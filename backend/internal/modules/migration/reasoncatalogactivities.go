@@ -22,6 +22,7 @@ const (
 
 // Reason codes for activity rows, each with its reasons text in the catalog below.
 const (
+	ReasonActivityEmpty                ReasonCode = "activity_empty"
 	ReasonActivityTypeUnnamed          ReasonCode = "activity_type_unnamed"
 	ReasonActivityTypeUnknown          ReasonCode = "activity_type_unknown"
 	ReasonMessageNotImportable         ReasonCode = "message_not_importable"
@@ -33,6 +34,7 @@ const (
 	ReasonDurationOutOfRange           ReasonCode = "duration_out_of_range"
 	ReasonMeetingStatusUnknown         ReasonCode = "meeting_status_unknown"
 	ReasonMeetingStatusNotForKind      ReasonCode = "meeting_status_not_valid_for_kind"
+	ReasonMeetingNotTakenPlace         ReasonCode = "meeting_not_taken_place"
 	ReasonDirectionUnknown             ReasonCode = "direction_unknown"
 	ReasonActivityUnlinked             ReasonCode = "activity_unlinked"
 	ReasonLinkMalformed                ReasonCode = "link_malformed"
@@ -41,6 +43,7 @@ const (
 	ReasonCompanyLinkOnMeeting         ReasonCode = "company_link_on_meeting"
 	ReasonLinkNotAttachable            ReasonCode = "link_not_attachable"
 	ReasonActivityHeld                 ReasonCode = "activity_held"
+	ReasonNoteRepeated                 ReasonCode = "note_repeated"
 	ReasonLeadNotFound                 ReasonCode = "lead_not_found"
 	ReasonLeadNotFoundDropped          ReasonCode = "lead_not_found_dropped"
 	ReasonDealNotFound                 ReasonCode = "deal_not_found"
@@ -59,6 +62,11 @@ func withActivityReasons(catalog map[ReasonCode]reasonEntry) map[ReasonCode]reas
 }
 
 var activityReasons = map[ReasonCode]reasonEntry{
+	ReasonActivityEmpty: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "A note or a call needs a subject or a body. Fill one of them in this row.",
+		textlang.German:     "Eine Notiz oder ein Anruf braucht einen Betreff oder einen Text. Fülle in dieser Zeile einen von beiden aus.",
+		textlang.Vietnamese: "Ghi chú hoặc cuộc gọi cần có tiêu đề hoặc nội dung. Điền tiêu đề hoặc nội dung vào hàng này.",
+	}},
 	ReasonActivityTypeUnnamed: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "Name the activity’s type: note, call, meeting or email.",
 		textlang.German:     "Nenne den Typ der Aktivität: note, call, meeting oder email.",
@@ -114,6 +122,11 @@ var activityReasons = map[ReasonCode]reasonEntry{
 		textlang.German:     "Nur ein Termin hat einen Terminstatus. Entferne ihn aus dieser Zeile.",
 		textlang.Vietnamese: "Chỉ cuộc họp mới có trạng thái cuộc họp. Hãy bỏ giá trị này khỏi hàng.",
 	}},
+	ReasonMeetingNotTakenPlace: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "By the date or time on this row, the meeting has not started yet, so it cannot be held or no_show. Leave the status empty, or use booked or canceled. If it started today, add the time it started.",
+		textlang.German:     "Nach dem Datum oder der Uhrzeit in dieser Zeile hat der Termin noch nicht begonnen und kann daher weder held noch no_show sein. Lass den Status leer oder nimm booked oder canceled. Hat er heute begonnen, ergänze die Uhrzeit des Beginns.",
+		textlang.Vietnamese: "Theo ngày hoặc giờ trong hàng này, cuộc họp chưa bắt đầu nên không thể là “held” hoặc “no_show”. Để trống trạng thái hoặc dùng “booked” hay “canceled”. Nếu cuộc họp đã bắt đầu hôm nay, thêm giờ bắt đầu.",
+	}},
 	ReasonDirectionUnknown: {params: []string{paramValue, paramAllowed}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a direction. The directions are: {allowed}.",
 		textlang.German:     "{value:q} ist keine Richtung. Es gibt: {allowed}.",
@@ -153,6 +166,11 @@ var activityReasons = map[ReasonCode]reasonEntry{
 		textlang.English:    "This activity is held under a retention obligation, so the row cannot change it.",
 		textlang.German:     "Diese Aktivität unterliegt einer Aufbewahrungspflicht, daher kann die Zeile sie nicht ändern.",
 		textlang.Vietnamese: "Hoạt động này đang bị giữ theo nghĩa vụ lưu trữ nên hàng không thể thay đổi nó.",
+	}},
+	ReasonNoteRepeated: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "This note repeats an earlier row of this import: same records, same text, same time. It is filed once.",
+		textlang.German:     "Diese Notiz wiederholt eine frühere Zeile dieses Imports: dieselben Datensätze, derselbe Text, dieselbe Zeit. Abgelegt wird sie nur einmal.",
+		textlang.Vietnamese: "Ghi chú này lặp lại một hàng trước đó của lần nhập này: cùng bản ghi, cùng nội dung, cùng thời điểm. Nó chỉ được lưu một lần.",
 	}},
 	ReasonLeadNotFound: {params: []string{paramRef}, text: map[textlang.Lang]string{
 		textlang.English:    "No lead with “{ref}” in this upload, in an earlier import, or in Margince.",

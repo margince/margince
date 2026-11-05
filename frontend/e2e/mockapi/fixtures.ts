@@ -20,17 +20,20 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   report_definition: ["read"],
   reporting_framework: ["read"],
   // The four records the specs write: deals, leads, projects and the notes the
-  // lead composer logs. A record page's write verbs ask the object grant and
-  // the row's `writable` before they draw. No spec disqualifies or archives,
-  // so the deletes stay unclaimed.
+  // lead composer logs, with the files attached to them. A record page's write
+  // verbs ask the object grant and the row's `writable` before they draw. No
+  // spec disqualifies or archives, so the deletes stay unclaimed.
   deal: ["read", "create", "update"],
   lead: ["read", "create", "update"],
   project: ["read", "create", "update"],
-  activity: ["read", "create"],
+  activity: ["read", "create", "update"],
   automation: ["create", "read", "update", "delete"],
   pipeline: ["create", "read", "update", "delete"],
   custom_field: ["create", "read", "update", "delete"],
   webhook_subscription: ["create", "read", "update", "delete"],
+  // Website forms, whose page opens on the integrations write. The provider
+  // and finance cards on Integrations ask the same object.
+  integrations: ["create", "read", "update", "delete"],
   capture_settings: ["read", "update"],
   embedding_reindex: ["read", "update"],
   fx_rate: ["create", "read", "update"],
@@ -84,6 +87,7 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   // above stays read-only and no spec opens a request.
   privacy_request: ["read", "update"],
   job_health: ["read"],
+  data_task: ["read", "update"],
   extension_access: ["read"],
   // AI usage, model calls and the health card, all three.
   ai_diagnostics: ["read"],
@@ -94,6 +98,8 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   // Read alone: the page opens on it, and the sign-in card's write checks
   // `installation_settings:update`, which this fixture holds.
   authentication_policy: ["read"],
+  // The MCP page opens on it, and the sweep measures the admin's controls.
+  agent_client: ["create", "read", "update", "delete"],
   // `license:read` above opens the Seats page, so the card never reads this.
   // It is the grant a Management seat has instead of the licence.
   seat_usage: ["read"],
@@ -200,6 +206,7 @@ export const anna = {
   full_name: "Anna Weber",
   title: "Head of Procurement",
   emails: [{ id: "e1", email: "anna.weber@brandt.example", is_primary: true }],
+  primary_email: "anna.weber@brandt.example",
   writable: true,
   captured_by: "connector:gmail",
   source: "gmail",
@@ -272,6 +279,14 @@ export const deals = [
     last_activity_at: "2026-06-28T08:00:00Z",
   },
 ];
+
+// Thirty more deals in Qualify: past one board column's page of 25.
+export const busyStageDeals = Array.from({ length: 30 }, (_, index) => ({
+  ...deals[0],
+  id: `d-busy-${index + 1}`,
+  name: `Busy deal ${index + 1}`,
+  stage_id: "s1",
+}));
 
 // The body of work the fleet deals are about. It starts in `initiative`,
 // attached to no deal, and the project page and the deal form's project
@@ -813,6 +828,14 @@ export const aiUsage = {
   },
 };
 
+export const aiUsageSummary = {
+  cost_est_minor: aiUsage.days
+    .flatMap((day) => day.tasks)
+    .reduce((total, task) => total + task.cost_est_minor, 0),
+  currency: aiUsage.budget.currency,
+  computed_at: "2026-07-05T12:00:00Z",
+} satisfies components["schemas"]["AiUsageSummary"];
+
 // The call figures every provider row and tier popover reads. `rows` is
 // required by AiCallStats. One row per provider and tier the fixtures above
 // bind, with failures and timeouts, so the sweeps see the widest form of each
@@ -1017,6 +1040,7 @@ export const jobHealth: components["schemas"]["JobHealth"] = {
 // A mailbox with a backlog and every sweep on schedule, so the sweeps measure
 // the card's tables rather than its failed read.
 export const captureHealth: components["schemas"]["CaptureHealth"] = {
+  connection_concerns: [],
   generated_at: "2026-07-05T06:20:00Z",
   mailboxes: [
     {

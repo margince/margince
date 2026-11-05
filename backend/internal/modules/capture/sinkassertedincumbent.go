@@ -26,7 +26,7 @@ const assertedProvenancePrefix = "human:"
 // AudienceRecomputer travels.
 type AssertedTakeOver func(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-	subject, body, wasCapturedBy, capturedBy string,
+	subject, body, wasCapturedBy, capturedBy string, senderIsMachine bool,
 ) error
 
 // WithAssertedTakeOver returns a copy that lets a connector take over a row an

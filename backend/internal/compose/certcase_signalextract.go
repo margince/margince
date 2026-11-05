@@ -46,23 +46,37 @@ type signalExtractFixture []signalExtractMessage
 // signalExtractMessage is one message in exactly the fields the prompt
 // consumes. It carries no id — see Prepare.
 type signalExtractMessage struct {
-	Direction string `json:"direction"`
-	Subject   string `json:"subject"`
-	Body      string `json:"body"`
+	Participants []certCommitmentParty `json:"participants,omitempty"`
+	Direction    string                `json:"direction"`
+	Subject      string                `json:"subject"`
+	Body         string                `json:"body"`
 	// Sent is the day the message went, YYYY-MM-DD. A relative deadline is
 	// resolved against it, so a scenario that dates a promise names its day.
 	Sent string `json:"sent,omitempty"`
+	// Reported is the kind of event the first reading of the pass cited on this
+	// message. A fixture with one is the second reading, built as the extractor
+	// builds it; a fixture with none is the ordinary reading.
+	Reported string `json:"reported,omitempty"`
 }
 
 // certSentDefault dates a message whose scenario does not, so every prompt
 // carries a real day the way production's does.
 const certSentDefault = "2026-09-07"
 
-// signalExtractExpectation is one event the scenario says the conversation
-// states: its kind, and the 1-based position of the message stating it.
+// signalExtractExpectation identifies an event, its cited message and verified promiser.
 type signalExtractExpectation struct {
-	Kind    string `json:"kind"`
-	Message int    `json:"message"`
+	Recipients      []string           `json:"recipients,omitempty"`
+	LifecycleScope  string             `json:"lifecycle_scope,omitempty"`
+	Workstream      string             `json:"workstream,omitempty"`
+	Buyer           string             `json:"buyer,omitempty"`
+	CommercialRole  string             `json:"commercial_role,omitempty"`
+	Meaning         *commitmentMeaning `json:"meaning,omitempty"`
+	Optional        bool               `json:"optional,omitempty"`
+	Kind            string             `json:"kind"`
+	Message         int                `json:"message"`
+	RestatedMessage int                `json:"restated_message,omitempty"`
+	DueDate         *string            `json:"due_date,omitempty"`
+	Promiser        string             `json:"promiser,omitempty"`
 }
 
 // signalExtractCases serves the one site that reads material events out of a
@@ -104,7 +118,15 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		return nil, err
 	}
 	thread := settledThread{Key: "cert-thread", CompanyID: ids.NewV7()}
+	identities := map[string]ids.UUID{}
+	references := make([]map[string]string, len(messages))
+	var firstReading []extractedEvent
 	for i, message := range messages {
+		parties, refs, err := prepareCommitmentParties(message.Participants, identities)
+		if err != nil {
+			return nil, err
+		}
+		references[i] = refs
 		sent := message.Sent
 		if sent == "" {
 			sent = certSentDefault
@@ -114,30 +136,64 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 			return nil, fmt.Errorf("signal_extract/thread_events: message %d is sent on %q, which is not a day: %w",
 				i+1, sent, err)
 		}
+		id := ids.NewV7()
+		if message.Reported != "" {
+			firstReading = append(firstReading, extractedEvent{Kind: message.Reported, MessageID: id.String()})
+		}
 		thread.Messages = append(thread.Messages, threadMessage{
-			ID:        ids.NewV7(),
+			ID:        id,
+			Parties:   parties,
 			Direction: message.Direction,
 			Subject:   message.Subject,
 			Body:      message.Body,
 			At:        at,
 		})
 	}
-	return &signalExtractCase{thread: thread, expected: want}, nil
+	numbered := thread.Messages
+	if len(firstReading) > 0 {
+		focused, ok := focusedReading(thread, firstReading)
+		if !ok {
+			return nil, errors.New(
+				"signal_extract/thread_events: the fixture's first reading leaves nothing for a second one to read")
+		}
+		thread = focused
+	}
+	for i := range want {
+		due := ""
+		if want[i].DueDate != nil {
+			due = *want[i].DueDate
+		}
+		if err := validateExpectedMeaning(want[i].Optional, want[i].Meaning, due, numbered[want[i].Message-1].Body); err != nil {
+			return nil, err
+		}
+		if err := validateExpectedRecipients(want[i].Recipients, references[want[i].Message-1]); err != nil {
+			return nil, err
+		}
+		for _, key := range []string{want[i].Promiser, want[i].Buyer} {
+			if key == "" {
+				continue
+			}
+			if _, found := references[want[i].Message-1][key]; !found {
+				return nil, fmt.Errorf("expected participant %q is not a participant of message %d", key, want[i].Message)
+			}
+		}
+	}
+	return &signalExtractCase{
+		thread: thread, numbered: numbered, expected: want, promiserKeys: certPromiserKeys(references...),
+	}, nil
 }
 
 // refuseUnreadableThread names a conversation the thread read could never have
-// returned: it takes at most extractThreadMessages and truncates every body to
-// extractBodyLimit, so a fixture beyond either bound would certify a prompt the
-// product cannot send.
+// returned. History reads add a recent window; every body still has the same size bound.
 func refuseUnreadableThread(messages signalExtractFixture) error {
 	if len(messages) == 0 {
 		return errors.New(
 			"signal_extract/thread_events: the fixture supplies no message, so there is no conversation to read")
 	}
-	if len(messages) > extractThreadMessages {
+	if len(messages) > extractContextMessages {
 		return fmt.Errorf(
 			"signal_extract/thread_events: the fixture carries %d messages, but one call reads at most %d",
-			len(messages), extractThreadMessages)
+			len(messages), extractContextMessages)
 	}
 	for i, message := range messages {
 		if n := utf8.RuneCountInString(message.Body); n > extractBodyLimit {
@@ -170,6 +226,9 @@ func refuseUnreachableEvents(want []signalExtractExpectation, messages int) erro
 				"signal_extract/thread_events: expectation %d names kind %q, which this site never records",
 				i+1, event.Kind)
 		}
+		if event.RestatedMessage != 0 && (event.RestatedMessage <= event.Message || event.RestatedMessage > messages) {
+			return fmt.Errorf("signal_extract/thread_events: expectation %d has an invalid restatement position", i+1)
+		}
 		if event.Message < 1 || event.Message > messages {
 			return fmt.Errorf(
 				"signal_extract/thread_events: expectation %d cites message %d, and the conversation has %d",
@@ -182,13 +241,17 @@ func refuseUnreachableEvents(want []signalExtractExpectation, messages int) erro
 // signalExtractCase is one conversation ready to be read, closed over the
 // minted ids and the events the scenario expects.
 type signalExtractCase struct {
-	thread   settledThread
+	promiserKeys map[string]string
+	thread       settledThread
+	// numbered is the fixture's conversation, which the expected events count
+	// in. A second reading sends fewer messages than it holds.
+	numbered []threadMessage
 	expected []signalExtractExpectation
 }
 
-// Run issues the one request this site sends, bare: production wraps the same
-// request in the shape-retry when the brain supports one, and a case that did
-// too would certify the answer a model gives after being told to try again.
+// Run issues the requests one pass sends, bare. Production wraps each in the
+// shape-retry when the brain supports one. A case that did too would certify
+// the answer a model gives after being told to try again.
 func (c *signalExtractCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	// English, pinned, rather than the installation's base language: a
 	// certification record grades a fixed corpus, and a score that moved with a
@@ -203,7 +266,62 @@ func (c *signalExtractCase) Run(ctx context.Context, completer aitasks.Completer
 		return trace, fmt.Errorf("signal_extract/thread_events: %w", err)
 	}
 	trace.Output = resp.Text
+	if len(c.thread.Focus) > 0 {
+		// The fixture is already a second reading, and a pass makes no third.
+		return trace, nil
+	}
+	return c.secondReading(ctx, completer, trace)
+}
+
+// secondReading finishes the pass the way readThread does, so the graded
+// answer is the one the product files. A first reply the engine refuses is
+// graded as it is. A refused second reply leaves the first reading's events,
+// as keepFirstReading does.
+func (c *signalExtractCase) secondReading(
+	ctx context.Context, completer aitasks.Completer, trace aitasks.Trace,
+) (aitasks.Trace, error) {
+	first, ok := readableReply(trace.Output, c.thread)
+	if !ok {
+		return trace, nil
+	}
+	focused, more := focusedReading(c.thread, first.events())
+	if !more {
+		return trace, nil
+	}
+	req := extractRequest(focused, string(textlang.English))
+	trace.Requests = append(trace.Requests, req)
+	resp, err := completer.Complete(ctx, req)
+	if err != nil {
+		return trace, fmt.Errorf("signal_extract/thread_events: the second reading: %w", err)
+	}
+	second, answered := readableReply(resp.Text, focused)
+	if !answered {
+		return trace, nil
+	}
+	// The joined answer cites messages by label, as the model's own replies do.
+	// The judge reads it beside a prompt that names no message by its id.
+	both := append(first.events(), second.events()...)
+	for i := range both {
+		both[i].MessageID = c.thread.messageLabel(both[i].MessageID)
+		both[i].RestatedMessageID = c.thread.messageLabel(both[i].RestatedMessageID)
+	}
+	served, err := json.Marshal(extractPayload{Events: &both})
+	if err != nil {
+		return trace, fmt.Errorf("signal_extract/thread_events: the two readings cannot be joined: %w", err)
+	}
+	trace.Output = string(served)
 	return trace, nil
+}
+
+// readableReply is a reply read as the engine reads it, and whether the engine
+// would accept it.
+func readableReply(text string, thread settledThread) (extractPayload, bool) {
+	var payload extractPayload
+	if json.Unmarshal([]byte(ai.Unfence(text)), &payload) != nil {
+		return payload, false
+	}
+	payload = payload.asRead(thread)
+	return payload, validateExtractEnvelope(payload, thread) == ""
 }
 
 // Evaluate applies the engine's own checks in the engine's own order — parse,
@@ -223,6 +341,7 @@ func (c *signalExtractCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: fmt.Sprintf("unparseable model output: %v", err),
 		}
 	}
+	payload = payload.asRead(c.thread)
 	if msg := validateExtractPayload(payload, c.thread); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
@@ -239,9 +358,10 @@ func (c *signalExtractCase) AnswerConfidence(trace aitasks.Trace) (low, high flo
 	if err := json.Unmarshal([]byte(ai.Unfence(trace.Output)), &payload); err != nil {
 		return 0, 0, false
 	}
+	payload = payload.asRead(c.thread)
 	var confidences []float64
 	for _, event := range payload.events() {
-		if event.Kind == extractKindCommitment {
+		if event.Kind == extractKindCommitment && event.Meaning.withheldOutcome() == "" {
 			confidences = append(confidences, float64(event.Confidence))
 		}
 	}
@@ -266,19 +386,56 @@ func spanOf(confidences []float64) (low, high float64, ok bool) {
 // author could look up, and the mail's own text has no business being echoed
 // into a record.
 func (c *signalExtractCase) disagreements(payload extractPayload) []string {
-	position := make(map[string]int, len(c.thread.Messages))
-	for i, message := range c.thread.Messages {
+	position := make(map[string]int, len(c.numbered))
+	for i, message := range c.numbered {
 		position[message.ID.String()] = i + 1
 	}
 	reported := map[string]bool{}
 	for _, event := range payload.events() {
-		reported[fmt.Sprintf("%s@%d", event.Kind, position[event.MessageID])] = true
+		if event.Kind == extractKindCommitment && event.Meaning.withheldOutcome() != "" {
+			continue
+		}
+		reported[fmt.Sprintf("%s@%d:%s", event.Kind, position[event.MessageID], c.promiserKeys[event.PromiserRef])] = true
 	}
 	wanted := map[string]bool{}
 	for _, event := range c.expected {
-		wanted[fmt.Sprintf("%s@%d", event.Kind, event.Message)] = true
+		if event.Optional {
+			continue
+		}
+		wanted[fmt.Sprintf("%s@%d:%s", event.Kind, event.Message, event.Promiser)] = true
 	}
 	var out []string
+	for _, expected := range c.expected {
+		for _, event := range payload.events() {
+			if event.Kind != expected.Kind || position[event.MessageID] != expected.Message {
+				continue
+			}
+			if c.promiserKeys[event.PromiserRef] == expected.Promiser && !expectedRecipientsMatch(expected.Recipients, event.RecipientRefs, c.promiserKeys) {
+				out = append(out, "the recipients do not match the quoted promise")
+			}
+			if expected.LifecycleScope != "" && event.LifecycleScope != expected.LifecycleScope {
+				out = append(out, "the lifecycle scope does not match the source")
+			}
+			if expected.Workstream != "" && event.Workstream != expected.Workstream {
+				out = append(out, "the named workstream does not match the source")
+			}
+			if expected.Buyer != "" && c.promiserKeys[event.BuyerRef] != expected.Buyer {
+				out = append(out, "the buyer does not match the verified participant")
+			}
+			if expected.CommercialRole != "" && event.CommercialRole != expected.CommercialRole {
+				out = append(out, "the commercial role does not match the request")
+			}
+			if !expectedMeaningMatches(expected.Meaning, event.Meaning) {
+				out = append(out, "the commitment meaning does not match the source")
+			}
+			if expected.RestatedMessage != 0 && position[event.RestatedMessageID] != expected.RestatedMessage {
+				out = append(out, "the renewed promise does not cite its restatement")
+			}
+			if expected.DueDate != nil && event.DueDate != *expected.DueDate {
+				out = append(out, "the deadline does not match its source date")
+			}
+		}
+	}
 	for key := range wanted {
 		if !reported[key] {
 			out = append(out, fmt.Sprintf("the conversation states %s and the reply does not report it", key))

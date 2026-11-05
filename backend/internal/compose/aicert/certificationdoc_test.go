@@ -336,8 +336,8 @@ func pickAICertRecord(records []aiCertRecord) *aiCertPick {
 }
 
 func beatsAICertRecord(rec, held aiCertRecord) bool {
-	if bandRank(rec.Band) != bandRank(held.Band) {
-		return bandRank(rec.Band) > bandRank(held.Band)
+	if aicert.VerdictRank(rec.Band) != aicert.VerdictRank(held.Band) {
+		return aicert.VerdictRank(rec.Band) > aicert.VerdictRank(held.Band)
 	}
 	if reliabilityOrZero(rec.Reliability) != reliabilityOrZero(held.Reliability) {
 		return reliabilityOrZero(rec.Reliability) > reliabilityOrZero(held.Reliability)
@@ -346,17 +346,6 @@ func beatsAICertRecord(rec, held aiCertRecord) bool {
 		return slowness(rec.LatencyP95MS) < slowness(held.LatencyP95MS)
 	}
 	return rec.Binding.label() < held.Binding.label()
-}
-
-func bandRank(band string) int {
-	switch band {
-	case aicert.VerdictCertified:
-		return 2
-	case aicert.VerdictSupportedDegraded:
-		return 1
-	default:
-		return 0
-	}
 }
 
 // bestStateOf is the strongest state any of a site's bindings reached, because

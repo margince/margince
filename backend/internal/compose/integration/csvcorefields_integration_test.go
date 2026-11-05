@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 type contactPhoneDTO struct {
@@ -56,16 +57,16 @@ func contactPhones(t *testing.T, e *apptest.AppEnv, id string) []string {
 
 func TestAContactsPhoneAndLinkedInLandAndAReImportKeepsTheOthers(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "contact", "email,name,phone,linkedin\nmy@core.example,My,+49 30 1234567,https://www.linkedin.com/in/my-core\n")
-	run, _ := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"email": "email", "name": "full_name", "phone": "phone", "linkedin": "linkedin_url"})
+	profile, _ := importjobtest.UploadCSV(t, e, "contact", "email,name,phone,linkedin\nmy@core.example,My,+49 30 1234567,https://www.linkedin.com/in/my-core\n")
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"email": "email", "name": "full_name", "phone": "phone", "linkedin": "linkedin_url"})
 	approveAndRead(t, e, run.ID)
 	id := contactIDByEmail(t, e, "my@core.example")
 	if got := contactCore(t, e, id).Social["linkedin"]; got != "https://www.linkedin.com/in/my-core" {
 		t.Fatalf("social.linkedin = %v, want the file's profile", got)
 	}
 	addPhoneByHand(t, e, id, "+84 28 1234 5678")
-	again, _ := uploadCSV(t, e, "contact", "email,name,phone\nmy@core.example,My,+49 30 7654321\n")
-	second, _ := createRunWithMapping(t, e, "contact", again.SourceRef, map[string]string{"email": "email", "name": "full_name", "phone": "phone"})
+	again, _ := importjobtest.UploadCSV(t, e, "contact", "email,name,phone\nmy@core.example,My,+49 30 7654321\n")
+	second, _ := importjobtest.CreateRunWithMapping(t, e, "contact", again.SourceRef, map[string]string{"email": "email", "name": "full_name", "phone": "phone"})
 	approveAndRead(t, e, second.ID)
 	phones := contactPhones(t, e, id)
 	if !slices.Contains(phones, "+49307654321") || !slices.Contains(phones, "+842812345678") {
@@ -78,8 +79,8 @@ func TestAContactsPhoneAndLinkedInLandAndAReImportKeepsTheOthers(t *testing.T) {
 
 func TestAPhoneWithoutACountryCodeIsAProblemNotAFailedRun(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "contact", "email,name,phone\nno@cc.example,No,030 1234567\nok@cc.example,Ok,+49 30 1\n")
-	run, _ := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"email": "email", "name": "full_name", "phone": "phone"})
+	profile, _ := importjobtest.UploadCSV(t, e, "contact", "email,name,phone\nno@cc.example,No,030 1234567\nok@cc.example,Ok,+49 30 1\n")
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"email": "email", "name": "full_name", "phone": "phone"})
 	var report importReportDTO
 	e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report)
 	if !hasIssue(report, "invalid_value", "030 1234567") {
@@ -89,22 +90,22 @@ func TestAPhoneWithoutACountryCodeIsAProblemNotAFailedRun(t *testing.T) {
 
 func TestACompanyAndALeadCarryTheirLinkedInURL(t *testing.T) {
 	e := setupImportApp(t)
-	companies, _ := uploadCSV(t, e, "company", "Name,LinkedIn\nVoltaq GmbH,https://www.linkedin.com/company/voltaq/about\n")
-	run, _ := createRunWithMapping(t, e, "company", companies.SourceRef, map[string]string{"Name": "display_name", "LinkedIn": "linkedin_url"})
+	companies, _ := importjobtest.UploadCSV(t, e, "company", "Name,LinkedIn\nVoltaq GmbH,https://www.linkedin.com/company/voltaq/about\n")
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", companies.SourceRef, map[string]string{"Name": "display_name", "LinkedIn": "linkedin_url"})
 	approveAndRead(t, e, run.ID)
 	if got := companyField(t, e, "Voltaq GmbH", "linkedin_url"); got != "https://www.linkedin.com/company/voltaq" {
 		t.Fatalf("company linkedin_url = %q, want the canonical company URL", got)
 	}
 
-	leads, _ := uploadCSV(t, e, "lead", "Email,Name,LinkedIn\nlee@core.example,Lee,linkedin.com/in/lee/\n")
-	leadRun, _ := createRunWithMapping(t, e, "lead", leads.SourceRef, map[string]string{"Email": "email", "Name": "full_name", "LinkedIn": "linkedin_url"})
+	leads, _ := importjobtest.UploadCSV(t, e, "lead", "Email,Name,LinkedIn\nlee@core.example,Lee,linkedin.com/in/lee/\n")
+	leadRun, _ := importjobtest.CreateRunWithMapping(t, e, "lead", leads.SourceRef, map[string]string{"Email": "email", "Name": "full_name", "LinkedIn": "linkedin_url"})
 	approveAndRead(t, e, leadRun.ID)
-	if got := recordField(t, e, "/v1/leads", "email", "lee@core.example", "linkedin_url"); got != "https://linkedin.com/in/lee" {
+	if got := recordField(t, e, "/v1/leads", "email", "lee@core.example", "linkedin_url"); got != "https://www.linkedin.com/in/lee" {
 		t.Fatalf("lead linkedin_url = %q, want the normalized profile", got)
 	}
 
-	edited, _ := uploadCSV(t, e, "lead", "Email,Name,LinkedIn\nlee@core.example,Lee,https://www.linkedin.com/in/lee-new\n")
-	editRun, _ := createRunWithMapping(t, e, "lead", edited.SourceRef, map[string]string{"Email": "email", "Name": "full_name", "LinkedIn": "linkedin_url"})
+	edited, _ := importjobtest.UploadCSV(t, e, "lead", "Email,Name,LinkedIn\nlee@core.example,Lee,https://www.linkedin.com/in/lee-new\n")
+	editRun, _ := importjobtest.CreateRunWithMapping(t, e, "lead", edited.SourceRef, map[string]string{"Email": "email", "Name": "full_name", "LinkedIn": "linkedin_url"})
 	approveAndRead(t, e, editRun.ID)
 	if got := recordField(t, e, "/v1/leads", "email", "lee@core.example", "linkedin_url"); got != "https://www.linkedin.com/in/lee-new" {
 		t.Fatalf("lead linkedin_url after the edited file = %q, want the new profile", got)
@@ -123,8 +124,8 @@ func TestACompanyWhoseLinkedInURLIsHeldIsSkippedInThePreviewAndTheCommit(t *test
 		AnyMap{"linkedin_url": "https://www.linkedin.com/company/held"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("PATCH /v1/companies/%s → %d, want 200", held.ID, status)
 	}
-	profile, _ := uploadCSV(t, e, "company", "Name,LinkedIn\nOther Held GmbH,https://www.linkedin.com/company/HELD/\n")
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "LinkedIn": "linkedin_url"})
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,LinkedIn\nOther Held GmbH,https://www.linkedin.com/company/HELD/\n")
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "LinkedIn": "linkedin_url"})
 	preview := readImportReport(t, e, run.ID)
 	if preview.Disposition.Skipped != 1 {
 		t.Fatalf("preview disposition = %+v, want the row skipped", preview.Disposition)

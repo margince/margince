@@ -6,6 +6,8 @@ package activities
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -78,8 +80,10 @@ func (s *Store) applyInvitationChange(ctx context.Context, host ids.UserID, id i
 		if err := auditInvitation(ctx, tx, &before, row); err != nil {
 			return err
 		}
-		result = row
-		return nil
+		// Read back as stored: the status trigger clears the reason a row
+		// that stops waiting no longer has.
+		result, err = readInvitation(ctx, tx, id, false)
+		return err
 	})
 	return invitationView(result), err
 }
@@ -90,7 +94,7 @@ func (s *Store) DeliverInvitations(ctx context.Context) error {
 	if s.calendar == nil {
 		return apperrors.ErrPermissionDenied
 	}
-	var faults []error
+	faults := []error{s.resumeParkedInvitations(ctx)}
 	for range 10 {
 		row, found, err := s.claimInvitation(ctx)
 		if err != nil {
@@ -141,6 +145,7 @@ func (s *Store) claimInvitation(ctx context.Context) (invitationRow, bool, error
 		before := row
 		row.Attempts++
 		row.Version++
+		row.ClaimedAt = s.now()
 		args = schedulingArgs{}
 		query := `UPDATE meeting_invitation SET attempts=` + args.add(row.Attempts) + `,version=` + args.add(row.Version) + `,lease_until=` + args.add(s.now().Add(3*time.Minute)) + ` WHERE activity_id=` + args.add(id)
 		if _, err := tx.Exec(ctx, query, args...); err != nil {
@@ -167,47 +172,70 @@ func (s *Store) finishInvitation(ctx context.Context, claimed invitationRow, rec
 			return s.finishSupersededInvitation(ctx, tx, row, claimed, receipt)
 		}
 		before := row
-		if deliveryErr != nil {
-			if row.Attempts >= 5 {
-				row.Status = invitationNeedsAttention
+		parked := false
+		if deliveryErr != nil && calendarAuthFailure(deliveryErr) {
+			if parked, err = s.parkInvitationAndQueue(ctx, tx, &row, claimed.ClaimedAt); err != nil {
+				return err
 			}
-		} else {
+		}
+		switch {
+		case parked:
+			// The whole queue waits for the host; no back-off applies.
+		case deliveryErr != nil && row.Attempts >= 5:
+			markAttention(&row, attentionDeliveryFailed, row.ID)
+		case deliveryErr != nil:
+			// An ordinary failure is retried after its back-off.
+		default:
 			row.Receipt = receipt
 			row.Status = invitationConfirmed
 			if row.Command == invitationCancel {
 				row.Status = invitationCanceled
 			}
-			if err := s.settleInvitation(ctx, tx, row); err != nil {
+			if err := s.settleInvitation(ctx, tx, row, row.Command == invitationUpdate); err != nil {
 				return err
 			}
 		}
 		row.Version++
 		args := schedulingArgs{}
-		query := `UPDATE meeting_invitation SET status=` + args.add(row.Status) + `,receipt=` + args.add(row.Receipt) + `,version=` + args.add(row.Version) + `,next_attempt_at=` + args.add(s.now().Add(time.Duration(row.Attempts)*time.Minute)) + `,lease_until=NULL,updated_at=now() WHERE activity_id=` + args.add(row.ID)
+		query := `UPDATE meeting_invitation SET status=` + args.add(row.Status) + `,receipt=` + args.add(row.Receipt) + `,attention_reason=` + args.add(row.AttentionReason) + `,attention_episode=` + args.add(row.AttentionEpisode) + `,version=` + args.add(row.Version) + `,next_attempt_at=` + args.add(s.now().Add(time.Duration(row.Attempts)*time.Minute)) + `,lease_until=NULL,updated_at=now() WHERE activity_id=` + args.add(row.ID)
 		if _, err := tx.Exec(ctx, query, args...); err != nil {
 			return err
 		}
-		return auditInvitation(ctx, tx, &before, row)
+		if err := auditInvitation(ctx, tx, &before, row); err != nil {
+			return err
+		}
+		if before.Status == invitationNeedsAttention || row.Status != invitationNeedsAttention {
+			return nil
+		}
+		return s.tellHost(ctx, tx, row)
 	})
 }
 
-func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationRow) error {
+// rescheduled is true only when this settlement delivers a Margince reschedule.
+func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationRow, rescheduled bool) error {
 	current, err := readActivity(ctx, tx, ids.From[ids.ActivityKind](row.ID), storekit.LiveOnly)
 	if err != nil {
 		return err
 	}
-	status := "booked"
-	if current.MeetingStatus != nil && (*current.MeetingStatus == ScheduledStatusHeld || *current.MeetingStatus == "no_show") {
-		status = string(*current.MeetingStatus)
+	at := s.now()
+	status := new(string(crmcontracts.ActivityMeetingStatusBooked))
+	stored := meetingStatusString(current.MeetingStatus)
+	// A reschedule that moves the start leaves its outcome with the old slot.
+	if isMeetingOutcome(&stored) && (!rescheduled || SameStoredStart(row.Appointment.Start, current.OccurredAt)) {
+		status = &stored
+	}
+	status, err = statusAfterMove(ctx, tx, status, row.Appointment.Start, PrecisionInstant, &at)
+	if err != nil {
+		return err
 	}
 	if row.Status == invitationCanceled {
-		status = invitationCanceled
+		status = new(invitationCanceled)
 	}
 	id := ids.From[ids.ActivityKind](row.ID)
 	// Provider receipts identify the organizer's intent without taking the natural
 	// key of a colleague's independently captured attendee copy.
 	seconds := int(row.Appointment.End.Sub(row.Appointment.Start) / time.Second)
-	if _, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{calendarSettlement: true, OccurredAt: &row.Appointment.Start, MeetingStatus: &status, DurationSeconds: &seconds}); err != nil {
+	if _, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{calendarSettlement: true, recordedAt: &at, OccurredAt: &row.Appointment.Start, MeetingStatus: status, DurationSeconds: &seconds}); err != nil {
 		return err
 	}
 
@@ -222,15 +250,38 @@ func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationR
 
 func refuseActiveInvitationPatch(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	args := schedulingArgs{}
-	var active bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM meeting_invitation WHERE activity_id=`+args.add(id)+` AND status<>'canceled')`, args...).Scan(&active)
+	var status string
+	err := tx.QueryRow(ctx, `SELECT status FROM meeting_invitation WHERE activity_id=`+args.add(id), args...).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
-	if active {
+	if invitationHoldsMeeting(status) {
 		return &SchedulingArgumentError{Field: KindMeeting, Code: "calendar_managed", Message: "Change or cancel this meeting through its calendar invitation"}
 	}
 	return nil
+}
+
+// calendarManaged reports whether a live invitation holds the meeting, so its
+// slot and wording change only through the calendar.
+func calendarManaged(meeting crmcontracts.Activity) bool {
+	return meeting.InvitationStatus != nil && invitationHoldsMeeting(string(*meeting.InvitationStatus))
+}
+
+// releasedInvitationStatuses no longer hold their meeting. An erased invitation
+// was withdrawn with its guest.
+var releasedInvitationStatuses = []string{invitationCanceled, invitationErased}
+
+// InvitationHoldsMeetingSQL is invitationHoldsMeeting over the status column of
+// the meeting_invitation row aliased alias, a compile-time identifier.
+func InvitationHoldsMeetingSQL(alias string) string {
+	return pgx.Identifier{alias}.Sanitize() + ".status NOT IN ('" + strings.Join(releasedInvitationStatuses, "', '") + "')"
+}
+
+func invitationHoldsMeeting(status string) bool {
+	return !slices.Contains(releasedInvitationStatuses, status)
 }
 
 func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in crmcontracts.MeetingInvitationChange, buffer int) error {
@@ -243,7 +294,7 @@ func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in
 			return err
 		}
 		row.Appointment.Start, row.Appointment.End = *in.Start, *in.End
-		row.Status, row.Command = "rescheduling", "update"
+		row.Status, row.Command = "rescheduling", invitationUpdate
 	case invitationCancel:
 		if row.Status == invitationCanceled || row.Status == invitationCanceling || row.Status == invitationErased {
 			return apperrors.ErrConflict
@@ -253,13 +304,7 @@ func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in
 		if row.Status != invitationNeedsAttention {
 			return apperrors.ErrConflict
 		}
-		row.Status = invitationPending
-		if row.Command == "update" {
-			row.Status = "rescheduling"
-		}
-		if row.Command == invitationCancel {
-			row.Status = invitationCanceling
-		}
+		row.Status = pendingFor(row.Command)
 	default:
 		return apperrors.ErrConflict
 	}
@@ -273,6 +318,9 @@ func (s *Store) executeInvitation(ctx context.Context, row invitationRow) (*conn
 	}
 	if row.Command != invitationCancel {
 		appointment := row.Appointment
+		if appointment.VideoCall {
+			appointment.Location = ""
+		}
 		if row.Receipt != nil {
 			appointment.EventID = row.Receipt.EventID
 		}
@@ -295,6 +343,6 @@ func (s *Store) executeInvitation(ctx context.Context, row invitationRow) (*conn
 }
 
 func changesInvitation(in UpdateActivityInput) bool {
-	return in.OccurredAt != nil || in.DurationSeconds != nil || in.Subject != nil || in.Body != nil ||
-		(in.MeetingStatus != nil && *in.MeetingStatus != ScheduledStatusHeld && *in.MeetingStatus != "no_show")
+	return in.OccurredAt != nil || in.OccurredPrecision != nil || in.DurationSeconds != nil || in.Subject != nil || in.Body != nil ||
+		(in.MeetingStatus != nil && !isMeetingOutcome(in.MeetingStatus))
 }

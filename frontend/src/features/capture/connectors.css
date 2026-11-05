@@ -1,0 +1,44 @@
+/* Connected inboxes and the workspace's messaging bot (Settings, Connections).
+   The rows themselves belong to the design system (ProviderRow, ServiceRow,
+   SettingRow); what is left here is what is specific to a CONNECTION: an
+   import's progress, and the account's settings. The empty card's tiles live in
+   connection-empty.css. */
+
+/* What a service reports under its caption: an import's progress and counts. */
+.connection-service-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+.connection-service-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.connection-service-facts b {
+  color: var(--textPrimary);
+  font-variant-numeric: tabular-nums;
+}
+.connection-service-held {
+  margin-top: var(--space-2);
+}
+
+/* The account's standing decisions sit under its services, headed by whose
+   mail they are about. */
+.connection-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* The history-baseline row's date and its verbs, wrapping on a narrow pane. */
+.connector-baseline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}

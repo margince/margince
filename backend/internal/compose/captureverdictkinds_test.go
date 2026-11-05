@@ -209,8 +209,9 @@ func TestThePromptsRoleExamplesComeFromTheOneList(t *testing.T) {
 func TestEveryCreatingKindNeedsTheHigherFloor(t *testing.T) {
 	t.Parallel()
 	creating := map[string]bool{
-		capture.KindContact: true,
-		capture.KindAdvisor: true,
+		capture.KindContact:     true,
+		capture.KindAdvisor:     true,
+		capture.KindVendorPitch: true,
 	}
 	for kind := range verdictKinds {
 		if got := createsARecord(kind); got != creating[kind] {

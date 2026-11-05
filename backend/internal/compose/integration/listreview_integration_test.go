@@ -157,11 +157,8 @@ func TestErasureTakesEveryAnonymizedLeadOffItsShortlists(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &name, Email: &email, Source: "manual"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND promoted_contact_id IS NULL`, lead.Id); n != 1 {
+	leadID := seedHistoricalLeadAtContactEmail(t, e, name, email, nil)
+	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND promoted_contact_id IS NULL`, leadID); n != 1 {
 		t.Fatal("the lead was promoted, so this test would not reach a lead matched by address alone")
 	}
 	list, err := store.CreateList(e.Admin(), collections.CreateListInput{Name: "Lead picks", EntityType: "lead"})
@@ -169,17 +166,17 @@ func TestErasureTakesEveryAnonymizedLeadOffItsShortlists(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := store.AddMember(e.Admin(), list.ID, collections.MemberChange{
-		EntityType: "lead", EntityID: ids.UUID(lead.Id), Reason: collections.ReasonChosen,
+		EntityType: "lead", EntityID: leadID.UUID, Reason: collections.ReasonChosen,
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.UUID(subject.Id), "test"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM list_member WHERE entity_id = $1`, lead.Id); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM list_member WHERE entity_id = $1`, leadID); n != 0 {
 		t.Fatalf("the anonymized lead is still on %d Shortlists", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM list_member_event WHERE entity_id = $1`, lead.Id); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM list_member_event WHERE entity_id = $1`, leadID); n != 0 {
 		t.Fatalf("%d membership events of the anonymized lead outlived the erasure", n)
 	}
 }

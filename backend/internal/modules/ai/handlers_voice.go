@@ -4,9 +4,8 @@
 package ai
 
 // The voice-profile transport slice (B-E07.4/.5a): compose embeds
-// Handlers so the generated stubs are shadowed. Mutations are
-// contract-annotated human-only; the store re-gates on the
-// `voice_profile` RBAC object and the row-scope clause.
+// Handlers so the generated stubs are shadowed. The store gates each
+// mutation on the `voice_profile` RBAC object and the row-scope clause.
 
 import (
 	"context"
@@ -18,6 +17,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,6 +28,9 @@ import (
 // transport). The BudgetPolicy is compose-injected — the seat-derived
 // pool joins identity's tables, which this module never reaches.
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks  func(surface []config.Any) *[]crmcontracts.SettingLock
 	voice  *VoiceStore
 	meter  *Meter
 	budget BudgetPolicy
@@ -178,6 +181,22 @@ func (h Handlers) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request,
 	}{Data: data, Summary: wireCorpusSummary(summary), Page: crmcontracts.PageInfo{HasMore: false}})
 }
 
+// LearnVoiceFromSentMail implements (POST /voice-profiles/{id}/sources/sent-mail).
+func (h Handlers) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.LearnVoiceFromSentMailParams) {
+	learned, err := h.voice.LearnFromSentMail(r.Context(), ids.UUID(id))
+	if err != nil {
+		writeVoiceErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.VoiceSentMailLearned{
+		Read:           learned.Read,
+		Added:          learned.Added,
+		AlreadyPresent: learned.AlreadyPresent,
+		NoOwnWords:     learned.NoOwnWords,
+		Summary:        wireCorpusSummary(learned.Summary),
+	})
+}
+
 // IngestVoiceCorpusSource implements (POST /voice-profiles/{id}/sources).
 func (h Handlers) IngestVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.IngestVoiceCorpusSourceParams) {
 	var req crmcontracts.IngestVoiceCorpusSourceRequest
@@ -308,10 +327,12 @@ func writeVoiceErr(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcontracts.VoiceProfile, error) {
-	summary, candidateVersion, err := h.voice.ProfilePresentation(ctx, p.ID)
+	view, err := h.voice.ProfileView(ctx, p.ID)
 	if err != nil {
 		return crmcontracts.VoiceProfile{}, err
 	}
+	summary := view.Summary
+	remaining := FirstBuildWordsRemaining(summary.TotalWords)
 	version := int(p.Version)
 	profileVersion := p.ProfileVersion
 	voiceProfileMD := p.VoiceProfileMD
@@ -322,23 +343,28 @@ func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcont
 		updatedAt = *p.UpdatedAt
 	}
 	wire := crmcontracts.VoiceProfile{
-		Id:                  openapi_types.UUID(p.ID),
-		Status:              crmcontracts.VoiceProfileStatus(p.Status),
-		VoiceProfileMd:      &voiceProfileMD,
-		ProfileVersion:      &profileVersion,
-		PersonalityMd:       p.PersonalityMD,
-		AutoLearningEnabled: p.AutoLearningEnabled,
-		ActiveSourceHash:    p.ActiveSourceHash,
-		CandidateVersion:    candidateVersion,
-		LastBuiltAt:         p.LastBuiltAt,
-		Maturity:            &maturity,
-		QualityBand:         &qualityBand,
-		Source:              p.Source,
-		CapturedBy:          &p.CapturedBy,
-		Version:             version,
-		CreatedAt:           p.CreatedAt,
-		UpdatedAt:           updatedAt,
-		ArchivedAt:          p.ArchivedAt,
+		Id:                       openapi_types.UUID(p.ID),
+		Status:                   crmcontracts.VoiceProfileStatus(p.Status),
+		VoiceProfileMd:           &voiceProfileMD,
+		ProfileVersion:           &profileVersion,
+		PersonalityMd:            p.PersonalityMD,
+		AutoLearningEnabled:      p.AutoLearningEnabled,
+		ActiveSourceHash:         p.ActiveSourceHash,
+		CandidateVersion:         view.CandidateVersion,
+		FirstBuildWordsRemaining: &remaining,
+		LastBuiltAt:              p.LastBuiltAt,
+		Maturity:                 &maturity,
+		QualityBand:              &qualityBand,
+		Source:                   p.Source,
+		CapturedBy:               &p.CapturedBy,
+		Version:                  version,
+		CreatedAt:                p.CreatedAt,
+		UpdatedAt:                updatedAt,
+		ArchivedAt:               p.ArchivedAt,
+	}
+	if view.LatestBuild != nil {
+		latest := wireVoiceBuild(*view.LatestBuild)
+		wire.LatestBuild = &latest
 	}
 	if p.OwnerID != nil {
 		owner := openapi_types.UUID(p.OwnerID.UUID)

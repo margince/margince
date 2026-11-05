@@ -1,3 +1,3 @@
 module example.invalid/margince/fixtures/crm-nosy
 
-go 1.27.2
+go 1.27.3

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { FilterVocabulary } from "../../lib/filterdata";
 import type { List } from "../../lib/lists.queries";
+import type { SavedView } from "../../lib/savedviews.queries";
 import {
   listsMe,
   liveList,
@@ -18,7 +19,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { FiltersScreen } from "./filters";
-import type { SavedView } from "./savedviews.queries";
 
 // `#/filters`: every saved view and list the reader can use, in one library.
 // The states are the ones a reader can be in: the populated library, a first

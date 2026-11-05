@@ -32,6 +32,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -224,9 +225,20 @@ func boundsBothSides(check, column string) bool {
 	if strings.Contains(strings.ToUpper(check), " OR ") {
 		return false
 	}
-	lower := regexp.MustCompile(`\b` + regexp.QuoteMeta(column) + `\b\s*>=?\s*'?-` + jsSafeInteger + `\D`)
-	upper := regexp.MustCompile(`\b` + regexp.QuoteMeta(column) + `\b\s*<=?\s*'?` + jsSafeInteger + `\D`)
-	return lower.MatchString(check) && upper.MatchString(check)
+	lower, lowerOK := comparisonBound(check, column, ">")
+	upper, upperOK := comparisonBound(check, column, "<")
+	const maximum = int64(1<<53 - 1)
+	return lowerOK && upperOK && lower >= -maximum && upper <= maximum
+}
+
+func comparisonBound(check, column, direction string) (int64, bool) {
+	pattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(column) + `\b\s*` + direction + `=?\s*'?(-?[0-9]+)'?(?:::bigint)?(?:\s*\)|\s+AND\b|\s*$)`)
+	match := pattern.FindStringSubmatch(check)
+	if match == nil {
+		return 0, false
+	}
+	value, err := strconv.ParseInt(match[1], 10, 64)
+	return value, err == nil
 }
 
 // TestWhatCountsAsABoundIsProvedHere probes the bound reading directly.
@@ -244,6 +256,18 @@ func TestWhatCountsAsABoundIsProvedHere(t *testing.T) {
 		name:  "the shape this change writes",
 		check: "((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint))",
 		bound: true,
+	}, {
+		name:  "nonnegative counters have a tighter lower bound",
+		check: "((amount_minor >= 0) AND (amount_minor <= '9007199254740991'::bigint))",
+		bound: true,
+	}, {
+		name:  "oversized negative bound is unsafe even with a safe maximum",
+		check: "((amount_minor >= '-9007199254740992'::bigint) AND (amount_minor <= '9007199254740991'::bigint))",
+		bound: false,
+	}, {
+		name:  "arithmetic after a bound is not a literal range",
+		check: "((amount_minor >= 0 - 99999999999999999) AND (amount_minor <= '9007199254740991'::bigint))",
+		bound: false,
 	}, {
 		name:  "upper only, leaving every negative value unbounded",
 		check: "(amount_minor <= '9007199254740991'::bigint)",

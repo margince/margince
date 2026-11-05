@@ -55,6 +55,7 @@ type StageProgressionFacts struct {
 // ProgressionCriterion is one criterion as the card shows it: the fact the
 // policy judged, plus the rows a reader can click through to.
 type ProgressionCriterion struct {
+	Version int64
 	CriterionFact
 	CriterionID ids.ExitCriterionID
 	Label       string
@@ -231,7 +232,7 @@ func (s *Store) readProgressionCriteria(
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, storekit.SQLf(`
-		SELECT c.id, c.key, c.label, c.required, c.kind,
+		SELECT c.id, c.key, c.label, c.required, c.kind, c.version,
 		       coalesce(e.met, false), coalesce(e.author_side, ''),
 		       coalesce(e.commitment, ''), e.confidence,
 		       coalesce(e.contradicted, false), coalesce(e.ids, '{}'),
@@ -286,7 +287,7 @@ func (s *Store) readProgressionCriteria(
 		var sourceTypes, snippets []string
 		var sourceIDs []ids.UUID
 		var sourcesMissing []bool
-		if err := rows.Scan(&c.CriterionID, &c.Key, &c.Label, &c.Required, &kind,
+		if err := rows.Scan(&c.CriterionID, &c.Key, &c.Label, &c.Required, &kind, &c.Version,
 			&c.Met, &authorSide, &commitment, &c.Confidence,
 			&c.Contradicted, &c.EvidenceIDs,
 			&sourceTypes, &sourceIDs, &snippets, &sourcesMissing); err != nil {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -104,4 +105,40 @@ func introRowsNaming(t *testing.T, e *Env, words string) int {
 		SELECT count(*) FROM intro_request
 		 WHERE forwardable_note || ' ' || internal_reason || ' ' || value_for_target
 		       || ' ' || coalesce(decision_reason, '') ILIKE '%' || $1 || '%'`, words)
+}
+
+// A recorded introduction has no prose to scrub and stays a clean introduced
+// fact. Writing the ask tombstone into it would break the table's rule that a
+// recorded row has no reason.
+func TestErasingASubjectLeavesARecordedIntroductionIntroduced(t *testing.T) {
+	e := Setup(t)
+	ctx := e.As(e.AdminUser, nil, introErasureAdmin)
+	subject := e.SeedContact(t, "Rita Reviewer", &e.Rep1)
+
+	intros := introductions.NewStore(e.DB(), func() time.Time { return clocktest.Now(t) })
+	recordedID, err := intros.Record(e.As(e.Rep2, nil, introErasureAdmin), introductions.NewRecorded{
+		ContactID:      subject,
+		IntroducerUser: e.Rep2,
+		IntroducedUser: e.Rep1,
+		On:             clocktest.Now(t).AddDate(0, 0, -2),
+		Channel:        "email",
+	})
+	if err != nil {
+		t.Fatalf("seeding the recorded introduction: %v", err)
+	}
+
+	if err := privacy.NewEraser(e.DB()).EraseContact(ctx, subject, "subject request"); err != nil {
+		t.Fatalf("EraseContact → %v", err)
+	}
+
+	var status string
+	var reason *string
+	if err := e.DB().Pool().QueryRow(t.Context(),
+		`SELECT status, internal_reason FROM intro_request WHERE id = $1`,
+		recordedID).Scan(&status, &reason); err != nil {
+		t.Fatalf("reading back the recorded introduction: %v", err)
+	}
+	if status != "introduced" || reason != nil {
+		t.Errorf("the scrub left status %q and reason %v; want introduced and NULL", status, reason)
+	}
 }

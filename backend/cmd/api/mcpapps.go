@@ -29,7 +29,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // mcpAppsOrigin answers the origin to read view documents from, or nil when this
@@ -91,9 +90,9 @@ func mcpAppsOrigin(cfg apiConfig, connectorEnabled bool) (*url.URL, error) {
 // A view that did not answer is NOT an error here: the api starts, serves what
 // it has, and says in the log which views it is without. Only a condition an
 // operator must fix — an origin configured but unusable — comes back as one.
-func mcpAppViewsLane(ctx context.Context, cfg apiConfig, deployCfg deployconfig.Config, logger *slog.Logger) ([]compose.Option, func(), error) {
+func mcpAppViewsLane(ctx context.Context, cfg apiConfig, logger *slog.Logger) ([]compose.Option, func(), error) {
 	noop := func() {}
-	origin, err := mcpAppsOrigin(cfg, deployCfg.MCP.ConnectorEnabled)
+	origin, err := mcpAppsOrigin(cfg, cfg.mcpConnector)
 	if err != nil {
 		return nil, noop, err
 	}

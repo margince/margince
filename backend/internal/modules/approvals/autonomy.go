@@ -129,10 +129,15 @@ func decisionOutcomeOf(approve bool, edited json.RawMessage) decisionOutcome {
 // across them would leave the kind half-governed with nothing saying so.
 const closeDateCorrectionKind = "close_date_correction"
 
+// kindDealCloseLost is Margince closing a deal the customer stopped answering.
+// It is never staged; the owner's mode for it is the whole of the switch.
+const kindDealCloseLost = "deal_close_lost"
+
 var AutoApplyKinds = map[string]bool{
 	closeDateCorrectionKind:  true,
-	"company_name_promotion": true,
-	"lifecycle_change":       true,
+	kindDealCloseLost:        true,
+	kindCompanyNamePromotion: true,
+	kindLifecycleChange:      true,
 }
 
 // AdminGovernedAutoKinds are the kinds that may apply without asking on an
@@ -232,12 +237,26 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 		return ModeManual, fmt.Errorf("a policy belongs to a contact, and this call names none: %w",
 			apperrors.ErrPermissionDenied)
 	}
-	var mode string
+	var mode AutonomyMode
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT mode FROM approval_autonomy_policy WHERE user_id = $1 AND kind = $2`,
-			rep.UserID, kind).Scan(&mode)
+		var err error
+		mode, err = AutoApplyModeTx(ctx, tx, rep.UserID, kind)
+		return err
 	})
+	return mode, err
+}
+
+// AutoApplyModeTx is one rep's mode for a kind, read in the caller's
+// transaction. A pass that acts for the rep asks it under the lock it writes
+// under, so a switch turned off in between holds.
+func AutoApplyModeTx(ctx context.Context, tx pgx.Tx, rep ids.UUID, kind string) (AutonomyMode, error) {
+	if !AutoApplyKinds[kind] {
+		return ModeManual, nil
+	}
+	var mode string
+	err := tx.QueryRow(ctx,
+		`SELECT mode FROM approval_autonomy_policy WHERE user_id = $1 AND kind = $2`,
+		rep, kind).Scan(&mode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return unsetAutonomy(kind), nil
 	}
@@ -393,13 +412,18 @@ func (s *Service) SetAutoApply(ctx context.Context, kind string, on bool) ([]Kin
 	// veto_window stays NULL: the table's CHECK allows one only on 'veto', and
 	// neither rung this writes waits.
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx,
-			`INSERT INTO approval_autonomy_policy (user_id, kind, mode)
-			 VALUES ($1, $2, $3)
-			 ON CONFLICT (user_id, kind) DO UPDATE SET mode = EXCLUDED.mode`,
-			rep.UserID, kind, string(mode))
+		if err := lockPersonalPolicy(ctx, tx, rep.UserID, kind); err != nil {
+			return err
+		}
+		muted, err := preferenceMuted(ctx, tx, rep.UserID, kind)
 		if err != nil {
-			return fmt.Errorf("crmapprovals: setting the autonomy mode: %w", err)
+			return err
+		}
+		if on && muted {
+			return fmt.Errorf("restore this kind in your queue before enabling automatic changes: %w", apperrors.ErrConflict)
+		}
+		if err := writeAutonomyMode(ctx, tx, rep.UserID, kind, mode); err != nil {
+			return err
 		}
 		settings, err = autonomySettingsInTx(ctx, tx, rep.UserID)
 		return err

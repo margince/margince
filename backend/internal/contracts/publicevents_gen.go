@@ -66,14 +66,44 @@ func (e PublicEventActivityChangedFieldsCalendarMethod) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsCallOutcome.
+const (
+	CallEndedCallBackLater PublicEventActivityChangedFieldsCallOutcome = "call_back_later"
+	CallEndedNotReached    PublicEventActivityChangedFieldsCallOutcome = "not_reached"
+	CallEndedPutThrough    PublicEventActivityChangedFieldsCallOutcome = "put_through"
+	CallEndedReached       PublicEventActivityChangedFieldsCallOutcome = "reached"
+	CallEndedVoicemail     PublicEventActivityChangedFieldsCallOutcome = "voicemail"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsCallOutcome enum.
+func (e PublicEventActivityChangedFieldsCallOutcome) Valid() bool {
+	switch e {
+	case CallEndedCallBackLater:
+		return true
+	case CallEndedNotReached:
+		return true
+	case CallEndedPutThrough:
+		return true
+	case CallEndedReached:
+		return true
+	case CallEndedVoicemail:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityChangedFieldsDirection.
 const (
+	DirectionBecameInbound  PublicEventActivityChangedFieldsDirection = "inbound"
 	DirectionBecameOutbound PublicEventActivityChangedFieldsDirection = "outbound"
 )
 
 // Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsDirection enum.
 func (e PublicEventActivityChangedFieldsDirection) Valid() bool {
 	switch e {
+	case DirectionBecameInbound:
+		return true
 	case DirectionBecameOutbound:
 		return true
 	default:
@@ -105,6 +135,24 @@ func (e PublicEventActivityChangedFieldsMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsOccurredPrecision.
+const (
+	ActivityTimeIsADay      PublicEventActivityChangedFieldsOccurredPrecision = "day"
+	ActivityTimeIsAnInstant PublicEventActivityChangedFieldsOccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsOccurredPrecision enum.
+func (e PublicEventActivityChangedFieldsOccurredPrecision) Valid() bool {
+	switch e {
+	case ActivityTimeIsADay:
+		return true
+	case ActivityTimeIsAnInstant:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityDispositionRecordedDisposition.
 const (
 	NotMine    PublicEventActivityDispositionRecordedDisposition = "not_mine"
@@ -126,6 +174,24 @@ func (e PublicEventActivityDispositionRecordedDisposition) Valid() bool {
 	case SalesAgain:
 		return true
 	case Snoozed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventActivityReadinessRecordedState.
+const (
+	Ready     PublicEventActivityReadinessRecordedState = "ready"
+	Withdrawn PublicEventActivityReadinessRecordedState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityReadinessRecordedState enum.
+func (e PublicEventActivityReadinessRecordedState) Valid() bool {
+	switch e {
+	case Ready:
+		return true
+	case Withdrawn:
 		return true
 	default:
 		return false
@@ -165,6 +231,24 @@ func (e PublicEventCommsDeliveryBouncedKind) Valid() bool {
 	case Hard:
 		return true
 	case Soft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventEngagementReplyOccurredPrecision.
+const (
+	ReplyTimeIsADay      PublicEventEngagementReplyOccurredPrecision = "day"
+	ReplyTimeIsAnInstant PublicEventEngagementReplyOccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventEngagementReplyOccurredPrecision enum.
+func (e PublicEventEngagementReplyOccurredPrecision) Valid() bool {
+	switch e {
+	case ReplyTimeIsADay:
+		return true
+	case ReplyTimeIsAnInstant:
 		return true
 	default:
 		return false
@@ -450,6 +534,27 @@ func (e PublicEventRetentionRestrictedAction) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventSalesInitiativeUpdatedStatus.
+const (
+	Draft PublicEventSalesInitiativeUpdatedStatus = "draft"
+	Ended PublicEventSalesInitiativeUpdatedStatus = "ended"
+	Live  PublicEventSalesInitiativeUpdatedStatus = "live"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventSalesInitiativeUpdatedStatus enum.
+func (e PublicEventSalesInitiativeUpdatedStatus) Valid() bool {
+	switch e {
+	case Draft:
+		return true
+	case Ended:
+		return true
+	case Live:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventTeamChangedChange.
 const (
 	PublicEventTeamChangedChangeArchived      PublicEventTeamChangedChange = "archived"
@@ -486,9 +591,11 @@ const (
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
 	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
 	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
+	ActivityReadinessRecorded             SubscribableEventType = "activity.readiness_recorded"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
 	ApprovalFailureAcknowledged           SubscribableEventType = "approval.failure_acknowledged"
+	ApprovalPreferenceChanged             SubscribableEventType = "approval.preference_changed"
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
 	AttachmentArchived                    SubscribableEventType = "attachment.archived"
 	AttachmentCreated                     SubscribableEventType = "attachment.created"
@@ -502,6 +609,7 @@ const (
 	CommsDeliveryBounced                  SubscribableEventType = "comms.delivery_bounced"
 	CompanyArchived                       SubscribableEventType = "company.archived"
 	CompanyCreated                        SubscribableEventType = "company.created"
+	CompanyErased                         SubscribableEventType = "company.erased"
 	CompanyMerged                         SubscribableEventType = "company.merged"
 	CompanyRestored                       SubscribableEventType = "company.restored"
 	CompanyUpdated                        SubscribableEventType = "company.updated"
@@ -523,6 +631,8 @@ const (
 	ConversationClaimChanged              SubscribableEventType = "conversation_claim.changed"
 	DealArchived                          SubscribableEventType = "deal.archived"
 	DealCreated                           SubscribableEventType = "deal.created"
+	DealErased                            SubscribableEventType = "deal.erased"
+	DealMerged                            SubscribableEventType = "deal.merged"
 	DealOwnerChanged                      SubscribableEventType = "deal.owner_changed"
 	DealRestored                          SubscribableEventType = "deal.restored"
 	DealRoomArchived                      SubscribableEventType = "deal_room.archived"
@@ -551,6 +661,7 @@ const (
 	IntroRequestCompleted                 SubscribableEventType = "intro_request.completed"
 	IntroRequestCreated                   SubscribableEventType = "intro_request.created"
 	IntroRequestDecided                   SubscribableEventType = "intro_request.decided"
+	IntroRequestRecorded                  SubscribableEventType = "intro_request.recorded"
 	IntroRequestReplied                   SubscribableEventType = "intro_request.replied"
 	LeadCreated                           SubscribableEventType = "lead.created"
 	LeadDemoted                           SubscribableEventType = "lead.demoted"
@@ -586,14 +697,17 @@ const (
 	PipelineUpdated                       SubscribableEventType = "pipeline.updated"
 	ProjectArchived                       SubscribableEventType = "project.archived"
 	ProjectCreated                        SubscribableEventType = "project.created"
+	ProjectHealthAssessed                 SubscribableEventType = "project.health_assessed"
 	ProjectPhaseChanged                   SubscribableEventType = "project.phase_changed"
 	ProjectUpdated                        SubscribableEventType = "project.updated"
 	RelationshipNudgeDecided              SubscribableEventType = "relationship_nudge.decided"
 	RetentionApplied                      SubscribableEventType = "retention.applied"
 	RetentionRestricted                   SubscribableEventType = "retention.restricted"
 	RoleChanged                           SubscribableEventType = "role.changed"
+	SalesInitiativeUpdated                SubscribableEventType = "sales_initiative.updated"
 	SignalDetected                        SubscribableEventType = "signal.detected"
 	SignalResolved                        SubscribableEventType = "signal.resolved"
+	SignalUpdated                         SubscribableEventType = "signal.updated"
 	StageArchived                         SubscribableEventType = "stage.archived"
 	StageCreated                          SubscribableEventType = "stage.created"
 	StageUpdated                          SubscribableEventType = "stage.updated"
@@ -605,8 +719,11 @@ const (
 	UserGreetingNameChanged               SubscribableEventType = "user_greeting_name.changed"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
+	UserMfaRemoved                        SubscribableEventType = "user.mfa_removed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
 	UserReactivated                       SubscribableEventType = "user.reactivated"
+	UserTimezoneChanged                   SubscribableEventType = "user_timezone.changed"
+	UserUpdated                           SubscribableEventType = "user.updated"
 	VoiceBuildChanged                     SubscribableEventType = "voice.build_changed"
 	VoiceCorpusChanged                    SubscribableEventType = "voice.corpus_changed"
 	VoiceDraftOutcomeRecorded             SubscribableEventType = "voice.draft_outcome_recorded"
@@ -629,11 +746,15 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case ActivityMarkedHandled:
 		return true
+	case ActivityReadinessRecorded:
+		return true
 	case ActivityUpdated:
 		return true
 	case ApprovalDecided:
 		return true
 	case ApprovalFailureAcknowledged:
+		return true
+	case ApprovalPreferenceChanged:
 		return true
 	case ApprovalRequested:
 		return true
@@ -660,6 +781,8 @@ func (e SubscribableEventType) Valid() bool {
 	case CompanyArchived:
 		return true
 	case CompanyCreated:
+		return true
+	case CompanyErased:
 		return true
 	case CompanyMerged:
 		return true
@@ -702,6 +825,10 @@ func (e SubscribableEventType) Valid() bool {
 	case DealArchived:
 		return true
 	case DealCreated:
+		return true
+	case DealErased:
+		return true
+	case DealMerged:
 		return true
 	case DealOwnerChanged:
 		return true
@@ -758,6 +885,8 @@ func (e SubscribableEventType) Valid() bool {
 	case IntroRequestCreated:
 		return true
 	case IntroRequestDecided:
+		return true
+	case IntroRequestRecorded:
 		return true
 	case IntroRequestReplied:
 		return true
@@ -829,6 +958,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case ProjectCreated:
 		return true
+	case ProjectHealthAssessed:
+		return true
 	case ProjectPhaseChanged:
 		return true
 	case ProjectUpdated:
@@ -841,9 +972,13 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case RoleChanged:
 		return true
+	case SalesInitiativeUpdated:
+		return true
 	case SignalDetected:
 		return true
 	case SignalResolved:
+		return true
+	case SignalUpdated:
 		return true
 	case StageArchived:
 		return true
@@ -867,9 +1002,15 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case UserLocaleChanged:
 		return true
+	case UserMfaRemoved:
+		return true
 	case UserPasswordLinkIssued:
 		return true
 	case UserReactivated:
+		return true
+	case UserTimezoneChanged:
+		return true
+	case UserUpdated:
 		return true
 	case VoiceBuildChanged:
 		return true
@@ -941,11 +1082,17 @@ type PublicEventActivityCaptured struct {
 
 // PublicEventActivityChangedFields The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map.
 type PublicEventActivityChangedFields struct {
+	// AgendaChanged The calendar invite's own description changed. An attendee who said they were ready is asked to confirm again. The description is not carried.
+	AgendaChanged *bool `json:"agenda_changed,omitempty"`
+
 	// AssigneeId The activity's new assignee (absent when this update did not touch it).
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
 	// Audience The activity's new audience (absent when this update did not touch it). Who is named is not carried. A subscriber that must know re-reads the row under its own audience, the same way a human does.
 	Audience *PublicEventActivityChangedFieldsAudience `json:"audience,omitempty"`
+
+	// AutomaticTaskRepaired A reviewed correction changed the task's source link or cleared a generated deadline; fetch the task through its normal access gate.
+	AutomaticTaskRepaired *bool `json:"automatic_task_repaired,omitempty"`
 
 	// Body Whether the body was touched (a presence flag, not the content — bodies can be large and are never echoed onto the wire).
 	Body *bool `json:"body,omitempty"`
@@ -953,11 +1100,23 @@ type PublicEventActivityChangedFields struct {
 	// CalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
 	CalendarMethod *PublicEventActivityChangedFieldsCalendarMethod `json:"calendar_method,omitempty"`
 
-	// Direction Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
+	// CallOutcome How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
+	CallOutcome *PublicEventActivityChangedFieldsCallOutcome `json:"call_outcome,omitempty"`
+
+	// CallOutcomeCleared True when this update removed the call's outcome, so the call has none again and counts as contact as before.
+	CallOutcomeCleared *bool `json:"call_outcome_cleared,omitempty"`
+
+	// CommitmentAdmissionsChanged The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
+	CommitmentAdmissionsChanged *bool `json:"commitment_admissions_changed,omitempty"`
+
+	// Direction `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
 	Direction *PublicEventActivityChangedFieldsDirection `json:"direction,omitempty"`
 
 	// DueAt The activity's new due_at (absent when this update did not touch it).
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime Whether the new due_at names a time of day (true) or only a day (false). Carried whenever this update names due_at.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// IsDone The activity's new completion state (absent when this update did not touch it).
 	IsDone *bool `json:"is_done,omitempty"`
@@ -968,6 +1127,9 @@ type PublicEventActivityChangedFields struct {
 	// OccurredAt The activity's new occurred_at (absent when this update did not touch it).
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
+	// OccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried whenever this update names occurred_at, and when it changed the precision alone.
+	OccurredPrecision *PublicEventActivityChangedFieldsOccurredPrecision `json:"occurred_precision,omitempty"`
+
 	// OutboundAttested True when the sender's own provider filing attested the message as their outbound mail, whether it was stored as received or as unattested outbound (absent otherwise).
 	OutboundAttested *bool `json:"outbound_attested,omitempty"`
 
@@ -977,14 +1139,23 @@ type PublicEventActivityChangedFields struct {
 	// Relinked The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.
 	Relinked *PublicEventActivityRelinkedRef `json:"relinked,omitempty"`
 
-	// RemindAt The activity's new remind_at (absent when this update did not touch it).
+	// RemindAt The activity's new remind_at (absent when this update did not set it).
 	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RemindAtCleared True when this update cleared the reminder: named as null by the caller, or ended because the due date moved. A reminder a consumer mirrors stops firing then.
+	RemindAtCleared *bool `json:"remind_at_cleared,omitempty"`
+
+	// RequestSettlementChanged The request's settlement verdict, or the ask to judge it again, changed; fetch the request through its normal access gate.
+	RequestSettlementChanged *bool `json:"request_settlement_changed,omitempty"`
 
 	// Restored True when explicit request acceptance restores an archived unfinished reminder.
 	Restored *bool `json:"restored,omitempty"`
 
 	// Subject The activity's new subject (absent when this update did not touch it).
 	Subject *string `json:"subject,omitempty"`
+
+	// ThreadKey The activity's new conversation key, when its thread grouping changed.
+	ThreadKey *string `json:"thread_key,omitempty"`
 }
 
 // PublicEventActivityChangedFieldsAudience The activity's new audience (absent when this update did not touch it). Who is named is not carried. A subscriber that must know re-reads the row under its own audience, the same way a human does.
@@ -993,11 +1164,17 @@ type PublicEventActivityChangedFieldsAudience string
 // PublicEventActivityChangedFieldsCalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
 type PublicEventActivityChangedFieldsCalendarMethod string
 
-// PublicEventActivityChangedFieldsDirection Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
+// PublicEventActivityChangedFieldsCallOutcome How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
+type PublicEventActivityChangedFieldsCallOutcome string
+
+// PublicEventActivityChangedFieldsDirection `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
 type PublicEventActivityChangedFieldsDirection string
 
 // PublicEventActivityChangedFieldsMeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
 type PublicEventActivityChangedFieldsMeetingStatus string
+
+// PublicEventActivityChangedFieldsOccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried whenever this update names occurred_at, and when it changed the precision alone.
+type PublicEventActivityChangedFieldsOccurredPrecision string
 
 // PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded. Somebody decided what to do about a waiting message, and the Worklist stopped showing it (activities/disposition.go). Who it stopped showing it to is not on the wire. `not_sales` settles what the message is and holds for everybody. `snoozed` and `not_mine` belong to the one reader who set them. A reader marking a message done is announced as activity.marked_handled, since this enum is closed at v1. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventActivityDispositionRecorded struct {
@@ -1014,6 +1191,20 @@ type PublicEventActivityDispositionRecordedDisposition string
 type PublicEventActivityMarkedHandled struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 }
+
+// PublicEventActivityReadinessRecorded Payload for activity.readiness_recorded. One attendee said they are ready for a meeting, or took that back (activities/meetingreadiness.go). It holds for that attendee alone, at the preparation revision they confirmed, and the attendee is not on the wire. A moved start, a new agenda or a changed guest list makes the revision stale without a new event.
+type PublicEventActivityReadinessRecorded struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// PreparationRevision The preparation revision the confirmation was given at.
+	PreparationRevision string `json:"preparation_revision"`
+
+	// State `ready` when the attendee confirmed, `withdrawn` when they undid it.
+	State PublicEventActivityReadinessRecordedState `json:"state"`
+}
+
+// PublicEventActivityReadinessRecordedState `ready` when the attendee confirmed, `withdrawn` when they undid it.
+type PublicEventActivityReadinessRecordedState string
 
 // PublicEventActivityRelinkedRef The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.
 type PublicEventActivityRelinkedRef struct {
@@ -1075,6 +1266,11 @@ type PublicEventApprovalFailureAcknowledged struct {
 	FailedAt time.Time `json:"failed_at"`
 
 	// Kind The approval's kind.
+	Kind string `json:"kind"`
+}
+
+// PublicEventApprovalPreferenceChanged A reader changed a personal approval preference. The private choice is not included.
+type PublicEventApprovalPreferenceChanged struct {
 	Kind string `json:"kind"`
 }
 
@@ -1253,6 +1449,9 @@ type PublicEventCompanyCreated struct {
 	SourceUrl *string `json:"source_url,omitempty"`
 }
 
+// PublicEventCompanyErased Payload for company.erased: a company was erased for good, not archived. The event's entity is the erased company. Carries no data, so no name or other personal field travels with it.
+type PublicEventCompanyErased struct{}
+
 // PublicEventCompanyMerged Payload for company.merged — two company records collapsed into one (the §1.3 merge); neither company.updated nor company.archived can say this, so it is its own verb.
 type PublicEventCompanyMerged struct {
 	// MergedFromId The merged-away (source) company, retired but still fetchable by id.
@@ -1427,11 +1626,11 @@ type PublicEventConversationClaimCaptured struct {
 	Kind string `json:"kind"`
 }
 
-// PublicEventConversationClaimChanged Payload for conversation_claim.changed — a human typed over the machine, or dismissed a claim outright. Published because a correction is SHARED truth, unlike a moment dismissal: a downstream reader holding the old claim needs to know it no longer stands.
+// PublicEventConversationClaimChanged Payload for conversation_claim.changed. A claim was corrected, renewed, taken over, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
 type PublicEventConversationClaimChanged struct {
 	ClaimId openapi_types.UUID `json:"claim_id"`
 
-	// Status The claim's status after the correction — open, done or dismissed. A plain string for the same reason as `kind` above.
+	// Status The claim's status after the change: open, done, dismissed or erased. A plain string for the same reason as `kind` above.
 	Status string `json:"status"`
 }
 
@@ -1454,6 +1653,18 @@ type PublicEventDealCreated struct {
 
 	// Name The deal's name at creation.
 	Name string `json:"name"`
+}
+
+// PublicEventDealErased Payload for deal.erased: a deal was erased for good, not archived. The event's entity is the erased deal. Carries no data, so no name or other personal field travels with it.
+type PublicEventDealErased struct{}
+
+// PublicEventDealMerged Payload for deal.merged: two deals collapsed into one. Neither deal.updated nor deal.archived can say this, so it is its own verb. The event's entity is the merged-away deal. References only.
+type PublicEventDealMerged struct {
+	// MergedFromId The merged-away (source) deal, retired but still fetchable by id.
+	MergedFromId openapi_types.UUID `json:"merged_from_id"`
+
+	// MergedIntoId The surviving (target) deal.
+	MergedIntoId openapi_types.UUID `json:"merged_into_id"`
 }
 
 // PublicEventDealOwnerChanged Payload for deal.owner_changed — the deal's owner was reassigned. Emitted instead of (never alongside) deal.updated for the owner_id field (events.md §5.3).
@@ -1643,6 +1854,9 @@ type PublicEventDealStageChanged struct {
 	// Imported True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise.
 	Imported *bool `json:"imported,omitempty"`
 
+	// LostReasonCode The key from `/loss-reasons` the closer chose, on a move to a lost stage. Absent when the loss names only a free note.
+	LostReasonCode *string `json:"lost_reason_code,omitempty"`
+
 	// PartnerAttribution What that partner did — sourced or influenced — at the moment of the move. Commission accrues on sourced only.
 	PartnerAttribution *string `json:"partner_attribution,omitempty"`
 
@@ -1676,7 +1890,7 @@ type PublicEventDealUpdated struct {
 
 // PublicEventEmailSignatureChanged Payload for email_signature.changed. A member wrote, edited or cleared the sign-off appended to every message they send (contacts/emailsignature.go's SaveMyEmailSignature). How a contact is represented on outbound mail is a fact worth answering later. So the change is audited and published rather than written silently. The payload leaves out the signature text. That text is the member's own words about themselves, often with a direct line or an address. A subscriber needs to know the sign-off moved, not what it says.
 type PublicEventEmailSignatureChanged struct {
-	// HasSignature Whether mail from this member now carries a sign-off. False after a member empties the field, which is a chosen "send unsigned".
+	// HasSignature Whether the member has saved personal plain text or HTML. This reports stored presence; sanitized HTML without visible text uses the usual fallback. A workspace template or closing may still sign mail when this is false.
 	HasSignature bool `json:"has_signature"`
 }
 
@@ -1696,7 +1910,13 @@ type PublicEventEngagementReply struct {
 
 	// OccurredAt When the reply activity occurred.
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// OccurredPrecision How to read occurred_at: `day` when only the reply's date is known, its UTC date.
+	OccurredPrecision *PublicEventEngagementReplyOccurredPrecision `json:"occurred_precision,omitempty"`
 }
+
+// PublicEventEngagementReplyOccurredPrecision How to read occurred_at: `day` when only the reply's date is known, its UTC date.
+type PublicEventEngagementReplyOccurredPrecision string
 
 // PublicEventEntityRef The primary entity the event concerns.
 type PublicEventEntityRef struct {
@@ -1742,6 +1962,9 @@ type PublicEventEnvelope struct {
 
 // PublicEventForecastAssuranceCreated Payload for forecast.assurance_created. A nightly input check finished, and the forecast's inputs have been examined. The Morning Brief waits on this event. A brief assembled before the night's check cannot say whether its numbers were verified. The verdict is `readiness`. A value of `checks_incomplete` is a different fact from `needs_review`, and not a worse one. One says the pipeline has problems; the other says the check could not look. A consumer that treats them alike will call a pipeline sound when nobody read the mailbox. The counts ride along because they say how much of the pipeline the run covered. The findings do not. They are a read away, and a list that arrived on a bus may already be resolved.
 type PublicEventForecastAssuranceCreated struct {
+	// DealId Set on a pass over this one deal, queued because the deal changed. Its counts describe that deal alone and never the pipeline. Absent on a pass over every deal.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
 	// EligibleDeals How many deals the run considered. A consumer comparing this against the previous run's count sees a pass that covered less of the pipeline.
 	EligibleDeals   int                                           `json:"eligible_deals"`
 	EligibleSignals *int                                          `json:"eligible_signals,omitempty"`
@@ -1860,6 +2083,14 @@ type PublicEventIntroRequestDecided struct {
 // PublicEventIntroRequestDecidedDecision defines model for PublicEventIntroRequestDecided.Decision.
 type PublicEventIntroRequestDecidedDecision string
 
+// PublicEventIntroRequestRecorded Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed. That event means an ask was marked done, and its consumers must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
+type PublicEventIntroRequestRecorded struct {
+	ContactId        openapi_types.UUID `json:"contact_id"`
+	IntroRequestId   openapi_types.UUID `json:"intro_request_id"`
+	IntroducedUserId openapi_types.UUID `json:"introduced_user_id"`
+	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
+}
+
 // PublicEventIntroRequestReplied Payload for intro_request.replied — the contact answered, observed from captured activity rather than asserted by a contact. `source_activity_id` is the evidence, so a reader can open the message the claim rests on.
 type PublicEventIntroRequestReplied struct {
 	ContactId        openapi_types.UUID  `json:"contact_id"`
@@ -1929,14 +2160,14 @@ type PublicEventLeadSlaBreached struct {
 	// Deadline The first-response deadline that passed.
 	Deadline time.Time `json:"deadline"`
 
-	// EscalationTarget The user the escalation task is assigned to (absent when nobody owns the lead).
+	// EscalationTarget The seat the scan chose for the escalation: the lead's owner while that owner can be handed work, else the intake seat. Delivery asks again, so the task and notice can go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it can differ from `owner_id`.
 	EscalationTarget *openapi_types.UUID `json:"escalation_target,omitempty"`
 
 	// OwnerId The lead's owner at breach time (absent when unrouted).
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 }
 
-// PublicEventLeadSourceChanged Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
+// PublicEventLeadSourceChanged Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
 type PublicEventLeadSourceChanged struct {
 	Change PublicEventLeadSourceChangedChange `json:"change"`
 
@@ -1965,8 +2196,14 @@ type PublicEventLinkedinAccountChanged struct {
 
 // PublicEventLinkedinMatchDecided Payload for linkedin_match.decided. A connection was linked to a contact on file, by an exact-name match or by a member approving the proposal. It carries no verdict. A refusal is an approval row that stays rejected and never becomes a link, so there is no "no" to publish. The payload does not name the connection, a third party who never consented to being in this CRM. The imported rows are kept invisible, and their names travelling through the outbox would defeat that. The verdict and whether a profile URL reached the contact are the auditable facts. The records themselves are reachable through the audit row this event is linked to.
 type PublicEventLinkedinMatchDecided struct {
+	// EmployerWritten Whether the decision made the company the import placed the connection at the contact's current employer. True only when the member ticked "Use as employer". False on every automatic confirmation.
+	EmployerWritten *bool `json:"employer_written,omitempty"`
+
 	// ProfileUrlWritten Whether the decision put a LinkedIn handle on the contact. False on every rejection, and false on a confirmation whose contact already carried one — a value on a record is somebody's statement and is never overwritten.
 	ProfileUrlWritten bool `json:"profile_url_written"`
+
+	// TitleWritten Whether the decision put the export's position on the contact as its title. True only when the member ticked "Use as title" and the title changed. False on every automatic confirmation.
+	TitleWritten *bool `json:"title_written,omitempty"`
 }
 
 // PublicEventLinkedinNetworkImported Payload for linkedin_network.imported. A member uploaded their own LinkedIn connections export. The import act emits a single event, never one per row. An export is thousands of rows, and a per-row event would bury every other event in the stream. The auditable fact is that a member imported their network at all. No connection is named in the payload. The imported rows are third parties who never consented to being in this CRM. Publishing their names would defeat the point of keeping them invisible everywhere else.
@@ -2224,6 +2461,18 @@ type PublicEventProjectCreated struct {
 	Phase string `json:"phase"`
 }
 
+// PublicEventProjectHealthAssessed Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user, their agent or the health job. The project row itself is not written, so no project.updated goes with it.
+type PublicEventProjectHealthAssessed struct {
+	// AssessmentId The appended reading.
+	AssessmentId openapi_types.UUID `json:"assessment_id"`
+
+	// Source human for a user, agent for their agent, ai for the health job, undo for a user undoing an AI reading.
+	Source string `json:"source"`
+
+	// State on_track, at_risk or off_track. On an undo row it is the reading the undo restored, or on_track when the project reads as not judged again.
+	State string `json:"state"`
+}
+
 // PublicEventProjectPhaseChanged Payload for project.phase_changed — a project moved along the phase ladder. Emitted INSTEAD of project.updated, and written from the same transaction as its phase-history row, so "where does this stand" and "how did it get there" can never disagree.
 type PublicEventProjectPhaseChanged struct {
 	// FromPhase Phase the project left (absent on the creation row).
@@ -2248,8 +2497,11 @@ type PublicEventRelationshipNudgeDecided struct {
 	Action    PublicEventRelationshipNudgeDecidedAction `json:"action"`
 	ContactId openapi_types.UUID                        `json:"contact_id"`
 
-	// DismissedUntil When the contact comes back to the lane. Present on `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. It is never absent on a dismissal: a dismissal with no end is the shape this feature refuses to have.
+	// DismissedUntil When the contact comes back to the lane. Present on a dated `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. Absent on a permanent stop, which `permanent` says.
 	DismissedUntil *time.Time `json:"dismissed_until,omitempty"`
+
+	// Permanent True when the reader stopped following the contact with no end date. Only on `dismissed`; the reader resumes it with `restored`.
+	Permanent *bool `json:"permanent,omitempty"`
 }
 
 // PublicEventRelationshipNudgeDecidedAction What was decided. The undo, `restored`, is carried rather than inferred from a row going quiet. A decision withdrawn is itself a decision. A consumer counting how often reps put relationships down has to see it happen.
@@ -2303,6 +2555,17 @@ type PublicEventRoleChanged struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// PublicEventSalesInitiativeUpdated Payload for sales_initiative.updated. A sales initiative was defined, changed, launched or had its picked and excluded records changed. The entity is the initiative. `changed_fields` names what moved rather than carrying it; the definition and the members stay on the record.
+type PublicEventSalesInitiativeUpdated struct {
+	// ChangedFields Which parts moved, such as definition, status, members.
+	ChangedFields []string                                `json:"changed_fields"`
+	InitiativeId  openapi_types.UUID                      `json:"initiative_id"`
+	Status        PublicEventSalesInitiativeUpdatedStatus `json:"status"`
+}
+
+// PublicEventSalesInitiativeUpdatedStatus defines model for PublicEventSalesInitiativeUpdated.Status.
+type PublicEventSalesInitiativeUpdatedStatus string
+
 // PublicEventSignalDetected Payload for signal.detected. A signal was created (signals/signal.go's CreateSignal). The entity_type and entity_id data fields name the signal's subject (deal | company | contact) when it is known at creation time. They differ from the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver. The resolution_confidence field is set only when the signal was created already resolved.
 type PublicEventSignalDetected struct {
 	// SubjectEntityId The subject record's id — a payload data field, absent until a raw signal resolves.
@@ -2348,6 +2611,12 @@ type PublicEventSignalResolved struct {
 	ResolvedContactId *openapi_types.UUID `json:"resolved_contact_id,omitempty"`
 
 	// SignalId The signal the resolver ran over.
+	SignalId openapi_types.UUID `json:"signal_id"`
+}
+
+// PublicEventSignalUpdated defines model for PublicEventSignalUpdated.
+type PublicEventSignalUpdated struct {
+	OwnerId  openapi_types.UUID `json:"owner_id"`
 	SignalId openapi_types.UUID `json:"signal_id"`
 }
 
@@ -2461,6 +2730,18 @@ type PublicEventUserLocaleChanged struct {
 	Locale string `json:"locale"`
 }
 
+// PublicEventUserMfaRemoved Payload for user.mfa_removed. An admin removed a member's confirmed second factor. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
+type PublicEventUserMfaRemoved struct {
+	// By The admin who removed it.
+	By openapi_types.UUID `json:"by"`
+
+	// SessionsEnded How many live sessions of the member the removal ended.
+	SessionsEnded int `json:"sessions_ended"`
+
+	// UserId The member whose second factor was removed.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // PublicEventUserPasswordLinkIssued Payload for user.password_link_issued. On an installation with no outbound-email channel, an admin minted a single-use set-password link for a member (ADR-0061). The admin delivers it out-of-band. Issuing supersedes the target's outstanding unused tokens. The link may be minted for a member who already has a password. That is an account takeover an admin is trusted to perform. This event is the detective control that records it, so `by` and `user_id` are both required and are the point of the event. The token itself is never a property here, and must never be added. The raw value is returned to the issuing admin once, over the response body, and reaches no ledger, log or bus.
 type PublicEventUserPasswordLinkIssued struct {
 	// By The admin who issued the link.
@@ -2483,6 +2764,21 @@ type PublicEventUserReactivated struct {
 	Status UserReactivatedStatus `json:"status"`
 
 	// UserId The reactivated member.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// PublicEventUserTimezoneChanged Payload for user_timezone.changed. A member's own time zone was stored by identity/usertimezone.go's writeTimezoneTx. It is the app's guess from the browser on first sign-in, or the member's own pick. Booking reads the member's working hours on it, and mail sent to them is timed by it.
+type PublicEventUserTimezoneChanged struct {
+	// Chosen True when the member picked the zone themselves. A later browser guess never replaces a chosen zone.
+	Chosen bool `json:"chosen"`
+
+	// Timezone The IANA name now stored, such as Europe/Berlin.
+	Timezone string `json:"timezone"`
+}
+
+// PublicEventUserUpdated defines model for PublicEventUserUpdated.
+type PublicEventUserUpdated struct {
+	By     openapi_types.UUID `json:"by"`
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
@@ -2670,6 +2966,10 @@ func (PublicEventActivityMarkedHandled) EventType() string { return "activity.ma
 
 func (PublicEventActivityMarkedHandled) EntityType() string { return "activity" }
 
+func (PublicEventActivityReadinessRecorded) EventType() string { return "activity.readiness_recorded" }
+
+func (PublicEventActivityReadinessRecorded) EntityType() string { return "activity" }
+
 func (PublicEventActivityUpdated) EventType() string { return "activity.updated" }
 
 func (PublicEventActivityUpdated) EntityType() string { return "activity" }
@@ -2683,6 +2983,10 @@ func (PublicEventApprovalFailureAcknowledged) EventType() string {
 }
 
 func (PublicEventApprovalFailureAcknowledged) EntityType() string { return "approval" }
+
+func (PublicEventApprovalPreferenceChanged) EventType() string { return "approval.preference_changed" }
+
+func (PublicEventApprovalPreferenceChanged) EntityType() string { return "user" }
 
 func (PublicEventApprovalRequested) EventType() string { return "approval.requested" }
 
@@ -2735,6 +3039,10 @@ func (PublicEventCompanyArchived) EntityType() string { return "company" }
 func (PublicEventCompanyCreated) EventType() string { return "company.created" }
 
 func (PublicEventCompanyCreated) EntityType() string { return "company" }
+
+func (PublicEventCompanyErased) EventType() string { return "company.erased" }
+
+func (PublicEventCompanyErased) EntityType() string { return "company" }
 
 func (PublicEventCompanyMerged) EventType() string { return "company.merged" }
 
@@ -2819,6 +3127,14 @@ func (PublicEventDealArchived) EntityType() string { return "deal" }
 func (PublicEventDealCreated) EventType() string { return "deal.created" }
 
 func (PublicEventDealCreated) EntityType() string { return "deal" }
+
+func (PublicEventDealErased) EventType() string { return "deal.erased" }
+
+func (PublicEventDealErased) EntityType() string { return "deal" }
+
+func (PublicEventDealMerged) EventType() string { return "deal.merged" }
+
+func (PublicEventDealMerged) EntityType() string { return "deal" }
 
 func (PublicEventDealOwnerChanged) EventType() string { return "deal.owner_changed" }
 
@@ -2937,6 +3253,10 @@ func (PublicEventIntroRequestCreated) EntityType() string { return "contact" }
 func (PublicEventIntroRequestDecided) EventType() string { return "intro_request.decided" }
 
 func (PublicEventIntroRequestDecided) EntityType() string { return "contact" }
+
+func (PublicEventIntroRequestRecorded) EventType() string { return "intro_request.recorded" }
+
+func (PublicEventIntroRequestRecorded) EntityType() string { return "contact" }
 
 func (PublicEventIntroRequestReplied) EventType() string { return "intro_request.replied" }
 
@@ -3082,6 +3402,10 @@ func (PublicEventProjectCreated) EventType() string { return "project.created" }
 
 func (PublicEventProjectCreated) EntityType() string { return "project" }
 
+func (PublicEventProjectHealthAssessed) EventType() string { return "project.health_assessed" }
+
+func (PublicEventProjectHealthAssessed) EntityType() string { return "project" }
+
 func (PublicEventProjectPhaseChanged) EventType() string { return "project.phase_changed" }
 
 func (PublicEventProjectPhaseChanged) EntityType() string { return "project" }
@@ -3106,6 +3430,10 @@ func (PublicEventRoleChanged) EventType() string { return "role.changed" }
 
 func (PublicEventRoleChanged) EntityType() string { return "user" }
 
+func (PublicEventSalesInitiativeUpdated) EventType() string { return "sales_initiative.updated" }
+
+func (PublicEventSalesInitiativeUpdated) EntityType() string { return "sales_initiative" }
+
 func (PublicEventSignalDetected) EventType() string { return "signal.detected" }
 
 func (PublicEventSignalDetected) EntityType() string { return "signal" }
@@ -3113,6 +3441,10 @@ func (PublicEventSignalDetected) EntityType() string { return "signal" }
 func (PublicEventSignalResolved) EventType() string { return "signal.resolved" }
 
 func (PublicEventSignalResolved) EntityType() string { return "signal" }
+
+func (PublicEventSignalUpdated) EventType() string { return "signal.updated" }
+
+func (PublicEventSignalUpdated) EntityType() string { return "signal" }
 
 func (PublicEventStageArchived) EventType() string { return "stage.archived" }
 
@@ -3158,6 +3490,10 @@ func (PublicEventUserLocaleChanged) EventType() string { return "user_locale.cha
 
 func (PublicEventUserLocaleChanged) EntityType() string { return "user" }
 
+func (PublicEventUserMfaRemoved) EventType() string { return "user.mfa_removed" }
+
+func (PublicEventUserMfaRemoved) EntityType() string { return "user" }
+
 func (PublicEventUserPasswordLinkIssued) EventType() string { return "user.password_link_issued" }
 
 func (PublicEventUserPasswordLinkIssued) EntityType() string { return "user" }
@@ -3165,6 +3501,14 @@ func (PublicEventUserPasswordLinkIssued) EntityType() string { return "user" }
 func (PublicEventUserReactivated) EventType() string { return "user.reactivated" }
 
 func (PublicEventUserReactivated) EntityType() string { return "user" }
+
+func (PublicEventUserTimezoneChanged) EventType() string { return "user_timezone.changed" }
+
+func (PublicEventUserTimezoneChanged) EntityType() string { return "user" }
+
+func (PublicEventUserUpdated) EventType() string { return "user.updated" }
+
+func (PublicEventUserUpdated) EntityType() string { return "user" }
 
 func (PublicEventVoiceBuildChanged) EventType() string { return "voice.build_changed" }
 
@@ -3212,9 +3556,11 @@ var PublicEventVersions = map[string]int{
 	"activity.captured":                         1,
 	"activity.disposition_recorded":             1,
 	"activity.marked_handled":                   1,
+	"activity.readiness_recorded":               1,
 	"activity.updated":                          1,
 	"approval.decided":                          1,
 	"approval.failure_acknowledged":             1,
+	"approval.preference_changed":               1,
 	"approval.requested":                        1,
 	"attachment.archived":                       1,
 	"attachment.created":                        1,
@@ -3228,6 +3574,7 @@ var PublicEventVersions = map[string]int{
 	"comms.delivery_bounced":                    1,
 	"company.archived":                          1,
 	"company.created":                           1,
+	"company.erased":                            1,
 	"company.merged":                            1,
 	"company.restored":                          1,
 	"company.updated":                           1,
@@ -3249,6 +3596,8 @@ var PublicEventVersions = map[string]int{
 	"conversation_claim.changed":                1,
 	"deal.archived":                             1,
 	"deal.created":                              1,
+	"deal.erased":                               1,
+	"deal.merged":                               1,
 	"deal.owner_changed":                        1,
 	"deal.restored":                             1,
 	"deal.stage_changed":                        1,
@@ -3277,6 +3626,7 @@ var PublicEventVersions = map[string]int{
 	"intro_request.completed":                   1,
 	"intro_request.created":                     1,
 	"intro_request.decided":                     1,
+	"intro_request.recorded":                    1,
 	"intro_request.replied":                     1,
 	"lead.created":                              1,
 	"lead.demoted":                              1,
@@ -3312,14 +3662,17 @@ var PublicEventVersions = map[string]int{
 	"pipeline.updated":                          1,
 	"project.archived":                          1,
 	"project.created":                           1,
+	"project.health_assessed":                   1,
 	"project.phase_changed":                     1,
 	"project.updated":                           1,
 	"relationship_nudge.decided":                1,
 	"retention.applied":                         1,
 	"retention.restricted":                      1,
 	"role.changed":                              1,
+	"sales_initiative.updated":                  1,
 	"signal.detected":                           1,
 	"signal.resolved":                           1,
+	"signal.updated":                            1,
 	"stage.archived":                            1,
 	"stage.created":                             1,
 	"stage.updated":                             1,
@@ -3327,12 +3680,15 @@ var PublicEventVersions = map[string]int{
 	"user.activated":                            1,
 	"user.deactivated":                          1,
 	"user.invited":                              1,
+	"user.mfa_removed":                          1,
 	"user.password_link_issued":                 1,
 	"user.reactivated":                          1,
+	"user.updated":                              1,
 	"user_delivery.changed":                     1,
 	"user_display_name.changed":                 1,
 	"user_greeting_name.changed":                1,
 	"user_locale.changed":                       1,
+	"user_timezone.changed":                     1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,
 	"voice.draft_outcome_recorded":              1,
@@ -3351,9 +3707,11 @@ var PublicEventSamples = map[string]string{
 	"activity.captured":                         "{\"channel_provider\":\"Sample channel provider\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"kind\":\"Sample kind\",\"source_system\":\"Sample source system\"}",
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
-	"activity.updated":                          "{\"changed_fields\":{\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"body\":true,\"calendar_method\":\"PUBLISH\",\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"restored\":true,\"subject\":\"Sample subject\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
+	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",
+	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"call_outcome\":\"reached\",\"call_outcome_cleared\":true,\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
+	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",
 	"approval.requested":                        "{\"expires_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\",\"summary\":\"Sample summary\",\"target_entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target_entity_type\":\"Sample target entity type\"}",
 	"attachment.archived":                       "{\"byte_size\":1,\"content_type\":\"Sample content type\",\"parent_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"parent_type\":\"Sample parent type\"}",
 	"attachment.created":                        "{\"byte_size\":1,\"content_type\":\"Sample content type\",\"parent_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"parent_type\":\"Sample parent type\"}",
@@ -3367,6 +3725,7 @@ var PublicEventSamples = map[string]string{
 	"comms.delivery_bounced":                    "{\"kind\":\"hard\",\"message_id\":\"Sample message id\",\"reason\":\"Sample reason\"}",
 	"company.archived":                          "{}",
 	"company.created":                           "{\"anchor\":true,\"captured_by\":\"Sample captured by\",\"delta\":{},\"display_name\":\"Sample display name\",\"primary_domain\":\"Sample primary domain\",\"site_read_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source\":\"Sample source\",\"source_url\":\"Sample source url\"}",
+	"company.erased":                            "{}",
 	"company.merged":                            "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"company.restored":                          "{}",
 	"company.updated":                           "{\"changed_fields\":{}}",
@@ -3388,9 +3747,11 @@ var PublicEventSamples = map[string]string{
 	"conversation_claim.changed":                "{\"claim_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"Sample status\"}",
 	"deal.archived":                             "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"deal.created":                              "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"name\":\"Sample name\"}",
+	"deal.erased":                               "{}",
+	"deal.merged":                               "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.owner_changed":                        "{\"from_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"to_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.restored":                             "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
-	"deal.stage_changed":                        "{\"amount_minor_at_change\":1,\"currency_at_change\":\"Sample currency at change\",\"deal_name\":\"Sample deal name\",\"from_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_stage_name\":\"Sample from stage name\",\"from_status\":\"Sample from status\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"partner_attribution\":\"Sample partner attribution\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_name\":\"Sample to stage name\",\"to_status\":\"Sample to status\",\"win_probability\":1}",
+	"deal.stage_changed":                        "{\"amount_minor_at_change\":1,\"currency_at_change\":\"Sample currency at change\",\"deal_name\":\"Sample deal name\",\"from_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_stage_name\":\"Sample from stage name\",\"from_status\":\"Sample from status\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"lost_reason_code\":\"Sample lost reason code\",\"partner_attribution\":\"Sample partner attribution\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_name\":\"Sample to stage name\",\"to_status\":\"Sample to status\",\"win_probability\":1}",
 	"deal.updated":                              "{\"changed_fields\":{},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"deal_room.archived":                        "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal_room.closed":                          "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
@@ -3405,8 +3766,8 @@ var PublicEventSamples = map[string]string{
 	"deal_room.thread_resolved":                 "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"document_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"thread_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal_room.updated":                         "{\"changed_fields\":[\"Sample changed fields\"],\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"email_signature.changed":                   "{\"has_signature\":true}",
-	"engagement.reply":                          "{\"channel\":\"Sample channel\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"idempotency_key\":\"Sample idempotency key\",\"matched_outbound_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"occurred_at\":\"2026-10-14T09:12:00Z\"}",
-	"forecast.assurance_created":                "{\"eligible_deals\":1,\"eligible_signals\":1,\"readiness\":\"ready\",\"run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"complete\"}",
+	"engagement.reply":                          "{\"channel\":\"Sample channel\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"idempotency_key\":\"Sample idempotency key\",\"matched_outbound_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\"}",
+	"forecast.assurance_created":                "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"eligible_deals\":1,\"eligible_signals\":1,\"readiness\":\"ready\",\"run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"complete\"}",
 	"forecast.created":                          "{\"amount_minor\":1,\"author_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"call_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"currency\":\"Sample currency\",\"period_end\":\"2026-10-14\",\"period_start\":\"2026-10-14\",\"supersedes_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"forecast.exception_resolved":               "{\"actor_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"exception_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"outcome\":\"fixed_record\"}",
 	"forecast.share_issued":                     "{\"expires_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"live\",\"share_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target\":\"Sample target\"}",
@@ -3416,6 +3777,7 @@ var PublicEventSamples = map[string]string{
 	"intro_request.completed":                   "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"outcome\":\"introduced\"}",
 	"intro_request.created":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"requester_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"intro_request.decided":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"decision\":\"accepted\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"intro_request.recorded":                    "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introduced_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"intro_request.replied":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead.created":                              "{\"source_system\":\"Sample source system\"}",
 	"lead.demoted":                              "{\"from_contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"unwind\":\"Sample unwind\"}",
@@ -3427,7 +3789,7 @@ var PublicEventSamples = map[string]string{
 	"lead_disqualify_reason.changed":            "{\"change\":\"created\",\"label\":\"Sample label\",\"reason_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead_source.changed":                       "{\"change\":\"created\",\"key\":\"Sample key\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"linkedin_account.changed":                  "{\"connected\":true,\"has_profile_url\":true}",
-	"linkedin_match.decided":                    "{\"profile_url_written\":true}",
+	"linkedin_match.decided":                    "{\"employer_written\":true,\"profile_url_written\":true,\"title_written\":true}",
 	"linkedin_network.imported":                 "{\"imported\":1,\"rows\":1,\"skipped\":1}",
 	"list.archived":                             "{}",
 	"list.created":                              "{\"list_type\":\"Sample list type\",\"record_type\":\"Sample record type\",\"sharing\":\"Sample sharing\"}",
@@ -3451,14 +3813,17 @@ var PublicEventSamples = map[string]string{
 	"pipeline.updated":                          "{\"changed_fields\":{}}",
 	"project.archived":                          "{}",
 	"project.created":                           "{\"company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"key\":\"Sample key\",\"name\":\"Sample name\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"phase\":\"Sample phase\"}",
+	"project.health_assessed":                   "{\"assessment_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source\":\"Sample source\",\"state\":\"Sample state\"}",
 	"project.phase_changed":                     "{\"from_phase\":\"Sample from phase\",\"reason\":\"Sample reason\",\"to_phase\":\"Sample to phase\"}",
 	"project.updated":                           "{\"changed_fields\":{}}",
-	"relationship_nudge.decided":                "{\"action\":\"dismissed\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"dismissed_until\":\"2026-10-14T09:12:00Z\"}",
+	"relationship_nudge.decided":                "{\"action\":\"dismissed\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"dismissed_until\":\"2026-10-14T09:12:00Z\",\"permanent\":true}",
 	"retention.applied":                         "{\"action\":\"archive\",\"policy\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\"}",
 	"retention.restricted":                      "{\"action\":\"restrict\",\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"restricted_until\":\"2026-10-14T09:12:00Z\",\"retention_class\":\"Sample retention class\"}",
 	"role.changed":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_role\":\"Sample from role\",\"to_role\":\"Sample to role\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"sales_initiative.updated":                  "{\"changed_fields\":[\"Sample changed fields\"],\"initiative_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"draft\"}",
 	"signal.detected":                           "{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\",\"kind\":\"Sample kind\",\"resolution_confidence\":1.5,\"resolution_state\":\"Sample resolution state\",\"severity\":\"Sample severity\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source_channel\":\"Sample source channel\"}",
 	"signal.resolved":                           "{\"match_confidence\":1.5,\"matched_on\":\"Sample matched on\",\"resolution_state\":\"Sample resolution state\",\"resolved_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"resolved_contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"signal.updated":                            "{\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"stage.archived":                            "{\"pipeline_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"stage.created":                             "{\"name\":\"Sample name\",\"pipeline_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"position\":1,\"semantic\":\"Sample semantic\",\"win_probability\":1}",
 	"stage.updated":                             "{\"name\":\"Sample name\",\"pipeline_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"semantic\":\"Sample semantic\",\"win_probability\":1}",
@@ -3466,12 +3831,15 @@ var PublicEventSamples = map[string]string{
 	"user.activated":                            "{\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.deactivated":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.invited":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"role\":\"Sample role\",\"team_ids\":[\"0190a7f2-0000-7000-8000-000000000010\"],\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"user.mfa_removed":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"sessions_ended\":1,\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.password_link_issued":                 "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.reactivated":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"invited\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"user.updated":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user_delivery.changed":                     "{\"changed_fields\":[\"Sample changed fields\"]}",
 	"user_display_name.changed":                 "{\"display_name\":\"Sample display name\"}",
 	"user_greeting_name.changed":                "{\"greeting_name\":\"Sample greeting name\"}",
 	"user_locale.changed":                       "{\"locale\":\"Sample locale\"}",
+	"user_timezone.changed":                     "{\"chosen\":true,\"timezone\":\"Sample timezone\"}",
 	"voice.build_changed":                       "{\"build_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"candidate_action\":\"Sample candidate action\",\"next_attempt_at\":\"2026-10-14T09:12:00Z\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"result_version\":1,\"source_count\":1,\"source_hash\":\"Sample source hash\",\"stage\":\"Sample stage\",\"status\":\"Sample status\",\"status_code\":\"Sample status code\"}",
 	"voice.corpus_changed":                      "{\"action\":\"Sample action\",\"origin\":\"Sample origin\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"register\":\"Sample register\",\"source_count\":1,\"source_hash\":\"Sample source hash\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"word_delta\":1}",
 	"voice.draft_outcome_recorded":              "{\"outcome\":\"Sample outcome\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"qualifies_as_source\":true,\"transformation_count\":1}",

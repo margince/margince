@@ -279,7 +279,9 @@ var predicateMaskedAmountReads = gatekit.Waive(map[string]string{
 // auth.Unbounded answers for outright — a mask asked there would be inert, and
 // the entry records why asking was never the point.
 var lifecycleMaskedAmountReads = gatekit.Waive(map[string]string{
-	"internal/compose/assuranceseam.go":                         "the assurance scan's subject statement, selecting each deal's owner, amount and currency so a finding can be raised against it. The pass runs as PrincipalSystem over the whole installation (assurancebundle.go records it), and what a HUMAN later reads is AssuranceExceptions, which is a report surface and carries the engine's own mask pass. A mask applied to the scan would hide a finding from everybody rather than a figure from one reader",
+	"internal/compose/extsystemread.go:readDealSummary":         "an extension unit's system read of one deal (Runtime.Deals().Get), as the delivery's or tick's PrincipalSystem, and refused by systemRead on any invocation a caller could receive it on. Whom the unit then shows the figure is the unit's to ask through Authority().CanRead, which answers false while auth.MaskedFields withholds a named field from that colleague, a conditional mask included",
+	"internal/compose/assurancebundle.go:bundleableFindings":    "the bundling pass's and the review delivery job's read of one run's findings, as the input check's PrincipalSystem. The amount only orders the findings WITHIN one deal (findingRank), so the most material one leads that deal's bundle. The deals themselves get their tasks in id order (groupBySubject, held by TestTheTasksAreMintedInAnOrderTheAmountsDoNotSet), so the creation order of the tasks says nothing about which deal is bigger, and the task names a count and no figure (bundleTaskSubject). What a HUMAN reads is AssuranceExceptions, which renders the money through maskedFindingMoney",
+	"internal/compose/assuranceseam.go":                         "the assurance scan's subject statement, selecting each deal's owner, amount and currency so a finding can be raised against it. The pass runs as PrincipalSystem over the whole installation (assurancebundle.go records it), and what a HUMAN later reads is AssuranceExceptions, which renders the finding's money through auth.MaskedExpressionSQL over the joined deal (assurancelist.go maskedFindingMoney). A mask applied to the scan would hide a finding from everybody rather than a figure from one reader",
 	"internal/modules/privacy/sarsections.go:sarRecordSections": "the deal rows AS the Art. 15 export: what the installation holds about the data subject, assembled under the system principal on a request a human already authorised. A field mask narrows what a COLLEAGUE may read about a record; applying one here would make the subject's own answer incomplete, which is the defect the export exists to prevent",
 })
 
@@ -287,7 +289,7 @@ var lifecycleMaskedAmountReads = gatekit.Waive(map[string]string{
 // spelling, and what applies it sits elsewhere — bound into the statement after
 // this file hands it over, or run across the rows once they are read.
 var calleeGatedMaskedAmountReads = gatekit.Waive(map[string]string{
-	"internal/compose/reportprojects.go":            "the project report's won-deal money total. It sums d.amount_minor_base under a FILTER on reportDealMaskToken, which reportsql.go binds from auth.MaskExcludedClause beside the row-scope token next to it — so the statement here is a template and the mask is resolved at bind time. The engine's own mask pass cannot cover this one: it asks the masks on the SPEC's entity, and the spec is projects while the sum is over deals",
+	"internal/compose/reportprojects.go":            "the project report's shared deal valuation and unpriced folds. Both use a FILTER on reportDealMaskToken, which reportsql.go binds from auth.MaskExcludedClause beside the row-scope token next to it — so the statement here is a template and the mask is resolved at bind time. The engine's own mask pass cannot cover this one: it asks the masks on the SPEC's entity, and the spec is projects while the sum is over deals",
 	"internal/modules/deals/dealfigures.go:Figures": "the Worklist's batched card read. It selects d.amount_minor bare and maskFigures, the declaration above it in the same file, withholds the figure afterwards in Go — auth.MaskedFields over auth.WritableSubset — because a card carries no masked_fields list for a rendered NULL to explain itself in. The mask is a whole-row decision here rather than a rendering, which is the one shape this census reads as ungated",
 })
 
@@ -301,9 +303,9 @@ var calleeGatedMaskedAmountReads = gatekit.Waive(map[string]string{
 // does not vouch for it, and a reason here that claimed to would be a mitigation
 // nobody can check from the statement it is written beside.
 var writePreimageMaskedAmountReads = gatekit.Waive(map[string]string{
-	"internal/modules/deals/basecurrencyfreezewrite.go:frozenBaseBefore": "the frozen base amount a re-price or a reopen is about to overwrite. amount_minor_base is an internal column on no contract, so the writer has no pre-image to hand over and reads the row for one; recording nil instead would write \"there was no converted amount\" into the audit diff of every reopen, which is the row a reversal reads to put the old figure back",
-	"internal/modules/deals/forecasthistory.go:recordForecastMovement":   "INSERT INTO deal_forecast_history … SELECT FROM deal: the deal's state copied into its forecast trail, in the write's own transaction and after the patch landed. The statement answers a row count and no figure. Nothing in this tree READS that table yet, so the obligation belongs to whoever writes the first such read rather than to somebody who has already met it",
-	"internal/modules/deals/offer_dealsync.go:syncDealAmountFromOffer":   "the deal's current price under a row lock, so an accepted offer's gross can be compared against it and the audit diff can name what it replaced. The comparison is what keeps an accept re-pricing at the figure already held out of the forecast trail. The pre-image it reads reaches only that diff: the money the function returns in p.After() is the offer's own gross, which its caller supplied",
+	"internal/modules/deals/basecurrencyfreezewrite.go:frozenBefore":   "the frozen base amount a re-price or a reopen is about to overwrite. amount_minor_base is an internal column on no contract, so the writer has no pre-image to hand over and reads the row for one; recording nil instead would write \"there was no converted amount\" into the audit diff of every reopen, which is the row a reversal reads to put the old figure back",
+	"internal/modules/initiatives/store.go:Launch":                     "the member deals' base amounts the launch freezes into sales_initiative_baseline, the figure every later origin reading compares against. Nothing of it reaches the caller: the launch answers the initiative row, and a masked reader meets the mask on the reports that read the baseline back",
+	"internal/modules/deals/offer_dealsync.go:syncDealAmountFromOffer": "the deal's current price under a row lock, so an accepted offer's gross can be compared against it and the audit diff can name what it replaced. The comparison is what keeps an accept re-pricing at the figure already held out of the forecast trail. The pre-image it reads reaches only that diff: the money the function returns in p.After() is the offer's own gross, which its caller supplied",
 })
 
 // ruledMaskedAmountReads: a read the product has ruled may print the figure
@@ -389,7 +391,7 @@ func readsADealAmount(filePath string, file *ast.File, columns *regexp.Regexp, b
 // It is part of the subject because its text is not: a statement built from one
 // names no amount column of its own, so a literal-only subject cannot see the
 // money it sums. The project report's open-value total was exactly that —
-// `sum(deals.OpenDealBaseValueSQL(...))` over every open deal, with no mask and
+// `sum(deals.BaseValueSQL(...))` over every open deal, with no mask and
 // nothing here to say so.
 //
 // DERIVED from the tree rather than listed, and the list is why. A hand-kept
@@ -412,6 +414,7 @@ var sqlFragmentMarker = regexp.MustCompile(`(?i)\b(SELECT|CASE|WHEN|COALESCE|SUM
 func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]bool {
 	t.Helper()
 	names := map[string]bool{}
+	var functions []*ast.FuncDecl
 	err := filepath.Walk("internal", func(filePath string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(filePath, ".go") ||
 			strings.HasSuffix(filePath, "_test.go") || strings.HasSuffix(filePath, "_gen.go") {
@@ -422,6 +425,9 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 			return parseErr
 		}
 		for _, decl := range file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && returnsSQLString(fn) {
+				functions = append(functions, fn)
+			}
 			if name, isBuilder := builderName(decl, columns); isBuilder {
 				names[name] = true
 			}
@@ -430,6 +436,14 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 	})
 	if err != nil {
 		t.Fatalf("deriving the deal-amount builders: %v", err)
+	}
+	for changed := true; changed; {
+		changed = false
+		for _, fn := range functions {
+			if !names[fn.Name.Name] && len(builtAmountsIn(fn, names)) > 0 {
+				names[fn.Name.Name], changed = true, true
+			}
+		}
 	}
 	if len(names) == 0 {
 		t.Fatal("no deal-amount builder found in the tree — this derivation has stopped recognising " +
@@ -443,11 +457,7 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 // reader changing what counts as a builder changes it in one place.
 func builderName(decl ast.Decl, columns *regexp.Regexp) (string, bool) {
 	fn, isFunc := decl.(*ast.FuncDecl)
-	if !isFunc || fn.Type.Results == nil || len(fn.Type.Results.List) != 1 {
-		return "", false
-	}
-	result, isIdent := fn.Type.Results.List[0].Type.(*ast.Ident)
-	if !isIdent || result.Name != "string" {
+	if !isFunc || !returnsSQLString(fn) {
 		return "", false
 	}
 	// Statements rather than literals, because a fragment assembled with `+` is
@@ -464,6 +474,14 @@ func builderName(decl ast.Decl, columns *regexp.Regexp) (string, bool) {
 }
 
 // dealAmountReadsIn is the site extraction the subject predicate above states.
+func returnsSQLString(fn *ast.FuncDecl) bool {
+	if fn.Type.Results == nil || len(fn.Type.Results.List) != 1 {
+		return false
+	}
+	result, ok := fn.Type.Results.List[0].Type.(*ast.Ident)
+	return ok && result.Name == "string"
+}
+
 func dealAmountReadsIn(decl ast.Decl, columns *regexp.Regexp, builders map[string]bool) []gatekit.TableRead {
 	amounts := gatekit.DeclReads(decl, columns)
 	if len(amounts) == 0 {
@@ -568,7 +586,7 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	columns := dealMaskedColumns(t)
 	builders := dealAmountBuilderNames(t, columns)
 	files := maskedAmountScope(columns, builders).Files(t)
-	gated := maskGate.gatedFunctionsByPackage(t, files)
+	gated := maskGate.walkPackages(t, files).gated
 	consts := constantTable{}
 
 	var satisfied, inMaskOwner int

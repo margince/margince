@@ -1,36 +1,35 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../design-system/applink";
 import { Callout } from "../design-system/callout";
-import { useT } from "../i18n";
-import { useCan } from "../lib/capability";
 import {
   useEmbedReindexAvailable,
-  useEmbedReindexStatus,
-} from "../screens/embedreindex";
+  useEmbedReindexIdentities,
+} from "../features/settings/embedreindex.queries";
+import { useT } from "../i18n";
+import { useCan } from "../lib/capability";
 
 // The reindex-needed advisory (v6 B2, rekeyed per ADR-0069 §3a): shown ONLY
 // on an identity mismatch (configured_identity ≠ populated_identity) — the
 // operator changed the embed binding and has not confirmed the rebuild, the
 // one state a human must act on. Identity-matched pending entities (a lost
 // embed event) are NOT this banner's business: the worker drift sweep heals
-// them automatically, and the settings card (screens/embedreindex.tsx) shows
+// them automatically. The settings card (features/settings/embedreindex.tsx) shows
 // the pending detail meanwhile. Keying off reindex_needed here would show an
-// admin a banner about drift the system is already fixing. The status read
-// this banner needs is itself RBAC-gated (embedding_reindex:read, granted to
-// admin and ops alone), so the gate below is not a UX preference layered over
-// an open endpoint — it is the same grant the server checks, asked before
-// issuing a query that could only 403. The installation's embed binding is
-// asked the same way: with no model bound the read could only 501, and a /me
-// not yet answered, or one predating the field, asks nothing.
+// admin a banner about drift the system is already fixing. The identities read
+// is RBAC-gated (embedding_reindex:read, held by admin and ops alone). The gate
+// below asks the same grant the server checks, before a query that could only
+// 403. The embed binding is asked the same way. With no model bound the read
+// could only 501, and a /me not yet answered, or older than the field, asks nothing.
 export function EmbedReindexBanner() {
   const t = useT();
   const canRead = useCan("embedding_reindex", "read");
   const bound = useEmbedReindexAvailable();
   const enabled = canRead && bound;
-  const query = useEmbedReindexStatus(enabled, 5 * 60_000);
-  // Advisory only: a failed status probe must not block the app shell — the
-  // settings card (screens/embedreindex.tsx) surfaces the same read's error
+  const query = useEmbedReindexIdentities(enabled, 5 * 60_000);
+  // Advisory only: a failed probe must not block the app shell. The settings
+  // card (features/settings/embedreindex.tsx) surfaces the status read's error
   // state to the accountable audience.
   // The mismatch ALONE keys the banner (SEARCH-AC-13) — deliberately not
   // status-qualified: suppressing during status="reembedding" would also
@@ -58,7 +57,11 @@ export function EmbedReindexBanner() {
         tone="warning"
         kind="standing"
         title={t("reindexbanner.needed")}
-        actions={<a href="#/settings/maintenance">{t("reindexbanner.link")}</a>}
+        actions={
+          <AppLink href="#/settings/maintenance">
+            {t("reindexbanner.link")}
+          </AppLink>
+        }
       />
     </div>
   );

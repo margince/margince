@@ -332,6 +332,34 @@ func TestTheAccessPreviewIsAReadAndAnswersOnTheQuery(t *testing.T) {
 	}
 }
 
+// The invite form ticks several teams, and the frontend client repeats the
+// parameter once per team rather than joining them with commas.
+func TestTheAccessPreviewTakesSeveralTeamsAsTheClientSendsThem(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var consulting, sales struct {
+		ID string `json:"id"`
+	}
+	mustCall(t, e, "POST", "/v1/teams", AnyMap{"name": "Consulting"}, http.StatusCreated, &consulting)
+	mustCall(t, e, "POST", "/v1/teams", AnyMap{"name": "Sales"}, http.StatusCreated, &sales)
+
+	var preview struct {
+		Teams []struct {
+			ID string `json:"id"`
+		} `json:"teams"`
+	}
+	mustCall(t, e, "GET", "/v1/users/access-preview?role=rep&team_ids="+consulting.ID+"&team_ids="+sales.ID,
+		nil, http.StatusOK, &preview)
+	got := map[string]bool{}
+	for _, team := range preview.Teams {
+		got[team.ID] = true
+	}
+	if len(got) != 2 || !got[consulting.ID] || !got[sales.ID] {
+		t.Errorf("preview teams = %+v, want %s and %s", preview.Teams, consulting.ID, sales.ID)
+	}
+}
+
 // The access read carries the member's own status, which is the TENSE of the
 // grants beside it: a deactivated member's stored access is exactly what the
 // answer lists, and login refuses them.

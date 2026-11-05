@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -82,14 +83,23 @@ type participantEngagement struct {
 func engagementByParticipant(
 	ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID,
 ) (map[ids.UUID]participantEngagement, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT e.participant_id, count(*) FILTER (WHERE e.kind = $2),
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	// A downloaded file still counts; only its title follows the carrier.
+	readable, err := sellerReadsTheCarrier(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	roomPos, kindPos := arg(roomID), arg(engagementDocumentDownloaded)
+	rows, err := tx.Query(ctx, storekit.SQLf(`
+		SELECT e.participant_id, count(*) FILTER (WHERE e.kind = $%[2]d),
 		       coalesce(array_agg(DISTINCT d.title)
-		                FILTER (WHERE e.kind = $2 AND d.title IS NOT NULL), '{}')
+		                FILTER (WHERE e.kind = $%[2]d AND d.title IS NOT NULL%[3]s), '{}')
 		  FROM deal_room_engagement e
 		  LEFT JOIN deal_room_document d ON d.id = e.document_id
-		 WHERE e.room_id = $1
-		 GROUP BY e.participant_id`, roomID, engagementDocumentDownloaded)
+		  LEFT JOIN attachment a ON a.id = d.attachment_id
+		 WHERE e.room_id = $%[1]d
+		 GROUP BY e.participant_id`, roomPos, kindPos, readable), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read deal room engagement: %w", err)
 	}

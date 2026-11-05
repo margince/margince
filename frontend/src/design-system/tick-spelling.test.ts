@@ -189,11 +189,11 @@ describe("one checkbox, one radio", () => {
     // An empty scan means the gate is pointed at the wrong tree. A census that
     // judged nothing certifies nothing.
     expect(files.length).toBeGreaterThan(100);
-    // And the screens specifically: every hand-rolled tick this gate was
-    // written for lived under src/screens/, and the floor above is one the
-    // design-system half could satisfy on its own.
+    // And the screens: every hand-rolled tick this gate was written for lived
+    // in a screen, now under src/features/. The design-system half alone
+    // could clear the floor above.
     expect(
-      files.some((file) => file.startsWith(`${srcDir}/screens/`)),
+      files.some((file) => file.startsWith(`${srcDir}/features/`)),
       "the census covered no screen, where every tick this gate replaced lived",
     ).toBe(true);
     // And the extension tier: a unit's screen ships in the same bundle, and

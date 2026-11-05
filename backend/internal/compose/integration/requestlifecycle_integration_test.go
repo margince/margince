@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -43,10 +45,16 @@ func TestWonDealKeepsOldSchedulingRequestUntilItsTaskIsCompleted(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := ids.UUID(message.Id)
-	if _, err := store.SetCaptureLabel(ctx, id, "meeting"); err != nil {
+	var version int64
+	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL`, id).Scan(&version)
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.SetOwedVerdict(ctx, id, activities.OwedVerdictAsksUs, "prompts-test", time.Now()); err != nil {
+	if _, err := store.SetCaptureLabel(ctx, id, "meeting", version); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.SetOwedVerdict(ctx, id, activities.OwedVerdictAsksUs, "prompts-test", at.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	// Push the request outside the recent-history window with real activity writes.
@@ -66,7 +74,7 @@ func TestWonDealKeepsOldSchedulingRequestUntilItsTaskIsCompleted(t *testing.T) {
 	if code := e.Call(t, "GET", "/v1/deals/"+deal+"/status", nil, nil, &card); code != http.StatusOK {
 		t.Fatalf("read card: %d", code)
 	}
-	if card.Next == nil || card.Next.Action != "create_task" || card.ReplyTo == nil || *card.ReplyTo != message.Id {
+	if card.Next == nil || card.Next.Action != "create_task" || card.ReplyTo != nil || card.RequestBasis != nil || card.Next.Basis == nil || card.Next.Basis.Kind != "request_review" {
 		t.Fatalf("won deal lost its old request: %+v", card)
 	}
 	var task crmcontracts.Activity
@@ -80,7 +88,7 @@ func TestWonDealKeepsOldSchedulingRequestUntilItsTaskIsCompleted(t *testing.T) {
 	if task.SourceActivityId == nil || *task.SourceActivityId != message.Id {
 		t.Fatal("task lost its source")
 	}
-	if code := e.Call(t, "GET", "/v1/deals/"+deal+"/status", nil, nil, &card); code != http.StatusOK || card.Next == nil || card.Next.Action != "open_task" {
+	if code := e.Call(t, "GET", "/v1/deals/"+deal+"/status", nil, nil, &card); code != http.StatusOK || card.Next == nil || card.Next.Action != "open_task" || card.ReplyTo == nil || *card.ReplyTo != message.Id || card.RequestBasis == nil || card.RequestBasis.Kind != "current_request" {
 		t.Fatalf("won deal hid its open task: %d %+v", code, card)
 	}
 	if code := e.Call(t, "PATCH", "/v1/activities/"+task.Id.String(), map[string]bool{"is_done": true}, nil, nil); code != http.StatusOK {

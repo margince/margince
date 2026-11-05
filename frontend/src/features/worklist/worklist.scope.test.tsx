@@ -6,7 +6,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { day, renderWorklist, stub } from "./worklist.testkit";
+import { day, renderWorklist, stub } from "../../testing/worklist.testkit";
 
 afterEach(() => {
   cleanup();

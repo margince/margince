@@ -98,7 +98,7 @@ func (s *Store) RecordReply(
 		err := tx.QueryRow(ctx, `
 			WITH prior AS (
 				SELECT id, status FROM intro_request
-				 WHERE id = $1 AND archived_at IS NULL
+				 WHERE id = $1 AND archived_at IS NULL AND origin = 'asked'
 				   AND status IN ('introduced', 'name_dropped')
 				 FOR UPDATE
 			)
@@ -108,7 +108,7 @@ func (s *Store) RecordReply(
 			       version = r.version + 1, updated_at = now()
 			  FROM prior
 			 WHERE r.id = prior.id
-			   AND r.status IN ('introduced', 'name_dropped')
+			   AND r.origin = 'asked' AND r.status IN ('introduced', 'name_dropped')
 			 RETURNING prior.status, r.contact_id`, id, at, activity).Scan(&before, &contactID)
 		// No row is the ordinary outcome rather than a fault. The ask is already
 		// replied, was never introduced, or is archived — each a message that
@@ -169,7 +169,7 @@ func (s *Store) AwaitingReply(ctx context.Context, contactID ids.UUID) ([]Pendin
 			-- one that exists rather than choosing between two candidates.
 			SELECT id, COALESCE(introduced_at, name_dropped_at)
 			  FROM intro_request
-			 WHERE contact_id = $1 AND archived_at IS NULL
+			 WHERE contact_id = $1 AND archived_at IS NULL AND origin = 'asked'
 			   AND status IN ('introduced', 'name_dropped')`, contactID)
 		if err != nil {
 			return fmt.Errorf("introductions: listing the asks awaiting a reply: %w", err)

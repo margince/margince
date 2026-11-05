@@ -17,14 +17,28 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
-  // Product names, an example address and an example header name.
+  // Product and protocol names, an example address and an example header name.
   "webhooks.body.preset.slack",
   "webhooks.body.preset.teams",
+  "settings.tab.mcp",
   "webhooks.eventGroup.voice_dna",
   "webhooks.field.targetUrlPlaceholder",
+  "webForms.sender.typeform",
+  "webForms.sender.tally",
+  "webForms.field.originsPlaceholder",
   "webhooks.headers.namePlaceholder",
   // Markup with placeholders, which is the same in every language.
+  // Only placeholders and punctuation, with no word to translate.
+  "compose.aboutWhen",
+  "captureConcern.title",
+  "companyReach.functionCount",
+  "deal.committee.seatSub",
+  "lead.card.askedQuote",
   "signatureTemplate.placeholder",
+  "agent.fact.sourceOnProvider",
+  // The promiser and stored summary are values separated by punctuation.
+  "magic.action.approval_commitment_task_named",
+  "magic.action.approval_commitment_task_summary",
   // Latency percentiles and OpenRouter's own name read the same in every
   // language, as does a raw key = value line the summary falls back to.
   "aiFigures.col.p50",
@@ -38,6 +52,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
+  // The product's own name, as the agent that made a change.
+  "agentJob.margince",
   // The name of the network, offered as a profile field in the research drawer.
   // "LinkedIn" is the brand and is written the same in every catalog; the other
   // six field labels beside it are translated normally.
@@ -46,6 +62,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // does; only the words inside change, and they are the speaker's own.
   "commitment.quote",
   "filters.propose.unusedItem",
+  "reporting.setup.unusedItem",
   // The product name of the buyer surface, on the card that names it and on
   // the tab that opens it.
   "room.card.title",
@@ -54,7 +71,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Sales nouns Vietnamese borrows: vi writes "Tên deal" and "Pipeline" elsewhere,
   // so translating only these drill-through headers would split the vocabulary.
   "explain.col.record",
+  "analytics.accounts.deal",
   "explain.col.pipeline",
+  "reporting.recordType.lead",
+  "reporting.recordType.deal",
+  "analytics.decisions.deal",
   // The settings group heading. "AI" is the initialism Vietnamese uses too —
   // the vi catalog already carries it untranslated wherever it appears in a
   // sentence, so rendering "Trí tuệ nhân tạo" on one nav heading would give
@@ -87,13 +108,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
-  // The release channel's own name on the rail head's stage marker. "Beta" is
-  // the word all three catalogs use for it — Vietnamese borrows it as a term of
-  // art the way it borrows "deal" and "pipeline" — and a marker four letters
-  // long is also the only spelling that fits the 56px rail it must survive.
-  // Temporary, with the badge that renders it: app/betabadge.tsx names this
-  // entry among the things its deletion takes.
-  "shell.beta",
   // "Core" is the product's name for the shared codebase, which every catalog
   // already uses as a term of art (ob.core.*).
   "shell.coreVersion",
@@ -106,16 +120,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // two rendered clauses and contributes no word of its own, so a locale has
   // nothing here to change.
   "brief.week.andCarry",
-  // The record's own name beside the numeral that names its reading. There is
-  // no word in it to translate — a locale that changed it would be changing
-  // the account's name.
-  "co.360.subject",
   // An acronym, not a word: DNS is DNS in every language this product speaks,
   // and a "translation" of it would be a different protocol.
   "co.tech.lane.dns",
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
-  "dealmail.title",
   // Same word, same reason, on the generic record mail box every other page
   // shares.
   "recordmail.title",
@@ -140,6 +149,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "oauthApp.microsoft.clientIdPlaceholder",
   "oauthApp.tenant",
   "oauthApp.tenantPlaceholder",
+  // A product name, the same word in every language.
+  "oauthApp.unlock.gmail",
   // A URL, which is the same string in every language.
   "scheduling.locationExample",
   "aiRouting.baseUrl.placeholder",
@@ -157,10 +168,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "approval.field.email",
   // And naming the kind of evidence a tag suggestion cites.
   "tagSuggestion.kind.email",
-  // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
-  // keeps "Email". German translates it, and does.
-  "deal.forecast.pipeline",
   "room.create.defaultTitle",
+  // These slots receive category counts and action names already translated by their owners.
+  "brief.agenda.summary",
+  "magic.action.approval_pending",
+  "magic.action.decided_summary",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   "dealSuggestion.name",
@@ -173,9 +185,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.sentence.pendingValue",
   // Two phase names and an arrow.
   "project.history.moved",
-  "brief.digestPhaseChange",
   // Two relationship-band names and an arrow, on the contact strip's latest
-  // change. Same shape, same reason as the two above.
+  // change. Same shape, same reason as the one above.
   "contact.intro.change.buckets",
   // A filename and the server's own refusal, separated by a colon. It is one
   // line of a list whose heading says what the list is, and both halves arrive
@@ -186,27 +197,31 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // .withheld), so this value is the placeholder and a full stop.
   "worklist.partial",
   // Brand and provider names: proper nouns, not translated in any locale.
-  "connectors.provGmail",
   "connectors.provGcal",
+  "connectors.provGmail",
   "connectors.provGraph",
   "connectors.provTelegram",
+  "connectors.vendorGoogle",
+  "connectors.vendorMicrosoft",
   "ob.s4.provGoogle",
   "ob.s4.provMicrosoft",
-  "ob.conv.connect.linkedinName",
   "magic.by.system",
+  // Only the name of whoever acted.
+  "magic.by.member",
   // A number and a plus sign, written alike in every locale.
   "lead.signal.employees.201+",
   // The same proper noun as connectors.provGmail and its neighbours, one
   // surface over.
   "provider.profile.linkedin",
   "contact.page.linkedin",
+  "contactCase.field.linkedin",
   "ob.ai.speakerName",
   "auth.title",
 
   // "deal", "pipeline" and "lead" are loanwords Vietnamese keeps.
   "board.count_one",
+  "lead.boardCount_one",
   "deals.pipeline",
-  "deal.fcPipeline",
   "filters.field.pipeline_id",
   "analytics.field.pipeline_id",
   "analytics.sectionPipeline",
@@ -219,21 +234,23 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
+  "co.brief.cite.lead",
   // The borrowed noun in the singular, which English and Vietnamese spell alike;
   // the plural arms differ because English pluralises.
-  "today.scan.readDeals_one",
   "analytics.forecastDeals_one",
   "filters.library.records.deal_one",
   "filters.library.records.lead_one",
   "leadSources.leads_one",
   "acqSources.deals_one",
+  "lossReasons.deals_one",
+  "users.handover.leads_one",
+  "brief.agenda.leads_one",
+  "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
 
-  // The forecast categories Commit and Best case keep their English names.
-  "deal.fcCommit",
-  "deal.fcBestCase",
-  "brief.weekly.outlook.bestCase",
+  // A bare percentage, written the same way in Vietnamese.
+  "deal.winProbability.band.zero",
 
   // Endonyms: a locale's own name for itself, identical in every catalog.
   "locale.name.en",
@@ -248,13 +265,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "timeline.filters.kind.email",
   "auth.email",
   "contact.action.email",
-  "contact.memory.email",
   "contact.memory.channelEmail",
-  "contact.rail.email",
   "history.field.email",
+  "activity.webForm.email",
   "settings.voice.register.email",
   "settings.voice.kind.email",
-  "product.sku",
   "compose.cc",
   "compose.bcc",
   "compose.transportEmail",
@@ -286,7 +301,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // ENTRY for the voice surface is no longer one of them — it was renamed off
   // the feature name to "Voice", which vi translates.
   "settings.voice.title",
-  "co.decisions.group",
 
   // "Lead" is the loanword in both de and vi — every other lead key in this
   // catalog leaves it untranslated, and the marker on the record page names
@@ -296,9 +310,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // only the plural headings differ because English pluralises.
   "search.kind.deal",
   "search.kind.lead",
-  // The lead rail's own deal card title, the same singular loanword as
-  // search.kind.deal above it.
-  "lead.rail.deal.title",
+  // The same loanword, naming the record an approval's evidence came from.
+  "decision.evidenceSource.deal",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client
@@ -307,7 +320,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // Other cases verified individually against the source.
   "shell.logoAria",
-  "ob.conv.connect.scopeMicrosoft",
+  // A product's own name, the built-in lead origin.
+  "leadOrigins.builtin.linkedin",
 
   // Worked examples of a German commercial register entry, the shape the
   // legal-notice read actually parses regardless of which locale a reader
@@ -500,6 +514,44 @@ describe("the product's word for the tenant", () => {
         expect(
           TENANT_MISNOMER.test(value.replace(PRODUCT_NAME, "")),
           `${locale}: ${key} — "${value}" says workspace where the product says company`,
+        ).toBe(false);
+      }
+    }
+  });
+});
+
+/**
+ * A record has one owner and, beside it, responsibility roles a team fills.
+ * Where the Responsibilities card says the owner's word, a reader is told
+ * "X is responsible" and "nobody is responsible" on one page.
+ *
+ * The word, not the whole label: Vietnamese says "Người chịu trách nhiệm" as a
+ * label and "ai chịu trách nhiệm" in a sentence. The label check below keeps
+ * this table in step with the catalogs.
+ */
+const OWNER_WORD: Record<string, string> = {
+  en: "owner",
+  de: "verantwortlich",
+  vi: "chịu trách nhiệm",
+};
+
+describe("the owner and the responsibility roles", () => {
+  it("names the owner's word for every locale, as its label says it", () => {
+    for (const [locale, catalog] of Object.entries(catalogs)) {
+      expect(
+        catalog["list.owner"].toLowerCase(),
+        `${locale}: the owner's word is missing`,
+      ).toContain(OWNER_WORD[locale]);
+    }
+  });
+
+  it("no catalog uses the owner's word in the Responsibilities card", () => {
+    for (const [locale, catalog] of Object.entries(catalogs)) {
+      for (const [key, value] of Object.entries(catalog)) {
+        if (!key.startsWith("assignments.")) continue;
+        expect(
+          value.toLowerCase().includes(OWNER_WORD[locale]),
+          `${locale}: ${key} — "${value}" says the owner's word`,
         ).toBe(false);
       }
     }

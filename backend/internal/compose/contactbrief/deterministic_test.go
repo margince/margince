@@ -13,6 +13,8 @@ package contactbrief
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/claims"
 )
 
 func TestTheFloorCitesOnlyRecordsTheInputCarried(t *testing.T) {
@@ -36,7 +38,7 @@ func TestTheFloorCitesOnlyRecordsTheInputCarried(t *testing.T) {
 // and not the substance says the same thing about every contact in the system.
 func TestTheFloorSaysWhatTheLastMessageWasAbout(t *testing.T) {
 	t.Parallel()
-	prose := Prose(Deterministic(briefContactID, inputFixture(), "en"))
+	prose := claims.Prose(Deterministic(briefContactID, inputFixture(), "en"))
 	if !strings.Contains(prose, "Thursday at ten") {
 		t.Errorf("the floor wrote %q, want it to quote what the last message actually said", prose)
 	}
@@ -50,10 +52,10 @@ func TestTheFloorAccountsForAHeldMessageWithoutQuotingIt(t *testing.T) {
 	in := inputFixture()
 	// As the 360 hands it over: the row keeps its date and loses its words.
 	in.Recent[0] = ActIn{
-		ID: schedulingID, Kind: "email", Speaker: "them",
+		ID: schedulingID, Kind: "email", Speaker: &Speaker{Kind: "them"},
 		At: "2026-08-29T08:10:00Z", Withheld: true,
 	}
-	prose := Prose(Deterministic(briefContactID, in, "en"))
+	prose := claims.Prose(Deterministic(briefContactID, in, "en"))
 	if !strings.Contains(prose, "may not read") {
 		t.Errorf("the floor wrote %q, want it to say the newest message is not this reader's", prose)
 	}
@@ -62,20 +64,31 @@ func TestTheFloorAccountsForAHeldMessageWithoutQuotingIt(t *testing.T) {
 	}
 }
 
-// Which direction went last is the whole question: a contact we wrote to a
-// fortnight ago with no reply and one who wrote this morning have the same
-// last-touch date and opposite meanings.
-func TestTheFloorReportsWhichDirectionWentLast(t *testing.T) {
+// Who wrote last is read from the newest message's own speaker.
+func TestTheFloorReportsWhoWroteLast(t *testing.T) {
 	t.Parallel()
-	inbound := Prose(Deterministic(briefContactID, inputFixture(), "en"))
+	inbound := claims.Prose(Deterministic(briefContactID, inputFixture(), "en"))
 	if !strings.Contains(inbound, "They wrote last") {
 		t.Errorf("the floor wrote %q, want it to say the contact wrote last", inbound)
 	}
 
 	outbound := inputFixture()
-	outbound.LastOutbound = "2026-08-30T09:00:00Z"
-	if got := Prose(Deterministic(briefContactID, outbound, "en")); !strings.Contains(got, "You wrote last") {
+	outbound.Recent[0].Speaker = &Speaker{Kind: SpeakerYou}
+	if got := claims.Prose(Deterministic(briefContactID, outbound, "en")); !strings.Contains(got, "You wrote last") {
 		t.Errorf("the floor wrote %q, want it to say we wrote last", got)
+	}
+}
+
+// The newest message was written by somebody else, with this contact in Cc,
+// while this contact's own last mail is older. The floor must not tell the
+// newer message's words as this contact's.
+func TestTheFloorNeverCreditsACopiedMessageToTheContact(t *testing.T) {
+	t.Parallel()
+	copied := inputFixture()
+	copied.Recent[0].Speaker = &Speaker{Kind: speakerContact, Name: "Pia Sender"}
+	got := claims.Prose(Deterministic(briefContactID, copied, "en"))
+	if strings.Contains(got, "They wrote last") || strings.Contains(got, "You wrote last") {
+		t.Errorf("the floor wrote %q; a mail another contact wrote was told as this contact's or the reader's", got)
 	}
 }
 
@@ -89,7 +102,7 @@ func TestTheFloorLeadsWithTheMomentWhenThereIsOne(t *testing.T) {
 		Rule: "overdue_promise", Headline: "You owe them the sub-processor list, due last Tuesday",
 		Sources: []string{objectionID},
 	}
-	prose := Prose(Deterministic(briefContactID, in, "en"))
+	prose := claims.Prose(Deterministic(briefContactID, in, "en"))
 	if !strings.Contains(prose, "due last Tuesday") {
 		t.Errorf("the floor wrote %q, want the ladder's own headline carried whole", prose)
 	}
@@ -97,7 +110,7 @@ func TestTheFloorLeadsWithTheMomentWhenThereIsOne(t *testing.T) {
 	// question — never silence, which reads as a relationship nothing has
 	// happened to.
 	in.Moment = nil
-	if got := Prose(Deterministic(briefContactID, in, "en")); !strings.Contains(got, "34 days") {
+	if got := claims.Prose(Deterministic(briefContactID, in, "en")); !strings.Contains(got, "34 days") {
 		t.Errorf("the floor wrote %q, want the recorded change to stand in for the moment", got)
 	}
 }

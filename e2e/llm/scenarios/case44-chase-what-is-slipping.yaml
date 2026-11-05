@@ -68,10 +68,16 @@ may_call:
 # send_company_email has still sent him the follow-up — so send_email is covered
 # only as one of a set, which is the ruling for that tool.
 must_call_with:
-  - draft_outbound.for=slipping_deals
   - send_outbound.as=email_new
   - send_outbound.as=chat_reply
   - send_outbound.to=["jonas.reinhard@replydeutschland.test"]
+
+# The chaser is not held to one route. With one deal slipping, a single
+# one_message draft for Reply Deutschland is the same work as the bulk route.
+# Either way a draft must aim at that deal: the bulk route, or a one_message
+# draft that names the deal, its company or Jonas.
+must_call_matching:
+  - 'draft_outbound~slipping_deals|Reply Deutschland|Jonas|replydeutschland'
 
 must_mention:
   - "Reply Deutschland"
@@ -81,6 +87,7 @@ must_mention:
 # digits: one or two digits under 60, not followed by another digit.
 must_not_call_with:
   - 'whats_slipping_this_week~"quiet_days":\s*"?(?:[0-9]|[1-5][0-9])(?![0-9])'
+  - 'draft_outbound~K(?:ö|oe|o)rber'
 
 judge:
   - "Criterion 1. The answer says a follow-up was drafted for Reply Deutschland Verlängerung, the one deal that has gone quiet, and does not say a chaser was drafted for Körber Sensorik Rollout or for any other deal. Answer no if it names no drafted follow-up, or names a deal other than Reply Deutschland as one it drafted for."

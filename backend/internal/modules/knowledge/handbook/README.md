@@ -8,10 +8,10 @@ sign-in and the app.
 Start at [What Margince is](what-margince-is.md) and read on. Each page stands on
 its own, so you can also come straight to the one you need.
 
-To ask this handbook a question inside Margince, press ⌘K (Ctrl+K) to open the
-command palette and choose **Ask your documents**. The **Margince handbook** is
-the document set it answers from, unless an administrator chose another; then
-pick **Margince handbook** in **Document set**.
+To ask this handbook a question inside Margince, type it into the top bar's
+**Search or ask Margince** field and press Enter. The answer comes from the
+**Margince handbook** first, then from your company's default document set. The
+handbook is in English, so questions in English work best.
 
 ## Common questions
 
@@ -21,13 +21,16 @@ Getting around Margince, and where to read about it:
 - How do I search, or open the command palette (⌘K)? → [What Margince is](what-margince-is.md)
 - How do I ask the handbook a question, and where is the Ask box? → [What Margince is](what-margince-is.md)
 - What does Margince call an opportunity, an account, a prospect or a quote? → [What Margince is](what-margince-is.md), under Other words for the same thing
+- Something is wrong. How do I report it? → [Report a problem](report-a-problem.md)
 
 Settings in Margince, by page:
 - Where are the settings, and what settings pages are there? → [Settings](settings.md)
 - Which settings page do I need for something? → [Settings](settings.md)
+- Where does the value of a setting come from, and how do I change one that is locked? → [Configuration](configuration.md)
 - How do I change my password, display name, language or theme? → [Your own settings](your-own-settings.md)
 - How do I add an email signature or set up my writing voice? → [Your own settings](your-own-settings.md)
 - How do I connect my mailbox or calendar? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
+- How do I get the leads from my website's contact form into Margince? → [Connecting your website](connect-your-website.md)
 - How do I post to a chat channel when a deal is won? → [Sending events to other tools](sending-events-to-other-tools.md)
 - How do I book a meeting with a contact, move or cancel it, or fix an invitation that needs attention? → [Meetings and booking](meetings-and-booking.md)
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
@@ -36,6 +39,7 @@ Settings in Margince, by page:
 - What happens to an AI task while its provider is down? → [AI providers](ai-providers.md)
 
 Records, deals and mail in Margince, by page:
+- How do record links appear in a message? → [Sharing record links](sharing-record-links.md)
 - How do I create a contact or company, merge, archive or tag one? → [Contacts, companies, leads, deals and projects](records.md)
 - How do I edit a contact or company, or change its owner? → [Contacts, companies, leads, deals and projects](records.md)
 - How do I create a lead, deal or project, or qualify a lead? → [Leads, deals and projects](leads-deals-and-projects.md)
@@ -92,11 +96,15 @@ Records, deals and mail in Margince, by page:
   connecting Gmail, Outlook, an IMAP mailbox or a calendar. What to do when a
   mailbox stops syncing, and reconnecting and disconnecting. Importing your
   older mail.
+- [Connecting your website](connect-your-website.md): putting a contact form on
+  your website, or keeping your own, so each question lands as a lead. WordPress,
+  Webflow, Typeform, Tally, Payload and your own server, plus spam and consent.
+- [Other recipients on a conversation](recipients-on-conversations.md): when other recipients and meeting guests become contacts, and how to add a suggested contact.
 - [Capture](capture.md): how email, calendar and chat get in, and what happens
   to a message step by step. The rules that file it against the right contact,
   deal and project. What happens when nothing matches, and what capture refuses
   to store.
-- [Your day](your-day.md): **Morning**, the bands of the Worklist and why a row
+- [Your day](your-day.md): **Today**, the bands of the Worklist and why a row
   appears there. Pinning, snoozing and what each action reaches, and what a team
   lead sees.
 - [Your week](your-week.md): the frozen weekly review, what it counts and will
@@ -105,11 +113,21 @@ Records, deals and mail in Margince, by page:
 - [Analytics and forecasting](analytics.md): the report sections, what each
   number covers, and how to open the deals behind it. Forecast calls and the
   projected landing. The pipeline needed figure, which is not a target.
+- [How the forecast learns](forecast-learning.md): how each stage's probability
+  moves with the deals that closed from it. The risks marked on a deal, and the
+  switch that turns it off.
+- [Deals the customer still supports](deals-the-customer-supports.md): the review
+  a deal gets when its customer stops answering. The switch that leaves such deals
+  out of the forecast.
+- [Your email signature](email-signatures.md): plain text, personal HTML and the company template.
 - [Writing and sending mail](sending-mail.md): the composer, replying to one
   message in a thread, filing a send under a project, and drafting in your
   voice. The purpose picker and the consent check. What a send refuses and what
   it only warns about, and scheduling one for later. What the recipient
   controls from their own preference page.
+- [When a mail cannot be read](when-a-mail-cannot-be-read.md): what the email
+  says when its text could not be read in full, and what Margince then leaves
+  alone.
 - [Who can see an email](who-can-see-an-email.md): record visibility against a
   message's own audience. The nine reasons one is held, and which a verdict can
   clear. The three mailbox postures, the company floor, and how to share a
@@ -162,14 +180,19 @@ Records, deals and mail in Margince, by page:
   states mean, and moving, cancelling or retrying a meeting. Reminders, what
   counts as busy, and what a guest sees.
 - [Your own settings](your-own-settings.md): changing your password, display
-  name, language and theme. Your email signature, the hours others can book,
-  and your writing voice. Your agent passports and your mailbox connections.
-  What the last 24 hours of your mail turned into.
+  name, language and theme. Your email signature, your meetings and booking
+  link, and your writing voice. Your agent passports and your mailbox
+  connections. What the last 24 hours of your mail turned into.
+- [Configuration](configuration.md): the read-only list of every setting, its
+  value and where the value comes from, and how to change a locked one.
 - [Settings](settings.md): how to open Settings, every settings page and which
   one you need. Whose state each changes, and which permission opens it.
 - [Importing data](importing-data.md): what a CSV or a ZIP can bring in, the
   template, and the steps. The test run, the problems that skip a row, deals,
   and importing the same file again. Undo and the limits.
+- [Report a problem](report-a-problem.md): how to tell the Margince team that
+  something is wrong. What to leave out of the mail, and where a security
+  problem goes instead.
 
 ## How this handbook is written
 

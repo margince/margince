@@ -1,0 +1,41 @@
+/* ConfirmPhraseBox: the danger plate, then the field that asks for the phrase.
+ * The plate is Callout's own; this sheet only stacks the parts. */
+
+.confirm-phrase {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.confirm-phrase-impact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+  list-style: disc;
+}
+
+.confirm-phrase-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Selecting the phrase takes all of it in one press, so it can be copied
+ * whole rather than dragged across a word at a time. */
+.confirm-phrase-phrase {
+  font-weight: var(--fontWeightBold);
+  user-select: all;
+}
+
+/* One line tall while empty, so the dialog does not jump when it matches. */
+.confirm-phrase-match {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: 1lh;
+  margin: 0;
+  font: var(--fontBodySmall);
+  color: var(--successText);
+}

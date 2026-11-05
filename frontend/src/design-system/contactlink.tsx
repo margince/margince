@@ -1,9 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Mail } from "lucide-react";
 import type { ReactNode } from "react";
-import { mailbox, telUri } from "../format/contacturi";
+import { mailbox } from "../format/contacturi";
+import { useT } from "../i18n";
+import type { CallRecord } from "../lib/callstart";
 import { useWriteTo, type WriteToRecord } from "../lib/writeto";
+import { AppLink } from "./applink";
+import { Button } from "./button";
+import { CallAction, linkVerb } from "./callaction";
+import { CopyAction } from "./clipboardcopy";
+import "./contactlink.css";
+import { useTruncationTooltip } from "./tooltip";
 
 // An address or a number a reader can ACT on — an address opens the product's
 // composer to the record it belongs to, a number is the `tel:` link its scheme
@@ -28,50 +37,101 @@ import { useWriteTo, type WriteToRecord } from "../lib/writeto";
 // handed on from record data is an injection surface, and it is decided once.
 // A refused value keeps the fact and loses only the action, exactly as
 // `OffsiteLink` does.
-type Contact = Readonly<
-  {
-    value: string;
-    // What the reader sees. Defaults to the value itself; a caller that leads
-    // with an icon, or shortens a long address, passes its own.
-    children?: ReactNode;
-    // The affordance this control wears. The product's secondary text
-    // affordance by default; a surface that styles its own passes its class.
-    className?: string;
-    // What a REFUSED value wears instead. Never the control's class: a pointer
-    // and an underline on text that opens nothing promise an action the reader
-    // cannot take. A caller whose layout the text must keep (a truncation, a
-    // wrapping width) names that here; by default the text is plain.
-    textClassName?: string;
-  } & (
-    | { kind: "phone" }
-    | {
-        kind: "email";
-        // The record a message to this address is filed under.
-        record: WriteToRecord;
-        // The record takes no writes — archived, closed — so the address is a
-        // fact to keep and not a door to open. The verb beside it carries the
-        // reason; a second control saying the same thing would say it twice.
-        readOnly?: boolean;
-      }
-  )
->;
+type ContactValue = {
+  appearance?: "value";
+  value: string;
+  // What the reader sees. Defaults to the value itself; a caller that leads
+  // with an icon, or shortens a long address, passes its own.
+  children?: ReactNode;
+  // The affordance this control wears. The product's secondary text
+  // affordance by default; a surface that styles its own passes its class.
+  className?: string;
+  // What a REFUSED value wears instead. Never the control's class: a pointer
+  // and an underline on text that opens nothing promise an action the reader
+  // cannot take. A caller whose layout the text must keep (a truncation, a
+  // wrapping width) names that here; by default the text is plain.
+  textClassName?: string;
+} & (
+  | {
+      kind: "phone";
+      // The contact a call to this number is logged on.
+      record: CallRecord;
+    }
+  | {
+      kind: "email";
+      // The record a message to this address is filed under.
+      record: WriteToRecord;
+      // The record takes no writes (archived, closed), so the address is a
+      // fact to keep and not a door to open. The verb beside it carries the
+      // reason; a second control saying the same thing would say it twice.
+      readOnly?: boolean;
+    }
+);
+
+// The labelled verb, parallel to `CallAction appearance="button"`: nothing at
+// all for a refused address or a read-only record, whose caller says why.
+type ContactVerb = {
+  kind: "email";
+  appearance: "button";
+  address: string | undefined;
+  label: string;
+  record: WriteToRecord;
+  readOnly?: boolean;
+  // The AI verb in place of the plain one: the composer drafts on arrival.
+  // Without a composer the reader's own client gets the plain `label`, since
+  // nothing would draft there.
+  draft?: Readonly<{ label: string; intent: string }>;
+};
+
+type Contact = Readonly<ContactValue | ContactVerb>;
 
 export function ContactLink(props: Contact) {
   const writeTo = useWriteTo();
+  if (props.appearance === "button") {
+    const address = mailbox(props.address ?? "");
+    if (!address || props.readOnly) {
+      return null;
+    }
+    const glyph = <Mail aria-hidden="true" />;
+    if (!writeTo) {
+      return linkVerb(`mailto:${address}`, glyph, props.label);
+    }
+    const { draft } = props;
+    if (draft) {
+      return (
+        <Button
+          variant="ai"
+          onClick={() =>
+            writeTo({ ...props.record, address, draftIntent: draft.intent })
+          }
+        >
+          {draft.label}
+        </Button>
+      );
+    }
+    return (
+      <Button
+        variant="ghost"
+        onClick={() => writeTo({ ...props.record, address })}
+      >
+        {glyph}
+        {props.label}
+      </Button>
+    );
+  }
   const { value, children, className = "link-button", textClassName } = props;
   const body = children ?? value;
   if (props.kind === "phone") {
-    const href = telUri(value);
-    if (!href) {
-      return <span className={textClassName}>{body}</span>;
-    }
-    // No `target="_blank"`: a `tel:` is handled by the operating system, not
-    // by a new tab, and a blank target on one leaves an empty tab behind in
-    // some browsers.
     return (
-      <a className={className} href={href}>
+      <CallAction
+        appearance="value"
+        number={value}
+        record={props.record}
+        className={className}
+        textClassName={textClassName}
+      >
         {body}
-      </a>
+      </CallAction>
     );
   }
   const address = mailbox(value);
@@ -84,11 +144,11 @@ export function ContactLink(props: Contact) {
   if (!writeTo) {
     // Nothing writes from the product here, so the reader's own client does.
     // The address was admitted above, so this carries nothing but it. No
-    // `target="_blank"`, for the reason the `tel:` link gives.
+    // `target="_blank"`, for the reason `CallAction` gives for a `tel:`.
     return (
-      <a className={className} href={`mailto:${address}`}>
+      <AppLink className={className} href={`mailto:${address}`}>
         {body}
-      </a>
+      </AppLink>
     );
   }
   return (
@@ -99,5 +159,52 @@ export function ContactLink(props: Contact) {
     >
       {body}
     </button>
+  );
+}
+
+/**
+ * An address as one line that shortens from its mailbox name, so the domain
+ * that says whose address it is stays whole. Pass it as `children`; a cut
+ * address shows in full on hover.
+ */
+export function EmailFace({ address }: Readonly<{ address: string }>) {
+  const { ref, trigger, tip } = useTruncationTooltip<HTMLSpanElement>(address);
+  const at = address.lastIndexOf("@");
+  if (at <= 0) {
+    return address;
+  }
+  // A name built from flex items puts a space between them. So the halves
+  // are hidden from it, and a reader hears the whole address once. The link
+  // around the face is the tab stop, so the tip adds none of its own.
+  return (
+    <>
+      <span
+        className="contactlink-email"
+        aria-hidden="true"
+        ref={ref}
+        {...trigger}
+        tabIndex={undefined}
+      >
+        <span className="contactlink-email-local">{address.slice(0, at)}</span>
+        <span className="contactlink-email-domain">{address.slice(at)}</span>
+        {tip}
+      </span>
+      <span className="sr-only">{address}</span>
+    </>
+  );
+}
+
+/** The copy glyph for an address, worded once for every record that shows one. */
+export function CopyEmail({ address }: Readonly<{ address: string }>) {
+  const t = useT();
+  return (
+    <CopyAction
+      text={address}
+      labels={{
+        copy: t("contactLink.copyEmail"),
+        copied: t("contactLink.emailCopied"),
+        remedy: t("contactLink.copyEmailRemedy"),
+      }}
+    />
   );
 }

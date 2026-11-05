@@ -8,6 +8,7 @@ import {
   customFieldsToBody,
   customFieldsToPatch,
   customFieldToFormField,
+  fieldsForSurface,
 } from "./customfields.form";
 
 const BOOL_LABELS = { yes: "Yes", no: "No" };
@@ -24,12 +25,80 @@ function cf(overrides: Partial<CustomField>): CustomField {
     type: "text",
     status: "active",
     column_name: "cf_field",
+    show_in_create: true,
+    reportable: false,
     created_by: "u1",
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
+
+describe("fieldsForSurface", () => {
+  const shown = cf({ id: "shown", column_name: "cf_tier" });
+  const kept = cf({
+    id: "kept",
+    column_name: "cf_previous_owner",
+    show_in_create: false,
+  });
+  const retired = cf({ id: "retired", status: "retired" });
+
+  it("leaves a field kept off create forms out of a create dialog", () => {
+    expect(fieldsForSurface([shown, kept, retired], "create")).toEqual([shown]);
+  });
+
+  it("keeps every active field on the record page", () => {
+    expect(fieldsForSurface([shown, kept, retired], "record")).toEqual([
+      shown,
+      kept,
+    ]);
+  });
+
+  // A server older than the setting sends no show_in_create; every field
+  // showed in create dialogs then, so it still does.
+  it("offers a field with no setting on the wire in a create dialog", () => {
+    const older = { ...shown };
+    Reflect.deleteProperty(older, "show_in_create");
+    expect(fieldsForSurface([older], "create")).toEqual([older]);
+  });
+
+  const visitReport = cf({
+    id: "visit",
+    object: "activity",
+    column_name: "cf_visit_report",
+    activity_kinds: ["meeting"],
+  });
+  const region = cf({
+    id: "region",
+    object: "activity",
+    column_name: "cf_region",
+    activity_kinds: null,
+  });
+
+  it("offers a meeting-only field on a meeting and not on a call", () => {
+    expect(
+      fieldsForSurface([visitReport, region], "create", { kind: "meeting" }),
+    ).toEqual([visitReport, region]);
+    expect(
+      fieldsForSurface([visitReport, region], "create", { kind: "call" }),
+    ).toEqual([region]);
+  });
+
+  it("shows a field that no longer applies only where the row holds a value", () => {
+    expect(
+      fieldsForSurface([visitReport], "record", {
+        kind: "call",
+        held: { cf_visit_report: "logged before" },
+      }),
+    ).toEqual([visitReport]);
+    expect(
+      fieldsForSurface([visitReport], "record", {
+        kind: "call",
+        held: { cf_visit_report: null },
+      }),
+    ).toEqual([]);
+  });
+});
 
 describe("customFieldToFormField", () => {
   it("keys the control on the immutable column_name and shows the raw label", () => {
@@ -176,7 +245,7 @@ describe("customFieldDisplay", () => {
     expect(customFieldDisplay(cf({ type: "text" }), "", opts)).toBeNull();
   });
 
-  it("shows text / number / date / picklist as their stored value", () => {
+  it("shows text / number / picklist as their stored value, and a date localized as their stored value", () => {
     expect(customFieldDisplay(cf({ type: "text" }), "hello", opts)).toBe(
       "hello",
     );
@@ -184,7 +253,7 @@ describe("customFieldDisplay", () => {
       "42.5",
     );
     expect(customFieldDisplay(cf({ type: "date" }), "2026-03-01", opts)).toBe(
-      "2026-03-01",
+      "1 Mar 2026",
     );
     expect(customFieldDisplay(cf({ type: "picklist" }), "Reseller", opts)).toBe(
       "Reseller",

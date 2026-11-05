@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "composite": true,
+    // Incremental, not composite, for the TS7056 reason in tsconfig.app.json.
+    "incremental": true,
     "tsBuildInfoFile": "node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "ES2022",
     "lib": ["ES2022", "ES2023.Intl", "DOM", "DOM.Iterable"],
@@ -58,10 +59,5 @@
     "scripts/**/*.ts",
     "src",
     "e2e/**/*.ts"
-  ],
-  // src/screens/ext/ is the COMPOSED lane's program — its screens call routes
-  // that are in `paths` only under the merged contract — so it cannot be typed
-  // here any more than in the app project, and `@composition/screens` above
-  // resolves the empty vanilla registry instead.
-  "exclude": ["src/screens/ext/**"]
+  ]
 }

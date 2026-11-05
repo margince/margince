@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { describe, expect, it } from "vitest";
+import { translate } from "../../i18n";
+import { valueLabel } from "./analytics.questions.values";
+
+const t = (
+  key: Parameters<typeof translate>[1],
+  params?: Record<string, string>,
+) => translate("en", key, params);
+
+describe("a dimension value in the reader's words", () => {
+  it("reads a status by whose status it is", () => {
+    expect(valueLabel(t, "win-loss", "status", "won")).toBe("Won");
+    expect(valueLabel(t, "leads-by-status", "status", "promoted")).toBe(
+      "Qualified",
+    );
+  });
+
+  it("reuses the words the timeline, forecast, meetings and projects use", () => {
+    expect(valueLabel(t, "activities-by-kind", "kind", "meeting")).toBe(
+      "Meeting",
+    );
+    expect(valueLabel(t, "forecast", "win_probability_band", "30_59")).toBe(
+      translate("en", "deal.winProbability.band.30_59"),
+    );
+    expect(valueLabel(t, "deals-by-stage", "status", "open")).toBe("Open");
+    expect(
+      valueLabel(t, "activities-by-kind", "meeting_status", "no_show"),
+    ).toBe("No-show");
+    expect(valueLabel(t, "projects-by-phase", "phase", "delivering")).toBe(
+      translate("en", "project.phase.delivering"),
+    );
+    expect(valueLabel(t, "leads-by-status", "source", "webform")).toBe(
+      "Web form",
+    );
+  });
+
+  it("names a built-in loss reason and how a loss reason was set", () => {
+    expect(valueLabel(t, "win-loss", "loss_reason", "competitor")).toBe(
+      "Chose a competitor",
+    );
+    expect(
+      valueLabel(t, "win-loss", "loss_reason", "our_own_reason"),
+    ).toBeNull();
+    expect(valueLabel(t, "win-loss", "loss_reason_state", "unmapped")).toBe(
+      "Note not mapped",
+    );
+    expect(valueLabel(t, "win-loss", "loss_reason_state", "missing")).toBe(
+      "No reason",
+    );
+  });
+
+  it("has no word for a value no screen names yet", () => {
+    expect(valueLabel(t, "deals-by-stage", "status", "stalled")).toBeNull();
+    expect(
+      valueLabel(t, "activities-by-kind", "direction", "inbound"),
+    ).toBeNull();
+    expect(valueLabel(t, "win-loss", "size_band", "11-50")).toBeNull();
+  });
+});

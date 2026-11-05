@@ -195,11 +195,10 @@ func unguardedCredentialLogs(t *testing.T) []credentialLogSite {
 	t.Helper()
 	var sites []credentialLogSite
 	fset := gatekit.SourceFileSet()
-	// Every hand-written Go tree, which is the same four CLAUDE.md names and
-	// `craft static` sweeps — backend, extensions, fixtures and desktop — not the
-	// backend half. The desktop launcher is exactly where this class recurs: it
-	// logs through slog and it generates a bootstrap admin password.
-	for _, root := range []string{"internal", "cmd", "pkg", "../extensions", "../fixtures", "../desktop"} {
+	// Every hand-written Go tree `craft static` sweeps (backend, extensions and
+	// fixtures), not the backend half. An extension logs through the same slog
+	// and handles credentials of its own.
+	for _, root := range []string{"internal", "cmd", "pkg", "../extensions", "../fixtures"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") ||

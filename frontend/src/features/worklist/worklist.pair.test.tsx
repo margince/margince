@@ -25,6 +25,7 @@ const RIGHT = "01a05500-0000-7000-8000-0000000000a2";
 
 function pairRow(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a05500-0000-7000-8000-0000000000ff",
     source: "dedupe_candidate",
     category: "decisions",
@@ -114,6 +115,15 @@ describe("deciding a duplicate pair on the row", () => {
     expect(screen.getByRole("button", { name: "Keep ACME Gmbh" })).toBeTruthy();
   });
 
+  // A reader who may change only one record may only give it away, so only
+  // the other record offers Keep.
+  it("offers only the record the server says must survive", () => {
+    const row = pairRow();
+    draw({ ...row, pair: row.pair && { ...row.pair, keep_id: RIGHT } });
+    expect(screen.queryByRole("button", { name: "Keep Acme GmbH" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Keep ACME Gmbh" })).toBeTruthy();
+  });
+
   // THE case this component exists for. Merging KEEPS one record and archives
   // the other, so the winner must be the one the reader pressed — picking for
   // them would be the product deciding which of a customer's records is real.
@@ -177,7 +187,7 @@ describe("deciding a duplicate pair on the row", () => {
       "fetch",
       vi.fn(
         async () =>
-          new Response(JSON.stringify({ code: "conflict" }), {
+          new Response(JSON.stringify({ code: "already_disposed" }), {
             status: 409,
             headers: { "content-type": "application/problem+json" },
           }),
@@ -230,7 +240,11 @@ describe("deciding a duplicate pair on the row", () => {
   // on a loaded runner as on an idle laptop.
   it.each([
     { what: "a refusal", code: "permission_denied", status: 403 },
-    { what: "a pair somebody else settled", code: "conflict", status: 409 },
+    {
+      what: "a pair somebody else settled",
+      code: "already_disposed",
+      status: 409,
+    },
   ])(
     "keeps $what on screen until it is dismissed",
     async ({ code, status }) => {

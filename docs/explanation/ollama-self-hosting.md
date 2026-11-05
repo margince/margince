@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/ai/ollama.go backend/internal/modules/ai/ollamaparts.go backend/internal/modules/ai/ollamathink.go backend/internal/modules/ai/providerregistry.go config/presets/gemma4_local_ollama.yaml -->
 # Self-hosting models with Ollama: what we measured
 
 **A dated measurement, from 2026-09-23 to 2026-09-24.** It records what one

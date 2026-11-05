@@ -52,6 +52,9 @@ func TestRelationshipStrengthOverSeededRows(t *testing.T) {
 			activity, contact); err != nil {
 			t.Fatal(err)
 		}
+		if direction == "inbound" {
+			LinkActivitySender(t, owner, activity, contact)
+		}
 	}
 
 	// A lead with its own linked activity: never an input (ADR-0008).

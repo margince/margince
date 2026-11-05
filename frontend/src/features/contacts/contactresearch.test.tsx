@@ -85,9 +85,10 @@ describe("the research tab's enrichment evidence", () => {
         })}
       />,
     );
-    expect(screen.getByText("Title")).toBeTruthy();
+    // The details card below carries the same field labels.
+    expect(screen.getAllByText("Title").length).toBeGreaterThan(0);
     expect(screen.getByText("Head of Fleet")).toBeTruthy();
-    expect(screen.getByText("Phone")).toBeTruthy();
+    expect(screen.getAllByText("Phone").length).toBeGreaterThan(0);
     expect(screen.getByText("+493012345678")).toBeTruthy();
   });
 
@@ -113,7 +114,7 @@ describe("the research tab's enrichment evidence", () => {
     expect(
       screen.getByText(/Dana Buyer, Head of Fleet at Brandt Automotive GmbH/),
     ).toBeTruthy();
-    expect(screen.getByText(/Read from site_read on/)).toBeTruthy();
+    expect(screen.getByText(/Read from their company website on/)).toBeTruthy();
   });
 
   it("keeps two readings of the same field as separate rows rather than one colliding on the key", () => {

@@ -149,13 +149,10 @@ func TestCapacityCountsAMeetingHostedByTheRepWhoeverFiledIt(t *testing.T) {
 	}
 }
 
-// An imported meeting whose source author holds no seat here is nobody's time.
-//
-// It carries no host, and its recorder is the admin who ran the import. The
-// capturer fallback would count every such meeting into the importer's week, so
-// it skips rows that name a source author. A host-less meeting the rep filed
-// by hand still counts.
-func TestCapacitySkipsAnImportedMeetingWhoseAuthorHoldsNoSeat(t *testing.T) {
+// Only a meeting the rep takes part in is their time. An imported meeting with
+// no seat here counts for nobody, and so does a host-less row the rep filed.
+// The meeting the rep hosts counts.
+func TestCapacityCountsOnlyAMeetingTheRepTakesPartIn(t *testing.T) {
 	e := integration.Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	owner := integration.OwnerConn(t)
@@ -172,9 +169,15 @@ func TestCapacitySkipsAnImportedMeetingWhoseAuthorHoldsNoSeat(t *testing.T) {
 	}
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
-		VALUES ($1, 'meeting', 'Filed by hand, no host', $2, 'booked', 'manual', $3)`,
+		VALUES ($1, 'meeting', 'Filed, no host', $2, 'booked', 'manual', $3)`,
 		ids.NewV7(), time.Date(2026, 6, 17, 9, 0, 0, 0, time.UTC), filedBy); err != nil {
-		t.Fatalf("seeding the hand-filed meeting: %v", err)
+		t.Fatalf("seeding the host-less meeting: %v", err)
+	}
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by, host_user_id)
+		VALUES ($1, 'meeting', 'Hosted by the rep', $2, 'booked', 'manual', $3, $4)`,
+		ids.NewV7(), time.Date(2026, 6, 18, 9, 0, 0, 0, time.UTC), filedBy, e.Rep1); err != nil {
+		t.Fatalf("seeding the hosted meeting: %v", err)
 	}
 
 	seam := weeklyPlanCapacity{pool: e.Pool}
@@ -183,7 +186,7 @@ func TestCapacitySkipsAnImportedMeetingWhoseAuthorHoldsNoSeat(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Meetings != 1 {
-		t.Errorf("counted %d meetings, want only the hand-filed one", got.Meetings)
+		t.Errorf("counted %d meetings, want only the one the rep hosts", got.Meetings)
 	}
 }
 

@@ -24,38 +24,51 @@ export type Fact = Readonly<{
   term: ReactNode;
   value: ReactNode;
   note?: ReactNode;
+  /** Draws the term over the value instead of beside it, for a value that is
+   *  a card rather than a line. Only `flat` lists take it. */
+  block?: boolean;
 }>;
 
 /**
  * A read-only fact table.
  *
  * Rows arrive as an array rather than as children so a caller filters absent
- * facts out before rendering — a `<dt>` with an empty `<dd>` reads as "we know
+ * facts out before rendering. A `<dt>` with an empty `<dd>` reads as "we know
  * this and it is blank", which is a different claim from not knowing it. Where
- * a row must be shown as unknown, the caller passes the honest words as
- * `value`.
+ * a row must be shown as unknown, the caller passes the plain words as `value`.
  *
  * `numeric` sets tabular figures on every value, for the case the runtime
  * chip's rows (`.mw-aistat-r dd`) already handle by hand: a column of counts
  * that would otherwise shift as digits change width.
+ *
+ * `flat` is the list inside a record's details card: a fixed term column so
+ * every value starts at one edge, and no rule between rows. A value wraps
+ * instead of being cut.
  */
 export function FactList({
   facts,
   numeric,
+  flat,
   className,
 }: Readonly<{
   facts: readonly Fact[];
   numeric?: boolean;
+  flat?: boolean;
   className?: string;
 }>) {
   return (
     <dl
       className={`factlist${numeric ? " factlist-numeric" : ""}${
-        className ? ` ${className}` : ""
-      }`}
+        flat ? " factlist-flat" : ""
+      }${className ? ` ${className}` : ""}`}
     >
       {facts.map((fact) => (
-        <div className="factlist-row" key={fact.key}>
+        <div
+          className={
+            fact.block ? "factlist-row factlist-row-block" : "factlist-row"
+          }
+          key={fact.key}
+        >
           <dt className="factlist-term">{fact.term}</dt>
           <dd className="factlist-value">
             {fact.value}

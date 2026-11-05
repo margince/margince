@@ -127,6 +127,7 @@ export const AnUnwrappableLine: Story = {
           preview:
             "Can you confirm the lead time before Friday? Procurement will not sign without it.",
           occurred_at: "2026-09-01T07:42:00Z",
+          occurred_precision: "instant",
           direction: "inbound",
           counterparty: "Kirsten Vogel",
           attachment_count: 1,

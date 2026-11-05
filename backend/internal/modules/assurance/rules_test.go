@@ -6,6 +6,8 @@ package assurance
 import (
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // testYear is the year every fixture below sits in — the rules are about
@@ -20,14 +22,14 @@ func at(m time.Month, d int) time.Time {
 // a case proves is that field.
 func healthy() Subject {
 	return Subject{
-		DealID:           "d1",
-		Owner:            "u1",
-		AmountMinor:      new(int64(500_000)),
-		Currency:         "EUR",
-		ExpectedClose:    new(at(time.June, 30)),
-		Category:         "commit",
+		DealID:         "d1",
+		Owner:          "u1",
+		AmountMinor:    new(int64(500_000)),
+		Currency:       "EUR",
+		ExpectedClose:  new(at(time.June, 30)),
+		WinProbability: 90, Likely: true,
 		StageName:        "Negotiation",
-		LastInboundAt:    new(at(time.May, 10)),
+		Viability:        &SubjectViability{Outcome: viability.OutcomeEligible},
 		HasNextStep:      true,
 		HasEconomicBuyer: true,
 	}
@@ -74,7 +76,7 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 			fires:    func(s Subject) Subject { s.CloseProvisional = true; return s },
 			// Provisional but not committed: the forecast does not rest on it.
 			quiet: func(s Subject) Subject {
-				s.CloseProvisional, s.Category = true, "pipeline"
+				s.CloseProvisional, s.Likely = true, false
 				return s
 			},
 		},
@@ -101,19 +103,21 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 			ruleType: TypeNoNextStep,
 			fires:    func(s Subject) Subject { s.HasNextStep = false; return s },
 			// No next step on a deal nobody is forecasting is not a finding.
-			quiet: func(s Subject) Subject { s.HasNextStep, s.Category = false, "omitted"; return s },
+			quiet: func(s Subject) Subject { s.HasNextStep, s.Likely = false, false; return s },
 		},
 		{
 			ruleType: TypeNoEconomicBuyer,
 			fires:    func(s Subject) Subject { s.HasEconomicBuyer = false; return s },
-			quiet:    func(s Subject) Subject { s.HasEconomicBuyer, s.Category = false, "pipeline"; return s },
+			quiet:    func(s Subject) Subject { s.HasEconomicBuyer, s.Likely = false, false; return s },
 		},
 		{
-			ruleType: TypeBuyerSilent,
-			fires:    func(s Subject) Subject { s.LastInboundAt = new(at(time.January, 5)); return s },
-			// Never heard from at all is a DIFFERENT finding, and not one this
-			// rule claims: a deal created today has no inbound either.
-			quiet: func(s Subject) Subject { s.LastInboundAt = nil; return s },
+			ruleType: TypeDealViability,
+			fires:    func(s Subject) Subject { s.Viability = reviewRequired(); return s },
+			// A wait the customer asked for is judged, and it is not a review.
+			quiet: func(s Subject) Subject {
+				s.Viability = &SubjectViability{Outcome: viability.OutcomeWaiting}
+				return s
+			},
 		},
 		{
 			ruleType: TypeCommitUnpriced,
@@ -122,9 +126,16 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 				return s
 			},
 			quiet: func(s Subject) Subject {
-				s.AmountMinor, s.Currency, s.Category = nil, "", "pipeline"
+				s.AmountMinor, s.Currency, s.Likely = nil, "", false
 				return s
 			},
+		},
+		{
+			ruleType: TypeStageExitUnmet,
+			fires:    func(s Subject) Subject { s.UnmetExitCriteria = 1; return s },
+			// A stage nobody wrote criteria for has none to miss, and that is
+			// every stage until an installation configures one.
+			quiet: func(s Subject) Subject { s.UnmetExitCriteria = 0; return s },
 		},
 	} {
 		t.Run(tc.ruleType, func(t *testing.T) {
@@ -176,6 +187,54 @@ func TestTheIdentityIgnoresTheObservedValue(t *testing.T) {
 	}
 }
 
+// A rule whose slots quote the deal's amount, or a total that differs from it
+// only by the masked gap, is in DealAmountTypes. The list read withholds those
+// slots from a masked reader by type, so a missing type would print the figure.
+// A listed type that quotes no money is a stale entry and fails too.
+func TestEveryRuleQuotingMoneyIsADealAmountType(t *testing.T) {
+	t.Parallel()
+	loaded := healthy()
+	loaded.AmountMinor = new(int64(987_654_321))
+	loaded.ExpectedClose = new(at(time.April, 30))
+	loaded.CloseProvisional = true
+	loaded.CloseDatePushes = 5
+	loaded.Viability = reviewRequired()
+	loaded.HasNextStep, loaded.HasEconomicBuyer = false, false
+	loaded.OfferTotalMinor = new(int64(123_456_789))
+	loaded.ContractTotalMinor = new(int64(234_567_891))
+	money := map[int64]bool{
+		*loaded.AmountMinor: true, *loaded.OfferTotalMinor: true, *loaded.ContractTotalMinor: true,
+	}
+
+	quoting := map[string]bool{}
+	for _, rule := range Rules() {
+		found := rule.Ask(at(time.May, 14), loaded, DefaultConfig())
+		if found == nil {
+			continue
+		}
+		for _, slots := range []map[string]any{found.Claim, found.Observed} {
+			for _, value := range slots {
+				if figure, isMoney := value.(int64); isMoney && money[figure] {
+					quoting[found.Type] = true
+				}
+			}
+		}
+	}
+	listed := map[string]bool{}
+	for _, kind := range DealAmountTypes() {
+		listed[kind] = true
+		if !quoting[kind] {
+			t.Errorf("%s is listed in DealAmountTypes but quotes no deal money", kind)
+		}
+	}
+	for kind := range quoting {
+		if !listed[kind] {
+			t.Errorf("%s quotes deal money in its slots but is not in DealAmountTypes — "+
+				"a reader under a mask on deal.amount_minor would read the figure", kind)
+		}
+	}
+}
+
 // The claim and the observed value hold structured values only. A frozen copy
 // of a protected sentence outlives the protection on its source, which is how
 // narrowing after birth stops being privacy.
@@ -192,7 +251,7 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 	loaded.ExpectedClose = new(at(time.April, 30))
 	loaded.CloseProvisional = true
 	loaded.CloseDatePushes = 5
-	loaded.LastInboundAt = new(at(time.January, 5))
+	loaded.Viability = reviewRequired()
 	loaded.HasEconomicBuyer = false
 	loaded.OfferTotalMinor = new(int64(100_000))
 	loaded.ContractTotalMinor = new(int64(90_000))
@@ -217,5 +276,14 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// reviewRequired is the assessment of a deal whose customer went silent.
+func reviewRequired() *SubjectViability {
+	return &SubjectViability{
+		Outcome:    viability.OutcomeReviewRequired,
+		Reasons:    []viability.Reason{viability.ReasonCustomerSilent, viability.ReasonCloseDateUnsupported},
+		SilentDays: 196,
 	}
 }

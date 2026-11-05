@@ -172,6 +172,33 @@ func TestLeadLinkedInRefusesNonURLsAsTheCallersFault(t *testing.T) {
 	}
 }
 
+func TestLeadLinkedInRefusesACompanyPage(t *testing.T) {
+	e := setupLeadLinkedIn(t)
+	ctx := e.as(e.rep1, principal.RowScopeAll)
+
+	var parseErr *values.ParseError
+	if _, _, err := e.store.CreateLead(ctx, CreateLeadInput{
+		FullName: new("Acme Page"), LinkedInURL: new("https://www.linkedin.com/company/acme"), Source: "manual",
+	}); !errors.As(err, &parseErr) || parseErr.Code != "linkedin_url_not_profile" {
+		t.Fatalf("create with a company page → %v, want linkedin_url_not_profile", err)
+	}
+	created, _, err := e.store.CreateLead(ctx, CreateLeadInput{
+		FullName: new("Vera VP"), LinkedInURL: new("https://www.linkedin.com/in/vera-vp"), Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("create lead: %v", err)
+	}
+	_, err = e.store.UpdateLead(ctx, ids.From[ids.LeadKind](ids.UUID(created.Id)), UpdateLeadInput{
+		LinkedInURL: new("https://www.linkedin.com/company/acme"),
+	})
+	if !errors.As(err, &parseErr) || parseErr.Code != "linkedin_url_not_profile" {
+		t.Fatalf("update to a company page → %v, want linkedin_url_not_profile", err)
+	}
+	if _, err := e.store.FindLeadByLinkedInURL(ctx, "https://www.linkedin.com/company/acme"); !errors.As(err, &parseErr) {
+		t.Fatalf("probe with a company page → %v, want a values.ParseError", err)
+	}
+}
+
 func (e *linkedinEnv) count(t *testing.T, sql string, args ...any) int {
 	t.Helper()
 	var n int

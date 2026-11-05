@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -55,14 +57,20 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 		return dimension(crmcontracts.HealthDimensionRatingAtRisk, crmcontracts.HealthDimensionReasonCodeNeverWritten,
 			crmcontracts.HealthDimensionReasonParams{}, "No message from them and no meeting yet.")
 	case touch.Basis == relstrength.InTouchQuiet:
+		// The day it counts from, so the sentence and a timeline beside it that
+		// counts from another exchange cannot read as disagreeing.
+		quiet := crmcontracts.HealthDimensionReasonParams{Days: &touch.Days}
+		if touch.Since != nil {
+			quiet.At, quiet.AtPrecision = &touch.Since.At, activitywhen.PrecisionOf(*touch.Since)
+		}
 		return dimension(crmcontracts.HealthDimensionRatingAtRisk, crmcontracts.HealthDimensionReasonCodeQuiet,
-			crmcontracts.HealthDimensionReasonParams{Days: &touch.Days},
-			fmt.Sprintf("No reply and no meeting for %d days.", touch.Days))
+			quiet, fmt.Sprintf("No reply from them and no meeting for %d days.", touch.Days))
 	case touch.Basis == relstrength.InTouchBooked:
-		// The instant, not a day: which day it falls on depends on the record's
-		// zone, which the client holds and this read does not.
+		// The stored time and its precision. The client names an instant's day in
+		// the record's zone, which this read does not hold. A day names its date.
+		booked := crmcontracts.HealthDimensionReasonParams{At: &touch.BookedAt.At, AtPrecision: activitywhen.PrecisionOf(*touch.BookedAt)}
 		return dimension(crmcontracts.HealthDimensionRatingGood, crmcontracts.HealthDimensionReasonCodeMeetingBooked,
-			crmcontracts.HealthDimensionReasonParams{At: touch.BookedAt}, "A meeting with them is booked.")
+			booked, "A meeting with them is booked.")
 	case touch.Basis == relstrength.InTouchMet:
 		// The meeting is named even on a single-threaded account: it is what
 		// keeps the rating off at risk, and SingleThreaded still says the rest.
@@ -72,7 +80,7 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 		}
 		return dimension(rating, crmcontracts.HealthDimensionReasonCodeLastMet,
 			crmcontracts.HealthDimensionReasonParams{Days: &touch.Days},
-			fmt.Sprintf("Last met them %d days ago.", touch.Days))
+			lastMetSentence(touch.Days))
 	case single:
 		return dimension(crmcontracts.HealthDimensionRatingGood, crmcontracts.HealthDimensionReasonCodeSingleThreaded,
 			crmcontracts.HealthDimensionReasonParams{}, "In contact, but one contact carries the whole account.")
@@ -81,6 +89,16 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 			crmcontracts.HealthDimensionReasonParams{Count: &active},
 			fmt.Sprintf("%d contacts here are in touch.", active))
 	}
+}
+
+// lastMetSentence is the English fallback of the last-met count. A count of
+// zero reads "today": "0 days ago" is not a sentence. The quiet reason needs no
+// such branch, because it only fires past the in-touch window.
+func lastMetSentence(days int) string {
+	if days <= 0 {
+		return "Last met them today."
+	}
+	return fmt.Sprintf("Last met them %d days ago.", days)
 }
 
 // rateCommercial: is work moving?
@@ -122,7 +140,7 @@ func dimension(
 // readableMeetings is meetingsAround behind the activity grant readNextMeeting
 // asks. A reader without it gets no meeting dates and a rating made from what
 // they may see, so the rating cannot tell them a meeting exists.
-func (a *assembly) readableMeetings() (last, next *time.Time, err error) {
+func (a *assembly) readableMeetings() (last, next *occurredday.Moment, err error) {
 	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil, nil, nil
@@ -140,7 +158,7 @@ func (a *assembly) readableMeetings() (last, next *time.Time, err error) {
 // neither. Nil is "no meeting on
 // record", a fact about the reading rather than a claim that none happened:
 // the caller may hold no scope over the activity that would prove otherwise.
-func (a *assembly) meetingsAround() (last, next *time.Time, err error) {
+func (a *assembly) meetingsAround() (last, next *occurredday.Moment, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(a.companyID.UUID)
@@ -159,29 +177,30 @@ func (a *assembly) meetingsAround() (last, next *time.Time, err error) {
 		activityScope, activities.CompanyLinkedActivityExists(companyPos)) + a.opts.projectScope(arg)
 	now := fmt.Sprintf("$%d", nowPos)
 	rows, err := a.tx.Query(a.ctx, fmt.Sprintf(`
-		(SELECT 'last' AS side, a.occurred_at FROM activity a
+		(SELECT 'last' AS side, a.occurred_at, a.occurred_precision FROM activity a
 		  WHERE %[1]s AND %[2]s
 		  ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1)
 		UNION ALL
-		(SELECT 'next', a.occurred_at FROM activity a
+		(SELECT 'next', a.occurred_at, a.occurred_precision FROM activity a
 		  WHERE %[1]s AND %[3]s
-		  ORDER BY a.occurred_at, a.id LIMIT 1)`,
-		where, relstrength.MeetingTookPlaceSQL("a", now), relstrength.MeetingAheadSQL("a", now)), args...)
+		  ORDER BY %[4]s, a.id LIMIT 1)`,
+		where, relstrength.MeetingTookPlaceSQL("a", now), relstrength.MeetingAheadSQL("a", now), occurredday.StartSQL("a")), args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read the account's meetings: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var side string
+		var side, precision string
 		var at time.Time
-		if err := rows.Scan(&side, &at); err != nil {
+		if err := rows.Scan(&side, &at, &precision); err != nil {
 			return nil, nil, err
 		}
+		meeting := &occurredday.Moment{At: at, DateOnly: occurredday.IsDay(precision)}
 		if side == "last" {
-			last = &at
+			last = meeting
 			continue
 		}
-		next = &at
+		next = meeting
 	}
 	return last, next, rows.Err()
 }

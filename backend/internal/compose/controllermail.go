@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -31,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -49,6 +51,8 @@ type controllerMailQueue struct {
 	// The lane is NOT a side door: a confirmation mail is asked the same
 	// question, and answers it on its own evidence rather than skipping it.
 	authority *consent.Gate
+	// from is the relay's sender address, recorded on each delivery it stages.
+	from string
 }
 
 var _ consent.ConfirmationSender = controllerMailQueue{}
@@ -56,7 +60,7 @@ var _ consent.ConfirmationSender = controllerMailQueue{}
 // NewControllerMailQueue builds the lane the installation's own notices ride.
 //
 //nolint:ireturn // returns the consent-side seam by design: the concrete type is unexported and every caller holds the interface
-func NewControllerMailQueue(pool *pgxpool.Pool, runner *jobs.Runner) consent.ConfirmationSender {
+func NewControllerMailQueue(pool *pgxpool.Pool, runner *jobs.Runner, from string) consent.ConfirmationSender {
 	store := activities.NewStore(InstallationDB(pool))
 	return controllerMailQueue{
 		activities: store,
@@ -64,6 +68,7 @@ func NewControllerMailQueue(pool *pgxpool.Pool, runner *jobs.Runner) consent.Con
 		runner:     runner,
 		templates:  consent.ControllerTemplateRegistry(),
 		authority:  consentGateFor(pool),
+		from:       from,
 	}
 }
 
@@ -78,19 +83,26 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	if !ok {
 		return ids.UUID{}, errors.New("compose: staging a controller delivery outside workspace context")
 	}
-	subject, body := in.Rendered.Subject, in.Rendered.Body
+	rendered, body, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	in.Rendered = rendered
+	subject := rendered.Subject
+	// Members read the activity; only the delivery keeps the placeholder the dispatcher fills.
+	readable := strings.ReplaceAll(body, comms.LinkPlaceholder, mailcopy.For(rendered.Language).SentLinkMarker)
 	outbound := string(crmcontracts.ActivityDirectionOutbound)
-	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
+	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.SentRecord(activities.LogActivityInput{
 		Kind:      string(crmcontracts.ActivityKindEmail),
 		Subject:   &subject,
-		Body:      &body,
+		Body:      &readable,
 		Direction: &outbound,
 		Source:    systemActor,
 		// The installation writing to somebody about its own obligations is not
 		// that contact engaging, so it stays out of every last_activity_at.
 		Origin: activities.OriginSystemNotice,
 		Links:  []activities.ActivityLinkInput{controllerMailSubject(in)},
-	})
+	}))
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: filing the notice on the timeline: %w", err)
 	}
@@ -101,10 +113,13 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		TemplateVersion:  in.Rendered.Version,
 		Subject:          subject,
 		Body:             body,
+		HTMLBody:         in.Rendered.HTMLBody,
 		MessageID:        in.MessageID,
 		PayloadRef:       in.LinkRef,
-		PayloadExpiresAt: &in.ExpiresAt,
+		PayloadExpiresAt: controllerExpiry(in.ExpiresAt),
+		DueAt:            in.DueAt,
 		LinkID:           in.LinkID,
+		FromAddress:      q.from,
 	}, q.templates)
 	if err != nil {
 		return ids.UUID{}, err
@@ -116,14 +131,9 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	// while satisfying a census gate that sees the call and cannot see it
 	// skipped.
 	if q.authority == nil {
-		return ids.UUID{}, errors.New("compose: no authorization authority is wired on the controller mail lane")
+		return ids.UUID{}, errNoControllerAuthority
 	}
-	set, err := q.authority.AuthorizeStagingTx(ctx, tx, deliveryID, commsauthz.Request{
-		Recipients: []connector.Recipient{{Email: in.Recipient}},
-		Context:    in.Category,
-		Subject:    subject,
-		Body:       body,
-	})
+	set, err := q.authority.AuthorizeStagingTx(ctx, tx, deliveryID, stagingRequest(in, body))
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -138,6 +148,62 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	return deliveryID, nil
 }
 
+// PresentConfirmationTx is the mail QueueConfirmationTx would stage, so a
+// preview shows the same From, subject and text, and refuses what staging
+// would refuse.
+func (q controllerMailQueue) PresentConfirmationTx(ctx context.Context, tx pgx.Tx, in consent.ConfirmationSend) (consent.PresentedMail, error) {
+	rendered, body, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	if err != nil {
+		return consent.PresentedMail{}, err
+	}
+	in.Rendered = rendered
+	if q.authority == nil {
+		return consent.PresentedMail{}, errNoControllerAuthority
+	}
+	set, err := q.authority.PreviewTx(ctx, tx, stagingRequest(in, body))
+	if err != nil {
+		return consent.PresentedMail{}, err
+	}
+	if err := refuseAtStaging(set); err != nil {
+		return consent.PresentedMail{}, err
+	}
+	return consent.PresentedMail{From: q.from, Subject: rendered.Subject, Text: body}, nil
+}
+
+// stagingRequest is what the engine is asked about one controller mail, at
+// staging and in its preview alike.
+func stagingRequest(in consent.ConfirmationSend, body string) commsauthz.Request {
+	return commsauthz.Request{
+		Recipients: []connector.Recipient{{Email: in.Recipient}},
+		Context:    in.Category,
+		Subject:    in.Rendered.Subject,
+		Body:       body,
+		HTMLBody:   in.Rendered.HTMLBody,
+	}
+}
+
+var errNoControllerAuthority = errors.New("compose: no authorization authority is wired on the controller mail lane")
+
+// presentControllerMailTx adds the brand the installation's mail is sent
+// under: an HTML alternative, and the brand line atop the plain text.
+func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered) (consent.Rendered, string, error) {
+	body := rendered.Body
+	if rendered.Language == "" && rendered.HTMLBody == "" {
+		return rendered, body, nil
+	}
+	// The same name product mail is headed by (mailletterhead.go). The logo is
+	// not attached on this lane yet, so the name heads the notice alone.
+	brand, _, err := letterheadNameTx(ctx, tx)
+	if err != nil {
+		return consent.Rendered{}, "", err
+	}
+	rendered.HTMLBody = consent.RenderControllerPresentation(rendered, brand)
+	if brand != "" {
+		body = brand + "\n\n" + body
+	}
+	return rendered, body, nil
+}
+
 // controllerMailSubject files the notice under the record it was sent to: the
 // lead for a website lead's privacy notice, the contact for everything else.
 func controllerMailSubject(in consent.ConfirmationSend) activities.ActivityLinkInput {
@@ -149,4 +215,11 @@ func controllerMailSubject(in consent.ConfirmationSend) activities.ActivityLinkI
 	return activities.ActivityLinkInput{
 		EntityType: string(crmcontracts.ActivityLinkEntityTypeContact), EntityID: in.ContactID.UUID,
 	}
+}
+
+func controllerExpiry(expiry time.Time) *time.Time {
+	if expiry.IsZero() {
+		return nil
+	}
+	return &expiry
 }

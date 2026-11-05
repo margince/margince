@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -50,6 +51,8 @@ func (decidesDeals) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RB
 	return authz.RBAC{Permissions: principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true},
+			"contact":  {Create: true, Read: true},
+			"lead":     {Create: true, Read: true},
 			"deal":     {Read: true, Update: true},
 		},
 		RowScope: principal.RowScopeAll,
@@ -193,17 +196,33 @@ func TestTheDigestCountsOnlyTheDuplicatesItsReaderCouldOpen(t *testing.T) {
 // This is the disclosure the seam closes: before it, the digest counted every
 // pending approval in the workspace and wrote that number into every payload,
 // so a reader holding no deal grant was told how many deal decisions exist.
-func TestTheDigestCountsOnlyTheProposalsItsReaderCouldDecide(t *testing.T) {
+func TestTheDigestCountsOnlyDecisionsRequestedFromItsReader(t *testing.T) {
 	b := setupBackfillWire(t)
-	b.stageCloseDateProposal(t, b.seedDecidableDeal(t))
-	now := time.Now().UTC()
-
+	deal := b.seedDecidableDeal(t)
+	b.stageCloseDateProposal(t, deal)
+	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
+	if pending := b.buildWith(t, decidesDeals{}, now); pending != 0 {
+		t.Fatalf("an unassigned decision became %d personal decisions", pending)
+	}
+	stager := principal.SystemActing(b.env.Admin(), "digest-review")
+	actor, ok := principal.Actor(stager)
+	if !ok {
+		t.Fatal("stager has no principal")
+	}
+	actor.OnBehalfOf = b.env.Rep1
+	stager = principal.WithActor(stager, actor)
+	if _, err := approvals.NewService(b.env.DB()).Stage(stager, approvals.StageInput{
+		Kind:           deals.FollowUpReconcileKind,
+		ProposedChange: []byte(`{"deal_id":"` + deal.String() + `","subject":"Send the pricing"}`),
+		DiffHash:       "personal-follow-up", TargetType: "deal", TargetID: deal, Summary: "Send the pricing",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if pending := b.buildWith(t, decidesNothing{}, now); pending != 0 {
-		t.Errorf("a reader who cannot decide a deal proposal was told %d are waiting, want 0", pending)
+		t.Fatalf("a reader without the target grant saw %d pending decisions", pending)
 	}
 	if pending := b.buildWith(t, decidesDeals{}, now); pending != 1 {
-		t.Errorf("a reader who CAN decide it was told %d are waiting, want 1 — "+
-			"a count that hides from everyone proves nothing about scope", pending)
+		t.Fatalf("the requested reader saw %d pending decisions, want one", pending)
 	}
 }
 
@@ -272,4 +291,24 @@ func (readsContacts) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.R
 // authztest.AdmittedFromPair for why the body is not written out here.
 func (r readsContacts) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+}
+
+// Duplicate contacts count as the one review the Worklist shows for them,
+// however many pairs join the group.
+func TestTheDigestCountsAGroupOfDuplicateContactsOnce(t *testing.T) {
+	b := setupBackfillWire(t)
+	for range 3 {
+		if _, err := b.env.Contacts.CreateContact(b.env.Admin(), contacts.CreateContactInput{
+			FullName: "Cleo Marsh", Source: "manual",
+			Phones: []contacts.ContactPhoneInput{{Phone: "+493055530001", PhoneType: "work", IsPrimary: true, Position: 1}},
+		}); err != nil {
+			t.Fatalf("seeding a duplicate: %v", err)
+		}
+	}
+	if pairs := b.env.WsCount(t, `SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'contact' AND disposition = 'open'`); pairs < 2 {
+		t.Fatalf("the three contacts are joined by %d pairs, want a group of at least two", pairs)
+	}
+	if _, open := b.buildCounts(t, readsContacts{}, clocktest.Now(t)); open != 1 {
+		t.Errorf("the digest reported %d duplicates to review, want the one group", open)
+	}
 }

@@ -6,7 +6,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project
 
-23 columns · primary key `(id)` · referenced by 10 foreign keys
+24 columns · primary key `(id)` · referenced by 12 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -16,12 +16,13 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `description` | `text` |  |  |
 | `ended_at` | `date` |  |  |
 | `key` | `text` |  | The short handle a human writes in a subject line. |
-| `last_activity_at` | `timestamp with time zone` |  | The newest workspace-audience activity filed under the project, maintained from the timeline on link write; a read accelerator that a rebuild must reproduce. |
+| `last_activity_at` | `timestamp with time zone` |  | The newest workspace-audience activity filed under the project, maintained from the timeline on link write. |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `phase` | `text`, default `'initiative'::text` | yes | Read-only here: transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
+| `source_id` | `text` |  | At most 128 characters. |
 | `started_at` | `date` |  |  |
 | `target_end_date` | `date` |  |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -49,6 +50,8 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `project_key_shape`: `CHECK (((key IS NULL) OR (key ~ '^[A-Za-z][A-Za-z0-9_-]{1,23}$')))`
 - `project_phase_check`: `CHECK ((phase = ANY (ARRAY['initiative', 'pursuing', 'delivering', 'closed'])))`
 - `project_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `project_source_id_length`: `CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))`
+- `project_source_id_needs_a_source`: `CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))`
 - `project_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -60,9 +63,12 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `idx_project_search`: `gin (search_tsv)`
 - `project_pkey`: `unique, btree (id)`
 - `uq_project_key`: `unique, btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL))`
+- `uq_project_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
 **Triggers**
 
+- `home_read_fence_project_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
+- `project_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `trg_project_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## project_health_assessment
@@ -80,7 +86,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `supersedes_assessment_id` | `uuid` |  | The reading this one corrects, when it is a correction. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | What recorded this assessment. |
+| `source` | `text` | yes | What recorded this assessment: `human` for a user, `agent` for the agent acting for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. |
 
 **Points at**
 
@@ -110,11 +116,12 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project_phase_history
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `audit_log_id` | `uuid` |  |  |
 | `changed_by` | `text` | yes |  |
 | `from_phase` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |

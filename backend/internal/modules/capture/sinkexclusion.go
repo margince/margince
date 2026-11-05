@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -35,7 +36,7 @@ const (
 func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
 	// Colleague correspondence is not evidence of a customer relationship — it
 	// is two employees talking, and the CRM was never asked to hold it.
-	internal, err := s.internalOnlyTx(ctx, tx, rec)
+	internal, err := internalOnlyTx(ctx, tx, rec)
 	if err != nil {
 		return "", err
 	}
@@ -56,6 +57,11 @@ func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.N
 	}
 	if excluded == "" {
 		return "", nil
+	}
+	if excluded == reasonExcludedContainer {
+		if err := s.revokePartySourceTx(ctx, tx, rec); err != nil {
+			return "", err
+		}
 	}
 	if err := s.logBreadcrumbTx(ctx, tx, actionCaptureExcluded, rec, excluded); err != nil {
 		return "", err
@@ -82,6 +88,7 @@ var _ connector.PreStoreJudge = (*Sink)(nil)
 // Upsert would refuse to admit is not judged here (false, nil); the full path
 // then answers for it exactly as it always did.
 func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedRecord) (bool, error) {
+	rec = maskCapturedCredentials(rec)
 	if _, err := admitRecord(ctx, rec); err != nil {
 		return false, nil //nolint:nilerr // not judged here; the full capture path answers for an unadmitted record
 	}
@@ -107,6 +114,10 @@ func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedReco
 // that reaches the raw store has been kept whatever happens next. The answer
 // is the reason to trace, or "" when nothing matched.
 func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
+	return excludedForTx(ctx, tx, rec, actorUserID(ctx))
+}
+
+func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, owner ids.UUID) (string, error) {
 	// A message with no addresses may still have been FILED somewhere the
 	// owner keeps out, so the container arm is asked on its own. The address
 	// arms need the lists below and answer nothing without them.
@@ -117,7 +128,7 @@ func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) 
 	domains := make([]string, 0, len(rec.Addresses))
 	for _, a := range rec.Addresses {
 		addresses = append(addresses, strings.ToLower(strings.TrimSpace(a)))
-		if d := domainOfAddress(a); d != "" {
+		if d := owndomain.OfAddress(a); d != "" {
 			domains = append(domains, d)
 		}
 	}
@@ -137,7 +148,7 @@ func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) 
 		            WHERE d = e.value OR d LIKE '%.' || `+storekit.EscapeLikeSQL("e.value")+`))
 		     OR (e.kind = 'container' AND e.value = ANY($4::text[])))
 		 ORDER BY e.kind LIMIT 1`,
-		addresses, domains, nilToNull(actorUserID(ctx)), rec.Containers).Scan(&kind)
+		addresses, domains, nilToNull(owner), rec.Containers).Scan(&kind)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", nil

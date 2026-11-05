@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { isLocale } from "../../i18n";
+import { catalogs, isLocale, type Locale } from "../../i18n";
 import {
+  callMessengersRoute,
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -10,18 +11,18 @@ import {
 } from "../../testing/story-utils";
 import { ContactDetails } from "./contactdetails";
 
+function storyLocale(parameters: Record<string, unknown>): Locale | undefined {
+  const asked = parameters.locale;
+  return typeof asked === "string" && isLocale(asked) ? asked : undefined;
+}
+
 const meta: Meta<typeof ContactDetails> = {
   title: "Records/Contact 360/Details",
   component: ContactDetails,
   decorators: [
     (Story, { parameters }) => {
-      const asked: unknown = parameters.locale;
       return (
-        <StoryProviders
-          locale={
-            typeof asked === "string" && isLocale(asked) ? asked : undefined
-          }
-        >
+        <StoryProviders locale={storyLocale(parameters)}>
           <Story />
         </StoryProviders>
       );
@@ -31,6 +32,7 @@ const meta: Meta<typeof ContactDetails> = {
     installFetchStub({
       "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
       "GET /users": () => jsonResponse({ data: [] }),
+      "GET /installation/settings": callMessengersRoute(),
     }),
 };
 export default meta;
@@ -72,6 +74,7 @@ const boughtFixture: components["schemas"]["Contact"] = {
   ...fixture,
   title: "Head of Revenue",
   social: { linkedin: "https://www.linkedin.com/in/dana" },
+  primary_email: "dana@bought.example",
   emails: [
     {
       id: "e-bought",
@@ -93,16 +96,26 @@ const boughtFixture: components["schemas"]["Contact"] = {
     },
   ],
   bought_fields: [
-    { target: "title", provider: "surfe", applied_at: "2026-06-02T12:00:00Z" },
+    {
+      target: "title",
+      provider: "surfe",
+      applied_at: "2026-06-02T12:00:00Z",
+      paid: true,
+      trigger: "manual",
+    },
     {
       target: "linkedin",
       provider: "surfe",
       applied_at: "2026-06-02T12:00:00Z",
+      paid: true,
+      trigger: "manual",
     },
     {
       target: "email:e-bought",
       provider: "surfe",
       applied_at: "2026-06-02T12:00:00Z",
+      paid: true,
+      trigger: "manual",
     },
   ],
 };
@@ -144,6 +157,7 @@ const longAddress = (local: string) =>
 const manual = { source: "manual", captured_by: "human:u1" };
 const longFixture: components["schemas"]["Contact"] = {
   ...fixture,
+  primary_email: longAddress("alexandra.konstantinopoulou"),
   emails: [
     {
       ...manual,
@@ -193,6 +207,8 @@ const longFixture: components["schemas"]["Contact"] = {
       target: "email:e-1",
       provider: "surfe",
       applied_at: "2026-06-02T12:00:00Z",
+      paid: true,
+      trigger: "manual",
     },
   ],
 };
@@ -355,4 +371,78 @@ export const LongAddressesGerman: Story = {
       kindsBeneath: [],
       marksBeneath: [0],
     }),
+};
+
+const twoNumbers: components["schemas"]["Contact"] = {
+  ...fixture,
+  phones: [
+    {
+      ...manual,
+      id: "p-1",
+      phone: "+493012345678",
+      phone_type: "mobile",
+      is_primary: true,
+      position: 0,
+    },
+    {
+      ...manual,
+      id: "p-2",
+      phone: "+849123456789012",
+      phone_type: "work",
+      is_primary: false,
+      position: 1,
+    },
+  ],
+};
+
+// Each number keeps one line, its kind beside it or (with no room) under it,
+// and its chat glyph after both.
+async function expectNumbersOnOneLine(
+  canvasElement: HTMLElement,
+  locale: Locale = "en",
+) {
+  await within(canvasElement).findAllByRole("button", {
+    name: catalogs[locale]["callAction.chats"],
+  });
+  const handles = [
+    ...canvasElement.querySelectorAll<HTMLElement>(".fieldgrid-handle"),
+  ].filter((handle) => handle.querySelector(".callaction-chats"));
+  await expect(handles).toHaveLength(2);
+  for (const handle of handles) {
+    const number = handle.querySelector<HTMLElement>("a[href^='tel:']");
+    const kind = handle.querySelector<HTMLElement>(":scope > .t-caption");
+    const chats = handle.querySelector<HTMLElement>(".callaction-chats");
+    if (!number || !kind || !chats) {
+      throw new Error("a phone handle lost its number, kind or chat glyph");
+    }
+    const line = document.createRange();
+    line.selectNodeContents(number);
+    await expect(line.getClientRects()).toHaveLength(1);
+    await expect(chats.getBoundingClientRect().right).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+  }
+  await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+    document.documentElement.clientWidth,
+  );
+}
+
+export const TwoNumbers: Story = {
+  args: { contact: twoNumbers },
+  play: ({ canvasElement, parameters }) =>
+    expectNumbersOnOneLine(canvasElement, storyLocale(parameters)),
+};
+export const TwoNumbersPhone: Story = {
+  ...TwoNumbers,
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+export const TwoNumbersPhoneGerman: Story = {
+  ...TwoNumbersPhone,
+  parameters: { layout: "fullscreen", locale: "de" },
+};
+export const TwoNumbersPhoneVietnamese: Story = {
+  ...TwoNumbersPhone,
+  parameters: { layout: "fullscreen", locale: "vi" },
 };

@@ -6,12 +6,22 @@ package relstrength
 import (
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // now is a fixed instant. Every case below states its times relative to it, so
 // a test reads as "they replied 41 days after we last spoke" rather than as
 // arithmetic against whatever the wall clock says.
 var now = time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+
+// instantAt is an instant activity at at; nil is none.
+func instantAt(at *time.Time) *occurredday.Moment {
+	if at == nil {
+		return nil
+	}
+	return &occurredday.Moment{At: *at}
+}
 
 func daysAgo(n int) *time.Time {
 	t := now.AddDate(0, 0, -n)
@@ -32,9 +42,9 @@ func kindsOf(changes []Change) map[string]Change {
 // came back.
 func TestChangesReportsAReplyThatEndedALongSilence(t *testing.T) {
 	in := ChangeInputs{
-		Current:              Inputs{LastInteraction: daysAgo(3), Count90d: 4, Inbound90d: 2, Outbound90d: 2},
-		LatestInbound:        daysAgo(3),
-		PrecedingInteraction: daysAgo(44),
+		Current:              Inputs{LastTouch: daysAgo(3), LastEngaged: daysAgo(3), Count90d: 4, Inbound90d: 2, Outbound90d: 2},
+		LatestInbound:        instantAt(daysAgo(3)),
+		PrecedingInteraction: instantAt(daysAgo(44)),
 	}
 	got := kindsOf(Changes(in, now))
 	c, found := got[ChangeRepliedAfterGap]
@@ -50,9 +60,9 @@ func TestChangesReportsAReplyThatEndedALongSilence(t *testing.T) {
 // long enough to be news. Reporting every reply would make the surface noise.
 func TestChangesIgnoresAReplyInAnActiveThread(t *testing.T) {
 	in := ChangeInputs{
-		Current:              Inputs{LastInteraction: daysAgo(1), Count90d: 12, Inbound90d: 6, Outbound90d: 6},
-		LatestInbound:        daysAgo(1),
-		PrecedingInteraction: daysAgo(3),
+		Current:              Inputs{LastTouch: daysAgo(1), LastEngaged: daysAgo(1), Count90d: 12, Inbound90d: 6, Outbound90d: 6},
+		LatestInbound:        instantAt(daysAgo(1)),
+		PrecedingInteraction: instantAt(daysAgo(3)),
 	}
 	if _, found := kindsOf(Changes(in, now))[ChangeRepliedAfterGap]; found {
 		t.Error("a reply two days after the last message was reported as ending a silence")
@@ -63,8 +73,8 @@ func TestChangesIgnoresAReplyInAnActiveThread(t *testing.T) {
 // behind it to have broken.
 func TestChangesDoesNotCallAFirstContactAReturn(t *testing.T) {
 	in := ChangeInputs{
-		Current:       Inputs{LastInteraction: daysAgo(2), Count90d: 1, Inbound90d: 1},
-		LatestInbound: daysAgo(2),
+		Current:       Inputs{LastTouch: daysAgo(2), LastEngaged: daysAgo(2), Count90d: 1, Inbound90d: 1},
+		LatestInbound: instantAt(daysAgo(2)),
 	}
 	if _, found := kindsOf(Changes(in, now))[ChangeRepliedAfterGap]; found {
 		t.Error("a first inbound message was reported as a reply after a gap")
@@ -75,9 +85,10 @@ func TestChangesDoesNotCallAFirstContactAReturn(t *testing.T) {
 // silence since is.
 func TestChangesDropsAStaleReturnAndReportsTheSilenceSince(t *testing.T) {
 	in := ChangeInputs{
-		Current:              Inputs{LastInteraction: daysAgo(100), Count90d: 0},
-		LatestInbound:        daysAgo(100),
-		PrecedingInteraction: daysAgo(200),
+		Current:              Inputs{LastTouch: daysAgo(100), LastEngaged: daysAgo(100), Count90d: 0},
+		LastTouch:            instantAt(daysAgo(100)),
+		LatestInbound:        instantAt(daysAgo(100)),
+		PrecedingInteraction: instantAt(daysAgo(200)),
 	}
 	got := kindsOf(Changes(in, now))
 	if _, found := got[ChangeRepliedAfterGap]; found {
@@ -105,8 +116,8 @@ func TestChangesSaysNothingAboutARelationshipThatNeverStarted(t *testing.T) {
 func TestChangesReportsABandCrossingAndNotADriftWithinOne(t *testing.T) {
 	// Busy and recent now, sparse and old a half-life ago: a real move.
 	moved := ChangeInputs{
-		Current:  Inputs{LastInteraction: daysAgo(1), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
-		Previous: Inputs{LastInteraction: daysAgo(40), Count90d: 1, Inbound90d: 1},
+		Current:  Inputs{LastTouch: daysAgo(1), LastEngaged: daysAgo(1), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
+		Previous: Inputs{LastTouch: daysAgo(40), LastEngaged: daysAgo(40), Count90d: 1, Inbound90d: 1},
 	}
 	c, found := kindsOf(Changes(moved, now))[ChangeWarmed]
 	if !found {
@@ -119,8 +130,8 @@ func TestChangesReportsABandCrossingAndNotADriftWithinOne(t *testing.T) {
 	// The same counts on both sides: only decay separates the two scores, and
 	// decay alone is not news.
 	steady := ChangeInputs{
-		Current:  Inputs{LastInteraction: daysAgo(1), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
-		Previous: Inputs{LastInteraction: daysAgo(31), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
+		Current:  Inputs{LastTouch: daysAgo(1), LastEngaged: daysAgo(1), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
+		Previous: Inputs{LastTouch: daysAgo(31), LastEngaged: daysAgo(31), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
 	}
 	for _, c := range Changes(steady, now) {
 		if c.Kind == ChangeWarmed || c.Kind == ChangeCooled {
@@ -132,8 +143,8 @@ func TestChangesReportsABandCrossingAndNotADriftWithinOne(t *testing.T) {
 // A relationship that stopped is reported as cooling, in that direction.
 func TestChangesReportsCoolingWhenTheBandFell(t *testing.T) {
 	in := ChangeInputs{
-		Current:  Inputs{LastInteraction: daysAgo(60), Count90d: 2, Inbound90d: 1, Outbound90d: 1},
-		Previous: Inputs{LastInteraction: daysAgo(31), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
+		Current:  Inputs{LastTouch: daysAgo(60), LastEngaged: daysAgo(60), Count90d: 2, Inbound90d: 1, Outbound90d: 1},
+		Previous: Inputs{LastTouch: daysAgo(31), LastEngaged: daysAgo(31), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
 	}
 	got := kindsOf(Changes(in, now))
 	if _, found := got[ChangeWarmed]; found {
@@ -145,5 +156,80 @@ func TestChangesReportsCoolingWhenTheBandFell(t *testing.T) {
 	}
 	if c.ToBucket == "" {
 		t.Error("a cooling change named no band to have fallen to")
+	}
+}
+
+// The count starts from the owner's touch, not from the strength fold's last
+// interaction. A newer fold row the owner rejects must not shorten the silence.
+func TestWentQuietCountsFromTheLastTouchNotTheFold(t *testing.T) {
+	in := ChangeInputs{
+		Current:   Inputs{LastTouch: daysAgo(5), LastEngaged: daysAgo(5), Count90d: 1},
+		LastTouch: instantAt(daysAgo(60)),
+	}
+	c, found := kindsOf(Changes(in, now))[ChangeWentQuiet]
+	if !found || c.Days != 60 || !c.At.Equal(*daysAgo(60)) {
+		t.Errorf("went_quiet = %+v (found %v), want 60 days from the last touch", c, found)
+	}
+	if _, found := kindsOf(Changes(ChangeInputs{Current: in.Current}, now))[ChangeWentQuiet]; found {
+		t.Error("a contact with no touch was reported as gone quiet")
+	}
+}
+
+// 20:00 UTC on 20 June is already 21 June in Bangkok, so the same two instants
+// are 45 calendar days apart in UTC and 44 in Bangkok.
+func TestWentQuietCountsInTheGivenZone(t *testing.T) {
+	bangkok, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 6, 20, 20, 0, 0, 0, time.UTC)
+	read := time.Date(2026, 8, 4, 10, 0, 0, 0, time.UTC)
+	if c := kindsOf(Changes(ChangeInputs{LastTouch: &occurredday.Moment{At: at}}, read))[ChangeWentQuiet]; c.Days != 45 {
+		t.Errorf("UTC days = %d, want 45", c.Days)
+	}
+	if _, found := kindsOf(Changes(ChangeInputs{LastTouch: &occurredday.Moment{At: at}, Zone: bangkok}, read))[ChangeWentQuiet]; found {
+		t.Error("in Bangkok this is day 44, below the quiet threshold, and must not be reported")
+	}
+}
+
+// A day entry counts from the date it names. Its stored noon UTC is already the
+// next morning in Kiritimati, which would make every silence a day shorter.
+func TestADayEntryCountsItsSilenceFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	read := time.Date(2026, 8, 4, 9, 0, 0, 0, kiritimati)
+	logged := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC).AddDate(0, 0, -QuietDays)
+	quiet, found := kindsOf(Changes(ChangeInputs{LastTouch: &occurredday.Moment{At: logged, DateOnly: true}, Zone: kiritimati}, read))[ChangeWentQuiet]
+	if !found || quiet.Days != QuietDays {
+		t.Fatalf("a day entry dated %d days ago reads %+v, want quiet for %d days", QuietDays, quiet, QuietDays)
+	}
+
+	inbound := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
+	// The instant before it falls on the next local date; the reply keeps its own.
+	preceding := inbound.AddDate(0, 0, -ReplyGapDays-1)
+	replied := kindsOf(Changes(ChangeInputs{
+		LatestInbound:        &occurredday.Moment{At: inbound, DateOnly: true},
+		PrecedingInteraction: &occurredday.Moment{At: preceding},
+		Zone:                 kiritimati,
+	}, read))[ChangeRepliedAfterGap]
+	if replied.Days != ReplyGapDays {
+		t.Fatalf("the reply broke a %d-day silence, want %d", replied.Days, ReplyGapDays)
+	}
+}
+
+// An unanswered send of ours does not report the relationship as warmed.
+func TestChangesReportsNoWarmingAfterAnUnansweredSend(t *testing.T) {
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	tenDaysAgo := now.AddDate(0, 0, -10)
+	got := Changes(ChangeInputs{
+		Current:  Inputs{LastTouch: &now, LastEngaged: &tenDaysAgo, Count90d: 17, Inbound90d: 4, Outbound90d: 7},
+		Previous: Inputs{LastTouch: &tenDaysAgo, LastEngaged: &tenDaysAgo, Count90d: 16, Inbound90d: 4, Outbound90d: 6},
+	}, now)
+	for _, change := range got {
+		if change.Kind == ChangeWarmed {
+			t.Fatalf("an unanswered send reported %+v", change)
+		}
 	}
 }

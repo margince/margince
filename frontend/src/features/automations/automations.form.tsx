@@ -1,5 +1,6 @@
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import { useUnsavedGuard } from "../../components/unsaved";
 import { Button, Checkbox, Field, TextInput } from "../../design-system/atoms";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
@@ -178,7 +179,7 @@ export function AutomationForm({
   const t = useT();
   const fields = paramFields(entry.params_schema);
   const [name, setName] = useState(initialName);
-  const [values, setValues] = useState<Record<string, string>>(() =>
+  const [seeded] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       fields.map((field) => {
         const configured = initialParams?.[field.key];
@@ -188,6 +189,11 @@ export function AutomationForm({
         ];
       }),
     ),
+  );
+  const [values, setValues] = useState(seeded);
+  useUnsavedGuard(
+    name !== initialName ||
+      Object.entries(values).some(([key, value]) => value !== seeded[key]),
   );
 
   return (

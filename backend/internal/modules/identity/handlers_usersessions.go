@@ -48,6 +48,20 @@ func (h Handlers) RevokeUserSession(w http.ResponseWriter, r *http.Request, id c
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// RemoveUserMfa implements DELETE /users/{id}/mfa: a user_admin holder
+// removing a locked-out member's second factor.
+func (h Handlers) RemoveUserMfa(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	actor, ok := h.actor(w, r)
+	if !ok {
+		return
+	}
+	if err := h.svc.RemoveMemberMFA(r.Context(), actor, ids.UserID{UUID: ids.UUID(id)}); err != nil {
+		httperr.Write(w, r, archivedRoleRefusal(err))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func userSessionList(sessions []UserSession) crmcontracts.UserSessionList {
 	out := crmcontracts.UserSessionList{Sessions: make([]crmcontracts.UserSession, 0, len(sessions))}
 	for _, s := range sessions {

@@ -84,6 +84,7 @@ var managerObjects = grid(crud, map[string]grant{
 	"finance":               readOnly,
 	objForecast:             writeNoDelete,
 	objFxRate:               none,
+	objTaxRate:              none,
 	objImportRun:            none,
 	objInstallationSettings: readOnly,
 	"integrations":          readOnly,
@@ -106,13 +107,15 @@ var managerObjects = grid(crud, map[string]grant{
 	objPrivacyRequest:         none,
 	objAuditLog:               none,
 	objJobHealth:              none,
+	objDataTask:               none,
 	objExtensionAccess:        none,
 	objSystemReset:            none,
 	objAiDiagnostics:          none,
 	objConsentConfig:          none,
-	objCommunicationException: none,
+	objCommunicationException: createRead,
 	objAuthenticationPolicy:   none,
 	objOauthApplication:       none,
+	objAgentClient:            none,
 	objSeatUsage:              none,
 	objTeamOversight:          none,
 
@@ -121,6 +124,7 @@ var managerObjects = grid(crud, map[string]grant{
 	// Reviewing legal requests is handed out by an admin, never inherited by a
 	// team lead.
 	objLegalReview: none,
+	objLegalEntity: readOnly,
 })
 
 // managementObjects is managerObjects with the administration reads a
@@ -134,12 +138,14 @@ var managerObjects = grid(crud, map[string]grant{
 // records posture would silently widen the company-scoped seat too.
 var managementObjects = func() map[string]grant {
 	out := maps.Clone(managerObjects)
+	out[objDataTask] = none
 	for _, object := range []string{
 		objAiDiagnostics,
 		objAiBudget,
 		objConsentConfig,
 		objAuthenticationPolicy,
 		objOauthApplication,
+		objAgentClient,
 		objSeatUsage,
 		objTeamOversight,
 	} {
@@ -176,6 +182,7 @@ var defaults = map[string]Document{
 			objEmbeddingReindex:     readUpdate,
 			objForecast:             writeNoDelete,
 			objFxRate:               writeNoDelete,
+			objTaxRate:              createRead,
 			objInstallationSettings: readUpdate,
 			objIntroduction:         writeNoDelete,
 			objLicense:              readOnly,
@@ -187,6 +194,7 @@ var defaults = map[string]Document{
 			objPrivacyRequest:       readUpdate,
 			objAuditLog:             readOnly,
 			objJobHealth:            readOnly,
+			objDataTask:             readUpdate,
 			objExtensionAccess:      readOnly,
 			objSystemReset:          deleteOnly,
 			objAiDiagnostics:        readOnly,
@@ -276,6 +284,7 @@ var defaults = map[string]Document{
 			"deal_room":         writeNoDelete,
 			objEmbeddingReindex: none,
 			objFxRate:           none,
+			objTaxRate:          none,
 			objImportRun:        none,
 			objIntroduction:     writeNoDelete,
 			"lead":              crud,
@@ -304,13 +313,15 @@ var defaults = map[string]Document{
 			objPrivacyRequest:         none,
 			objAuditLog:               none,
 			objJobHealth:              none,
+			objDataTask:               none,
 			objExtensionAccess:        none,
 			objSystemReset:            none,
 			objAiDiagnostics:          none,
 			objConsentConfig:          none,
-			objCommunicationException: none,
+			objCommunicationException: createRead,
 			objAuthenticationPolicy:   none,
 			objOauthApplication:       none,
+			objAgentClient:            none,
 			objSeatUsage:              none,
 			objTeamOversight:          none,
 			objTeamLead:               none,
@@ -332,6 +343,7 @@ var defaults = map[string]Document{
 			objDataCoverage:     none,
 			objEmbeddingReindex: none,
 			objFxRate:           none,
+			objTaxRate:          none,
 			objImportRun:        none,
 			objLicense:          none,
 			objRetentionPolicy:  none,
@@ -347,6 +359,7 @@ var defaults = map[string]Document{
 			objPrivacyRequest:         none,
 			objAuditLog:               none,
 			objJobHealth:              none,
+			objDataTask:               none,
 			objExtensionAccess:        none,
 			objSystemReset:            none,
 			objAiDiagnostics:          none,
@@ -354,6 +367,7 @@ var defaults = map[string]Document{
 			objCommunicationException: none,
 			objAuthenticationPolicy:   none,
 			objOauthApplication:       none,
+			objAgentClient:            none,
 			objSeatUsage:              none,
 			objTeamOversight:          none,
 			objTeamLead:               none,
@@ -368,11 +382,13 @@ var defaults = map[string]Document{
 	"ops": {
 		Objects: grid(crud, map[string]grant{
 			reportingReportDefinition: readOnly,
-			reportingSalesTarget:      readOnly,
-			reportingFrameworkObject:  readOnly,
-			reportingReportSchedule:   readOnly,
-			reportingReportEdition:    readOnly,
-			reportingCreditObject:     readOnly,
+			// An initiative is a commercial decision; an operator reads it.
+			"sales_initiative":       readOnly,
+			reportingSalesTarget:     readOnly,
+			reportingFrameworkObject: readOnly,
+			reportingReportSchedule:  readOnly,
+			reportingReportEdition:   readOnly,
+			reportingCreditObject:    readOnly,
 
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,
@@ -384,6 +400,7 @@ var defaults = map[string]Document{
 			objEmbeddingReindex:     readUpdate,
 			objForecast:             writeNoDelete,
 			objFxRate:               writeNoDelete,
+			objTaxRate:              createRead,
 			objInstallationSettings: readUpdate,
 			objIntroduction:         writeNoDelete,
 			objLicense:              readOnly,
@@ -402,22 +419,44 @@ var defaults = map[string]Document{
 			objPrivacyRequest:       none,
 			objAuditLog:             none,
 			objJobHealth:            readOnly,
+			objDataTask:             readUpdate,
 			objExtensionAccess:      readOnly,
 			objSystemReset:          none,
 			objAiDiagnostics:        readOnly,
 			objAuthenticationPolicy: readOnly,
-			objSeatUsage:            readOnly,
+			// Ops reads the AI tool clients and leaves admitting a new one to admin,
+			// as it does the sign-in policy.
+			objAgentClient: readOnly,
+			objSeatUsage:   readOnly,
 			// Ops runs the installation and leads nobody, so it reads no
 			// team's coaching week.
 			objTeamOversight: none,
 			objTeamLead:      none,
 			objLegalReview:   none,
+			objLegalEntity:   readOnly,
 			// Ops configures the rules and does not send under them. Directing
 			// a message past the engine's answer about a contact is a decision
 			// somebody takes about their own correspondence, and this seat has
 			// none — it holds consent_config precisely because that is the
 			// other authority.
 			objCommunicationException: none,
+		}),
+		RowScope: principal.RowScopeAll,
+	},
+	// service_ingest is what a service member holds. It is the narrowest grant
+	// that lets a landing succeed. It covers the activity, the deal, and the
+	// contact and company the counterparty ladder may resolve or mint. Row scope `all` lets that
+	// ladder find a contact whoever owns it. A narrower scope would mint a
+	// duplicate. It reads installation settings because pricing a deal reads the
+	// base currency. It is not in systemRoles: identity seeds it on first declaration.
+	"service_ingest": {
+		Objects: grid(none, map[string]grant{
+			"activity": writeNoDelete,
+			"contact":  writeNoDelete,
+			"company":  writeNoDelete,
+			"deal":     writeNoDelete,
+
+			objInstallationSettings: readOnly,
 		}),
 		RowScope: principal.RowScopeAll,
 	},

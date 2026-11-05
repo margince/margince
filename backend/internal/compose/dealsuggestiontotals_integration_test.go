@@ -119,6 +119,8 @@ func TestOpenSuggestionsChangeNoReportedFigure(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("opening the real deal: %v", err)
 	}
+	e.buyerPair(t, acme, e.daysAgo(6))
+	e.buyerPair(t, priced, e.daysAgo(6))
 	e.pass(t)
 	if n := e.WsCount(t, `SELECT count(*) FROM deal_suggestion WHERE state = 'open'`); n != 2 {
 		t.Fatalf("%d open suggestions, want 2 to test against", n)

@@ -51,6 +51,7 @@ var categoryGuidance = map[string]string{
 		"story or however much of the page it fills. Extract only what the page states THIS company sells, never what a featured customer sells — but the company's OWN " +
 		"product or service the story says the customer adopted, bought or uses is still this company's offering and belongs in the answer exactly as it would on any other page.",
 	"market": "served_industry, company_size, geography and language describe markets the company explicitly says it serves — one entry per grounded item, repeating the field name. " +
+		"served_industry is an industry the company sells TO, never the industry the company itself is in. " +
 		"company_size here is the size of the customers they sell TO (\"we work with mid-sized retailers\"), never their own headcount, which is employee_range under company. " +
 		"The subject decides it, not the wording: the passage must be in THIS company's own voice about ITS OWN buyers (\"we work with mid-sized retailers,\" \"our clients include\") " +
 		"— never a sentence that happens to use similar words while describing a NAMED CUSTOMER's own business. A case study, testimonial or customer story names a customer's own " +

@@ -146,7 +146,7 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 		// The queue's own horizon, read once and handed to every relaxation
 		// below. Read per count, two scans could differ by cutoff rather
 		// than by the rule being relaxed.
-		measured, err := s.waitingHorizonFor(ctx, tx)
+		measured, err := s.waitingHorizonFor(ctx, tx, asOf)
 		if err != nil {
 			return err
 		}
@@ -267,7 +267,7 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
-	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
+	linkVisible, err := auth.LinkTargetReadableClause(ctx, "wl", arg)
 	if err != nil {
 		return "", err
 	}
@@ -306,29 +306,34 @@ func (s *Store) waitingStatement(
 	if relax.keepSetAside {
 		setAside = scopeUnbounded
 	}
-	readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
-	if err != nil {
-		return "", err
-	}
 	// Relaxations widen eligibility rules, never what a reader may be shown.
 	bookedDiscover, err := bookedDiscoverClause(ctx, arg)
 	if err != nil {
 		return "", err
 	}
+	requestTaskDiscover, err := requestTaskDiscoverClause(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	identities, err := s.mailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return "", err
+	}
+	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg, fmt.Sprintf("$%d", instant), fmt.Sprint(horizon))
 	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		liveRecord(openDealPredicate, "openDeal"),
 		arg(relax.reader),
-		scopeUnbounded,
+		responsibility,
 		notSales, unlinked,
 		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
-		fmt.Sprintf("$%d", arg(readerAddresses)),
+		mailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", arg(relax.reader))),
 		informsUs,
 		noKeyset, bookedDiscover,
-		setAside, neverRelaxed), nil
+		setAside, neverRelaxed, requestTaskDiscover), nil
 }
 
 // countWaiting is the statement above asked for how many.

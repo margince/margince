@@ -18,6 +18,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"strings"
 
@@ -26,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // quickCaptureSource is the provenance every row this path writes carries. It
@@ -33,6 +35,10 @@ import (
 // claim: a human typed this. A separate token would split one provenance
 // question into two answers for no gain a reader could name.
 const quickCaptureSource = "manual"
+
+// quickCaptureEmailField is this request's one address, where a contact create
+// carries a list.
+const quickCaptureEmailField = "email"
 
 // profileURLField is where a stated profile address lives on a contact. The
 // wire's `social` map is open, and `linkedin` is the key the rail reads and
@@ -61,6 +67,9 @@ type QuickCaptureInput struct {
 	ProfileURL  *string
 	Email       *string
 	Phone       *string
+	// ConvertLeadIDs are the live leads holding the email or the profile, which
+	// the user chose to convert into the new contact.
+	ConvertLeadIDs []ids.LeadID
 }
 
 // QuickCaptureResult is the contact that landed, plus the employer they were
@@ -91,7 +100,7 @@ func (s *Store) QuickCapture(ctx context.Context, in QuickCaptureInput) (QuickCa
 		out, err = s.quickCaptureInTx(ctx, tx, in)
 		return err
 	})
-	if err != nil {
+	if err = s.AskHolderToShare(ctx, err); err != nil {
 		return QuickCaptureResult{}, err
 	}
 	return out, nil
@@ -103,70 +112,45 @@ func (s *Store) quickCaptureInTx(
 	in QuickCaptureInput,
 ) (QuickCaptureResult, error) {
 	var out QuickCaptureResult
-	contact, err := s.CreateContactTx(ctx, tx, contactFromQuickCapture(in), CustomColumns{})
+	var attached EmployerAttached
+	contactInput := contactFromQuickCapture(in)
+	contactInput.Employer = EmployerChoice{CompanyID: in.CompanyID, CompanyName: in.CompanyName, Role: in.Role, Source: quickCaptureSource}
+	contactInput.EmployerResult = &attached
+	contact, err := s.CreateContactTx(ctx, tx, contactInput, CustomColumns{})
 	if err != nil {
-		return out, err
+		return out, nameProfileURLField(err)
 	}
 	out.Contact = contact
-
-	companyID, created, err := s.employerForQuickCapture(ctx, tx, in)
-	if err != nil {
-		return out, err
+	if !attached.CompanyID.IsZero() {
+		out.CompanyID = &attached.CompanyID
 	}
-	if companyID == nil {
-		return out, nil
-	}
-	out.CompanyID = companyID
-	out.CompanyCreated = created
-
-	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	if _, err := s.CreateRelationshipTx(ctx, tx, CreateRelationshipInput{
-		Kind:      employmentKind,
-		ContactID: &contactID,
-		CompanyID: companyID,
-		Role:      in.Role,
-		Source:    quickCaptureSource,
-	}); err != nil {
-		return out, err
-	}
+	out.CompanyCreated = attached.CompanyCreated
 	return out, nil
 }
 
-// employerForQuickCapture resolves the employer the caller named, creating one
-// only when they gave a name and no id. A blank name is not a company: it is a
-// field the reader left alone, and creating a company called "" would put
-// a record in the list that nobody can find or delete by name.
-func (s *Store) employerForQuickCapture(
-	ctx context.Context,
-	tx pgx.Tx,
-	in QuickCaptureInput,
-) (companyID *ids.CompanyID, created bool, err error) {
-	if in.CompanyID != nil {
-		return in.CompanyID, false, nil
+// nameProfileURLField reports a refused LinkedIn value under the field this
+// request carries, so a client can bind the refusal to its profile_url input.
+// A lead-held refusal names this request's email or profile_url the same way.
+func nameProfileURLField(err error) error {
+	if parseErr, ok := errors.AsType[*values.ParseError](err); ok && parseErr.Field == linkedinURLField {
+		renamed := *parseErr
+		renamed.Field = profileURLRequestField
+		return &renamed
 	}
-	if in.CompanyName == nil {
-		return nil, false, nil
+	if held, ok := errors.AsType[*LeadHoldsIdentityError](err); ok {
+		renamed := *held
+		renamed.Field = map[string]string{fieldEmails: quickCaptureEmailField, fieldSocialLinkedIn: profileURLRequestField}[held.Field]
+		return &renamed
 	}
-	name := strings.TrimSpace(*in.CompanyName)
-	if name == "" {
-		return nil, false, nil
-	}
-	company, err := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
-		DisplayName: name,
-		Source:      quickCaptureSource,
-	}, CustomColumns{})
-	if err != nil {
-		return nil, false, err
-	}
-	made := ids.From[ids.CompanyKind](ids.UUID(company.Id))
-	return &made, true, nil
+	return err
 }
 
 func contactFromQuickCapture(in QuickCaptureInput) CreateContactInput {
 	contact := CreateContactInput{
-		FullName: strings.TrimSpace(in.FullName),
-		Title:    in.Title,
-		Source:   quickCaptureSource,
+		FullName:       strings.TrimSpace(in.FullName),
+		Title:          in.Title,
+		Source:         quickCaptureSource,
+		ConvertLeadIDs: in.ConvertLeadIDs,
 	}
 	if url := profileURLWithScheme(trimmedValue(in.ProfileURL)); url != "" {
 		contact.Social = map[string]any{profileURLField: url}

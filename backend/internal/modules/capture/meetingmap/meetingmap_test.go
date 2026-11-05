@@ -44,8 +44,8 @@ func TestAnEventWithNoOrganizerIsStillJudgedOnItsParties(t *testing.T) {
 		ID: "evt-standup", Subject: "Standup",
 		Attendees: []Actor{{Email: owner}, {Email: "peer@myco.com"}},
 	}, owner)
-	if reason, skip := internal.SkipReason(); !skip || reason != "no party outside the owner's domain" {
-		t.Fatalf("got (%q, skip=%v), want the owner-domain floor to drop it", reason, skip)
+	if got := internal.ToRecord("testcal", nil).OwnerDomainOnly; got != "myco.com" {
+		t.Fatalf("OwnerDomainOnly = %q, want the owner's domain stated for the writer", got)
 	}
 }
 
@@ -61,8 +61,8 @@ func TestABookedRoomIsNeitherAPartyNorAParticipant(t *testing.T) {
 			{Email: "boardroom@myco.com", Room: true},
 		},
 	}, owner)
-	if reason, skip := m.SkipReason(); !skip || reason != "no party outside the owner's domain" {
-		t.Fatalf("got (%q, skip=%v), want the room ignored and the meeting dropped as internal", reason, skip)
+	if got := m.ToRecord("testcal", nil).OwnerDomainOnly; got != "myco.com" {
+		t.Fatalf("OwnerDomainOnly = %q, want myco.com: the room is no outside guest", got)
 	}
 	for _, p := range m.Participants().Participants {
 		if strings.HasPrefix(p.Email, "boardroom@") {
@@ -143,10 +143,9 @@ func TestACancellationOutranksThePartyRules(t *testing.T) {
 	}
 }
 
-// The owner is excluded from the participant rows because capture stamps them
-// from the CONNECTION, which carries their user_id — the column the interaction
-// graph joins on. A row built from this header would carry only an address.
-func TestTheOwnerIsNotAParticipantAndOrganizerOutranksAttending(t *testing.T) {
+// The owner keeps the provider's role for them, the evidence that they take
+// part. A calendar holding a copy of somebody else's meeting lists no owner.
+func TestTheOwnerKeepsTheProvidersRoleAndOrganizerOutranksAttending(t *testing.T) {
 	m := Classify(Event{
 		ID: "evt-2", Subject: "Review",
 		Organizer: Actor{Email: "host@acme.test"},
@@ -158,8 +157,14 @@ func TestTheOwnerIsNotAParticipantAndOrganizerOutranksAttending(t *testing.T) {
 	for _, p := range m.Participants().Participants {
 		roles[p.Email] = p.Role
 	}
-	if _, ok := roles[owner]; ok {
-		t.Error("the owner appears among the participant rows")
+	if roles[owner] != connector.ParticipantRoleAttendee {
+		t.Errorf("owner role = %q, want the provider's attendee role", roles[owner])
+	}
+	copied := Classify(Event{ID: "evt-3", Organizer: Actor{Email: "host@acme.test"}}, owner)
+	for _, p := range copied.Participants().Participants {
+		if p.Email == owner {
+			t.Error("a calendar copy the owner is not invited to lists the owner as a party")
+		}
 	}
 	if roles["host@acme.test"] != connector.ParticipantRoleOrganizer {
 		t.Errorf("host role = %q, want organizer to outrank attending", roles["host@acme.test"])
@@ -272,5 +277,64 @@ func TestAnEventTooLongToStoreCarriesNoDuration(t *testing.T) {
 				t.Errorf("DurationSeconds = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+// A dial-in passcode and a key in an invitation are masked before the cut, so a
+// key the cut would split is found whole.
+func TestTheBodyIsStoredWithItsCredentialsMasked(t *testing.T) {
+	key := "-----BEGIN PRIVATE KEY-----\n" + strings.Repeat("KEYMATERIAL", 40) + "\n-----END PRIVATE KEY-----"
+	m := Classify(Event{
+		ID: "evt-5", Subject: "Dial-in",
+		Description: "Passcode: 993311\n" + strings.Repeat("a", MaxBodyLen-200) + key,
+		Organizer:   Actor{Email: owner},
+		Attendees:   []Actor{{Email: "client@acme.test"}},
+	}, owner)
+	fields := activityFields(t, m.ToRecord("graphcal", nil))
+	body := fields.Body
+	if !fields.CredentialsMasked {
+		t.Error("the record does not say masking changed its body")
+	}
+	if !strings.Contains(body, "Passcode: [masked]") || strings.Contains(body, "993311") {
+		t.Errorf("body = %.120q…, want the passcode masked behind its label", body)
+	}
+	if strings.Contains(body, "KEYMATERIAL") {
+		t.Errorf("the stored body keeps the half of the key the cut left: %q", body[len(body)-80:])
+	}
+}
+
+func TestAnHTMLDescriptionIsStoredAsReadableText(t *testing.T) {
+	body, _ := buildBody(Event{Description: "Booked by <b>Guest</b><br>Topic: intro<script>alert(1)</script><style>p{x:y}</style>"}, nil)
+	if !strings.Contains(body, "Booked by Guest\nTopic: intro") {
+		t.Fatalf("body = %q, want text with the line break kept", body)
+	}
+	for _, leak := range []string{"<b>", "<br>", "alert", "p{x:y}"} {
+		if strings.Contains(body, leak) {
+			t.Fatalf("body = %q, must not contain %q", body, leak)
+		}
+	}
+}
+
+func TestAPlainDescriptionIsStoredUnchanged(t *testing.T) {
+	desc := "Agenda:\n\n  1. a < b\n  2. R&D"
+	body, _ := buildBody(Event{Description: desc}, nil)
+	if want := "Organizer: -\n\n" + desc; body != want {
+		t.Fatalf("body = %q, want %q", body, want)
+	}
+}
+
+func TestABracketedAddressOrLinkIsNotMistakenForMarkup(t *testing.T) {
+	for _, desc := range []string{"Contact <john@example.com>", "Join <https://example.test/room>\nPasscode 42"} {
+		body, _ := buildBody(Event{Description: desc}, nil)
+		if want := "Organizer: -\n\n" + desc; body != want {
+			t.Errorf("body = %q, want %q", body, want)
+		}
+	}
+}
+
+func TestAnHTMLDescriptionWithACommentAndClosingTagsIsRendered(t *testing.T) {
+	body, _ := buildBody(Event{Description: "<!-- booking -->Hello <i>there</i></p>"}, nil)
+	if want := "Organizer: -\n\nHello there"; body != want {
+		t.Errorf("body = %q, want %q", body, want)
 	}
 }

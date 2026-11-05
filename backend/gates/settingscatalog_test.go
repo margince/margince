@@ -34,6 +34,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // keyShape mirrors the CHECK on setting.key. Both exist on purpose: the
@@ -147,7 +148,7 @@ func TestNoSettingKeyIsAlsoADeploymentConfigKey(t *testing.T) {
 // trusted to compose.
 // gatekit:fixture the settings whose freeze probe crosses a module boundary, and what supplies it — expected wiring, not a waived cost
 var settingsWithInjectedFreeze = map[string]string{
-	"installation.base_currency": "deals.BaseCurrencyFrozen — once a deal has stamped a " +
+	"installation.base_currency": "deals.BaseCurrencyLock — once a deal has stamped a " +
 		"conversion rate, changing the base re-means every roll-up built on it (ADR-0085 §7)",
 }
 
@@ -170,5 +171,9 @@ func TestEverySettingWithAnInjectedFreezeActuallyHasOne(t *testing.T) {
 			t.Errorf("%s is listed as needing an injected freeze but is not in the catalog: "+
 				"delete the entry here, or register the setting", key)
 		}
+	}
+	if !identity.BaseCurrencyLockWired() {
+		t.Error("installation.base_currency has no read probe after assembly, so GET reports it " +
+			"changeable while PATCH may refuse; wire it through identity.LockBaseCurrencyWith")
 	}
 }

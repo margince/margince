@@ -1,0 +1,34 @@
+/* What sits on the dark ink field reads the field's inks.
+ *
+ * The page tokens are tuned for a light page: --textSecondary measures 2.62:1
+ * and --accentText 1.89:1 on --bgInkField. Every component that paints the
+ * plate is listed here, so a label, a link or a focus ring dropped into it
+ * reads the plate's inks without knowing where it is. inkfield.test.ts fails a
+ * rule that paints the plate and is missing from this list. */
+:where(
+  .docked-head,
+  .docked-bar,
+  .toast,
+  .capturechip-link,
+  .rail .navtip,
+  .client-bar
+) {
+  --textPrimary: var(--textOnInkField);
+  --textSecondary: var(--textOnInkFieldQuiet);
+  --accentText: var(--textOnInkField);
+  --focus-ring: 2px solid var(--textOnInkField);
+}
+
+/* A link here is the same white as the words around it, so the underline is
+ * what tells it apart (WCAG 1.4.1). Not zero-specificity: it has to beat the
+ * resting `text-decoration: none` the link classes declare in atoms.css. */
+:is(
+  .docked-head,
+  .docked-bar,
+  .toast,
+  .capturechip-link,
+  .rail .navtip,
+  .client-bar
+) :is(.entity-link, .link-button) {
+  text-decoration: underline;
+}

@@ -6,11 +6,13 @@ package magic
 // Dressing an admitted audit row as a line a reader can act on.
 
 import (
+	"context"
 	"encoding/json"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -49,6 +51,7 @@ func linesOf(mask imageMask, entries []entry, capped map[string]bool, limit int)
 			continue
 		}
 		if at, seen := group[key]; seen {
+			out[at].ReceiptIds = appendReceiptIdentities(out[at].ReceiptIds, line.ReceiptIds)
 			records[at][e.EntityID] = true
 			count := len(records[at])
 			out[at].Count = &count
@@ -86,12 +89,13 @@ func linesOf(mask imageMask, entries []entry, capped map[string]bool, limit int)
 // or generic sentence: "A record was updated" about no named record is noise,
 // and noise on this page hides the lines that matter.
 func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
-	d, ok := describe(e)
+	d, ok := describeEntry(e)
 	if !ok {
 		return crmcontracts.MagicLine{}, "", false
 	}
 	line := crmcontracts.MagicLine{
 		Id:         openapi_types.UUID(e.ID),
+		ReceiptIds: new([]openapi_types.UUID{receiptIdentity(e)}),
 		OccurredAt: e.OccurredAt,
 		Lane:       crmcontracts.MagicLineLaneMagicLaneDone,
 		Summary:    d.summary,
@@ -113,6 +117,10 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 		consequence := meaning.consequence
 		line.Consequence = &consequence
 	}
+	if isDataCorrection(e) {
+		maintenance := true
+		line.Maintenance = &maintenance
+	}
 	if e.OnBehalfOf != nil {
 		// WHOSE authority it bound. The auto-apply sweep acts under a rep's own
 		// standing decision, and a receipt saying only "agent" would hide which
@@ -123,27 +131,67 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 	// A create's image is the whole new record and an archive's is empty;
 	// neither says more than the line's sentence and the record's name.
 	if !bulkActions[e.Action] {
-		line.Before = mask.withheldFrom(e.EntityType, fieldsOf(e.Before))
-		line.After = mask.withheldFrom(e.EntityType, fieldsOf(e.After))
+		line.Before, line.After = imagesOf(mask, e)
 	}
 	return line, groupKey(e, d), true
+}
+
+// imagesOf is what a line shows of its row's before and after images.
+func imagesOf(mask imageMask, e entry) (before, after *map[string]any) {
+	return mask.withheldFrom(e.EntityType, fieldsOf(e.Before)), mask.withheldFrom(e.EntityType, fieldsOf(e.After))
+}
+
+// showDeferredImages fills the images of the drawn lines whose rows the arms
+// read without them. A line is named by its newest row, whose images it shows.
+func showDeferredImages(ctx context.Context, tx pgx.Tx, mask imageMask, lines []crmcontracts.MagicLine, entries []entry) error {
+	byID := make(map[ids.UUID]entry, len(entries))
+	for _, e := range entries {
+		byID[e.ID] = e
+	}
+	shown := make([]entry, 0, len(lines))
+	lineAt := map[ids.UUID]int{}
+	for i, line := range lines {
+		if e, ok := byID[ids.UUID(line.Id)]; ok && imagesDeferred(e.Action) {
+			lineAt[e.ID] = i
+			shown = append(shown, e)
+		}
+	}
+	if err := loadDeferredImages(ctx, tx, shown); err != nil {
+		return err
+	}
+	for _, e := range shown {
+		at := lineAt[e.ID]
+		lines[at].Before, lines[at].After = imagesOf(mask, e)
+	}
+	return nil
 }
 
 // groupKeyOf answers what lineOf would group this row under, without dressing
 // the line: the members read wants the key and nothing else, and a line it
 // discards would need a reader's mask to be built at all.
 func groupKeyOf(e entry) (string, bool) {
-	d, ok := describe(e)
+	d, ok := describeEntry(e)
 	if !ok {
 		return "", false
 	}
 	return groupKey(e, d), true
 }
 
+// describeEntry is describe plus the one reason a data correction carries
+// when its own sentence names none: that it repaired an older record. Both
+// the line and its members read through here, so they group alike.
+func describeEntry(e entry) (description, bool) {
+	d, ok := describe(e)
+	if ok && d.reason == nil && isDataCorrection(e) {
+		d.reason = &crmcontracts.MagicSentence{Key: whyDataCorrection}
+	}
+	return d, ok
+}
+
 // groupKey is what two lines must share to be one line with a count: the same
 // job, doing the same thing, for the same reason, to the same kind of record.
 func groupKey(e entry, d description) string {
-	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), "", "", ""}
+	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), "", "", "", ""}
 	if d.reason != nil {
 		parts[4] = sentenceKey(*d.reason)
 		if many, perRecord := manyReasons[d.reason.Key]; perRecord {
@@ -160,6 +208,12 @@ func groupKey(e entry, d description) string {
 	// day it happened, and an import that ran over a week reads as seven.
 	if bulkActions[e.Action] {
 		parts[6] = e.OccurredAt.UTC().Format(time.DateOnly)
+	}
+	// One correction run is one operation. Two runs of the same task (a
+	// version restart, a manual rerun) are two, so their counts do not merge.
+	// A row with no batch keeps the grouping it always had.
+	if isDataCorrection(e) && e.BatchID != nil {
+		parts[7] = e.BatchID.String()
 	}
 	return strings.Join(parts, "\x00")
 }

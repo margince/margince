@@ -398,3 +398,81 @@ export const CompactLongNamesPhone: Story = {
     }
   },
 };
+
+// The plate at the foot of How it stands: one ground, hairlines between the
+// cells, a smaller figure. Each cell opens where its figure was read from.
+export const Plate: Story = {
+  render: () => (
+    <StatStrip density="plate">
+      <StatCard
+        label="Open deals"
+        value="2"
+        detail="€60,000 · Fleet retrofit, Phase two"
+        onOpen={() => undefined}
+      />
+      <StatCard
+        label="Last two-way"
+        value="1 Aug"
+        tone="warning"
+        detail="12 days ago"
+        onOpen={() => undefined}
+      />
+      <StatCard label="Revenue · 12 mo" value="€64,200" detail="Net invoiced" />
+      <StatCard
+        label="Overdue"
+        value="€0"
+        tone="success"
+        detail="1 invoice open, due 1 Sep"
+      />
+    </StatStrip>
+  ),
+};
+
+// The plate on a new record: every figure says what it lacks in words, in the
+// plain ink, never a zero it did not count.
+export const PlateEmpty: Story = {
+  render: () => (
+    <StatStrip density="plate">
+      <StatCard label="Open deals" value="None yet" />
+      <StatCard label="Last two-way" value="No contact yet" />
+      <StatCard label="Revenue · 12 mo" value="Not connected" />
+    </StatStrip>
+  ),
+};
+
+// The plate heading an Analytics card: the first figure leads at display size,
+// and each cell keeps one short line under its figure.
+export const PlateLead: Story = {
+  render: () => (
+    <StatStrip density="plate" lead>
+      <StatCard
+        label="Sales won"
+        value="€420,000"
+        detail="of €800,000 target"
+        onOpen={() => undefined}
+      />
+      <StatCard
+        label="Won + Likely deals"
+        value="€760,000"
+        detail="€40,000 short of target"
+        href="#forecast"
+        opens="forecast"
+      />
+      <StatCard
+        label="Modelled quarter finish"
+        value="€610,000 – €980,000"
+        detail="Central 80% of outcomes"
+      />
+      <StatCard
+        label="Pipeline due this quarter"
+        value="€1,360,000"
+        detail="18 deals"
+        onOpen={() => undefined}
+      />
+    </StatStrip>
+  ),
+  play: async ({ canvasElement }) => {
+    const strip = canvasElement.querySelector(".stat-strip");
+    await expect(strip?.getAttribute("data-lead")).toBe("true");
+  },
+};

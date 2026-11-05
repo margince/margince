@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Info } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Disclosure, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FactList } from "../../design-system/factlist";
@@ -34,22 +35,23 @@ import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import "./extension-access.css";
 import {
-  GrantMatrix,
-  type GrantMatrixRow,
-  type GrantMatrixSection,
-  grantOf,
-} from "../../screens/grantmatrix";
+  EXTENSIONS_KEY,
+  type ExtensionUnit,
+  useExtensions,
+} from "../../lib/extensions.queries";
 import {
   ROLES_KEY,
   type Role,
   useRoles,
   useSetRoleGrant,
-} from "../../screens/roles.queries";
+} from "../../lib/roles.queries";
 import {
-  EXTENSIONS_KEY,
-  type ExtensionUnit,
-  useExtensions,
-} from "./extensions.queries";
+  GrantMatrix,
+  type GrantMatrixRow,
+  type GrantMatrixSection,
+  grantOf,
+} from "../settings/grantmatrix";
+import { UnitGovernance } from "./extension-governance";
 
 // Extension access (settings → Extensions): what the composed extension tier
 // brought into this installation, and who may use it.
@@ -270,7 +272,7 @@ function UnitCard({
             // page, and "Open" five times names nothing out of context. The
             // hash comes from routeHash and the exported screen token, so
             // link and router cannot drift apart.
-            <a
+            <AppLink
               className="ext-unit-link"
               href={routeHash({ screen: EXTENSION_SCREEN, id: page.name })}
             >
@@ -278,7 +280,7 @@ function UnitCard({
               <span className="ext-unit-link-text">
                 {t("extAccess.openUnit", { name: title })}
               </span>
-            </a>
+            </AppLink>
           ) : null}
         </div>
       }
@@ -330,6 +332,7 @@ function UnitCard({
           canManage={canManage}
         />
       ) : null}
+      <UnitGovernance unit={unit.name} canManage={canManage} />
       {/* Reference, not a decision: an operator opens it to check which
           object gates the route they care about. */}
       {brings > 0 ? (

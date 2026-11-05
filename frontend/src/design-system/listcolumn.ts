@@ -24,6 +24,11 @@ export type ListColumn<Row> = {
    * trigger, whose header only assistive technology reads.
    */
   verbs?: boolean | "menu";
+  /**
+   * A value whose length hardly changes: a date, or a colleague's name beside
+   * their avatar. The column stops growing at a preset width.
+   */
+  holds?: "date" | "colleague";
   /** Starts unticked in the Display menu: offered rather than drawn. */
   initiallyHidden?: boolean;
 };

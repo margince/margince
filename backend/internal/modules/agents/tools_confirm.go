@@ -26,6 +26,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -38,20 +39,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// --- archive_record (🟡 write — visibility change, hard to undo) ---
+// --- archive_record (write: runs at once unless a tier floor stages it; hard to undo) ---
 
 // archivableRecordTypes is what SystemOfRecordProvider.Archive actually routes
-// (compose/provider.go) — narrower than datasource.EntityTypes(), which is the
-// whole seam vocabulary and includes `lead`, a type Archive does not serve.
+// (compose/provider.go). It is narrower than datasource.EntityTypes(), which
+// includes `lead`, a type Archive does not serve.
 //
-// Stage-time truth has to equal execute-time truth here: this tool stages a
-// confirmation FIRST and archives on the approved retry, so a type admitted at
-// staging and refused at execution spends a human's approval on a call that
-// could never run. That is what happened to `activity` — the contract declared
-// archiveActivity as this tool's, the seam had no branch for it, and the
-// refusal arrived only after a human had said yes. The list is stated here
-// rather than derived so adding a branch to Archive is a deliberate edit in
-// both places.
+// Where a tier floor stages this tool, it archives only on the approved retry.
+// A type admitted at staging and refused at execution then spends a human's
+// approval on a call that could never run. The list is stated rather than
+// derived, so a new Archive branch is edited in both.
 var archivableRecordTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityProject),
@@ -108,6 +105,7 @@ type archiveRecord struct {
 func (t archiveRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "archive_record", Title: "Archive a record", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   archiveRecordCopy.render(),
 		Instead:       archiveRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
@@ -209,10 +207,11 @@ func (t archiveRecord) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 // approval time, and a promotion that applied none would mint a contact from
 // lead fields a concurrent edit may have changed since the human approved.
 type LeadPromoter interface {
-	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (datasource.EntityRef, bool, error)
+	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64, choice datasource.PromotionDealChoice) (datasource.EntityRef, bool, error)
 }
 
 type promoteArgs struct {
+	datasource.PromotionDealChoice
 	LeadID       ids.UUID `json:"lead_id"`
 	Trigger      string   `json:"trigger"`
 	EvidenceNote *string  `json:"evidence_note"`
@@ -236,6 +235,11 @@ func (t promoteLead) Spec() mcp.ToolSpec {
 			"trigger":{"type":"string","enum":["inbound_reply","meeting_booked","meeting_held","human_qualify"],
 				"description":"The genuine engagement justifying promotion; cold outreach with no reply never promotes"},
 			"evidence_note":{"type":"string"},
+			"existing_deal_id":{"type":"string","format":"uuid"},
+			"create_company":{"type":"boolean"},
+			"deal":{"type":"object","additionalProperties":false,"properties":{
+			"pipeline_id":{"type":"string","format":"uuid","description":"Choose from ` + pipelinesSource + ` with list_pipelines."},"stage_id":{"type":"string","format":"uuid","description":"Choose an open stage from ` + pipelinesSource + ` with list_pipelines."},
+			"name":{"type":"string"},"amount_minor":{"type":"integer"},"currency":{"type":"string"}}},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[PromoteLeadResult](),
@@ -252,8 +256,9 @@ func (t promoteLead) StageInfo(ctx context.Context, in json.RawMessage) (StageIn
 		return StageInfo{}, err
 	}
 	return StageSubject(ctx, NewPromoteLeadCall(t.p, t.language, PromoteLeadCommand{
-		LeadID:  args.LeadID,
-		Trigger: args.Trigger,
+		LeadID:     args.LeadID,
+		Trigger:    args.Trigger,
+		DealChoice: args.PromotionDealChoice,
 	}))
 }
 
@@ -271,6 +276,9 @@ func (t promoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := requireGenuineTrigger(args.Trigger); err != nil {
 		return nil, err
 	}
+	if err := datasource.ValidatePromotionDeals(datasource.PromotionDealSelection{New: args.Deal != nil, Existing: args.ExistingDealID != nil}); err != nil {
+		return nil, err
+	}
 	// nil, because this tool takes no if_version of its own: the pin it
 	// applies is the one the approval was released against, as every other
 	// staged write's is.
@@ -278,7 +286,7 @@ func (t promoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err != nil {
 		return nil, err
 	}
-	ref, merged, err := t.promoter.PromoteLead(ctx, args.LeadID, args.Trigger, args.EvidenceNote, pin)
+	ref, merged, err := t.promoter.PromoteLead(ctx, args.LeadID, args.Trigger, args.EvidenceNote, pin, args.PromotionDealChoice)
 	if err != nil {
 		return nil, err
 	}
@@ -316,19 +324,66 @@ func mergeableTypeNames() []string {
 type mergeRecords struct {
 	p        datasource.SystemOfRecordProvider
 	language baselanguage.Resolver
+	cases    ContactCaseMerger
+}
+
+// caseArgs are the arguments of a contact case decision. A call naming
+// member_ids decides the case the review screen shows, through its engine.
+type caseArgs struct {
+	ContactID  ids.UUID   `json:"contact_id"`
+	Revision   string     `json:"revision"`
+	MemberIDs  []ids.UUID `json:"member_ids"`
+	SurvivorID ids.UUID   `json:"survivor_id"`
+	OwnerID    ids.UUID   `json:"owner_id"`
+	Preview    bool       `json:"preview"`
+}
+
+type mergeCallArgs struct {
+	mergeArgs
+	caseArgs
+}
+
+var errMergeNamesOneWay = &BadArgsError{Cause: errors.New(
+	"name source_id and target_id to merge two records, or contact_id, member_ids, survivor_id, owner_id " +
+		"and revision to merge a contact case, not both")}
+
+// decodeMerge reads one call as a pair merge or a case decision, never both.
+func decodeMerge(in json.RawMessage) (mergeArgs, *ContactCaseCommand, error) {
+	var args mergeCallArgs
+	if err := decodeArgs(in, &args); err != nil {
+		return mergeArgs{}, nil, err
+	}
+	if len(args.MemberIDs) == 0 && args.ContactID.IsZero() {
+		return args.mergeArgs, nil, nil
+	}
+	if !args.SourceID.IsZero() || !args.TargetID.IsZero() {
+		return mergeArgs{}, nil, errMergeNamesOneWay
+	}
+	if args.RecordType != importObjectContact {
+		return mergeArgs{}, nil, &BadArgsError{Cause: errors.New("a case merge is record_type contact")}
+	}
+	cmd := ContactCaseCommand(args.caseArgs)
+	return args.mergeArgs, &cmd, nil
 }
 
 func (t mergeRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   mergeRecordsCopy.render(),
 		Instead:       mergeRecordsCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
-		OpenAPIOp: "mergeContact/mergeCompany",
-		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
+		OpenAPIOp: "mergeContact/mergeCompany/mergeContactCase/previewContactCaseMerge",
+		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company"]},
 			"source_id":{"type":"string","format":"uuid","description":"The record merged away (archived, redirected to the survivor)"},
 			"target_id":{"type":"string","format":"uuid","description":"The surviving record everything relinks to"},
+			"contact_id":{"type":"string","format":"uuid","description":"Any member of a contact case, to merge the case instead of a pair"},
+			"member_ids":{"type":"array","items":{"type":"string","format":"uuid"},"description":"The case members to merge into one contact, survivor included"},
+			"survivor_id":{"type":"string","format":"uuid","description":"The case member that remains"},
+			"owner_id":{"type":"string","format":"uuid","description":"Who owns the remaining contact: the owner of one selected member"},
+			"revision":{"type":"string","description":"The case revision you read"},
+			"preview":{"type":"boolean","description":"Answer what the case merge would do and write nothing"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[MergeRecordsResult](),
@@ -339,23 +394,24 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 // delegates: the refusals and the staged subject live in the resolver
 // (commandrecord.go), where the REST door reaches the same ones for the same
 // operation.
-//
-// This door's wire shape IS the command's field set — the arguments differ
-// only in carrying JSON tags — so it converts rather than restating the
-// fields, and a command that grows one fails to compile here instead of
-// quietly leaving it unset.
 func (t mergeRecords) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
-	var args mergeArgs
-	if err := decodeArgs(in, &args); err != nil {
+	args, decided, err := decodeMerge(in)
+	if err != nil {
 		return StageInfo{}, err
+	}
+	if decided != nil {
+		return StageSubject(ctx, NewContactCaseCall(t.p, t.language, *decided))
 	}
 	return StageSubject(ctx, NewMergeCall(t.p, t.language, MergeCommand(args)))
 }
 
 func (t mergeRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args mergeArgs
-	if err := decodeArgs(in, &args); err != nil {
+	args, decided, err := decodeMerge(in)
+	if err != nil {
 		return nil, err
+	}
+	if decided != nil {
+		return t.decideCase(ctx, *decided)
 	}
 	// The resolver's own refusal (commandrecord.go), predicate and sentence
 	// both: the approved retry re-enters here without passing Guards, so a type
@@ -378,42 +434,28 @@ func (t mergeRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	return json.Marshal(MergeRecordsResult{Merged: true, RecordType: ref.Type, SurvivorID: ref.ID})
 }
 
-// recordLabel pulls a human-readable name out of a record's fields for
-// inbox summaries; falls back to the id.
-func recordLabel(rec datasource.Record) string {
-	var f struct {
-		FullName    string `json:"full_name"`
-		DisplayName string `json:"display_name"`
-		Name        string `json:"name"`
-		Email       string `json:"email"`
-		Kind        string `json:"kind"`
-		Subject     string `json:"subject"`
+// decideCase runs the case decision the review screen runs.
+func (t mergeRecords) decideCase(ctx context.Context, cmd ContactCaseCommand) (json.RawMessage, error) {
+	if err := requireCaseSelection(cmd); err != nil {
+		return nil, err
 	}
-	//craft:ignore swallowed-errors label extraction is best-effort by design — unparseable fields fall through to the id below
-	_ = json.Unmarshal(rec.Fields, &f)
-	// An edge has no name of any sort: its identity is its kind plus two
-	// endpoints, so "Archive relationship 0195c3…" tells the approving human
-	// nothing about what disappears, while "employment" at least names the class.
-	//
-	// Scoped to that ONE type rather than added to the ladder below. `kind` is a
-	// field an activity also carries, and there the id is the better answer: a
-	// staged overwrite reading `Update activity "note"` would name a class where a
-	// human needs to know WHICH note, and would suppress the id that told them.
-	if rec.Ref.Type == datasource.EntityRelationship && f.Kind != "" {
-		return fmt.Sprintf("%q", f.Kind)
+	if t.cases == nil {
+		return nil, &BadArgsError{Cause: errors.New("contact cases are not served here")}
 	}
-	// An activity's subject is the WHICH the kind cannot supply — "Archive
-	// activity 0195c3…" names nothing a human can weigh, while `Archive activity
-	// "Kickoff Migration Shopsystem"` is the decision they are being asked for.
-	// Also scoped to the one type, and to the field that identifies rather than
-	// classifies: an activity carrying no subject still falls through to the id.
-	if rec.Ref.Type == datasource.EntityActivity && f.Subject != "" {
-		return fmt.Sprintf("%q", f.Subject)
+	decide := t.cases.MergeContactCase
+	if cmd.Preview {
+		decide = t.cases.PreviewContactCaseMerge
 	}
-	for _, s := range []string{f.FullName, f.DisplayName, f.Name, f.Email} {
-		if s != "" {
-			return fmt.Sprintf("%q", s)
-		}
+	outcome, err := decide(ctx, cmd)
+	if err != nil {
+		return nil, err
 	}
-	return rec.Ref.ID.String()
+	noteEvidence(ctx, datasource.EntityContact, ids.UUID(outcome.SurvivorId))
+	for _, merged := range outcome.MergedIds {
+		noteEvidence(ctx, datasource.EntityContact, ids.UUID(merged))
+	}
+	return json.Marshal(MergeRecordsResult{
+		Merged: outcome.Committed, RecordType: datasource.EntityContact,
+		SurvivorID: ids.UUID(outcome.SurvivorId), Case: &outcome,
+	})
 }

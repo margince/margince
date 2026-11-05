@@ -3,15 +3,16 @@
 
 package attention
 
-// The domain_question lane: the reader's own undecided domains, each carrying
-// the two verbs that answer it.
-
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type stubDomainQuestions struct {
@@ -71,14 +72,7 @@ func TestADomainQuestionNamesTheDomainAndWhyItStopped(t *testing.T) {
 	}
 }
 
-// TestADomainQuestionOffersBothAnswersAndNoThirdOne is the verb contract.
-//
-// Two verbs, and deliberately no `open`: the subject is a domain, which has no
-// page to open, so a third control would send the reader nowhere. Keeping the
-// list exact is what stops the row growing a verb the client cannot perform —
-// the defect the source/action census exists to catch, asserted here at the
-// lane rather than only across the whole queue.
-func TestADomainQuestionOffersBothAnswersAndNoThirdOne(t *testing.T) {
+func TestADomainQuestionOffersAnswersAndRetry(t *testing.T) {
 	t.Parallel()
 	svc := domainQuestionLaneService(&stubDomainQuestions{rows: []DomainQuestion{{
 		Domain: "botsync.co", Reason: "Nothing on the site named a company.", AskedAt: readInstant,
@@ -88,7 +82,7 @@ func TestADomainQuestionOffersBothAnswersAndNoThirdOne(t *testing.T) {
 		t.Fatalf("assembling: %v", err)
 	}
 	row := (*out.DomainQuestions)[0]
-	want := []crmcontracts.AttentionItemActions{"keep", "discard"}
+	want := []crmcontracts.AttentionItemActions{"keep", "discard", "reopen"}
 	if len(row.Actions) != len(want) {
 		t.Fatalf("actions = %v, want exactly %v", row.Actions, want)
 	}
@@ -96,6 +90,51 @@ func TestADomainQuestionOffersBothAnswersAndNoThirdOne(t *testing.T) {
 		if row.Actions[i] != action {
 			t.Errorf("action %d = %q, want %q", i, row.Actions[i], action)
 		}
+	}
+}
+
+func TestAVendorQuestionOffersCreateOrKeepAsVendorAndCarriesTheTriageSentence(t *testing.T) {
+	t.Parallel()
+	const sentence = "Classified as a mail or hosting vendor: the page sells managed hosting."
+	svc := domainQuestionLaneService(&stubDomainQuestions{rows: []DomainQuestion{{
+		Domain: "hosting.example", Reason: "The site reads as a mail or hosting vendor.",
+		ReasonCode: contacts.PendingVendorVerdict, Note: sentence, AskedAt: readInstant,
+	}, {
+		Domain: "botsync.co", Reason: "Nothing on the site named a company.",
+		ReasonCode: contacts.PendingUnevidenced, Note: "ignored", AskedAt: readInstant,
+	}}})
+	out, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	rows := map[string]crmcontracts.AttentionItem{}
+	for _, row := range *out.DomainQuestions {
+		rows[row.Id] = row
+	}
+	vendor := rows["hosting.example"]
+	want := []crmcontracts.AttentionItemActions{"keep", "keep_as_vendor", "discard"}
+	if !slices.Equal(vendor.Actions, want) {
+		t.Errorf("vendor actions = %v, want %v: a re-read would ask the same front page again", vendor.Actions, want)
+	}
+	if vendor.DomainNote == nil || *vendor.DomainNote != sentence {
+		t.Errorf("vendor note = %v, want the triage's sentence", vendor.DomainNote)
+	}
+	other := rows["botsync.co"]
+	if slices.Contains(other.Actions, "keep_as_vendor") || other.DomainNote != nil {
+		t.Errorf("an unevidenced question offers %v with note %v; only a vendor question keeps a vendor verdict", other.Actions, other.DomainNote)
+	}
+	found := false
+	for _, item := range queueOf(t, out, nil) {
+		if item.Id != "hosting.example" {
+			continue
+		}
+		found = true
+		if item.DomainNote == nil || *item.DomainNote != sentence {
+			t.Errorf("the worklist row lost the triage sentence: %v", item.DomainNote)
+		}
+	}
+	if !found {
+		t.Fatal("the vendor question never reached the worklist")
 	}
 }
 
@@ -117,5 +156,118 @@ func TestAnUnboundDomainQuestionLaneIsAbsentRatherThanEmpty(t *testing.T) {
 	if out.Counts.DomainQuestions != nil {
 		t.Errorf("an unbound lane reported a count of %v; absent carries no number",
 			out.Counts.DomainQuestions)
+	}
+}
+
+func TestDomainMaintenanceFoldsWithoutEnteringFocus(t *testing.T) {
+	for _, count := range []int{2, 3, 60, DomainQuestionLimit} {
+		rows := make([]ranked, 0, count)
+		for i := range count {
+			rows = append(rows, classifyDomainQuestion(domainQuestionItem(DomainQuestion{
+				Domain: fmt.Sprintf("company-%d.test", i), AskedAt: readInstant,
+			}), readInstant))
+		}
+		grouped := foldRoutineDecisionsBounded(rows, map[crmcontracts.WorklistItemSource]bool{crmcontracts.WorklistItemSource(sourceDomainQuestion): count == DomainQuestionLimit})
+		assertDomainMaintenanceGroup(t, grouped, count)
+		for _, row := range append(rows, grouped...) {
+			if focusEligible(row, readInstant) {
+				t.Fatal("routine domain maintenance entered Focus")
+			}
+		}
+	}
+}
+
+func (s *stubDomainQuestions) OwnsDomainQuestion(_ context.Context, domain string) (bool, error) {
+	for _, row := range s.rows {
+		if row.Domain == domain {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func TestDomainMaintenanceGroupDefersThroughItsMembers(t *testing.T) {
+	group := ranked{item: crmcontracts.WorklistItem{Source: "batch", Batch: &crmcontracts.WorklistBatch{Key: "domain_questions", Count: 100}}}
+	if got := dispositionsFor(group, ids.UUID{}); len(got) != 0 {
+		t.Fatalf("bounded maintenance group offered a blanket disposition: %v", got)
+	}
+	member := ranked{item: crmcontracts.WorklistItem{Source: "domain_question"}}
+	if got := dispositionsFor(member, ids.UUID{}); len(got) != 1 {
+		t.Fatalf("individual question cannot be deferred: %v", got)
+	}
+}
+
+func TestDomainQuestionAttentionCountsNameTheirBound(t *testing.T) {
+	for _, count := range []int{0, 2, DomainQuestionLimit} {
+		rows := make([]DomainQuestion, count)
+		for i := range rows {
+			rows[i] = DomainQuestion{Domain: fmt.Sprintf("domain-%d.test", i), AskedAt: readInstant}
+		}
+		out, err := domainQuestionLaneService(&stubDomainQuestions{rows: rows}).Assemble(pageReader())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out.Counts.DomainQuestions == nil || *out.Counts.DomainQuestions != count || out.DomainQuestionsMoreAvailable == nil || *out.DomainQuestionsMoreAvailable != (count == DomainQuestionLimit) {
+			t.Fatalf("count=%d totals=%+v bounded=%v", count, out.Counts, out.DomainQuestionsMoreAvailable)
+		}
+	}
+}
+
+func assertDomainMaintenanceGroup(t *testing.T, grouped []ranked, count int) {
+	t.Helper()
+	if count < batchFloor {
+		if len(grouped) != count {
+			t.Fatalf("small backlog changed size: %d", len(grouped))
+		}
+		return
+	}
+	if len(grouped) != 1 || grouped[0].item.Batch == nil || grouped[0].item.Batch.Key != domainQuestionsBatchKey || grouped[0].item.Batch.Count != count {
+		t.Fatalf("%d questions did not form one maintenance group: %+v", count, grouped)
+	}
+	if count == DomainQuestionLimit && (grouped[0].item.Batch.AtLeast == nil || !*grouped[0].item.Batch.AtLeast) {
+		t.Fatal("bounded batch claimed a total")
+	}
+	if len(grouped[0].members) != count {
+		t.Fatal("batch lost the member identities")
+	}
+}
+
+func TestAForwardedQuestionCarriesItsContextAndKeepsItsVerbs(t *testing.T) {
+	t.Parallel()
+	contact := ids.New[ids.ContactKind]()
+	company := ids.New[ids.CompanyKind]()
+	svc := domainQuestionLaneService(&stubDomainQuestions{rows: []DomainQuestion{{
+		Domain: "alias.example", Reason: "The site redirects elsewhere.",
+		ReasonCode: contacts.PendingForwardedIdentity, AskedAt: readInstant,
+		Context: contacts.DomainQuestionContext{
+			Contacts:      []contacts.DomainQuestionContact{{ID: contact, Name: "Alex Example"}},
+			ContactCount:  2,
+			SenderAddress: "alex@alias.example",
+			Suggestion:    &contacts.DomainQuestionSuggestion{CompanyID: company, Name: "Example Company", Basis: contacts.SuggestionRedirectTarget},
+		},
+	}}})
+	out, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	var row *crmcontracts.WorklistItem
+	for _, item := range queueOf(t, out, nil) {
+		if item.Id == "alias.example" {
+			row = &item
+		}
+	}
+	if row == nil {
+		t.Fatal("the forwarded question never reached the worklist")
+	}
+	if want := []crmcontracts.WorklistItemActions{"discard", "reopen"}; !slices.Equal(row.Actions, want) {
+		t.Errorf("actions = %v, want %v: a redirect never offers keep without a chosen company", row.Actions, want)
+	}
+	got := row.DomainContext
+	if got == nil || got.ContactCount != 2 || len(got.Contacts) != 1 || got.Contacts[0].Name != "Alex Example" ||
+		got.SenderAddress == nil || *got.SenderAddress != "alex@alias.example" {
+		t.Fatalf("domain_context = %+v, want the sender and count", got)
+	}
+	if got.SuggestedCompany == nil || got.SuggestedCompany.Name != "Example Company" || got.SuggestedCompany.Basis != crmcontracts.DomainQuestionSuggestionBasisRedirectTarget {
+		t.Fatalf("suggested_company = %+v, want the redirect target's owner", got.SuggestedCompany)
 	}
 }

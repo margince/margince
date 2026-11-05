@@ -115,7 +115,7 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 				if err := json.Unmarshal(body, &req); err != nil {
 					t.Fatalf("probe body does not decode: %v", err)
 				}
-				_, err := dealCreateInput(req)
+				_, err := DealCreationInput(req)
 				return err
 			},
 		},

@@ -30,6 +30,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -144,6 +145,14 @@ func TestCompany360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 	svc := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return roomFixedNow })
 	companyID := companyIDOf(f.company)
+	// The account's direction clocks roll up its employees' own, so the
+	// contact who wrote the mail works there.
+	contactID := ContactIDOf(f.contact)
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
+	}); err != nil {
+		t.Fatalf("employing the contact: %v", err)
+	}
 
 	scoped, err := svc.AssembleScoped(e.Admin(), companyID, company360.AssembleOptions{ProjectID: &f.erp})
 	if err != nil {

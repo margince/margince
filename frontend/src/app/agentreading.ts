@@ -84,7 +84,9 @@ export function derive(
   // A queued occurrence counts as live: the agent has taken the work up, and
   // the reader has no use for the difference. The line under the orb carries
   // that detail, in copy the feed already has for every state.
-  const live = server.running.find((item) => item.state !== "stalled");
+  const live = server.running.find(
+    (item) => item.state !== "stalled" && item.kind !== "report_interpret",
+  );
   if (live) {
     return { state: laneFor(live), cause: live, register: "agent" };
   }
@@ -210,7 +212,9 @@ function faultLine(
   }
   if (signals.offline.length > 0) {
     return plain(
-      t("agent.line.cannotReach", { sources: signals.offline.join(", ") }),
+      t("agent.line.cannotReach", {
+        sources: signals.offline.map((source) => source.label).join(", "),
+      }),
     );
   }
   return agentLine ?? plain(t("agent.line.runFailed"));

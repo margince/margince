@@ -73,6 +73,7 @@ var catalog = map[string]struct {
 	// about the installation, which names its own language in a setting and
 	// publishes nothing per reader.
 	"user_locale.changed":        {contactStreamEntity, 1},
+	"user_timezone.changed":      {contactStreamEntity, 1},
 	"user_display_name.changed":  {contactStreamEntity, 1},
 	"user_greeting_name.changed": {contactStreamEntity, 1},
 	// What a member wants DELIVERED rides the identity stream rather than the
@@ -105,6 +106,7 @@ var catalog = map[string]struct {
 	"company.archived": {companyStreamEntity, 1},
 	"company.merged":   {companyStreamEntity, 1},
 	"company.restored": {companyStreamEntity, 1},
+	"company.erased":   {companyStreamEntity, 1},
 
 	"deal.created":       {dealStreamEntity, 1},
 	"pipeline.created":   {dealStreamEntity, 1},
@@ -118,12 +120,15 @@ var catalog = map[string]struct {
 	"deal.owner_changed": {dealStreamEntity, 1},
 	"deal.archived":      {dealStreamEntity, 1},
 	"deal.restored":      {dealStreamEntity, 1},
+	"deal.merged":        {dealStreamEntity, 1},
+	"deal.erased":        {dealStreamEntity, 1},
 	// The project rides the deal family stream: it is the body of work the
 	// deals hang off, and a consumer interested in one is interested in both.
-	"project.created":       {dealStreamEntity, 1},
-	"project.updated":       {dealStreamEntity, 1},
-	"project.phase_changed": {dealStreamEntity, 1},
-	"project.archived":      {dealStreamEntity, 1},
+	"project.created":         {dealStreamEntity, 1},
+	"project.updated":         {dealStreamEntity, 1},
+	"project.phase_changed":   {dealStreamEntity, 1},
+	"project.health_assessed": {dealStreamEntity, 1},
+	"project.archived":        {dealStreamEntity, 1},
 	// A commission entry rides the deal family stream for the same reason a
 	// contract does: it is what a WON deal produced, and a consumer following
 	// the commercial arc of one deal wants the money that came out of it on
@@ -189,13 +194,23 @@ var catalog = map[string]struct {
 	"list.member_removed": {contactStreamEntity, 1},
 	"list.evaluated":      {contactStreamEntity, 1},
 
-	"reporting.changed":          {identityStreamEntity, 1},
-	"booking_page.updated":       {identityStreamEntity, 1},
-	"meeting_proposal.updated":   {activityStreamEntity, 1},
-	"meeting_invitation.updated": {activityStreamEntity, 1},
-	"activity.captured":          {activityStreamEntity, 1},
-	"activity.updated":           {activityStreamEntity, 1},
-	"activity.archived":          {activityStreamEntity, 1},
+	"reporting.changed":    {identityStreamEntity, 1},
+	"booking_page.updated": {identityStreamEntity, 1},
+	// The legal entities the installation trades as, on the identity stream
+	// because an entity is installation configuration a user is assigned to.
+	"legal_entity.created":      {identityStreamEntity, 1},
+	"legal_entity.updated":      {identityStreamEntity, 1},
+	"legal_entity.archived":     {identityStreamEntity, 1},
+	"legal_entity.member_added": {identityStreamEntity, 1},
+	// A collection-notice declaration is consent configuration an admin
+	// keeps, on the identity stream beside the entity it names.
+	"existing_customer_notice.created":   {identityStreamEntity, 1},
+	"existing_customer_notice.withdrawn": {identityStreamEntity, 1},
+	"meeting_proposal.updated":           {activityStreamEntity, 1},
+	"meeting_invitation.updated":         {activityStreamEntity, 1},
+	"activity.captured":                  {activityStreamEntity, 1},
+	"activity.updated":                   {activityStreamEntity, 1},
+	"activity.archived":                  {activityStreamEntity, 1},
 	// A file's own kind is not a stream §4.1 defines, so the attachment family
 	// rides the activity stream, the table belongs to the activities module,
 	// and a file that arrives with captured mail is already filed on an
@@ -218,6 +233,9 @@ var catalog = map[string]struct {
 	// disposition_recorded's enum is closed at v1, and a new value would break
 	// subscribers that validate it.
 	"activity.marked_handled": {activityStreamEntity, 1},
+	// One attendee said they are ready for a meeting, or took it back. Its
+	// own type because it is one attendee's state, not a change to the meeting.
+	"activity.readiness_recorded": {activityStreamEntity, 1},
 	// A rep set a lapsed CONTACT aside so their own decay lane stops raising
 	// them, or put them back. The entity is the contact, which is what the
 	// judgement is about, the relationship's silence is a fact about them
@@ -241,6 +259,7 @@ var catalog = map[string]struct {
 	// How a seat wants their notices to reach them is a fact about the seat, so
 	// it rides the stream those notices ride, and only they are its subject.
 	"notification.preference_changed": {identityStreamEntity, 1},
+	"approval.preference_changed":     {identityStreamEntity, 1},
 
 	// A weekly plan belongs to one rep, so its changes ride the same identity
 	// stream a notice does. help_requested is its own type rather than another
@@ -249,6 +268,11 @@ var catalog = map[string]struct {
 	// a checkbox.
 	"weekly_plan.updated":        {identityStreamEntity, 1},
 	"weekly_plan.help_requested": {identityStreamEntity, 1},
+
+	// A sales initiative is a commercial decision about a population, not a
+	// record of its own stream. It rides the identity stream as a report
+	// definition does.
+	"sales_initiative.updated": {identityStreamEntity, 1},
 
 	// A call rides the identity stream because its entity is the AUTHOR. A
 	// forecast is about a pipeline, but a CALL is an assertion by a contact and
@@ -269,6 +293,7 @@ var catalog = map[string]struct {
 	"intro_request.created":   {contactStreamEntity, 1},
 	"intro_request.decided":   {contactStreamEntity, 1},
 	"intro_request.completed": {contactStreamEntity, 1},
+	"intro_request.recorded":  {contactStreamEntity, 1},
 	"intro_request.replied":   {contactStreamEntity, 1},
 	"intro_request.closed":    {contactStreamEntity, 1},
 
@@ -285,6 +310,7 @@ var catalog = map[string]struct {
 	// detection lifecycle rides the capture stream (events.md §5.11
 	// stream-routing rule).
 	"signal.detected": {captureStreamEntity, 1},
+	"signal.updated":  {captureStreamEntity, 1},
 	"signal.resolved": {captureStreamEntity, 1},
 
 	"coldstart.read_back_proposed": {coldstartStreamEntity, 1},
@@ -297,9 +323,11 @@ var catalog = map[string]struct {
 	// identity-owned facts, so they ride the identity stream rather than gaining
 	// per-entity streams of their own. A subscriber watching one seat's access
 	// reads them in one place and in order.
+	"user.updated":              {identityStreamEntity, 1},
 	"user.invited":              {identityStreamEntity, 1},
 	"user.activated":            {identityStreamEntity, 1},
 	"user.password_link_issued": {identityStreamEntity, 1},
+	"user.mfa_removed":          {identityStreamEntity, 1},
 	"user.deactivated":          {identityStreamEntity, 1},
 	"user.reactivated":          {identityStreamEntity, 1},
 	"role.changed":              {identityStreamEntity, 1},

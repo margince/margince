@@ -36,7 +36,11 @@ func TestEveryAdvertisedVerbAnswersForItself(t *testing.T) {
 			// Derived rather than listed: the help renders the parser's own flag
 			// set, so naming one flag per verb here would be a second list to
 			// keep true. Asking the set what it holds is asking the same source.
-			verb.flags().VisitAll(func(f *flag.Flag) {
+			fs, err := verb.flags()
+			if err != nil {
+				t.Fatal(err)
+			}
+			fs.VisitAll(func(f *flag.Flag) {
 				if !strings.Contains(help, "-"+f.Name) {
 					t.Errorf("`aitask %s --help` omits the -%s flag its parser accepts", verb.name, f.Name)
 				}

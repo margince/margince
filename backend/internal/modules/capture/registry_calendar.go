@@ -37,14 +37,14 @@ func (r *Registry) CalendarFor(ctx context.Context, host ids.UserID, provider st
 	if err != nil {
 		return nil, nil, err
 	}
-	if write && !calendarWriteGranted(provider, scopes) {
+	if write && !CalendarWriteGranted(provider, scopes) {
 		return nil, nil, connector.ErrAuthRejected
 	}
 	c, err := r.connector(provider)
 	if err != nil {
 		return nil, nil, err
 	}
-	c = connector.RotatingSyncer(c, rotationSink{registry: r, connectionID: id, generation: generation, readRef: ref, log: slog.Default()})
+	c = connector.RotatingSyncer(c, &rotationSink{registry: r, connectionID: id, generation: generation, readRef: ref, log: slog.Default()})
 	scheduler, ok := c.(connector.CalendarScheduler)
 	if !ok {
 		return nil, nil, fmt.Errorf("calendar: scheduling unavailable: %w", ErrConnectorNotConfigured)
@@ -65,7 +65,9 @@ var calendarWriteScopes = map[string][]string{
 	"graphcal": {"Calendars.ReadWrite"},
 }
 
-func calendarWriteGranted(provider string, scopes []string) bool {
+// CalendarWriteGranted says whether a connection's granted scopes let it write
+// events on provider's calendar. It is the one read-only detector.
+func CalendarWriteGranted(provider string, scopes []string) bool {
 	for _, grant := range calendarWriteScopes[provider] {
 		if slices.Contains(scopes, grant) {
 			return true

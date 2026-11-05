@@ -205,6 +205,16 @@ const ACCEPTED = new Map<string, string>([
     "a button drawn as the FIELD the palette opens with, so it wears the " +
       "field's height too (app/topbar.css says so where it is drawn)",
   ],
+  [
+    ".record-split-verbs .btn:not(.btn-primary)",
+    "a verb tile in the record's verb bar stacks a glyph over its word, so it " +
+      "is a two-line box that takes an equal share of the bar's width",
+  ],
+  [
+    ".standing-timeline-mark",
+    "a glyph chip on the How it stands line: it marks one logged item among " +
+      "others a few pixels apart, so it is a mark on an axis and not a verb in a row",
+  ],
   // Text, not boxes. The link variant and the affordances that sit inside a
   // running line: a 32px box there sets the height of the line around it.
   [
@@ -219,9 +229,10 @@ const ACCEPTED = new Map<string, string>([
   // 2.2 AA asks 44px of a thumb. `max()` is what keeps them a floor: a later
   // rise in the shared height passes straight through.
   [
-    "user",
-    "the account chip takes the coarse-pointer 44px floor; at a fine pointer it " +
-      "is --controlHeight like every other control",
+    ".topbar-trail .iconbtn, .topbar-trail .btn.btn-bare",
+    "the top bar's glyphs take a 44px-tall box under a coarse pointer, as wide " +
+      "as half the gap to each neighbour allows, and clip their fill to the " +
+      "--controlHeight square inside it (app/topbar.css)",
   ],
   [
     ".segmented button",
@@ -306,6 +317,11 @@ const ACCEPTED = new Map<string, string>([
     ".overflow-menu-items .btn",
     "a Button turned into a menu ROW — the fill, the border and the control " +
       "height all go, and what is left is the Select option's geometry",
+  ],
+  [
+    "compose-choice",
+    "a Button turned into a thread ROW of two lines, as tall as its subject " +
+      "and its summary need",
   ],
   ["stat-card", "a card: the strip's tile, and the tile filling its cell"],
   ["arhit", "the agent orb's hit area, sized to the orb rather than to a verb"],

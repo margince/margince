@@ -143,6 +143,28 @@ func TestOwnDomainHandlersRefuseBadInputAndAgents(t *testing.T) {
 	}
 }
 
+func TestOwnDomainHandlersRefuseAConsumerMailDomainUnlessTheWorkspaceCarvedItOut(t *testing.T) {
+	e := integration.Setup(t)
+	h := ownDomainHandlers{store: capture.NewOwnDomainStore(e.DB())}
+	admin := ownDomainAdmin(e)
+
+	rec := callOwnDomains(admin, h.CreateWorkspaceEmailDomain,
+		http.MethodPost, strings.NewReader(`{"domain":"AOL.com"}`))
+	if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), "consumer_mail_domain") {
+		t.Fatalf("a shipped consumer-mail domain: status = %d, want 422 consumer_mail_domain (body %s)", rec.Code, rec.Body)
+	}
+	if got := listOwnDomains(admin, t, h); len(got.Data) != 0 {
+		t.Fatalf("a refused registration left %d rows behind", len(got.Data))
+	}
+
+	e.WsExec(t, `INSERT INTO capture_freemail_domain (domain, kind) VALUES ('aol.com', 'never')`)
+	rec = callOwnDomains(admin, h.CreateWorkspaceEmailDomain,
+		http.MethodPost, strings.NewReader(`{"domain":"aol.com"}`))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("a domain the workspace carved out of the baseline: status = %d, want 201 (body %s)", rec.Code, rec.Body)
+	}
+}
+
 // callOwnDomains drives one handler and hands back the recorder, so each caller
 // decodes into the concrete wire type the operation actually answers with.
 func callOwnDomains(ctx context.Context, handler func(http.ResponseWriter, *http.Request),

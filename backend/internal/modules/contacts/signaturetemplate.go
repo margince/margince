@@ -11,8 +11,8 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -25,12 +25,13 @@ func (s *Store) GetSignatureTemplate(ctx context.Context) (string, error) {
 	if s.settings == nil {
 		return "", errors.New("contacts: the signature template is not wired; the installation cannot read it")
 	}
-	return settings.Get(ctx, s.settings, SignatureTemplate)
+	return config.StoredVal(ctx, s.settings, SignatureTemplate)
 }
 
-// SaveSignatureTemplate writes the layout through the settings store, which
-// validates, gates and audits it. The send path sanitizes the markup, so what
-// an admin types never reaches a recipient unchecked.
+// SaveSignatureTemplate writes the layout through the configuration, which
+// gates it, refuses a boot-set value, validates and audits it. The send path
+// sanitizes the markup, so what an admin types never reaches a recipient
+// unchecked.
 func (s *Store) SaveSignatureTemplate(ctx context.Context, template string) (string, error) {
 	if err := auth.Require(ctx, "installation_settings", principal.ActionUpdate); err != nil {
 		return "", err
@@ -39,7 +40,7 @@ func (s *Store) SaveSignatureTemplate(ctx context.Context, template string) (str
 		return "", errors.New("contacts: the signature template is not wired; the installation cannot change it")
 	}
 	trimmed := strings.TrimSpace(template)
-	if err := settings.Set(ctx, s.settings, SignatureTemplate, trimmed); err != nil {
+	if err := config.Save(ctx, s.settings, SignatureTemplate, trimmed); err != nil {
 		return "", err
 	}
 	return trimmed, nil
@@ -52,7 +53,9 @@ func (h Handlers) GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Reque
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignatureTemplate{Template: template})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignatureTemplate{
+		Template: template, Locks: h.settingLocks(SignatureTemplate),
+	})
 }
 
 // SaveEmailSignatureTemplate implements PUT /email-signature-template (admin/ops, human only).
@@ -66,5 +69,21 @@ func (h Handlers) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Requ
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignatureTemplate{Template: template})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignatureTemplate{
+		Template: template, Locks: h.settingLocks(SignatureTemplate),
+	})
+}
+
+// WithLocks binds what reports the settings a boot source sets.
+func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+	h.locks = locks
+	return h
+}
+
+// settingLocks are the locks among surface, the settings one response carries.
+func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+	if h.locks == nil {
+		return nil
+	}
+	return h.locks(surface)
 }

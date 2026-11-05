@@ -200,7 +200,7 @@ func TestAllowanceRecoveryRequeuesVoiceBuildWithoutResettingItsAttempt(t *testin
 
 func setRecoveryAllowance(t *testing.T, e *integration.Env, tokens int64) {
 	t.Helper()
-	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
+	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 	current, err := store.ReadBudget(e.Admin())
 	if err != nil {
 		t.Fatal(err)

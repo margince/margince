@@ -86,11 +86,13 @@ func isConsentEntry(r *http.Request) bool {
 //   - a capture-connector OAuth callback arrives with neither cookie (SameSite
 //     blocks it on the cross-site redirect) nor workspace slug. Its signed `state`
 //     is the auth: the handler verifies it and rebuilds the workspace and granting
-//     human from it before persisting.
+//     human from it before persisting. An extension unit's OAuth callback is held
+//     the same way.
 func AdmittedWithoutSession(r *http.Request) bool {
 	return isPublicRequest(r) ||
 		strings.HasPrefix(r.URL.Path, "/v1/public/") ||
-		isConnectorOAuthCallback(r.URL.Path)
+		isConnectorOAuthCallback(r.URL.Path) ||
+		isExtensionOAuthCallback(r.URL.Path)
 }
 
 func isPublicRequest(r *http.Request) bool {
@@ -122,10 +124,21 @@ func isOIDCLoginRequest(path string) bool {
 // construction; the connectorOAuthCallback handler authenticates via the
 // signed `state` parameter, never a cookie.
 func isConnectorOAuthCallback(path string) bool {
-	// Match EXACTLY /v1/connectors/{provider}/callback — a single provider
-	// segment. A prefix/suffix test alone would also admit deeper paths like
-	// /v1/connectors/gmail/admin/callback, widening the session bypass.
-	rest, ok := strings.CutPrefix(path, "/v1/connectors/")
+	return isOneSegmentCallback(path, "/v1/connectors/")
+}
+
+// isExtensionOAuthCallback matches an extension unit's OAuth redirect target
+// (/v1/ext-oauth/{provider}/callback). Its signed state and CSRF cookie hold it,
+// as they hold the connector callback; the connect route beside it needs a session.
+func isExtensionOAuthCallback(path string) bool {
+	return isOneSegmentCallback(path, "/v1/ext-oauth/")
+}
+
+// isOneSegmentCallback matches prefix + {provider} + /callback and nothing
+// deeper. A prefix/suffix test alone would also admit a path such as
+// /v1/connectors/gmail/admin/callback, widening the session bypass.
+func isOneSegmentCallback(path, prefix string) bool {
+	rest, ok := strings.CutPrefix(path, prefix)
 	if !ok {
 		return false
 	}

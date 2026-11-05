@@ -97,6 +97,23 @@ export function useCanMutate(): boolean {
   return useMe().data?.authorization?.seat_type === "full";
 }
 
+/** The grant a shared record action needs; its caller states it, never the action. */
+export type RequiredGrant = {
+  readonly object: RbacObject;
+  readonly action: RbacAction;
+};
+
+/**
+ * Whether a shared record action (archive, merge) is refused to this seat by
+ * its grant. False until /me has answered, so no refusal is claimed before the
+ * server has decided what the seat holds.
+ */
+export function useGrantRefused({ object, action }: RequiredGrant): boolean {
+  const allowed = useCanWrite(object, action);
+  const answered = useMe().data?.authorization !== undefined;
+  return answered && !allowed;
+}
+
 /**
  * Both axes, for a control that issues a MUTATING request — the common case.
  *
@@ -194,6 +211,26 @@ export function useRecordWriteRefusal(
 }
 
 /**
+ * Why this caller may not take a write verb, or undefined when they may.
+ *
+ * `useCanWrite` folds two refusals with different remedies: a read seat needs
+ * a full seat, a missing grant needs a role change. A sentence blaming the
+ * role for a seat sends the reader to the wrong fix, so each gets its own.
+ * The seat comes first: no grant lets a read seat write.
+ */
+export function useWriteRefusal(
+  object: RbacObject,
+  action: RbacAction,
+  reasons: Readonly<{ seat: string; grant: string }>,
+): string | undefined {
+  const granted = useCan(object, action);
+  if (!useCanMutate()) {
+    return reasons.seat;
+  }
+  return granted ? undefined : reasons.grant;
+}
+
+/**
  * Both axes, for a control whose request is an UPSERT — one endpoint that
  * inserts or replaces, so which grant it needs is not knowable until the server
  * has read the row.
@@ -273,12 +310,22 @@ export function holdsAdminRole(roles: readonly string[] | undefined): boolean {
  * alone would hide surfaces the server serves an ops principal, which is the
  * client disagreeing with the authority.
  *
- * The entries INSIDE the section keep their own read predicates, so an ops
- * principal still finds the two admin-only surfaces (job health, the danger
- * zone) withheld by the cards themselves. This predicate decides whether the
- * section exists for a reader, never what they may do inside it.
+ * The entries inside the section keep their own read predicates. A principal
+ * without the `job_health` read finds job health withheld by its card, and one
+ * without the admin role finds the danger zone withheld. This predicate decides
+ * whether the section exists for a reader, never what they may do inside it.
  */
 export function useHoldsOperatorSeat(): boolean {
   const roles = useMe().data?.roles ?? [];
   return roles.includes("admin") || roles.includes("ops");
+}
+
+/**
+ * Whether a directory-group grant hands out the `admin` role, which asks for a
+ * typed confirmation before it is saved. It names the role being GRANTED, not
+ * the reader's authority: the server's assignable-roles ceiling still decides
+ * who may grant it. Retired when AssignableRole says what a role may do.
+ */
+export function grantsAdminRole(roleKey: string): boolean {
+  return roleKey === "admin";
 }

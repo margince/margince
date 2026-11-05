@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -71,6 +72,25 @@ type searchBranch struct {
 	// rankSample, when set, is how many visible matches the branch scores at
 	// most; the scan stops there, and the best hits come from that sample.
 	rankSample int
+	// snippetIsContext marks an excerpt shown beside the record whatever text
+	// matched. Retrieval cites the title instead, because evidence must be text
+	// that could have ranked the hit.
+	snippetIsContext bool
+	// nearName is the indexed trigram expression over the branch's name, with a
+	// %s for the alias. It is copied from the index definition, so the
+	// near-match pass reads the index. Empty means no near matches.
+	nearName string
+}
+
+// snippetIsEvidence reports whether a hit's excerpt may be cited as the text
+// that ranked it.
+func snippetIsEvidence(entity string) bool {
+	for _, branch := range searchBranches {
+		if branch.entity == entity {
+			return !branch.snippetIsContext
+		}
+	}
+	return true
 }
 
 // activityRankSample bounds the mail the activity branch ranks. A common word
@@ -80,35 +100,77 @@ type searchBranch struct {
 const activityRankSample = 2000
 
 // ownMatch is the predicate that finds a record by its own text: the name index,
-// or an exact identifier the record carries. identifierPos binds the query the
-// first time an identifier arm asks for it.
-func (b searchBranch) ownMatch(alias, tsquery string, identifierPos func() int) string {
+// or an identifier (whole or a fragment) the record carries. identifierPos
+// binds the query the first time an identifier arm asks for it.
+func (b searchBranch) ownMatch(alias, tsquery string, identifierPos identifierBinder) string {
 	if b.identifier.Table == "" {
 		return fmt.Sprintf("%s.search_tsv @@ %s", alias, tsquery)
 	}
 	return fmt.Sprintf("(%s.search_tsv @@ %s OR %s)",
-		alias, tsquery, b.identifier.MatchSQL(identifierPos(), alias+".id"))
+		alias, tsquery, b.identifier.MatchSQL(identifierPos.position(b.identifier == storekit.CompanyDomains), alias+".id"))
 }
 
-// ownScore lifts an identifier hit into the whole-word tier, so a pasted address
-// ranks its contact above every name that merely starts like it.
-func (b searchBranch) ownScore(alias, score string, identifierPos func() int) string {
+// Identifier tiers exceed the bounded text rank; the cursor carries the complete score.
+const (
+	sqlFalse                = "false"
+	companyAssociationScore = 4
+	identifierPrefixScore   = 8
+	identifierExactScore    = 16
+)
+
+func (b searchBranch) identifierEvidence(alias string, identifierPos identifierBinder) string {
+	if b.identifier.Table == "" {
+		return "NULL::text"
+	}
+	whole := identifierPos.position(false)
+	exact := b.identifier.ExactSQL(whole, alias+".id")
+	prefix := b.identifier.PrefixSQL(whole, alias+".id")
+	if b.identifier != storekit.CompanyDomains {
+		if !identifierPos.addressPrefix {
+			prefix = sqlFalse
+		}
+	}
+	return fmt.Sprintf("CASE WHEN %s THEN 'exact' WHEN %s THEN 'prefix' ELSE NULL END", exact, prefix)
+}
+
+func (b searchBranch) ownScore(alias, score string, identifierPos identifierBinder) string {
 	if b.identifier.Table == "" {
 		return score
 	}
-	return fmt.Sprintf("(%s + (%s)::int)", score, b.identifier.MatchSQL(identifierPos(), alias+".id"))
+	ranked := fmt.Sprintf("(%s + CASE (%s) WHEN 'exact' THEN %d WHEN 'prefix' THEN %d ELSE 0 END)",
+		score, b.identifierEvidence(alias, identifierPos), identifierExactScore, identifierPrefixScore)
+	if b.identifier != storekit.CompanyDomains {
+		return ranked
+	}
+	// A company may be discovered by an address's domain; identifier evidence describes the whole query.
+	return fmt.Sprintf("(%s + coalesce((SELECT max(similarity(f_fold_apostrophes(lower(domain)),f_fold_apostrophes(lower(btrim($%d))))) FROM company_domain WHERE company_id=%s.id AND archived_at IS NULL),0) / 10.0)", ranked, identifierPos.position(true), alias)
 }
 
-// bindIdentifier binds the whole query for the identifier arms on first use. A
-// bound parameter no statement references fails the whole search, and every
-// identifier branch may be denied.
-func bindIdentifier(query string, arg func(any) int) func() int {
-	pos := 0
-	return func() int {
-		if pos == 0 {
-			pos = arg(query)
-		}
-		return pos
+// identifierBinder yields the bind position of the query the identifier arms
+// match on. A company's identifier is its domain, so it asks for the part after
+// the "@" (storekit.DomainTerm), as the company list does.
+type identifierBinder struct {
+	position      func(domain bool) int
+	addressPrefix bool
+}
+
+// bindIdentifier defers each binding until an admitted branch needs it.
+func bindIdentifier(query string, arg func(any) int) identifierBinder {
+	var whole, domain int
+	return identifierBinder{
+		addressPrefix: strings.IndexByte(query, '@') > 0,
+		position: func(asDomain bool) int {
+			if asDomain {
+				if domain == 0 {
+					domain = arg(storekit.DomainTerm(query))
+				}
+				return domain
+			}
+			if whole == 0 {
+				whole = arg(query)
+			}
+			return whole
+		},
 	}
 }
 
@@ -119,7 +181,7 @@ func bindIdentifier(query string, arg func(any) int) func() int {
 // rather than inlined so the discard is a decision with a reason on it instead
 // of an error value that goes quietly missing.
 func mayRead(ctx context.Context, entity string) bool {
-	return auth.Require(ctx, entity, principal.ActionRead) == nil
+	return auth.Allows(ctx, entity, principal.ActionRead)
 }
 
 // projectSnippet is `key · company`, with the company named only to a caller
@@ -204,13 +266,24 @@ const noSnippet = "NULL"
 const columnName = "name"
 
 var searchBranches = []searchBranch{
-	{entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet, identifier: storekit.ContactEmails},
+	{
+		entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet,
+		identifier: storekit.ContactEmails, nearName: "f_fold_apostrophes(lower(%s.full_name))",
+	},
 	{
 		entity: "company", table: entityCompany, title: "display_name", snippet: noSnippet,
 		extraWhere: "NOT %s.is_anchor", identifier: storekit.CompanyDomains,
+		nearName: "f_fold_apostrophes(lower(%s.display_name))",
 	},
-	{entity: "deal", table: entityDeal, title: columnName, snippet: noSnippet},
-	{entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)", snippet: noSnippet},
+	{entity: "deal", table: entityDeal, title: columnName, snippet: noSnippet, nearName: "f_fold_apostrophes(lower(%s.name))"},
+	// A name alone does not say why searching an account found the lead.
+	// So a lead's excerpt is its company, as a contact hit carries its employer.
+	// A lead with no full name is already titled by that company.
+	{
+		entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)",
+		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetIsContext: true, identifier: storekit.LeadEmails,
+		nearName: "f_fold_apostrophes(lower(coalesce(%[1]s.full_name, '') || ' ' || coalesce(%[1]s.company_name, '')))",
+	},
 	// A project's name alone does not say which account's work it is, and two
 	// accounts can run a "Phase 2". The excerpt is the key and the company,
 	// which is how a contact tells the hits apart; see projectSnippet for the

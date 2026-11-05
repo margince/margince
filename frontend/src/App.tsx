@@ -1,37 +1,73 @@
-import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 // Route → screen. The table below is total over `Screen` (lib/router.tsx), so
 // every address the product answers has a view. An address it does not answer
 // is a not-found page rather than a surface that reads as unbuilt.
-import { ResetRoute, ROUTE_CHUNKS } from "./App.screens";
+import { ResetRoute } from "./App.screens";
 import { ScreenView } from "./App.views";
+import { useWarmRouteChunks } from "./App.warmchunks";
 import { AskFromAddress } from "./app/askfromaddress";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
+import { ConfinedAccountScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
+import { prefetchHome } from "./app/homeprefetch";
+import { passesOnboardingGate } from "./app/onboarding-gate";
 import {
   CommandPalette,
   useBuiltinCommands,
   usePaletteHotkey,
 } from "./app/palette";
 import { Shell, useRoute } from "./app/shell";
-import { useLocale } from "./i18n";
-import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
-import { SPA_RELEASE } from "./lib/release";
-import { navigateReplacing, type Screen } from "./lib/router";
-import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
+import { SourceHost } from "./app/sourcehost";
+import { CallLogHost } from "./components/calllog.host";
+import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
+import {
+  ReleaseSkewScreen,
+  useSkewedApiRelease,
+} from "./features/settings/releaseskew";
+import { WriteToHost } from "./features/settings/writetohost";
 import {
   type AuthNotice,
   AuthScreen,
   AvailabilityScreen,
   RESET_ROUTE,
-} from "./screens/auth";
-import { ConfinedAccountScreen, useProbeAnswer } from "./screens/confinement";
-import { useInstallationDescribed } from "./screens/installationcompany";
-import { useJourneyProgress } from "./screens/onboarding-journey";
-import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
-import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
-import { WriteToHost } from "./screens/writetohost";
+} from "./features/sign-in/auth";
+import {
+  fetchSetupStatus,
+  SetupClaimScreen,
+} from "./features/sign-in/setupclaim";
+import { useLocale } from "./i18n";
+import {
+  CompanyZoneProvider,
+  useConfiguredCompanyZone,
+} from "./lib/companyzone";
+import { useInstallationDescribed } from "./lib/installationcompany";
+import { markJourney } from "./lib/journeymarks";
+import { SPA_RELEASE } from "./lib/release";
+import { navigateReplacing, type Screen } from "./lib/router";
+import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  watchStored,
+  writeStored,
+} from "./lib/storage";
+import { useTaskReminderNotifications } from "./lib/taskreminders";
+import { currentParams } from "./lib/urlstate";
+import {
+  renderableViewerZone,
+  useBrowserZoneOnFirstSignIn,
+  ViewerZoneProvider,
+} from "./lib/viewerzone";
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).
@@ -41,12 +77,6 @@ const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set([
   "preferences",
   "unsubscribe",
   "room",
-]);
-
-// OAuth consent keeps its cookie-bound, single-use nonce through onboarding.
-const ONBOARDING_GATE_EXEMPT_SCREENS: ReadonlySet<Screen> = new Set([
-  "onboarding",
-  "oauth-consent",
 ]);
 
 export function App() {
@@ -134,6 +164,48 @@ function UnavailableOrClaimable({
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
 
+// Watched, so a sign-out here or in another tab ends Home's early reads at once.
+const watchSessionSeen = (changed: () => void) =>
+  watchStored(STORAGE_KEYS.sessionSeen, changed);
+const sessionSeenNow = () => readStored(STORAGE_KEYS.sessionSeen) === "1";
+
+// Marks whether this browser has a session, and answers whether the probe was
+// refused. A refused refetch keeps the last data beside its error.
+function noteSessionSeen(data: unknown, error: unknown): boolean {
+  const refused =
+    error instanceof AuthProbeError && error.kind === "unauthorized";
+  if (refused) {
+    removeStored(STORAGE_KEYS.sessionSeen);
+  } else if (data && !error) {
+    writeStored(STORAGE_KEYS.sessionSeen, "1");
+  }
+  return refused;
+}
+
+// On a browser that had a session, Home's reads start with the session probe.
+// Waiting for the gates it opens costs two round trips. An answer that sends the
+// reader elsewhere stops them, and the cleanup aborts them.
+function homeMayRead(
+  state: Readonly<{
+    screen: Screen;
+    signedIn: boolean;
+    sessionSeen: boolean;
+    refused: boolean;
+    confined: boolean;
+    described: boolean | undefined;
+    unfinished: boolean;
+  }>,
+): boolean {
+  return (
+    state.screen === "home" &&
+    (state.signedIn || state.sessionSeen) &&
+    !state.refused &&
+    !state.confined &&
+    state.described !== false &&
+    !state.unfinished
+  );
+}
+
 // AuthGate: everything behind the session probes GET /v1/me, and the
 // boundary branches on the TYPED failure (§4 of the login spec):
 // 401 → login, network/5xx → connection problem, 503 → installation
@@ -150,7 +222,7 @@ function AuthedApp({
   // signed in" and carries no notice.
   const hadSession = useRef(false);
   const [notice, setNotice] = useState<AuthNotice>(null);
-  // The signed-in person's own language, handed up to the provider that sits
+  // The signed-in user's own language, handed up to the provider that sits
   // above this component. It cannot ask for `/me` itself, and this is the first
   // place the answer exists — so a choice made on another browser reaches the
   // catalog here or nowhere.
@@ -161,16 +233,18 @@ function AuthedApp({
       adoptLocale(chosen);
     }
   }, [me.data, adoptLocale]);
+  // A user with no stored zone gets the browser's as a first guess. They
+  // change it under Settings → Account.
+  useBrowserZoneOnFirstSignIn(me.data);
   useEffect(() => {
+    const refused = noteSessionSeen(me.data, me.error);
     if (me.data) {
       hadSession.current = true;
       setNotice(null);
+      markJourney("session");
       return;
     }
-    if (
-      me.error instanceof AuthProbeError &&
-      me.error.kind === "unauthorized"
-    ) {
+    if (refused) {
       const exit = consumeAuthExitNotice();
       if (exit) {
         setNotice(exit);
@@ -196,19 +270,27 @@ function AuthedApp({
   // here rather than per screen so all of them agree, and gated on the session
   // for the same reason the company probe is: an unauthenticated read would
   // 401 and say nothing about the installation.
-  const recordZone = useConfiguredRecordZone(authed);
+  const companyZone = useConfiguredCompanyZone(authed);
+  // The reader's own clock, for every time a signed-in screen shows. It is
+  // the zone they stored, or their browser's until they have one.
+  const storedZone = me.data?.user.timezone;
+  const browserZone = useMemo(
+    () => renderableViewerZone(storedZone),
+    [storedZone],
+  );
 
-  // route.screen is a dependency on purpose: the gate must hold on every
-  // navigation, not only on first load — otherwise the palette or a typed hash
-  // walks straight past onboarding. ONBOARDING_GATE_EXEMPT_SCREENS is exempt
-  // or this effect would fight its own destination (onboarding) or destroy a
-  // request that cannot survive the rewrite (oauth-consent).
+  // The route is a dependency so the gate holds on every navigation. Otherwise
+  // the palette or a typed hash walks past onboarding.
+  // passesOnboardingGate's screens are exempt, or this effect would fight its
+  // own destination (onboarding) or destroy a request that cannot survive the
+  // rewrite (oauth-consent).
+  const { screen: gateScreen, id: gateId, id2: gateId2 } = route;
   useEffect(() => {
     if (
       authed &&
       described !== undefined &&
       (!described || progress.unfinished) &&
-      !ONBOARDING_GATE_EXEMPT_SCREENS.has(route.screen)
+      !passesOnboardingGate({ screen: gateScreen, id: gateId, id2: gateId2 })
     ) {
       // Replacing, not pushing: this is a redirect, and the address it sends
       // the reader away from answers by sending them here again. Pushed, Back
@@ -216,12 +298,42 @@ function AuthedApp({
       // onboarding by the one key that exists for getting out of things.
       navigateReplacing({ screen: "onboarding", id: "company" });
     }
-  }, [authed, described, progress.unfinished, route.screen]);
+  }, [authed, described, progress.unfinished, gateScreen, gateId, gateId2]);
 
   const { refusal, confinement } = useProbeAnswer(me);
+  const sessionSeen = useSyncExternalStore(
+    watchSessionSeen,
+    sessionSeenNow,
+    sessionSeenNow,
+  );
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const gatesPending =
+    companyPending || companyZone.pending || progress.pending;
+  const shellReady = authed && !gatesPending;
+  const opensHome = homeMayRead({
+    screen: route.screen,
+    signedIn: me.data !== undefined,
+    sessionSeen,
+    refused: me.isError,
+    confined: confinement !== null,
+    described,
+    unfinished: progress.unfinished,
+  });
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (shellReady) {
+      markJourney("gates");
+    }
+  }, [shellReady]);
+  useEffect(() => {
+    if (!opensHome) {
+      return;
+    }
+    return prefetchHome(queryClient, currentParams());
+  }, [opensHome, queryClient]);
   const commands = useBuiltinCommands();
   usePaletteHotkey(paletteOpen, setPaletteOpen);
+  useTaskReminderNotifications(authed);
 
   if (me.isPending && refusal === null) {
     return (
@@ -284,7 +396,7 @@ function AuthedApp({
   // The progress and rollout reads join the splash for the same reason the
   // company read does: a shell painted before they answer is a landing page the
   // gate then pulls away from under the reader.
-  if (companyPending || recordZone.pending || progress.pending) {
+  if (gatesPending) {
     return (
       <RaillessFrame>
         <AuthSplash />
@@ -294,74 +406,34 @@ function AuthedApp({
 
   return (
     <DateFormatsProvider>
-      <RecordZoneProvider zone={recordZone.zone}>
-        {/* An address pressed on any screen writes from here: the composer is
+      <CompanyZoneProvider zone={companyZone.zone}>
+        <ViewerZoneProvider zone={browserZone}>
+          {/* An address pressed on any screen writes from here: the composer is
           the product's, not the reader's mail client's. */}
-        <WriteToHost>
-          <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-            <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
-          </AuthedShell>
-        </WriteToHost>
-        <CommandPalette
-          open={paletteOpen}
-          onClose={() => setPaletteOpen(false)}
-          commands={commands}
-        />
-        {/* Over whatever the reader was doing, not on a screen of its own. */}
-        <AskFromAddress />
-      </RecordZoneProvider>
+          <WriteToHost>
+            <CallLogHost>
+              <SourceHost>
+                <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+                  <ScreenView
+                    screen={route.screen}
+                    id={route.id}
+                    id2={route.id2}
+                  />
+                </AuthedShell>
+              </SourceHost>
+            </CallLogHost>
+          </WriteToHost>
+          <CommandPalette
+            open={paletteOpen}
+            onClose={() => setPaletteOpen(false)}
+            commands={commands}
+          />
+          {/* Over whatever the reader was doing, not on a screen of its own. */}
+          <AskFromAddress />
+        </ViewerZoneProvider>
+      </CompanyZoneProvider>
     </DateFormatsProvider>
   );
-}
-
-// Route warm-up runs only after login.
-// Fetches the route chunks in the background, once, for a reader who is past
-// the login screen. It runs at idle so it never competes with the screen the
-// reader is actually looking at, and with a deadline so a busy tab cannot defer
-// it indefinitely — a click that arrives before the warm-up finishes suspends
-// exactly as it would have without one, so the worst case is the behaviour
-// without this hook rather than a slower one.
-function useWarmRouteChunks() {
-  useEffect(() => {
-    let cancelled = false;
-    // ONE chunk in flight at a time. Asking for all of them at once empties the
-    // browser's per-host connection pool, and the read the reader is actually
-    // waiting on — the record they just opened — queues behind two dozen files
-    // nobody asked for. Warming that makes the next navigation slower is worse
-    // than not warming at all.
-    const warm = async () => {
-      for (const load of ROUTE_CHUNKS) {
-        if (cancelled) {
-          return;
-        }
-        try {
-          await load();
-        } catch (reason: unknown) {
-          // Nobody asked for this screen yet, so a failed fetch is not the
-          // reader's problem: the navigation that does ask will suspend and
-          // surface it through the error boundary. It is still worth saying out
-          // loud, because a chunk that cannot be fetched is a broken deploy.
-          console.warn("route chunk warm-up failed", reason);
-        }
-      }
-    };
-    // Typed as always present, and absent in jsdom and in older Safari, so the
-    // check is a runtime one whatever the DOM lib claims.
-    if (typeof window.requestIdleCallback === "function") {
-      const handle = window.requestIdleCallback(() => void warm(), {
-        timeout: 500,
-      });
-      return () => {
-        cancelled = true;
-        window.cancelIdleCallback(handle);
-      };
-    }
-    const handle = window.setTimeout(() => void warm(), 0);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(handle);
-    };
-  }, []);
 }
 
 function AuthedShell({

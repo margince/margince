@@ -113,8 +113,8 @@ func TestOnlyARealThreadSubjectEarnsTheReplyPrefix(t *testing.T) {
 		t.Errorf("a message THEY sent should be replied to: subject %q", inbound.Subject)
 	}
 
-	// Our own last outbound carries a subject too, and replying to it replies
-	// to ourselves.
+	// A thread only our side has written in is still the thread: a follow-up
+	// keeps its subject, so the recipient's mail client groups the two.
 	outbound := contactdraft.Deterministic(contactdraft.Input{
 		Envelope:  envelopeFor(textlang.English, convstate.BandFresh),
 		Recipient: contactdraft.RecipientIn{ID: "p1", FirstName: "Marek"},
@@ -122,8 +122,8 @@ func TestOnlyARealThreadSubjectEarnsTheReplyPrefix(t *testing.T) {
 			{ID: "a1", Kind: "email", Subject: "Pricing question", At: "2026-08-10T09:00:00Z"},
 		},
 	})
-	if strings.HasPrefix(outbound.Subject, "Re:") {
-		t.Errorf("our own outbound is not a thread to reply to: subject %q", outbound.Subject)
+	if outbound.Subject != "Re: Pricing question" {
+		t.Errorf("a follow-up on our own mail keeps its thread: subject %q", outbound.Subject)
 	}
 }
 

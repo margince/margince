@@ -3,29 +3,8 @@
 
 package activities
 
-// Whether our own reply settled the request an inbound message made.
-//
-// owed_verdict answers a question about ONE message: does it ask the recipient
-// side for something. It is written once, from that message alone, and nothing
-// revisits it — which is right for what it says and wrong for what a reader
-// then sees, because a request answered within the hour still reads as owed a
-// week later. The missing half is not a better verdict on the inbound mail. It
-// is a second question, asked of the THREAD, and only askable once we have
-// written back.
-//
-// TWO THINGS THIS DELIBERATELY DOES NOT DO.
-//
-// It does not settle on the existence of a reply. "Thanks, I will check" is a
-// reply and discharges nothing, and the two integration tests that pin that
-// behaviour stay green under this file: the judgement is a model's, and with no
-// model configured nothing here runs at all. What changes is that a reply is
-// now EVIDENCE the question is asked over, where before it was invisible.
-//
-// It does not reopen. A settled request whose task a human has reopened is
-// theirs again — ApplySettlement skips a task that moved underneath it rather
-// than retrying, which is the opposite of the follow-up completer beside it and
-// is the whole difference between a machine finishing work and a machine
-// overruling somebody.
+// Settlement judges later conversation evidence against one request, never merely the presence
+// of a reply. Applying a verdict preserves human edits and never reopens completed work.
 
 import (
 	"context"
@@ -39,18 +18,19 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The closed set the column's CHECK admits, spelled here because the store is
 // what writes it and a third spelling would be refused by the database after a
 // model call has already been paid for.
 const (
-	// RequestSettled: our words answered, declined, delivered, booked, or
-	// handed the ask to somebody else. Nothing is left for us to do.
+	// RequestSettled means the evidence establishes that nothing remains owed on this request.
 	RequestSettled = "settled"
-	// RequestStillOwed: we replied and left something undone. Remaining names
-	// it in the reader's own seat.
+	// RequestStillOwed: we replied and left one of the customer's asks undone.
+	// Remaining quotes that ask from their request (RequestRemainderGrounded).
 	RequestStillOwed = "still_owed"
 	// RequestUnsure: the model would not commit above the floor. A real answer
 	// and not an absence — the request stays owed, which is what it was before
@@ -69,6 +49,10 @@ const (
 	settlementDueCol       = "due_at"
 	settlementConfidence   = "confidence"
 	settlementDecidedByCol = "decided_by"
+	settlementEvidenceCol  = "judged_evidence"
+	settlementRuleCol      = "rule_version"
+	// settlementRevalidationCol is set by the reviewed repair (requestsettlementrepair.go).
+	settlementRevalidationCol = "revalidation_requested_at"
 )
 
 // OwedVerdictCapturedBy is what the owed pass stamps on a reminder it filed.
@@ -80,13 +64,11 @@ const (
 // a human's own work.
 const OwedVerdictCapturedBy = "system:owed_verdict"
 
-// RepliedRequest is one request the workspace has since written back on, as the
-// settlement pass consumes it.
+// RepliedRequest is a request with later evidence for the settlement pass.
 type RepliedRequest struct {
 	RequestID ids.UUID
 	// NewestAnswerID is the newest answer the judgement is reached over: our
-	// reply, our same-subject mail off the thread, or a call or meeting with
-	// the sender. It is the watermark written beside the verdict, and a later
+	// reply, a correspondent confirmation, our off-thread mail, or a call or meeting. It is the watermark written beside the verdict, and a later
 	// answer re-arms the question.
 	NewestAnswerID ids.UUID
 	// TaskID is the email_request reminder minted from this request, when one
@@ -100,12 +82,21 @@ type RepliedRequest struct {
 	// one a human accepted. Only a machine-minted, undated task may be retitled
 	// — a human's own subject and deadline are theirs.
 	TaskMachineMinted bool
+	TaskHumanReopened bool
 	// CounterpartyEmail is who this request was with. Carried out of the
 	// selection so the conversation read can bind to the same correspondent
 	// this statement matched on, rather than reading the column a second time:
 	// the two statements run under read-committed, and a value that moved in
 	// between would widen the window the selection had already narrowed.
 	CounterpartyEmail string
+	// AsOf is the instant the selection read its answers at.
+	AsOf time.Time
+	// Evidence is the request and answers as read (settlementEvidenceSQL).
+	Evidence string
+	// DoneTaskID is a reminder this pass completed earlier and nobody touched
+	// since, which a later still-owed verdict may reopen.
+	DoneTaskID      *ids.UUID
+	DoneTaskVersion int64
 }
 
 // repliedRequestsSQL selects requests the workspace has answered since.
@@ -126,16 +117,37 @@ type RepliedRequest struct {
 // attestation, plus the workspace audience, since their text reaches the model.
 //
 // The watermark arm is what makes the pass idempotent and re-armable at once. A
-// request already judged through its newest answer is skipped; one answered
-// again since comes back, because the newest answer is no longer the one the
-// row names.
-var repliedRequestsSQL = outstandingRequestSQL + `
+// verdict that recorded its evidence is skipped while that evidence is
+// unchanged, so an edit, a narrowing or a backdated answer brings it back. An
+// older verdict without it is skipped while its answer is still the newest. A
+// still_owed verdict from an older rule is never skipped.
+var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `))
  AND a.audience = 'workspace'
  AND a.counterparty_email IS NOT NULL
  AND EXISTS (` + settlementAnswersSQL() + `)
+ AND ` + settlementEvidenceCompleteSQL + `
  AND NOT EXISTS (SELECT 1 FROM activity_request_settlement judged
    WHERE judged.request_activity_id = a.id
-     AND judged.judged_through_activity_id = (` + newestAnswerSince + `))`
+     AND judged.revalidation_requested_at IS NULL
+     AND (judged.verdict <> '` + RequestStillOwed + `' OR judged.rule_version = '` + RequestSettlementRule + `')
+     AND ((judged.judged_evidence IS NULL AND judged.judged_through_activity_id = (` + newestAnswerSince + `))
+       OR judged.judged_evidence = (` + settlementEvidenceSQL() + `)))`
+
+// settlementEvidenceCompleteSQL keeps a request off the candidate list when its
+// evidence holds a body that was not read in full. The settlement pass would
+// refuse to judge it. A refused request left on the list comes back first on
+// every pass, so a few of them would starve every other request. It covers at
+// least what the pass reads. That is the request, its later thread messages
+// with the same correspondent, and the answers off its thread.
+var settlementEvidenceCompleteSQL = provenance.MailBodyCompleteSQL("a") + `
+ AND NOT EXISTS (SELECT 1 FROM activity later
+   WHERE later.thread_key = a.thread_key AND later.kind = a.kind
+     AND later.counterparty_email = a.counterparty_email AND later.archived_at IS NULL
+     AND ` + occurredday.BegunSQL("later", "$1") + ` AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
+     AND NOT ` + provenance.MailBodyCompleteSQL("later") + `)
+ AND NOT EXISTS (SELECT 1 FROM (` + offThreadAnswersSQL("a", "$1") + `) off
+   JOIN activity answer ON answer.id = off.id
+   WHERE NOT ` + provenance.MailBodyCompleteSQL("answer") + `)`
 
 // settlementAnswersSQL selects, as (id, occurred_at), every answer to request a
 // as of the pass's own instant ($1): our attested reply in the conversation and
@@ -144,9 +156,10 @@ var repliedRequestsSQL = outstandingRequestSQL + `
 // settlement model may be shown.
 func settlementAnswersSQL() string {
 	return `SELECT reply.id, reply.occurred_at FROM activity reply
-   WHERE ` + ourOutboundInThisThread("reply", "a") + `
+   WHERE (` + ourOutboundInThisThread("reply", "a") + `
+     OR (` + correspondentInThisThread("reply", "a") + ` AND ` + CapturedInboundSQL("reply") + `))
      AND reply.audience = 'workspace' AND reply.restricted_at IS NULL
-     AND reply.occurred_at <= $1
+     AND ` + occurredday.BegunSQL("reply", "$1") + `
      AND (reply.occurred_at, reply.id) > (a.occurred_at, a.id)
  UNION ` + offThreadAnswersSQL("a", "$1")
 }
@@ -196,22 +209,25 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			SELECT a.id, coalesce(a.counterparty_email, ''),
 			       latest.id,
 			       task.id, coalesce(task.version, 0),
-			       -- Whether the reminder is still the machine's to sharpen: the
-			       -- pass filed it, nobody has dated it, and nobody has renamed
-			       -- it. The SUBJECT comparison is the half captured_by cannot
-			       -- carry — a human renaming a task leaves the stamp alone, so
-			       -- without it the machine could overwrite the title somebody
-			       -- had just typed.
+			       -- The reminder is still the machine's to retitle: the pass filed
+			       -- it, nobody dated it, and its title is the request's subject or a
+			       -- verdict's remaining text. A human rename leaves captured_by alone.
 			       coalesce(task.captured_by = $2 AND task.due_at IS NULL
-			                AND task.subject IS NOT DISTINCT FROM a.subject, false)
+			                AND (task.subject IS NOT DISTINCT FROM a.subject OR task.subject = (SELECT prior.remaining
+			                  FROM activity_request_settlement prior WHERE prior.request_activity_id = a.id)), false),
+                   `+humanReopenedTaskSQL("task")+`,
+			       (%[1]s), done.id, coalesce(done.version, 0)
 			  FROM activity a
-			  CROSS JOIN LATERAL (`+newestAnswerRow+`) latest
+			  CROSS JOIN LATERAL (%[2]s) latest
+			  LEFT JOIN LATERAL (SELECT reminder.id, reminder.version FROM activity reminder
+			    WHERE reminder.source_system = '%[3]s' AND reminder.source_activity_id = a.id
+			      AND %[4]s LIMIT 1) done ON true
 			  LEFT JOIN activity task
-			    ON task.source_system = '%s' AND task.source_activity_id = a.id
+			    ON task.source_system = '%[3]s' AND task.source_activity_id = a.id
 			   AND task.archived_at IS NULL AND task.is_done = false
-			 WHERE %s
+			 WHERE %[5]s
 			 ORDER BY latest.occurred_at DESC, latest.id DESC, a.id DESC
-			 LIMIT $3`, EmailRequestTaskSource, repliedRequestsSQL),
+			 LIMIT $3`, settlementEvidenceSQL(), newestAnswerRow, EmailRequestTaskSource, settlementCompletedTaskSQL("reminder"), repliedRequestsSQL),
 			asOf, OwedVerdictCapturedBy, limit)
 		if err != nil {
 			return fmt.Errorf("activities: reading answered requests: %w", err)
@@ -220,9 +236,11 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 		for rows.Next() {
 			var r RepliedRequest
 			if err := rows.Scan(&r.RequestID, &r.CounterpartyEmail, &r.NewestAnswerID,
-				&r.TaskID, &r.TaskVersion, &r.TaskMachineMinted); err != nil {
+				&r.TaskID, &r.TaskVersion, &r.TaskMachineMinted, &r.TaskHumanReopened,
+				&r.Evidence, &r.DoneTaskID, &r.DoneTaskVersion); err != nil {
 				return err
 			}
+			r.AsOf = asOf
 			out = append(out, r)
 		}
 		return rows.Err()
@@ -237,8 +255,8 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 type RequestSettlementInput struct {
 	Request RepliedRequest
 	Verdict string
-	// Remaining is what is still owed, in the reader's own seat. Only a
-	// still_owed verdict carries one; the column's CHECK refuses the rest.
+	// Remaining quotes the customer's ask still owed. Only a still_owed
+	// verdict carries one; the column's CHECK refuses the rest.
 	Remaining string
 	DueAt     *time.Time
 	// Confidence is the model's own, recorded so a later reader can tell a
@@ -271,50 +289,43 @@ func (s *Store) SettleRequest(ctx context.Context, in RequestSettlementInput) er
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return err
 	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		still, err := requestStillWritable(ctx, tx, in.Request.RequestID)
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		still, err := holdSettlementEvidenceTx(ctx, tx, in.Request)
 		if err != nil {
 			return err
 		}
+		if still {
+			still, err = s.judgedThroughNewest(ctx, tx, in.Request)
+			if err != nil {
+				return err
+			}
+		}
+		if still {
+			still, err = evidenceUnchanged(ctx, tx, in.Request)
+			if err != nil {
+				return err
+			}
+		}
 		if !still {
-			// Narrowed, archived, held or erased since the candidate read. The
-			// pass reads a batch, spends a model call per conversation and
-			// writes the answers back, so a human or a privacy verdict can move
-			// the row inside that window — and `remaining` is model prose about
-			// a customer, which must not land on a message the workspace may no
-			// longer open. Not an error: the judgement is simply dropped, and
-			// the next pass reads whatever the row says then.
+			// The request or its evidence moved since the candidate read. The
+			// judgement is dropped, and the next pass reads the row again.
 			return nil
+		}
+		if in.Remaining, err = groundedRemainderTx(ctx, tx, in); err != nil {
+			return err
 		}
 		if err := recordSettlement(ctx, tx, in); err != nil {
 			return err
 		}
+		if err := reopenSettledReminder(ctx, tx, in, in.Request.AsOf); err != nil {
+			return err
+		}
 		return applySettlement(ctx, tx, in)
 	})
-}
-
-// requestStillWritable re-tests, at WRITE time, that the request is one this
-// pass may still record a judgement about.
-//
-// The same re-test SetOwedVerdict carries in its own UPDATE's WHERE clause, and
-// for the same reason — except that this write lands in a different table, so
-// there is no row of the request's own to attach the condition to and it has to
-// be asked outright. Without it a settlement that finished after an erasure
-// would reinsert a sentence about a subject nobody may now assert anything
-// about, into a table the cascade has already swept.
-func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (bool, error) {
-	var live bool
-	err := tx.QueryRow(ctx, `
-		SELECT true FROM activity
-		 WHERE id = $1 AND archived_at IS NULL
-		   AND audience = 'workspace' AND restricted_at IS NULL`, requestID).Scan(&live)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
+	if errors.Is(err, errSettlementBusy) {
+		return nil
 	}
-	if err != nil {
-		return false, fmt.Errorf("activities: re-reading the request before settling it: %w", err)
-	}
-	return live, nil
+	return err
 }
 
 // recordSettlement writes the verdict, replacing any earlier one.
@@ -337,18 +348,24 @@ func recordSettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput)
 		settlementDueCol:       dueAt,
 		settlementConfidence:   in.Confidence,
 		settlementDecidedByCol: in.DecidedBy,
+		settlementEvidenceCol:  in.Request.Evidence,
+		settlementRuleCol:      RequestSettlementRule,
+	}
+	args := []any{
+		in.Request.RequestID, in.Request.NewestAnswerID, in.Verdict,
+		remaining, dueAt, in.Confidence, in.DecidedBy, in.Request.Evidence, RequestSettlementRule,
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_request_settlement (request_activity_id,
-		       judged_through_activity_id, verdict, remaining, due_at, confidence, decided_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO activity_request_settlement (request_activity_id, judged_through_activity_id,
+		       verdict, remaining, due_at, confidence, decided_by, judged_evidence, rule_version)
+		VALUES (`+storekit.Placeholders(args)+`)
 		ON CONFLICT (request_activity_id) DO UPDATE SET
 		       judged_through_activity_id = EXCLUDED.judged_through_activity_id,
 		       verdict = EXCLUDED.verdict, remaining = EXCLUDED.remaining,
 		       due_at = EXCLUDED.due_at, confidence = EXCLUDED.confidence,
-		       decided_by = EXCLUDED.decided_by, decided_at = now()`,
-		in.Request.RequestID, in.Request.NewestAnswerID, in.Verdict,
-		remaining, dueAt, in.Confidence, in.DecidedBy); err != nil {
+		       decided_by = EXCLUDED.decided_by, decided_at = now(),
+		       judged_evidence = EXCLUDED.judged_evidence, revalidation_requested_at = NULL,
+		       rule_version = EXCLUDED.rule_version`, args...); err != nil {
 		return fmt.Errorf("activities: recording the request settlement: %w", err)
 	}
 	// TWO call sites with LITERAL verbs rather than one with a variable, and
@@ -358,17 +375,17 @@ func recordSettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput)
 	// what it is. A first judgement CREATES and has no prior state to image; a
 	// later one REPLACES, and carries what the row said before.
 	if before == nil {
-		if _, err := storekit.Audit(ctx, tx, "create", "activity",
-			in.Request.RequestID, nil, after); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "create", "activity", in.Request.RequestID, nil, after)
+		if err != nil {
 			return err
 		}
-		return nil
+		return emitSettlementChanged(ctx, tx, auditID, in.Request.RequestID)
 	}
-	if _, err := storekit.Audit(ctx, tx, "update", "activity",
-		in.Request.RequestID, before, after); err != nil {
+	auditID, err := storekit.Audit(ctx, tx, "update", "activity", in.Request.RequestID, before, after)
+	if err != nil {
 		return err
 	}
-	return nil
+	return emitSettlementChanged(ctx, tx, auditID, in.Request.RequestID)
 }
 
 // settlementProse is the prose half of a verdict, which only still_owed has.
@@ -393,15 +410,15 @@ func settlementProse(in RequestSettlementInput) (remaining *string, dueAt *time.
 //
 //nolint:nilnil // an absent before-image IS the answer for a first judgement; see above.
 func settlementImage(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (map[string]any, error) {
-	var verdict, decidedBy string
-	var remaining *string
+	var verdict, decidedBy, rule string
+	var remaining, evidence *string
 	var judgedThrough ids.UUID
 	var dueAt *time.Time
 	var confidence float64
 	err := tx.QueryRow(ctx, `
-		SELECT verdict, judged_through_activity_id, remaining, due_at, confidence, decided_by
+		SELECT verdict, judged_through_activity_id, remaining, due_at, confidence, decided_by, judged_evidence, rule_version
 		  FROM activity_request_settlement WHERE request_activity_id = $1`,
-		requestID).Scan(&verdict, &judgedThrough, &remaining, &dueAt, &confidence, &decidedBy)
+		requestID).Scan(&verdict, &judgedThrough, &remaining, &dueAt, &confidence, &decidedBy, &evidence, &rule)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -415,6 +432,8 @@ func settlementImage(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (map[st
 		settlementDueCol:       dueAt,
 		settlementConfidence:   confidence,
 		settlementDecidedByCol: decidedBy,
+		settlementEvidenceCol:  evidence,
+		settlementRuleCol:      rule,
 	}, nil
 }
 
@@ -454,14 +473,14 @@ func applySettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput) 
 
 // settlementPatch is what a verdict asks of the task, or false for nothing.
 //
-// still_owed sharpens a task the MACHINE filed and nobody has dated: the
-// subject becomes what is actually owed rather than the mail's subject line,
-// and a deadline lands only if our own words named one. A task a human accepted
-// keeps their wording and their date — TaskMachineMinted is what tells the two
-// apart, and it is read from captured_by rather than inferred from the subject,
-// because a human accepting a request uses the same builder and may keep the
-// same title.
+// still_owed retitles a task the MACHINE filed and nobody has dated to the
+// quoted ask, with a deadline only if our own words named one. A task a human
+// accepted keeps their wording and date. TaskMachineMinted tells the two apart
+// from captured_by, since a human accepting a request may keep the same title.
 func settlementPatch(in RequestSettlementInput) (UpdateActivityInput, bool) {
+	if in.Request.TaskHumanReopened {
+		return UpdateActivityInput{}, false
+	}
 	switch in.Verdict {
 	case RequestSettled:
 		done := true

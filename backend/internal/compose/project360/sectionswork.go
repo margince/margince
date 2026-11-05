@@ -50,6 +50,7 @@ func (a *assembly) readDocuments() error {
 // order a reviewer works it: soonest due first, undated last.
 func (a *assembly) readCommitments() error {
 	tasks, truncated, err := a.svc.activities.ListOpenTasksTx(a.ctx, a.tx, activities.ListOpenTasksInput{
+		AsOf:       a.now,
 		EntityType: &entityTypeProject, EntityID: &a.projectID.UUID, Limit: sectionLimit,
 		ExcludeSystemMinted: a.reading.ExcludeSystemMinted,
 	})
@@ -86,6 +87,7 @@ func (a *assembly) readTimeline() error {
 	limit := sectionLimit
 	rows, page, err := activities.ListActivitiesTx(a.ctx, a.tx, activities.ListActivitiesInput{
 		EntityType: &entityTypeProject, EntityID: &a.projectID.UUID, Limit: &limit,
+		AsOf: &a.now, Columns: a.cats.activity,
 	})
 	if err != nil {
 		return err
@@ -121,11 +123,13 @@ func (a *assembly) readRollups() error {
 	open, won := totals.OpenMinor, totals.WonMinor
 	openCurrency, wonCurrency := totals.Currency, totals.Currency
 	a.out.Rollups = &crmcontracts.Project360Rollups{
-		OpenDealValue:   crmcontracts.Money{AmountMinor: &open, Currency: &openCurrency},
-		WonDealValue:    crmcontracts.Money{AmountMinor: &won, Currency: &wonCurrency},
-		OpenCommitments: facts.OpenCommitments,
-		LastActivityAt:  facts.LastActivityAt,
-		ActivityCount:   facts.Attributed,
+		OpenDealValue:     crmcontracts.Money{AmountMinor: open, Currency: &openCurrency},
+		WonDealValue:      crmcontracts.Money{AmountMinor: won, Currency: &wonCurrency},
+		OpenDealsUnpriced: &totals.OpenUnpriced,
+		WonDealsUnpriced:  &totals.WonUnpriced,
+		OpenCommitments:   facts.OpenCommitments,
+		LastActivityAt:    facts.LastActivityAt,
+		ActivityCount:     facts.Attributed,
 	}
 	return nil
 }

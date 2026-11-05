@@ -23,6 +23,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -140,7 +141,7 @@ func TestANullResolutionClearsAnOpenRequestsAnswer(t *testing.T) {
 func TestAClosedRequestKeepsItsAnswer(t *testing.T) {
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "closed@dsr.test")
-	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent"}`); w.Code != http.StatusOK {
+	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent","identity_check":"id_document"}`); w.Code != http.StatusOK {
 		t.Fatalf("fulfilling → %d: %s", w.Code, w.Body)
 	}
 
@@ -152,6 +153,90 @@ func TestAClosedRequestKeepsItsAnswer(t *testing.T) {
 	}
 	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != "package sent" {
 		t.Fatalf("a refused patch left the answer %v, want %q", after.Resolution, "package sent")
+	}
+}
+
+func TestAClosedRequestRefusesAnotherAnswerAndAcceptsItsOwn(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindAccess, "rewrite@dsr.test")
+	if w := e.patchDSR(t, request.ID, `{"status":"rejected","resolution":"first answer","identity_check":"id_document"}`); w.Code != http.StatusOK {
+		t.Fatalf("rejecting → %d: %s", w.Code, w.Body)
+	}
+
+	w := e.patchDSR(t, request.ID, `{"resolution":"another answer"}`)
+	if w.Code != http.StatusUnprocessableEntity || validationField(t, w.Body.Bytes()) != fieldResolution {
+		t.Fatalf("a new answer on a rejected request → %d %s, want 422 naming resolution", w.Code, w.Body)
+	}
+	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != "first answer" {
+		t.Fatalf("a refused patch left the answer %v, want %q", after.Resolution, "first answer")
+	}
+	if w := e.patchDSR(t, request.ID, `{"resolution":"first answer"}`); w.Code != http.StatusOK {
+		t.Fatalf("resending the stored answer → %d: %s", w.Code, w.Body)
+	}
+}
+
+func TestARepeatedErasureFulfilmentIsAccepted(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
+	erase := func(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
+		return erasureaccount.Empty(), nil
+	}
+	in := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("erased on request"), Proof: idDocumentChecked}
+
+	for attempt := 1; attempt <= 2; attempt++ {
+		if _, err := e.store.FulfilErasure(e.ctx, request.ID, in, erase); err != nil {
+			t.Fatalf("fulfilment attempt %d: %v", attempt, err)
+		}
+	}
+	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != erasedResolution {
+		t.Fatalf("the erased request holds %v, want %q", after.Resolution, erasedResolution)
+	}
+	if claims := e.auditedResolutionClaims(t, request.ID); len(claims) != 2 || claims[0] != "true" || claims[1] != "false" {
+		t.Fatalf("the update rows claim the answer changed as %v, want [true false]: the repeat changed nothing", claims)
+	}
+}
+
+// auditedResolutionClaims lists, oldest first, what each update row of the
+// request says about its answer.
+func (e *dsrEnv) auditedResolutionClaims(t *testing.T, id ids.UUID) []any {
+	t.Helper()
+	var claims []any
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(e.ctx, `
+			SELECT after->'resolution' FROM audit_log
+			 WHERE entity_type = 'data_subject_request' AND entity_id = $1 AND action = 'update'
+			 ORDER BY occurred_at, id`, id)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var claim []byte
+			if err := rows.Scan(&claim); err != nil {
+				return err
+			}
+			claims = append(claims, string(claim))
+		}
+		return rows.Err()
+	}); err != nil {
+		t.Fatalf("reading the audit rows: %v", err)
+	}
+	return claims
+}
+
+func TestResendingTheStoredAnswerWritesNoAuditRow(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindAccess, "audit-claim@dsr.test")
+	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent","identity_check":"id_document"}`); w.Code != http.StatusOK {
+		t.Fatalf("fulfilling → %d: %s", w.Code, w.Body)
+	}
+	if w := e.patchDSR(t, request.ID, `{"resolution":"package sent"}`); w.Code != http.StatusOK {
+		t.Fatalf("resending the stored answer → %d: %s", w.Code, w.Body)
+	}
+
+	claims := e.auditedResolutionClaims(t, request.ID)
+	if len(claims) != 1 || claims[0] != "true" {
+		t.Fatalf("the update rows claim the answer changed as %v, want [true]: the repeat changed nothing and writes no row", claims)
 	}
 }
 
@@ -191,15 +276,52 @@ func TestAPatchValidatesTheRowItHolds(t *testing.T) {
 		t.Fatalf("holding the request: %v", err)
 	}
 
-	bounded, cancel := context.WithTimeout(e.ctx, 250*time.Millisecond)
+	patching, cancel := context.WithCancel(e.ctx)
 	defer cancel()
-	if _, err := e.store.UpdateDSR(bounded, request.ID, UpdateDSRInput{ClearResolution: true}); !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("a patch beside a held key-share lock answered %v, want it to wait: "+
-			"its validating read took no row lock, so another close can land before its write", err)
+	finished := make(chan error, 1)
+	go func() {
+		_, err := e.store.UpdateDSR(patching, request.ID, UpdateDSRInput{ClearResolution: true})
+		finished <- err
+	}()
+	if !waitsOnARowLock(t, e, finished) {
+		t.Fatal("a patch beside a held key-share lock did not wait on it: " +
+			"its validating read took no row lock, so another close can land before its write")
 	}
+	cancel()
+	<-finished
 	release()
 	if _, err := e.store.UpdateDSR(e.ctx, request.ID, UpdateDSRInput{ClearResolution: true}); err != nil {
 		t.Fatalf("the patch once the lock is released: %v", err)
+	}
+}
+
+// waitsOnARowLock reports whether a statement on data_subject_request is seen
+// waiting on a lock before the patch behind finished ends. The server's own
+// wait state is the evidence; a client timeout cannot tell a wait from a send.
+func waitsOnARowLock(t *testing.T, e *dsrEnv, finished <-chan error) bool {
+	t.Helper()
+	tick := time.NewTicker(10 * time.Millisecond)
+	defer tick.Stop()
+	give := time.After(10 * time.Second)
+	for {
+		var waiting bool
+		if err := e.pool.QueryRow(context.Background(), `
+			SELECT EXISTS (SELECT 1 FROM pg_stat_activity
+			                WHERE datname = current_database() AND wait_event_type = 'Lock'
+			                  AND query ILIKE '%data_subject_request%' AND pid <> pg_backend_pid())`).Scan(&waiting); err != nil {
+			t.Fatalf("reading the server's wait state: %v", err)
+		}
+		if waiting {
+			return true
+		}
+		select {
+		case err := <-finished:
+			t.Logf("the patch ended without waiting: %v", err)
+			return false
+		case <-give:
+			return false
+		case <-tick.C:
+		}
 	}
 }
 

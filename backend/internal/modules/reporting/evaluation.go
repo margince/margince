@@ -5,10 +5,7 @@ package reporting
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/hex"
-	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -27,14 +24,24 @@ func (s *Service) Catalog(ctx context.Context) (crmcontracts.ReportingCatalog, e
 	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
 		return crmcontracts.ReportingCatalog{}, err
 	}
-	out, err := s.evaluator.Catalog(ctx)
-	canSchedule := auth.Allows(ctx, "report_schedule", principal.ActionCreate) || auth.Allows(ctx, "report_schedule", principal.ActionUpdate)
-	if err != nil || !canSchedule {
-		return out, err
-	}
-	err = s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+	var out crmcontracts.ReportingCatalog
+	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.evaluator.Catalog(ctx, s.readerCopy(ctx, tx).Lang())
+		if err != nil {
+			return err
+		}
+		canSchedule := auth.Allows(ctx, "report_schedule", principal.ActionCreate) || auth.Allows(ctx, "report_schedule", principal.ActionUpdate)
+		if !canSchedule {
+			return nil
+		}
 		ready, err := scheduleReady(ctx, tx)
 		out.ScheduleReady = &ready
+		if err != nil || !ready {
+			return err
+		}
+		days, err := editionRetentionDays(ctx, tx)
+		out.EditionRetentionDays = &days
 		return err
 	})
 	return out, err
@@ -65,16 +72,10 @@ func (s *Service) evaluateSelection(ctx context.Context, tx pgx.Tx, selection cr
 }
 
 func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, at time.Time) (Evaluation, error) {
-	// A selection with no charts serialises the same whichever door built it,
-	// so the evaluation key does not depend on nil versus empty.
-	if selection.Blocks == nil {
-		selection.Blocks = []crmcontracts.ReportingBlockKind{}
-	}
-	// A selection with no charts serialises the same whichever door built it,
-	// so the evaluation key does not depend on nil versus empty.
-	if selection.Blocks == nil {
-		selection.Blocks = []crmcontracts.ReportingBlockKind{}
-	}
+	// Every door derives the blocks from a layout, so the charts drawn are the
+	// ones the layout places.
+	deriveLayoutBlocks(&selection)
+	withChartList(&selection)
 	if err := s.validateSelection(ctx, selection); err != nil {
 		return Evaluation{}, err
 	}
@@ -82,16 +83,11 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	if err != nil {
 		return Evaluation{}, err
 	}
-	if err := s.applyTargets(ctx, tx, &out.Result); err != nil {
+	if err := s.applyTargets(ctx, tx, &out); err != nil {
 		return Evaluation{}, err
 	}
-	raw, err := json.Marshal(out)
-	if err != nil {
-		return Evaluation{}, err
-	}
-	digest := sha256.Sum256(raw)
-	out.Result.EvaluationKey = hex.EncodeToString(digest[:])
-	return out, nil
+	out.Result.EvaluationKey, err = evaluationKey(out)
+	return out, err
 }
 
 // EvaluateReport pins the requested definition revision before evaluation.
@@ -109,7 +105,7 @@ func (s *Service) EvaluateReport(ctx context.Context, id ids.UUID, revision *int
 		if revision != nil {
 			chosen = *revision
 		}
-		selection, frameworkID, err := s.reportRevision(ctx, tx, report, chosen)
+		selection, frameworkID, err := s.evaluableRevision(ctx, tx, report, chosen)
 		if err != nil {
 			return err
 		}
@@ -118,7 +114,14 @@ func (s *Service) EvaluateReport(ctx context.Context, id ids.UUID, revision *int
 			return err
 		}
 		out, err = s.evaluateSelection(ctx, tx, selection, framework)
-		return err
+		if err != nil {
+			return err
+		}
+		recorded, err := s.revisionMetricVersions(ctx, tx, id, chosen)
+		if err != nil {
+			return err
+		}
+		return withdrawChangedDefinitions(&out, recorded)
 	})
 	return out.Result, err
 }
@@ -129,7 +132,8 @@ func (s *Service) frameworkRevision(ctx context.Context, tx pgx.Tx, revision int
 		return out, nil
 	}
 	var b bindings
-	err := tx.QueryRow(ctx, "SELECT definition,effective_at FROM reporting_framework_revision WHERE revision="+b.add(revision), b.values...).Scan(&out.Definition, &out.EffectiveAt)
+	query := "SELECT definition,effective_at FROM reporting_framework_revision WHERE revision=" + b.add(revision)
+	err := tx.QueryRow(ctx, query, b.values...).Scan(&out.Definition, &out.EffectiveAt)
 	return out, storedError(err)
 }
 
@@ -176,7 +180,7 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 		if fact.Metric != metric || fact.ContextID != contextID || !evidenceGroup(frame, fact, group) {
 			continue
 		}
-		if through != nil && (fact.Row.OccurredAt == nil || !fact.Row.OccurredAt.Before(*through)) {
+		if through != nil && (fact.At() == nil || !fact.At().Before(*through)) {
 			continue
 		}
 		matched++
@@ -189,7 +193,24 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 			out.Truncated = true
 			break
 		}
-		out.Rows = append(out.Rows, fact.Row)
+		row := fact.Row
+		if fact.EvidenceAt != nil {
+			row.OccurredAt = fact.EvidenceAt
+		}
+		if fact.OwnerLabel != "" && !fact.OwnerWithheld && !row.Restricted {
+			row.OwnerLabel = &fact.OwnerLabel
+		}
+		if fact.StageLabel != "" && !row.Restricted {
+			row.StageLabel = &fact.StageLabel
+		}
+		if fact.OwnerWithheld || row.Restricted {
+			row.OwnerId = nil
+			row.OwnerLabel = nil
+		}
+		if row.Restricted {
+			row.StageLabel = nil
+		}
+		out.Rows = append(out.Rows, row)
 	}
 	return out, nil
 }
@@ -199,12 +220,14 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 		return true
 	}
 	if after, ok := strings.CutPrefix(group, "owner:"); ok {
-		return fact.OwnerID.String() == after
+		return !fact.OwnerWithheld && fact.OwnerID.String() == after
 	}
+	// A stage cohort's outcome group starts like its stage's and names the
+	// outcome after it, so the fact's own key answers it.
 	if after, ok := strings.CutPrefix(group, "stage:"); ok {
-		return fact.StageID == after
+		return fact.StageID == after || fact.GroupKey == group
 	}
-	if strings.HasPrefix(group, "week:") && fact.Row.OccurredAt != nil {
+	if strings.HasPrefix(group, "week:") && fact.At() != nil {
 		zone, err := time.LoadLocation(frame.Timezone)
 		if err != nil {
 			return false
@@ -214,7 +237,7 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 			return false
 		}
 		days := 7 - (int(start.Weekday())+6)%7
-		return !fact.Row.OccurredAt.Before(start) && fact.Row.OccurredAt.Before(start.AddDate(0, 0, days))
+		return !fact.At().Before(start) && fact.At().Before(start.AddDate(0, 0, days))
 	}
 	return fact.GroupKey == group
 }

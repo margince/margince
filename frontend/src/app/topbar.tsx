@@ -1,12 +1,22 @@
-import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { type RefObject, useEffect, useRef } from "react";
+import { AppLink } from "../design-system/applink";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
+import { IconAction } from "../design-system/iconaction";
+import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
-import { type Route, routeHash } from "../lib/router";
-import { SETTINGS_SCREEN } from "../screens/settingsnav";
+import {
+  leaveRecord,
+  listAddress,
+  rememberListAddress,
+} from "../lib/listreturn";
+import { type Route, routeHash, useHash } from "../lib/router";
+import { usePhoneViewport } from "../lib/viewport";
 import { AccountMenu } from "./account";
 import { useFiltersCrumbs } from "./filterstrail";
+import { sidebarHotkeyCaps } from "./hotkeys";
 import {
   entryLabel,
   NAV,
@@ -15,8 +25,11 @@ import {
   reservedPageTitle,
 } from "./nav";
 import { NotificationBell } from "./notificationbell";
+import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
 import { paletteHotkeyCaps } from "./palette";
+import { SetupReminder } from "./setup-reminder";
+import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
 import "./topbar.css";
 
 // The top bar: the one strip that is true of the whole session rather than of
@@ -32,10 +45,11 @@ import "./topbar.css";
 // CONTENT column — the reference this follows centres there too, and a field
 // centred on the window sits visibly left of the column it stands in.
 
-// The sidebar's shortcut, spelled the way the platform spells it — the palette's
-// label helper answers the same question for ⌘K.
-function collapseHotkeyLabel(platform: string): string {
-  return /mac|iphone|ipad|ipod/i.test(platform) ? "⌘B" : "Ctrl B";
+// A page that stands below a list: a record, or a page a record screen reserves
+// a segment for. An id that names no record (a settings tab) is still the
+// screen. The trail and the back control both lead to that list.
+function belowList(route: Route): boolean {
+  return Boolean(recordKindOf(route) && route.id) || !!reservedPageTitle(route);
 }
 
 /**
@@ -51,23 +65,19 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   const t = useT();
   const { locale } = useLocale();
   const navItem = NAV.find((item) => item.screen === route.screen);
-  // A record kind, and only then: an id segment that names no record is a
-  // screen's own state — the settings tab, for one — and the page is still the
-  // screen.
-  const recordKind = recordKindOf(route);
   const subject = useRouteSubject(route);
   const inSection = sectionHead(section, route);
   const unit =
     route.screen === EXTENSION_SCREEN ? findExtension(route.id) : null;
   const filtersCrumbs = useFiltersCrumbs(route);
 
-  if ((recordKind && route.id) || reservedPageTitle(route)) {
-    // A record's trail leads back to the list it was opened from, which is the
-    // one place the reader can go that is not "somewhere else entirely".
+  if (belowList(route)) {
+    // A record's trail leads back to the list it was opened from. The list
+    // keeps the filter the reader left it with.
     return [
       {
         label: resolveTitle(route.screen, navItem?.labelKey, t),
-        href: routeHash({ screen: route.screen }),
+        href: listAddress(route.screen),
       },
       { label: subject },
     ];
@@ -111,20 +121,25 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
  * does not already know it, and on touch there is no ⌘K at all, so the
  * affordance itself may never leave.
  */
-function TopBarSearch({
+export function TopBarSearch({
   onOpenSearch,
-}: Readonly<{ onOpenSearch: () => void }>) {
+  buttonRef,
+}: Readonly<{
+  onOpenSearch: () => void;
+  buttonRef: RefObject<HTMLButtonElement | null>;
+}>) {
   const t = useT();
   const label = t("shell.searchEverything");
   return (
     <div className="topbar-searchslot">
       <button
+        ref={buttonRef}
         type="button"
         className="topbar-search"
         aria-label={label}
         onClick={onOpenSearch}
       >
-        <Search size={15} strokeWidth={1.8} aria-hidden />
+        <Search size={16} strokeWidth={1.8} aria-hidden />
         <span className="topbar-searchlabel">{label}</span>
         {/* One cap per KEY, which is how a keyboard shortcut is read: "⌘ then K",
             not the four-character string "⌘K" in one box. The caps come from the
@@ -143,6 +158,26 @@ function TopBarSearch({
   );
 }
 
+/** The trail, mounted only where it is drawn, so a phone reads no names for it. */
+function TopBarTrail({
+  route,
+  section,
+}: Readonly<{ route: Route; section?: NavSection }>) {
+  const t = useT();
+  const crumbs = useCrumbs(route, section);
+  return <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />;
+}
+
+/** The company's mark leading home, where a phone has no room for the trail. */
+function TopBarHome() {
+  const label = useHomeLinkLabel();
+  return (
+    <AppLink className="topbar-home" href="#/home" aria-label={label}>
+      <WorkspaceChip />
+    </AppLink>
+  );
+}
+
 export function TopBar({
   route,
   section,
@@ -157,8 +192,15 @@ export function TopBar({
   onOpenSearch: () => void;
 }>) {
   const t = useT();
-  const crumbs = useCrumbs(route, section);
+  const hash = useHash();
+  // Every list the bar stands over is noted, so a record opened from it can
+  // lead back to it with the same filter.
+  useEffect(() => rememberListAddress(hash), [hash]);
   const toggleLabel = collapsed ? t("shell.expand") : t("shell.collapse");
+  const searchRef = useRef<HTMLButtonElement>(null);
+  // The page heading under the bar already names the page, and the account
+  // menu carries the setup reminder at this width.
+  const phone = usePhoneViewport();
   return (
     <header className="topbar">
       <div className="topbar-lead">
@@ -170,7 +212,7 @@ export function TopBar({
             // The shortcut belongs in the tooltip, not in the accessible name:
             // a speech-input user says the words they can read, and "Collapse
             // sidebar ⌘B" is not one of them.
-            title={`${toggleLabel} · ${collapseHotkeyLabel(navigator.platform)}`}
+            title={`${toggleLabel} · ${sidebarHotkeyCaps(navigator.platform).join(" ")}`}
             aria-expanded={!collapsed}
             onClick={onToggle}
           >
@@ -181,14 +223,36 @@ export function TopBar({
             )}
           </button>
         )}
-        <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />
+        {/* The installed app has no browser Back, so a record page carries
+            its own way out. */}
+        {belowList(route) && (
+          <IconAction
+            label={t("shell.back")}
+            icon={<ArrowLeft />}
+            onClick={() => leaveRecord(route)}
+          />
+        )}
+        {phone ? (
+          <TopBarHome />
+        ) : (
+          <TopBarTrail route={route} section={section} />
+        )}
       </div>
-      <TopBarSearch onOpenSearch={onOpenSearch} />
+      <TopBarSearch onOpenSearch={onOpenSearch} buttonRef={searchRef} />
       <div className="topbar-trail">
         {/* Before the account chip, which is the strip's last word: the bell is
             something waiting FOR the reader, and the chip is who the reader is.
             Reading right to left, identity is the anchor and everything that
             wants their attention stacks up before it. */}
+        {/* Keyed on the route: a step's action navigates, and the new page
+            should not open under a panel left over from the last one. */}
+        {!phone && (
+          <SetupReminder
+            key={routeHash(route)}
+            onHide={() => searchRef.current?.focus()}
+          />
+        )}
+        <OutboxButton />
         <NotificationBell />
         <AccountMenu />
       </div>

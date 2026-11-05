@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ContactRail } from "./contactrail";
 import "./contact360.css";
 import {
+  callMessengersRoute,
   installFetchStub,
   meRoute,
   StoryProviders,
@@ -58,6 +60,7 @@ const contact: components["schemas"]["Contact"] = {
   title: "Head of Fleet",
   social: { linkedin: "https://linkedin.com/in/danabuyer" },
   address: { city: "Munich", country: "DE" },
+  primary_email: "dana@brandt.example",
   emails: [
     {
       id: "pe-1",
@@ -97,6 +100,7 @@ const guard: components["schemas"]["ContactConsentGuard"] = {
       channel: "email",
       verdict: "allowed",
       reason: "She wrote to you three days ago.",
+      reason_code: "qualifying_event",
     },
     {
       purpose_key: "phone_outreach",
@@ -104,6 +108,7 @@ const guard: components["schemas"]["ContactConsentGuard"] = {
       channel: "phone",
       verdict: "unknown",
       reason: "No consent recorded.",
+      reason_code: "no_consent",
     },
   ],
 };
@@ -148,6 +153,8 @@ const granted: View = {
   activities: {
     data: [
       {
+        occurred_precision: "instant",
+        offers_email: false,
         id: "a-1",
         kind: "email",
         direction: "inbound",
@@ -177,6 +184,7 @@ const granted: View = {
   next_meeting: {
     activity_id: "a-2",
     starts_at: daysAgo(-4),
+    occurred_precision: "instant",
     subject: "Fleet retrofit walkthrough",
   },
 };
@@ -247,15 +255,24 @@ const signalsPartlyDerivable: View = {
 // apart and the section stops reading as a glance.
 function rail(view: View, entries = guard.entries) {
   installFetchStub({
-    // The rail draws capability-gated verbs (the inline edits, add employment),
-    // so the session has to be routed: an unrouted probe denies every grant and
-    // the gallery would show the read-only rail under every story name.
+    // The rail draws capability-gated verbs, so the session has to be routed.
+    // An unrouted probe denies every grant and every story shows the read-only rail.
     "GET /me": meRoute({ contact: ["read", "update"] }),
+    "GET /installation/settings": callMessengersRoute(),
   });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 320 }}>
-        <ContactRail view={view} guard={{ ...guard, entries }} />
+        <ContactRail
+          view={view}
+          consent={{
+            guard: { ...guard, entries },
+            loading: false,
+            failed: false,
+            onRetry: () => undefined,
+          }}
+          writeRefusalId="write-refused"
+        />
       </div>
     </StoryProviders>
   );
@@ -301,6 +318,93 @@ export const NoCorrespondencePurpose: Story = {
         channel: "email",
         verdict: "allowed",
         reason: "They opted in on 3 March.",
+        reason_code: "consent_confirmed",
       },
     ]),
+};
+
+const boughtPhone: View = {
+  ...granted,
+  contact: {
+    ...contact,
+    bought_fields: [
+      {
+        target: "phone:pp-1",
+        provider: "surfe",
+        applied_at: "2026-06-02T12:00:00Z",
+        paid: true,
+        trigger: "manual",
+      },
+    ],
+  },
+};
+
+// The bought mark belongs to the number, so it sits on the number's line,
+// and the chat glyph ends that line.
+export const BoughtPhone: Story = {
+  name: "Bought phone number",
+  render: () => rail(boughtPhone),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Open a chat" });
+    const number = canvas.getByRole("link", { name: "+493012345678" });
+    const handle = number.closest(".fieldgrid-handle");
+    const mark = handle?.querySelector(":scope > .evmark");
+    const chats = handle?.querySelector(":scope > .callaction-chats");
+    if (!mark || !chats) {
+      throw new Error("the phone row lost its bought mark or its chat glyph");
+    }
+    const box = number.getBoundingClientRect();
+    await expect(mark.getBoundingClientRect().top).toBeLessThan(box.bottom);
+    await expect(chats.getBoundingClientRect().top).toBeLessThan(box.bottom);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+  },
+};
+
+export const BoughtPhonePhone: Story = {
+  ...BoughtPhone,
+  name: "Bought phone number, phone",
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+const LONG_ADDRESS = "sebastian.sachsinger@straight.de";
+
+// An address wider than the column keeps one line. The mailbox name gives
+// way, and the domain stays whole to say whose address it is.
+export const LongAddress: Story = {
+  name: "Long address, phone",
+  render: () =>
+    rail({
+      ...granted,
+      contact: {
+        ...contact,
+        primary_email: LONG_ADDRESS,
+        emails: contact.emails?.map((row) => ({ ...row, email: LONG_ADDRESS })),
+      },
+    }),
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const link = await within(canvasElement).findByRole("link", {
+      name: LONG_ADDRESS,
+    });
+    const face = link.querySelector<HTMLElement>(".contactlink-email");
+    const domain = face?.querySelector<HTMLElement>(
+      ".contactlink-email-domain",
+    );
+    const column = link.closest(".factlist-value");
+    if (!face || !domain || !column) {
+      throw new Error("the address lost its domain");
+    }
+    await expect(face.getClientRects()).toHaveLength(1);
+    await expect(domain.scrollWidth).toBeLessThanOrEqual(domain.clientWidth);
+    await expect(domain.getBoundingClientRect().right).toBeLessThanOrEqual(
+      column.getBoundingClientRect().right,
+    );
+  },
 };

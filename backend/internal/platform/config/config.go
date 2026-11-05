@@ -24,7 +24,7 @@
 // fails the gate instead of quietly reopening the gap.
 package config
 
-import "os"
+import "github.com/margince/margince/backend/internal/platform/config/osenv"
 
 // Lookup reads one configuration variable by name, answering "" when it is not
 // set. It is a function rather than an interface because there is exactly one
@@ -32,14 +32,14 @@ import "os"
 // and a map's index expression is the test one.
 type Lookup func(name string) string
 
-// FromOS is the process environment — the single os.Getenv in the product.
+// FromOS is the process environment, through the product's single os.Getenv.
 //
 // Passed down from each cmd/<role> rather than reached for, so that what a
 // package reads is visible in its signature. A package holding a Lookup can be
 // exercised without mutating global state, which is the other half of why this
 // exists: a test that sets a real environment variable to steer a package it is
 // not testing leaks into every test that runs after it.
-func FromOS(name string) string { return os.Getenv(name) }
+func FromOS(name string) string { return osenv.Get(name) }
 
 // Static answers from a fixed map. It is the test-time Lookup, and it is here
 // rather than in a test helper so that a package with configuration can be

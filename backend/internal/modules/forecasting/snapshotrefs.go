@@ -39,7 +39,8 @@ type SnapshotRef struct {
 // nightly whole-pipeline capture carries one, so requiring it empty would list
 // nothing. The scope is the one the reading resolved,
 // so a wider one was already refused. managed_teams has nothing frozen against
-// it and answers without a query.
+// it and answers without a query. A call's baseline is not listed: it belongs
+// to its call, and no comparison may take it for a capture.
 func (s *Store) SnapshotRefsTx(
 	ctx context.Context, tx pgx.Tx, period Period, scope Scope, baseCurrency string,
 ) ([]SnapshotRef, error) {
@@ -57,13 +58,13 @@ func (s *Store) SnapshotRefsTx(
 			SELECT id, taken_at, trigger FROM forecast_snapshot
 			WHERE period_start = $1 AND period_end = $2 AND scope_kind = $3
 			  AND scope_id IS NOT DISTINCT FROM $4 AND base_currency = $5
-			  AND pipeline_id IS NULL
+			  AND pipeline_id IS NULL AND trigger <> $7
 		)
 		(SELECT * FROM comparable ORDER BY taken_at DESC, id DESC LIMIT $6)
 		UNION
 		(SELECT * FROM comparable ORDER BY taken_at ASC, id ASC LIMIT 1)
 		ORDER BY taken_at DESC, id DESC`,
-		period.StartDate, period.EndDate, scope.Kind, scope.ID, baseCurrency, recentSnapshotRefs)
+		period.StartDate, period.EndDate, scope.Kind, scope.ID, baseCurrency, recentSnapshotRefs, TriggerCall)
 	if err != nil {
 		return nil, fmt.Errorf("forecasting: listing the period's snapshots: %w", err)
 	}

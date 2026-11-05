@@ -33,6 +33,8 @@ func (f *fakeRelay) SendControllerMail(_ context.Context, msg ControllerMessage)
 	return f.err
 }
 
+func (f *fakeRelay) SenderAddress() string { return "" }
+
 // fakeVault is the key vault boundary. It counts reads and destructions
 // separately, because the two answer different questions: whether the link ever
 // reached the wire, and whether it stopped being live afterwards.
@@ -294,5 +296,22 @@ func TestBothLanesAreAskedTheSameQuestion(t *testing.T) {
 				"there any more and asking it again could only park what the engine allowed",
 				tc.name, gate.askedWithPurpose)
 		}
+	}
+}
+
+func TestOneSealedLinkPopulatesBothAlternativesWithoutChangingTheRow(t *testing.T) {
+	vault := &fakeVault{secret: "https://example.test/#/confirm/a?x=1&y=2"}
+	dispatcher := Dispatcher{payloads: vault}
+	delivery := controllerDelivery()
+	delivery.HTMLBody = `<a href="` + LinkPlaceholder + `">Check data</a>`
+	bodies, err := dispatcher.substituteLink(context.Background(), delivery)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vault.gets != 1 || !strings.Contains(bodies.text, "&y=2") || !strings.Contains(bodies.html, "&amp;y=2") {
+		t.Fatalf("alternatives did not share one safely escaped link: %+v", bodies)
+	}
+	if !strings.Contains(delivery.HTMLBody, LinkPlaceholder) {
+		t.Fatal("dispatch modified persisted markup")
 	}
 }

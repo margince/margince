@@ -4,7 +4,7 @@
 // Package meetingbrief assembles the pre-meeting brief for one booked meeting
 // (ADR-0097 D5).
 //
-// Tables owned: none. Nothing here is written; every read runs under the
+// Nothing here is written; every read runs under the
 // caller's own scope through the same gated reads the contact page serves.
 //
 // NO CACHE, and that is the deliberate difference from contactbrief beside it.

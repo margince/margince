@@ -153,7 +153,7 @@ func writeCompanyContextTable(b *strings.Builder, c contract, taskNames []string
 	b.WriteString("// caller must ask for them. Scopes are contract NAMES; the composition\n")
 	b.WriteString("// layer maps them to its own scope type, because this package must not\n")
 	b.WriteString("// import a sibling module.\n")
-	b.WriteString("type CompanyContextPolicy struct {\n\tScopes      []string\n\tTokenBudget int\n\tConditional bool\n}\n\n")
+	b.WriteString("type CompanyContextPolicy struct {\n\tScopes      []string\n\tTokenBudget int\n\tConditional bool\n\t// OfferingSelectable is true when the caller may name the legal entity whose\n\t// offering the context describes.\n\tOfferingSelectable bool\n}\n\n")
 	b.WriteString("var taskCompanyContext = map[Task]CompanyContextPolicy{\n")
 	for _, name := range taskNames {
 		p := c.Tasks[name].CompanyContext
@@ -171,7 +171,11 @@ func writeCompanyContextTable(b *strings.Builder, c contract, taskNames []string
 			}
 			b.WriteString("}, ")
 		}
-		fmt.Fprintf(b, "TokenBudget: %d, Conditional: %t},\n", p.TokenBudget, p.Conditional)
+		fmt.Fprintf(b, "TokenBudget: %d, Conditional: %t", p.TokenBudget, p.Conditional)
+		if p.OfferingSelectable {
+			b.WriteString(", OfferingSelectable: true")
+		}
+		b.WriteString("},\n")
 	}
 	b.WriteString("}\n\n")
 	b.WriteString("// CompanyContextFor returns the task's declared policy. The bool reports\n")

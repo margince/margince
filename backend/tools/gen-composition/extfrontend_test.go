@@ -146,8 +146,8 @@ func TestCollectUnitFrontendAcceptsAWellFormedLayer(t *testing.T) {
 	}
 }
 
-// A unit with no frontend layer is the common case — de and crm-hello are
-// both shaped that way — and composes normally.
+// A unit with no frontend layer is the common case (de is shaped that way),
+// and it composes normally.
 func TestCollectUnitFrontendAbsentIsNotAnError(t *testing.T) {
 	got, err := collectUnitFrontend("demo", t.TempDir())
 	if err != nil || got != nil {
@@ -271,7 +271,7 @@ func TestExtScreensGenImportsOnlyUnitsWithAScreen(t *testing.T) {
 	got := string(extScreensGen([]extensionUnit{
 		{Name: "notes", Frontend: &unitFrontend{Package: "@margince-ext/notes", Export: "@margince-ext/notes"}},
 		{Name: "de"},
-	}))
+	}, nil))
 	for _, want := range []string{
 		`import NotesScreen from "@margince-ext/notes";`,
 		`"notes": NotesScreen,`,
@@ -292,8 +292,56 @@ func TestExtScreensGenIsOrderedByUnitName(t *testing.T) {
 	got := string(extScreensGen([]extensionUnit{
 		{Name: "alpha", Frontend: &unitFrontend{Package: "@margince-ext/alpha", Export: "@margince-ext/alpha"}},
 		{Name: "beta", Frontend: &unitFrontend{Package: "@margince-ext/beta", Export: "@margince-ext/beta"}},
-	}))
+	}, nil))
 	if strings.Index(got, "AlphaScreen") > strings.Index(got, "BetaScreen") {
 		t.Errorf("imports are not in unit order:\n%s", got)
+	}
+}
+
+// A declared panel rides the unit's one import under a name of its own, keyed
+// by unit and slot. So two units exporting one component name coexist.
+func TestExtScreensGenImportsEachDeclaredPanel(t *testing.T) {
+	front := func(name string) *unitFrontend {
+		return &unitFrontend{Package: "@margince-ext/" + name, Export: "@margince-ext/" + name}
+	}
+	got := string(extScreensGen([]extensionUnit{
+		{Name: "alpha", Frontend: front("alpha")},
+		{Name: "beta", Frontend: front("beta")},
+		{Name: "gamma", Frontend: front("gamma")},
+	}, map[string][]declaredPanel{
+		"alpha": {{Slot: "record_panel.deal", Export: "DealPanel", Object: "ext_alpha_x"}},
+		"beta":  {{Slot: "record_panel.deal", Export: "DealPanel", Object: "ext_beta_x"}},
+	}))
+	for _, want := range []string{
+		`import AlphaScreen, { DealPanel as Alpha__DealPanel } from "@margince-ext/alpha";`,
+		`import BetaScreen, { DealPanel as Beta__DealPanel } from "@margince-ext/beta";`,
+		`import GammaScreen from "@margince-ext/gamma";`,
+		"export const extensionPanels = {\n  \"alpha\": {\n    \"record_panel.deal\": Alpha__DealPanel,\n  },\n  \"beta\": {",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("emitted registry is missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, `"gamma": {`) {
+		t.Errorf("a unit with no panel must add none:\n%s", got)
+	}
+	if !strings.HasSuffix(string(extScreensGen(nil, nil)), "export const extensionPanels = {};\n") {
+		t.Error("the empty set must still export an empty panel registry")
+	}
+}
+
+// Two different unit and export pairs never share an import name, and a panel
+// name is never a screen's.
+func TestPanelIdentsAreInjective(t *testing.T) {
+	seen := map[string]string{
+		screenIdent("foo-panel-x"): "screen foo-panel-x",
+		screenIdent("foo"):         "screen foo",
+	}
+	for _, pair := range [][2]string{{"foo", "BarPanelBaz"}, {"foo-panel-bar", "Baz"}, {"foo", "XScreen"}, {"foo", "Screen"}} {
+		ident := panelIdent(pair[0], pair[1])
+		if other, taken := seen[ident]; taken {
+			t.Errorf("panel %s/%s is imported as %s, which %s already is", pair[0], pair[1], ident, other)
+		}
+		seen[ident] = "panel " + pair[0] + "/" + pair[1]
 	}
 }

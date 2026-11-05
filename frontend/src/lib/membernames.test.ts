@@ -298,3 +298,27 @@ describe("useMemberNames", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("a colleague who left", () => {
+  it("is named as having left, wherever their name is printed", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse({
+        data: [
+          { id: "u-gone", display_name: "Shay Left", departed: true },
+          { id: "u-here", display_name: "Ada Here", departed: false },
+        ],
+      }),
+    );
+    const one = renderHook(() => useMemberName("u-gone"), { wrapper });
+    await waitFor(() =>
+      expect(one.result.current.data).toBe("Shay Left (left)"),
+    );
+    const many = renderHook(() => useMemberNames(["u-gone", "u-here"]), {
+      wrapper,
+    });
+    await waitFor(() =>
+      expect(many.result.current.get("u-here")).toBe("Ada Here"),
+    );
+    expect(many.result.current.get("u-gone")).toBe("Shay Left (left)");
+  });
+});

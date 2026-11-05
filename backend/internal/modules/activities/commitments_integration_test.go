@@ -108,17 +108,24 @@ func setupPromises(t *testing.T) *promiseEnv {
 // as binds the rep at OWN row scope — the narrowest real caller, and the one
 // for whom every scope clause in this read is non-empty.
 func (e *promiseEnv) as() context.Context {
+	return e.asWithout("")
+}
+
+// asWithout is as() for a role that holds no read grant on object.
+func (e *promiseEnv) asWithout(object string) context.Context {
+	grants := map[string]principal.ObjectGrant{
+		"activity": {Read: true}, "contact": {Read: true},
+		"deal": {Read: true}, "project": {Read: true},
+		"company": {Read: true}, "lead": {Read: true},
+	}
+	delete(grants, object)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
-			Objects: map[string]principal.ObjectGrant{
-				"activity": {Read: true}, "contact": {Read: true},
-				"deal": {Read: true}, "project": {Read: true},
-				"company": {Read: true},
-			},
+			Objects:  grants,
 			RowScope: principal.RowScopeOwn,
 		},
 	})
@@ -234,6 +241,35 @@ func TestNarrowingToAnUnreadableRecordAnswersNotFound(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("narrowing to another rep's unpromoted capture → %v, want ErrNotFound — an "+
 			"answer of any kind tells the caller the company is there", err)
+	}
+}
+
+// Row scope reads every shared company, so only the object grant keeps a role
+// from asking which promises a company it may not open holds. The narrowing is
+// refused as an object denial, and the same question with the grant answers.
+func TestNarrowingToARecordTypeTheRoleMayNotReadIsRefused(t *testing.T) {
+	e := setupPromises(t)
+	companyID, taskID := ids.NewV7(), ids.NewV7()
+	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by)
+		VALUES ($1, 'Acme GmbH', $2, 'seed', 'system')`, companyID, e.other)
+	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, assignee_id, is_done, source, captured_by)
+		VALUES ($1, 'task', 'Send Acme the renewal', now(), now(), $2, false, 'seed', 'system')`,
+		taskID, e.rep)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, company_id)
+		VALUES ($1, $2, 'company', $3)`, ids.NewV7(), taskID, companyID)
+
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	companyType := "company"
+	in := ListOpenTasksInput{EntityType: &companyType, EntityID: &companyID}
+	tasks, _, err := store.ListOpenTasks(e.as(), in)
+	if err != nil {
+		t.Fatalf("narrowing to a shared company with the company grant: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("narrowing to the company with the grant answered %d tasks, want its one promise", len(tasks))
+	}
+	if _, _, err := store.ListOpenTasks(e.asWithout("company"), in); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("narrowing to a company without the company grant → %v, want ErrPermissionDenied", err)
 	}
 }
 

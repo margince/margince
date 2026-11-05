@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -14,9 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // fieldKind names the activity kind in the write shape's audit and outbox
@@ -43,15 +44,20 @@ func activityCapturedPayload(ctx context.Context, kind, channelProvider string) 
 }
 
 type LogActivityInput struct {
-	recordedAt *time.Time
+	Recommendation *crmcontracts.RecommendationReceipt
+	FollowUpTask   *LogActivityInput
+	recordedAt     *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
-	// invitedAssignee admits an invited colleague as the task's assignee. Only
-	// the HTTP create handler sets it, for an assignee the caller NAMED; every
-	// automatic writer (deal check-up, lead SLA, email requests) leaves it
-	// false and keeps handing work to active seats only.
+	// invitedAssignee admits an invited colleague as the task's assignee. The
+	// HTTP create handler sets it for an assignee the caller NAMED, and
+	// AdmitInvitedAssignee for a promiser's own task. Every other automatic
+	// writer leaves it false and hands work to active seats only.
 	invitedAssignee bool
 	Kind            string
+	// LinksFromRequest says the caller typed Links, so a missing record is
+	// refused naming `links`. A writer that derives its links leaves it false.
+	LinksFromRequest bool
 	// ChannelProvider names the messaging transport that carried this activity —
 	// a channel_provider row — and is empty for anything that did not travel on
 	// one. Separate from Kind because they answer separate questions: what sort
@@ -63,16 +69,25 @@ type LogActivityInput struct {
 	Subject         *string
 	Body            *string
 	OccurredAt      *time.Time
-	Direction       *string
+	// OccurredPrecision is PrecisionDay when OccurredAt is only a date's anchor;
+	// empty is an instant.
+	OccurredPrecision string
+	Direction         *string
 	// MeetingStatus is meaningful only for kind meeting; the mapping refuses
 	// it on any other kind. The lead status ladder reads booked/held as
 	// engagement, so a hand-logged meeting moves a lead the same as a synced
 	// one.
 	MeetingStatus *string
-	DueAt         *time.Time
-	RemindAt      *time.Time
-	AssigneeID    *ids.UserID
-	HostUserID    *ids.UserID
+	// CallOutcome is how a call ended; the mapping refuses it on another kind.
+	CallOutcome *string
+	DueAt       *time.Time
+	// DueHasTime is true when DueAt names an agreed time of day rather than
+	// the day the task is due by. It needs DueAt, and on a task with no
+	// RemindAt it sets the reminder to DueAt (admitTaskTime).
+	DueHasTime bool
+	RemindAt   *time.Time
+	AssigneeID *ids.UserID
+	HostUserID *ids.UserID
 	// AttendeeUserIDs are the colleagues who were in a meeting or call besides
 	// whoever logged it; each is stamped as an our-side participant.
 	AttendeeUserIDs []ids.UserID
@@ -131,6 +146,11 @@ type LogActivityInput struct {
 	ICalInstance string
 	Links        []ActivityLinkInput
 	Source       string
+	// CustomFields are the create wire's cf_ values, keyed by column name.
+	// customColumns are the active fields they are checked and written against.
+	CustomFields  map[string]any
+	customColumns []fieldcatalog.Column
+	customChecked bool
 	// Origin says who caused this row to exist, and the recency clocks in the
 	// schema read it: the two system origins are excluded from every
 	// last_activity_at, because neither the system asking about a silent deal
@@ -165,45 +185,64 @@ func (s *Store) LogActivity(ctx context.Context, in LogActivityInput) (crmcontra
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
+	if err := s.withCustomColumns(ctx, &in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	var out crmcontracts.Activity
 	created := true
-	err := s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
+	isolation := pgx.ReadCommitted
+	if in.Recommendation != nil {
+		isolation = pgx.Serializable
+	}
+	err := s.txRetryingLockCycles(ctx, isolation, func(tx pgx.Tx) error {
 		var err error
 		out, created, err = s.logActivityAndReadTranscript(ctx, tx, in)
 		return err
 	})
-	return out, created, err
+	if in.Recommendation != nil && storekit.IsLockCycle(err) {
+		return out, created, fmt.Errorf("the suggested step changed while it was accepted; refresh it: %w", apperrors.ErrVersionSkew)
+	}
+	if err != nil {
+		return out, created, err
+	}
+	return out, created, s.attachCustomValues(ctx, &out)
 }
 
-// LogActivityTx is LogActivity's transaction-accepting variant (the C5
-// shared-tx shape): a caller that must commit an activity note atomically
-// with a sibling module's own write (the extraction accept-write's deal
-// update, compose/extractionaccept.go) drives it inside the ONE
-// transaction it already opened, so a note failure rolls the sibling
-// write back too, instead of letting LogActivity open (and commit) a
-// second transaction of its own.
+// LogActivityTx keeps the activity and its derived work in the caller’s transaction.
 func (s *Store) LogActivityTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	return s.logActivityAndReadTranscript(ctx, tx, in)
+	if err := s.withCustomColumns(ctx, &in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	// The columns this call already read, never a second read: the caller holds
+	// its transaction, and the catalog would open another connection under it.
+	out, created, err := s.logActivityAndReadTranscript(ctx, tx, in)
+	if err == nil {
+		err = withCustomValuesOf(ctx, tx, in.customColumns, &out)
+	}
+	return out, created, err
 }
 
-// logActivityAndReadTranscript is the ONE place the write and the reading are
-// joined, so every door reaches both.
-//
-// It sits here rather than in each entry point because there are three of
-// them: LogActivity opens its own transaction, LogActivityTx runs inside a
-// caller's, and both are reached from the tool surface, from REST, and from
-// the extension core. The first cut hooked only LogActivity, which meant
-// POST /v1/activities and the extension's own logging stored a transcript and
-// silently never read it — the exact defect this feature exists to close,
-// reintroduced on two of its three doors.
+// All activity writers share transcript processing and recommendation admission.
 func (s *Store) logActivityAndReadTranscript(
 	ctx context.Context, tx pgx.Tx, in LogActivityInput,
 ) (crmcontracts.Activity, bool, error) {
+	if err := CheckEntryHasContent(in.Kind, in.Subject, in.Body, in.CallOutcome); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	if in.RequestActivityID != nil {
+		if err := validateFollowUpShape(in); err != nil {
+			return crmcontracts.Activity{}, false, err
+		}
 		return s.takeEmailRequest(ctx, tx, in)
+	}
+	if replay, found, err := s.replayedTaskRecommendation(ctx, tx, in); found || err != nil {
+		return replay, false, err
+	}
+	if err := s.checkTaskRecommendation(ctx, tx, &in); err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
 	at := s.now()
 	in.recordedAt = &at
@@ -211,61 +250,20 @@ func (s *Store) logActivityAndReadTranscript(
 	if err != nil {
 		return out, created, err
 	}
-	return out, created, s.readTranscriptOnLanding(ctx, tx, out, created)
+	if err := s.readTranscriptOnLanding(ctx, tx, out, created); err != nil {
+		return out, created, err
+	}
+	if created && in.FollowUpTask != nil {
+		followUp := *in.FollowUpTask
+		followUp.SourceActivityID = new(ids.UUID(out.Id))
+		if _, _, err := s.logActivityAndReadTranscript(ctx, tx, followUp); err != nil {
+			return out, created, err
+		}
+	}
+	return out, created, nil
 }
 
-// taskAssignee decides who a new task belongs to.
-//
-// A task somebody writes for themselves and does not assign is THEIRS. The
-// column used to keep the NULL and the "my work" queue compensated by treating
-// every unassigned task as the reader's own, which put each automation-created
-// follow-up on every colleague's queue at once — the lead was owned, the task
-// it minted was not, and "mine" quietly meant "mine plus everybody's".
-//
-// Owning it at the point of writing is the half of that fix which keeps the
-// self-written task where its author expects it, so the queue can go back to
-// meaning exactly what it says.
-//
-// Only for a HUMAN creating a TASK. A system principal writing on nobody's
-// behalf leaves the column NULL, which is what routes automation work to the
-// unassigned queue instead of to whoever the workflow ran as; and a caller who
-// named an assignee is obeyed.
-func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
-	if in.AssigneeID != nil || in.Kind != "task" {
-		return in.AssigneeID
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
-		return nil
-	}
-	owner := ids.From[ids.UserKind](actor.UserID)
-	return &owner
-}
-
-// meetingHost is who HELD a meeting, which is not the same question as who
-// typed it up.
-//
-// A meeting names the one place an activity says which of US was there, and it
-// is what a rep's week is counted from. Left unset it falls to captured_by, so
-// a colleague who minutes somebody else's meeting takes it into their own week
-// — the case the attribution audit named, and the one the connector import
-// already answers because a calendar knows whose it was.
-//
-// A caller may name somebody else: that IS the minuting case, and the host is a
-// label rather than an authority — what the caller may read was decided before
-// this field is filled in. Silence defaults to the acting human, because a
-// meeting somebody logs with no host named is almost always their own; a system
-// or agent principal has no week to count it into and leaves it null rather
-// than inventing one.
-//
-// A meeting that names its source author was not logged by the caller: an
-// import writes another system's history, and the caller is whoever ran it.
-// Defaulting to the caller there makes the importer host of every imported
-// meeting, which fills their own "upcoming meetings". The host is then the
-// author's seat when the source names one — RefuseUnknownSeat refuses the write
-// before the insert if it is no seat here — and nobody when the source names
-// only an author with no seat. Same rule as stampLoggedParticipants. The host
-// claims no slot either way: claims_host_slot stays the booking doors' alone.
+// An importer records another system's history; the actor alone proves no attendance.
 func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 	if in.HostUserID != nil || in.Kind != KindMeeting {
 		return in.HostUserID
@@ -274,7 +272,7 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 		host := ids.From[ids.UserKind](*in.Author.AuthorID)
 		return &host
 	}
-	if in.Author.AuthorName != nil {
+	if in.Author.AuthorName != nil || isImportedActivity(in) {
 		return nil
 	}
 	actor, ok := principal.Actor(ctx)
@@ -289,46 +287,27 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
 func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
-	if err := validateActivityDuration(in.DurationSeconds); err != nil {
+	if err := prepareLoggedActivity(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	occurredAt := time.Now().UTC()
-	if in.OccurredAt != nil {
-		occurredAt = in.OccurredAt.UTC()
-	}
-	assignee := taskAssignee(ctx, in)
-	host := meetingHost(ctx, in)
-	// Asked at the CREATE door too, not only at the patch. A task minted onto an
-	// agent seat is one that never reaches a queue, and it used to be refused
-	// only if somebody later tried to move it — which is after it has been sat
-	// in nobody's list for however long it took to notice.
-	//
-	// Checked against the resolved assignee rather than the input, so the
-	// self-assignment above is covered by the same question. An invited
-	// colleague may be given a NEW task when the caller named them over HTTP
-	// (invitedAssignee); automatic writers keep the active-only check.
-	checkAssignee := ensureAssigneeCanHoldWork
-	if in.invitedAssignee {
-		checkAssignee = ensureNewTaskAssignee
-	}
-	if err := checkAssignee(ctx, tx, assignee); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-
-	replay, err := replayedActivity(ctx, tx, in)
+	assignee, err := checkedTaskAssignee(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	if replay != nil {
-		moved, err := replayMovedTheMeeting(ctx, tx, *replay, in)
-		return moved, false, err
+	host := meetingHost(ctx, in)
+
+	if replayed, found, err := replayLanding(ctx, tx, in); err != nil || found {
+		return replayed, false, err
 	}
 	if bound, found, err := recognizedMessage(ctx, tx, in); err != nil || found {
 		return bound, false, err
+	}
+	if err := refuseLoggedOutcomeBeforeStart(ctx, tx, in); err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
 
 	id := ids.New[ids.ActivityKind]()
@@ -340,15 +319,8 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	// Attested outbound is the one write that turns "does this workspace
-	// correspond with them" from no to yes, and the verdict engine acts on that
-	// answer inside its own transaction. The two serialize on one key; capture's
-	// sink takes it for the same reason on the rows a connector files.
-	if in.CounterpartyOutboundAttested && counterparty != "" {
-		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
-			correspondence.LockIdentity(counterparty)); err != nil {
-			return crmcontracts.Activity{}, false, err
-		}
+	if err := lockCorrespondenceForAttestedSend(ctx, tx, in, counterparty); err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return crmcontracts.Activity{}, false, err
@@ -356,19 +328,28 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	authorCols, authorHolders, args := storekit.AuthorInsertFragments(in.Author, []any{
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.
-		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, occurredAt, in.Direction, in.MeetingStatus,
+		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, in.OccurredAt, in.Direction, in.MeetingStatus,
 		in.DueAt, in.RemindAt, assignee, host, in.ClaimsHostSlot, in.SourceSystem, in.SourceID, in.Source, by,
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
-		in.SourceActivityID, in.Raw, in.DurationSeconds,
+		in.SourceActivityID, in.Raw, in.DurationSeconds, loggedSenderIsMachine(in), in.DueHasTime, in.CallOutcome,
 	})
-	_, err = tx.Exec(ctx,
+	precisionCol, precisionHolder, args := precisionInsertFragment(in.OccurredPrecision, args)
+	languageCol, languageHolder, args := languageInsertFragment(in, args)
+	cfCols, cfHolders, args, err := storekit.InsertFragments(in.customColumns, in.CustomFields, args)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	// An undated activity takes the transaction's now(): the last-activity clock
+	// counts only occurred_at <= now(), and a Go clock read here runs ahead of it.
+	var occurredAt time.Time
+	err = tx.QueryRow(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id, raw, duration_seconds`+authorCols+`)
-		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24`+authorHolders+`)`,
-		args...)
+		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time, call_outcome`+authorCols+precisionCol+languageCol+cfCols+`)
+		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
+		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26, $27`+authorHolders+precisionHolder+languageHolder+cfHolders+`) RETURNING occurred_at`,
+		args...).Scan(&occurredAt)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return crmcontracts.Activity{}, false, apperrors.ErrConflict
@@ -376,10 +357,10 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 
-	if err := writeActivitySatellites(ctx, tx, id, in, occurredAt, by); err != nil {
+	if err := writeActivitySatellites(ctx, tx, id, in, occurredAt.UTC(), by); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+	out, err := readActivityAt(ctx, tx, id, storekit.LiveOnly, orWallClock(in.recordedAt))
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -395,19 +376,19 @@ func writeActivitySatellites(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in LogActivityInput,
 	occurredAt time.Time, by string,
 ) error {
-	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links); err != nil {
+	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links, in.LinksFromRequest); err != nil {
 		return err
 	}
 	// The first transition, where this capture named a status. A meeting
 	// arrives `booked` far more often than not, and that booking is the fact
 	// every "how many did we book this period" question counts.
 	if err := recordMeetingTransition(ctx, tx, meetingTransition{
-		RecordedAt:     in.recordedAt,
-		ActivityID:     id,
-		Status:         meetingStatusOrNone(in.MeetingStatus),
-		ScheduledStart: &occurredAt,
-		SourceSystem:   in.SourceSystem,
-		SourceID:       in.SourceID,
+		RecordedAt:   in.recordedAt,
+		ActivityID:   id,
+		Status:       meetingStatusOrNone(in.MeetingStatus),
+		Scheduled:    scheduledAs(occurredAt, storedPrecision(in.OccurredPrecision)),
+		SourceSystem: in.SourceSystem,
+		SourceID:     in.SourceID,
 	}); err != nil {
 		return err
 	}
@@ -448,11 +429,18 @@ func writeActivitySatellites(
 // the same bounded delta a human's PATCH does. A held row refuses this write
 // like any other, which is the point of the hold — the capture reports the
 // refusal rather than claiming a success it did not have.
+//
+// Moving the status changes a row that already exists, so it asks for the
+// update grant a PATCH asks for. The create grant that admitted the log only
+// covers a replay that changes nothing.
 func replayMovedTheMeeting(
 	ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, in LogActivityInput,
 ) (crmcontracts.Activity, error) {
 	if in.MeetingStatus == nil || *in.MeetingStatus == meetingStatusString(replay.MeetingStatus) {
 		return replay, nil
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return crmcontracts.Activity{}, err
 	}
 	return updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(replay.Id)), UpdateActivityInput{
 		recordedAt:    in.recordedAt,
@@ -464,11 +452,15 @@ func replayedActivity(ctx context.Context, tx pgx.Tx, in LogActivityInput) (*crm
 	if in.SourceSystem == nil || in.SourceID == nil {
 		return nil, nil
 	}
+	return replayedSourceActivity(ctx, tx, *in.SourceSystem, *in.SourceID, orWallClock(in.recordedAt))
+}
+
+func replayedSourceActivity(ctx context.Context, tx pgx.Tx, source, key string, asOf time.Time) (*crmcontracts.Activity, error) {
 	var existing ids.ActivityID
 	err := tx.QueryRow(ctx,
 		`SELECT id FROM activity
 		   WHERE source_system = $1 AND source_id = $2`,
-		*in.SourceSystem, *in.SourceID).Scan(&existing)
+		source, key).Scan(&existing)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -478,7 +470,7 @@ func replayedActivity(ctx context.Context, tx pgx.Tx, in LogActivityInput) (*crm
 	// The row exists — the SELECT above just found it — so the only way
 	// readActivity's own row-scope gate can answer ErrNotFound here is that
 	// the key belongs to someone out of scope.
-	out, err := readActivity(ctx, tx, existing, storekit.IncludeArchived)
+	out, err := readActivityAt(ctx, tx, existing, storekit.IncludeArchived, asOf)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, apperrors.ErrConflict
 	}

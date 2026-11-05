@@ -421,3 +421,30 @@ func TestADatedRowFallsInTheRunItsDeadlineNames(t *testing.T) {
 		}
 	}
 }
+
+func TestWaitingAndOccurrenceUseTheAssemblyCalendar(t *testing.T) {
+	loc, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		t.Fatal(err)
+	}
+	clock := func() time.Time { return time.Date(2026, 6, 10, 17, 5, 0, 0, time.UTC) }
+	s := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, clock, WithZone(func(context.Context) (*time.Location, error) { return loc, nil }))
+	day, err := s.Assemble(pageReader())
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := clock().Add(-10 * time.Minute)
+	row := classifyWaiting(WaitingCustomer{Since: at, Engaged: true}, day.AsOf)
+	if row.waitingDays != 1 {
+		t.Fatalf("waiting = %d, want 1 across local midnight", row.waitingDays)
+	}
+	older := candidate("older", levelWaiting)
+	older.occurredAt = at
+	newer := candidate("newer", levelWaiting)
+	newer.occurredAt = clock()
+	rows := rankAll(stampAsOf([]ranked{older, newer}, day.AsOf))
+	comparison := rows[0].AboveNext
+	if comparison == nil || comparison.Mine == nil || comparison.Mine.Days == nil || *comparison.Mine.Days != 1 {
+		t.Fatalf("occurrence comparison = %+v, want a one-day wait", comparison)
+	}
+}

@@ -14,9 +14,24 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useFilterVocabulary } from "../../lib/filterdata";
+import {
+  type ObjectTab,
+  RESOURCE_OF,
+  TAB_LABEL,
+  tabOfViewResource,
+  UNIT_LABEL,
+} from "../../lib/filtersaddress";
 import { useListsAvailable } from "../../lib/lists.queries";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 import { navigateReplacing } from "../../lib/router";
+import {
+  filterStateFrom,
+  filterTreeOf,
+  openableTree,
+  type SavedView,
+  useSavedView,
+  useSaveView,
+} from "../../lib/savedviews.queries";
 import { type Group, type Node, rootGroup } from "../../lib/segmentpredicate";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import {
@@ -24,12 +39,7 @@ import {
   useRowsFocus,
   type VocabularyRead,
 } from "./filtereditor";
-import {
-  canExportFilter,
-  ExportFilterItems,
-  ExportProgress,
-  useFilterExport,
-} from "./filterexport";
+import { canExportFilter } from "./filterexport";
 import { FilterFoot } from "./filterfoot";
 import {
   BackToLibrary,
@@ -39,24 +49,9 @@ import {
 } from "./filterhead";
 import { FilterOutcome } from "./filtermatches";
 import { usePlainWords } from "./filterpropose";
-import {
-  type ObjectTab,
-  RESOURCE_OF,
-  TAB_LABEL,
-  tabOfViewResource,
-  UNIT_LABEL,
-} from "./filtersaddress";
 import { type SavedKind, SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { filterSentence, useSentenceWords } from "./filtersentence";
 import { type Reread, useReload } from "./filterview.reload";
-import {
-  filterStateFrom,
-  filterTreeOf,
-  openableTree,
-  type SavedView,
-  useSavedView,
-  useSaveView,
-} from "./savedviews.queries";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
 import "./filters.css";
 
@@ -212,7 +207,6 @@ function OpenedView({
   const focus = useFoldFocus();
   const onScreen = useOnScreen(draft.tree);
   const resource = RESOURCE_OF[tab];
-  const exportRun = useFilterExport();
   const plainWords = usePlainWords({
     resource,
     dispatch,
@@ -304,13 +298,6 @@ function OpenedView({
                   {t("filters.view.saveAsList")}
                 </Button>
               )}
-              {complete && (
-                <ExportFilterItems
-                  run={exportRun}
-                  resource={resource}
-                  tree={draft.tree}
-                />
-              )}
               <DeleteViewAction
                 view={pin.view}
                 // The library's views anchor takes focus once it has drawn, so
@@ -321,9 +308,6 @@ function OpenedView({
           </div>
         }
       />
-      <div className="filters-head-status">
-        <ExportProgress run={exportRun} tree={draft.tree} />
-      </div>
       <Panel
         title={t("filters.builderTitle")}
         titleAction={
@@ -343,7 +327,6 @@ function OpenedView({
         footer={
           editing ? (
             <FilterFoot
-              resource={resource}
               tree={draft.tree}
               mode={{
                 kind: "view",
@@ -354,7 +337,6 @@ function OpenedView({
                 saving: saveQuery.isPending,
               }}
               onSave={() => setSaving({ keep: "view", tree: draft.tree })}
-              exportRun={exportRun}
               problem={
                 <SaveProblem failure={saveQuery.error} reload={reload} />
               }

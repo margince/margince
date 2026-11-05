@@ -102,12 +102,15 @@ func (p PreparedSend) Authorization() commsauthz.Request {
 // scheduled message was composed, which is exactly why a scheduled send runs
 // them again at fire rather than trusting what it froze (ADR-0104 §2).
 func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmailInput, gate ConsentGate, stager DeliveryStager) (PreparedSend, error) {
-	links, err := origin.resolve(ctx, s)
+	links, err := origin.Resolve(ctx, s)
 	if err != nil {
 		return PreparedSend{}, err
 	}
 	provider, err := s.refuseUnsendable(ctx, in, gate, stager)
 	if err != nil {
+		return PreparedSend{}, err
+	}
+	if err := s.fileTypedRecipients(ctx, origin, in.Recipients); err != nil {
 		return PreparedSend{}, err
 	}
 
@@ -137,7 +140,11 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 
 	// Deliverability is derived here, after the gates, so both transports
 	// get it and neither can send marketing mail without it.
-	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surfaceFor(in.Context, in.MarketingPurpose, in.ConsentPurpose))
+	surface, err := surfaceForRecipients(ctx, in, origin, links, gate)
+	if err != nil {
+		return PreparedSend{}, err
+	}
+	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surface)
 	if err != nil {
 		return PreparedSend{}, err
 	}
@@ -148,7 +155,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 	// does — the transaction holds writes only — and it refuses the whole send
 	// when one file cannot be resolved, because a message carrying fewer files
 	// than the sender attached is one nobody is told is wrong.
-	files, err := s.resolveAttachments(ctx, in.AttachmentIDs)
+	files, err := s.PreviewSendAttachments(ctx, in.AttachmentIDs)
 	if err != nil {
 		return PreparedSend{}, err
 	}
@@ -187,7 +194,8 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 			inlineLogoKey:   sign.LogoKey,
 			files:           files,
 			listUnsubscribe: derived.listUnsubscribe,
-			to:              toRecipients(in.Recipients, in.Cc, in.Bcc),
+			advertising:     surface.disclosureCategory() == commsauthz.CategoryMarketing,
+			to:              ToRecipients(in.Recipients, in.Cc, in.Bcc),
 			links:           links,
 			provider:        provider,
 		},

@@ -1,0 +1,211 @@
+.lead-surface {
+  min-width: 0;
+}
+
+/* The queue page's own stack: the segregation notice, the toast region and
+   the surface, with one interval between them. It is a stack rather than a
+   margin on each child so that a child which is not rendered — a dismissed
+   notice, an overlay with no toggle — leaves no gap behind it. */
+.lead-queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* The lead page's own small layouts. They were twenty-seven inline `style`
+   objects spelling the same three shapes — a column, a row, a bare list — and
+   a screen that spells its own geometry is a second author of the space scale.
+   Stated here, they take the tokens and nothing else. */
+.lead-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lead-stack-tight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.lead-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* A list of sentences, not of bullets: these are reasons a reader scans, and
+   a marker before each would make three of them look like a form. */
+.lead-plainlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The score override's two fields and their verbs. Capped, because a score is
+   three digits and a full-width box for it invites a paragraph. */
+.lead-override {
+  max-width: 20rem;
+}
+
+/* The visibility pill under the name: a badge that opens the share screen. */
+.lead-share-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--textSecondary);
+  cursor: pointer;
+}
+
+.lead-share-pill > svg {
+  inline-size: 12px;
+  block-size: 12px;
+}
+
+.lead-share-pill:hover {
+  color: var(--textPrimary);
+}
+
+/* The email row: the address and its copy glyph on one line, the address
+   cut with an ellipsis so the glyph keeps its place. */
+.lead-row-email {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.lead-row-link {
+  display: block;
+  min-inline-size: 0;
+  padding-inline: 0;
+  max-inline-size: 100%;
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lead-company-offer.btn {
+  padding-inline: 0;
+}
+
+@media (max-width: 720px) {
+  .lead-surface .fieldgrid {
+    grid-template-columns: minmax(6.5rem, 35%) minmax(0, 1fr);
+  }
+
+  .lead-surface .fieldgrid-value,
+  .lead-surface .fieldgrid-value a {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* The status ladder under the lead header: five steps on one line, the
+   filled ones up to the current step, the terminal pair set apart. */
+
+/* A section heading in the qualify dialog and the one sentence it introduces,
+   held closer than the dialog's rows so the pair reads as one. */
+.lead-qualify-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Folds on the track, not a media query: what runs out is the dialog's width.
+   On a phone a paired Select is narrower than the pipeline name it shows. */
+.lead-qualify-deal {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+
+.lead-qualify-deal > .field:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+/* One factor of the score card: its name and kind, and its points at the
+   row's end. */
+.lead-score-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* The overview's cards under How it stands: two stacks side by side, the
+   score and what you know on the left, what they asked and the qualify
+   preview on the right. One stack once the feed is too narrow for two. */
+.lead-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gapCards);
+  align-items: start;
+}
+
+.lead-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-inline-size: 0;
+}
+
+@container (max-width: 40rem) {
+  .lead-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The lead's own words in "What they asked for", held to a few lines. */
+.lead-enquiry {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* The History head's dials: the search toggle, then the cuts. */
+.lead-history-dials {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+/* A lead's status and its SLA state, side by side in one table cell. */
+.lead-status-cell {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+/* The lists a lead is on, as chips under the left column's Lists label. */
+.lead-aside-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The lead card's opener is a button stretched over the card, so it sheds the
+   button's own box and reads as the card's title. */
+.lead-card-open {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}

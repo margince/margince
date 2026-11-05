@@ -198,6 +198,9 @@ func refuseIDsInReaderText(text string, known map[string]bool) error {
 func knownIDs(in StatusInput) map[string]bool {
 	known := citableIDs(in)
 	known[in.Deal.ID] = true
+	for id := range in.RequestStates {
+		known[id] = true
+	}
 	if in.Room != nil {
 		for _, th := range in.Room.Threads {
 			known[th.ID] = true
@@ -224,4 +227,15 @@ func citableIDs(in StatusInput) map[string]bool {
 		citable[t.ID] = true
 	}
 	return citable
+}
+
+// Historical review can ground the story, but cannot establish a current blocker.
+func currentClaimLines(lines []replyLine, states map[string]string) []replyLine {
+	kept := make([]replyLine, 0, len(lines))
+	for _, line := range lines {
+		if !citesReviewRequest(line.Evidence, states) {
+			kept = append(kept, line)
+		}
+	}
+	return kept
 }

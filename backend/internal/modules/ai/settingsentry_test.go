@@ -17,7 +17,7 @@ import (
 // reset leaves it with no binding and its AI lanes simply gone — discovered
 // whenever someone next opens a surface that needs a model, not at the reset.
 func TestTheRoutingBindingSurvivesADataReset(t *testing.T) {
-	if !Routing.SurvivesDataReset() {
+	if !storedRow(t, RoutingKey).SurvivesDataReset() {
 		t.Error("a data reset would delete ai.routing; the model binding is what bootstrap took from the " +
 			"deployment configuration, like the installation's name and currency, and a reset spares those")
 	}
@@ -28,7 +28,7 @@ func TestTheRoutingBindingSurvivesADataReset(t *testing.T) {
 // chose — and it would do it on the read of an UNSET setting, which is the
 // state every installation is in before anyone binds a model.
 func TestTheRegisteredDefaultBindsNothing(t *testing.T) {
-	raw, err := Routing.DefaultJSON()
+	raw, err := storedRow(t, RoutingKey).DefaultJSON()
 	if err != nil {
 		t.Fatalf("the registered default does not encode: %v", err)
 	}

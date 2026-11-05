@@ -232,7 +232,7 @@ func TestARaceOnAClaimedAddressStillAnswersTheDuplicateContract(t *testing.T) {
 	incumbentID := ids.From[ids.ContactKind](ids.UUID(incumbent.Id))
 
 	err = e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, cerr := createContact(ctx, tx, ContactResolution{
+		_, cerr := createContact(ctx, tx, e.store, ContactResolution{
 			Decision: DecisionExactCollision, MatchedLane: LaneEmail, ContactID: incumbentID,
 		}, ContactSpec{
 			FullName:   "Ida Kranz",
@@ -282,7 +282,7 @@ func TestTheChokepointRefusalHidesARecordTheCallerCannotRead(t *testing.T) {
 	// A second rep who may create contacts but sees only their own rows.
 	stranger := e.asRowScope(principal.RowScopeOwn)
 	err = e.store.tx(stranger, func(tx pgx.Tx) error {
-		_, cerr := createContact(stranger, tx, ContactResolution{
+		_, cerr := createContact(stranger, tx, e.store, ContactResolution{
 			Decision: DecisionExactCollision, MatchedLane: LaneEmail, ContactID: hiddenID,
 		}, ContactSpec{
 			FullName:   "Mara Steiner",
@@ -292,14 +292,13 @@ func TestTheChokepointRefusalHidesARecordTheCallerCannotRead(t *testing.T) {
 		})
 		return cerr
 	})
-	var dup *DuplicateEmailError
-	if !errors.As(err, &dup) {
-		t.Fatalf("refusal = %v, want DuplicateEmailError", err)
+	// Still refused, because the duplicate is real. The held refusal carries no
+	// pointer to a record this caller was never allowed to read.
+	if _, held := errors.AsType[*ContactHeldByColleagueError](err); !held {
+		t.Fatalf("refusal = %v, want ContactHeldByColleagueError", err)
 	}
-	// Still refused — the duplicate is real — but with no pointer to a record
-	// this caller was never allowed to read.
-	if !dup.ExistingID.IsZero() {
-		t.Fatalf("refusal disclosed %s to a caller who cannot read it", dup.ExistingID)
+	if _, dup := errors.AsType[*DuplicateEmailError](err); dup {
+		t.Fatalf("refusal %v answers as a duplicate the caller could open", err)
 	}
 }
 
@@ -396,14 +395,10 @@ func TestPromotingALeadStillMergesOnAClaimedAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{
-		FullName: new("Dana Fischer"), Email: new("dana@globex.test"), Source: "manual",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	contact, merged, err := e.store.PromoteLead(ctx,
-		ids.From[ids.LeadKind](ids.UUID(lead.Id)), PromoteLeadInput{Trigger: "human_qualify"})
+	lead := seedHistoricalLeadWithEmail(ctx, t, e.store, CreateLeadInput{
+		FullName: new("Dana Fischer"), Source: "manual",
+	}, "dana@globex.test")
+	contact, merged, err := e.store.PromoteLead(ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil {
 		t.Fatalf("promote lead: %v", err)
 	}
@@ -465,7 +460,7 @@ func TestTheChokepointRefusesToMintOverAnExactCollision(t *testing.T) {
 	var contactRefusal error
 	var contacts int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, contactRefusal = createContact(ctx, tx, ContactResolution{
+		_, contactRefusal = createContact(ctx, tx, e.store, ContactResolution{
 			Decision: DecisionExactCollision, MatchedLane: LaneEmail, ContactID: ids.New[ids.ContactKind](),
 		}, ContactSpec{FullName: "Ghost", Source: "manual", CapturedBy: "human:test"})
 		return tx.QueryRow(ctx, `SELECT count(*) FROM contact`).Scan(&contacts)

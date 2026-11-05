@@ -390,8 +390,9 @@ func (c *Connector) pullWindow(ctx context.Context, client *imapclient.Client, s
 // transient pull, and returns the highest UID seen.
 func (c *Connector) pullSet(ctx context.Context, client *imapclient.Client, set imapv2.NumSet, capMessages int, sink connector.Sink, st *syncState) (uint32, error) {
 	fetchOpts := &imapv2.FetchOptions{
-		UID:         true,
-		BodySection: []*imapv2.FetchItemBodySection{{}},
+		UID:          true,
+		InternalDate: true,
+		BodySection:  []*imapv2.FetchItemBodySection{{}},
 	}
 	fetchCmd := client.Fetch(set, fetchOpts)
 	var maxUID uint32
@@ -427,14 +428,14 @@ func (c *Connector) pullSet(ctx context.Context, client *imapclient.Client, set 
 // drop-or-upsert — the same discipline as the transient pull — returning
 // the message UID for the watermark.
 func (c *Connector) captureFetched(ctx context.Context, msg *imapclient.FetchMessageData, sink connector.Sink, st *syncState) (uint32, error) {
-	raw, uid, err := readMessageBodyUID(msg)
+	raw, uid, receivedAt, err := readMessageBodyUID(msg)
 	if err != nil {
 		// Oversized or bodyless is a per-message drop, never a
 		// pull-stopping fault — the same discipline as the transient pull.
 		st.stats.Skipped++
 		return uid, nil //nolint:nilerr // deliberate: the drop is counted, the pull continues
 	}
-	if err := c.capture(ctx, raw, sink, st); err != nil {
+	if err := c.capture(ctx, raw, sink, st, receivedAt); err != nil {
 		return uid, err
 	}
 	return uid, nil

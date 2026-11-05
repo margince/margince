@@ -4,6 +4,7 @@
 package provenance
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	"strings"
@@ -27,6 +28,9 @@ const ReservedSourceSystemPrefix = "mirror:"
 // Their source identity links task state to the original email obligation.
 const EmailRequestSource = "email_request"
 
+// AcceptedRecommendationSource keys a human-accepted observation for idempotent replay.
+const AcceptedRecommendationSource = "accepted_recommendation"
+
 // NoActivityReminderSource and CheckInCadenceSource name the quiet-account
 // reminders the automation engine mints, and they are reserved for the same
 // reason EmailRequestSource is: the activity store keys its idempotent replay
@@ -49,21 +53,67 @@ const (
 // written anew.
 const CommitmentTaskSource = "commitment"
 
+// AnalyticsDecisionSource names a task a manager recorded from a sales review:
+// a decision with an owner, a review date and an expected result.
+const AnalyticsDecisionSource = "analytics_decision"
+
+// The other native writers that create a task with no human behind it. Each
+// stamps one of these, and storekit.TaskSourceFamilies says how its task stays
+// current.
+const (
+	LeadSLATaskSource        = "lead_sla"
+	LeadQualifyTaskSource    = "lead_qualify"
+	AssuranceTaskSource      = "assurance"
+	OvernightReconcileSource = "overnight-reconcile"
+	// LeadRepliedSource asks a lead's owner to qualify a lead who wrote or
+	// booked. LeadForContactSource tells a contact's owner about a lead that
+	// arrived for their contact and was not created.
+	LeadRepliedSource    = "lead_replied"
+	LeadForContactSource = "lead_for_contact"
+)
+
+// WhichDealSource names the one "Which deal is this about?" task capture raises
+// for a mail several open deals fit. Its source_id is the mail's thread, so a
+// thread is asked about once.
+const WhichDealSource = "which_deal"
+
 // WebsiteLeadSource names a lead read off a company's website and accepted by
 // a human. Only that accept writes it. A lead under it is sent an Art. 14
 // notice, held until the notice is through, and deleted when it fails.
 const WebsiteLeadSource = "siteread"
+
+// WebFormSource names a lead or note a website form wrote. Its source_id is
+// the form and the submission's key, so a sender's retry lands once. That
+// holds only while no client can spell it.
+const WebFormSource = "web_form"
+
+// WebFormSourceID is a website form submission's source_id: the form, then the
+// submission's own part. WebFormIDSQL reads the form back out of it.
+func WebFormSourceID(form, submission string) string { return form + ":" + submission }
+
+// WebFormIDSQL is the form a row under alias came through, as text, or NULL
+// for a row no website form wrote.
+func WebFormIDSQL(alias string) string {
+	return fmt.Sprintf(`CASE WHEN %[1]s.source_system = '%[2]s' THEN split_part(%[1]s.source_id, ':', 1) END`,
+		alias, WebFormSource)
+}
 
 // internalSourceSystems are the exact identities only an internal writer may
 // spell. Exact names rather than a second prefix: these are already written
 // into rows, and renaming them to fit a namespace would strand every row that
 // carries the old spelling.
 var internalSourceSystems = map[string]bool{
-	EmailRequestSource:       true,
-	NoActivityReminderSource: true,
-	CheckInCadenceSource:     true,
-	CommitmentTaskSource:     true,
-	WebsiteLeadSource:        true,
+	EmailRequestSource:           true,
+	AcceptedRecommendationSource: true,
+	NoActivityReminderSource:     true,
+	CheckInCadenceSource:         true,
+	CommitmentTaskSource:         true,
+	AnalyticsDecisionSource:      true,
+	WebsiteLeadSource:            true,
+	WhichDealSource:              true,
+	LeadRepliedSource:            true,
+	LeadForContactSource:         true,
+	WebFormSource:                true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system
@@ -99,6 +149,10 @@ const ReminderAnchorSeparator = ":anchor:"
 func EngineReminderSources() []string {
 	return []string{NoActivityReminderSource, CheckInCadenceSource}
 }
+
+// RetiredTaskSources are automatic task families whose writers were removed.
+// Their rows remain current until a user completes them.
+func RetiredTaskSources() []string { return []string{LeadQualifyTaskSource} }
 
 // InternalSourceSystems lists the exact reserved identities, sorted. It is the
 // one place that knows the membership, so the refusal message and any census

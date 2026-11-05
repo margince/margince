@@ -127,8 +127,16 @@ func TestEveryResultTypeSatisfiesTheSchemaDerivedFromIt(t *testing.T) {
 	record := wireRecord{RecordType: "deal", ID: id, Fields: json.RawMessage(`{"name":"Acme"}`), Version: 3}
 
 	for name, value := range map[string]any{
-		"SearchRecordsResult":  SearchRecordsResult{Records: []recordWithOwner{{wireRecord: record, Owner: &RecordOwner{ID: id, Name: "Sofia Meier"}}}, NextCursor: "cursor"},
-		"SearchRecordsEmpty":   SearchRecordsResult{Records: []recordWithOwner{}},
+		"ListRecordsResult": ListRecordsResult{Records: []recordWithOwner{{wireRecord: record, Owner: &RecordOwner{ID: id, Name: "Sofia Meier"}}}, NextCursor: "cursor"},
+		"ListRecordsEmpty":  ListRecordsResult{Records: []recordWithOwner{}},
+		"SearchRecordsResult": SearchRecordsResult{
+			Records: []searchedRecord{{
+				wireRecord: record,
+				Match:      &RecordMatch{Snippet: "Acme", WorksAt: &RecordEmployer{CompanyID: id, CompanyName: "Acme"}},
+			}}, TypesWithMore: &[]string{"deal"}, Coverage: CoveragePartialDegraded,
+			Notes: []QueryNote{{Code: CodeMoreRecordsMatch, Detail: "more"}},
+		},
+		"SearchRecordsEmpty":   SearchRecordsResult{Records: []searchedRecord{}, Coverage: CoverageCompleteExact, Notes: []QueryNote{}},
 		"recordWithOwner":      recordWithOwner{wireRecord: record},
 		"wireRecord":           record,
 		"ArchiveResult":        ArchiveResult{Archived: true, RecordType: "contact", ID: id},
@@ -143,15 +151,14 @@ func TestEveryResultTypeSatisfiesTheSchemaDerivedFromIt(t *testing.T) {
 		"WhatsSlippingResult":  WhatsSlippingResult{Deals: []SlippingDealItem{{Rank: 1, DealID: id, Name: "Acme", AmountMinor: &amount, Currency: &currency, Evidence: []SlippingEvidence{{Source: "s", Snippet: "x"}}}}},
 		"SlippingUnpriced":     WhatsSlippingResult{Deals: []SlippingDealItem{{Rank: 1, DealID: id, Name: "Acme", Evidence: []SlippingEvidence{{Source: "s", Snippet: "x"}}}}},
 		"DraftFollowUpsResult": DraftFollowUpsResult{Segment: "slipping", Drafts: []FollowUpDraft{{DealID: id, DraftActivityID: id, Summary: note, Evidence: []SlippingEvidence{{Source: "s", Snippet: "x"}}}}},
-		"UpdateSplitResult":    UpdateWithStagedApprovalResult{wireRecord: record, StagedApproval: &stagedApprovalNote{ApprovalID: ids.New[ids.ApprovalKind](), Fields: []string{"title"}, Replay: json.RawMessage(`{}`), Message: "m"}},
-		"UpdatePlainResult":    UpdateWithStagedApprovalResult{wireRecord: record},
+		"UpdatePlainResult":    UpdateResult{wireRecord: record},
 		"RunReportResult":      RunReportResult{Report: "pipeline", Columns: []string{"stage"}, Plan: json.RawMessage(`{}`), Rows: []json.RawMessage{json.RawMessage(`{"stage":"open"}`)}},
 		"SendEmailResult":      SendEmailResult{ActivityID: id, Status: "accepted"},
 		"SendMessageResult":    SendMessageResult{ActivityID: id, Status: "accepted"},
 		"AvailabilityResult":   AvailabilityResult{Slots: []FreeSlot{{Start: time.Now().UTC(), End: time.Now().UTC().Add(time.Hour)}}, Truncated: false},
 		"PassthroughEntity":    PassthroughEntityResult{ID: id},
 		"listPipelinesAnswer":  listPipelinesAnswer{Pipelines: []Pipeline{{ID: id, Name: "Sales", IsDefault: true, Stages: []Stage{{ID: id, Name: "Open", Semantic: "open"}}}}},
-		"WhoKnowsAnswer":       WhoKnowsAnswer{ContactID: id, Colleagues: []KnownColleague{{UserID: id, DisplayName: "Ada", StrengthBucket: "moderate"}}},
+		"WhoKnowsAnswer":       WhoKnowsAnswer{ContactID: id, Colleagues: []KnownColleague{{UserID: id, DisplayName: "Ada", StrengthBucket: "moderate"}}, CaptureGaps: []CaptureGap{}},
 		"IntroPathAnswer":      IntroPathAnswer{CompanyID: id, Routes: []IntroRoute{}},
 		"AtRiskReport":         AtRiskReport{Deals: []AtRiskDeal{}, DealsScanned: 4},
 		"DealCoverageAnswer":   DealCoverageAnswer{DealID: id, Stakeholders: []CoverageSeat{}, OurSide: []KnownColleague{}, Risks: []CoverageRisk{}, SectionsOmitted: []string{}},
@@ -203,6 +210,7 @@ func TestANilListIsReportedRatherThanServedAsNull(t *testing.T) {
 	for name, value := range map[string]any{
 		"a report with no deals list":   AtRiskReport{},
 		"a deal with no findings list":  AtRiskReport{Deals: []AtRiskDeal{{DealID: ids.NewV7(), Name: "Acme"}}},
+		"a list with no records list":   ListRecordsResult{},
 		"a search with no records list": SearchRecordsResult{},
 	} {
 		t.Run(name, func(t *testing.T) {

@@ -17,10 +17,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -31,7 +32,7 @@ import (
 // compose injects it. Nil is a Sink that never moves a meeting — what it did
 // before this existed.
 type MeetingMover func(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, start time.Time, duration *int,
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, slot connector.MeetingSlot,
 ) (bool, error)
 
 // WithMeetingMover returns a copy that moves a captured meeting when the
@@ -39,6 +40,18 @@ type MeetingMover func(
 func (s *Sink) WithMeetingMover(move MeetingMover) *Sink {
 	c := *s
 	c.moveMeeting = move
+	return &c
+}
+
+// MeetingFolder retires duplicate onto survivor when both hold one meeting and
+// retiring it loses nothing, reporting whether it did. proven says the binding
+// rule already tied the duplicate's seat to the survivor. compose injects it.
+type MeetingFolder func(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID, proven bool) (bool, error)
+
+// WithMeetingFolder returns a copy that folds a meeting it finds stored twice.
+func (s *Sink) WithMeetingFolder(fold MeetingFolder) *Sink {
+	c := *s
+	c.foldMeeting = fold
 	return &c
 }
 
@@ -71,7 +84,7 @@ func admitCalendarVerb(ctx context.Context, key connector.NaturalKey, verb strin
 // and length, satisfying connector.MeetingMover. A key naming no captured
 // meeting writes nothing: an event beyond the horizon that was never captured
 // stays uncaptured until it comes within it.
-func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, start time.Time, duration *int) error {
+func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, slot connector.MeetingSlot) error {
 	if s.moveMeeting == nil {
 		return nil
 	}
@@ -91,7 +104,8 @@ func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, start 
 		if err != nil {
 			return fmt.Errorf("capture: finding the meeting to move: %w", err)
 		}
-		_, err = s.moveMeeting(ctx, tx, id, start, StorableDuration(duration))
+		slot.Duration = StorableDuration(slot.Duration)
+		_, err = s.moveMeeting(ctx, tx, id, slot)
 		return err
 	})
 }
@@ -112,20 +126,77 @@ func (s *Sink) moveOnReplay(
 	if s.moveMeeting == nil || viaIdentity || !ok || fields.Kind != meetingKind || fields.OccurredAt.IsZero() {
 		return nil
 	}
-	_, err := s.moveMeeting(ctx, tx, id, fields.OccurredAt, StorableDuration(fields.DurationSeconds))
+	_, err := s.moveMeeting(ctx, tx, id, connector.MeetingSlot{
+		Start: fields.OccurredAt, Duration: StorableDuration(fields.DurationSeconds), AllDay: fields.DateOnly,
+		Agenda: fields.AgendaFingerprint,
+	})
 	return err
 }
 
 // settleMeetingReplay is what a proven replay of a meeting still owes the row:
-// its current identity (reclaimMeetingIdentity) and its current start
-// (moveOnReplay). The move is for a replay of THIS calendar's own key only; a
-// row reached through the cross-door identity is another door's filing, and a
-// second calendar still describing the old time would move it back.
+// its current identity, its guests and its current start. Only a replay of this
+// calendar's own key moves it. A row reached through the cross-door identity is
+// another door's filing, and a second calendar on the old time would move it back.
 func (s *Sink) settleMeetingReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {
 	if err := s.reclaimMeetingIdentity(ctx, tx, id, rec); err != nil {
 		return err
 	}
+	if err := s.stampLaterGuests(ctx, tx, id, rec); err != nil {
+		return err
+	}
+	if err := s.recordMeetingDocuments(ctx, tx, id, rec, true); err != nil {
+		return err
+	}
 	return s.moveOnReplay(ctx, tx, id, rec, viaIdentity)
+}
+
+// foldOwnDuplicate answers the row this capture is about when the identity
+// resolved to known (alreadyFiled) while this seat's own key also holds a live meeting. The
+// own row folds onto known. If a human worked it, known folds onto the own row
+// instead, and the own row moves to the record's start. When neither retires
+// cleanly both stay, and the pair is logged.
+func (s *Sink) foldOwnDuplicate(
+	ctx context.Context, tx pgx.Tx, known ids.ActivityID, alreadyFiled bool, rec connector.NormalizedRecord,
+) (ids.ActivityID, error) {
+	if !alreadyFiled || s.foldMeeting == nil || !rec.CrossDoorIdentity.Stated() {
+		return known, nil
+	}
+	own, found, err := ownLiveMeetingTx(ctx, tx, rec.NaturalKey, actorUserID(ctx))
+	if err != nil || !found || own == known {
+		return known, err
+	}
+	if folded, err := s.foldMeeting(ctx, tx, own, known, true); err != nil || folded {
+		return known, err
+	}
+	folded, err := s.foldMeeting(ctx, tx, known, own, false)
+	if err != nil {
+		return known, err
+	}
+	if !folded {
+		slog.WarnContext(ctx, "capture: a meeting stays stored twice because neither row retires cleanly",
+			"kept", own.String(), "holder", known.String())
+		return known, nil
+	}
+	return own, s.moveOnReplay(ctx, tx, own, rec, false)
+}
+
+// ownLiveMeetingTx is the live meeting this seat's calendar stored under the
+// record's own natural key.
+func ownLiveMeetingTx(ctx context.Context, tx pgx.Tx, key connector.NaturalKey, seat ids.UUID) (ids.ActivityID, bool, error) {
+	var own ids.ActivityID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM activity
+		 WHERE source_system = $1 AND source_id = $2 AND kind = 'meeting'
+		   AND archived_at IS NULL AND restricted_at IS NULL
+		   AND `+auth.ConnectorSeatSQL("activity")+` = $3::text`,
+		key.SourceSystem, key.SourceID, seat.String()).Scan(&own)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.ActivityID{}, false, nil
+	}
+	if err != nil {
+		return ids.ActivityID{}, false, fmt.Errorf("capture: finding this calendar's own meeting row: %w", err)
+	}
+	return own, true, nil
 }

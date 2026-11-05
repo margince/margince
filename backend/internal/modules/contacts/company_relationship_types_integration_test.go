@@ -16,11 +16,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -182,9 +184,8 @@ func TestPartnerPromotionWritesTheTypeAndThePatchCannotTakeItAway(t *testing.T) 
 	// exists. Under ADR-0032 this was a comment, and a plain patch could take
 	// the label off a company listPartners still returned.
 	without := []string{"customer"}
-	if _, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{RelationshipTypes: &without}); err == nil {
-		t.Fatal("dropping the partner type while the partner row lives was accepted")
-	}
+	_, err = e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{RelationshipTypes: &without})
+	requireRefusalMessage(t, err, partnerRowExistsMessage())
 	if live := liveTypesOf(ctx, t, e, companyID); !live["partner"] {
 		t.Fatalf("types after the refused patch = %+v — the refusal must change nothing", live)
 	}
@@ -205,9 +206,8 @@ func TestNamingAnAccountAPartnerWithoutAProgrammeIsRefused(t *testing.T) {
 	// open: the account would carry the label while every partner API — which
 	// reads the extension table — went on saying it is not one.
 	claim := []string{"partner"}
-	if _, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{RelationshipTypes: &claim}); err == nil {
-		t.Fatal("an account with no partner programme was named a partner")
-	}
+	_, err = e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{RelationshipTypes: &claim})
+	requireRefusalMessage(t, err, partnerRowMissingMessage())
 	if live := liveTypesOf(ctx, t, e, companyID); len(live) != 0 {
 		t.Fatalf("the refused patch still wrote %+v", live)
 	}
@@ -235,5 +235,15 @@ func TestArchivingAnAccountRetiresItsRelationshipTypes(t *testing.T) {
 	// filters, which read live rows only.
 	if live := liveTypesOf(ctx, t, e, companyID); len(live) != 0 {
 		t.Fatalf("types after archive = %+v, want none — they retire with their parent", live)
+	}
+}
+
+// requireRefusalMessage holds the 422 a caller reads to the message function
+// that writes it, so the text a caller reads is the text the code names.
+func requireRefusalMessage(t *testing.T, err error, want string) {
+	t.Helper()
+	detailed, ok := errors.AsType[*httperr.DetailedError](err)
+	if !ok || len(detailed.Fields) != 1 || detailed.Fields[0].Message != want {
+		t.Fatalf("refusal = %v, want one field fault saying %q", err, want)
 	}
 }

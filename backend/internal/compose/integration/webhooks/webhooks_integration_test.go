@@ -659,12 +659,18 @@ func (we *webhookEnv) seedProduct(t *testing.T, name string) ids.UUID {
 // driven against a known approval subject.
 func (we *webhookEnv) insertApproval(t *testing.T, id ids.UUID, targetType *string, targetID *ids.UUID) {
 	t.Helper()
+	decider := ids.NewV7()
+	we.execInWorkspace(t,
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Decider')`,
+		decider, "decider-"+decider.String()+"@webhooks.test")
 	we.execInWorkspace(t, `
 		INSERT INTO approval (id, kind, proposed_by, target_entity_type, target_entity_id,
-		                      summary, proposed_change, diff_hash, expires_at)
+		                      summary, proposed_change, diff_hash, expires_at,
+		                      requested_decider_id, requested_decider_source)
 		VALUES ($1, 'advance_deal', 'agent:test', $2, $3,
-		        'staged change', '{}'::jsonb, 'sha256:test', now() + interval '1 day')`,
-		id, targetType, targetID)
+		        'staged change', '{}'::jsonb, 'sha256:test', now() + interval '1 day',
+		        $4, 'record_owner')`,
+		id, targetType, targetID, decider)
 }
 
 // execInWorkspace runs one statement on an owner tx and commits it. It answers

@@ -102,7 +102,7 @@ func bucketsOf(rows []ranked) crmcontracts.WorklistBuckets {
 // which fails when the sort level reaches a figure that answers what the day
 // holds.
 func semanticLevelOf(row ranked) int {
-	if row.pinned {
+	if row.pinned || row.reminded {
 		return row.semanticLevel
 	}
 	return row.item.Level
@@ -168,3 +168,10 @@ func dueToday(row ranked) bool {
 }
 
 func urgentWork(row ranked) bool { return semanticLevelOf(row) <= levelPromise }
+
+func summaryPopulation(considered, filtered []ranked, view, filter string) []ranked {
+	if filter == string(crmcontracts.WorklistFilterProspecting) {
+		return filtered
+	}
+	return outstanding(considered, view)
+}

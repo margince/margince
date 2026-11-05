@@ -21,11 +21,8 @@ const (
 	// CloseDateUnrealisticSoonDays is CLOSE_DATE_UNREALISTIC_SOON_DAYS:
 	// an early-stage deal cannot honestly claim to close within it.
 	CloseDateUnrealisticSoonDays = 7
-	// CloseDateStageDays is CLOSE_DATE_STAGE_DAYS, the per-remaining-stage
-	// velocity fallback while won-deal history is thin.
-	CloseDateStageDays = 14
 	// CloseDateMinHistory is CLOSE_DATE_MIN_HISTORY: won deals required
-	// before the workspace's observed stage velocity outranks the fallback.
+	// before observed stage pace may support a replacement date.
 	CloseDateMinHistory = 20
 	// CloseDateAutoApplyEnabled is CLOSE_DATE_AUTOAPPLY, which selects whether
 	// a clearly-overdue early-stage date is replaced on the spot (🟢) or left
@@ -41,12 +38,9 @@ const (
 	// unrealisticSoonMaxProb bounds the §11 unrealistic_soon flag: at or
 	// above 40% the stage is close enough that a near date is credible.
 	unrealisticSoonMaxProb = 40
-	// lateStageMinProb is FORECAST_BESTCASE_MIN_PROB (§7): at or above it
-	// the date is forecast-bearing, so a machine never finalizes it.
+	// lateStageMinProb: at or above it the date is forecast-bearing, so a
+	// machine never finalizes it.
 	lateStageMinProb = 50
-	// forecastCommitMinProb is FORECAST_COMMIT_MIN_PROB (§7), the derived
-	// Commit default when the rep set no explicit forecast_category.
-	forecastCommitMinProb = 90
 )
 
 // CloseDateFlag is one §11 hygiene finding.
@@ -75,20 +69,20 @@ type CloseDateInput struct {
 	CreatedAt      time.Time
 	LastActivityAt *time.Time
 	WaitUntil      *time.Time
+	// MeetingAhead is MeetingAheadSQL for the deal, read with LastActivityAt.
+	MeetingAhead bool
 
 	// StageWinProbability drives the unrealistic_soon and late-stage
 	// judgments; RemainingOpenStages the replacement-date horizon.
 	StageWinProbability int
 	RemainingOpenStages int
 
-	// InForecastCommit: the deal counts in this period's Commit or
-	// Best-case per §7 (explicit forecast_category override, else the
-	// probability-derived default) — the number a leader is staking on.
-	InForecastCommit bool
+	// Likely: the deal's probability is at or above the Likely threshold, so
+	// it counts in full in the forecast a leader is staking on.
+	Likely bool
 
 	// StageVelocityDays is the workspace-observed median days-per-stage
-	// for won deals in the deal's pipeline; zero (thin history, below
-	// CloseDateMinHistory) falls back to CloseDateStageDays.
+	// for won deals in the deal's pipeline; zero means insufficient evidence.
 	StageVelocityDays float64
 }
 
@@ -103,7 +97,7 @@ type CloseDateHygiene struct {
 	// Provisional: the written date is a guess a human must confirm — the
 	// deal stays out of Commit/Best-case until then.
 	Provisional bool
-	// Downgrade: the deal has gone quiet; its forecast category drops one
+	// Downgrade: the deal has gone quiet; its win probability drops one
 	// notch instead of the date being pushed optimistically forward.
 	Downgrade bool
 }
@@ -118,7 +112,7 @@ func CloseDateAssessment(in CloseDateInput, now time.Time, workspaceTZ *time.Loc
 	today := dateAt(now, workspaceTZ)
 
 	findings := closeDateFindings{
-		stalled: IsStalled(in.Status, in.CreatedAt, in.LastActivityAt, in.WaitUntil, now),
+		stalled: IsStalled(in.Status, in.CreatedAt, in.LastActivityAt, in.WaitUntil, in.MeetingAhead, now),
 		paused:  in.WaitUntil != nil && now.Before(*in.WaitUntil),
 	}
 
@@ -153,10 +147,15 @@ func CloseDateAssessment(in CloseDateInput, now time.Time, workspaceTZ *time.Loc
 		return out
 	}
 
-	proposed := proposedCloseDate(today, in.RemainingOpenStages, in.StageVelocityDays)
+	var proposed time.Time
 	// Quietness changes confidence, not an already recorded future date.
 	if in.ExpectedClose != nil && !findings.overdue {
 		proposed = dateOnly(*in.ExpectedClose)
+	} else {
+		proposed = proposedCloseDate(today, in.RemainingOpenStages, in.StageVelocityDays)
+		if proposed.IsZero() {
+			return out
+		}
 	}
 	out.ProposedClose = &proposed
 	out.Action = closeDateAction(findings, in, CloseDateAutoApplyEnabled)
@@ -188,17 +187,17 @@ func closeDateAction(f closeDateFindings, in CloseDateInput, autoApply bool) Clo
 	// wait, so a stage-velocity guess is never silently finalized.
 	clearOverdue := f.overdue && !f.missing && !f.unrealisticSoon
 	lateStage := in.StageWinProbability >= lateStageMinProb
-	if autoApply && clearOverdue && !f.paused && !in.InForecastCommit && !lateStage {
+	if autoApply && clearOverdue && !f.paused && !in.Likely && !lateStage {
 		return CloseDateActionAutoApply
 	}
 	return CloseDateActionProvisionalConfirm
 }
 
 // A missing or overdue date gets whole weeks of observed remaining-stage pace,
-// with a seven-day minimum. Thin history uses fourteen days per stage.
+// with a seven-day minimum. The caller requires observed pace.
 func proposedCloseDate(today time.Time, remainingOpenStages int, velocityDays float64) time.Time {
 	if velocityDays <= 0 {
-		velocityDays = CloseDateStageDays
+		return time.Time{}
 	}
 	days := math.Ceil(float64(StagesToGo(remainingOpenStages))*velocityDays/7) * 7
 	return today.AddDate(0, 0, max(7, int(days)))

@@ -112,13 +112,20 @@ func (re *runnerEnv) seedRun(t *testing.T, triggerRef, status string, staleFor t
 // seedApproval writes the staged row an awaiting_approval run points at.
 func (re *runnerEnv) seedApproval(t *testing.T) ids.UUID {
 	t.Helper()
-	id := ids.NewV7()
+	id, decider := ids.NewV7(), ids.NewV7()
+	if _, err := re.Owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Decider')`,
+		decider, "decider-"+decider.String()+"@runner.test"); err != nil {
+		t.Fatalf("seeding the decider: %v", err)
+	}
 	if _, err := re.Owner.Exec(context.Background(), `
 		INSERT INTO approval (id, kind, proposed_by, target_entity_type, target_entity_id,
-		                      summary, proposed_change, diff_hash, expires_at)
+		                      summary, proposed_change, diff_hash, expires_at,
+		                      requested_decider_id, requested_decider_source)
 		VALUES ($1, 'advance_deal', 'agent:test', 'deal', $2,
-		        'staged for the sweep test', '{}'::jsonb, 'sha256:test', now() + interval '30 days')`,
-		id, ids.NewV7()); err != nil {
+		        'staged for the sweep test', '{}'::jsonb, 'sha256:test', now() + interval '30 days',
+		        $3, 'record_owner')`,
+		id, ids.NewV7(), decider); err != nil {
 		t.Fatalf("seeding the pending approval: %v", err)
 	}
 	return id

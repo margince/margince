@@ -5,6 +5,8 @@ package activities
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -18,12 +20,15 @@ import (
 // whether everyone here can read it.
 //
 // ONE entry point rather than a pass per fact, because they are one
-// obligation. Both are content, both are read once for the whole page, both
-// are refused on a withheld row — and a page that picked up one and not the
-// other would show a parked message as though it had gone.
-//
-// No statements at all when the page carries no readable email.
-func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
+// obligation. Each is read once per page and refused on a withheld row. Who
+// wrote each row rides it too (WithMessageVoices).
+func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, asOf time.Time) error {
+	if err := WithMessageVoices(ctx, tx, page); err != nil {
+		return err
+	}
+	if err := withMessageMoves(ctx, tx, page, asOf); err != nil {
+		return err
+	}
 	emailIDs := emailIDsOf(page)
 	if len(emailIDs) == 0 {
 		return nil
@@ -34,7 +39,7 @@ func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 	}
 	applyAttachmentCounts(page, counts)
 
-	states, err := EmailStatesFor(ctx, tx, emailIDs)
+	states, err := EmailStatesFor(ctx, tx, emailIDs, asOf)
 	if err != nil {
 		return err
 	}
@@ -67,4 +72,63 @@ func applyEverySeatReach(page []crmcontracts.Activity, reach map[ids.UUID]bool) 
 			summary.DisplayStatus = crmcontracts.EmailAccessStatusWorkspace
 		}
 	}
+}
+
+// messageIDsOf is the chat messages on a page the reader may read. A withheld
+// one draws no move, as a withheld mail draws no badge.
+func messageIDsOf(page []crmcontracts.Activity) []ids.UUID {
+	var out []ids.UUID
+	for i := range page {
+		withheld := page[i].ContentState != nil && *page[i].ContentState == crmcontracts.ActivityContentStateWithheld
+		if page[i].Kind != crmcontracts.ActivityKindMessage || withheld {
+			continue
+		}
+		out = append(out, ids.UUID(page[i].Id))
+	}
+	return out
+}
+
+// withMessageMoves sets each readable chat message's move, by the rules the
+// mail badge follows.
+func withMessageMoves(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, asOf time.Time) error {
+	messages := messageIDsOf(page)
+	if len(messages) == 0 {
+		return nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	wanted := arg(messages)
+	in, err := moveInputs(ctx, arg, asOf)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx, `SELECT a.id, `+moveSQL(in, conversationKinds)+`
+ FROM activity a WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL`, args...)
+	if err != nil {
+		return fmt.Errorf("activities: reading whose move each chat message is: %w", err)
+	}
+	moves, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (messageMoveRow, error) {
+		var m messageMoveRow
+		err := row.Scan(&m.id, &m.move)
+		return m, err
+	})
+	if err != nil {
+		return fmt.Errorf("activities: reading whose move each chat message is: %w", err)
+	}
+	byID := make(map[ids.UUID]crmcontracts.ActivityMessageMove, len(moves))
+	for _, m := range moves {
+		byID[m.id] = m.move
+	}
+	for i := range page {
+		if move, ok := byID[ids.UUID(page[i].Id)]; ok {
+			page[i].MessageMove = &move
+		}
+	}
+	return nil
+}
+
+// messageMoveRow is one chat message's move as the page pass reads it.
+type messageMoveRow struct {
+	id   ids.UUID
+	move crmcontracts.ActivityMessageMove
 }

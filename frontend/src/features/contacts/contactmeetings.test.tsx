@@ -16,15 +16,14 @@ import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { formatDayMonth } from "../../format/format";
 import { formatTimeRange } from "../../format/meetingtime";
-import { viewerZone } from "../../format/timezone";
 import { LocaleProvider, translate } from "../../i18n";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { proposalEmailBody } from "../../lib/booking-proposal-message";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
   bookingProfile,
   bookingProposals,
   bookingSlots,
-} from "../../screens/book.testkit";
-import { proposalEmailBody } from "../../screens/booking-proposal-message";
+} from "../../testing/book.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -37,7 +36,7 @@ type Proposal = components["schemas"]["MeetingProposal"];
 
 // The composer is the boundary here: what this tab owes it is the message and
 // the address it opens on, which is what the stand-in shows.
-vi.mock("../../screens/compose", () => ({
+vi.mock("../mail/compose", () => ({
   ComposeModal: ({
     initialMessage,
     recordAddress,
@@ -95,9 +94,9 @@ function mount(
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone="UTC">
+        <ViewerZoneProvider zone="UTC">
           <ContactMeetingsTab view={shown} />
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -113,7 +112,7 @@ it("lists the invitations still waiting on the contact, between upcoming and hel
   // A link that offers no times says what it is instead.
   const intro = screen.getByText("Intro call").closest("article");
   expect(intro?.textContent).toContain("Personal link");
-  const zone = viewerZone();
+  const zone = "UTC";
   // Each offered time is its own label, so a reader scans them as a set.
   for (const slot of bookingSlots)
     expect(
@@ -217,7 +216,7 @@ it("resends an invitation through the composer with the email it was sent with",
     (key, params) => translate("en", key, params),
     { description: "", options: proposed.options, url: proposed.url },
     "en",
-    viewerZone(),
+    "UTC",
   );
   expect(composer.querySelector("pre")?.textContent).toBe(body);
   expect(body).toContain(proposed.url);
@@ -289,6 +288,8 @@ function meeting(
   row: Pick<Activity, "id" | "occurred_at"> & Partial<Activity>,
 ) {
   return {
+    occurred_precision: "instant",
+    offers_email: false,
     kind: "meeting",
     subject: "Weekly call",
     duration_seconds: 1800,
@@ -321,6 +322,7 @@ const withBooking: components["schemas"]["Contact360"] = {
   next_meeting: {
     activity_id: booked.id,
     starts_at: booked.occurred_at,
+    occurred_precision: "instant",
     subject: "Weekly call",
     participants: [{ contact_id: "p-1", full_name: "Dana Buyer" }],
   },
@@ -365,7 +367,7 @@ it("offers the next meeting's join link and its own page, from the invitation th
   ).toBeTruthy();
   expect(
     screen.getByRole("link", { name: "Weekly call" }).getAttribute("href"),
-  ).toBe(`#/book/meeting-${booked.id}`);
+  ).toBe(`/#/book/meeting-${booked.id}`);
 });
 
 it("asks for no invitation for a meeting that was not booked through Margince", async () => {
@@ -418,6 +420,43 @@ it("says what became of a meeting only where it is not the ordinary answer", asy
   expect(
     within(held).queryByText("Held", { selector: ".badge-label" }),
   ).toBeNull();
+});
+
+it("names the colleague who hosted a held meeting", async () => {
+  mount(() => [], {
+    "GET /activities": () =>
+      meetingsPage([
+        meeting({
+          id: "m-held",
+          subject: "Site visit",
+          occurred_at: "2026-09-24T08:00:00Z",
+          meeting_status: "held",
+          host_user_id: "u-host",
+        }),
+      ]),
+    "GET /users/names": () =>
+      jsonResponse({ data: [{ id: "u-host", display_name: "Lena Fischer" }] }),
+  });
+  const held = await screen.findByRole("region", { name: "Held" });
+  expect(await within(held).findByText("Lena Fischer")).toBeTruthy();
+  expect(within(held).getAllByRole("columnheader")).toHaveLength(4);
+});
+
+it("draws no host column for held meetings nobody hosted", async () => {
+  mount(() => [], {
+    "GET /activities": () =>
+      meetingsPage([
+        meeting({
+          id: "m-held",
+          subject: "Site visit",
+          occurred_at: "2026-09-24T08:00:00Z",
+          meeting_status: "held",
+        }),
+      ]),
+  });
+  const held = await screen.findByRole("region", { name: "Held" });
+  await within(held).findByText("Site visit");
+  expect(within(held).getAllByRole("columnheader")).toHaveLength(3);
 });
 
 it("reads older meetings when the reader asks for them", async () => {
@@ -507,6 +546,7 @@ it("says how far off each meeting ahead is, on the read's own clock", async () =
       next_meeting: {
         activity_id: soon.id,
         starts_at: soon.occurred_at,
+        occurred_precision: "instant",
         subject: "Weekly call",
       },
     },

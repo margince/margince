@@ -37,6 +37,7 @@ func TestFieldRoutersRouteEveryChoice(t *testing.T) {
 		{"read_context", principal.ScopeRead, "about", (readContext{}).routeTargets()},
 		{"read_attention", principal.ScopeRead, "view", (readAttention{}).routeTargets()},
 		{"read_reports", principal.ScopeRead, "kind", (readReports{}).routeTargets()},
+		{"change_reports", principal.ScopeWrite, "action", (changeReports{}).routeTargets()},
 		{"read_analytics", principal.ScopeRead, "step", (readAnalytics{}).routeTargets()},
 		{"change_state", principal.ScopeWrite, "action", (changeState{}).routeTargets()},
 		{"change_activities", principal.ScopeWrite, "action", (changeActivities{}).routeTargets()},

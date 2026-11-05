@@ -31,7 +31,7 @@ import (
 // object grant it just refused.
 type refusingMoves struct{ err error }
 
-func (r refusingMoves) CachedMoves(context.Context, []ids.UUID) (map[ids.UUID]crmcontracts.DealStatusCardMove, error) {
+func (r refusingMoves) CurrentMoves(context.Context, []ids.UUID) (map[ids.UUID]crmcontracts.DealStatusCardMove, error) {
 	return nil, r.err
 }
 
@@ -40,7 +40,7 @@ type answeringMoves struct {
 	move crmcontracts.DealStatusCardMove
 }
 
-func (a answeringMoves) CachedMoves(_ context.Context, ids_ []ids.UUID) (map[ids.UUID]crmcontracts.DealStatusCardMove, error) {
+func (a answeringMoves) CurrentMoves(_ context.Context, ids_ []ids.UUID) (map[ids.UUID]crmcontracts.DealStatusCardMove, error) {
 	out := map[ids.UUID]crmcontracts.DealStatusCardMove{}
 	for _, id := range ids_ {
 		out[id] = a.move

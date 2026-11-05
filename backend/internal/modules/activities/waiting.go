@@ -24,6 +24,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -36,8 +38,9 @@ type WaitingReply struct {
 	// only an email has an email's shape: a caller drawing the canonical email
 	// row for a chat would put a mail icon on a message that never travelled
 	// on one.
-	Kind    string
-	Subject string
+	DirectRecipients []ids.UUID
+	Kind             string
+	Subject          string
 	// Sender is the address the message came from, so a caller can tell a
 	// contact waiting from a machine sending. Empty when no sender was recorded.
 	Sender string
@@ -114,19 +117,21 @@ type WaitingReply struct {
 	// unresolved. REPORTED, never used to exclude, for Engaged's reason — the
 	// caller demotes what it cannot prove.
 	AddressedElsewhere bool
-	// OwnerID is who owes this reply, resolved from the record the thread is
-	// filed under. Zero when no record on it names an owner.
-	//
-	// PRECEDENCE, first owner found: deal, lead, contact, company — the order of
-	// how specific the claim is. A contact outranks their company because the
-	// company owner answers for the account, not for every conversation in it.
-	//
-	// A separate question from the record ids above, which answer "what is this
-	// about" while this answers "who owes the reply"; the two may differ.
-	//
-	// Resolved through the SAME visibility-gated links, so an owner appears only
-	// where the reader may see the record naming them.
+	// OwnerID is the sole verified direct recipient for email. A linked
+	// record's owner does not establish responsibility for a reply. Zero means
+	// non-email or no sole direct recipient.
 	OwnerID ids.UUID
+	// OwnerKnown is true after recipient resolution, including no duty.
+	OwnerKnown bool
+	// SenderWasStranger, BccOnly and ForeignLink are what capture judged about
+	// the mail (strangerMailSQL); false where it judged nothing. BccOnly is
+	// this reader's own import, so a system reader never sees it.
+	SenderWasStranger bool
+	BccOnly           bool
+	ForeignLink       bool
+	// SenderIsMachine is the message's sender_is_machine stamp: a sending
+	// system wrote it, by mailidentity.InboundFromSendingSystem.
+	SenderIsMachine bool
 }
 
 // WaitingScanCap bounds the work one read does. Beyond this the answer is
@@ -152,7 +157,7 @@ const WaitingScanCap = 200
 // Applied BEFORE the cap, which is the whole shape of this query: a filter after
 // LIMIT lets two hundred rows nobody wants fill the scan and push a real
 // customer past it, and the page then says nobody is waiting.
-const waitingHorizonDays = 90
+const waitingHorizonDays = storekit.DefaultWaitingHorizonDays
 
 // What "still live" means, per record type, as one spelling each.
 //
@@ -211,146 +216,91 @@ func liveRecord(predicate, alias string) string {
 // WaitingRepliesBefore, which continues where a page left off; this spelling
 // asks for the newest page and stops.
 //
-// Paged because the scan's own machine-sender rule is a coarse subset of the
-// real one. The full test reads a registrable domain against a transactional
-// baseline — a public-suffix question, not something a LIKE can answer — so it
-// runs in the caller, AFTER this cap. Two hundred newer messages from one
-// transactional relay could therefore fill the scan and push a genuinely
-// waiting customer out of it, and the caller would discard all two hundred and
-// show nothing. Asking for the next page is how the customer comes back.
+// Paged because the caller folds conversations and drops sending systems
+// after this cap. The next page is how a customer comes back.
 //
-// Not by moving the full rule into SQL: that rule is one capability, and a
-// second copy of it here would be the thing that drifts — the domain baseline
-// and the public-suffix walk are both Go, and compose owns the seam that has
-// them.
+// The machine-sender rule stays one Go capability. Capture and the activity
+// writer stamp its verdict on sender_is_machine, and a data task stamps older
+// mail. The card tail (waitingcards.go) drops stamped mail before its fold;
+// the caller asks the rule itself of every row, so unstamped mail is judged too.
 func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingReply, error) {
-	return s.WaitingRepliesBefore(ctx, asOf, time.Time{})
+	return s.WaitingRepliesBefore(ctx, asOf, WaitingPosition{})
 }
 
 // WaitingRepliesBefore is WaitingReplies continued: the next page of the same
-// scan, older than the instant given.
+// scan, after the timestamp and identity given.
 //
 // One implementation, two names. The unpaged spelling is what almost every
 // caller wants — one page is two hundred rows and more than a queue shows —
 // and it says so by taking no cursor at all, rather than every call site
 // carrying a zero somebody has to recognise as "the beginning".
-func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before time.Time) ([]WaitingReply, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return nil, err
-	}
+func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before WaitingPosition) ([]WaitingReply, error) {
+	return s.scanWaitingReplies(ctx, asOf, before, mailSeats{})
+}
+
+// WaitingRepliesForOwnerBefore narrows mail responsibility before the scan bound.
+func (s *Store) WaitingRepliesForOwnerBefore(ctx context.Context, asOf time.Time, before WaitingPosition, owner ids.UUID) ([]WaitingReply, error) {
+	return s.scanWaitingReplies(ctx, asOf, before, mailSeats{owner: &owner})
+}
+
+// WaitingRepliesAnsweredByBefore is WaitingRepliesBefore kept, before the scan
+// bound, to the mail one of these seats answers for. A message that is not
+// mail answers to nobody and stays, as it does in the unnarrowed read.
+func (s *Store) WaitingRepliesAnsweredByBefore(ctx context.Context, asOf time.Time, before WaitingPosition, seats []ids.UUID) ([]WaitingReply, error) {
+	return s.scanWaitingReplies(ctx, asOf, before, mailSeats{answeredBy: seats, bySeats: true})
+}
+
+func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before WaitingPosition, seats mailSeats) ([]WaitingReply, error) {
 	var waiting []WaitingReply
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		args := []any{}
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		instant := arg(asOf)
-		// The CONTENT gate, not the discover one. Everything this read answers
-		// — who wrote last, that nobody replied, how long they have waited — is
-		// derived from thread membership, and inheritedscope.go states the rule
-		// plainly: a reader that shows anything derived from a thread composes
-		// ActivityContentClause. Discover admits the safe markers only, and a
-		// caller that picks it for content is the defect restrictedreaders_test
-		// exists to catch.
-		//
-		// So a message this reader may not read produces no row at all. The
-		// earlier cut kept the row and withheld only its subject, which still
-		// published the wait, the timing and the linked record — and let a
-		// reader watch a row vanish to learn that a reply they may not see had
-		// arrived.
-		content, err := auth.ActivityContentClause(ctx, "a", arg)
-		if err != nil {
+	err := s.readWaitingQueue(ctx, asOf, seats, waitingShape{drawsRows: true},
+		func(slots waitingSlots, arg func(any) int) string {
+			slots.values[waitingKeysetSlot] = olderThan(before, arg)
+			return "SELECT waiting.*, " + directMailSeatsSQL(slots.identities) + " FROM (" + fmt.Sprintf(waitingRepliesSQL, slots.values...) +
+				") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC, waiting.id DESC"
+		},
+		func(rows pgx.Rows) (err error) {
+			waiting, err = collectWaiting(rows, seats.owner)
 			return err
-		}
-		// The same gate for the reply that may LIFT a snooze. A reply this
-		// reader cannot see must not put the row back on their day: the row
-		// reappearing is itself the disclosure that it arrived.
-		backContent, err := auth.ActivityContentClause(ctx, "back", arg)
-		if err != nil {
-			return err
-		}
-		// The links come back only where the reader may see what they point at.
-		// One visible contact must not expose a colleague's deal, which is the
-		// disclosure the timeline's own link read guards against.
-		//
-		// Aliased `wl`, not `l`: the discover gate composed above renders its
-		// OWN correlated subquery over activity_link using `l`, and a second
-		// `l` in this query's FROM shadows it — the gate's subquery then reads
-		// our joined row instead of the activity's own links, and admits or
-		// refuses on the wrong evidence.
-		linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
-		if err != nil {
-			return err
-		}
-		if linkVisible == "" {
-			linkVisible = scopeUnbounded
-		}
-		// WHOSE set-asides apply. The reader comes from the principal rather
-		// than from a parameter, so one contact's snooze cannot be asked for on
-		// another's behalf. A caller with no contact behind it — a system pass
-		// reading the same query — matches no reader_state row and therefore
-		// has nothing hidden from it, which is the honest answer: a background
-		// job has set nothing aside.
-		reader := arg(readerOrNobody(ctx))
-		// One snapshot for this read. Passed as a list rather than tested in Go
-		// so the clause runs before the scan cap — see OwnDomains.
-		ownDomains, err := s.ownDomainList(ctx, tx)
-		if err != nil {
-			return err
-		}
-		// The horizon this installation's own answering implies, read ONCE for
-		// this scan so every row it judges is judged by one cutoff. Stored by
-		// the worker pass; a read never measures it (waitingHorizonFor).
-		horizon, err := s.waitingHorizonFor(ctx, tx)
-		if err != nil {
-			return err
-		}
-		// The reader's own addresses, read in the SAME transaction as the scan
-		// so a mailbox connected mid-read cannot make one row judge the
-		// envelope differently from the next.
-		readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
-		if err != nil {
-			return err
-		}
-		bookedDiscover, err := bookedDiscoverClause(ctx, arg)
-		if err != nil {
-			return err
-		}
-		rows, err := tx.Query(ctx,
-			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
-				horizon,
-				liveRecord(openDealPredicate, "d"),
-				liveRecord(workingLeadPredicate, "ld"),
-				liveRecord(openDealPredicate, "openDeal"),
-				reader,
-				scopeUnbounded,
-				neverRelaxed, neverRelaxed,
-				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
-				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
-				fmt.Sprintf("$%d", arg(readerAddresses)),
-				neverRelaxed,
-				olderThan(before, arg), bookedDiscover,
-				neverRelaxed, neverRelaxed), planEachBind(args)...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		waiting = []WaitingReply{}
-		for rows.Next() {
-			var row WaitingReply
-			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
-				&row.ContactID, &row.CompanyID, &row.DealID,
-				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
-				&row.MeetingBookedAt); err != nil {
-				return err
-			}
-			waiting = append(waiting, row)
-		}
-		return rows.Err()
-	})
+		})
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading who is waiting for a reply: %w", err)
 	}
 	return waiting, nil
+}
+
+// readWaitingQueue sends one statement over the waiting queue in its own
+// transaction.
+func (s *Store) readWaitingQueue(
+	ctx context.Context, asOf time.Time, seats mailSeats, shape waitingShape,
+	statement func(waitingSlots, func(any) int) string, read func(pgx.Rows) error,
+) error {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return s.queryWaitingQueue(ctx, tx, asOf, seats, shape, statement, read)
+	})
+}
+
+// queryWaitingQueue sends one statement over the waiting queue: the page or a
+// card tail read. Each gates every row it judges, so the statement stops at
+// its own LIMIT instead of judging the whole horizon first.
+func (s *Store) queryWaitingQueue(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, seats mailSeats, shape waitingShape,
+	statement func(waitingSlots, func(any) int) string, read func(pgx.Rows) error,
+) error {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	slots, err := s.waitingQueueSlots(ctx, tx, asOf, seats, shape, arg)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx, statement(slots, arg), planEachBind(args)...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	return read(rows)
 }
 
 // OwnDomains reports the email domains this installation's own contacts write
@@ -367,16 +317,8 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 // counts meant to differ by exactly one rule.
 type OwnDomains interface {
 	Domains(ctx context.Context, tx pgx.Tx) ([]string, error)
-	// ReaderAddresses is the reader's OWN addresses, for telling a message
-	// written to them from one written to a colleague that they can see.
-	//
-	// Capture stamps the mailbox owner as a recipient on every inbound message
-	// it stores, so a participant row alone proves nothing about the envelope.
-	// These are the addresses a header has to name.
-	//
-	// Empty admits everyone, like Domains above and for the same reason: a
-	// reader whose addresses cannot be resolved is one whose real waiting mail
-	// must not silently vanish.
+	MailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error)
+	// ReaderAddresses supplies private self identity for the addressing annotation.
 	ReaderAddresses(ctx context.Context, tx pgx.Tx, reader ids.UUID) ([]string, error)
 }
 
@@ -427,45 +369,51 @@ func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) 
 	return domains, nil
 }
 
-// ownDomainSenderSQL is the ONE spelling of "this message came from one of our
-// own domains", rendered under a caller's activity alias with the placeholder
-// holding the domain list.
+// ownDomainSenderSQL is "this message came from one of our own domains" under
+// a caller's activity alias, with the placeholder holding Set's folded domains.
+// The waiting queue and the response reading share it so they agree on who is
+// waiting. It compares the sender's folded domain, never the address, so it
+// agrees with the reply path's owndomain.Set.Covers. An unfolded row stays in
+// the queue as an outside sender.
 //
-// Held by: TestTheOwnDomainSenderPredicateHasOneSpelling
+// Held by: TestEveryOwnDomainComparisonInSQLReadsFoldedDomains
 // (backend/gates/owndomainpredicate_test.go)
-//
-// A shared fragment rather than the same predicate typed twice, because the
-// waiting queue and the response reading judge the same messages: a rule that
-// drifted between them would make /worklist/response disagree with the queue
-// about who is waiting, and nothing would fail.
-//
-// Two things it does NOT do, each learned from a way it can suppress a real
-// customer silently:
-//
-//   - It reads the domain after the LAST at-sign, not the first. A quoted local
-//     part may legally contain one, so a sender can put one of our domains
-//     inside their own local part; splitting at the first would read that as
-//     the domain and hide their message.
-//   - It compares a suffix with right(), never LIKE. A domain is text an
-//     operator typed, and underscore is a LIKE wildcard, so an entry such as
-//     "our_.test" would match "ourx.test" and hide that customer's mail.
-//
-// A blank entry matches nothing on its own: equality fails against any real
-// domain, and the suffix comparison then asks whether a domain ends in a bare
-// dot, which none does. Stated here rather than guarded, because a guard no
-// test can fail is a claim nobody is holding.
 func ownDomainSenderSQL(alias string, domainArg int) string {
 	return fmt.Sprintf(`EXISTS (
 	         SELECT 1 FROM activity_participant ours
-	          CROSS JOIN LATERAL (SELECT lower(split_part(ours.address, '@',
-	                  length(ours.address) - length(replace(ours.address, '@', '')) + 1))
-	              ) AS sender(domain)
 	          WHERE ours.activity_id = %[1]s.id
 	            AND ours.role = 'from'
-	            AND sender.domain <> ''
 	            AND EXISTS (
 	                  SELECT 1 FROM unnest($%[2]d::text[]) AS own(domain)
-	                   WHERE (sender.domain = own.domain
-	                       OR right(sender.domain, length(own.domain) + 1)
-	                          = '.' || own.domain)))`, alias, domainArg)
+	                   WHERE %[3]s))`, alias, domainArg, owndomain.CoversSQL("ours.address_domain_folded", "own.domain"))
+}
+
+func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
+	var row WaitingReply
+	err := record.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
+		&row.ContactID, &row.CompanyID, &row.DealID,
+		&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
+		&row.Engaged, &row.OwnerID, &row.OwnerKnown, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
+		&row.MeetingBookedAt, &row.SenderWasStranger, &row.BccOnly, &row.ForeignLink, &row.SenderIsMachine)
+	if !row.OwnerKnown {
+		row.OwnerID = ids.Nil
+	}
+	return row, err
+}
+
+// collectWaiting reads the scanned waits for this owner, leaving out a mail
+// addressed to more than one seat, which is nobody's automatic duty.
+func collectWaiting(rows pgx.Rows, owner *ids.UUID) ([]WaitingReply, error) {
+	waiting := []WaitingReply{}
+	for rows.Next() {
+		row, err := scanWaitingRecipients(rows)
+		if err != nil {
+			return nil, err
+		}
+		if ambiguouslyAddressed(row) {
+			continue
+		}
+		waiting = append(waiting, waitingReplyForOwner(row, owner))
+	}
+	return waiting, rows.Err()
 }

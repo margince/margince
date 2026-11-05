@@ -9,8 +9,8 @@ package consent
 // a composer can show the verdict before a word is typed. Two things about it
 // are load-bearing:
 //
-// It is computed by VerdictForContact — the SAME code the dispatcher runs at
-// transmit — so a preview and the check that fires at send cannot drift.
+// It is computed by GuardVerdictForContact, which shares verdictFor with the
+// check the dispatcher runs at transmit. So a preview and a send cannot drift.
 //
 // It never grants anything. The transmit-time recheck stays authoritative and
 // refuses with the newer answer when state changed after the drawer opened; a
@@ -70,18 +70,20 @@ func (s *Store) ContactConsentGuard(ctx context.Context, contactID ids.ContactID
 		// The SAME window the send path binds a decision to. A preview that
 		// answered on a different span would tell a rep a send is allowed that
 		// the engine then refuses, which is worse than no preview at all.
-		w, err := s.packRulesFor(ctx, tx)
+		country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()})
 		if err != nil {
 			return err
 		}
+		w := packRulesFor(country)
 		since := s.now().Add(-w.reply)
-		// A guard reads a CONTACT, not a message, so it names nothing advertised
-		// and an exception requiring similarity answers no here. The guard is
-		// advisory; the send path asks the same question with the message in
-		// hand and is what actually decides.
-		marketing := MarketingContext{Exception: w.marketingException}
+		// The same marketing context the send path builds for this caller, so
+		// the advisory answer and the send agree on the existing-customer route.
+		marketing, err := marketingContextTx(ctx, tx, w)
+		if err != nil {
+			return err
+		}
 		for _, purpose := range purposes {
-			verdict, err := VerdictForContact(ctx, tx, contactID.String(), purpose, since, marketing)
+			verdict, err := GuardVerdictForContact(ctx, tx, contactID.String(), purpose, since, marketing)
 			if err != nil {
 				return err
 			}
@@ -108,6 +110,8 @@ func wireGuardEntry(purpose PurposeRow, verdict Verdict) (crmcontracts.ContactCo
 		Channel:      channelFor(purpose.Class),
 		Verdict:      crmcontracts.ContactConsentGuardEntryVerdict(verdict.State),
 		Reason:       verdict.Reason,
+		ReasonCode:   crmcontracts.ContactConsentGuardEntryReasonCode(verdict.ReasonCode),
+		ReasonAt:     verdict.ReasonAt,
 	}
 	if verdict.Qualifying != nil {
 		qualifying, err := wireQualifying(*verdict.Qualifying)
@@ -132,6 +136,13 @@ func wireQualifying(event QualifyingEvent) (*crmcontracts.ConsentQualifyingEvent
 	wired := crmcontracts.ConsentQualifyingEvent{
 		Kind:       crmcontracts.ConsentQualifyingEventKind(event.Kind),
 		OccurredAt: event.OccurredAt,
+	}
+	if event.ID != "" {
+		id, err := ids.Parse(event.ID)
+		if err != nil {
+			return nil, fmt.Errorf("the qualifying event has an unreadable id: %w", err)
+		}
+		wired.Id = new(openapi_types.UUID(id))
 	}
 	if event.SourceEntityType != "" {
 		sourceType := crmcontracts.ConsentQualifyingEventSourceEntityType(event.SourceEntityType)

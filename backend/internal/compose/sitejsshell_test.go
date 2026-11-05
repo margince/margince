@@ -20,7 +20,7 @@ import (
 // model call would panic rather than pass quietly.
 func TestAJavaScriptShellIsNotSettledAsParked(t *testing.T) {
 	shell := crawlPage{Text: "", ExternalScripts: 3, ModuleScripts: 1}
-	verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), shell)
+	verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), domainEvidenceCopyFor("en"), shell)
 	if err != nil {
 		t.Fatalf("classifying: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestAJavaScriptShellIsNotSettledAsParked(t *testing.T) {
 // with is genuinely empty, and that answer still costs no model call.
 func TestAnEmptyPageWithNoScriptsIsStillParked(t *testing.T) {
 	empty := crawlPage{Text: "", ExternalScripts: 0}
-	verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), empty)
+	verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), domainEvidenceCopyFor("en"), empty)
 	if err != nil {
 		t.Fatalf("classifying: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestAnEmptyPageWithNoScriptsIsStillParked(t *testing.T) {
 // every current bundler emits an application entry point.
 func TestAParkedPageWithAnalyticsIsStillParked(t *testing.T) {
 	parked := crawlPage{Text: "", ExternalScripts: 2, ModuleScripts: 0}
-	verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), parked)
+	verdict, err := (&siteDeepReadWorker{}).classifySeed(context.Background(), domainEvidenceCopyFor("en"), parked)
 	if err != nil {
 		t.Fatalf("classifying: %v", err)
 	}

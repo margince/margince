@@ -30,14 +30,14 @@ function draw(node: ReactNode) {
 
 describe("VisibilityBadge", () => {
   it.each<[Visibility, string, string]>([
-    ["team", "Team", "visibility-open"],
-    ["workspace", "Shared", "visibility-open"],
-    ["participants", "Participants", "visibility-limited"],
-    ["selected", "Selected", "visibility-limited"],
+    ["team", "Team", "visibility"],
+    ["workspace", "Shared", "visibility"],
+    ["participants", "Participants", "visibility visibility-limited"],
+    ["selected", "Selected", "visibility visibility-limited"],
     // The state and not the reader: the owner and a colleague it was shared
     // with see one badge, and "Only you" would be false for the second.
-    ["private", "Private", "visibility-limited"],
-    ["withheld", "Withheld", "visibility-withheld"],
+    ["private", "Private", "visibility visibility-limited"],
+    ["withheld", "Withheld", "visibility visibility-withheld"],
   ])("says %s as %j and draws it %s", (state, word, look) => {
     const { container } = draw(<VisibilityBadge state={state} />);
     // The word is the exact one, so a row and the drawer cannot disagree
@@ -45,13 +45,13 @@ describe("VisibilityBadge", () => {
     expect(screen.getByText(word)).toBeInTheDocument();
     // Three looks for six states: every limit is drawn the same heavier way,
     // because the exception in a list is what a reader scans for.
-    expect(container.querySelector(".visibility")?.className).toContain(look);
+    expect(container.querySelector(".visibility")?.className).toBe(look);
   });
 
   it("marks the face of a control that opens with a caret and nothing else", () => {
     const { container } = draw(<VisibilityBadge state="workspace" opens />);
     const mark = container.querySelector(".visibility");
-    expect(mark).toHaveClass("visibility-open", "visibility-opens");
+    expect(mark).toHaveClass("visibility-opens");
     expect(mark).toHaveTextContent(/^Shared$/);
     const glyphs = mark?.querySelectorAll("svg") ?? [];
     expect(glyphs).toHaveLength(2);

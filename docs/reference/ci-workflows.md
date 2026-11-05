@@ -13,13 +13,14 @@ workflow is outside the gate:
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
 | `closing-declaration.yml` | pull request events | No |
+| `docs-describing.yml` | pull request events | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
-| `main-health.yml` | `main` every two hours, manual dispatch | No |
+| `main-health.yml` | `main-health-pace.yml`, `main` every six hours, manual dispatch | No |
+| `main-health-pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
 | `release.yml` | manual dispatch only | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
-| `desktop-macos.yml` / `desktop-windows.yml` | `desktop/**` pull requests, dispatch, `workflow_call`; macOS also on a `desktop/**` push to `main` | No (not required checks) |
 
 The merge queue rule is off, so the `merge_group` trigger in `ci.yml` does not run.
 `main-health.yml` is the only workflow that publishes the SonarCloud analysis of `main`.
@@ -126,6 +127,24 @@ that users do not read the warning.
 report. It reads its evidence from the environment, so a fixture can drive every case
 (`make test-closing-declaration`).
 
+## `docs-describing.yml`
+
+What starts it: `opened`, `reopened`, `edited`, `synchronize` and `ready_for_review`. The rule it asks
+about, and the form of each answer, are in
+[docs-prose-style.md](docs-prose-style.md#a-list-the-code-owns-is-linked-and-a-page-names-the-code-it-describes).
+This workflow lists the explanation and handbook pages whose `describes:` paths the pull request changes.
+Then it looks for an answer to each one in the body.
+
+A check cannot tell that a sentence stopped being true. The answer is a human's, and the workflow asks
+for it where the reviewer reads. It warns and never fails, for the same reason as
+`closing-declaration.yml`, and deletes its comment once every page is answered. A failed query for the
+changed files stops without a comment. On a pull request from a fork, the token cannot write a comment,
+so the report is only in the job summary.
+
+The report comes from [`scripts/check-docs-describing.sh`](../../scripts/check-docs-describing.sh). It reads
+its evidence from the environment, so a fixture can drive every case (`make test-docs-describing`).
+`make docs-describing` prints the same list for a local branch.
+
 ## `issue-closed.yml`
 
 What starts it: an issue `closed`, a daily check, and manual dispatch. An issue closes by a merged
@@ -141,7 +160,14 @@ and holds only `issues: write`.
 
 ## `main-health.yml`
 
-Runs on `main` every two hours.
+Runs on `main` while commits are landing, with at least two hours between two runs.
+
+The GitHub scheduler can start a cron run hours behind its time, or not at all. It keeps no record
+of a run it did not start. So `main-health-pace.yml` runs on every push to `main` and starts this
+workflow when the newest run is at least two hours old
+([`scripts/main-health-pace.sh`](../../scripts/main-health-pace.sh), `make test-main-health-pace`).
+A cron line every six hours remains for a quiet `main`, when no push comes.
+
 Each run covers these lanes:
 
 - the backend gate;
@@ -181,7 +207,7 @@ an hour, it cuts the list of commits that may have caused a red to about 12.
 
 ## `scheduled.yml`
 
-Daily on `main`, plus a weekly Monday cron for the two jobs that cost too much to run daily. These
+Daily on `main`, plus a weekly Monday cron for the jobs that cost too much to run daily. These
 checks answer "is `main` still good?", and that answer can change when nothing is merged. `ci.yml`
 asks "is this diff good?", and runs because a diff exists.
 
@@ -193,9 +219,12 @@ asks "is this diff good?", and runs because a diff exists.
 | frontend clock drift | daily | The Vitest tests run as if it were 200 days from now, with the same result | A fixture whose fixed date a page part compares to `now` breaks on a calendar date, with no diff. |
 | every story renders | daily | `make fe-uat ARGS=--all-stories`: every story the Storybook build registers renders clean | `make fe-uat` on a branch renders only the stories the diff reaches, so a story that fails on `main` stays hidden until a change reaches it. |
 | backend clock drift | daily | The Go tests, unit and real-Postgres, run on a runner whose clock is 200 days later, with the same result | The same calendar break on the backend, where a test can read the clock of Go or the `now()` of Postgres. |
-| PERF-3/PERF-7 budgets | weekly | `make bench-perf-check`: the budgets on the SMB tier (10,000 test contacts), writing no record | Weekly is enough for a budget that no merge needs. |
+| PERF-3/PERF-7 budgets | weekly | `make bench-perf BENCH_PERF_TIER=smb`: the budgets on the SMB tier (10,000 test contacts), writing a record | Weekly is enough for a budget that no merge needs. |
+| `MOBILE-AC-2` budget | weekly | `make bench-mobile`: record open `p95` on a throttled Fast-3G profile at 390px, writing a record | The browser half of the PERF-1 budget, which no merge gate measures. |
 | vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
-| use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
+| use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
+| MCP role sweep (`make test-roles`) | weekly | Every MCP tool and action called as every seeded role, held to `mcp-tool-roles.json` and `toolchecks.json` | It takes longer than a merge-gate job allows. Each PR still holds the committed table to the registry and to `tools/list`. |
+| weekly records (`records`, `records-pr`) | weekly | Renders the pages built from the three weekly records, then opens one pull request with them | A record reaches `main` only when a maintainer merges it. |
 
 Notes on the jobs:
 
@@ -212,7 +241,7 @@ Notes on the jobs:
   return to the pool 200 days later.
 - `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane on a laptop with the
   weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
-- The model lane costs real tokens. It skips, and does not fail, when `ANTHROPIC_API_KEY` is
+- The model lane costs real tokens. It skips, and does not fail, when `CLAUDE_CODE_OAUTH_TOKEN` is
   missing. So a lane with no money does not turn `main` red every Monday. A skipped job says "not
   set up" where a red one says "broken".
 - The vendor live check needs the `SURFE_LIVE_KEY` secret. Without it, the job reports "not checked"
@@ -220,6 +249,21 @@ Notes on the jobs:
 - The model lane does not give the same result each time: it runs each scenario three times, and
   passes at two. It uploads each transcript as an artifact, because the result line names the failed
   scenario, and only the transcript shows what the model did.
+
+The three weekly jobs record what they measure, and none of them writes to `main`:
+
+- Each job uploads its record as an artifact: `bench-perf-record`, `bench-mobile-record` and
+  `e2e-llm-verdicts`. A failed job still uploads, because a budget that is over is recorded before its gate fails.
+- `records` puts the records over the tree of the run. A record that matches the committed one counts
+  as not recorded. It runs `make perfdoc` and the MCP tool coverage generator, and hands over a patch.
+  It holds no write token.
+- `records-pr` commits the patch on a `bench/scheduled-<date>-<run>` branch and opens one pull request.
+  The body names each part, how it was measured (route, search mode, runner), and any part that did
+  not record. It runs only on `main`, and opens nothing when nothing recorded.
+- The default workflow token opens that pull request, and a pull request it opens starts no workflow.
+  Close it and open it again to start CI. The repository must let GitHub Actions open pull requests.
+- The model lane searches by word overlap, because no embedding key reaches the runner. Its verdicts
+  say `search: lexical`, and they replace the verdicts in the same `<model>@<route>` folder.
 
 Findings become issues (`scripts/scheduled-report.sh`): one open issue per check, keyed on a fixed
 title, because a red scheduled run tells nobody.
@@ -236,7 +280,8 @@ title, because a red scheduled run tells nobody.
   looking for a slow-down that nobody measured. A lane that ran and measured something bad has
   proved that it could run. So that finding is closed on the same run that files the other one.
 
-The report job is the only holder of `issues: write`, and runs no build code. That is the same
+The report job is the only holder of `issues: write`, and runs no build code. `records-pr` is the only
+holder of `contents: write` and `pull-requests: write`, and runs no build code either. That is the same
 permission rule `sbom.yml` uses for signing.
 
 ## `sbom.yml`
@@ -264,17 +309,18 @@ Manual dispatch only. It cuts a margince-constellation release with the version 
 the dist service of the constellation deployment at `test.margince.com`. The year is pinned to 1970
 while this is a PoC, so these releases sort below any real dated release. The build is the
 workflow run number. A constellation release is a server deployment, which GitHub does not host.
-The GitHub release and the desktop bundles belong to `release-tag.yml`, which owns the
+The GitHub release belongs to `release-tag.yml`, which owns the
 `github-release` job.
 
 A release is a decision someone makes; there is no push trigger. So the role images have no other
-build ([#1965](https://github.com/margince/margince/issues/1965)), and the patch range is one commit
-(below).
+build ([#1965](https://github.com/margince/margince/issues/1965)).
 
 What a run does:
 
-1. The release CLI cuts the patch and uploads it with `draft-release`. With it go the three SBOM
-   files for the source tree, generated again at the release commit (`make sbom`).
+1. The CLI asks the dist service for the patch base (`resolve-patch-base --version`): the newest published
+   release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --patch-base <version>`. The first release has no base: its patch is
+   the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source
+   tree, generated again at the release commit (`make sbom`).
    The dist service checks that the SBOM files cover every file the patch makes. So the
    committed `sboms/` files, which may be behind, are never uploaded.
 2. The three role images are built through the bake file (`docker-bake.hcl`, `linux/amd64` +
@@ -294,19 +340,17 @@ What a run does:
 4. The release is published with `publish-release`. The dist uploads log in with the dist
    publisher token (the `MARGINCE_DIST_PUBLISHER_TOKEN` secret).
 
-**The patch range is always `HEAD~1..HEAD`.** A dispatch carries no push range, so the base is
-the commit before it. The patch of a release from a dispatch covers one commit, no matter how many
-landed since the last release. A consumer that applies patches in order cannot use these patches to stay
-current. Nothing reads them today. To derive the base from the last published release fixes
-it, and must come before any automatic trigger
-([#1798](https://github.com/margince/margince/issues/1798)).
+Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#where-the-patch-of-changes-starts).
 
 Runs at once: `draft` and `docker-image` each carry a group that cancels, so an older bake stops. `publish`
 carries a group that queues runs and does not cancel. A publish that has started always runs to the end,
 and a publish that still waits when a newer one comes gives up its place. That way only one
-publish runs at a time, but in no set order. Nothing on this path refuses an old version. So a new
-run, or a dispatch of an older commit, can still publish after a newer one
-([#1810](https://github.com/margince/margince/issues/1810)).
+publish runs at a time, but in no set order.
+
+The workflow does not check the order itself. The dist service does. It refuses `publish-release` for a
+version that is not newer than its newest published one. It also refuses the same version a second time.
+So a new run of an old build fails at the publish step. A dispatch of an older commit fails there too,
+instead of landing after a newer release.
 
 ## `release-tag.yml`
 
@@ -316,33 +360,31 @@ cannot both claim the one release page.
 
 The tag is the version, read and checked by
 [`scripts/release-tag-version.sh`](../../scripts/release-tag-version.sh)
-(`make test-release-tag-version`). A plain `v0.0.1` becomes the download the page offers by
-default; a tag with an ending, such as `v0.0.1-rc.1`, becomes a `pre-release`. A tag the script cannot
-read is refused in seconds, before either bundle compiles PostgreSQL from source.
+(`make test-release-tag-version`). A plain `v1.0.0` becomes the download the page offers by
+default; a tag with an ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A tag the script cannot
+read is refused in seconds, before anything is published.
 
-Two more checks share that first job. The tag points at a commit on `main`, and the commit carries
-no failing `verdict` from `merge-attest`. That last check picks releases, and does not gate merges.
+More checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
+release's Change Date and version, checked by
+[`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)
+(`make test-release-license-stamped`). No open issue carries `release: blocker`. And
+the commit carries no failing `verdict` from `merge-attest`.
+
+The `draft` job then checks that a plain tag has a draft release with notes. It holds
+`contents: write` only to read: GitHub shows a draft to no token that cannot write.
+
+That last check picks releases, and does not gate merges.
 To merge past `ci` is a standing decision here, so a missing result passes. A result that exists
 but is not done yet refuses.
 
-`desktop-macos` and `desktop-windows` are then called (not copied). They are the same shared
-workflows the pull request check runs, so a release bundle cannot differ from the bundle CI
-approved.
+The release job publishes the draft, or creates the release for a pre-release that has no draft.
+It ships no files: the notes end with a link to the install steps in
+[deploy-margince.md](../how-to/deploy-margince.md).
 
-The release job renames the macOS tarball after the version. It runs `zip` again on the Windows
-tree that `download-artifact` opened, and creates the release with both added. It queues and does not
-cancel. By that job the lane is making a release and uploading files, and a stopped run would
+Under the draft's text it lists the pull requests merged since
+the last plain release. A release body holds at most 125,000 characters, and the list gets what the
+draft leaves. The list comes from
+[`scripts/release-notes.sh`](../../scripts/release-notes.sh) (`make test-release-notes`).
+
+The release job queues and does not cancel. By that job the lane is making a release and writing its notes, and a stopped run would
 leave that half done. How to drive it is in [cut-a-release.md](../how-to/cut-a-release.md).
-
-## `desktop-macos.yml` / `desktop-windows.yml`
-
-Each builds the desktop folder, with all it needs, for its own system. That is the only system
-it can be built on. pgvector has no build system but `nmake` against MSVC, and the event bus needs
-`MSYS2`. The macOS half changes every `Mach-O` load command to `@rpath`, and signs each changed file
-again.
-
-Each runs on pull requests only for `desktop/**`, so a normal change never costs a Postgres
-compile. Each also runs on manual dispatch, and on `workflow_call` from `release-tag.yml`. The macOS
-lane also runs on a `desktop/**` push to `main`, so the merged tree is built once more; the Windows
-lane does not. The macOS lane uploads a tarball, because `upload-artifact` does not keep the
-bit that lets a file run. The Windows lane has no such bit, and uploads the folder.

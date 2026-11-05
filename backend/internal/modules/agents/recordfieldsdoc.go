@@ -227,7 +227,8 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 	// not advertise one (the contract has no single-relationship GET), and a
 	// document a caller can disprove in one call costs more than the silence it
 	// replaced.
-	return "A contact's employer is a relationship, not a field on the contact: record_type=relationship " +
+	return "Contact creation accepts company_id or company_name and resolves employment atomically. " +
+		"For later employment changes use record_type=relationship " +
 		"with kind=employment, contact_id and company_id. Each kind REQUIRES its own endpoint pair, " +
 		"and a wrong pair is refused by name — employment: contact + company; deal_stakeholder: " +
 		"deal + contact; project_stakeholder: project + contact; partner_of, referred_by and co_sell_with: " +
@@ -243,14 +244,11 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 // shape maps carry activity, so a record-type test alone put patch-only advice
 // in the create section too — which DOES accept links.
 func activityReachNotes(shapes map[datasource.EntityType]reflect.Type) []string {
-	// An activity is not searchable, and only the EDGE was ever told this.
-	// search_records' record_type enum has no activity, so an activity is
-	// retrievable afterwards only through the id its write returned — the same
-	// hazard the relationship note names, on the record type this surface creates
-	// far more often. Keyed on the create shapes (which carry `links`), because it
-	// is the write that hands out the only handle.
+	// A default record search leaves activity out, so the id the write returns
+	// is the sure handle. Keyed on the create shapes (which carry `links`),
+	// because it is the write that hands that id out.
 	if describesField(shapes, "links") {
-		return []string{"An activity is not searchable — a record search does not serve it — so keep the id " +
+		return []string{"A record search finds an activity only when activity is named, so keep the id " +
 			"an activity write returns; read_record answers it by that id."}
 	}
 	if _, hasActivity := shapes[datasource.EntityActivity]; !hasActivity {
@@ -270,26 +268,16 @@ func activityReachNotes(shapes map[datasource.EntityType]reflect.Type) []string 
 		"write changes what an activity says, never who it is about."}
 }
 
-// customFieldNotes says how an extra key is read, which of the two fates it
-// meets, and which record types carry no custom fields at all.
+// customFieldNotes says how an extra key is read, and which record types carry
+// no custom fields at all.
 func customFieldNotes(shapes map[datasource.EntityType]reflect.Type) []string {
-	// Two different fates, and the sentence used to describe neither. It said
-	// every extra key is "silently discarded", which is wrong in both directions:
-	// a key that is not cf_-prefixed is REFUSED by name (rejectUnknownFields), so
-	// an agent was told to distrust a success it would never receive — while the
-	// one case that IS silently dropped, a cf_ key whose custom field is not
-	// active, was the half the sentence glossed over. A UAT run found exactly
-	// that: cf_employee_count answered 200 with a full record body and the value
-	// nowhere in it.
+	// A write refuses any key it cannot store, so a success means all were stored.
 	notes := []string{"Extra keys must be named cf_<slug> and are read as custom-field values; any other " +
-		"key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom " +
-		"field is not ACTIVE in this workspace is the one that is: the write reports success and drops " +
-		"the value, so re-read the record if you are unsure a cf_ value landed."}
-	// …but not for every record type, and the exception is this surface's own
-	// decision: a type takes custom fields only if its contract shape carries the
-	// additionalProperties bag a cf_ value travels in, and activity and
-	// relationship carry none. Promising carriage there would send an agent to
-	// write a key the strict decoder refuses.
+		"key is REFUSED by name, and so is a cf_ key whose custom field is not ACTIVE in this workspace " +
+		"or whose value its type or options cannot hold, so a success means every key you sent was stored."}
+	// …but not for every record type. A type takes custom fields only if its
+	// contract shape carries the additionalProperties bag a cf_ value travels in.
+	// Promising carriage elsewhere sends an agent to write a key the decoder refuses.
 	//
 	// DERIVED from the shapes, not listed: the exclusion is a property of the
 	// generated contract, and agents may not import customfields to ask it (a

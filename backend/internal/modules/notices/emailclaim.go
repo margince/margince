@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -49,8 +48,9 @@ const maxMailErrorRunes = 500
 // one. The sender needs the seat in order to resolve an address for it, which
 // is a different question from anything the centre displays.
 type EmailAttempt struct {
-	Notice    Notice
-	Recipient ids.UserID
+	ApprovalID *ids.ApprovalID
+	Notice     Notice
+	Recipient  ids.UserID
 }
 
 // ClaimEmailAttempt takes this notice's ONE mail attempt, or reports that there
@@ -75,41 +75,65 @@ func (s *Store) ClaimEmailAttempt(ctx context.Context, id ids.UUID) (EmailAttemp
 	var attempt EmailAttempt
 	var claimed bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var recipient ids.UUID
-		var claimedAt time.Time
-		// Both halves are nullable and the table pairs them, so either arriving
-		// alone is a row the constraint should have refused.
-		var targetType *string
-		var targetID *ids.UUID
 		row := tx.QueryRow(ctx, `
 			UPDATE notice
 			   SET email_attempted_at = now()
 			 WHERE id = $1 AND email_attempted_at IS NULL AND read_at IS NULL
-			 RETURNING recipient_user_id, kind, subject, body,
-			           target_type, target_id, created_at, origin, email_attempted_at`, id)
-		switch scanErr := row.Scan(&recipient, &attempt.Notice.Kind, &attempt.Notice.Subject,
-			&attempt.Notice.Body, &targetType, &targetID, &attempt.Notice.CreatedAt,
-			&attempt.Notice.Origin, &claimedAt); {
+			 RETURNING `+claimedNoticeColumns, id)
+		var claimedAt time.Time
+		var scanErr error
+		attempt, claimedAt, scanErr = scanClaimedNotice(row)
+		switch {
 		case errors.Is(scanErr, pgx.ErrNoRows):
 			return nil
 		case scanErr != nil:
 			return fmt.Errorf("notices: claiming the notice's mail attempt: %w", scanErr)
 		}
-		attempt.Notice.ID = id
-		attempt.Recipient = ids.From[ids.UserKind](recipient)
-		if targetType != nil && targetID != nil {
-			attempt.Notice.Target = Target{Type: *targetType, ID: *targetID}
-		}
 		claimed = true
-		_, err := storekit.Audit(ctx, tx, "update", "notice", id,
-			map[string]any{"email_attempted_at": nil},
-			map[string]any{"email_attempted_at": claimedAt})
-		return err
+		return auditEmailClaim(ctx, tx, attempt.Notice.ID, claimedAt)
 	})
 	if err != nil {
 		return EmailAttempt{}, false, err
 	}
 	return attempt, claimed, nil
+}
+
+// claimedNoticeColumns is what a claim returns about each notice it took.
+const claimedNoticeColumns = `id, recipient_user_id, kind, subject, body,
+	target_type, target_id, created_at, origin, email_attempted_at, coalesce(dedupe_key,'')`
+
+// scanClaimedNotice reads one row of claimedNoticeColumns.
+func scanClaimedNotice(row pgx.Row) (EmailAttempt, time.Time, error) {
+	var attempt EmailAttempt
+	var id, recipient ids.UUID
+	var claimedAt time.Time
+	var noticeKey string
+	// Both halves are nullable and the table pairs them, so either arriving
+	// alone is a row the constraint should have refused.
+	var targetType *string
+	var targetID *ids.UUID
+	if err := row.Scan(&id, &recipient, &attempt.Notice.Kind, &attempt.Notice.Subject,
+		&attempt.Notice.Body, &targetType, &targetID, &attempt.Notice.CreatedAt,
+		&attempt.Notice.Origin, &claimedAt, &noticeKey); err != nil {
+		return attempt, claimedAt, err
+	}
+	if approval, ok := approvalOfNoticeKey(attempt.Notice.Kind, noticeKey); ok {
+		typed := ids.From[ids.ApprovalKind](approval)
+		attempt.ApprovalID = &typed
+	}
+	attempt.Notice.ID = id
+	attempt.Recipient = ids.From[ids.UserKind](recipient)
+	if targetType != nil && targetID != nil {
+		attempt.Notice.Target = Target{Type: *targetType, ID: *targetID}
+	}
+	return attempt, claimedAt, nil
+}
+
+func auditEmailClaim(ctx context.Context, tx pgx.Tx, id ids.UUID, claimedAt time.Time) error {
+	_, err := storekit.Audit(ctx, tx, "update", "notice", id,
+		map[string]any{"email_attempted_at": nil},
+		map[string]any{"email_attempted_at": claimedAt})
+	return err
 }
 
 // EmailFailed records why the claimed attempt produced no message.

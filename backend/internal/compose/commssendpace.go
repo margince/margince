@@ -8,7 +8,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -30,28 +30,20 @@ type sendPace struct {
 	maxAge time.Duration
 }
 
-// readSendPace reads the pace in one statement, so an admin's save that moves
-// the rate and its window together is never read half applied.
+// readSendPace reads the pace in one transaction, so an admin's save that
+// moves the rate and its window together is never read half applied.
 func readSendPace(ctx context.Context, store *settings.Store) (sendPace, error) {
 	var limit, windowSeconds, maxAgeHours int
 	err := store.WriteTx(ctx, func(tx pgx.Tx) error {
-		raw, err := settings.ApplyManyTx(ctx, tx, identity.SendRateLimit, identity.SendRateWindowSeconds, identity.SendMaxAgeHours)
-		if err != nil {
+		var err error
+		if limit, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.SendRateLimit); err != nil {
 			return err
 		}
-		for _, f := range []struct {
-			into *int
-			key  string
-		}{
-			{&limit, identity.SendRateLimit.Key()},
-			{&windowSeconds, identity.SendRateWindowSeconds.Key()},
-			{&maxAgeHours, identity.SendMaxAgeHours.Key()},
-		} {
-			if err := json.Unmarshal(raw[f.key], f.into); err != nil {
-				return fmt.Errorf("%s does not hold a whole number: %w", f.key, err)
-			}
+		if windowSeconds, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.SendRateWindowSeconds); err != nil {
+			return err
 		}
-		return nil
+		maxAgeHours, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.SendMaxAgeHours)
+		return err
 	})
 	if err != nil {
 		return sendPace{}, fmt.Errorf("compose: reading the send pace: %w", err)

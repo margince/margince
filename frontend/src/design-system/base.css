@@ -137,6 +137,12 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* `Button align="start"`. Two classes, so it outranks `.btn` on specificity
+   rather than on which sheet the bundler emitted first. */
+.btn[data-align="start"] {
+  justify-content: flex-start;
+  text-align: start;
+}
 /* Every button in the product had NO focus style: no rule here, none in
    app.css, none in tokens.css or brand.css, so a keyboard reader got whatever
    the engine drew by default and one screen file had patched its own chips
@@ -161,6 +167,11 @@
   inline-size: var(--controlIcon);
   block-size: var(--controlIcon);
   flex: none;
+}
+/* The AI mark is solid wherever it is drawn. A property here beats lucide's
+   `fill="none"` attribute, so no call site has to ask. */
+.lucide-sparkles {
+  fill: currentColor;
 }
 /* The filled tones are FLAT: a fill and its ink, no shadow under it and no
    lift on hover. A button that casts a shadow sits above the pane it belongs
@@ -190,12 +201,10 @@
 .btn-danger:hover {
   filter: brightness(1.06);
 }
-/* The agent's own verb. Filled indigo rather than outlined, because it is the
-   move the card is recommending and an outlined control beside a bordered
-   "not now" offers a reader two equal choices when only one advances the
-   account. --ai does not lift in dark, so the ink is --textOnAccent, the light
+/* The agent's own verb as the one filled control of its screen, panel or
+   card. --ai does not lift in dark, so the ink is --textOnAccent, the light
    ink every fill that stays put takes: the dark --textOnAccentControl reads
-   3.26:1 on it. */
+   3.73:1 on it. The sparkle takes the label's ink. */
 .btn-ai {
   background: var(--ai);
   color: var(--textOnAccent);
@@ -203,23 +212,16 @@
 .btn-ai:hover {
   filter: brightness(1.06);
 }
-/* The agent's own verb where it is ONE of several equal offers — the four
-   rewrites of a draft, where no single one is the move. Tinted and outlined
-   rather than filled: four filled indigo buttons in a row read as four
-   recommendations, and the colour stops meaning "the machine does this" and
-   starts meaning "press me". */
-.btn-aiQuiet {
-  background: var(--aiLight);
+/* Every other agent verb is a ghost that also carries this class (see
+   `faceClass` in button.tsx), so a row of verbs reads as one volume, and only
+   the sparkle in --aiText says the press starts a model. */
+.btn-aiQuiet .lucide-sparkles {
   color: var(--aiText);
-  border-color: var(--aiMed);
-}
-.btn-aiQuiet:hover {
-  background: var(--aiChip);
 }
 
 /* The outlined verb: the pane's own ground with a hairline, in the primary
-   ink. Not transparent — on the glow behind a record head a see-through
-   button reads as a label, and four of them as a sentence. */
+   ink. Not transparent: a see-through button reads as a label, and four of
+   them as a sentence. */
 .btn-ghost {
   background: var(--pane);
   /* The hairline, not the control boundary: an outlined verb is a pane with
@@ -227,30 +229,30 @@
      cartoon buttons. The word is what identifies the control (WCAG 1.4.11
      asks the boundary to clear 3:1 only where it is the sole cue), so the
      edge can be as quiet as every other pane's. */
-  border-color: var(--borderSubtle);
+  --ghostEdge: var(--borderSubtle);
+  border-color: var(--ghostEdge);
 }
 .btn-ghost:hover {
   background: var(--bgHover);
 }
-/* A button that TOGGLES has to show which way it is set. `aria-pressed` is the
-   fact — it is already on every toggle in the tree — but nothing drew it, so a
-   selected relationship-graph node announced itself as pressed and looked
-   exactly like its unpressed neighbours, on a panel whose whole point is that
-   selecting a node drives the detail below it. The accent pairing is the one
-   the list surface already uses for a pressed chip (`.lt-chip.active`), so a
-   set toggle reads the same wherever it is drawn.
+/* Hover recolours the variable, not the border: a ghost drawn borderless or
+   with its own edge keeps it under the pointer. */
+.btn-ghost:hover:not(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
+  --ghostEdge: var(--accent);
+}
+/* A button that TOGGLES has to show which way it is set, from `aria-pressed`:
+   a selected relationship-graph node drives the detail below it, and has to
+   look unlike its neighbours. The pair is the pressed filter pill's
+   (filterpills.css), because a set toggle says where the reader is; in the
+   accent it read as the page's one action.
 
    Scoped to the ghost variant: primary and danger carry a fill already, and a
    pressed state has to differ from the resting one rather than replace a
    stronger signal with a weaker. */
 .btn-ghost[aria-pressed="true"] {
-  border-color: var(--accentMed);
-  background: var(--accentLight);
-  color: var(--accentText);
-}
-.btn-ghost[aria-pressed="true"]:hover {
-  background: var(--accentMed);
-  color: var(--accentText);
+  border-color: var(--borderStrong);
+  background: var(--bgChip);
+  color: var(--textPrimary);
 }
 /* federated: the door into another company's sign-in.
  *
@@ -325,6 +327,11 @@
   padding-inline: 0;
   flex: none;
   align-self: center;
+}
+/* A verb's short tile word (`IconAction word`, `VerbWord`): drawn only where
+   a verb bar lays the verbs out as tiles (recordview.css). */
+.verb-word {
+  display: none;
 }
 /*
  * The press. Until now nothing in this design system had one: `grep :active`
@@ -551,7 +558,7 @@ a:not([class]):focus-visible {
 }
 .iconbtn:hover,
 .btn.btn-bare:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 .iconbtn:focus-visible,
@@ -653,11 +660,11 @@ kbd {
 .code-block {
   margin: 0;
   max-height: 300px;
+  position: relative;
   overflow: auto;
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
   font-family: var(--fontFamilyMono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

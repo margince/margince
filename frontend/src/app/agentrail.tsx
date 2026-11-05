@@ -299,6 +299,7 @@ export function AgentRail({
     restingReadings(
       {
         waiting: signals.waiting,
+        sourcesUnknown: signals.sourcesUnknown,
         developmentLine:
           signals.ai === "development" ? t("auth.coreDevelopment") : null,
         settled,

@@ -47,3 +47,13 @@ a5f0633da0c9bcb048f592cef53e3bced9583c4e e5a82786d1b7231e23936099e6305e7b9244be8
 44c4f0a9db33142a6b457a9c9ad0b7df84f51429 d8503b30e4b216b292d235d74278b9a2cb24d92b ratified-6208-the-author-arrives-with-the-record
 4ac0f091d9c7d58807f7f7dce3db29182e617a9f a759abe8b87bbe08f66e7943d0d76db3898f8c35 ratified-a-zip-run-has-no-single-object-so-object-is-optional-on-the-import-profile-and-run-and-a-whole-file-problem-has-no-line
 28b85567196374137b62f75d2d1849b6d65d2a59 5e8151789247b842b7cee867e6cf6b262d62d7be ratified-agent-reads-allowance-retired
+ccb5c671bcb9781769fb9550e7bddfb5a3b0934c b2a77ae532eea4f11b438f13bd34c4330ff01cdc ratified-every-draft-email-route-takes-the-same-steering-and-intent-limit
+236434a7133e1bbbff3b6cabd1352dad36ee74b8 fccd891a6a7d58721bbbd8c6745d063ff9c20a8d ratified-industry-is-one-fixed-list-of-codes-and-growth-fit-sends-its-missing-inputs-and-next-step-as-codes
+b7b06dc10359127ff57ad0baad7a4adb9e74b913 541e6db26df483432708952efd3f9c496d330d34 ratified-8573-a-phase-move-names-its-actor-from-the-audit-row-and-may-be-unknown
+d27e25da7ca3cd4a9828e08eb961a8a76da07880 950608de6a2004dd11a2b9d56b072ccc81d99e8e ratified-an-introduction-can-be-recorded-after-the-fact-so-reason-and-due-date-are-optional-on-an-ask
+f7fe6ec4b79863203693aa0d7419d4b18311e558 6862fdbfce854e9e3c6527e6b06204c32280a75f ratified-an-introduction-can-be-recorded-after-the-fact-so-reason-and-due-date-are-optional-on-an-ask
+521ac02c81425d74b8be26618c6b157d944f0487 b042d606af4d8de4a500f9b975b258e8b988c190 ratified-a-team-review-sends-no-member-meetings-to-a-seat-that-may-not-read-activities
+733a8dd4c6d535c39b03707d9ba1018659336358 7eb293749cb60ab3169ebb7ed40cb1ecdd01f9c9 ratified-a-partner-stage-is-an-installation-list-not-an-enum
+6689c8fd8ee2ee2dd8c7b76699cf9aebbb3a6030 b76c8b7a5dfeff21cc423ec273f5d8ae6e0260ce ratified-a-team-review-member-handoff-count-is-absent-for-a-reader-without-lead-read
+80336a2151528f103f78bfc932dcb1720f1cc711 179edea967f95e1e6a734d964f65f40f2e7f0c97 ratified-member-and-assistant-employment-status-is-current-or-former
+efc718c707ea1a12c05ab5e28b6672875e0b1be1 b2fa8a57163c5a79e48473b59e34cf9d6b79249a ratified-a-deal-has-its-own-win-probability

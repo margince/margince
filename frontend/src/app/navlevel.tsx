@@ -12,6 +12,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { AppLink } from "../design-system/applink";
 import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
@@ -47,6 +48,9 @@ function navTipKey(level: NavTrailLevel, id: string): string {
 }
 
 const BACK_TIP_KEY = "rail-level-back";
+
+/** A level's destination rows. Back is a `.navitem` too, and stands outside them. */
+export const DESTINATION_ROW = ".navlevel .navwrap .navitem";
 
 // Where a reader who never walked into the section is sent when they walk out
 // of it: a deep link carries no origin, and an invented one would be a claim
@@ -180,7 +184,7 @@ export function useNavLevel(
   };
   const onSelect = useCallback(
     (entry: NavLevelEntry) => {
-      // A row pressed inside the phone sheet closes it: the sheet covers the
+      // A row pressed inside the phone menu closes it: the menu covers the
       // page it just navigated to. Dismissal on an OUTSIDE click cannot do this,
       // and should not — a preference row inside a popover must be able to act
       // without taking the popover with it.
@@ -203,18 +207,23 @@ export function useNavLevel(
     if (!walk.spend(routeHash(route))) {
       return;
     }
-    container.current
-      ?.querySelector<HTMLElement>(".navlevel .navwrap .navitem")
-      ?.focus();
+    container.current?.querySelector<HTMLElement>(DESTINATION_ROW)?.focus();
   });
 
   return { depth, shown, parent, onWalkUp, onSelect };
 }
 
+export type NavRows = "all" | "bar" | "offbar";
+
+function drawsRow(level: NavTrailLevel, rows: NavRows, id: string): boolean {
+  if (rows === "all") return true;
+  return (level.barIds?.has(id) ?? false) === (rows === "bar");
+}
+
 type TipState = Readonly<{
   collapsed: boolean;
   tip: string | null;
-  onTip: (key: string | null) => void;
+  onTip: (key: string | null, by?: "pointer" | "focus") => void;
 }>;
 
 function NavLevelRow({
@@ -242,18 +251,18 @@ function NavLevelRow({
   // A rail crossed on the way to the work column fired one tip per row it
   // passed, which read as the rail flickering rather than as a page answering.
   const hover = useHoverIntent(
-    () => state.onTip(key),
+    () => state.onTip(key, "pointer"),
     () => state.onTip(null),
   );
   return (
-    <a
+    <AppLink
       className={active ? "navitem t-body active" : "navitem t-body"}
       href={navEntryHref(level.path, entry)}
       aria-label={label}
       aria-current={active ? currentClaim(level) : undefined}
       onPointerEnter={hover.onPointerEnter}
       onPointerLeave={hover.onPointerLeave}
-      onFocus={() => state.onTip(key)}
+      onFocus={() => state.onTip(key, "focus")}
       onBlur={() => state.onTip(null)}
       onClick={() => onSelect(entry)}
     >
@@ -280,7 +289,7 @@ function NavLevelRow({
           {label}
         </span>
       )}
-    </a>
+    </AppLink>
   );
 }
 
@@ -292,6 +301,7 @@ function NavLevelGroupView({
   onSelect,
   centre,
   centreAfter,
+  rows,
 }: Readonly<{
   level: NavTrailLevel;
   group: NavLevelGroup;
@@ -300,13 +310,20 @@ function NavLevelGroupView({
   onSelect: (entry: NavLevelEntry) => void;
   centre?: ReactNode;
   centreAfter?: string;
+  rows: NavRows;
 }>) {
   const t = useT();
+  const items = group.items.filter((entry) => drawsRow(level, rows, entry.id));
+  if (items.length === 0) {
+    return null;
+  }
   // The id that ties the group to the words naming it. DERIVED from the message
   // key and never generated, so it is the same across renders and the same in a
   // snapshot — and the key is already what makes a group unique in its level,
   // being the React key the level maps these with.
-  const labelId = group.headingKey ? `navgroup-${group.headingKey}` : undefined;
+  // The menu over the bar names the same groups, and an id names one element.
+  const heading = rows === "bar" ? undefined : group.headingKey;
+  const labelId = heading ? `navgroup-${heading}` : undefined;
   return (
     // A named GROUP, not a heading and its section. The words name a set of
     // links inside a navigation landmark, which is where a reader meets them;
@@ -327,18 +344,14 @@ function NavLevelGroupView({
           NAMED there: a hidden element referenced by `aria-labelledby` is read
           for the name, which is the whole reason the name is wired this way
           rather than taken from the content. */}
-      {group.headingKey && (
+      {heading && (
         <div className="navheading" id={labelId}>
-          {t(group.headingKey)}
+          {t(heading)}
         </div>
       )}
-      {group.items.map((entry) => (
+      {items.map((entry) => (
         <Fragment key={entry.id}>
-          <div
-            className={
-              level.barIds?.has(entry.id) ? "navwrap primary" : "navwrap"
-            }
-          >
+          <div className="navwrap">
             <NavLevelRow
               level={level}
               entry={entry}
@@ -389,7 +402,7 @@ function NavLevelBack({
       ? t("shell.navBackApp")
       : t("shell.navBackTo", { name: t(above) });
   const hover = useHoverIntent(
-    () => state.onTip(BACK_TIP_KEY),
+    () => state.onTip(BACK_TIP_KEY, "pointer"),
     () => state.onTip(null),
   );
   return (
@@ -400,7 +413,7 @@ function NavLevelBack({
       onClick={onWalkUp}
       onPointerEnter={hover.onPointerEnter}
       onPointerLeave={hover.onPointerLeave}
-      onFocus={() => state.onTip(BACK_TIP_KEY)}
+      onFocus={() => state.onTip(BACK_TIP_KEY, "focus")}
       onBlur={() => state.onTip(null)}
     >
       <ChevronLeft aria-hidden />
@@ -443,6 +456,7 @@ export function NavLevelView({
   onSelect,
   onWalkUp,
   centre,
+  rows = "all",
 }: Readonly<{
   level: NavTrailLevel;
   // Absent on the primary level, which is where the sidebar already is: there
@@ -456,6 +470,7 @@ export function NavLevelView({
   // bar's row of them. The sidebar passes nothing: a column of places to go has
   // no middle for a reading to stand in, and the agent keeps its own foot there.
   centre?: ReactNode;
+  rows?: NavRows;
 }>) {
   const centreAfter = centre ? centreAfterId(level) : undefined;
   return (
@@ -476,6 +491,7 @@ export function NavLevelView({
           onSelect={onSelect}
           centre={centre}
           centreAfter={centreAfter}
+          rows={rows}
         />
       ))}
     </div>

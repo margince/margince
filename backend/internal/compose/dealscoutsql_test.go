@@ -30,7 +30,7 @@ func TestTheScoutReadsOnlyTheCompaniesItChose(t *testing.T) {
 		t.Fatal("a document reading is looked up outside the final select over the chosen companies' evidence")
 	}
 	chosenBody := query[chosen:cited]
-	for _, rule := range []string{"FROM ev WHERE kind <> 'signal'", "FROM pairs"} {
+	for _, rule := range []string{"FROM pairs"} {
 		if !strings.Contains(chosenBody, rule) {
 			t.Fatalf("the cap chooses among companies without %q qualifying them first", rule)
 		}

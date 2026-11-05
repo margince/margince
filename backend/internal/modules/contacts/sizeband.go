@@ -4,10 +4,11 @@
 package contacts
 
 // The size_band column is a closed enum; employee_range is the page's own
-// phrasing ("25 to 50", "about 120 contacts", "51-200"). The mapping between
-// them REFUSES rather than guesses (PO-AC-N-7's spirit for a derived
-// canonical value): a phrase lands in a band only when every headcount it
-// could honestly mean falls inside that one band.
+// phrasing ("25 to 50", "about 120 contacts", "140+"). A phrase lands in a
+// band when one band holds the headcount it states. A floor ("140+", "over
+// 500") lands in the band holding its lower bound. That band is the smallest
+// one the page supports, and an empty column matches no size filter at all.
+// A ceiling ("up to 50") and a range across bands still refuse.
 
 import (
 	"context"
@@ -42,9 +43,15 @@ var (
 	// means the digits alone are NOT the headcount — always a refusal,
 	// never a parse.
 	employeeRangeMagnitude = regexp.MustCompile(`(?i)\d\s*[-–.]?\s*(k|m|thousand|tausend|tsd|million|mio|mrd|billion)($|[^\p{L}])`)
-	// A comparison marker (">500", "over 500", "up to 50") states a bound,
-	// not a range this mapping can place in one band.
-	employeeRangeComparison = regexp.MustCompile(`(?i)[<>≤≥]|(^|[^\p{L}])(over|under|more than|less than|fewer than|at least|up to|mehr als|über|unter|weniger als|bis zu|mindestens|höchstens)([^\p{L}]|$)`)
+	// A floor marker states a lower bound. The exclusive ones (">500", "over
+	// 500") start one above the number; the inclusive ones ("at least 500")
+	// start on it.
+	employeeRangeAbove   = regexp.MustCompile(`(?i)>([^=]|$)|(^|[^\p{L}])(over|more than|mehr als|über)([^\p{L}]|$)`)
+	employeeRangeAtLeast = regexp.MustCompile(`(?i)≥|>=|(^|[^\p{L}])(at least|mindestens)([^\p{L}]|$)`)
+	// A ceiling marker ("up to 50") could mean any band below it. A negated
+	// floor ("no more than 500", "nicht mehr als 500") is a ceiling too, and
+	// is checked before the floors so it never reads as one.
+	employeeRangeCeiling = regexp.MustCompile(`(?i)[<≤]|(^|[^\p{L}])(under|less than|fewer than|up to|at most|unter|weniger als|bis zu|höchstens|maximal|(no|not|nicht)\s+(more than|greater than|over|mehr als|über))([^\p{L}]|$)`)
 	// A company-register marker means the digits are an identifier, not a
 	// headcount ("HRB 9001").
 	employeeRangeRegister = regexp.MustCompile(`(?i)(^|[^\p{L}])(hrb|hra|vr|vat|ust)([^\p{L}\d]|\d|$)`)
@@ -56,15 +63,8 @@ var (
 )
 
 // sizeBandFromEmployeeRange maps a stated headcount phrase onto the
-// size_band enum, reporting false whenever the phrasing does not land
-// cleanly in exactly one band.
-// topBand is the only band with no ceiling, and topBandFloor the headcount
-// above which nothing else can contain a company.
-const (
-	topBand      = "5000+"
-	topBandFloor = 5000
-)
-
+// size_band enum, reporting false whenever the phrasing does not land in
+// one single band.
 func sizeBandFromEmployeeRange(text string) (string, bool) {
 	trimmed := strings.TrimSpace(text)
 	for _, band := range sizeBands {
@@ -75,44 +75,58 @@ func sizeBandFromEmployeeRange(text string) (string, bool) {
 	// A leading minus is a parse artifact ("-5"), not a headcount.
 	if strings.HasPrefix(trimmed, "-") ||
 		employeeRangeMagnitude.MatchString(trimmed) ||
-		employeeRangeRegister.MatchString(trimmed) {
-		return "", false
-	}
-	// A comparison states a FLOOR, and a floor places the company in one band
-	// only when it already sits above the open top band's boundary: "über
-	// 11500 Mitarbeitende" cannot be anything but 5000+, however far above it
-	// reaches. Every other bound stays refused for the reason the pattern was
-	// written — "over 500" is 501 or 50,000 and the mapping cannot tell.
-	//
-	// This is why adesso.de's homepage headcount was read, filed and then
-	// dropped on the way to the column.
-	if employeeRangeComparison.MatchString(trimmed) {
-		if numbers, ok := employeeRangeNumbers(trimmed); ok && len(numbers) == 1 && numbers[0] >= topBandFloor {
-			return topBand, true
-		}
+		employeeRangeRegister.MatchString(trimmed) ||
+		employeeRangeCeiling.MatchString(trimmed) {
 		return "", false
 	}
 	numbers, ok := employeeRangeNumbers(trimmed)
 	if !ok {
 		return "", false
 	}
-	// "200+" states a floor with no ceiling: only the open top band can
-	// contain all of it.
-	if strings.Contains(trimmed, "+") {
-		if len(numbers) == 1 && numbers[0] >= topBandFloor {
-			return topBand, true
+	above := employeeRangeAbove.MatchString(trimmed)
+	if above || employeeRangeAtLeast.MatchString(trimmed) || strings.Contains(trimmed, "+") {
+		// A floor names one number; "50-200+" is no floor anybody can read.
+		if len(numbers) != 1 {
+			return "", false
 		}
-		return "", false
+		if above {
+			return bandContaining(numbers[0] + 1)
+		}
+		// The enum spells its open band "5000+", so that floor names the band
+		// in every spelling ("5.000+", "5,000+ employees"), not the one below.
+		top := sizeBands[len(sizeBands)-1]
+		if strings.Contains(trimmed, "+") && numbers[0] == top.lo-1 {
+			return top.label, true
+		}
+		return bandContaining(numbers[0])
 	}
 	switch len(numbers) {
 	case 1:
 		return bandContaining(numbers[0])
 	case 2:
-		lowBand, okLow := bandContaining(numbers[0])
-		highBand, okHigh := bandContaining(numbers[1])
-		if okLow && okHigh && numbers[0] <= numbers[1] && lowBand == highBand {
-			return lowBand, true
+		return bandHoldingRange(numbers[0], numbers[1])
+	}
+	return "", false
+}
+
+// bandHoldingRange places a stated range when both ends share one band. Sites
+// print band edges on round numbers ("50-200", "200-500"), one below the
+// enum's own floors. So a range that starts on a band's ceiling is read as
+// the band above it.
+func bandHoldingRange(lo, hi int) (string, bool) {
+	if lo > hi {
+		return "", false
+	}
+	for _, band := range sizeBands {
+		if lo == band.hi && hi > lo {
+			lo++
+			break
 		}
+	}
+	lowBand, okLow := bandContaining(lo)
+	highBand, okHigh := bandContaining(hi)
+	if okLow && okHigh && lowBand == highBand {
+		return lowBand, true
 	}
 	return "", false
 }

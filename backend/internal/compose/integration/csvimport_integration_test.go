@@ -30,40 +30,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
-
-type importColumnDTO struct {
-	Header   string   `json:"header"`
-	FillRate float64  `json:"fill_rate"`
-	Samples  []string `json:"samples"`
-}
-
-type importProfileDTO struct {
-	RunID            string            `json:"run_id"`
-	RowCount         int               `json:"row_count"`
-	SourceRef        string            `json:"source_ref"`
-	Object           string            `json:"object"`
-	Columns          []importColumnDTO `json:"columns"`
-	RowsProfiled     int               `json:"rows_profiled"`
-	SuggestedMapping map[string]string `json:"suggested_mapping"`
-	Targets          []string          `json:"targets"`
-}
-
-type importRunDTO struct {
-	ID         string `json:"id"`
-	Status     string `json:"status"`
-	Connector  string `json:"connector"`
-	Object     string `json:"object"`
-	Checkpoint int    `json:"checkpoint"`
-	Error      string `json:"error"`
-	Version    int    `json:"version"`
-	// Released is the run's source_released.
-	Released     bool   `json:"source_released"`
-	OnBrokenLink string `json:"on_broken_link"`
-	SupersededBy string `json:"superseded_by"`
-}
 
 type importDispositionDTO struct {
 	Created    int  `json:"created"`
@@ -74,12 +44,13 @@ type importDispositionDTO struct {
 }
 
 type importIssueDTO struct {
-	Line   int    `json:"line"`
-	Reason string `json:"reason"`
-	File   string `json:"file"`
-	Kind   string `json:"kind"`
-	Column string `json:"column"`
-	Value  string `json:"value"`
+	Line       int    `json:"line"`
+	Reason     string `json:"reason"`
+	ReasonCode string `json:"reason_code"`
+	File       string `json:"file"`
+	Kind       string `json:"kind"`
+	Column     string `json:"column"`
+	Value      string `json:"value"`
 }
 
 type importLinksDTO struct {
@@ -133,27 +104,17 @@ func setupImportAppWithStore(t *testing.T) (*apptest.AppEnv, blobstore.Store) {
 	return e, store
 }
 
-// createRunOnDuplicate is createRunWithMapping for a run that names a duplicate
+// createRunOnDuplicate is importjobtest.CreateRunWithMapping for a run that names a duplicate
 // policy. Separate rather than a variadic so every existing call site keeps
 // saying, in its own text, that it takes the default.
 func createRunOnDuplicate(t *testing.T, e *apptest.AppEnv, object, sourceRef string,
 	mapping map[string]string, onDuplicate string,
-) (importRunDTO, int) {
+) (importjobtest.Run, int) {
 	t.Helper()
-	var run importRunDTO
-	status := testCall(t, e, "/v1/imports", map[string]any{
+	var run importjobtest.Run
+	status := importjobtest.CallTestRun(t, e, "/v1/imports", map[string]any{
 		"connector": "csv", "object": object, "source_ref": sourceRef,
 		"mapping": mapping, "on_duplicate": onDuplicate,
-	}, &run)
-	return run, status
-}
-
-func createRunWithMapping(t *testing.T, e *apptest.AppEnv, object, sourceRef string, mapping map[string]string) (importRunDTO, int) {
-	t.Helper()
-	var run importRunDTO
-	status := testCall(t, e, "/v1/imports", AnyMap{
-		"connector": "csv", "object": object,
-		"source_ref": sourceRef, "mapping": mapping,
 	}, &run)
 	return run, status
 }
@@ -195,7 +156,7 @@ func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 	e := setupImportApp(t)
 	contactsBefore := importedContactCount(t, e)
 
-	profile, status := uploadCSV(t, e, "lead", prospectCSV)
+	profile, status := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
@@ -209,7 +170,7 @@ func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 		t.Fatal("the upload returned no source_ref, so nothing can reference the stored file")
 	}
 
-	run, status := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
@@ -234,7 +195,7 @@ func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 		t.Fatalf("source key = %q, want the column mapped onto email", report.SourceKeyUsed)
 	}
 
-	var approved importRunDTO
+	var approved importjobtest.Run
 	if status := importCall(t, e, run.ID, "approve", nil, &approved); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
@@ -260,8 +221,8 @@ func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 func TestCSVImportReRunConvergesAndAnEditedFileUpdates(t *testing.T) {
 	e := setupImportApp(t)
 
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("first approve → %d, want 202", status)
 	}
@@ -270,8 +231,8 @@ func TestCSVImportReRunConvergesAndAnEditedFileUpdates(t *testing.T) {
 	}
 
 	// The identical file again: recognized, and nothing created.
-	same, _ := uploadCSV(t, e, "lead", prospectCSV)
-	sameRun, _ := createRunWithMapping(t, e, "lead", same.SourceRef, same.SuggestedMapping)
+	same, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	sameRun, _ := importjobtest.CreateRunWithMapping(t, e, "lead", same.SourceRef, same.SuggestedMapping)
 	if status := importCall(t, e, sameRun.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("second approve → %d, want 202", status)
 	}
@@ -284,8 +245,8 @@ func TestCSVImportReRunConvergesAndAnEditedFileUpdates(t *testing.T) {
 		"ada@lovelace.example,Ada Lovelace,Analyst\n" +
 		"grace@hopper.example,Grace Hopper,Rear Admiral (upper half)\n" +
 		"katherine@johnson.example,Katherine Johnson,Mathematician\n"
-	edited, _ := uploadCSV(t, e, "lead", corrected)
-	editedRun, _ := createRunWithMapping(t, e, "lead", edited.SourceRef, edited.SuggestedMapping)
+	edited, _ := importjobtest.UploadCSV(t, e, "lead", corrected)
+	editedRun, _ := importjobtest.CreateRunWithMapping(t, e, "lead", edited.SourceRef, edited.SuggestedMapping)
 	if status := importCall(t, e, editedRun.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("third approve → %d, want 202", status)
 	}
@@ -320,11 +281,11 @@ func TestCSVImportDisclosesUnidentifiableRows(t *testing.T) {
 	ragged := "Email,Full Name\n" +
 		",No Address Here\n" +
 		"real@example.test,Real Contact\n"
-	profile, status := uploadCSV(t, e, "lead", ragged)
+	profile, status := importjobtest.UploadCSV(t, e, "lead", ragged)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, status := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
@@ -349,8 +310,8 @@ func TestCSVImportDisclosesUnidentifiableRows(t *testing.T) {
 func TestCSVImportApprovalIsValidOnlyOnce(t *testing.T) {
 	e := setupImportApp(t)
 
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("first approve → %d, want 202", status)
 	}
@@ -378,8 +339,8 @@ func TestCSVImportUnknownRunIsNotFound(t *testing.T) {
 func TestCSVImportRefusesAnImpossibleMapping(t *testing.T) {
 	e := setupImportApp(t)
 
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	status := testCall(t, e, "/v1/imports", AnyMap{
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": profile.SourceRef,
 		"mapping":    map[string]string{"Email": "email", "Title": "annual_revenue"},
@@ -396,10 +357,10 @@ func TestCSVImportRefusesAnImpossibleMapping(t *testing.T) {
 func TestCSVImportRefusesAForeignSourceReference(t *testing.T) {
 	e := setupImportApp(t)
 
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	foreign := "11111111-1111-7111-8111-111111111111/import/" + path.Base(profile.SourceRef)
 
-	status := testCall(t, e, "/v1/imports", AnyMap{
+	status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": foreign, "mapping": profile.SuggestedMapping,
 	}, nil)
@@ -419,14 +380,14 @@ func TestCSVImportRefusesAForeignSourceReference(t *testing.T) {
 func TestCSVImportPredictsUnchangedRatherThanUpdatingEverything(t *testing.T) {
 	e := setupImportApp(t)
 
-	first, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)
+	first, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)
 	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
-	again, _ := uploadCSV(t, e, "lead", prospectCSV)
-	second, _ := createRunWithMapping(t, e, "lead", again.SourceRef, again.SuggestedMapping)
+	again, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	second, _ := importjobtest.CreateRunWithMapping(t, e, "lead", again.SourceRef, again.SuggestedMapping)
 
 	var report importReportDTO
 	if status := e.Call(t, http.MethodGet, "/v1/imports/"+second.ID+"/report", nil, nil, &report); status != http.StatusOK {
@@ -447,15 +408,15 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 	// Readable header, unreadable rows: the mapping check passes and the walk
 	// is what fails. Written over the stored upload, because profiling would
 	// have refused this file at the door.
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	const brokenRows = "Email,First Name\na@x.test,\"unterminated\n"
 	if err := store.Put(context.Background(), profile.SourceRef,
 		strings.NewReader(brokenRows), int64(len(brokenRows)), "text/csv"); err != nil {
 		t.Fatalf("replacing the stored upload: %v", err)
 	}
 	// The worker meets the broken row, so the request answers before it does.
-	var refused importRunDTO
-	if status := testCall(t, e, "/v1/imports", AnyMap{
+	var refused importjobtest.Run
+	if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": profile.SourceRef, "mapping": map[string]string{"Email": "email"},
 	}, &refused); status != http.StatusAccepted {
@@ -470,11 +431,11 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 
 	// A vanished upload cannot be read at all, so it is refused before the
 	// test run starts, and its draft is left as it was.
-	second, _ := uploadCSV(t, e, "lead", prospectCSV)
+	second, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	if err := store.Delete(context.Background(), second.SourceRef); err != nil {
 		t.Fatalf("removing the stored upload: %v", err)
 	}
-	if status := testCall(t, e, "/v1/imports", AnyMap{
+	if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": second.SourceRef, "mapping": second.SuggestedMapping,
 	}, nil); status != http.StatusNotFound {
@@ -488,9 +449,9 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 // importRuns reads the csv runs this installation holds, straight from the
 // table: what the assertions above need is the row a read surface would not
 // show, including one sitting in a state nothing can move.
-func importRuns(t *testing.T, e *apptest.AppEnv) []importRunDTO {
+func importRuns(t *testing.T, e *apptest.AppEnv) []importjobtest.Run {
 	t.Helper()
-	var runs []importRunDTO
+	var runs []importjobtest.Run
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT id::text, status FROM import_run WHERE connector = 'csv'`)
 		if err != nil {
@@ -498,7 +459,7 @@ func importRuns(t *testing.T, e *apptest.AppEnv) []importRunDTO {
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var r importRunDTO
+			var r importjobtest.Run
 			if err := rows.Scan(&r.ID, &r.Status); err != nil {
 				return err
 			}
@@ -517,12 +478,12 @@ func importRuns(t *testing.T, e *apptest.AppEnv) []importRunDTO {
 func TestCSVImportRunNamesWhoOpenedIt(t *testing.T) {
 	e := setupImportApp(t)
 
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	var run struct {
 		ID         string `json:"id"`
 		CapturedBy string `json:"captured_by"`
 	}
-	if status := testCall(t, e, "/v1/imports", AnyMap{
+	if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": profile.SourceRef, "mapping": profile.SuggestedMapping,
 	}, &run); status != http.StatusAccepted {
@@ -560,7 +521,7 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 	const file = "Company,Legal Name,Industry,Description\n" +
 		"Initech,Initech GmbH,software,They make software\n" +
 		"Umbrella,Umbrella AG,biotech,They make other things\n"
-	profile, status := uploadCSV(t, e, "company", file)
+	profile, status := importjobtest.UploadCSV(t, e, "company", file)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
@@ -569,7 +530,7 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 		"Company": "display_name", "Legal Name": "legal_name",
 		"Industry": "industry", "Description": "description",
 	}
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, mapping)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, mapping)
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
@@ -601,8 +562,8 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 	const corrected = "Company,Legal Name,Industry,Description\n" +
 		"Initech,Initech SE,software,They make software\n" +
 		"Umbrella,Umbrella AG,biotech,They make other things\n"
-	edited, _ := uploadCSV(t, e, "company", corrected)
-	editedRun, status := createRunWithMapping(t, e, "company", edited.SourceRef, mapping)
+	edited, _ := importjobtest.UploadCSV(t, e, "company", corrected)
+	editedRun, status := importjobtest.CreateRunWithMapping(t, e, "company", edited.SourceRef, mapping)
 	if status != http.StatusAccepted {
 		t.Fatalf("create corrected run → %d, want 202", status)
 	}
@@ -631,13 +592,13 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 func TestCSVImportUploadRefusesWhatItCannotUse(t *testing.T) {
 	e := setupImportApp(t)
 
-	if _, status := uploadCSV(t, e, "note", prospectCSV); status != http.StatusUnprocessableEntity {
+	if _, status := importjobtest.UploadCSV(t, e, "note", prospectCSV); status != http.StatusUnprocessableEntity {
 		t.Fatalf("an unsupported object → %d, want 422", status)
 	}
-	if _, status := uploadCSV(t, e, "lead", ""); status != http.StatusUnprocessableEntity {
+	if _, status := importjobtest.UploadCSV(t, e, "lead", ""); status != http.StatusUnprocessableEntity {
 		t.Fatalf("an empty file → %d, want 422", status)
 	}
-	if _, status := uploadCSV(t, e, "lead", "Email,Email\na@x.test,b@x.test\n"); status != http.StatusUnprocessableEntity {
+	if _, status := importjobtest.UploadCSV(t, e, "lead", "Email,Email\na@x.test,b@x.test\n"); status != http.StatusUnprocessableEntity {
 		t.Fatalf("a duplicate header → %d, want 422", status)
 	}
 }
@@ -660,8 +621,8 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 
 	// A spreadsheet naming that same company.
 	const second = "Company,Industry\nAkeneo,retail software\n"
-	profile2, _ := uploadCSV(t, e, "company", second)
-	run2, _ := createRunWithMapping(t, e, "company", profile2.SourceRef,
+	profile2, _ := importjobtest.UploadCSV(t, e, "company", second)
+	run2, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile2.SourceRef,
 		map[string]string{"Company": "display_name", "Industry": "industry"})
 
 	var report importReportDTO
@@ -717,8 +678,8 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	// say so — a dry run that reports a clean create for a row the commit
 	// cannot land has told the user the opposite of what will happen.
 	const bands = "Company,Employees\nNordwind Logistik,240\n"
-	profile3, _ := uploadCSV(t, e, "company", bands)
-	run3, status3 := createRunWithMapping(t, e, "company", profile3.SourceRef,
+	profile3, _ := importjobtest.UploadCSV(t, e, "company", bands)
+	run3, status3 := importjobtest.CreateRunWithMapping(t, e, "company", profile3.SourceRef,
 		map[string]string{"Company": "display_name", "Employees": "size_band"})
 
 	if status3 != http.StatusAccepted {
@@ -760,8 +721,8 @@ func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
 	// Land the company through the import, with a full address.
 	const full = "Company,Street,City,Postal,Country\n" +
 		"Baqend,Stresemannstr. 23,Hamburg,22769,DE\n"
-	p1, _ := uploadCSV(t, e, "company", full)
-	r1, _ := createRunWithMapping(t, e, "company", p1.SourceRef, map[string]string{
+	p1, _ := importjobtest.UploadCSV(t, e, "company", full)
+	r1, _ := importjobtest.CreateRunWithMapping(t, e, "company", p1.SourceRef, map[string]string{
 		"Company": "display_name", "Street": "address.line1", "City": "address.city",
 		"Postal": "address.postal_code", "Country": "address.country",
 	})
@@ -771,8 +732,8 @@ func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
 
 	// A corrected file carrying the company and ONE address field.
 	const partial = "Company,City\nBaqend,Berlin\n"
-	profile, _ := uploadCSV(t, e, "company", partial)
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
+	profile, _ := importjobtest.UploadCSV(t, e, "company", partial)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "City": "address.city"})
 	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
@@ -819,7 +780,7 @@ func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 	companiesBefore := len(companyList(t, e).Data)
 
 	const file = "Company\nKestrel Data\nNordwind Logistik\n"
-	profile, _ := uploadCSV(t, e, "company", file)
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
 	run, status := createRunOnDuplicate(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name"}, "skip")
 	if status != http.StatusAccepted {
@@ -865,9 +826,9 @@ func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 // An unknown policy is refused rather than silently treated as create.
 func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "company", "Company\nInitech\n")
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Company\nInitech\n")
 	// Decoded into nothing: a refusal answers a problem document, not a run.
-	status := testCall(t, e, "/v1/imports", map[string]any{
+	status := importjobtest.CallTestRun(t, e, "/v1/imports", map[string]any{
 		"connector": "csv", "object": "company", "source_ref": profile.SourceRef,
 		"mapping": map[string]string{"Company": "display_name"}, "on_duplicate": "merge",
 	}, nil)
@@ -892,8 +853,8 @@ func TestCSVImportCountsTheDuplicatesTheCommitMetNotTheOnesThePreviewPredicted(t
 	e := setupImportApp(t)
 
 	const file = "Company,Industry\nZephyr Freight,logistics\n"
-	profile, _ := uploadCSV(t, e, "company", file)
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef,
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "Industry": "industry"})
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
@@ -954,12 +915,12 @@ func duplicatesSaid(report importReportDTO) string {
 
 func TestRecentImportsListsTheRunsNewestFirstAcrossPages(t *testing.T) {
 	e := setupImportApp(t)
-	first, _ := uploadCSV(t, e, "lead", prospectCSV)
-	oldest, _ := createRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)
-	second, _ := uploadCSV(t, e, "lead", prospectCSV)
-	newest, _ := createRunWithMapping(t, e, "lead", second.SourceRef, second.SuggestedMapping)
+	first, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	oldest, _ := importjobtest.CreateRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)
+	second, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	newest, _ := importjobtest.CreateRunWithMapping(t, e, "lead", second.SourceRef, second.SuggestedMapping)
 	type runPage struct {
-		Data []importRunDTO `json:"data"`
+		Data []importjobtest.Run `json:"data"`
 		Page struct {
 			NextCursor *string `json:"next_cursor"`
 			HasMore    bool    `json:"has_more"`

@@ -196,6 +196,7 @@ func TestAHumanApprovedMoveIsNotTakenBackByTheUndoVerb(t *testing.T) {
 		e.Admin(), card, true, nil); err != nil {
 		t.Fatalf("approving the card as a contact: %v", err)
 	}
+	assertProgressionAppliedOnce(t, e, deal, card)
 	deliverApprovalDecided(t, e, card)
 
 	_, err := e.Deals.RevertStageProgression(e.Admin(), deal, card.UUID)

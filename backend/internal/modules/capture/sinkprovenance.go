@@ -34,6 +34,20 @@ func connectorPrincipalID(name string) string {
 	return "connector:" + strings.TrimPrefix(name, "connector:")
 }
 
+// deliveringConnector names the connector the authenticated principal speaks
+// for, or "" when it is not one. A record cannot assert it.
+func deliveringConnector(ctx context.Context) string {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return ""
+	}
+	name := strings.TrimPrefix(actor.ID, "connector:")
+	if name == actor.ID {
+		return ""
+	}
+	return name
+}
+
 // connectorProvenance is what a captured activity's captured_by records: the
 // connector AND the mailbox owner behind it, `connector:gmail:<user>`.
 //

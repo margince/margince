@@ -91,7 +91,10 @@ function keepTabInside(event: KeyboardEvent, dialog: HTMLElement) {
   // behind took focus while the dialog was open, and from there a plain Tab
   // would keep walking that page rather than coming back.
   const outside = !dialog.contains(active);
-  const leavingBackwards = event.shiftKey && (active === first || outside);
+  // The box itself (the first focus when nothing else may take it) sits before
+  // `first`, so Shift+Tab from it would leave unless it wraps too.
+  const leavingBackwards =
+    event.shiftKey && (active === first || active === dialog || outside);
   const leavingForwards = !event.shiftKey && (active === last || outside);
   if (!leavingBackwards && !leavingForwards) {
     return;
@@ -129,7 +132,11 @@ function openPanelIn(
 ): HTMLElement | null {
   const panels = panelsOpenedFrom(dialog);
   const active = document.activeElement;
-  const held = panels.find((panel) => panel.contains(active));
+  // A docked window owns Tab only while the reader is in it. Unlike a popover,
+  // it stays open while they work in the dialog under it.
+  const held = [...panels, ...windowsAbove(dialog)].find((panel) =>
+    panel.contains(active),
+  );
   const panel = held ?? panels[0];
   return panel && (!needsTabStops || focusableWithin(panel).length > 0)
     ? panel
@@ -157,6 +164,28 @@ export function panelsOpenedFrom(container: HTMLElement | null): HTMLElement[] {
     );
 }
 
+/**
+ * The docked windows (`DockedWindow`) drawn above a dialog: they share its
+ * level, so the ones after its overlay in the body are on top of it.
+ */
+function windowsAbove(dialog: HTMLElement | null): HTMLElement[] {
+  const layer = dialog?.closest<HTMLElement>(".overlay") ?? dialog;
+  if (!layer) {
+    return [];
+  }
+  return [
+    ...document.querySelectorAll<HTMLElement>(
+      '[role="dialog"][aria-modal="false"]',
+    ),
+  ].filter(
+    (docked) =>
+      !layer.contains(docked) &&
+      (layer.compareDocumentPosition(docked) &
+        Node.DOCUMENT_POSITION_FOLLOWING) !==
+        0,
+  );
+}
+
 /** The modal dialogs that are up, in document order. */
 export function liveDialogs(): HTMLElement[] {
   // A leaving dialog is still painted, inside the `inert` its surface marks the
@@ -175,7 +204,20 @@ export function liveDialogs(): HTMLElement[] {
 export function coveredByDialog(element: Element | null): boolean {
   const layers = liveDialogs();
   const top = layers[layers.length - 1];
-  return top !== undefined && !top.contains(element);
+  return (
+    top !== undefined &&
+    !top.contains(element) &&
+    !windowsAbove(top).some((docked) => docked.contains(element))
+  );
+}
+
+/** As `coveredByDialog`, with the top dialog's opened panels as part of it. */
+export function coveredByLayer(element: Element | null): boolean {
+  const top = liveDialogs().at(-1) ?? null;
+  return (
+    coveredByDialog(element) &&
+    !panelsOpenedFrom(top).some((panel) => panel.contains(element))
+  );
 }
 
 /** The layer a panel portalled out of `anchorRef` joins, so it opens above its

@@ -64,16 +64,15 @@ func TestNoDealLandsOnAStageBeingRemoved(t *testing.T) {
 // gets to the stage first: the removal must then find the deal it had just
 // gained and refuse on occupancy.
 //
-// The advance is held open by the DEAL row, which it patches only after its
-// target lookup has taken the stage — so while it waits there, the lock the
-// removal has to queue behind is provably held, and the probe below says so
-// rather than hoping for it.
+// The advance locks the deal before the stage, so the deal row cannot hold it
+// open. A table lock on its stage-history insert does, as that insert follows
+// the target lookup. The probe below shows the stage lock held meanwhile.
 func theAdvanceReachesTheStageFirst(t *testing.T, e *Env, pipeline ids.PipelineID, open ids.StageID) {
 	admin := e.Admin()
 	target := raceStage(t, e, pipeline, "Racy: advance first", 90)
 	deal := e.SeedDeal(t, "Racer: advance first", pipeline, open, &e.Rep1)
 
-	release := holdRow(t, holdDealRow, deal)
+	release := holdRow(t, holdStageHistoryInserts)
 
 	advance := make(chan error, 1)
 	advanceReturned := make(chan struct{})
@@ -167,8 +166,9 @@ func raceStage(t *testing.T, e *Env, pipeline ids.PipelineID, name string, posit
 // the racer has taken the lock its counterpart must wait on. Constants because
 // the table is this file's own choice and never travels through a parameter.
 const (
-	holdDealRow  = `SELECT 1 FROM deal WHERE id = $1 FOR UPDATE`
-	holdStageRow = `SELECT 1 FROM stage WHERE id = $1 FOR UPDATE`
+	// SHARE ROW EXCLUSIVE refuses inserts and lets every read through.
+	holdStageHistoryInserts = `LOCK TABLE deal_stage_history IN SHARE ROW EXCLUSIVE MODE`
+	holdStageRow            = `SELECT 1 FROM stage WHERE id = $1 FOR UPDATE`
 	// FOR UPDATE conflicts with the FOR KEY SHARE an advance's target lookup
 	// takes, and FOR KEY SHARE conflicts with the FOR UPDATE a removal takes —
 	// so each probe is refused by exactly the racer it is asking about, and by
@@ -207,16 +207,13 @@ func waitUntilRowLockIsRefused(
 	})
 }
 
-// holdRow pins one row until the returned release runs: a connection of this
-// test's own holds it FOR UPDATE, so a racer that must write it waits there
-// instead of finishing, and the ordering under test stays open long enough to
-// be observed.
+// holdRow pins a row, or with no id a table, until the returned release runs.
+// A racer that must write it waits there, which keeps the ordering open long
+// enough to observe.
 //
-// The release is idempotent and also registered as cleanup, because a round
-// that fails an assertion returns without reaching its own release — and a
-// transaction left holding a row outlives the test that opened it and blocks
-// whatever runs next in the package.
-func holdRow(t *testing.T, query string, id ids.UUID) func() {
+// The release is idempotent and registered as cleanup. A failed assertion skips
+// the round's own release, and a lock left held would block the next test.
+func holdRow(t *testing.T, query string, id ...ids.UUID) func() {
 	t.Helper()
 	ctx := context.Background()
 	conn := freshConnection(t)
@@ -224,7 +221,7 @@ func holdRow(t *testing.T, query string, id ids.UUID) func() {
 	if err != nil {
 		t.Fatalf("opening the transaction that holds the contested row: %v", err)
 	}
-	if _, err := tx.Exec(ctx, query, id); err != nil {
+	if _, err := tx.Exec(ctx, query, rowArgs(id)...); err != nil {
 		t.Fatalf("holding the contested row: %v", err)
 	}
 	released := false
@@ -239,6 +236,14 @@ func holdRow(t *testing.T, query string, id ids.UUID) func() {
 	}
 	t.Cleanup(release)
 	return release
+}
+
+func rowArgs(id []ids.UUID) []any {
+	args := make([]any, len(id))
+	for i, v := range id {
+		args[i] = v
+	}
+	return args
 }
 
 // freshConnection dials a connection outside the stores' pool. The pool is

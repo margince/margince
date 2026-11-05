@@ -5,15 +5,17 @@ package consent
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,6 +30,9 @@ const (
 // Handlers is the module's transport slice; compose embeds it so the
 // generated consent stubs are shadowed by real code.
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks  func(surface []config.Any) *[]crmcontracts.SettingLock
 	store  *Store
 	eraser Eraser
 	// The Art. 15 assembler, injected the same way and for the same reason as
@@ -38,12 +43,13 @@ type Handlers struct {
 	// like every other installation setting, and consent may not write another
 	// module's table — so the store that owns it is injected rather than the
 	// row being written from here.
-	settings *settings.Store
+	settings *config.Config
 	names    RecordNames
 }
 
-// WithSettings hands the handlers the store that owns installation settings.
-func (h Handlers) WithSettings(s *settings.Store) Handlers {
+// WithSettings hands the handlers the configuration the controller
+// particulars are read and saved through, under the boot locks it holds.
+func (h Handlers) WithSettings(s *config.Config) Handlers {
 	h.settings = s
 	return h
 }
@@ -52,7 +58,7 @@ func (h Handlers) WithSettings(s *settings.Store) Handlers {
 // fulfillment of an erasure request EXECUTES the erasure, it never just
 // marks a row done.
 type Eraser interface {
-	EraseContact(ctx context.Context, contactID ids.UUID, reason string) error
+	EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error)
 }
 
 // SubjectAccessAssembler is the Art. 15 read seam (compose injects the real
@@ -79,13 +85,6 @@ func NewHandlers(db *database.DB) Handlers {
 // reader; a module never imports a sibling.
 func (h Handlers) WithInstallationName(r InstallationNameReader) Handlers {
 	h.store = h.store.WithInstallationName(r)
-	return h
-}
-
-// WithReviewRouter injects the approvals-side seam a refused send is handed to.
-// Compose supplies it; a module never imports a sibling.
-func (h Handlers) WithReviewRouter(r ReviewRouter) Handlers {
-	h.store = h.store.WithReviewRouter(r)
 	return h
 }
 
@@ -355,17 +354,26 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), RecordQualifyingEventInput{
-		Kind:       string(req.Kind),
-		Note:       req.Note,
-		OccurredAt: req.OccurredAt,
+		Kind:         string(req.Kind),
+		Note:         req.Note,
+		OccurredAt:   req.OccurredAt,
+		AsksForQuote: req.AsksForQuote != nil && *req.AsksForQuote,
 	})
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
+	recordedID, err := ids.Parse(recorded.ID)
+	if err != nil {
+		writeConsentErr(w, r, fmt.Errorf("consent: the recorded exchange has no id: %w", err))
+		return
+	}
 	out := crmcontracts.QualifyingEventRecord{
-		Kind:       crmcontracts.QualifyingEventRecordKind(recorded.Kind),
-		OccurredAt: recorded.OccurredAt,
+		Id:           openapi_types.UUID(recordedID),
+		Kind:         crmcontracts.QualifyingEventRecordKind(recorded.Kind),
+		OccurredAt:   recorded.OccurredAt,
+		AsksForQuote: recorded.AsksForQuote,
+		Retracted:    recorded.Retracted,
 	}
 	if recorded.Note != "" {
 		note := recorded.Note
@@ -374,16 +382,28 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 	httperr.WriteJSON(w, http.StatusCreated, out)
 }
 
+// RetractQualifyingEvent serves POST
+// /contacts/{id}/consent/qualifying-events/{event_id}/retract. Wire-only.
+func (h Handlers) RetractQualifyingEvent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, eventID openapi_types.UUID) {
+	if err := h.store.RetractQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), ids.UUID(eventID)); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func writeConsentErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
 func wirePurpose(p Purpose) crmcontracts.ConsentPurpose {
+	class := crmcontracts.ConsentPurposeClass(p.Class)
 	return crmcontracts.ConsentPurpose{
 		Id:                  openapi_types.UUID(p.ID.UUID),
 		Key:                 p.Key,
 		Label:               p.Label,
 		RequiresDoubleOptIn: &p.RequiresDoubleOptIn,
+		Class:               &class,
 		CreatedAt:           p.CreatedAt,
 	}
 }

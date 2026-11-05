@@ -224,9 +224,9 @@ func (e *forecastEnv) typedReader(user ids.UUID) context.Context {
 	})
 }
 
-// A row id among a typed question's MEASURES or FILTERS does not make it a
+// A field among a typed question's MEASURES or FILTERS does not make it a
 // listing. Only the grouping can, so the owner breakdown stays narrowed.
-func TestATypedOwnerBreakdownStaysNarrowedWhateverElseNamesTheRow(t *testing.T) {
+func TestATypedOwnerBreakdownStaysNarrowedWhateverElseItNames(t *testing.T) {
 	e := setupForecast(t)
 	company := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Delivery Co', 'manual', 'human:x')`)
@@ -239,14 +239,14 @@ func TestATypedOwnerBreakdownStaysNarrowedWhateverElseNamesTheRow(t *testing.T) 
 	rep := e.typedReader(e.Rep1)
 	byOwner := analyticsquery.Query{Entity: "projects-gone-quiet", GroupBy: []string{"owner_id"}}
 	cases := map[string]analyticsquery.Query{
-		"count_distinct(project_id)": {
+		"count_distinct(phase)": {
 			Entity: byOwner.Entity, GroupBy: byOwner.GroupBy,
-			Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountDistinct, Field: "project_id", As: "n"}},
+			Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountDistinct, Field: "phase", As: "n"}},
 		},
-		"project_id is_not_null": {
+		"phase is_not_null": {
 			Entity: byOwner.Entity, GroupBy: byOwner.GroupBy,
 			Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}},
-			Filters:  []analyticsquery.Filter{{Field: "project_id", Op: analyticsquery.OpIsNotNull}},
+			Filters:  []analyticsquery.Filter{{Field: "phase", Op: analyticsquery.OpIsNotNull}},
 		},
 	}
 	for name, q := range cases {

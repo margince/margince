@@ -167,6 +167,33 @@ export const Headings: Story = {
   ),
 };
 
+const DISPLAY: ReadonlyArray<{ token: string; context: string }> = [
+  { token: "--fontDisplayXLarge", context: "the full-window greeting" },
+  {
+    token: "--fontDisplayLarge",
+    context: "Home's title, and an MCP app view's figure",
+  },
+  { token: "--fontDisplayMedium", context: "a figure under the greeting" },
+  {
+    token: "--fontDisplayFigure",
+    context: "the one figure an Analytics view leads with",
+  },
+  { token: "--fontLead", context: "the line under the full-window greeting" },
+];
+
+/** The display sizes, which scale with the window. */
+export const Display: Story = {
+  render: () => (
+    <div style={ladder}>
+      {DISPLAY.map((size) => (
+        <div key={size.token} style={{ font: `var(${size.token})` }}>
+          {size.token} · {size.context}
+        </div>
+      ))}
+    </div>
+  ),
+};
+
 const pairing: CSSProperties = {
   display: "flex",
   flexDirection: "column",

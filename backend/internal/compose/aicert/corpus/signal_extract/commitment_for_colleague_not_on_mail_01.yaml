@@ -1,0 +1,11 @@
+name: a_promise_for_a_colleague_not_on_the_mail_names_no_promiser
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture: [{"direction": "outbound", "subject": "Product demo", "sent": "2026-09-07", "body": "Hi Jonas, product demo on the 5th at 10:00, online with Robin.", "participants": [{"key": "mira", "kind": "seat", "role": "from", "name": "Mira Chen", "address": ""}, {"key": "jonas", "kind": "contact", "role": "to", "name": "Jonas Weber", "address": ""}]}]
+expect:
+  outcome: accepted
+  answer: [{"kind": "commitment_made", "message": 1, "promiser": ""}]
+  rubric: "Identify the promiser from the quoted clause. The words name Robin, who is not a participant, as the one who runs the demo. The expected reference is empty. The writer must not be reported in Robin's place."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

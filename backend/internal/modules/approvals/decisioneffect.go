@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -115,7 +116,7 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 		return nil
 	}
 	if effect, ok := s.effects[a.Kind]; ok && approve && serverProposed(a) {
-		if err := effect(releasing(ctx, id), id, a.ProposedChange, a.DiffHash); err != nil {
+		if err := effect(storekit.WithReleasingApproval(releasing(ctx, id), id.UUID), id, a.ProposedChange, a.DiffHash); err != nil {
 			return s.recordEffectFailure(ctx, a,
 				"this was approved, but the work it released did not run",
 				fmt.Errorf("approved, but executing the %s effect failed: %w", a.Kind, err))

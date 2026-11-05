@@ -25,23 +25,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// chargedCredits is what a reservation row counts as spent.
-//
-// An unreconciled hold counts at its full reserved amount: the provider has
-// not said what it actually charged, and assuming a refund nobody promised
-// would understate the bill in exactly the window where a customer is
-// deciding whether to keep spending.
-//
-//nolint:gosec // G101 false positive: a SQL fragment naming credit columns, not a credential.
-const chargedCredits = `COALESCE(r.actual_credits, r.reserved_credits)`
-
-// spendExcludedStates are the runs that bought nothing. Nothing left the
-// building for either, so neither is a charge — the same exclusion the
-// ceiling makes.
-const spendExcludedStates = `run.state <> 'skipped' AND run.state <> 'cancelled'`
 
 // spendMonths is how far back the card looks: the current month plus five,
 // so a reader sees a trend without the connection read growing unbounded.
@@ -103,14 +89,14 @@ func (s *Store) readSpendHistory(ctx context.Context, tx pgx.Tx, name string) ([
 	rows, err := tx.Query(ctx, `
 		SELECT date_trunc('month', run.created_at AT TIME ZONE 'UTC') AS month,
 		       r.pool,
-		       COALESCE(SUM(`+chargedCredits+`), 0)::int AS charged,
-		       COALESCE(SUM(`+chargedCredits+`) FILTER (
+		       COALESCE(SUM(`+storekit.ProviderChargedCredits+`), 0)::int AS charged,
+		       COALESCE(SUM(`+storekit.ProviderChargedCredits+`) FILTER (
 		         WHERE run.state = 'submission_unknown'), 0)::int AS held,
 		       COUNT(DISTINCT run.id)::int AS runs
 		  FROM provider_run_reservation r
 		  JOIN provider_run run ON run.id = r.run_id
 		 WHERE run.provider = $1
-		   AND `+spendExcludedStates+`
+		   AND `+storekit.ProviderRunCharges+`
 		   AND run.created_at >= (date_trunc('month', now() AT TIME ZONE 'UTC')
 		                            - make_interval(months => $2)) AT TIME ZONE 'UTC'
 		 GROUP BY month, r.pool

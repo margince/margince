@@ -149,14 +149,10 @@ var atRiskRelationshipsCopy = toolCopy{
 		"read_relationships takes next.",
 }
 
-// The prebuilt reports exist so a common question costs one call. That is only
-// true if a caller reaching for a number finds them BEFORE it finds the
-// ad-hoc query path, and it stopped being true: asked how much of the logged
-// activity was inbound against outbound — which `activities-by-kind` answers
-// outright — a model went to describe_analytics_vocabulary and composed two
-// queries instead. Correct, three times the work, and around the curation.
-// So the boundary is stated here rather than left to be inferred from which
-// tool sounds more general.
+// The prebuilt reports exist so a common question costs one call. That holds
+// only if a caller finds them before the ad-hoc query path. A model asked for
+// a breakdown `activities-by-kind` answers outright composed two queries
+// instead, so the boundary is stated here rather than inferred.
 var runReportCopy = toolCopy{
 	// No illustrative examples in the Purpose. They were three goals picked out
 	// of a catalog the `report` argument then enumerates in full, one line per
@@ -230,7 +226,7 @@ var readProjectCopy = toolCopy{
 		"what your grants withhold. A handoff gap means the field is empty as far as the caller " +
 		"can see. Preparing a handover is not performing one.",
 	Instead: "read_record for the project's stored fields alone, catch_me_up_on for what has been " +
-		"happening.",
+		"happening, change_state record_project_health to say how it is going.",
 	Retain: "The project_id, each gap's source field, and the deal, contact and task ids a " +
 		"follow-up acts on.",
 }

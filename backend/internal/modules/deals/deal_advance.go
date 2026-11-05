@@ -11,7 +11,7 @@ package deals
 import (
 	"context"
 	"fmt"
-	"strings"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -26,9 +26,16 @@ import (
 )
 
 type AdvanceDealInput struct {
-	ToStageID  ids.StageID
-	LostReason *string
-	IfVersion  *int64
+	ToStageID ids.StageID
+	// ReferencesFromRequest says the caller typed ToStageID, so a stage that
+	// is gone is refused naming `to_stage_id`. A move that came from a decided
+	// card leaves it false.
+	ReferencesFromRequest bool
+	LostReason            *string
+	// LostReasonCode is a key from deal_loss_reason, on a move to a lost stage.
+	// Nil is the legacy path: the note alone, counted as unmapped.
+	LostReasonCode *string
+	IfVersion      *int64
 	// WonWithoutContractReason says why this win has no agreement behind it
 	// (ADR-0109 §6). Absent means the deal claims one, and the store looks for
 	// it — a win that claims nothing and offers no reason is what gets refused.
@@ -59,6 +66,9 @@ type AdvanceDealInput struct {
 	// closedAt is the instant a closing move records as the close, set only
 	// by ImportDealTx: an imported win keeps the day its source closed it.
 	closedAt *time.Time
+	// auditEvidence rides into the move's audit row. Margince's own close sets
+	// it, so the Home receipt can say why the deal was closed.
+	auditEvidence map[string]any
 }
 
 // StagePipelineMismatchError maps to 422: the target stage exists but
@@ -97,9 +107,9 @@ func (e *LostReasonRequiredError) FieldFault() (field, code, message string) {
 // stage's semantic (never from client-supplied status), appending the
 // stage history snapshot and emitting the first-class deal.stage_changed
 // event — never a generic deal.updated (events.md §1).
-func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealInput) (crmcontracts.Deal, error) {
+func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealInput) (AdvancedDeal, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
-		return crmcontracts.Deal{}, err
+		return AdvancedDeal{}, err
 	}
 	// The custom-field catalog is fetched BEFORE the transaction opens: it
 	// reads through its own connection, and a second connection inside a
@@ -107,9 +117,9 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 	// lock that transaction holds.
 	active, err := s.activeColumns(ctx)
 	if err != nil {
-		return crmcontracts.Deal{}, err
+		return AdvancedDeal{}, err
 	}
-	var out crmcontracts.Deal
+	var out AdvancedDeal
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = s.advanceOnTx(ctx, tx, id, in, active)
@@ -133,7 +143,7 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 func (s *Store) AdvanceDealTx(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
 	active CustomColumns,
-) (crmcontracts.Deal, error) {
+) (AdvancedDeal, error) {
 	return s.advanceOnTx(ctx, tx, id, in, active.cols)
 }
 
@@ -142,18 +152,18 @@ func (s *Store) AdvanceDealTx(
 func (s *Store) advanceOnTx(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
 	active []fieldcatalog.Column,
-) (crmcontracts.Deal, error) {
+) (AdvancedDeal, error) {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return crmcontracts.Deal{}, err
+		return AdvancedDeal{}, err
 	}
 
-	var out crmcontracts.Deal
+	var out AdvancedDeal
 	// A closure rather than the body inline: fourteen early returns below say
 	// `return err`, and unwrapping them into `return crmcontracts.Deal{}, err`
 	// would be fourteen chances to return a half-built deal beside an error.
 	err = func() error {
-		if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+		if err := lockThenEnsureWritable(ctx, tx, id); err != nil {
 			return err
 		}
 		// A decision read (stage/amount snapshot for the transition patch
@@ -178,11 +188,14 @@ func (s *Store) advanceOnTx(
 			if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
 				return err
 			}
-			out, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+			out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
 			return err
 		}
 		semantic, winProbability, err := resolveAdvanceTarget(ctx, tx, in.ToStageID, current)
 		if err != nil {
+			if in.ReferencesFromRequest {
+				err = auth.NameMissingReference("to_stage_id", err)
+			}
 			return err
 		}
 		// Under the lock resolveAdvanceTarget just took on the target row, and
@@ -193,13 +206,7 @@ func (s *Store) advanceOnTx(
 		// Checked inside the transaction that writes the transition, and
 		// checked BEFORE the patch is built, so a refusal costs nothing and a
 		// concurrent archive cannot remove the evidence between the two.
-		if StageSemantic(semantic) == SemanticWon {
-			if err := ensureWinEvidence(ctx, tx, id, in); err != nil {
-				return err
-			}
-		}
-
-		p, status, err := s.stageTransitionPatch(ctx, tx, current, in, semantic)
+		p, status, err := s.buildStageAdvance(ctx, tx, id, current, in, semantic)
 		if err != nil {
 			return err
 		}
@@ -220,12 +227,13 @@ func (s *Store) advanceOnTx(
 		// joining the live stage would then report an old closing as something
 		// it was not.
 		from := ids.UUID(*current.StageId)
-		if err := s.recordStageHistory(ctx, tx, stageHistoryInput{
+		out.HistoryID, err = s.recordStageHistory(ctx, tx, stageHistoryInput{
 			DealID: id, FromStageID: &from, ToStageID: in.ToStageID, ChangedBy: by, OwnerID: (*ids.UUID)(current.OwnerId), PipelineID: ids.UUID(*current.PipelineId),
 			Amount: current.AmountMinor, Currency: current.Currency,
 			Probability: &winProbability, ApprovalID: in.ApprovalID,
-			ReversalOf: in.ReversalOf, Semantic: &semantic,
-		}); err != nil {
+			ReversalOf: in.ReversalOf, Semantic: &semantic, LostReasonCode: lostReasonCodeFromPatch(p),
+		})
+		if err != nil {
 			return err
 		}
 
@@ -242,13 +250,16 @@ func (s *Store) advanceOnTx(
 			}
 		}
 
-		if err := announceStageAdvance(ctx, tx, id, in, current, p, status, winProbability); err != nil {
+		toStageName, auditID, err := announceStageAdvance(ctx, tx, id, in, current, p, status, winProbability)
+		if err != nil {
 			return err
 		}
+		out.AuditLogID = auditID
+		out.Probability = newProbabilitySet(winProbability, toStageName)
 		if err := s.onDealWon(ctx, tx, id, status, by, p); err != nil {
 			return err
 		}
-		if out, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active); err != nil {
+		if out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 			return fmt.Errorf("read advanced deal: %w", err)
 		}
 		return nil
@@ -282,7 +293,7 @@ func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, t
 }
 
 // announceStageAdvance writes the move's audit row and the event that carries
-// it, linked to each other.
+// it, linked to each other. It also releases the note the move took off.
 //
 // The §5.3 payload carries the amount snapshot so as-of-date pipeline reports
 // and the overnight stalled/forecast sweep react without a read-back;
@@ -290,21 +301,36 @@ func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, t
 func announceStageAdvance(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
 	current crmcontracts.Deal, p *storekit.Patch, status string, winProbability int,
-) error {
-	auditID, err := storekit.Audit(ctx, tx, "advance_stage", "deal", id.UUID, p.Before(), p.After())
+) (string, ids.UUID, error) {
+	if err := releaseLossNote(ctx, tx, p, current); err != nil {
+		return "", ids.Nil, err
+	}
+	evidence := maps.Clone(in.auditEvidence)
+	if in.ApprovalID != nil {
+		if evidence == nil {
+			evidence = map[string]any{}
+		}
+		evidence[StageApprovalEvidenceKey] = in.ApprovalID.String()
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "advance_stage", "deal", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
-		return fmt.Errorf("audit stage advance: %w", err)
+		return "", ids.Nil, fmt.Errorf("audit stage advance: %w", err)
 	}
 	payload := dealStageChangedPayload(current, in.ToStageID, status, winProbability, frozenFxFromPatch(p, current))
+	payload.LostReasonCode = lostReasonCodeFromPatch(p)
 	payload.Imported, payload.ImportRunId = storekit.ImportMark(ctx)
 	args := []any{current.StageId, in.ToStageID}
 	if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT (SELECT name FROM stage WHERE id = $%d), (SELECT name FROM stage WHERE id = $%d)`, len(args)-1, len(args)), args...).Scan(&payload.FromStageName, &payload.ToStageName); err != nil {
-		return fmt.Errorf("read the stage names for the change: %w", err)
+		return "", ids.Nil, fmt.Errorf("read the stage names for the change: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload); err != nil {
-		return fmt.Errorf("emit deal.stage_changed: %w", err)
+		return "", ids.Nil, fmt.Errorf("emit deal.stage_changed: %w", err)
 	}
-	return nil
+	var toStageName string
+	if payload.ToStageName != nil {
+		toStageName = *payload.ToStageName
+	}
+	return toStageName, auditID, nil
 }
 
 // onDealWon does what winning a deal sets off, in the transaction that won it.
@@ -335,18 +361,19 @@ func announceStageAdvance(
 func (s *Store) onDealWon(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, status, by string, p *storekit.Patch,
 ) error {
-	if DealStatus(status) != DealWon {
-		return nil
+	for _, effect := range wonEffects(status, p) {
+		switch effect {
+		case effectClassifyCorrespondence:
+			if err := s.stampCorrespondence(ctx, tx, id, BasisDealWon); err != nil {
+				return fmt.Errorf("stamp won deal's correspondence: %w", err)
+			}
+		case effectStartDelivery:
+			if err := s.startDeliveryForWonDeal(ctx, tx, id, by); err != nil {
+				return fmt.Errorf("start delivery on the won deal's project: %w", err)
+			}
+		}
 	}
-	if err := s.stampCorrespondence(ctx, tx, id, BasisDealWon); err != nil {
-		return fmt.Errorf("stamp won deal's correspondence: %w", err)
-	}
-	if _, becameWon := p.After()["status"]; !becameWon {
-		return nil
-	}
-	if err := s.startDeliveryForWonDeal(ctx, tx, id, by); err != nil {
-		return fmt.Errorf("start delivery on the won deal's project: %w", err)
-	}
+
 	return nil
 }
 
@@ -368,6 +395,25 @@ func frozenFxFromPatch(p *storekit.Patch, current crmcontracts.Deal) *string {
 	return &frozen
 }
 
+// buildStageAdvance checks a win's evidence, then builds the stage move's row
+// changes plus the probability the target stage sets.
+func (s *Store) buildStageAdvance(ctx context.Context, tx pgx.Tx, id ids.DealID,
+	current crmcontracts.Deal, in AdvanceDealInput, semantic string,
+) (*storekit.Patch, string, error) {
+	if StageSemantic(semantic) == SemanticWon {
+		if err := ensureWinEvidence(ctx, tx, id, in); err != nil {
+			return nil, "", err
+		}
+	}
+	p, status, err := s.stageTransitionPatch(ctx, tx, current, in, semantic)
+	if err != nil {
+		return nil, "", err
+	}
+	stored, storedBy := storedWinProbability(current)
+	setWinProbability(p, stored, storedBy, nil, SourceStage)
+	return p, status, nil
+}
+
 // stageTransitionPatch derives the row changes one stage move implies
 // and the resulting status: terminal fields (closed_at, lost_reason,
 // frozen FX) are set when the target semantic closes the deal and
@@ -375,23 +421,19 @@ func frozenFxFromPatch(p *storekit.Patch, current crmcontracts.Deal) *string {
 func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in AdvanceDealInput, semantic string,
 ) (*storekit.Patch, string, error) {
-	status := string(DealOpen)
+	status := string(StageSemantic(semantic).Status())
 	var closedAt *time.Time
-	var lostReason string
 	switch semantic {
 	case "won", "lost":
-		status = semantic
 		now := s.clock().UTC()
 		if in.closedAt != nil {
 			now = in.closedAt.UTC()
 		}
 		closedAt = &now
-		if in.LostReason != nil {
-			lostReason = strings.TrimSpace(*in.LostReason)
-		}
-		if StageSemantic(semantic) == SemanticLost && lostReason == "" {
-			return nil, "", &LostReasonRequiredError{}
-		}
+	}
+	loss, err := lossOfMove(ctx, tx, in, semantic)
+	if err != nil {
+		return nil, "", err
 	}
 
 	p := storekit.NewPatch()
@@ -403,18 +445,8 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 		p.Set("closed_at", current.ClosedAt, *closedAt)
 	}
 	// Written when this advance lands on lost, and cleared on every other
-	// landing. A reason describing a previous close is worse than none: it
-	// answers the report with a fact about a different outcome — so a deal
-	// re-decided from lost to won must not carry the loss explanation with it.
-	// The clear is conditional on there being something to clear: Set records
-	// an assignment unconditionally, so clearing a column that is already NULL
-	// would put lost_reason into the UPDATE and the audit diff of every
-	// ordinary open-to-open advance.
-	if DealStatus(status) == DealLost {
-		p.Set("lost_reason", current.LostReason, lostReason)
-	} else if DealStatus(status) != DealLost && current.LostReason != nil {
-		p.Set("lost_reason", current.LostReason, nil)
-	}
+	// landing: a reason describing a previous close is worse than none.
+	setLossReason(p, current, loss)
 	// The won-without-contract reason is written only on a win, and cleared on
 	// every other landing, for the same reason.
 	if DealStatus(status) == DealWon {
@@ -431,9 +463,8 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// close it is supposed to price, and the roll-up would then reconcile
 	// against a rate the deal never closed at.
 	if DealStatus(status) != DealOpen && current.AmountMinor != nil && current.Currency != nil {
-		rateBefore, rateDateBefore := frozenBefore(current)
 		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*current.Currency),
-			*current.AmountMinor, *closedAt, rateBefore, rateDateBefore); err != nil {
+			*current.AmountMinor, *closedAt); err != nil {
 			return nil, "", fmt.Errorf("freeze fx at close: %w", err)
 		}
 	}
@@ -444,17 +475,7 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// which covers the reopen too.
 	if DealStatus(status) == DealOpen && DealStatus(current.Status) != DealOpen {
 		p.Set("closed_at", current.ClosedAt, nil)
-		// The pre-images are what the row HELD, not nil. A closed deal carrying an
-		// amount carries a rate — deal_closed_fx requires it — and the reopen's
-		// audit row is precisely what a reversal reads to put the old rate back.
-		rateBefore, rateDateBefore := frozenBefore(current)
-		p.Set(fxRateColumn, rateBefore, nil)
-		p.SetDate(fxRateDateColumn, rateDateBefore, nil)
-		// The converted amount goes with the rate it was converted at, so the
-		// reopen clears both. clearFrozenConversion owns that, beside the writer
-		// that sets it: two places deciding what a frozen conversion consists of
-		// is how one of them comes to leave half of it behind.
-		if err := clearFrozenConversion(ctx, tx, p, current); err != nil {
+		if err := clearFrozenConversion(ctx, tx, p, current.Id); err != nil {
 			return nil, "", err
 		}
 	}

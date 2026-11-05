@@ -1,0 +1,17 @@
+name: optional_commitment_preserves_its_meaning_en
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  - direction: outbound
+    subject: "Scope review"
+    sent: "2026-09-07"
+    body: "Mira: I could draft a scope next week if that would be useful."
+expect:
+  outcome: accepted
+  answer: [{"optional": true, "meaning": {"state": "optional", "condition": "", "deadline_precision": "range", "deadline_quote": "next week"}, "kind": "commitment_made", "message": 1, "due_date": ""}]
+  judge: none
+  judge_none_reason: >
+    An unmet condition or tentative offer creates no unconditional work.
+    The deterministic checks require the state, condition and deadline words when reported, and refuse new work.

@@ -18,8 +18,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // ProjectActivityFacts is the timeline's answer about one project, counted
@@ -34,8 +36,8 @@ type ProjectActivityFacts struct {
 	// project link — not this project's, not another's. An activity filed
 	// under a sibling engagement is somebody's, and is not debt here.
 	UnattributedNearby int
-	// LastActivityAt is the newest attributed activity's instant; nil when
-	// nothing is filed under the project yet.
+	// LastActivityAt is the newest attributed activity that counts as last
+	// activity by asOf; nil when nothing that counts is filed under the project.
 	LastActivityAt *time.Time
 	// OpenCommitments is every open task filed under the project — the
 	// whole set, where the commitments section carries a page of it.
@@ -46,7 +48,7 @@ type ProjectActivityFacts struct {
 // project is the record the count is narrowed TO, so it is gated before it
 // is counted against — the same existence-hiding rule the timeline list
 // keeps for its narrowing target.
-func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.ProjectID) (ProjectActivityFacts, error) {
+func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.ProjectID, asOf time.Time) (ProjectActivityFacts, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return ProjectActivityFacts{}, err
 	}
@@ -82,6 +84,12 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 	if edgeScope == "" {
 		edgeScope = scopeUnbounded
 	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return ProjectActivityFacts{}, err
+	}
+	current := CurrentTaskClause("a", asOf, identities, arg)
+	counts := relstrength.LastActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", arg(asOf)))
 	var facts ProjectActivityFacts
 	// The candidate set is every activity with ANY link into the project's
 	// neighbourhood; each is then classified once, so an activity linked to
@@ -96,14 +104,15 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 			WHERE l.project_id = $%[1]d OR d.project_id = $%[1]d OR r.project_id = $%[1]d
 		)
 		SELECT count(*) FILTER (WHERE f.filed_here),
-		       -- Recency excludes the system's own origins, matching
-		       -- last_activity_of_project. The counts do not: a review task filed
+		       -- Recency excludes the system's own origins, every task and a
+		       -- called-off or future meeting, matching last_activity_of_project. The counts do not: a review task filed
 		       -- here IS attributed work, it just is not the other side engaging.
 		       -- TRUE carries the fragment's leading AND, so the one spelling in
 		       -- auth.OriginIsEngagement serves a FILTER as well as a WHERE.
-		       max(a.occurred_at) FILTER (WHERE f.filed_here AND TRUE`+auth.OriginIsEngagement("a")+`),
+		       max(a.occurred_at) FILTER (WHERE f.filed_here AND TRUE`+auth.OriginIsEngagement("a")+
+		` AND `+counts+`),
 		       count(*) FILTER (WHERE NOT f.filed_anywhere),
-		       count(*) FILTER (WHERE f.filed_here AND a.kind = 'task' AND NOT a.is_done)
+		       count(*) FILTER (WHERE f.filed_here AND a.kind = 'task' AND NOT a.is_done AND %[5]s)
 		FROM activity a
 		JOIN nearby n ON n.activity_id = a.id
 		CROSS JOIN LATERAL (
@@ -112,7 +121,7 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 			       EXISTS (SELECT 1 FROM activity_link l
 			               WHERE l.activity_id = a.id AND l.project_id IS NOT NULL) AS filed_anywhere
 		) f
-		WHERE %[2]s`, projectPos, strings.Join(where, " AND "), dealScope, edgeScope), args...).
+		WHERE %[2]s`, projectPos, strings.Join(where, " AND "), dealScope, edgeScope, current), args...).
 		Scan(&facts.Attributed, &facts.LastActivityAt, &facts.UnattributedNearby, &facts.OpenCommitments)
 	if err != nil {
 		return ProjectActivityFacts{}, err

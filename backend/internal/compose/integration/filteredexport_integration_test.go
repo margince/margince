@@ -62,20 +62,20 @@ func (e *SearchEnv) seedFilteredDeals(t *testing.T) filteredDealFixture {
 	pipelineID := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, 'Sales', true, 0)`)
 	stageID := e.SeedID(t, `INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability) VALUES ($1, $2, 'Qualify', 0, 'open', 10)`, pipelineID)
 
-	deal := func(owner ids.UUID, name, forecast string) ids.UUID {
-		return e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, forecast_category, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, 'manual', 'human:x')`, owner, name, pipelineID, stageID, forecast)
+	deal := func(owner ids.UUID, name string, probability int) ids.UUID {
+		return e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, win_probability_override, win_probability_set_by, source, captured_by)
+			VALUES ($1, $2, $3, $4, $5, $6, 'human', 'manual', 'human:x')`, owner, name, pipelineID, stageID, probability)
 	}
 	return filteredDealFixture{
-		matchOwn:   deal(e.Rep1, "Match Own", "commit"),
-		missOwn:    deal(e.Rep1, "Miss Own", "omitted"),
-		matchOther: deal(e.Rep3, "Match Other", "commit"),
+		matchOwn:   deal(e.Rep1, "Match Own", 95),
+		missOwn:    deal(e.Rep1, "Miss Own", 0),
+		matchOther: deal(e.Rep3, "Match Other", 95),
 	}
 }
 
-// commitDeals is the predicate the suite exports: forecast_category = commit.
+// commitDeals is the predicate the suite exports: win_probability = 95.
 func commitDeals() storekit.Predicate {
-	return storekit.Predicate{Field: "forecast_category", Op: "eq", Value: "commit"}
+	return storekit.Predicate{Field: "win_probability", Op: "eq", Value: 95}
 }
 
 // TestFilteredExportIsScopedAndFiltered is the pinned intersection: a
@@ -164,11 +164,11 @@ func TestFilteredExportOpenFormatsAndAudit(t *testing.T) {
 	if doc.Format == "" || doc.Object != "deal" || doc.RowCount != 2 || len(doc.Rows) != 2 {
 		t.Fatalf("json export shape wrong: %+v", doc)
 	}
-	// A custom/real column rides along: forecast_category is present and is
-	// exactly the value the predicate selected on.
+	// A real column rides along: the probability set on the deal is present
+	// and is the value the predicate selected on.
 	for _, row := range doc.Rows {
-		if row["forecast_category"] != "commit" {
-			t.Fatalf("exported a row outside the predicate: %v", row["forecast_category"])
+		if row["win_probability_override"] != float64(95) {
+			t.Fatalf("exported a row outside the predicate: %v", row["win_probability_override"])
 		}
 	}
 
@@ -196,7 +196,7 @@ func TestFilteredExportEmptyResultIsHonest(t *testing.T) {
 	ctx := e.exportAdmin()
 	result, err := compose.NewFilteredExportWriter(e.Pool).WriteFiltered(
 		ctx, dealEngine(ctx, t, e),
-		storekit.Predicate{Field: "forecast_category", Op: "eq", Value: "best_case"}, "csv",
+		storekit.Predicate{Field: "win_probability", Op: "eq", Value: 60}, "csv",
 	)
 	if err != nil {
 		t.Fatalf("empty-result export errored: %v", err)
@@ -274,7 +274,7 @@ func TestFilteredExportHTTPEndToEnd(t *testing.T) {
 	// the endpoint is wired and the open format is honest on an empty slice.
 	body, err := json.Marshal(AnyMap{
 		"object": "deal",
-		"filter": AnyMap{"field": "forecast_category", "op": "eq", "value": "commit"},
+		"filter": AnyMap{"field": "win_probability", "op": "eq", "value": 95},
 		"format": "csv",
 	})
 	if err != nil {
@@ -341,7 +341,7 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 		t.Fatalf("login → %d", status)
 	}
 
-	commitFilter := AnyMap{"field": "forecast_category", "op": "eq", "value": "commit"}
+	commitFilter := AnyMap{"field": "win_probability", "op": "eq", "value": 95}
 
 	var view struct {
 		ID string `json:"id"`
@@ -452,11 +452,15 @@ func exportCSV(t *testing.T, e *apptest.AppEnv, body AnyMap) [][]string {
 // deal carries an EMPTY amount for a rep whose role masks it, while their own
 // row keeps the figure — the same per-row decision the deal list makes,
 // proven here against the statement the export actually runs.
+// The base amount and rate go with it: either one prints the masked money
+// back out.
 func TestFilteredExportWithholdsAMaskedAmount(t *testing.T) {
 	e := SetupSearch(t)
 	f := e.seedFilteredDeals(t)
 	for id, amount := range map[ids.UUID]int64{f.matchOwn: 100000, f.matchOther: 250000} {
-		if _, err := e.Owner.Exec(context.Background(), `UPDATE deal SET amount_minor = $2, currency = 'EUR' WHERE id = $1`, id, amount); err != nil {
+		if _, err := e.Owner.Exec(context.Background(),
+			`UPDATE deal SET amount_minor = $2, currency = 'USD', amount_minor_base = $3,
+			        fx_rate_to_base = 0.5, fx_rate_date = CURRENT_DATE WHERE id = $1`, id, amount, amount/2); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -477,18 +481,22 @@ func TestFilteredExportWithholdsAMaskedAmount(t *testing.T) {
 	}
 	rowIDs := CSVColumn(t, result.Body, "id")
 	amounts := CSVColumn(t, result.Body, "amount_minor")
+	baseAmounts := CSVColumn(t, result.Body, "amount_minor_base")
+	rates := CSVColumn(t, result.Body, "fx_rate_to_base")
 	if len(rowIDs) != 2 {
 		t.Fatalf("exported rows = %v, want both matching deals (a deal is readable by every seat)", rowIDs)
 	}
 	for i, id := range rowIDs {
 		switch id {
 		case f.matchOwn.String():
-			if amounts[i] != "100000" {
-				t.Errorf("the rep's own amount = %q, want 100000", amounts[i])
+			if amounts[i] != "100000" || baseAmounts[i] != "50000" || rates[i] == "" {
+				t.Errorf("the rep's own amount, base amount, rate = %q, %q, %q, want 100000, 50000 and the rate",
+					amounts[i], baseAmounts[i], rates[i])
 			}
 		case f.matchOther.String():
-			if amounts[i] != "" {
-				t.Errorf("the other team's amount = %q, want empty — the export printed a masked value", amounts[i])
+			if amounts[i] != "" || baseAmounts[i] != "" || rates[i] != "" {
+				t.Errorf("the other team's amount, base amount, rate = %q, %q, %q, want all empty — "+
+					"the export printed a masked value", amounts[i], baseAmounts[i], rates[i])
 			}
 		default:
 			t.Errorf("unexpected row %s", id)

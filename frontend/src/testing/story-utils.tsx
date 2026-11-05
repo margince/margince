@@ -9,15 +9,15 @@ import {
 import { type ReactNode, useEffect } from "react";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { RecordShell } from "../app/testing/recordshell.testkit";
 import { type Locale, LocaleProvider } from "../i18n";
 import { useMe } from "../lib/session";
 import { type GrantSpec, meFixture } from "./mefixture";
+import { RecordShell } from "./recordshell.testkit";
 import { recordUnroutedSessionProbe } from "./unrouted-session";
 
-// Shared Storybook rendering harness for the screens/* modules (fe-uat
-// render gate, frontend/scripts/fe-uat.mjs): every screen component reads
-// through the openapi-fetch `api` client (global fetch) and expects a
+// Shared Storybook rendering harness for the feature modules, used by the
+// fe-uat render gate (frontend/scripts/fe-uat.mjs). Every screen component
+// reads through the openapi-fetch `api` client (global fetch). It expects a
 // react-query + LocaleProvider context. Mirrors the *.test.tsx fetch-stub
 // convention exactly, so a story renders off the same fixture shapes the
 // unit tests already exercise — never a live network call.
@@ -109,6 +109,23 @@ export function meRoute(
   identity: { roles?: string[]; seat?: "full" | "read" } = {},
 ): () => Response {
   return () => jsonResponse(meFixture({ ...identity, allow }));
+}
+
+type CallSettings = Pick<
+  components["schemas"]["InstallationSettings"],
+  "call_whatsapp" | "call_telegram" | "call_zalo"
+>;
+
+/** `GET /installation/settings` for a phone number's chat links, all on unless overridden. */
+export function callMessengersRoute(
+  overrides: Partial<CallSettings> = {},
+): () => Response {
+  const on: CallSettings = {
+    call_whatsapp: true,
+    call_telegram: true,
+    call_zalo: true,
+  };
+  return () => jsonResponse({ ...on, ...overrides });
 }
 
 /**
@@ -254,15 +271,14 @@ export function WithInstallationBrand({
 export function StoryProviders({
   children,
   locale = "en",
-}: Readonly<{ children: ReactNode; locale?: Locale }>) {
+  client,
+}: Readonly<{ children: ReactNode; locale?: Locale; client?: QueryClient }>) {
   // Before the client, so a story that routed nothing cannot reach the network
   // on its first render.
   ensureFetchStubInstalled();
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const queryClient = client ?? storyQueryClient();
   return (
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={queryClient}>
       <LocaleProvider initial={locale}>
         {/* The record pages' context column belongs to the shell, and a story
             mounts no shell — so a record drawn here had its rail cards portal
@@ -273,6 +289,11 @@ export function StoryProviders({
       </LocaleProvider>
     </QueryClientProvider>
   );
+}
+
+// For a story that seeds the cache before the screen mounts.
+export function storyQueryClient(): QueryClient {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
 // Real Chromium only: jsdom computes no cascade, so the timeline row rule

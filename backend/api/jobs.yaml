@@ -90,6 +90,9 @@
 # but never built is one a fan-out child is inserted onto (workspaceSweepOpts
 # reads the DECLARED queue) with no client to work it.
 queues:
+  data_task:
+    max_workers: 1
+    reason: Bounded database corrections run apart from interactive jobs and serialize across processes with a database lock.
   default: {max_workers: 5}
   comms_send:
     max_workers: 3
@@ -124,6 +127,13 @@ queues:
       bound by the sites it reads and by the model rather than by the
       process: each one spends its time waiting on the network, holds little
       memory, and does not touch Postgres while it waits.
+  assurance_rescan:
+    max_workers: 1
+    reason: >-
+      A one-deal input check takes the same database lock as the nightly pass
+      over every deal, so a second worker would only wait on it. One worker
+      also bounds how much of the database a burst of edits can hold: each
+      changed deal is one job, and the jobs run one after another.
   geocode:
     max_workers: 1
     reason: >-
@@ -330,6 +340,25 @@ kinds:
       the six-hourly sweep. It is the pass the sweep runs per workspace, under
       the same five minutes.
 
+  data_task_run:
+    role: worker
+    fleet: true
+    go_type: DataTaskRunArgs
+    queue: data_task
+    timeout: 2m
+    opts_owner: caller
+    reason: A globally serialized bounded correction batch, paced between transactions.
+
+  data_task_reconcile:
+    role: worker
+    fleet: true
+    go_type: DataTaskReconcileArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 10m
+    reason: Seed missing correction progress and restore an interrupted executor job.
+
   capture_backfill_reconcile:
     role: worker
     fleet: true
@@ -469,6 +498,44 @@ kinds:
       retention this feature promises. An empty pass is one indexed probe.
 
 
+  captured_deal_refile:
+    role: worker
+    go_type: CapturedDealRefileArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: fan_out
+    args:
+      Workspace: id
+      Event: id
+      Correlation: id
+      Ceiling: id
+      Scope:
+        scalar: true
+        reason: Record identities and a boolean selecting the recovery census; no correspondence travels in the job.
+      AsOf:
+        scalar: true
+        reason: Fixed horizon instant for a resumable pass, never a message timestamp supplied by a sender.
+    reason: >-
+      Each attempt inspects at most 200 activities, committing one activity at a
+      time. A metadata cursor advances over unchanged and ambiguous candidates
+      before the job yields. Crashes replay through the same locked writer.
+
+  captured_deal_refile_sweep:
+    role: dispatcher
+    go_type: CapturedDealRefileSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1h
+    fans_out_to: captured_deal_refile
+    fan_out_unit: workspace
+    reason: >-
+      Recover missed or interrupted attribution without replaying old triggers.
+      The child carries a durable River cursor across attempts, so the scheduler only
+      starts a pass when no active recovery pass remains. It freezes its horizon and
+      resumes through bounded pages instead of rescanning the first page on each tick.
+
   capture_digest:
     role: worker
     fleet: true
@@ -505,14 +572,11 @@ kinds:
     queue: default
     timeout: 10m
     opts_owner: caller
-    cadence: 6h
+    cadence: 1h
     reason: >-
-      Every six hours rather than weekly, for the same reason the brief ticks
-      hourly: the Monday it aims at is the installation's local one, and a tick
-      that crosses the review hour in every zone the setting can name is what
-      makes the schedule correct without a per-zone cron. The per-rep week
-      uniqueness collapses the extra ticks into one review, and the same
-      property backfills a Monday the worker was down for.
+      Hourly ticks reach each recipient's bounded personal delivery window.
+      The reporting week remains the installation's last closed week;
+      existing review and delivery claims prevent repeated generation or sending.
 
 
 
@@ -598,6 +662,42 @@ kinds:
       eligible deals and one bundling pass. Uniqueness on the workspace makes a
       second press while one is in flight a refusal rather than a second walk.
 
+
+  assurance_deal_rescan:
+    role: worker
+    go_type: AssuranceDealRescanArgs
+    queue: assurance_rescan
+    timeout: 2m
+    opts_owner: caller
+    args:
+      Workspace: id
+      Deal: id
+    reason: >-
+      The input check over one deal, queued when a change marked that deal's
+      findings out of date. One deal's rules and one bundling pass take
+      seconds; two minutes leaves room to wait for the nightly pass's lock.
+      Unique on the workspace and the deal while one is waiting or running, so
+      a burst of edits to one deal is one job.
+
+  assurance_review_delivery:
+    role: worker
+    go_type: AssuranceReviewDeliveryArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    args:
+      Workspace: id
+      Exception: id
+      Episode:
+        scalar: true
+        reason: The review's episode counter, so a job for an episode that has since ended does nothing.
+    reason: >-
+      Delivers one review episode as its task. Inserted in the transaction that
+      records the finding, so the delivery exists exactly when the review does.
+      Each attempt reads the newest finished run that observed the review, and
+      a retry never starts a new check. One review's task and filing take
+      seconds. Unique on the review and its episode while one is waiting or
+      running.
 
   close_date_sweep:
     role: worker
@@ -1002,6 +1102,21 @@ kinds:
       loosening the cadence without amending the migration makes it a lie.
 
 
+  approval_notice_reconcile:
+    role: worker
+    go_type: ApprovalNoticeReconcileArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 5m
+    reason: >-
+      Clear pending-decision notices whose approval was withdrawn, replaced or
+      erased without a decision event. Each attempt reads at most 200 notices
+      and keeps its cursor in the job metadata before yielding. Pending rows
+      do not hide later notices. At the end of the scan the job completes, so
+      the next periodic pass starts from the beginning.
+
   # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
   # an installation-wide table, so there is nothing to fan out over.
   approval_expiry:
@@ -1027,8 +1142,6 @@ kinds:
       every row this pass did not reach is still due then. A backing-off row
       would only suppress that tick.
 
-  # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
-  # an installation-wide table, so there is nothing to fan out over.
   intro_expiry:
     role: worker
     go_type: IntroExpiryArgs
@@ -1055,6 +1168,25 @@ kinds:
       One attempt, not three: the retry is the next tick, and every ask this
       pass did not reach is still due then. A backing-off row would only
       suppress that tick.
+
+  past_activity_clock_refold:
+    role: worker
+    go_type: PastActivityClockRefoldArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 10m
+    reason: >-
+      The last-activity clocks count only what has happened, and no row changes
+      when a booked meeting's start passes, so no trigger moves the clock of
+      the records it is filed under. Ten minutes keeps a contact's "last
+      contacted" close behind the meeting; the stalled flag and deal health
+      read a meeting the clock has not reached on their own, so nothing waits
+      on this pass to be right.
+
+      One attempt: the pass resumes from a stored mark, so the next tick
+      refolds whatever this one did not reach, however long the worker was down.
 
   approval_auto_apply:
     role: worker
@@ -1235,6 +1367,23 @@ kinds:
       answers not found, so nobody can find it to discard it — and a draft
       holds a subject's address and the words written to them.
 
+  privacy_request_proof_expiry:
+    role: worker
+    go_type: RequestProofExpiryArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 24h
+    reason: >-
+      Daily, and the pass deletes only in January: a proof is kept until the
+      start of the fourth year after the year its request was answered in, so
+      every proof of one year falls due on the same 1 January and the first
+      January pass deletes them. The later January passes find only proofs
+      whose dispute closed since. Outside January the pass returns without
+      reading anything. Each pass loops over capped batches until no due proof
+      is left.
+
   waiting_horizon_refresh:
     role: worker
     go_type: WaitingHorizonRefreshArgs
@@ -1248,6 +1397,20 @@ kinds:
       missing (waitingHorizonStaleAfter): a few missed passes still leave a
       fresh value, and a measurement that fails keeps the previous one. The
       measurement is a year of inbound mail, which is why no read does it.
+
+  evidence_authorship:
+    role: worker
+    go_type: EvidenceAuthorshipArgs
+    queue: default
+    timeout: 10m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, so stage evidence follows an own domain added or removed within
+      the hour, whichever writer changed the set: the admin list or the own
+      company's domains. Each pass reads the live activity-backed evidence in
+      capped batches and writes only rows whose author side changed.
 
   idempotency_retention:
     role: worker
@@ -1379,7 +1542,7 @@ kinds:
     queue: privacy_retention
     timeout:
       derived: privacyRetentionPassTimeout
-      value: 7h18m20s
+      value: 7h51m40s
       reason: >-
         privacy.MaxPassDuration is the pass's own ceiling — its stage count
         times its batch bound times its per-record allowance — and the margin
@@ -1504,6 +1667,21 @@ kinds:
       bytes. Each rule selects its runs by status over an index, so on an idle
       installation a pass finds nothing.
 
+  dedupe_recheck:
+    role: worker
+    fleet: true
+    go_type: DedupeRecheckArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 24h
+    reason: >-
+      Closes open duplicate pairs the filing rule no longer files, so a rule
+      that grew stricter also empties the queue it built before. Then it files
+      the pairs the companies and contacts changed since its last pass make, so
+      records an import wrote together are compared too. Run at boot as well,
+      so a deploy that changes the rule cleans the old queue the same day.
+
   employment_import_sweep:
     role: worker
     fleet: true
@@ -1581,6 +1759,23 @@ kinds:
       longest-unchecked first, each against at most fifty thousand records in
       keyset pages, so ten minutes bounds the slowest pass with room to spare
       and a pass cut short resumes where the checkpoints say.
+
+
+  project_health_scan:
+    role: worker
+    fleet: true
+    go_type: ProjectHealthScanArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 24h
+    reason: >-
+      Daily, because its inputs move by the day: the quiet rule counts thirty
+      days without a filed activity, and a task is overdue once its due date
+      has passed. An hourly pass would find the same answer twenty-three times
+      out of twenty-four. One pass is two indexed reads per in-flight project
+      and calls no model, so ten minutes covers every workspace of an
+      installation with room to spare.
 
 
   deal_scout:
@@ -1721,6 +1916,28 @@ kinds:
       outbound call of its own — the lookups happen in the per-company jobs it
       queues, each paced by the installation-wide requester. Two minutes is
       generous for that and bounded by the batch.
+
+  # The address-country check: which country a record's postal code and city
+  # lie in, so the read can flag a stored country that does not fit. It asks
+  # through the same client and on the same queue as geocode_company, so the
+  # one pacer and the one worker hold it to the provider's rate. No workspace
+  # arg, for geocode_backfill's reason.
+  address_country_check:
+    role: worker
+    go_type: AddressCountryCheckArgs
+    queue: geocode
+    timeout: 4m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 10m
+    registration: {when: [Geocoder], absent: registers_nothing}
+    reason: >-
+      At most addressCountryLookupsPerRun (4) provider lookups a pass. The pacer
+      may hold each for its 15s interval and the HTTP client allows 20s, so a
+      pass spends at most 140s waiting on the provider, plus indexed reads and
+      one guarded write per record. Four minutes is that with room. Every ten
+      minutes keeps the pass to 24 lookups an hour, a quarter of what the
+      provider's terms allow, so address writes keep most of the rate.
 
   technical_enrich_company:
     role: worker

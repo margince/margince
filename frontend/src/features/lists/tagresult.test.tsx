@@ -261,4 +261,18 @@ describe("the tag page names what carries the word", () => {
       await screen.findByText(en["tagResult.nothingCarries"]),
     ).toBeInTheDocument();
   });
+
+  // `#/tags` names no tag, and the page that lists them lives in Settings. The
+  // bare address redirects there, so Back never lands on an empty page again.
+  it("sends the bare address to the page that lists tags", () => {
+    installFetchStub({});
+    window.location.hash = "#/tags";
+    render(
+      <StoryProviders>
+        <TagResultScreen />
+      </StoryProviders>,
+    );
+
+    expect(window.location.hash).toBe("#/settings/tags");
+  });
 });

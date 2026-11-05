@@ -29,45 +29,11 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 )
 
-// transactionalBaseline is the pinned set of registrable domains (eTLD+1) that
-// are mail infrastructure, never a counterparty's own company. Matched exactly
-// (against the PSL-normalized eTLD+1), so every subdomain of a listed eSLD is
-// covered. Additions land through the spec (CAP-PARAM-6), not ad-hoc edits; a
-// deployment appends via margince.yaml capture.transactional_extra.
-var transactionalBaseline = map[string]struct{}{
-	"sendgrid.net":      {}, // Twilio SendGrid relay
-	"sendgrid.com":      {},
-	"mailgun.org":       {}, // Mailgun
-	"mailgun.info":      {},
-	"amazonses.com":     {}, // Amazon SES
-	"mandrillapp.com":   {}, // Mailchimp Transactional
-	"mcsv.net":          {}, // Mailchimp
-	"mcdlv.net":         {},
-	"mailchimpapp.net":  {},
-	"rsgsv.net":         {}, // Mailchimp campaign
-	"postmarkapp.com":   {}, // Postmark
-	"sparkpostmail.com": {}, // SparkPost
-	"createsend.com":    {}, // Campaign Monitor
-	"cmail19.com":       {},
-	"docusign.net":      {}, // DocuSign envelope infrastructure
-}
-
-// personalServiceDomains are product companies whose mail to a mailbox owner is
-// the product talking to its user: expense reports, itineraries, invoices.
-//
-// They are kept OUT of transactionalBaseline deliberately. That set is read by
-// IsMachineAddress, which the attention queue uses to drop rows — and these are
-// companies with named salescontacts, not relay infrastructure like sendgrid.net.
-// Listing them there would hide a real human waiting on a reply, which the
-// queue's reader cannot recover from because nothing on the page says somebody
-// was hidden.
-//
-// What they DO justify is refusing to mint a contact from the owner's own
-// traffic with the service. Each one put a contact in a real CRM — an expense
-// tool's "Receipts", an itinerary service's "Plans" — because a founder
-// replying to their own receipts reads as correspondence.
+// Personal service mail can be bookkeeping without making its domain mail infrastructure.
+// Keeping these domains separate preserves real sales contacts in waiting queues.
 var personalServiceDomains = map[string]struct{}{
 	"expensify.com":       {},
 	"tripit.com":          {},
@@ -142,7 +108,7 @@ func (l *TransactionalList) Suppress(in TransactionalInput) (bool, string) {
 		// The operator vouched for this domain — never suppress it.
 		return false, ""
 	}
-	if _, hit := transactionalBaseline[base]; hit {
+	if mailidentity.Infrastructure(base) {
 		return true, "transactional_infra:" + base
 	}
 	if _, hit := l.extra[base]; hit {
@@ -180,70 +146,7 @@ func corroborated(in TransactionalInput) bool {
 // mail mapper deliberately lets these through — dropping them there would leave
 // this rule nothing to judge (ADR-0072 §1: the activity stands, only the
 // derivation is suppressed) — so this is where they are recognized.
-func isMachineLocalpart(localpart string) bool {
-	local := strings.ToLower(strings.TrimSpace(localpart))
-	local = strings.ReplaceAll(local, ".", "")
-	local = strings.ReplaceAll(local, "-", "")
-	local = strings.ReplaceAll(local, "_", "")
-	switch local {
-	case "noreply", "donotreply", "nreply", "mailerdaemon", "postmaster",
-		"bounce", "bounces", "notifications", "notification", "mailer", "newsletter":
-		return true
-	}
-	return false
-}
-
-// hasMachineMarker catches the compound no-reply names an exact match misses:
-// `esignature-noreply@`, `calendar-notification@`, `jira-no-reply@`. The real
-// world writes the marker into a longer local part far more often than it sends
-// from a bare `noreply@`, and the exact list alone let a page of e-signature
-// and calendar notifications open a rep's day.
-//
-// Kept to markers that are unambiguous ON THEIR OWN. "notification" and
-// "no-reply" mean the same thing wherever they appear in a name; "mail" or
-// "info" do not, and a rule that swept those would hide real contacts.
-// machineMarkers are the words a sending SYSTEM names itself with. Listed once:
-// the three places below ask about the same vocabulary, and three copies of it
-// drift into meaning three different things.
-// `receipts` is here rather than in platform/mailrole because the two lists
-// answer different questions and this address answers neither with a human: an
-// expense tool's `receipts@` is the product mailing its own user, and a reply
-// to it reaches a parser. The money words a company's staff DO answer —
-// billing, invoice, rechnung, buchhaltung — stay in mailrole, where a role
-// mailbox is real correspondence with nobody to name.
-var machineMarkers = map[string]bool{
-	"noreply": true, "noreplies": true, "donotreply": true, "notreply": true,
-	"nreply": true, "notification": true, "notifications": true, "notify": true,
-	"mailerdaemon": true, "autoreply": true, "automailer": true, "automated": true,
-	"receipt": true, "receipts": true,
-}
-
-func hasMachineMarker(localpart string) bool {
-	// A marker counts where a sending system puts it: as the whole local part,
-	// or at either END of it. Two rules learned from real addresses.
-	//
-	// Separators are boundaries, not noise: stripping them turned
-	// `connor.eply@` into `connoreply` and matched "noreply" inside a contact's
-	// name.
-	//
-	// And position matters. `esignature-noreply@` is a machine while
-	// `anna.notify.weber@` is a contact, so a marker buried in the middle of a
-	// name proves nothing — only the ends, where a service names itself.
-	local := strings.ToLower(strings.TrimSpace(localpart))
-	parts := strings.FieldsFunc(local, func(r rune) bool {
-		return r == '.' || r == '-' || r == '_' || r == '+'
-	})
-	if len(parts) == 0 {
-		return false
-	}
-	if machineMarkers[parts[0]] || machineMarkers[parts[len(parts)-1]] {
-		return true
-	}
-	// `no-reply` and `do-not-reply` split into parts that mean nothing alone,
-	// so the whole and its tail are re-joined and asked as one word.
-	return machineMarkers[strings.Join(parts, "")] ||
-		machineMarkers[strings.Join(parts[1:], "")]
-}
+func isMachineLocalpart(localpart string) bool { return mailidentity.IsMachineLocalpart(localpart) }
 
 // senderPrefix returns the leftmost subdomain label below the registrable
 // domain — the "sender lane" a prefix rule keys on. "event.gitex.com" over base
@@ -294,18 +197,4 @@ func normalizedSet(values []string) map[string]struct{} {
 // prefix rule needs, the subdomain arm is left out. Under-recognising costs a
 // row in a queue; over-recognising hides a real customer, and only one of those
 // is recoverable by the reader.
-func IsMachineAddress(address string) bool {
-	at := strings.LastIndex(address, "@")
-	if at <= 0 || at == len(address)-1 {
-		return false
-	}
-	if isMachineLocalpart(address[:at]) || hasMachineMarker(address[:at]) {
-		return true
-	}
-	base := freemail.Registrable(address[at+1:])
-	if base == "" {
-		return false
-	}
-	_, transactional := transactionalBaseline[base]
-	return transactional
-}
+func IsMachineAddress(address string) bool { return mailidentity.IsMachineAddress(address) }

@@ -31,6 +31,7 @@ func TestDeferredSiteReadMetadataReachesBothWireShapes(t *testing.T) {
 	report := siteReadReport(read)
 	if report.Status != crmcontracts.SiteReadReportStatusDeferred ||
 		report.StatusCode == nil || *report.StatusCode != crmcontracts.SiteReadReportStatusCodeBudgetDeferred ||
+		report.DeferralReason == nil || *report.DeferralReason != "budget" ||
 		report.StatusDetail == nil || *report.StatusDetail != statusDetail ||
 		report.NextAttemptAt == nil || !report.NextAttemptAt.Equal(nextAttempt) {
 		t.Fatalf("deferred company report lost scheduling metadata: %+v", report)
@@ -39,6 +40,7 @@ func TestDeferredSiteReadMetadataReachesBothWireShapes(t *testing.T) {
 	company := companySiteRead(read, nil, nil)
 	if company.Status != crmcontracts.CompanySiteReadStatusDeferred ||
 		company.StatusCode == nil || *company.StatusCode != crmcontracts.CompanySiteReadStatusCodeBudgetDeferred ||
+		company.DeferralReason == nil || *company.DeferralReason != "budget" ||
 		company.StatusDetail == nil || *company.StatusDetail != statusDetail ||
 		company.NextAttemptAt == nil || !company.NextAttemptAt.Equal(nextAttempt) {
 		t.Fatalf("deferred onboarding report lost scheduling metadata: %+v", company)

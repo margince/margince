@@ -45,10 +45,12 @@ func (h Handlers) writeMFAChallenge(w http.ResponseWriter, r *http.Request, user
 // half was wrong.
 //
 // The throttles mirror the login pair's, because this is the login endpoint's
-// second half and guards the same account: a per-IP attempt cap ahead of any
-// work, and a per-user failure counter keyed by the user id the VERIFIED
-// signature names — after Verify, so a forged token cannot spend a victim's
-// budget, and never from the body, which the caller chooses.
+// second half and guards the same account. A per-IP attempt cap runs ahead of
+// any work. A per-user attempt cap is keyed by the user id the verified
+// signature names. It runs after Verify, so a forged token cannot spend a
+// victim's budget, and never reads the body, which the caller chooses. Both
+// are per process; the durable cap is the account lockout the service counts
+// wrong codes into.
 func (h Handlers) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
 	if h.mfaSigner == nil {
 		httperr.Write(w, r, errors.New("identity: no signer is configured for the second-factor challenge"))
@@ -76,14 +78,15 @@ func (h Handlers) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
 		httperr.Unauthorized(w, r, "the code, or the challenge, is not valid")
 		return
 	}
-	if h.mfaFailures.Blocked(userID.String()) {
+	// Allow counts the attempt before it runs: a peek here with the failure
+	// recorded afterwards would let a concurrent burst all pass the check.
+	if !h.mfaAttempts.Allow(userID.String()) {
 		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
 	}
 	id, token, err := h.svc.CompleteMFAChallenge(withUserAgent(r.Context(), r.UserAgent()), userID, jti, req.Code)
 	if err != nil {
-		if errors.Is(err, errBadMFACode) || errors.Is(err, errMFANotEnrolled) {
-			h.mfaFailures.Record(userID.String())
+		if errors.Is(err, errBadMFACode) || errors.Is(err, errMFANotEnrolled) || errors.Is(err, errAccountLocked) {
 			httperr.Unauthorized(w, r, "the code, or the challenge, is not valid")
 			return
 		}

@@ -89,15 +89,17 @@ const (
 	// here is about the thread rather than about this message — and each one is
 	// an arm of the offer the extractor itself applies, named where that rule is
 	// spelled so the two cannot come to mean different things.
-	ReasonEventsRaised      Reason = "events_raised"
-	ReasonNothingMaterial   Reason = "nothing_material"
-	ReasonThreadStillMoving Reason = "thread_still_moving"
-	ReasonAwaitingScan      Reason = "awaiting_scan"
-	ReasonReadingParked     Reason = "reading_parked"
-	ReasonNoSingleAccount   Reason = "no_single_account"
-	ReasonTwoBodiesOfWork   Reason = "two_bodies_of_work"
-	ReasonThreadNotAllOpen  Reason = "thread_not_all_open"
-	ReasonNoNamedReader     Reason = "no_named_reader"
+	ReasonEventsRaised       Reason = "events_raised"
+	ReasonNothingMaterial    Reason = "nothing_material"
+	ReasonThreadStillMoving  Reason = "thread_still_moving"
+	ReasonAwaitingScan       Reason = "awaiting_scan"
+	ReasonReadingParked      Reason = "reading_parked"
+	ReasonNoSingleAccount    Reason = "no_single_account"
+	ReasonTwoBodiesOfWork    Reason = "two_bodies_of_work"
+	ReasonThreadNotAllOpen   Reason = "thread_not_all_open"
+	ReasonThreadNotAllRead   Reason = "thread_not_all_read"
+	ReasonNoNamedReader      Reason = "no_named_reader"
+	ReasonFromSendingSystems Reason = "from_sending_systems"
 
 	// StageCompanyTriage, whose subject is a DOMAIN. These are the per-domain
 	// answers the company surface reports; the message ladder carries no rung

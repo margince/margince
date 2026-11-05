@@ -10,10 +10,14 @@ package integration
 // contract promise either holds or does not.
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type networkColleagueDTO struct {
@@ -25,8 +29,13 @@ type networkColleagueDTO struct {
 }
 
 type contactNetworkDTO struct {
-	ContactID  string                `json:"contact_id"`
-	Colleagues []networkColleagueDTO `json:"colleagues"`
+	ContactID   string                `json:"contact_id"`
+	Colleagues  []networkColleagueDTO `json:"colleagues"`
+	CaptureGaps []struct {
+		UserID      string `json:"user_id"`
+		DisplayName string `json:"display_name"`
+		Invited     bool   `json:"invited"`
+	} `json:"capture_gaps"`
 }
 
 type coverageRiskDTO struct {
@@ -69,6 +78,54 @@ func TestContactNetworkAnswersHonestlyWhenNobodyKnowsThem(t *testing.T) {
 	}
 	if len(got.Colleagues) != 0 {
 		t.Errorf("a contact with no interactions has %d colleagues", len(got.Colleagues))
+	}
+	if got.CaptureGaps == nil || len(got.CaptureGaps) != 0 {
+		t.Errorf("capture_gaps = %v, want an empty array", got.CaptureGaps)
+	}
+}
+
+// An invited colleague Cc'd on the contact's mail appears in capture_gaps with
+// invited=true and never as a row of colleagues.
+func TestContactNetworkNoticesAnInvitedSeatWithoutListingItAsAColleague(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var contact AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts",
+		AnyMap{"source": "manual", "full_name": "Outside Contact"}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("creating the contact: %d", status)
+	}
+	id, _ := contact["id"].(string)
+	seat := ids.NewV7()
+	if err := e.DB().Tx(context.Background(), func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(),
+			`INSERT INTO app_user (id, email, display_name, status) VALUES ($1, 'invited.seat@example.test', 'Ina Invited', 'invited')`,
+			seat); err != nil {
+			return err
+		}
+		var activity ids.UUID
+		if err := tx.QueryRow(context.Background(), `
+			INSERT INTO activity (kind, occurred_at, direction, source, captured_by)
+			VALUES ('email', now(), 'inbound', 'imap', 'connector:imap') RETURNING id`).Scan(&activity); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, contact_id, address, role)
+			VALUES ($1, $2, NULL, 'from'), ($1, NULL, 'invited.seat@example.test', 'cc')`, activity, id)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the thread: %v", err)
+	}
+
+	var got contactNetworkDTO
+	if status := e.Call(t, "GET", "/v1/contacts/"+id+"/network", nil, nil, &got); status != http.StatusOK {
+		t.Fatalf("network status = %d, want 200", status)
+	}
+	if len(got.Colleagues) != 0 {
+		t.Errorf("an invited seat was listed as a colleague: %+v", got.Colleagues)
+	}
+	if len(got.CaptureGaps) != 1 || got.CaptureGaps[0].UserID != seat.String() || !got.CaptureGaps[0].Invited {
+		t.Errorf("capture_gaps = %+v, want the invited seat", got.CaptureGaps)
 	}
 }
 

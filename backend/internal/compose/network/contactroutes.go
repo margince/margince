@@ -24,6 +24,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // routeCandidateCap bounds the list for the same reason the groups are capped:
@@ -41,7 +42,7 @@ const routeCandidateCap = 5
 // so the card's recommendation and the list's first row cannot disagree.
 // Held by: TestTheRecommendationIsTheHeadOfTheList
 // (backend/internal/compose/network/contactroutes_test.go)
-func chooseRoutes(out *crmcontracts.ContactGraph, now time.Time) []crmcontracts.ContactGraphRouteCandidate {
+func chooseRoutes(out *crmcontracts.ContactGraph, now time.Time, loc *time.Location) []crmcontracts.ContactGraphRouteCandidate {
 	idx := indexNodes(out)
 	if idx.anchor == "" {
 		return nil
@@ -49,7 +50,7 @@ func chooseRoutes(out *crmcontracts.ContactGraph, now time.Time) []crmcontracts.
 
 	candidates := []crmcontracts.ContactGraphRouteCandidate{}
 	for i := range out.Edges {
-		candidate, ok := candidateFor(&out.Edges[i], idx, now)
+		candidate, ok := candidateFor(&out.Edges[i], idx, now, loc)
 		if !ok {
 			continue
 		}
@@ -96,7 +97,7 @@ func indexNodes(out *crmcontracts.ContactGraph) nodeIndex {
 // the picture and never in this list, because the list's only verb is "ask
 // this contact", and there is nobody here to ask.
 func candidateFor(
-	e *crmcontracts.ContactGraphEdge, idx nodeIndex, now time.Time,
+	e *crmcontracts.ContactGraphEdge, idx nodeIndex, now time.Time, loc *time.Location,
 ) (crmcontracts.ContactGraphRouteCandidate, bool) {
 	via := idx.users[e.From]
 	if via == nil {
@@ -107,7 +108,7 @@ func candidateFor(
 		ViaUserId:      *via,
 		ViaDisplayName: idx.labels[e.From],
 		StrengthBucket: bucketOf(e.StrengthBucket),
-		Evidence:       evidenceOf(e, now),
+		Evidence:       evidenceOf(e, now, loc),
 		// Nothing has been asked for until the introductions module says
 		// otherwise; a nil availability seam means every route is offerable.
 		Availability: crmcontracts.ContactGraphRouteAvailabilityAvailable,
@@ -168,25 +169,30 @@ func beatsCandidate(a, b crmcontracts.ContactGraphRouteCandidate) bool {
 
 // evidenceOf states the counts as facts. The sentence is the client's to
 // write: this server speaks English and the product speaks three languages.
-func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time) crmcontracts.ContactGraphRouteEvidence {
+func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time, loc *time.Location) crmcontracts.ContactGraphRouteEvidence {
 	ev := crmcontracts.ContactGraphRouteEvidence{
 		Interactions90d: e.Interactions90d,
 		Inbound90d:      e.Inbound90d,
 		Outbound90d:     e.Outbound90d,
-		TwoWay:          twoWay(e),
+		TwoWay:          twoWay(e.Inbound90d, e.Outbound90d),
 	}
 	if e.LastAt != nil {
 		last := *e.LastAt
-		days := elapsed.Days(last, now)
+		days := elapsed.Days(last, now, loc)
 		ev.LastAt = &last
 		ev.DaysSinceLast = &days
 	}
 	return ev
 }
 
-// twoWay is the claim that separates a relationship from a mailing list.
-func twoWay(e *crmcontracts.ContactGraphEdge) bool {
-	return e.Inbound90d != nil && *e.Inbound90d > 0 && e.Outbound90d != nil && *e.Outbound90d > 0
+// twoWay is the claim that separates a relationship from a mailing list, in
+// relstrength's direction words over the colleague's 90-day counts.
+func twoWay(inbound, outbound *int) bool {
+	sides := relstrength.Sides{
+		TheyWrote: inbound != nil && *inbound > 0,
+		WeWrote:   outbound != nil && *outbound > 0,
+	}
+	return sides.Direction() == relstrength.DirectionTwoWay
 }
 
 func bucketOf(b crmcontracts.ContactGraphEdgeStrengthBucket) *crmcontracts.ContactGraphRouteCandidateStrengthBucket {

@@ -10,6 +10,8 @@ package compose
 // one undo that opens them all again.
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -21,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -128,9 +131,8 @@ func TestBulkCompletingThreeTasksAndUndoingOpensAllThreeAgain(t *testing.T) {
 	}
 }
 
-// One change over a task and a promise settles each through its own writer,
-// and reports rather than overwrites the rows it cannot honestly change.
-func TestABulkCompletionSettlesAPromiseAndReportsWhatItLeftAlone(t *testing.T) {
+// A personal completion cannot settle an unassigned team claim.
+func TestABulkCompletionRefusesUnassignedClaimsAndReportsWhatItLeftAlone(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Send the quote")
@@ -150,19 +152,20 @@ func TestABulkCompletionSettlesAPromiseAndReportsWhatItLeftAlone(t *testing.T) {
 	engine := bulkEngineFor(e)
 
 	out, err := engine.Execute(e.Admin(), completeItems(task, promise, stale, finished))
-	if err != nil || out.Changed != 2 {
-		t.Fatalf("execute → %+v, %v; want the task and the promise done", out, err)
+	if err != nil || out.Changed != 1 {
+		t.Fatalf("execute → %+v, %v; want only the assigned task done", out, err)
 	}
 	assertReasons(t, "execute", skipReasons(out.Skipped), map[openapi_types.UUID]crmcontracts.BulkSkipReason{
+		promise.Id:  crmcontracts.BulkSkipReasonNotFound,
 		stale.Id:    crmcontracts.BulkSkipReasonChangedSincePreview,
 		finished.Id: crmcontracts.BulkSkipReasonNoChange,
 	})
-	if got := e.WsScalar(t, `SELECT status FROM conversation_claim WHERE id = $1`, promise.Id); got != "done" {
-		t.Fatalf("the promise is %s after the change, want done", got)
+	if got := e.WsScalar(t, `SELECT status FROM conversation_claim WHERE id = $1`, promise.Id); got != "open" {
+		t.Fatalf("the unassigned team claim is %s after the change, want open", got)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE batch_id = $1 AND entity_type = 'contact'`,
-		ids.UUID(out.BatchId)); n != 1 {
-		t.Errorf("%d contact audit rows carry the batch id, want the one settlement", n)
+		ids.UUID(out.BatchId)); n != 0 {
+		t.Errorf("%d contact audit rows carry the batch id, want no claim settlement", n)
 	}
 
 	if _, err := engine.Undo(e.Admin(), ids.UUID(out.BatchId), ""); err != nil {
@@ -222,25 +225,42 @@ func TestABatchStopsNamingAPromiseOnceItsRequesterLosesActivityRead(t *testing.T
 	}
 }
 
-// An agent may mark the user's tasks done, never their promises: whether a
-// human kept their word is theirs to say, and the skip says so by name.
-func TestAnAgentsBulkCompletionLeavesPromisesToTheUser(t *testing.T) {
+// A user's agent reaches a promise as its user does, and the write names the
+// agent. Automatic work is refused it.
+func TestAUsersAgentSettlesAPromiseAndAutomaticWorkIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Frau Keller", &e.Rep1)
-	task := seedWorklistTask(t, e, contact, "Book the site visit")
 	promise := seedWorklistPromise(t, e, contact, "Confirm the delivery date")
-	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
-
-	out, err := bulkEngineFor(e).Execute(agent, completeItems(task, promise))
-	if err != nil || out.Changed != 1 || len(out.Skipped) != 1 {
-		t.Fatalf("execute → %+v, %v; want the task done and the promise skipped", out, err)
+	settle := func(ctx context.Context) error {
+		return e.DB().Tx(ctx, func(tx pgx.Tx) error {
+			if _, err := e.Contacts.LockClaimForBulkTx(ctx, tx, ids.UUID(promise.Id)); err != nil {
+				return err
+			}
+			_, err := e.Contacts.SetClaimDoneTx(ctx, tx, ids.UUID(promise.Id), true)
+			return err
+		})
 	}
-	if skip := out.Skipped[0]; skip.Id != promise.Id || skip.Reason != crmcontracts.BulkSkipReasonRefused ||
-		skip.Code == nil || *skip.Code != "commitment_needs_the_user" {
-		t.Errorf("the promise was skipped as %+v, want refused with commitment_needs_the_user", skip)
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+	actor, ok := principal.Actor(human)
+	if !ok {
+		t.Fatal("the fixture carries no actor")
+	}
+	actor.Type, actor.ID = principal.PrincipalAgent, "agent:enrich"
+	if err := settle(principal.WithActor(human, actor)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("automatic work settling a promise = %v, want ErrPermissionDenied", err)
 	}
 	if got := e.WsScalar(t, `SELECT status FROM conversation_claim WHERE id = $1`, promise.Id); got != "open" {
-		t.Errorf("the promise is %s, want it left open", got)
+		t.Fatalf("the promise is %s after automatic work, want it left open", got)
+	}
+
+	if err := settle(e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)); err != nil {
+		t.Fatalf("the user's agent settling a promise: %v", err)
+	}
+	if got := e.WsScalar(t, `SELECT status FROM conversation_claim WHERE id = $1`, promise.Id); got != "done" {
+		t.Errorf("the promise is %s, want done", got)
+	}
+	if got := e.WsScalar(t, `SELECT actor_type FROM audit_log WHERE entity_id = $1 ORDER BY id DESC LIMIT 1`, contact); got != "agent" {
+		t.Errorf("the settlement is audited to %s, want the agent", got)
 	}
 }
 
@@ -250,7 +270,6 @@ func TestTheWorklistOffersDoneOnlyWhereTheReaderMayWrite(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Call back")
-	seedWorklistPromise(t, e, contact, "Send the quote")
 	readOnly := principal.Permissions{
 		RoleKeys: integration.SchedulerPerms.RoleKeys,
 		Objects: map[string]principal.ObjectGrant{
@@ -258,7 +277,6 @@ func TestTheWorklistOffersDoneOnlyWhereTheReaderMayWrite(t *testing.T) {
 		},
 		RowScope: integration.SchedulerPerms.RowScope,
 	}
-	due := time.Now().Add(24 * time.Hour)
 	for name, tc := range map[string]struct {
 		perms    principal.Permissions
 		writable bool
@@ -271,14 +289,7 @@ func TestTheWorklistOffersDoneOnlyWhereTheReaderMayWrite(t *testing.T) {
 		if err != nil || tasks[ids.UUID(task.Id)] != tc.writable {
 			t.Errorf("%s: task writable = %v (%v), want %v", name, tasks[ids.UUID(task.Id)], err, tc.writable)
 		}
-		claims := contacts.NewStore(e.DB())
-		promises, err := claims.OpenCommitmentsDue(reader, ids.From[ids.UserKind](e.Rep1), due, 10)
-		if err == nil {
-			err = claims.MarkSettleable(reader, promises)
-		}
-		if err != nil || len(promises) != 1 || promises[0].Settleable != tc.writable {
-			t.Errorf("%s: promises %+v (%v), want one with settleable = %v", name, promises, err, tc.writable)
-		}
+
 	}
 }
 
@@ -300,9 +311,9 @@ func TestABulkCompletionReachesOnlyTheReadersOwnPromises(t *testing.T) {
 	}
 }
 
-// An agent that may read the contact but not change it still hears the one
-// reason a promise is refused to an agent, not the write authority it lacks.
-func TestAnAgentIsToldThePromiseIsTheUsersBeforeAnyWriteCheck(t *testing.T) {
+// A user's agent that may read the contact but not change it is refused as its
+// user would be.
+func TestAnAgentWithoutWriteAuthorityOverTheContactLeavesThePromiseOpen(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Herr Lang", &e.Rep1)
 	promise := seedWorklistPromise(t, e, contact, "Call back on Monday")
@@ -314,13 +325,17 @@ func TestAnAgentIsToldThePromiseIsTheUsersBeforeAnyWriteCheck(t *testing.T) {
 		RowScope: integration.SchedulerPerms.RowScope,
 	}
 	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, readOnly)
-
-	out, err := bulkEngineFor(e).Execute(agent, completeItems(promise))
-	if err != nil || len(out.Skipped) != 1 {
-		t.Fatalf("execute → %+v, %v; want the promise skipped", out, err)
+	if err := e.DB().Tx(agent, func(tx pgx.Tx) error {
+		if _, err := e.Contacts.LockClaimForBulkTx(agent, tx, ids.UUID(promise.Id)); err != nil {
+			return err
+		}
+		_, err := e.Contacts.SetClaimDoneTx(agent, tx, ids.UUID(promise.Id), true)
+		return err
+	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("settling the promise = %v, want ErrPermissionDenied", err)
 	}
-	if skip := out.Skipped[0]; skip.Code == nil || *skip.Code != "commitment_needs_the_user" {
-		t.Errorf("the promise was skipped as %+v, want commitment_needs_the_user", skip)
+	if got := e.WsScalar(t, `SELECT status FROM conversation_claim WHERE id = $1`, promise.Id); got != "open" {
+		t.Errorf("the promise is %s, want it left open", got)
 	}
 }
 
@@ -382,7 +397,7 @@ func TestABulkCompletionLeavesRowsTheReaderMayNotChange(t *testing.T) {
 	}
 	assertReasons(t, "read-only", skipReasons(out.Skipped), map[openapi_types.UUID]crmcontracts.BulkSkipReason{
 		task.Id:    crmcontracts.BulkSkipReasonNotWritable,
-		promise.Id: crmcontracts.BulkSkipReasonNotWritable,
+		promise.Id: crmcontracts.BulkSkipReasonNotFound,
 	})
 
 	otherTeam := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.SchedulerPerms)
@@ -433,9 +448,8 @@ func TestABatchNamesItsSkippedTasksOnlyWhileTheRequesterReadsThem(t *testing.T) 
 	}
 }
 
-// The Worklist target answers a task and a promise as the rows a sample shows:
-// the task by its subject, the promise by its sentence, each at its version.
-func TestTheWorklistTargetLocksATaskAndAPromiseByTheirOwnWords(t *testing.T) {
+// A preview must not offer a personal completion for an unassigned team claim.
+func TestTheWorklistTargetLocksTasksButNotUnassignedTeamClaims(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Frau Keller", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Send the quote")
@@ -448,6 +462,12 @@ func TestTheWorklistTargetLocksATaskAndAPromiseByTheirOwnWords(t *testing.T) {
 	}{{task, "Send the quote"}, {promise, "Confirm the delivery date"}} {
 		err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
 			row, err := target.lock(e.Admin(), tx, ids.UUID(want.item.Id))
+			if want.item.Id == promise.Id {
+				if !errors.Is(err, apperrors.ErrNotFound) {
+					t.Errorf("unassigned claim lock error=%v, want not found", err)
+				}
+				return nil
+			}
 			if err == nil && (row.label != want.label || row.version != want.item.Version) {
 				t.Errorf("locked %+v, want %q at version %d", row, want.label, want.item.Version)
 			}

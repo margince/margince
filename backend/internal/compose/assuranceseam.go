@@ -17,23 +17,55 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // assuranceSubjectsSQL is AssuranceSubjects' one read, held at package
 // level so the function stays within the length a reader holds at once.
-const assuranceSubjectsSQL = `
+var assuranceSubjectsSQL = `
 		SELECT d.id, d.owner_id, d.amount_minor, d.currency,
 		       d.expected_close_date, d.close_date_provisional,
-		       d.forecast_category, s.name,
+		       ` + deals.WinProbabilitySQL("d") + `, s.name, d.stage_id,
+		       COALESCE((SELECT max(h.changed_at) FROM deal_stage_history h
+		                  WHERE h.deal_id = d.id AND h.to_stage_id = d.stage_id), d.created_at),
+		       d.created_at, d.wait_until,
 		       (SELECT max(a.occurred_at)
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
 		         WHERE al.deal_id = d.id
-		           AND a.direction = 'inbound'
-		           AND a.archived_at IS NULL) AS last_inbound_at,
+		           AND a.archived_at IS NULL
+		           AND %[2]s) AS last_customer_progress_at,
+		       (SELECT max(a.occurred_at)
+		          FROM activity a
+		          JOIN activity_link al ON al.activity_id = a.id
+		         WHERE al.deal_id = d.id
+		           AND a.archived_at IS NULL
+		           AND %[6]s) AS last_customer_refusal_at,
+		       (SELECT min(a.occurred_at)
+		          FROM activity a
+		          JOIN activity_link al ON al.activity_id = a.id
+		         WHERE al.deal_id = d.id
+		           AND a.archived_at IS NULL
+		           AND a.kind = 'meeting'
+		           AND %[3]s
+		           AND %[7]s
+		           AND EXISTS (SELECT 1 FROM activity_participant p
+		                        WHERE p.activity_id = a.id AND p.contact_id IS NOT NULL
+		                          AND p.response = 'accepted')) AS confirmed_meeting_at,
+		       %[8]s AS earlier_answer_until,
+		       EXISTS (SELECT 1 FROM assurance_exception x
+		                WHERE x.subject_kind = 'deal' AND x.subject_id = d.id
+		                  AND x.type = $4 AND x.status = 'open') AS open_review,
+		       %[4]s AS viability_fingerprint,
 		       (SELECT o.gross_minor
 		          FROM offer o
 		         WHERE o.deal_id = d.id
@@ -59,29 +91,41 @@ const assuranceSubjectsSQL = `
 		           AND (au.before ->> 'expected_close_date') IS NOT NULL
 		           AND (au.after ->> 'expected_close_date') IS NOT NULL
 		           AND (au.after ->> 'expected_close_date')::date
-		               > (au.before ->> 'expected_close_date')::date) AS close_date_pushes,
+		               > (au.before ->> 'expected_close_date')::date
+		           AND %[10]s) AS close_date_pushes,
 		       EXISTS (SELECT 1
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
 		         WHERE al.deal_id = d.id
 		           AND a.archived_at IS NULL
-		           AND ((a.kind = 'task' AND a.is_done = false)
-		                -- NULL is a meeting nothing has said is off. An imported
-		                -- one carries no status, and the strict form raised a
+		           AND ((a.kind = 'task' AND a.is_done = false AND %[1]s)
+		                -- MeetingAheadSQL admits NULL, a meeting nothing has said
+		                -- is off. An imported one carries no status, and the strict form raised a
 		                -- "no next step" finding against a deal whose next step
 		                -- was in the rep's calendar.
-		                OR (a.kind = 'meeting'
-		                    AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
-		                    AND a.occurred_at > $2))) AS has_next_step,
+		                OR (a.kind = 'meeting' AND %[3]s))) AS has_next_step,
 		       EXISTS (SELECT 1
 		          FROM relationship r
 		         WHERE r.kind = 'deal_stakeholder'
 		           AND r.deal_id = d.id
 		           AND r.role = $3
-		           AND r.archived_at IS NULL) AS has_economic_buyer
+		           AND r.archived_at IS NULL) AS has_economic_buyer,
+		       (SELECT count(*)
+		          FROM stage_exit_criterion c
+		         WHERE c.stage_id = d.stage_id
+		           AND c.required
+		           AND c.archived_at IS NULL
+		           AND NOT EXISTS (SELECT 1
+		              FROM deal_stage_evidence e
+		             WHERE e.criterion_id = c.id
+		               AND e.deal_id = d.id
+		               AND e.met
+		               AND e.refuted_at IS NULL
+		               AND %[5]s)) AS unmet_exit_criteria,
+		       %[11]s AS mail_boxes
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
-		WHERE d.archived_at IS NULL AND d.status = 'open'
+		WHERE d.archived_at IS NULL AND d.status = 'open'%[9]s
 		ORDER BY d.id`
 
 // closePushWindow bounds how far back the close-date-push count looks. One
@@ -113,41 +157,217 @@ const closePushWindow = 90 * 24 * time.Hour
 // offer or contract in a different currency is not comparable minor-for-minor,
 // and handing the rule such a number would report a "discrepancy" that is
 // entirely exchange rate.
-func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, error) {
-	now := time.Now().UTC()
-	rows, err := tx.Query(ctx, assuranceSubjectsSQL,
-		now.Add(-closePushWindow), now, dealrole.EconomicBuyer)
+func AssuranceSubjects(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage,
+) ([]assurance.Subject, error) {
+	return assuranceSubjects(ctx, tx, asOf, coverage, nil)
+}
+
+// assuranceSubjects is AssuranceSubjects, narrowed to the deals in only when it
+// is not nil. A review answer and the forecast's risk signals read the same
+// evidence the nightly pass reads.
+func assuranceSubjects(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only []ids.UUID,
+) ([]assurance.Subject, error) {
+	now := asOf.UTC()
+	zone, err := installationZoneTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	args := []any{now.Add(-closePushWindow), now, dealrole.EconomicBuyer, assurance.TypeDealViability}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, err
+	}
+	byOwner, err := mailCoverageByOwner(ctx, tx, now)
+	if err != nil {
+		return nil, err
+	}
+	byConnection, err := mailCoverageByConnection(ctx, tx, now)
+	if err != nil {
+		return nil, err
+	}
+	mailCovered := dealMailCovered(sourceChecked(coverage, sourceMail), byOwner, byConnection)
+	query := assuranceSubjectsQuery(now, identities, only, arg)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
 	}
 	defer rows.Close()
 
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.Subject, error) {
-		var out assurance.Subject
-		var dealID ids.UUID
-		var owner *ids.UUID
-		var currency, category, stage *string
-		var lastInbound *time.Time
-		err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
-			&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &lastInbound,
-			&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
-			&out.HasNextStep, &out.HasEconomicBuyer)
-		out.DealID = dealID.String()
-		if owner != nil {
-			out.Owner = owner.String()
-		}
-		if currency != nil {
-			out.Currency = *currency
-		}
-		if category != nil {
-			out.Category = *category
-		}
-		if stage != nil {
-			out.StageName = *stage
-		}
-		out.LastInboundAt = lastInbound
-		return out, err
+	subjects, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.Subject, error) {
+		return scanAssuranceSubject(row, now, zone, mailCovered)
 	})
+	if err != nil {
+		return nil, err
+	}
+	threshold, err := identity.ForecastLikelyThresholdTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range subjects {
+		subjects[i].Likely = subjects[i].WinProbability >= threshold
+	}
+	return subjects, nil
+}
+
+func scanAssuranceSubject(
+	row pgx.CollectableRow, asOf time.Time, zone *time.Location, mailCovered func(owner *ids.UUID, mailboxes []string) bool,
+) (assurance.Subject, error) {
+	var out assurance.Subject
+	var dealID ids.UUID
+	var owner *ids.UUID
+	var currency, stage *string
+	var stageID *ids.UUID
+	var evidence deals.ViabilityInput
+	var fingerprint string
+	var mailboxes []string
+	err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
+		&out.ExpectedClose, &out.CloseProvisional, &out.WinProbability, &stage, &stageID, &out.StageEnteredAt,
+		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
+		&evidence.LastCustomerRefusalAt,
+		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
+		&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
+		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria, &mailboxes)
+	if err != nil {
+		return out, err
+	}
+	out.DealID = dealID.String()
+	if owner != nil {
+		out.Owner = owner.String()
+	}
+	if currency != nil {
+		out.Currency = *currency
+	}
+	if stage != nil {
+		out.StageName = *stage
+	}
+	if stageID != nil {
+		out.StageID = stageID.String()
+	}
+	evidence.ExpectedClose, evidence.CloseProvisional = out.ExpectedClose, out.CloseProvisional
+	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered(owner, mailboxes)
+	assessed := deals.AssessViability(evidence, asOf, zone)
+	out.Viability = &assurance.SubjectViability{
+		Outcome: assessed.Outcome, Reasons: assessed.Reasons, SilentDays: assessed.SilentDays,
+		NextChange: assessed.NextChange, Fingerprint: fingerprint,
+	}
+	return out, nil
+}
+
+// customerProgressSQL admits a row that is the CUSTOMER moving the deal. That is
+// a message a contact on it wrote, or a meeting or call with them that happened.
+// Our own mail, a task, a field edit and a machine's mail never count. Nor do a
+// message not every member may read, or a refusal. An unjudged message counts,
+// because every message from before the verdict existed is unjudged.
+func customerProgressSQL(alias, asOf string) string {
+	return "(" + visibleToAllSQL(alias) + " AND " + customerProgressAnyAudienceSQL(alias, asOf) + ")"
+}
+
+// customerProgressAnyAudienceSQL is customerProgressSQL over every message,
+// those only their participants may read included. Only its date may be used.
+func customerProgressAnyAudienceSQL(alias, asOf string) string {
+	return "(" + relstrength.DirectionClockSQL(alias) +
+		" AND ((" + customerWroteSQL(alias) + " AND " +
+		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
+		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
+		relstrength.NotCalledOffSQL(alias) + " AND " +
+		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
+}
+
+// customerRefusalSQL admits a message a contact on the deal wrote that was
+// judged a refusal.
+func customerRefusalSQL(alias, asOf string) string {
+	return "(" + visibleToAllSQL(alias) + " AND " + customerRefusalAnyAudienceSQL(alias, asOf) + ")"
+}
+
+// customerRefusalAnyAudienceSQL is customerRefusalSQL over every message.
+func customerRefusalAnyAudienceSQL(alias, asOf string) string {
+	return "(" + relstrength.DirectionClockSQL(alias) + " AND " + customerWroteSQL(alias) + " AND " +
+		alias + ".reply_verdict = '" + activities.ReplyVerdictNegative + "' AND " + occurredday.BegunSQL(alias, asOf) + ")"
+}
+
+// earlierAnswerSQL is when the newest answer to the retired buyer-silent check
+// on the deal runs out, if it has not yet. Its findings close on the first
+// night the mail is read, but the answers stay. A deal somebody answered is not
+// asked again before its answer ends. The answer was about one silence:
+// once the customer moved the deal after it, a later silence is a new one. A
+// reminder holds at most as long as any answer may hide a finding.
+func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
+	capped := assurance.LiveRemindAtSQL("r", fmt.Sprintf("$%d", arg(assurance.MaxSuppressionDays())))
+	return fmt.Sprintf(`(SELECT CASE
+		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
+		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
+		                    AND NOT %[8]s AND %[7]s) THEN NULL
+		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
+		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
+		  FROM assurance_resolution r
+		  JOIN assurance_exception x ON x.id = r.exception_id
+		 WHERE x.subject_kind = 'deal' AND x.subject_id = %[1]s.id AND x.type = $%[6]d
+		 ORDER BY r.created_at DESC, r.id DESC
+		 LIMIT 1)`,
+		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
+		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", asOf),
+		occurredday.BegunSQL("pa", "r.created_at"))
+}
+
+// assuranceSubjectsQuery is the statement assuranceSubjects runs. Rendered
+// apart so a test can read which tables the check reads.
+func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, arg func(any) int) string {
+	// A task the product filed itself asks for a next step; it is not one.
+	humanTask := activities.CurrentTaskClause("a", now, identities, arg) +
+		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
+	return fmt.Sprintf(assuranceSubjectsSQL, humanTask,
+		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
+		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
+		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
+		// A date an import moved is the source system's history, not a push.
+		storekit.AuditNotFromAnImport("au"), dealMailboxesSQL("d"))
+}
+
+// onlyDealSQL narrows the read to the deals in only, or not at all when only is
+// nil. An empty, non-nil list reads no deal.
+func onlyDealSQL(only []ids.UUID, arg func(any) int) string {
+	if only == nil {
+		return ""
+	}
+	return fmt.Sprintf(" AND d.id = ANY($%d)", arg(only))
+}
+
+// visibleToAllSQL admits an activity every member may read. The check runs as
+// the system and its answer reaches every reader of the forecast, so a limited
+// or restricted message must not move it.
+func visibleToAllSQL(alias string) string {
+	return "(" + relstrength.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
+}
+
+// customerWroteSQL is a message one of the deal's contacts wrote.
+func customerWroteSQL(alias string) string {
+	return "EXISTS (SELECT 1 FROM (SELECT cp.contact_id FROM activity_participant cp WHERE cp.activity_id = " +
+		alias + ".id UNION SELECT cl.contact_id FROM activity_link cl WHERE cl.activity_id = " + alias +
+		".id) who WHERE who.contact_id IS NOT NULL AND " + relstrength.TheyWroteSQL("who.contact_id", alias) + ")"
+}
+
+// sourceChecked reports whether the run read one source on time.
+func sourceChecked(coverage []assurance.SourceCoverage, source string) bool {
+	for _, c := range coverage {
+		if c.Source == source {
+			return c.State == assurance.CoverageChecked
+		}
+	}
+	return false
+}
+
+// AssuranceConfig is the check's configuration, with a receipt lifetime taken
+// from the job catalog: one cadence plus one run's deadline. A receipt older
+// than that has outlived the check that should have replaced it.
+func AssuranceConfig() assurance.Config {
+	cfg := assurance.DefaultConfig()
+	if spec, ok := jobs.SpecFor(AssuranceSweepArgs{}.Kind()); ok {
+		cfg.ReceiptLifetime = spec.Cadence.Fixed + spec.Timeout.Duration()
+	}
+	return cfg
 }
 
 // AssuranceCoverage answers which sources the run could reach.
@@ -160,66 +380,6 @@ func AssuranceCoverage(ctx context.Context, tx pgx.Tx, now time.Time) []assuranc
 	return []assurance.SourceCoverage{
 		mailCoverage(ctx, tx, now),
 		offerCoverage(now),
-	}
-}
-
-// sourceMail names the mailbox in coverage rows; the assurance store's CHECK
-// constraint owns the vocabulary.
-const sourceMail = "mail"
-
-// mailProviders are the capture connectors that carry mail. gcal is calendar
-// and the chat providers are messaging; a healthy WhatsApp says nothing about
-// whether anybody read the mailbox a close date would be checked against.
-var mailProviders = []string{providerGmail, "imap", providerGraph, "offline_demo"}
-
-// mailCoverage grades the mailbox by CONNECTOR health, not by mail volume.
-//
-// It used to read max(occurred_at) over captured email, which conflates two
-// different facts: a quiet mailbox on a healthy connector was reported stale —
-// nothing arrived, so "the source fell behind" — while a broken connector under
-// recent mail read as checked. The sync checkpoint is the fact this state
-// actually claims: when the connector last successfully read the source.
-func mailCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.SourceCoverage {
-	// Aggregates fail CLOSED over every live, not-deliberately-disconnected
-	// connection: min() ignores NULL, so a never-synced broken mailbox next to
-	// a healthy one would otherwise vanish from the aggregate and the run
-	// would claim checked over a source it never read.
-	var live, reauth, unsynced int
-	var oldestSuccess *time.Time
-	if err := tx.QueryRow(ctx, `
-		SELECT count(*) FILTER (WHERE c.status <> 'disconnected'),
-		       count(*) FILTER (WHERE c.status = 'reauth_required'),
-		       count(*) FILTER (WHERE c.status <> 'disconnected' AND s.last_success_at IS NULL),
-		       min(s.last_success_at) FILTER (WHERE c.status <> 'disconnected')
-		FROM capture_connection c
-		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
-		WHERE c.provider = ANY($1) AND c.archived_at IS NULL`,
-		mailProviders).Scan(&live, &reauth, &unsynced, &oldestSuccess); err != nil {
-		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
-	}
-	switch {
-	case live == 0:
-		// Never configured, or every mailbox deliberately disconnected. Either
-		// way there is nothing to fix, only something to decide, and the two
-		// route to different contacts than a broken connector does.
-		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageNotConnected}
-	case reauth > 0:
-		// Somebody must re-grant access; until then part of the mailbox is
-		// unreadable for a permission reason, not a technical one.
-		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoveragePermissionLimited}
-	case unsynced > 0:
-		// At least one live mailbox has never been read. One healthy sibling
-		// does not make the source checked — the claim covers all of them.
-		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
-	case now.Sub(*oldestSuccess) > staleAfter:
-		// The slowest mailbox decides: "mail was checked" over three mailboxes
-		// means all three, so the oldest checkpoint grades the source and caps
-		// the checked-through date below.
-		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageStale}
-	default:
-		return assurance.SourceCoverage{
-			Source: sourceMail, State: assurance.CoverageChecked, CheckedThrough: oldestSuccess,
-		}
 	}
 }
 

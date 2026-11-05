@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 )
 
 // ClearVoiceCorpus implements (DELETE /voice-profiles/{id}/corpus).
@@ -189,7 +190,8 @@ func wireVoiceBuild(build VoiceBuild) crmcontracts.VoiceBuild {
 		ResultVersion:   build.ResultVersion,
 		CandidateAction: crmcontracts.VoiceBuildCandidateAction(build.CandidateAction),
 		StatusCode:      statusCode, StatusDetail: build.StatusDetail, NextAttemptAt: build.NextAttemptAt,
-		Version: int(build.Version), CreatedAt: build.CreatedAt, StartedAt: build.StartedAt,
+		DeferralReason: providerwait.Reason(build.Status, build.StatusCode, build.StatusDetail),
+		Version:        int(build.Version), CreatedAt: build.CreatedAt, StartedAt: build.StartedAt,
 		CompletedAt: build.CompletedAt, UpdatedAt: updatedAt(build.CreatedAt, build.UpdatedAt),
 		ArchivedAt: build.ArchivedAt,
 	}

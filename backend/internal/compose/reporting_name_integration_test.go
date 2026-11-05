@@ -55,7 +55,5 @@ func TestATargetReasonLimitCountsCharactersNotBytes(t *testing.T) {
 	if err := create(time.October, strings.Repeat("é", 1000)); err != nil {
 		t.Fatalf("1000 characters (2000 bytes) refused: %v", err)
 	}
-	if err := create(time.November, strings.Repeat("é", 1001)); !errors.Is(err, apperrors.ErrInvalidArgument) {
-		t.Fatalf("1001 characters answered %v, want an invalid-argument refusal", err)
-	}
+	requireRefusedField(t, create(time.November, strings.Repeat("é", 1001)), "reason")
 }

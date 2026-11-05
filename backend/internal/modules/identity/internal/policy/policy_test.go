@@ -241,15 +241,16 @@ func TestNoSeededRoleGrantsAWriteWithoutRead(t *testing.T) {
 	}
 }
 
-// An unbounded row scope is held by four roles, and it is therefore not a
+// An unbounded row scope is held by five roles, and it is therefore not a
 // stand-in for "admin". Gates that conflated the two handed workspace-wide
 // governance reads to ops and read_only, so the set is pinned here: a role
 // gaining or losing `all` changes who those gates admit, and that has to be a
 // deliberate edit rather than a side effect nobody sees. management (ADR-0110)
-// is the newest of the four and the sharpest case: it is manager's grid over
-// every row, and holds no governance authority at all.
-func TestExactlyFourSeededRolesAreUnbounded(t *testing.T) {
-	want := map[string]bool{"admin": true, "ops": true, "management": true, "read_only": true}
+// is the sharpest case: it is manager's grid over every row, and holds no
+// governance authority at all. service_ingest is the fifth. A landing must see
+// the contacts the installation already holds. It grants nothing beyond them.
+func TestExactlyFiveSeededRolesAreUnbounded(t *testing.T) {
+	want := map[string]bool{"admin": true, "ops": true, "management": true, "read_only": true, "service_ingest": true}
 	for roleKey, doc := range defaults {
 		unbounded := doc.RowScope == principal.RowScopeAll
 		if unbounded != want[roleKey] {
@@ -260,6 +261,31 @@ func TestExactlyFourSeededRolesAreUnbounded(t *testing.T) {
 	for roleKey := range want {
 		if _, ok := defaults[roleKey]; !ok {
 			t.Errorf("role %q is named as unbounded but is not seeded at all", roleKey)
+		}
+	}
+}
+
+// A service member lands records and does nothing else. It never deletes.
+// It holds the activity, contact, company and deal of a landing, and the read of
+// installation settings that pricing a deal needs.
+func TestTheServiceIngestRoleGrantsOnlyTheLandingWrites(t *testing.T) {
+	landing := map[string]bool{"activity": true, "contact": true, "company": true, "deal": true}
+	for _, object := range coreObjects {
+		g := defaults["service_ingest"].Objects[object]
+		if object == objInstallationSettings {
+			if g != readOnly {
+				t.Errorf("service_ingest on %q = %+v, want read only", object, g)
+			}
+			continue
+		}
+		if landing[object] {
+			if !g.Create || !g.Read || !g.Update || g.Delete {
+				t.Errorf("service_ingest on %q = %+v, want create, read and update without delete", object, g)
+			}
+			continue
+		}
+		if g != none {
+			t.Errorf("service_ingest holds %+v on %q, which a landing does not touch", g, object)
 		}
 	}
 }
@@ -338,16 +364,15 @@ func TestNoOverrideRestatesItsOwnBase(t *testing.T) {
 		}
 		calls = append(calls, call.FindAllStringSubmatch(string(source), -1)...)
 	}
-	// Five: admin, ops, rep, read_only and the shared managerObjects. The two
-	// missing roles are the point of the number — `manager` reuses
-	// managerObjects and `management` derives managementObjects from it, so
-	// neither spells a grid call of its own. Pinning the count is what makes
-	// this test fail LOUDLY when the corpus stops seeing part of the seed;
-	// without it a file rename would quietly leave a role unchecked.
-	const wantCalls = 5
+	// Six: admin, ops, rep, read_only, service_ingest, managerObjects.
+	// `manager` reuses managerObjects and `management` derives
+	// managementObjects from it, so neither spells a grid call of its own.
+	// Pinning the count makes this test fail when the corpus stops seeing
+	// part of the seed. A file rename would otherwise leave a role unchecked.
+	const wantCalls = 6
 	if len(calls) != wantCalls {
 		t.Fatalf("found %d grid(base, overrides) calls across the package, want %d "+
-			"(admin, ops, rep, read_only, managerObjects) — either the corpus is not reading "+
+			"(admin, ops, rep, read_only, service_ingest, managerObjects) — either the corpus is not reading "+
 			"the whole seed, or a role gained its own grid and this count needs revisiting",
 			len(calls), wantCalls)
 	}

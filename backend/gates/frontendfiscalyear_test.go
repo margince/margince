@@ -5,11 +5,10 @@
 
 package gates
 
-// A fiscal year's label is spelled twice: the server builds it in SQL
-// (internal/compose/reportperiod.go) because that is what a report is actually
-// cut by, and the browser builds it in TypeScript
-// (frontend/src/format/fiscalyear.ts) to show an admin what the setting they
-// are about to save will produce.
+// A fiscal year's label is spelled twice. The server builds it in SQL
+// (internal/compose/reportperiod.go), because that is what a report is cut by.
+// The browser builds it in TypeScript (frontend/src/features/sign-in/fiscalyear.ts)
+// to show an admin what the setting they are about to save will produce.
 //
 // Two spellings of one rule drift, and this one drifts SILENTLY: the settings
 // screen would promise "FY2026/27" while every report said something else, and
@@ -31,7 +30,8 @@ package gates
 //
 // What it cannot see: an off-by-one in the SQL's month shift, or a to_char
 // pattern that renders the right shape from the wrong instant. Those are
-// arithmetic rather than shape, and they are held by TestQuarterBounds and by
+// arithmetic rather than shape, and they are held by
+// TestTheRollupWithNoPeriodSumsTheFiscalQuarterUnderWay and by
 // TestWinLossPeriodBucketsFollowTheInstallationFiscalYear /
 // TestTheFiscalMonthShiftIsExactAtTheYearsFirstDay in
 // internal/compose/report_winloss_integration_test.go, which execute the real
@@ -54,7 +54,7 @@ import (
 )
 
 const (
-	frontendFiscalYear = "../frontend/src/format/fiscalyear.ts"
+	frontendFiscalYear = "../frontend/src/features/sign-in/fiscalyear.ts"
 	backendFiscalYear  = "internal/compose/reportperiod.go"
 )
 

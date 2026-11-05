@@ -132,5 +132,7 @@ type Item struct {
 	// event. It rides the assembled picture so a reader states a date from the
 	// RECORD rather than from whatever a note's prose recalls.
 	OccurredAt time.Time
-	Evidence   []Evidence
+	// DateOnly says OccurredAt is a date's anchor, so its time of day is no fact.
+	DateOnly bool
+	Evidence []Evidence
 }

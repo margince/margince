@@ -42,34 +42,10 @@ type dedupeListDTO struct {
 	} `json:"page"`
 }
 
-// seedCompanyPairHTTP creates an incumbent company and a same-stem near-duplicate
-// through the real create endpoint; the create records the queue pair.
-func seedCompanyPairHTTP(t *testing.T, e *apptest.AppEnv, stem, incumbentDomain, dupDomain string) (incumbentID string) {
-	t.Helper()
-	var company struct {
-		ID string `json:"id"`
-	}
-	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
-		"source":       "manual",
-		"display_name": stem + " GmbH",
-		"domains":      []AnyMap{{"domain": incumbentDomain, "is_primary": true}},
-	}, nil, &company); status != http.StatusCreated {
-		t.Fatalf("incumbent create → %d, want 201", status)
-	}
-	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
-		"source":       "manual",
-		"display_name": stem + " Inc",
-		"domains":      []AnyMap{{"domain": dupDomain, "is_primary": true}},
-	}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("fuzzy create must still 201, got %d", status)
-	}
-	return company.ID
-}
-
 func TestDedupeQueueOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	incumbentID := seedCompanyPairHTTP(t, e, "Umbrella Holdings", "umbrella.example", "umbrella-us.example")
+	incumbentID := apptest.SeedCompanyPair(t, e, "Umbrella Holdings", "umbrella.example", "umbrella-us.example")
 
 	var queue dedupeListDTO
 	if status := e.Call(t, "GET", "/v1/dedupe/candidates", nil, nil, &queue); status != http.StatusOK {
@@ -109,9 +85,10 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 		AnyMap{"disposition": "not_a_duplicate"}, nil, &decided); status != http.StatusOK || decided.Status != "not_a_duplicate" {
 		t.Fatalf("dismiss → %d/%s, want 200/not_a_duplicate", status, decided.Status)
 	}
+	var second AnyMap
 	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/disposition",
-		AnyMap{"disposition": "not_a_duplicate"}, nil, nil); status != http.StatusConflict {
-		t.Fatalf("second decision → %d, want 409", status)
+		AnyMap{"disposition": "not_a_duplicate"}, nil, &second); status != http.StatusConflict || second["code"] != "already_disposed" {
+		t.Fatalf("second decision → %d %v, want 409 already_disposed", status, second)
 	}
 	var reopened dedupeCandidateDTO
 	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/undo", nil, nil, &reopened); status != http.StatusOK || reopened.Status != "open" {
@@ -124,8 +101,9 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 		AnyMap{"disposition": "merge", "winner_id": incumbentID}, nil, &merged); status != http.StatusOK || merged.Status != "merged" {
 		t.Fatalf("merge → %d/%s, want 200/merged", status, merged.Status)
 	}
-	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/undo", nil, nil, nil); status != http.StatusConflict {
-		t.Fatalf("undo on merged → %d, want 409 (PO-AC-M6: no merge reversal)", status)
+	var undone AnyMap
+	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/undo", nil, nil, &undone); status != http.StatusConflict || undone["code"] != "not_undoable" {
+		t.Fatalf("undo on merged → %d %v, want 409 not_undoable (PO-AC-M6: no merge reversal)", status, undone)
 	}
 
 	// The decided pair filters by status; the open queue is empty again.
@@ -142,8 +120,8 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 func TestDedupeQueuePagesOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	seedCompanyPairHTTP(t, e, "Vandelay Industries", "vandelay.example", "vandelay-us.example")
-	seedCompanyPairHTTP(t, e, "Initech Systems", "initech.example", "initech-us.example")
+	apptest.SeedCompanyPair(t, e, "Vandelay Industries", "vandelay.example", "vandelay-us.example")
+	apptest.SeedCompanyPair(t, e, "Initech Systems", "initech.example", "initech-us.example")
 
 	var page1 dedupeListDTO
 	if status := e.Call(t, "GET", "/v1/dedupe/candidates?limit=1", nil, nil, &page1); status != http.StatusOK {

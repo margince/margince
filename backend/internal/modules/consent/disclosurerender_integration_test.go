@@ -24,7 +24,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -33,7 +34,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// inJurisdiction binds the store to a pack declaring the given disclosures.
+// inJurisdiction registers a pack declaring the given disclosures and puts both
+// selectors in its country. The default entity sends, and the recipient lives
+// there.
 func inJurisdiction(
 	t *testing.T, e *channelConsentEnv, code string, ds ...messagingrules.Disclosure,
 ) *Store {
@@ -41,6 +44,7 @@ func inJurisdiction(
 	messagingrules.Register(messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code(code), Version: 1, Disclosures: ds,
 	})
+	livesIn(t, e, code)
 	return e.store.WithInstallationCountry(
 		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
 			return jurisdiction.Code(code), nil
@@ -61,10 +65,11 @@ func operatorCtx(e *channelConsentEnv) context.Context {
 	return principal.WithActor(e.ctx, actor)
 }
 
-// settingsStoreFor builds the store that OWNS the setting table, over the same
-// pool this suite runs on. Consent may not write that table, so the operator
-// path goes through here in production too.
-func settingsStoreFor(t *testing.T) *settings.Store {
+// settingsStoreFor builds the configuration that reads and saves through the
+// store that OWNS the setting table, over the same pool this suite runs on.
+// Consent may not write that table, so the operator path goes through here in
+// production too.
+func settingsStoreFor(t *testing.T) *config.Config {
 	t.Helper()
 	pool, err := testdb.Pool(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"))
 	if err != nil {
@@ -75,7 +80,7 @@ func settingsStoreFor(t *testing.T) *settings.Store {
 	// genuinely stopped — a goroutine still holding a connection would go on
 	// writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	return settings.New(pool, settings.NewRegistry(Definitions()...))
+	return configtest.StoredOver(t, pool, ConfigSettings())
 }
 
 // stateParticulars saves what the installation says about itself.
@@ -97,7 +102,29 @@ func stateParticulars(t *testing.T, e *channelConsentEnv, p ControllerParticular
 	}
 }
 
-// disclosures asks what a message of this category must carry.
+// recipientAddress is the env contact's mail address, which livesIn files.
+func recipientAddress(e *channelConsentEnv) string {
+	return "subject-" + e.contact.String() + "@cc.test"
+}
+
+// livesIn gives the env contact a mail address and a postal address in code's
+// country, written the way the contacts writer stores one: upper case.
+func livesIn(t *testing.T, e *channelConsentEnv, code string) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'manual', 'human:x') ON CONFLICT DO NOTHING`,
+		e.contact, recipientAddress(e)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, e.contact, code); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// disclosures asks what a message of this category to the env contact must
+// carry.
 func disclosures(
 	t *testing.T, e *channelConsentEnv, store *Store, category commsauthz.Category,
 ) []DisclosureLine {
@@ -105,7 +132,9 @@ func disclosures(
 	var out []DisclosureLine
 	if err := store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = store.DisclosuresFor(e.ctx, tx, category)
+		out, err = store.DisclosuresFor(e.ctx, tx, DisclosureQuery{
+			Category: category, Recipients: []string{recipientAddress(e)},
+		})
 		return err
 	}); err != nil {
 		t.Fatalf("resolving the disclosures: %v", err)
@@ -267,10 +296,10 @@ func TestTheParticularsRoundTrip(t *testing.T) {
 	}
 
 	store := settingsStoreFor(t)
-	if err := settings.Set(ctx, store, ControllerIdentity, in); err != nil {
+	if err := config.Save(ctx, store, ControllerIdentity, in); err != nil {
 		t.Fatalf("stating the particulars: %v", err)
 	}
-	read, err := settings.Get(ctx, store, ControllerIdentity)
+	read, err := config.StoredVal(ctx, store, ControllerIdentity)
 	if err != nil {
 		t.Fatalf("reading them back: %v", err)
 	}
@@ -286,12 +315,12 @@ func TestStatingTheParticularsNeedsTheSettingsGrant(t *testing.T) {
 	e := setupChannelConsent(t)
 
 	store := settingsStoreFor(t)
-	if err := settings.Set(e.ctx, store, ControllerIdentity, ControllerParticulars{
+	if err := config.Save(e.ctx, store, ControllerIdentity, ControllerParticulars{
 		LegalName: "Somebody Else Ltd",
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep restated who this installation is: %v", err)
 	}
-	if _, err := settings.Get(e.ctx, store, ControllerIdentity); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := config.StoredVal(e.ctx, store, ControllerIdentity); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep was shown the particulars form: %v", err)
 	}
 }
@@ -302,7 +331,7 @@ func TestAnOverlongParticularIsRefused(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := operatorCtx(e)
 
-	err := settings.Set(ctx, settingsStoreFor(t), ControllerIdentity,
+	err := config.Save(ctx, settingsStoreFor(t), ControllerIdentity,
 		ControllerParticulars{LegalName: strings.Repeat("x", particularsFieldCap+1)})
 	if err == nil {
 		t.Fatal("an over-long legal name was accepted: every field goes into every message " +
@@ -317,7 +346,7 @@ func TestAWhitespaceParticularIsRefused(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := operatorCtx(e)
 
-	err := settings.Set(ctx, settingsStoreFor(t), ControllerIdentity,
+	err := config.Save(ctx, settingsStoreFor(t), ControllerIdentity,
 		ControllerParticulars{LegalName: "   "})
 	if err == nil {
 		t.Fatal("a whitespace legal name was accepted: it reads as filled in and discloses " +
@@ -339,7 +368,7 @@ func TestAWriterWithoutTheReadGrantChangesNothing(t *testing.T) {
 		LegalName:     "Beispiel GmbH",
 		PostalAddress: "Hauptstraße 1\n10115 Berlin",
 	}
-	if err := settings.Set(operatorCtx(e), store, ControllerIdentity, stated); err != nil {
+	if err := config.Save(operatorCtx(e), store, ControllerIdentity, stated); err != nil {
 		t.Fatalf("stating the particulars: %v", err)
 	}
 
@@ -361,7 +390,7 @@ func TestAWriterWithoutTheReadGrantChangesNothing(t *testing.T) {
 		t.Fatalf("a writer with no read grant got 200; the response echoes the stored value, "+
 			"so this request cannot succeed (body: %s)", rec.Body.String())
 	}
-	after, err := settings.Get(operatorCtx(e), store, ControllerIdentity)
+	after, err := config.StoredVal(operatorCtx(e), store, ControllerIdentity)
 	if err != nil {
 		t.Fatalf("reading the particulars back: %v", err)
 	}

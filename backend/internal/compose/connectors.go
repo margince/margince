@@ -22,7 +22,6 @@ package compose
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -37,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -99,6 +99,12 @@ type connectorHandlers struct {
 	// wires this, and a test can hand over a fake without a database.
 	googleCredentials    appResolver
 	microsoftCredentials appResolver
+	// importer starts the past-email import a connect asked for, on the same
+	// engine as the backfill start endpoint (connectors_chain.go).
+	importer connectImport
+	// extOAuthGrants opens one unit's OAuth grants; nil reads them through the
+	// process's extension runtime binding, as the unit's Runtime does.
+	extOAuthGrants func(unit string) extOAuthGrants
 }
 
 // wired reports whether the Gmail OAuth app is composed for this role.
@@ -152,10 +158,17 @@ func (h connectorHandlers) ListConnectors(w http.ResponseWriter, r *http.Request
 		}
 	}
 	resp.Providers = h.providerAvailability(r.Context())
+	resp.SeatCapture = seatCapture(r.Context())
 	httperr.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+	// Before every branch, IMAP and the test mailbox included: a role that
+	// cannot capture is refused with its reason, and nothing is stored.
+	if err := callerCaptureRefusal(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	// The standing IMAP connect needs only the registry (credentials are
 	// per-connection, vault-sealed) — never the Gmail OAuth app.
 	if string(provider) == providerIMAP {
@@ -201,55 +214,29 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	app := avail.app
-	actor, ok := principal.Actor(r.Context())
-	ws, hasWS := principal.WorkspaceID(r.Context())
-	if !ok || actor.Type != principal.PrincipalHuman || !hasWS {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnauthorized,
-			Code:   codeUnauthorized,
-			// Provider-neutral: this guard serves the calendars as well as the
-			// mailboxes, and naming a mailbox mislabels half the flows it refuses.
-			Detail: "Connecting an account is a signed-in human action.",
-		})
+	actor, ws, ok := signedInHuman(w, r)
+	if !ok {
 		return
 	}
-	// The body is optional for OAuth providers (they submit nothing), so an
-	// absent one is not a failure — only a malformed one is. ContentLength ==
-	// 0 is the reliable "definitely no body" signal; -1 (chunked, length
-	// unknown until read) must still be decoded, or a chunked request's
-	// return_to is silently dropped and a malformed chunked body skips
-	// rejection entirely.
-	returnTo := returnToOnboarding
-	if r.ContentLength != 0 {
-		var req crmcontracts.ConnectConnectorRequest
-		if !httperr.Decode(w, r, &req) {
+	// The body is optional for OAuth providers, so an absent one is not a
+	// failure; only a malformed or refused one is.
+	ask, ok := h.decodeConnectRequest(w, r, string(provider))
+	if !ok {
+		return
+	}
+	st := connectState{
+		Workspace: ws, User: actor.UserID, Provider: string(provider),
+		ReturnTo: ask.returnTo, Then: ask.then, WindowMonths: ask.windowMonths,
+		SharedConsent: sharesConsent(string(provider), ask.then),
+	}
+	authURL := h.mintConsent(w, app, st)
+	if st.SharedConsent {
+		var err error
+		if authURL, err = withCalendarScopes(authURL, st.Then); err != nil {
+			httperr.Write(w, r, err)
 			return
 		}
-		if req.ReturnTo != nil && string(*req.ReturnTo) == returnToSettings {
-			returnTo = returnToSettings
-		}
 	}
-	// CSRF: a random nonce goes into both a SameSite=Lax cookie and the signed
-	// state; the callback requires them to match, so a victim can't complete an
-	// attacker-initiated flow (account-linking CSRF).
-	nonce := rand.Text()
-	http.SetCookie(w, &http.Cookie{
-		Name:     csrfCookieName(string(provider)),
-		Value:    nonce,
-		Path:     "/v1/connectors",
-		MaxAge:   int(connectStateTTL / time.Second),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	})
-	state := h.signer.sign(
-		connectState{
-			Workspace: ws, User: actor.UserID, Provider: string(provider),
-			Nonce: nonce, ReturnTo: returnTo, Version: stateVersionNamespacedCSRF,
-		},
-		time.Now().Add(connectStateTTL),
-	)
-	authURL := app.authCodeURL(state, h.callbackURL(string(provider)))
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ConnectConnectorResponse{AuthorizeUrl: &authURL})
 }
 
@@ -268,24 +255,28 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// started from. Verify it BEFORE branching on the outcome: a denial that
 	// began in Settings has to land back in Settings, or the contact never sees
 	// the note explaining what happened. An unverifiable state yields no
-	// trustworthy ReturnTo, so those paths keep the default.
+	// trustworthy ReturnTo, so those paths keep the default. A held import
+	// forwarded by a mail leg is offered whatever this calendar leg's outcome.
 	st, err := h.signer.verify(params.State, time.Now())
 	stateTrusted := err == nil && st.Provider == string(provider)
-	returnTo := returnToOnboarding
+	returnTo, held := returnToOnboarding, 0
 	if stateTrusted {
-		returnTo = st.ReturnTo
+		returnTo, held = st.ReturnTo, heldOnLeg(st)
+	}
+	land := func(outcome string) {
+		http.Redirect(w, r, h.landingURL(outcome, returnTo, string(provider), held), http.StatusFound)
 	}
 	// The user denied consent at the provider — surface it honestly, never as
 	// an error.
 	if params.Error != nil && *params.Error != "" {
-		http.Redirect(w, r, h.landingURL(outcomeDenied, returnTo, string(provider)), http.StatusFound)
+		land(outcomeDenied)
 		return
 	}
 	// A bad/expired/mismatched state or a missing code cannot proceed —
 	// redirect with an honest error, details logged only.
 	if !stateTrusted || params.Code == nil || *params.Code == "" {
 		slog.WarnContext(ctx, "connector callback rejected", "err", err, "provider", string(provider))
-		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		land(outcomeError)
 		return
 	}
 	// CSRF: the nonce cookie must match the nonce in the signed state, proving
@@ -296,7 +287,7 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// establishes is the BROWSER's identity — so the redirect can honor the
 	// surface the flow started from.
 	if !consumeCSRFNonce(w, r, string(provider), st) {
-		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		land(outcomeError)
 		return
 	}
 
@@ -306,10 +297,10 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// minted for a human who may no longer hold it has to be revoked at the
 	// provider rather than simply discarded. Registry.Connect enforces the same
 	// invariant; this is the cheaper, earlier half of it.
-	if err := h.requireLiveGrantor(runCtx, st); err != nil {
-		slog.WarnContext(ctx, "connector callback: the granting human no longer holds live authority",
+	if err := h.requireCapturingGrantor(runCtx, st); err != nil {
+		slog.WarnContext(ctx, "connector callback: the granting human may no longer grant",
 			"err", err, "provider", string(provider))
-		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		land(grantorRefusalOutcome(err))
 		return
 	}
 
@@ -330,23 +321,45 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		if err != nil {
 			logConnectFailure(ctx, string(provider), err)
 		}
-		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		land(outcomeError)
 		return
 	}
 
-	auth, err := app.authenticate(runCtx, *params.Code, h.callbackURL(string(provider)))
+	consent := newConsentCode(*params.Code, h.callbackURL(string(provider)))
+	if st.SharedConsent {
+		consent.alsoAsked = sharedConsentCalendars[st.Then].scopes()
+	}
+	auth, err := app.authenticate(runCtx, consent)
 	if err != nil {
 		logConnectFailure(ctx, string(provider), err)
-		http.Redirect(w, r, h.landingURL(connectFailureOutcome(string(provider), err), returnTo, string(provider)), http.StatusFound)
+		land(connectFailureOutcome(string(provider), err))
 		return
 	}
 
 	if _, err := h.registry.Connect(runCtx, string(provider), auth); err != nil {
 		slog.ErrorContext(ctx, "connector callback: persisting connection", "err", err, "provider", string(provider))
-		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		land(outcomeError)
 		return
 	}
-	http.Redirect(w, r, h.landingURL(outcomeOK, returnTo, string(provider)), http.StatusFound)
+	h.chainAfterConnect(runCtx, w, r, st, consent)
+}
+
+// signedInHuman answers the human starting a consent and their workspace, or
+// writes the 401 and false.
+func signedInHuman(w http.ResponseWriter, r *http.Request) (principal.Principal, ids.UUID, bool) {
+	actor, ok := principal.Actor(r.Context())
+	ws, hasWS := principal.WorkspaceID(r.Context())
+	if !ok || actor.Type != principal.PrincipalHuman || !hasWS {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnauthorized,
+			Code:   codeUnauthorized,
+			// Provider-neutral: this guard serves every consent flow, and
+			// naming a mailbox mislabels most of the ones it refuses.
+			Detail: "Connecting an account is a signed-in human action.",
+		})
+		return principal.Principal{}, ids.UUID{}, false
+	}
+	return actor, ws, true
 }
 
 // grantorContext reconstructs the granting human's authority from the trusted
@@ -363,19 +376,20 @@ func grantorContext(ctx context.Context, st connectState) context.Context {
 	})
 }
 
-// requireLiveGrantor resolves the human named by the signed state against
-// identity's live authority. A missing resolver is a wiring fault and fails
-// closed: an unchecked grant is the hole this exists to close, and silently
-// skipping the check would look exactly like passing it.
-func (h connectorHandlers) requireLiveGrantor(ctx context.Context, st connectState) error {
+// liveGrantorAuthority resolves the human named by the signed state against
+// identity's live authority: their grants and seat. A missing resolver is a
+// wiring fault and fails closed. An unchecked grant is the hole this closes,
+// and a skipped check would look the same as a passed one.
+func (h connectorHandlers) liveGrantorAuthority(ctx context.Context, st connectState) (authz.RBAC, principal.SeatType, error) {
 	if h.authority == nil {
-		return errors.New("connector callback: no authority resolver wired — a grant cannot be checked against live authority")
+		return authz.RBAC{}, "", errors.New("connector callback: no authority resolver wired — a grant cannot be checked against live authority")
 	}
-	if _, err := h.authority.EffectiveRBAC(ctx, st.Workspace, st.User); err != nil {
-		return err
+	rbac, err := h.authority.EffectiveRBAC(ctx, st.Workspace, st.User)
+	if err != nil {
+		return authz.RBAC{}, "", err
 	}
-	_, err := h.authority.SeatType(ctx, st.Workspace, st.User)
-	return err
+	seat, err := h.authority.SeatType(ctx, st.Workspace, st.User)
+	return rbac, seat, err
 }
 
 func (h connectorHandlers) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
@@ -400,6 +414,11 @@ func (h connectorHandlers) SetConnectorSignatureEnrichment(w http.ResponseWriter
 	}
 	var req crmcontracts.SetSignatureEnrichmentRequest
 	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// A null follows the workspace default; a body that omits the switch is a mistake.
+	if err := httperr.RequireSent(r, "enabled", "send enabled: true, false, or null to follow the workspace default"); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	view, err := h.registry.SetSignatureEnrichment(r.Context(), string(provider), req.Enabled)

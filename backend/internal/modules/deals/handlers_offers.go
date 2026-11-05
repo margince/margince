@@ -58,6 +58,7 @@ func lineInputRow(in crmcontracts.OfferLineItemInput) OfferLineInputRow {
 		Unit:           in.Unit,
 		Quantity:       wireDecimal(in.Quantity),
 		UnitPriceMinor: in.UnitPriceMinor,
+		TaxCategory:    componentKindOf(in.TaxCategory),
 	}
 	if in.DiscountPct != nil {
 		v := wireDecimal(*in.DiscountPct)
@@ -93,7 +94,7 @@ func (h Handlers) CreateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		httperr.Write(w, r, httperr.Validation("body", "unreadable", "request body could not be read"))
 		return
 	}
-	in, err := offerCreateInput(raw)
+	in, err := OfferCreationInput(raw)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -123,14 +124,10 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		return
 	}
 	var req crmcontracts.UpdateOfferRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeClaiming(w, r, &req, claimClientTotal) {
 		return
 	}
-	in, err := offerUpdateInput(req, httperr.ClearedFields(r), ifVersion)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
+	in := offerUpdateInput(req, httperr.ClearedFields(r), ifVersion)
 
 	offerID := pathID[ids.OfferKind](id)
 	offer, retired, err := h.store.UpdateOffer(r.Context(), offerID, in)
@@ -143,15 +140,20 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 	// render's reclamation of a superseded PDF is, rather than failing the edit.
 	if retired != nil && h.blob != nil {
 		if delErr := h.blob.Delete(r.Context(), *retired); delErr != nil {
-			slog.WarnContext(r.Context(), "reclaiming the rendering a buyer change retired",
+			slog.WarnContext(r.Context(), "reclaiming the rendering a buyer or issuer change retired",
 				"offer", offerID.String(), "ref", *retired, "err", delErr)
 		}
 	}
 	httperr.WriteJSON(w, http.StatusOK, offer)
 }
 
-func (h Handlers) ArchiveOffer(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	offer, err := h.store.ArchiveOffer(r.Context(), pathID[ids.OfferKind](id))
+// ArchiveOffer preserves the request version through the native archive writer.
+func (h Handlers) ArchiveOffer(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveOfferParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	offer, err := h.store.ArchiveOfferAt(r.Context(), pathID[ids.OfferKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

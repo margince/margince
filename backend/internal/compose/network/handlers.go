@@ -15,7 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -51,6 +53,19 @@ type Reads struct {
 	// were free. Nil leaves every route available, which is what the tab
 	// showed before this seam existed.
 	askedRoutes AskedRoutes
+	// seatGaps answers which colleagues are on the contact's threads without a
+	// connected mailbox. Nil leaves capture_gaps empty.
+	seatGaps SeatGaps
+}
+
+// SeatGaps reads the colleagues on a contact's threads who have no connected
+// mailbox. It runs in the caller's transaction, after the contact read gates.
+type SeatGaps func(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (capture.UncapturedSeats, error)
+
+// WithSeatGaps binds the reader behind the capture_gaps notice.
+func (h Reads) WithSeatGaps(gaps SeatGaps) Reads {
+	h.seatGaps = gaps
+	return h
 }
 
 // NewReads builds the network surface over the pool.
@@ -65,6 +80,7 @@ func (h Reads) GetContactNetwork(w http.ResponseWriter, r *http.Request, id crmc
 	var out crmcontracts.ContactNetwork
 	out.ContactId = id
 	out.Colleagues = []crmcontracts.ContactNetworkColleague{}
+	out.CaptureGaps = []crmcontracts.ContactCaptureGap{}
 
 	ctx := r.Context()
 	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
@@ -90,6 +106,21 @@ func (h Reads) GetContactNetwork(w http.ResponseWriter, r *http.Request, id crmc
 		}
 		for _, e := range edges {
 			out.Colleagues = append(out.Colleagues, WireColleague(e, names[e.UserID], now))
+		}
+		if h.seatGaps == nil {
+			return nil
+		}
+		gaps, err := h.seatGaps(ctx, tx, contactID.UUID)
+		if err != nil {
+			return err
+		}
+		out.CaptureGapsTotal = gaps.Total
+		for _, g := range gaps.Seats {
+			out.CaptureGaps = append(out.CaptureGaps, crmcontracts.ContactCaptureGap{
+				UserId: openapi_types.UUID(g.UserID), DisplayName: g.DisplayName,
+				Invited: g.Invited, LastOnThreadAt: g.LastOnThread,
+				LastOnThreadPrecision: activitywhen.Stated(g.LastOnThreadPrecision),
+			})
 		}
 		return nil
 	})
@@ -135,6 +166,11 @@ func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcon
 		if err != nil {
 			return err
 		}
+		// Only this page shows when a seat last wrote. So the status card, the
+		// assistant and the intro paths neither pay for that read nor fail on it.
+		if coverage.SeatsInbound, err = readSeatsInbound(ctx, tx, coverage.Stakeholders, now); err != nil {
+			return err
+		}
 		names, err := UserNames(ctx, tx, coverageUsers(coverage))
 		if err != nil {
 			return err
@@ -167,6 +203,7 @@ func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcont
 		DisplayName:     name,
 		StrengthBucket:  crmcontracts.ContactNetworkColleagueStrengthBucket(score.Bucket),
 		Interactions90d: e.Count90d,
+		TwoWay:          new(twoWay(&e.InCount90d, ourSide(e))),
 		// The direction split, from the same projection the score reads.
 		// Without it a surface can say "6 exchanges" but not "6 two-way
 		// exchanges" or "replied 2 days ago", and cannot tell a live
@@ -174,6 +211,7 @@ func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcont
 		// distinction that decides whether this colleague is a route in.
 		Inbound90d:  &e.InCount90d,
 		Outbound90d: &e.OutCount90d,
+		Sent90d:     e.SentCount90d,
 	}
 	if score.Bucket != relstrength.BucketNone {
 		strength := score.Strength
@@ -216,9 +254,13 @@ func wireCoverage(
 		if name, ok := contacts[s.ContactID]; ok {
 			seat.ContactName = &name
 		}
+		if inbound, ok := c.SeatsInbound[s.ContactID]; ok {
+			seat.LastInboundAt = &inbound.At
+			seat.LastInboundPrecision = activitywhen.Stated(inbound.Precision)
+		}
 		out.Stakeholders = append(out.Stakeholders, seat)
 	}
-	for _, e := range c.OurSide {
+	for _, e := range OurColleagues(c.OurSide) {
 		colleague := crmcontracts.ContactNetworkColleague{
 			UserId:          openapi_types.UUID(e.UserID),
 			DisplayName:     names[e.UserID],
@@ -337,4 +379,14 @@ func UserNames(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]s
 		out[id] = name
 	}
 	return out, rows.Err()
+}
+
+// ourSide is what this colleague sent, not every outbound mail they were on:
+// a colleague copied both ways has written nothing. A row folded before the
+// sent count existed keeps the outbound reading until it is refolded.
+func ourSide(e search.InteractionEdge) *int {
+	if e.SentCount90d != nil {
+		return e.SentCount90d
+	}
+	return &e.OutCount90d
 }

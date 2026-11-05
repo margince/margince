@@ -161,7 +161,7 @@ func TestARedeliveredMeetingThatDidNotMoveWritesNothing(t *testing.T) {
 // alone rather than patching every mutable field.
 func TestARedeliveryLeavesTheSubjectAContactCorrected(t *testing.T) {
 	e := setupSend(t)
-	start := time.Now().Add(48 * time.Hour)
+	start := time.Now().Add(-48 * time.Hour)
 	first := deliverMeeting(t, e, "evt-subject-1", "mtg", start,
 		crmcontracts.ActivityMeetingStatusBooked)
 	id := ids.From[ids.ActivityKind](ids.UUID(first.Id))

@@ -189,7 +189,7 @@ describe("filter menu", () => {
 });
 
 describe("a chip with an async search source", () => {
-  type SearchFn = Extract<ListChip, { appliedName: unknown }>["search"];
+  type SearchFn = Extract<ListChip, { search: unknown }>["search"];
   function chipWithSearch(search: SearchFn): readonly ListChip[] {
     return [
       {

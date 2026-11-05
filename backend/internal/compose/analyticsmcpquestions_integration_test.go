@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 
@@ -52,7 +53,10 @@ func loadCanonicalQuestions(t *testing.T) []canonicalQuestion {
 //
 // run_analytics_query is the agent's typed grammar; run_report is the HTTP
 // report path. They are different reaches, not two names for one.
-var questionSurfaces = map[string]bool{"run_analytics_query": true, "run_report": true}
+var questionSurfaces = map[string]bool{
+	"run_analytics_query": true, "run_report": true, "read_reporting": true, "read_attention": true,
+	"read_forecast": true,
+}
 
 // caseSurfaces names which surface each proof ACTUALLY drives, so the corpus
 // cannot claim one and prove another.
@@ -73,6 +77,25 @@ var caseSurfaces = map[string]string{
 	"M08": "run_analytics_query",
 	"M11": "run_analytics_query",
 	"M12": "run_analytics_query",
+	"M01": "run_analytics_query",
+	"M02": "run_analytics_query",
+	"M03": "run_analytics_query",
+	"M09": "run_analytics_query",
+	"M10": "run_analytics_query",
+	"G04": "run_analytics_query",
+	"G08": "run_analytics_query",
+	"G10": "run_analytics_query",
+	"G11": "run_analytics_query",
+	"G05": "run_report",
+	"G09": "read_reporting",
+	"G06": "read_attention",
+	"G07": "read_attention",
+	"F01": "read_forecast",
+	"F02": "read_forecast",
+	"F03": "read_forecast",
+	"F04": "read_forecast",
+	"F05": "read_forecast",
+	"F06": "read_reporting",
 }
 
 // canonicalCases maps each corpus id to its executable proof.
@@ -88,6 +111,25 @@ func canonicalCases() map[string]func(t *testing.T) {
 		"M08": proveM08WinRateByCountAndValue,
 		"M11": proveM11LossReasonsByRecordedReason,
 		"M12": proveM12WonRevenueByLeadSource,
+		"M01": proveM01ForecastByCategory,
+		"M02": proveM02PipelineByCloseMonth,
+		"M03": proveM03SlippedCommittedDeals,
+		"M09": proveM09OwnerWithMostPipeline,
+		"M10": proveM10WinsByRepThisQuarter,
+		"G04": proveG04OwnWinsAndLossesThisMonth,
+		"G08": proveG08WonThisQuarterVersusLast,
+		"G10": proveG10CustomersWithMostOpenDeals,
+		"G11": proveG11LeadsByStatus,
+		"G05": proveG05HeldMeetingsThatConverted,
+		"G09": proveG09LeadFirstResponse,
+		"G06": proveG06SlippingDealsWithEvidence,
+		"G07": proveG07OpenPromisesToCustomers,
+		"F01": proveF01QuarterForecast,
+		"F02": proveF02ForecastMovement,
+		"F03": proveF03ForecastInputsCanBeTrusted,
+		"F04": proveF04DealsWithInputProblems,
+		"F05": proveF05ForecastSources,
+		"F06": proveF06QuarterAgainstItsTarget,
 	}
 }
 
@@ -171,8 +213,8 @@ func proveG01OwnPipeline(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
-		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
-		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount)
+		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount)
 	}
 	got, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
 		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}]}`)
@@ -187,27 +229,40 @@ func proveG01OwnPipeline(t *testing.T) {
 	}
 }
 
-// G02: Show me the whole company's pipeline by owner. Refused, not narrowed:
-// a caller who asserts a wider population and is quietly given a smaller one
-// cannot tell the answer from a genuinely small pipeline.
+// G02: Show me the whole company's pipeline by owner. The company total is
+// open to every seat. The split by owner is cut to the owners the rep may
+// measure and says so. A small answer is never mistaken for a small pipeline.
 func proveG02WorkspaceRefused(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
-		e.seedOpenDeal(t, "Somebody's", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Somebody's", 20, &e.Rep3, &amount)
 	}
-	// The admit arm first: the SAME question without the workspace assertion
-	// answers, so the refusal below cannot be a validation failure wearing the
-	// gate's clothes.
-	if _, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
-		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}]}`); err != nil {
-		t.Fatalf("the rep's own question was refused, so the workspace refusal below proves nothing: %v", err)
-	}
-	_, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
+	total, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
 		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}],"scope_kind":"workspace"}`)
+	if err != nil {
+		t.Fatalf("a rep asking for the company total was refused: %v", err)
+	}
+	if len(total.Rows) != 1 || toolRow(t, total.Rows[0])["deals"] != float64(6) {
+		t.Fatalf("the company total must count every deal, got %s", total.Rows)
+	}
+	byOwner, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
+		`{"entity":"pipeline-current","group_by":["owner_id"],"measures":[{"fn":"count","as":"deals"}],"scope_kind":"workspace"}`)
+	if err != nil {
+		t.Fatalf("the owner split was refused instead of narrowed: %v", err)
+	}
+	if byOwner.PopulationNarrowed == nil || *byOwner.PopulationNarrowed != narrowedToMeasurableOwners {
+		t.Fatalf("the owner split must announce its narrowing, got %v", byOwner.PopulationNarrowed)
+	}
+	for _, raw := range byOwner.Rows {
+		if toolRow(t, raw)["owner_id"] == e.Rep3.String() {
+			t.Fatalf("the split names an owner the rep may not measure: %s", raw)
+		}
+	}
+	_, err = askTool(e.ownLensRepCtx(e.Rep1), t, e, fmt.Sprintf(
+		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}],"scope_kind":"workspace","filters":[{"field":"owner_id","op":"eq","value":%q}]}`, e.Rep3))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("a rep asking for the workspace got %v, want the permission sentinel — "+
-			"a 422 here would be the compiler refusing the words, not the gate refusing the population", err)
+		t.Fatalf("filtering by a colleague got %v, want the permission sentinel", err)
 	}
 }
 
@@ -254,10 +309,10 @@ func proveM04OneRowPerStage(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 5 {
-		e.seedOpenDeal(t, "Early", 20, &e.Rep1, &amount, nil)
-		e.seedOpenDeal(t, "Late", 60, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Early", 20, &e.Rep1, &amount)
+		e.seedOpenDeal(t, "Late", 60, &e.Rep1, &amount)
 		// Somebody else's pipeline, which "my" must exclude.
-		e.seedOpenDeal(t, "Not mine", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Not mine", 20, &e.Rep3, &amount)
 	}
 	// Closed deals in the same stages, so "open only" has something to leak.
 	seedPricedDeal(t, e, "Won already", 90_000, "EUR", "won")
@@ -279,30 +334,34 @@ func proveM04OneRowPerStage(t *testing.T) {
 	}
 }
 
-// M06: Which stages are taking longer than normal? The statistic under it —
-// a percentile — answers null below the five-value sample floor, beside an
-// honest count: four values do not make a median, and Postgres computing one
-// anyway is exactly why the refusal is rendered into the SQL.
+// M06: Which stages are taking longer than normal? The statistic under it is
+// a median of days in the current stage. Four deals are withheld whole, with no
+// count or median to read, because four values do not make a typical one.
 func proveM06MedianUnderTheFloor(t *testing.T) {
 	e := setupForecast(t)
-	amount := int64(100_000)
-	for i := range 6 {
-		priced := &amount
-		if i >= 4 {
-			priced = nil // two unpriced deals: six rows, four values
+	askMedian := func() map[string]any {
+		got, err := askTool(e.ownLensRepCtx(e.Rep1), t, e, `{"entity":"stage-age","measures":[
+			{"fn":"count","as":"deals"},{"fn":"median","field":"days_in_stage","as":"typical"}]}`)
+		if err != nil {
+			t.Fatal(err)
 		}
-		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, priced, nil)
+		return toolRow(t, got.Rows[0])
 	}
-	got, err := askTool(e.ownLensRepCtx(e.Rep1), t, e, `{"entity":"pipeline-current","measures":[
-		{"fn":"count","as":"deals"},{"fn":"median","field":"amount_base_minor","as":"typical"}]}`)
-	if err != nil {
-		t.Fatal(err)
+	seedAged := func(n int) {
+		for range n {
+			e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id,
+					expected_close_date, source, captured_by, created_at)
+				VALUES ($1, 'Aged', $2, $3, $4, (now() + interval '30 days')::date, 'manual',
+				        'human:x', now() - interval '20 days')`, e.pipeline, e.stages[20], e.Rep1)
+		}
 	}
-	row := toolRow(t, got.Rows[0])
-	if row["deals"] != float64(6) {
-		t.Errorf("counted %v deals, want 6", row["deals"])
+	seedAged(4)
+	row := askMedian()
+	if row["_withheld"] != true || row["deals"] != nil || row["typical"] != nil {
+		t.Errorf("four deals answered %v, want the row withheld", row)
 	}
-	if row["typical"] != nil {
-		t.Errorf("a median over four values answered %v, want null beside the count", row["typical"])
+	seedAged(2)
+	if row := askMedian(); row["deals"] != float64(6) || row["typical"] != float64(20) {
+		t.Errorf("six deals answered %v, want a count of 6 and a median of 20 days", row)
 	}
 }

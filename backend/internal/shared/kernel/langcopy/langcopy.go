@@ -43,7 +43,12 @@ func (s Spoken) Say(p Phrase) string { return p.In(s.lang) }
 
 // Lang names the resolved language, for a writer that formats something the
 // table cannot hold, such as a month name or a number's grouping.
-func (s Spoken) Lang() textlang.Lang { return s.lang }
+func (s Spoken) Lang() textlang.Lang {
+	if s.lang == "" {
+		return textlang.English
+	}
+	return s.lang
+}
 
 // For resolves a stored language code, falling back to English for anything
 // this build does not speak.

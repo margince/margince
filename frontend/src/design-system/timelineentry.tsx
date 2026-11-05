@@ -9,10 +9,23 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { formatDate, formatNumber, formatTimeOfDay } from "../format/format";
-import { type Locale, translatePlural, useLocale, useT } from "../i18n";
+import {
+  activityDay,
+  activityTimeOfDay,
+  type OccurredPrecision,
+} from "../format/activitywhen";
+import { formatNumber } from "../format/format";
+import {
+  type Locale,
+  translate,
+  translatePlural,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Badge } from "./atoms";
+import { moveLabel } from "./emailentry";
 import type { ContactOn } from "./participants";
 import type { Provenance } from "./trust";
 import "./composed.css";
@@ -26,7 +39,7 @@ import "./composed.css";
 export type TimelineGroup = {
   /** The newest member's id; the list keys on it. */
   id: string;
-  kind: "thread" | "bulk" | "single";
+  kind: "thread" | "bulk" | "newsletters" | "single";
   /** Newest first, like the list itself. */
   entries: TimelineEntry[];
   /** This group may continue past what the page holds. */
@@ -36,6 +49,10 @@ export type TimelineGroup = {
 type EmailSummary = components["schemas"]["EmailSummary"];
 
 type ActivityAudience = components["schemas"]["ActivityAudience"];
+
+type AutomaticKind = NonNullable<
+  components["schemas"]["Activity"]["automatic_kind"]
+>;
 
 export type TimelineEntry = {
   id: string;
@@ -49,8 +66,12 @@ export type TimelineEntry = {
   // hold two orderings in their head.
   kind: "email" | "meeting" | "note" | "call" | "task" | "message" | "change";
   title: string;
+  isDone?: boolean;
   atIso: string;
+  // `day` when only the date is known, so the row draws no time.
+  atPrecision: OccurredPrecision;
   provenance: Provenance;
+  commitmentReviewCount?: number;
   // A right-aligned per-row action slot (Reply / Relink). Absent on rows with
   // no affordance, which then draw no action slot.
   actions?: ReactNode;
@@ -67,6 +88,12 @@ export type TimelineEntry = {
    * task), which render with no direction mark.
    */
   direction?: "inbound" | "outbound" | null;
+  /**
+   * Which side wrote it, when known. `direction` is only how the copy moved.
+   * A colleague's inbound copy is still `ours`. The adapter fills it from
+   * correspondenceSide (lib/messagevoice.ts); absent falls back to direction.
+   */
+  side?: "ours" | "theirs";
   /**
    * Who was on the other end, already resolved to names by the caller.
    *
@@ -91,6 +118,11 @@ export type TimelineEntry = {
    * this component was one of them.
    */
   emailSummary?: EmailSummary;
+  /**
+   * Whose move a chat message is, the server's own reading by the rules the
+   * mail badge follows. Present only on a readable `message` row.
+   */
+  messageMove?: EmailSummary["move"];
   /**
    * Opens the canonical detail for this message. The caller owns it, because
    * the screen mounts the drawer, not the list. Absent leaves the row readable
@@ -117,6 +149,12 @@ export type TimelineEntry = {
    */
   bulkAttested?: boolean;
   /**
+   * What sent a message no human wrote, as the server judged it: a calendar
+   * invitation, a sending system or the product. Such a row counts on neither
+   * side of a conversation.
+   */
+  automaticKind?: AutomaticKind | null;
+  /**
    * The message's own subject, when it had one. This is not the rendered
    * `title`, which falls back to the body (or to the kind) so a subjectless
    * row still has something to show. Bulk grouping keys on this. Keyed on the
@@ -136,6 +174,11 @@ export type TimelineEntry = {
    * request. That is why this is optional rather than empty string.
    */
   body?: string | null;
+  /**
+   * The language the activity is written in, as the server read it. Null when
+   * it could not be told; absent on a row that is not an activity.
+   */
+  language?: "de" | "en" | "vi" | null;
   /** A pasted or uploaded transcript, drawn as its lines rather than markdown. */
   transcript?: boolean;
   /**
@@ -213,12 +256,25 @@ export const TIMELINE_ICON = {
 // get. A mail we did not write is not a place to render a friendly label over
 // a different address.
 
-// directionClass tracks the row to one side of the spine: ours or theirs.
-export function directionClass(direction: TimelineEntry["direction"]): string {
-  if (direction === "outbound") {
+// sideOf answers which side wrote an entry: known authorship first, then
+// transport direction. Every authorship reading on the timeline goes through it.
+export function sideOf(entry: TimelineEntry): "ours" | "theirs" | undefined {
+  if (entry.side) {
+    return entry.side;
+  }
+  if (entry.direction === "outbound") {
+    return "ours";
+  }
+  return entry.direction === "inbound" ? "theirs" : undefined;
+}
+
+// sideClass tracks the row to one side of the spine: ours or theirs.
+export function sideClass(entry: TimelineEntry): string {
+  const side = sideOf(entry);
+  if (side === "ours") {
     return "tl-out";
   }
-  return direction === "inbound" ? "tl-in" : "";
+  return side === "theirs" ? "tl-in" : "";
 }
 
 export function noteClass(entry: TimelineEntry): string {
@@ -236,69 +292,79 @@ export function isConversationKind(kind: string): boolean {
 }
 
 /**
- * MoveFlag is whose move a conversation is waiting on, read off its newest
- * message: their word standing last means the move is ours. One spelling
- * serves every cut. The same chip shows on the row in the full chronology and
- * in the Conversations reading. A thread that read "your move" on one cut and
- * said nothing on the other would be two claims about one conversation.
- *
- * Only on the row that stands for the conversation (a collapsed thread, or a
- * lone message). Never on the members inside an expanded thread, where every
- * reply would otherwise carry a verdict about the whole exchange.
+ * MoveFlag is whose move a conversation waits on: the server's move for its
+ * newest message (moveLabel). A colleague's inbound invitation owes nobody a
+ * reply, so the direction cannot say it. Only on the row that stands for the
+ * conversation, never on the members of an expanded thread.
  */
-// Whether the entry carries a direction a move can be read off. Both flag
-// sites share this guard, so a wrapper cannot render an empty chip row.
-export function conversationDirection(
+export function entryMove(entry: TimelineEntry): MessageKey | undefined {
+  const move = entryMoveValue(entry);
+  return moveLabel(move ? { move } : undefined, entry.withheld === true);
+}
+
+// entryMoveValue is the server's move for a mail or a chat message alike.
+function entryMoveValue(
   entry: TimelineEntry,
-): "inbound" | "outbound" | undefined {
-  if (!CONVERSATION_KINDS.has(entry.kind)) {
-    return undefined;
-  }
-  return entry.direction === "inbound" || entry.direction === "outbound"
-    ? entry.direction
-    : undefined;
+): EmailSummary["move"] | undefined {
+  return entry.emailSummary?.move ?? entry.messageMove;
 }
 
 export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   const t = useT();
-  // A withheld row claims no move, in either direction. "Your move" over
-  // content the reader may not read tells them they owe a reply to words they
-  // are not allowed to see. The row's own per-message move label is already
-  // suppressed for that reason. Leaving this one unsuppressed made the two
-  // disagree about one row, and this is the one on screen.
-  if (entry.withheld) {
+  const move = entryMove(entry);
+  if (!move) {
     return null;
   }
-  const direction = conversationDirection(entry);
-  if (direction === "inbound") {
-    return <Badge tone="warning">{t("convo.yourMove")}</Badge>;
-  }
-  if (direction === "outbound") {
-    return <Badge>{t("convo.waitingOnThem")}</Badge>;
-  }
-  return null;
+  return (
+    <Badge
+      tone={entryMoveValue(entry) === "needs_reply" ? "warning" : undefined}
+    >
+      {t(move)}
+    </Badge>
+  );
 }
 
 /**
  * TimelineWhen is the row's place on the axis: the day, and under it the time
- * of day. The day alone told a reader two calls happened on the 26th, and not
- * which came first. Nor did it say whether the reply landed an hour after the
- * ask or a working day later. That is the one thing a chronology is opened to
- * settle. Tabular digits keep the column straight whatever each date's digits
- * are.
+ * of day when one is known. The day alone told a reader two calls happened on
+ * the 26th, and not which came first. Nor did it say whether the reply landed
+ * an hour after the ask or a working day later. That is the one thing a
+ * chronology is opened to settle. Tabular digits keep the column straight
+ * whatever each date's digits are.
  */
 export function TimelineWhen({
-  atIso,
+  entry,
   zone,
-}: Readonly<{ atIso: string; zone: string }>) {
+}: Readonly<{ entry: TimelineMoment; zone: string }>) {
   const { locale } = useLocale();
+  const time = entryTimeOfDay(entry, locale, zone);
   return (
     <span className="tl-when t-num">
-      {formatDate(atIso, locale, zone)}
-      <span className="tl-when-time">
-        {formatTimeOfDay(atIso, locale, zone)}
-      </span>
+      {entryDay(entry, locale, zone)}
+      {time && <span className="tl-when-time">{time}</span>}
     </span>
+  );
+}
+
+type TimelineMoment = Pick<TimelineEntry, "atIso" | "atPrecision">;
+
+/** The date an entry falls on. */
+export function entryDay(
+  entry: TimelineMoment,
+  locale: Locale,
+  zone: string,
+): string {
+  return activityDay(entry.atIso, entry.atPrecision, locale, zone);
+}
+
+/** An entry's clock reading, or undefined when only its day is known. */
+export function entryTimeOfDay(
+  entry: TimelineMoment,
+  locale: Locale,
+  zone: string,
+): string | undefined {
+  return (
+    activityTimeOfDay(entry.atIso, entry.atPrecision, locale, zone) ?? undefined
   );
 }
 
@@ -306,11 +372,97 @@ export function TimelineWhen({
 // kinds can hold one member. A thread can have its other messages on another
 // page, and a sender can attest a single message as a bulk send. The plural
 // forms rendered "1 messages" and "sent to 1 contacts" for it.
+// A thread also says how many messages each side wrote. Four from them and
+// five from the team then never read as nine from one contact.
 export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   const count = group.entries.length;
-  const base =
-    group.kind === "bulk" ? "timeline.group.bulk" : "timeline.group.thread";
-  return translatePlural(locale, base, count, {
+  const base = {
+    bulk: "timeline.group.bulk",
+    newsletters: "timeline.group.newsletters",
+    thread: "timeline.group.thread",
+    single: "timeline.group.thread",
+  } as const satisfies Record<TimelineGroup["kind"], string>;
+  const total = translatePlural(locale, base[group.kind], count, {
     count: formatNumber(count, locale),
   });
+  if (group.kind !== "thread") {
+    return total;
+  }
+  const { theirs, ours } = threadSides(group.entries);
+  if (theirs + ours === 0) {
+    return total;
+  }
+  return `${total} · ${translate(locale, "timeline.group.sides", {
+    theirs: formatNumber(theirs, locale),
+    ours: formatNumber(ours, locale),
+  })}`;
+}
+
+// threadSides counts the messages a human wrote on each side.
+export function threadSides(entries: readonly TimelineEntry[]): {
+  theirs: number;
+  ours: number;
+} {
+  let theirs = 0;
+  let ours = 0;
+  for (const entry of entries) {
+    if (entry.automaticKind) {
+      continue;
+    }
+    const side = sideOf(entry);
+    if (side === "theirs") {
+      theirs++;
+    } else if (side === "ours") {
+      ours++;
+    }
+  }
+  return { theirs, ours };
+}
+
+const AUTOMATIC_LABEL: Record<AutomaticKind, MessageKey> = {
+  calendar: "timeline.automatic.calendar",
+  sending_system: "timeline.automatic.sending_system",
+  product: "timeline.automatic.product",
+  bulk: "timeline.automatic.bulk",
+};
+
+export function automaticLabel(entry: TimelineEntry): MessageKey | undefined {
+  return entry.automaticKind ? AUTOMATIC_LABEL[entry.automaticKind] : undefined;
+}
+
+// AutomaticFlag says a row is not a human's message, so it is not read as
+// the contact writing.
+export function AutomaticFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  const t = useT();
+  // A relay send's own tag already says Margince sent it, and for whom.
+  if (entry.provenance.kind === "system" && entry.provenance.relay) {
+    return null;
+  }
+  const label = automaticLabel(entry);
+  return label ? <Badge>{t(label)}</Badge> : null;
+}
+
+export function CommitmentReviewFlag({
+  count = 0,
+}: Readonly<{ count?: number }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return count > 0 ? (
+    <Badge tone="ai">
+      {plural("commitment.review.count", count, {
+        count: formatNumber(count, locale),
+      })}
+    </Badge>
+  ) : null;
+}
+
+export function TaskStateFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  const t = useT();
+  if (entry.kind !== "task" || entry.withheld || entry.isDone === undefined)
+    return null;
+  return (
+    <Badge tone={entry.isDone ? "success" : "default"}>
+      {t(entry.isDone ? "tasks.isDone" : "tasks.isOpen")}
+    </Badge>
+  );
 }

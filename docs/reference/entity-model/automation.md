@@ -6,7 +6,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 ## automation
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -16,9 +16,10 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | `key` | `text` | yes | The catalog type this instance is built from. |
 | `name` | `text` | yes |  |
 | `origin` | `text`, default `'catalog'::text` | yes | One of `catalog`, `agent_authored`. |
-| `owner_id` | `uuid` |  | Points at `app_user.id`. |
+| `owner_id` | `uuid` |  | The member the rule runs as. |
 | `params` | `jsonb`, default `'{}'::jsonb` | yes |  |
-| `paused_reason` | `text` |  | Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. |
+| `paused_reason` | `text` |  | Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the passport of the agent that set the rule up was revoked. |
+| `setter_passport_id` | `uuid` |  | Points at `passport.id`. |
 | `tier` | `text`, default `'confirmation_required'::text` | yes | One of `auto_execute`, `confirmation_required`. |
 | `trigger` | `jsonb` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -31,11 +32,12 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
+| `setter_passport_id` | `passport` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
 - `automation_origin_check`: `CHECK ((origin = ANY (ARRAY['catalog', 'agent_authored'])))`
-- `automation_paused_reason_check`: `CHECK ((paused_reason = ANY (ARRAY['list_archived', 'list_invalid', 'list_unavailable', 'burst'])))`
+- `automation_paused_reason_check`: `CHECK ((paused_reason = ANY (ARRAY['list_archived', 'list_invalid', 'list_unavailable', 'burst', 'passport_revoked'])))`
 - `automation_tier_check`: `CHECK ((tier = ANY (ARRAY['auto_execute', 'confirmation_required'])))`
 - `automation_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -43,6 +45,10 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 - `automation_pkey`: `unique, btree (id)`
 - `idx_automation_key_live`: `btree (key) WHERE (enabled AND (archived_at IS NULL))`
+
+**Triggers**
+
+- `automation_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.enabled AND (new.archived_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 
 ## automation_effect_claim
 

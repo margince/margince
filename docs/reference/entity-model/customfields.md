@@ -6,17 +6,20 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 ## custom_field
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `activity_kinds` | `text[]` |  | The activity kinds an activity field applies to; null means every kind, and every other object's field is null. |
 | `column_name` | `text` | yes | Server-derived, `cf_`-prefixed, slug-derived physical column identifier: never client-supplied, immutable once live, stable across rename. |
 | `created_by` | `uuid` | yes | Points at `app_user.id`. |
-| `currency` | `character(3)` |  | ISO-4217 currency code; present when `type=currency`, null otherwise. |
-| `label` | `text` | yes | Display label; the only thing a rename updates. |
+| `currency` | `currency_code` |  | ISO-4217 currency code; present when `type=currency`, null otherwise. |
+| `label` | `text` | yes | Display label; a rename changes it, and never the slug or column_name. |
 | `object` | `text` | yes | The existing core object this field is added to. |
 | `options` | `jsonb` |  | Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise. |
+| `reportable` | `boolean`, default `false` | yes | Whether reports may group and filter by this field. |
+| `show_in_create` | `boolean`, default `true` | yes | Whether the field is offered in the create dialog of its object. |
 | `slug` | `text` | yes | Admin-facing key the column_name derives from. |
 | `status` | `text`, default `'active'::text` | yes | retired = soft: hidden from the API and filtering, column and values preserved. |
 | `type` | `text` | yes | The supported field types. |
@@ -33,8 +36,9 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 **Rules**
 
-- `custom_field_currency_check`: `CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$')))`
+- `custom_field_activity_kinds_check`: `CHECK (((activity_kinds IS NULL) OR ((object = 'activity') AND (cardinality(activity_kinds) > 0))))`
 - `custom_field_object_check`: `CHECK ((object = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'contract'])))`
+- `custom_field_reportable_type_check`: `CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal', 'company'])) AND (type = ANY (ARRAY['picklist', 'boolean'])))))`
 - `custom_field_status_check`: `CHECK ((status = ANY (ARRAY['active', 'retired'])))`
 - `custom_field_type_check`: `CHECK ((type = ANY (ARRAY['text', 'number', 'date', 'currency', 'picklist', 'multiselect', 'boolean'])))`
 - `custom_field_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`

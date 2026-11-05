@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -21,12 +22,35 @@ func TestABookedMeetingIsProjectedAsScheduledNotPast(t *testing.T) {
 	// this the card reports a meeting scheduled for Thursday as one that
 	// already took place, and then measures silence from it.
 	booked := act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, 3))
-	if got := actIn(booked, testNow).When; got != "scheduled" {
+	if got := actIn(booked, testNow, time.UTC).When; got != "scheduled" {
 		t.Fatalf("when = %q for a meeting three days out, want scheduled", got)
 	}
 	done := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -3))
-	if got := actIn(done, testNow).When; got != "past" {
+	if got := actIn(done, testNow, time.UTC).When; got != "past" {
 		t.Fatalf("when = %q for a mail three days ago, want past", got)
+	}
+}
+
+// A day meeting is scheduled for its whole date in the installation zone. It is
+// dated by its own date, though its stored noon is the next morning there.
+func TestADayMeetingIsScheduledUntilItsDateEnds(t *testing.T) {
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fair := act(crmcontracts.ActivityKindMeeting, time.Date(2026, 8, 23, 12, 0, 0, 0, time.UTC))
+	fair.OccurredPrecision = crmcontracts.OccurredPrecisionOccurredPrecisionDay
+	for _, c := range []struct {
+		now  time.Time
+		when string
+	}{
+		{time.Date(2026, 8, 23, 23, 0, 0, 0, auckland), "scheduled"},
+		{time.Date(2026, 8, 24, 0, 30, 0, 0, auckland), "past"},
+	} {
+		got := actIn(fair, c.now, auckland)
+		if got.When != c.when || got.At != "2026-08-23" {
+			t.Errorf("at %v the day meeting reads %s on %s, want %s on 2026-08-23", c.now, got.When, got.At, c.when)
+		}
 	}
 }
 
@@ -38,7 +62,7 @@ func TestAWithheldRowContributesItsDateButNotItsWords(t *testing.T) {
 	a.Body = &body
 	state := crmcontracts.ActivityContentStateWithheld
 	a.ContentState = &state
-	got := actIn(a, testNow)
+	got := actIn(a, testNow, time.UTC)
 	if got.At == "" {
 		t.Fatal("a withheld row lost its date, so the story loses that contact happened")
 	}
@@ -47,33 +71,20 @@ func TestAWithheldRowContributesItsDateButNotItsWords(t *testing.T) {
 	}
 }
 
-func TestTheHealthFactorsCarryNoProseToQuote(t *testing.T) {
-	// The formula's own sentences are written for a numeric readout. Handing
-	// them to a writer produces a card that pastes a statistic where the
-	// reader wanted the situation — and that reads a measurement WINDOW ("in
-	// the last 90 days") as elapsed time. The projection sends numbers, so
-	// there is nothing to paste.
+func TestTheModelReadsSourceRecordsWithoutAggregateHealthSignals(t *testing.T) {
 	health := deals.DealHealth{AtRisk: true}
-	in := project(
-		facts{deal: openDeal(), now: testNow, health: &health},
-		crmcontracts.DealStatusCardMove{Action: ActionNone},
-	)
-	if len(in.Health) == 0 {
-		t.Fatal("the summary carries no health signal at all")
-	}
-	encoded, err := json.Marshal(in.Health)
+	in := project(facts{deal: openDeal(), now: testNow, loc: time.UTC, health: &health},
+		crmcontracts.DealStatusCardMove{Action: ActionNone})
+	encoded, err := json.Marshal(in)
 	if err != nil {
-		t.Fatalf("encoding the health signal: %v", err)
+		t.Fatal(err)
 	}
-	// Every sentence the formula writes ends in a full stop; a measurement
-	// does not. If one reaches the prompt, it is quotable.
-	if strings.Contains(string(encoded), ". ") || strings.Contains(string(encoded), `.\"`) {
-		t.Fatalf("the health signal carries prose the model can paste: %s", encoded)
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(encoded, &fields); err != nil {
+		t.Fatal(err)
 	}
-	for _, f := range in.Health {
-		if strings.Contains(f.Key, " ") {
-			t.Fatalf("factor key %q reads as a sentence", f.Key)
-		}
+	if _, found := fields["health"]; found {
+		t.Fatal("aggregate health entered the model's source context")
 	}
 }
 
@@ -85,7 +96,7 @@ func TestEveryCitableIDResolvesWhenTheCardIsAssembled(t *testing.T) {
 	// from the facts rather than listed, so a new citable kind fails here
 	// until the card can render it.
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline: []crmcontracts.Activity{
 			act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -2)),
 			act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, 3)),
@@ -109,7 +120,7 @@ func TestACitedTaskCarriesASubjectTheReaderCanRead(t *testing.T) {
 	// with no subject would cite it by kind — "task" — which tells the reader
 	// nothing about which promise the sentence rests on.
 	task := activities.OpenTask{ID: ids.NewV7(), Subject: "Send the revised terms"}
-	f := facts{deal: openDeal(), now: testNow, openTasks: []activities.OpenTask{task}}
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, openTasks: []activities.OpenTask{task}}
 	got, ok := citedRecord(f, task.ID.String())
 	if !ok {
 		t.Fatal("an open task in the facts could not be cited")

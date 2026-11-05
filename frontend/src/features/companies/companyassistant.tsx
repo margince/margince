@@ -1,0 +1,62 @@
+import type { OpenReceipt } from "../../components/citations";
+import { Badge } from "../../design-system/atoms";
+import { Panel, PanelBody } from "../../design-system/panel";
+import type { PickableProject } from "../../design-system/projectpicker";
+import { useT } from "../../i18n";
+import { AskSection } from "./company360";
+
+/**
+ * AssistantPanel is what you can ASK about this account.
+ *
+ * It used to also carry a standing "Account brief", whose sentences counted
+ * what the page already showed — "you currently have three contacts recorded
+ * for this account" — under a heading that promised a reading. A summary that
+ * restates the screen is worse than no summary: it spends the reader's trust
+ * and returns nothing. The account's actual reading is the brief at the top of
+ * the page, which says what the records mean and what to do about it.
+ *
+ * A Panel, like every other section of the overview column it stands in. Drawn
+ * as a `Card` it was the one box on that column with no header band, which
+ * reads as a control from a different product rather than as one more part of
+ * this record.
+ */
+export function AssistantPanel({
+  companyId,
+  onOpenRecord,
+  onOpenReceipt,
+  onOpenEmail,
+  projects,
+}: Readonly<{
+  companyId: string;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
+  // The account's projects, for the question to be asked about one of them.
+  projects?: readonly PickableProject[];
+}>) {
+  const t = useT();
+  return (
+    <Panel
+      title={t("co.assistant.title")}
+      // Indigo, because everything under this head is a machine's reading of
+      // the account: the questions are the agent's and so is every answer.
+      tone="ai"
+      // The disclosure is the badge, and it rides in the header band so it is
+      // read before anything under it. The sentence that used to sit beside it
+      // explained the panel's own epistemology to a reader who came here to
+      // sell something, which is the UI talking about itself.
+      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
+    >
+      <PanelBody>
+        <AskSection
+          companyId={companyId}
+          onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
+          onOpenEmail={onOpenEmail}
+          projects={projects}
+        />
+      </PanelBody>
+    </Panel>
+  );
+}

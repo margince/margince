@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -64,7 +65,9 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	// Checked in the registry, the one place every transport passes through, so
 	// the invariant does not rest on each caller's own check. It runs before
 	// the seal below, so a refusal leaves neither a row nor a stored secret.
-	if err := r.requireLiveGrantor(ctx, ws, actor.UserID); err != nil {
+	// The same check refuses a member whose role cannot record what capture
+	// writes, so no mailbox is connected only to fail on its first sync.
+	if err := r.requireCapturingGrantor(ctx, ws, actor.UserID); err != nil {
 		return ids.Nil, err
 	}
 	// Put-then-commit (like blobstore): seal the credential in the vault
@@ -100,6 +103,9 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 				return err
 			}
 		}
+		if err := lockConnectionClaimsTx(ctx, tx, row.userID, row.provider, row.accountLabel); err != nil {
+			return err
+		}
 		var err error
 		id, priorRef, err = upsertConnection(ctx, tx, row)
 		return err
@@ -120,21 +126,38 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	return id, nil
 }
 
-// requireLiveGrantor resolves the granting human against identity's live
-// authority. A human who is archived, suspended, or deactivated resolves to
-// ErrNotFound, which is the refusal: the grant is denied before anything is
-// sealed or written, so nothing has to be undone.
-func (r *Registry) requireLiveGrantor(ctx context.Context, ws, userID ids.UUID) error {
+// requireCapturingMember is requireCapturingGrantor for the member a history
+// import is asked for, in the caller's workspace.
+func (r *Registry) requireCapturingMember(ctx context.Context, userID ids.UserID) error {
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return errors.New("capture: a history import outside workspace context")
+	}
+	return r.requireCapturingGrantor(ctx, ws, userID.UUID)
+}
+
+// requireCapturingGrantor resolves the granting human against identity's live
+// authority and asks CaptureRefusal about it. An archived, suspended, or
+// deactivated human resolves to ErrNotFound, which is the refusal. Nothing is
+// sealed or written first, so nothing has to be undone. Starting a history
+// import asks it too.
+func (r *Registry) requireCapturingGrantor(ctx context.Context, ws, userID ids.UUID) error {
 	if r.authority == nil {
 		return errors.New("capture: no authority resolver configured — a connector grant cannot be checked against live authority")
 	}
-	if _, err := r.authority.EffectiveRBAC(ctx, ws, userID); err != nil {
+	rbac, err := r.authority.EffectiveRBAC(ctx, ws, userID)
+	if err != nil {
 		return fmt.Errorf("capture: the granting human's authority does not resolve: %w", err)
 	}
-	if _, err := r.authority.SeatType(ctx, ws, userID); err != nil {
+	seat, err := r.authority.SeatType(ctx, ws, userID)
+	if err != nil {
 		return fmt.Errorf("capture: the granting human's seat does not resolve: %w", err)
 	}
-	return nil
+	for _, object := range captureWriterGrants {
+		create := auth.Check{Object: object, Actions: []principal.Action{principal.ActionCreate}}
+		auth.RecordDecision(ctx, create, rbac.Permissions.Allows(object, principal.ActionCreate))
+	}
+	return CaptureRefusal(rbac.Permissions, seat)
 }
 
 // grantedScopes runs the grant-time scope intersection and returns the
@@ -273,6 +296,8 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		VALUES ($1, $2, $3, $4, 'connected', $5, $6, now())
 		ON CONFLICT (user_id, provider)
 		DO UPDATE SET credential_ref = EXCLUDED.credential_ref, auth = NULL, status = 'connected', archived_at = NULL,
+		              connected_at = now(),
+		              silence_dismissed_since = CASE WHEN $7 THEN NULL ELSE capture_connection.silence_dismissed_since END,
 		              share_acknowledged_at = CASE WHEN $7 THEN now()
 		                                           ELSE COALESCE(capture_connection.share_acknowledged_at, now()) END,
 		              account_label = EXCLUDED.account_label, provider_scopes = EXCLUDED.provider_scopes,
@@ -298,6 +323,11 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              -- direction.
 		              signature_enrich_enabled = CASE WHEN $7 THEN NULL
 		                                              ELSE capture_connection.signature_enrich_enabled END,
+		              -- The history baseline is a date chosen for the previous account's mail.
+		              history_baseline_date = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_date END,
+		              history_baseline_tz = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_tz END,
+		              history_baseline_set_by = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_set_by END,
+		              history_baseline_set_at = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_set_at END,
 		              -- A rebind points this row at a DIFFERENT mailbox, and a
 		              -- watch handle names a subscription in the mailbox it was
 		              -- made against. Kept, it would send the next renewal to
@@ -327,14 +357,24 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		connectionAuditImage(in.provider, "connected", in.accountLabel)); err != nil {
 		return ids.Nil, nil, err
 	}
+	if err := resetConnectionSchedule(ctx, tx, id, rebound); err != nil {
+		return ids.Nil, nil, err
+	}
+	return id, priorRef, nil
+}
+
+func resetConnectionSchedule(ctx context.Context, tx pgx.Tx, id ids.UUID, rebound bool) error {
 	// A (re)connect starts the scheduling ladder clean: a row parked by
 	// reauth_required or degraded by backoff is due immediately with a fresh
 	// credential (ADR-0063).
 	if _, err := tx.Exec(ctx, `
 		UPDATE capture_sync_state
-		SET next_sync_at = now(), consecutive_failures = 0, last_error_class = NULL
-		WHERE connection_id = $1`, id); err != nil {
-		return ids.Nil, nil, err
+		SET next_sync_at = now(), consecutive_failures = 0, last_error_class = NULL, failing_since = NULL,
+		    last_synced_at = CASE WHEN @rebound THEN NULL ELSE last_synced_at END,
+		    last_success_at = CASE WHEN @rebound THEN NULL ELSE last_success_at END,
+ last_delivery_at = CASE WHEN @rebound THEN NULL ELSE last_delivery_at END
+		WHERE connection_id = @id`, pgx.NamedArgs{"id": id, "rebound": rebound}); err != nil {
+		return err
 	}
-	return id, priorRef, nil
+	return nil
 }

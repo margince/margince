@@ -316,3 +316,85 @@ export function classNameLiterals(
   visit(attribute.initializer);
   return out;
 }
+
+// The compiler options the app itself is built with. Borrowed rather than
+// restated, because the path aliases are how an extension screen's imports
+// resolve at all.
+export function appCompilerOptions(frontendRoot: string): ts.CompilerOptions {
+  const config = ts.getParsedCommandLineOfConfigFile(
+    join(frontendRoot, "tsconfig.app.json"),
+    {},
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+        throw new Error(
+          ts.flattenDiagnosticMessageText(diagnostic.messageText, " "),
+        );
+      },
+    },
+  );
+  if (config === undefined) {
+    throw new Error("tsconfig.app.json did not parse");
+  }
+  return config.options;
+}
+
+// A typed program over the swept corpus, not over the project's file list. The
+// project excludes every test and never reaches `extensions/`, so its list
+// would read a smaller tree and report the same word, PASS.
+export function programOver(files: string[], frontendRoot: string): ts.Program {
+  return ts.createProgram(files, appCompilerOptions(frontendRoot));
+}
+
+// A program over one virtual file of planted cases, typed against the real
+// tree. A gate shows with it that each shape it claims to see fails.
+export function plantedProgram(
+  fixture: string,
+  source: string,
+  frontendRoot: string,
+): ts.Program {
+  const options = appCompilerOptions(frontendRoot);
+  const host = ts.createCompilerHost(options, true);
+  const readReal = host.getSourceFile.bind(host);
+  host.getSourceFile = (name, version, onError, shouldCreate) =>
+    name === fixture
+      ? parseSource(name, source)
+      : readReal(name, version, onError, shouldCreate);
+  host.fileExists = (name) => name === fixture || ts.sys.fileExists(name);
+  host.readFile = (name) => (name === fixture ? source : ts.sys.readFile(name));
+  return ts.createProgram([fixture], options, host);
+}
+
+// checkedProgram is a type-checked program over `roots`, for a gate that has to
+// know what a name REFERS to rather than how it is spelled: a renamed import, a
+// namespace read or a function passed uncalled. It is built here so this file
+// stays the one place the frontend calls the compiler, and every source file it
+// reads goes through parseSource.
+//
+// `overlay` holds files that exist only in memory, for a gate's planted cases.
+// Options come from the app's own tsconfig, so imports resolve the way the
+// build resolves them.
+export function checkedProgram(
+  configPath: string,
+  roots: readonly string[],
+  overlay: ReadonlyMap<string, string> = new Map(),
+): { program: ts.Program; checker: ts.TypeChecker } {
+  const read = ts.readConfigFile(configPath, ts.sys.readFile);
+  const parsed = ts.parseJsonConfigFileContent(
+    read.config,
+    ts.sys,
+    dirname(configPath),
+  );
+  const options = { ...parsed.options, noEmit: true, incremental: false };
+  const host = ts.createCompilerHost(options, true);
+  const readFile = host.readFile.bind(host);
+  const fileExists = host.fileExists.bind(host);
+  host.readFile = (file) => overlay.get(file) ?? readFile(file);
+  host.fileExists = (file) => overlay.has(file) || fileExists(file);
+  host.getSourceFile = (file) => {
+    const text = overlay.get(file) ?? readFile(file);
+    return text === undefined ? undefined : parseSource(file, text);
+  };
+  const program = ts.createProgram([...roots], options, host);
+  return { program, checker: program.getTypeChecker() };
+}

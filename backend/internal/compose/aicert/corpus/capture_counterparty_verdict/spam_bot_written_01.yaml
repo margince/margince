@@ -1,4 +1,4 @@
-name: a_fluent_machine_written_pitch_is_still_spam
+name: a_fluent_machine_written_pitch_is_still_a_vendor_pitch
 task: capture_counterparty_verdict
 site: verdict
 source: hand_authored
@@ -33,7 +33,7 @@ fixture:
     GrowthLever Partners
 expect:
   outcome: accepted
-  answer: spam
+  answer: vendor_pitch
   rubric: >
     Unsolicited commercial mail selling a marketing service TO this business,
     written well enough that every surface signal points the other way: a real
@@ -46,8 +46,8 @@ expect:
     homepage and used as an opener — the offer is generic ("operators like
     yours", "several firms in your segment"), the outcome claim is unfalsifiable
     ("30-40% lift"), and no named customer, contact or engagement appears anywhere.
-    "spam" scores high. "newsletter" is a near miss scoring in the middle: wrong
-    label, right effect, since both hide the mail and create no record.
+    "vendor_pitch" scores high. "spam" and "newsletter" are near misses scoring in the
+    middle: they hide the mail and create no record, which is safe.
     "contact" is the failure this scenario exists to catch and scores zero above
     the floor. It is the expensive direction of error for a reason the crude spam
     cases cannot show: a well-written pitch is precisely what a human reviewer

@@ -26,7 +26,7 @@ func toContractFxRate(r FxRateRow) crmcontracts.FxRate {
 // ListFxRates returns the latest rate per currency, or (with ?from=USD) one
 // pair's effective-dated history. Admin/ops-gated in the store.
 func (h Handlers) ListFxRates(w http.ResponseWriter, r *http.Request, params crmcontracts.ListFxRatesParams) {
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -60,14 +60,27 @@ func (h Handlers) ListFxRates(w http.ResponseWriter, r *http.Request, params crm
 	})
 }
 
+// ListFxRateCurrencies returns the sheet's currency codes for the currency
+// pickers. Deal-read gated in the store; it carries no rate.
+func (h Handlers) ListFxRateCurrencies(w http.ResponseWriter, r *http.Request) {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	base, codes, err := h.store.RateSheetCurrencies(r.Context())
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.FxRateCurrencyListResponse{
+		BaseCurrency: base, Data: codes,
+	})
+}
+
 // SetFxRate appends (or same-day corrects) one effective-dated FX rate.
-// Human-admin/ops only; append-forward. Effective date defaults to today.
+// Admin/ops only, or their agent; append-forward. Effective date defaults to today.
 func (h Handlers) SetFxRate(w http.ResponseWriter, r *http.Request) {
-	// Human-only at the handler too, not only via the agent gate: the POST is
-	// x-agent-access: human-only, so an AGENT principal is refused here the
-	// same way the GET refuses one (the gate skips GETs) — self-evident,
-	// belt-and-suspenders enforcement of the human-only write contract.
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

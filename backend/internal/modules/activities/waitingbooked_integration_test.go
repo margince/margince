@@ -24,6 +24,7 @@ func bookedWait(e *loadEnv, t *testing.T, contact ids.UUID) ids.UUID {
 	activity := e.seedWait(t, "When can we meet?", "contact_id", contact)
 	e.exec(t, `UPDATE activity_participant SET contact_id = $2
 		WHERE activity_id = $1 AND role = 'from'`, activity, contact)
+	e.directlyTo(t, activity, e.rep)
 	return activity
 }
 

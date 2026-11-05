@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapitypes "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -240,7 +241,7 @@ func briefPageOf(contact ids.UUID) contactbrief.Assembler {
 
 type assembleFunc func(context.Context, ids.ContactID) (crmcontracts.Contact360, error)
 
-func (f assembleFunc) Assemble(ctx context.Context, id ids.ContactID) (crmcontracts.Contact360, error) {
+func (f assembleFunc) AssembleScoped(ctx context.Context, id ids.ContactID, _ contact360.AssembleOptions) (crmcontracts.Contact360, error) {
 	return f(ctx, id)
 }
 

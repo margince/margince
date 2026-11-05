@@ -382,7 +382,7 @@ func TestAFoldedGroupReachesTheChangedPageThroughWorklist(t *testing.T) {
 	// The premise: unfiltered, these three really did fold into one row. Without
 	// it the assertion below would pass over three unfolded rows and prove
 	// nothing about a minted one.
-	whole, err := svc.Worklist(pageReader(), "", "", ids.UUID{}, 25, "")
+	whole, err := svc.Worklist(pageReader(), scopeUnassigned, "", ids.UUID{}, 25, "")
 	if err != nil {
 		t.Fatalf("unfiltered worklist: %v", err)
 	}
@@ -393,7 +393,7 @@ func TestAFoldedGroupReachesTheChangedPageThroughWorklist(t *testing.T) {
 	}
 
 	narrowed, err := svc.Worklist(
-		pageReader(), "", string(filterChangedSinceBrief), ids.UUID{}, 25, "")
+		pageReader(), scopeUnassigned, string(filterChangedSinceBrief), ids.UUID{}, 25, "")
 	if err != nil {
 		t.Fatalf("narrowed worklist: %v", err)
 	}

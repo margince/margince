@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
 func serveSecurityTxt(t *testing.T, body, method string) *httptest.ResponseRecorder {
@@ -48,10 +48,7 @@ func TestAnUnconfiguredSecurityTxtIsNotMounted(t *testing.T) {
 
 func TestAStaleSecurityTxtIsLoggedAtBoot(t *testing.T) {
 	var out bytes.Buffer
-	web := deployconfig.Web{SecurityTxt: &deployconfig.SecurityTxt{
-		Contact: []string{"mailto:security@example.org"}, Expires: "2030-01-01T00:00:00Z",
-	}}
-	WarnSecurityTxt(web, time.Date(2031, 1, 1, 0, 0, 0, 0, time.UTC), slog.New(slog.NewTextHandler(&out, nil)))
+	WarnSecurityTxt(&SecurityTxt{Contact: []string{"mailto:security@example.org"}, Expires: "2030-01-01T00:00:00Z"}, time.Date(2031, 1, 1, 0, 0, 0, 0, time.UTC), slog.New(slog.NewTextHandler(&out, nil)))
 	if got := out.String(); !strings.Contains(got, "level=WARN") || !strings.Contains(got, "web.security_txt.expires") {
 		t.Fatalf("boot log = %q, want a warning naming the key", got)
 	}
@@ -59,9 +56,7 @@ func TestAStaleSecurityTxtIsLoggedAtBoot(t *testing.T) {
 
 func TestSecurityTxtOptionWarnsAndHandsTheBodyToTheServer(t *testing.T) {
 	var out bytes.Buffer
-	web := deployconfig.Web{SecurityTxt: &deployconfig.SecurityTxt{
-		Contact: []string{"mailto:security@example.org"}, Expires: "2030-01-01T00:00:00Z",
-	}}
+	web := configtest.MustLoad(t, "web:\n  security_txt:\n    contact: [mailto:security@example.org]\n    expires: \"2030-01-01T00:00:00Z\"\n", WebSecurityTxt)
 	var s Server
 	SecurityTxtOption(web, time.Date(2031, 1, 1, 0, 0, 0, 0, time.UTC), slog.New(slog.NewTextHandler(&out, nil)))(&s, nil)
 	if !strings.Contains(s.securityTxt, "Contact: mailto:security@example.org") {
@@ -71,7 +66,7 @@ func TestSecurityTxtOptionWarnsAndHandsTheBodyToTheServer(t *testing.T) {
 		t.Fatalf("boot log = %q, want the stale-Expires warning", out.String())
 	}
 	var bare Server
-	SecurityTxtOption(deployconfig.Web{}, time.Now(), slog.New(slog.NewTextHandler(&out, nil)))(&bare, nil)
+	SecurityTxtOption(configtest.MustLoad(t, "version: 1\n", WebSecurityTxt), time.Now(), slog.New(slog.NewTextHandler(&out, nil)))(&bare, nil)
 	if bare.securityTxt != "" {
 		t.Fatalf("unconfigured security.txt = %q, want empty", bare.securityTxt)
 	}

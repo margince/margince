@@ -14,11 +14,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -30,7 +32,9 @@ type activityPlan struct {
 
 // storedActivity is the part of the stored activity a plan decides on.
 type storedActivity struct {
-	Kind string `json:"kind"`
+	Kind              string    `json:"kind"`
+	OccurredAt        time.Time `json:"occurred_at"`
+	OccurredPrecision string    `json:"occurred_precision"`
 }
 
 // planActivityUpdate reads the stored activity and decides what the row
@@ -52,18 +56,34 @@ func (w *csvWriters) planActivityUpdate(
 			delete(changed, target)
 		}
 	}
-	plan := activityPlan{patch: activityUpdateFrom(changed, typed), changed: len(changed)}
 	var stored storedActivity
 	if err := json.Unmarshal(current, &stored); err != nil {
-		return plan, migration.Reason{}, fmt.Errorf("import: reading the stored activity: %w", err)
+		return activityPlan{}, migration.Reason{}, fmt.Errorf("import: reading the stored activity: %w", err)
 	}
+	if text, given := fields[activityTargetOccurredAt]; given {
+		delete(changed, activityTargetOccurredAt)
+		if !sameOccurrence(stored, typed, w.zone) {
+			changed[activityTargetOccurredAt] = text
+		}
+	}
+	plan := activityPlan{patch: activityUpdateFrom(changed, typed), changed: len(changed)}
 	// The row's own type cell may be absent, so the kind the fields are held
 	// against is the stored one: a patch cannot change it.
-	err = activities.CheckKindFields(stored.Kind, plan.patch.DurationSeconds, plan.patch.MeetingStatus, "")
+	err = activities.CheckKindFields(stored.Kind, plan.patch.DurationSeconds, plan.patch.MeetingStatus, nil, "")
 	if _, why, known := activityKindReason(err, fields); known {
 		return plan, why, nil
 	}
-	return plan, migration.Reason{}, nil
+	movesStart := plan.patch.OccurredAt != nil || plan.patch.OccurredPrecision != nil
+	probes := plan.patch.MeetingStatus != nil || (movesStart && stored.Kind == activities.KindMeeting)
+	// Without the update grant the caller refuses the row for that instead.
+	if !probes || !auth.Allows(ctx, w.object, principal.ActionUpdate) {
+		return plan, migration.Reason{}, nil
+	}
+	err = w.activities.ProbeOutcome(ctx, ids.From[ids.ActivityKind](id), plan.patch)
+	if _, why, known := activityKindReason(err, fields); known {
+		return plan, why, nil
+	}
+	return plan, migration.Reason{}, err
 }
 
 // reconcileActivity brings an activity up to what the file now says.
@@ -82,6 +102,7 @@ func (w *csvWriters) reconcileActivity(
 	case !auth.Allows(ctx, w.object, principal.ActionUpdate):
 		return skippedFor(cannotEditWhy(w.object)), nil
 	}
+	plan.patch.IfVersion = w.reviewedVersion(id)
 	_, err = w.activities.UpdateActivity(ctx, ids.From[ids.ActivityKind](id), plan.patch)
 	if why, refused := activityRefusalOf(err, textFields(row.Fields)); refused {
 		return skippedFor(why), nil
@@ -110,4 +131,20 @@ func (w *csvWriters) predictActivityUpdate(
 		return predictUnwritable, cannotEditWhy(w.object), nil
 	}
 	return predictUpdate, migration.Reason{}, nil
+}
+
+// sameOccurrence says the timestamp cell names what the activity already holds.
+// A day cell is a date, so it matches a day entry of that date and an instant
+// on that date in the installation zone. A timed cell matches only the same
+// instant, never a day.
+func sameOccurrence(stored storedActivity, typed map[string]any, zone *time.Location) bool {
+	at, ok := typed[activityTargetOccurredAt].(time.Time)
+	if !ok {
+		return true
+	}
+	if precision, _ := typed[activityTypedPrecision].(string); occurredday.IsDay(precision) {
+		storedAt := occurredday.Moment{At: stored.OccurredAt, DateOnly: occurredday.IsDay(stored.OccurredPrecision)}
+		return occurredday.DateIn(storedAt, zone).Equal(at)
+	}
+	return !occurredday.IsDay(stored.OccurredPrecision) && activities.SameStoredStart(at, stored.OccurredAt)
 }

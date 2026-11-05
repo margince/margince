@@ -56,9 +56,7 @@ func roomAgo(d time.Duration) time.Time { return roomFixedNow.Add(-d) }
 // fixture that wants a booked meeting wants the same one.
 var roomTomorrow = roomFixedNow.Add(24 * time.Hour)
 
-// roomPerms is a bounded rep holding every grant the contact page asks for. The
-// scope must be team-level: an unbounded admin short-circuits the row-scope
-// clauses these tests exist to prove.
+// roomPerms grants every section with team scope, so row-scope clauses remain exercised.
 var roomPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
@@ -68,6 +66,7 @@ var roomPerms = principal.Permissions{
 		"activity":              {Create: true, Read: true, Update: true},
 		"deal":                  {Read: true},
 		"project":               {Read: true},
+		"privacy_request":       {Read: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,
@@ -712,15 +711,15 @@ func TestADismissalHoldsUntilTheEvidenceMoves(t *testing.T) {
 	}
 }
 
-// contactChanges runs the Tx-scoped derivation in a transaction of its own.
-// There is no pool-level variant, and adding one for a test would be an
-// entry point with no production caller.
+// contactChanges runs the Tx-scoped derivation in its own transaction; a pool variant would have no caller.
 func contactChanges(ctx context.Context, t *testing.T, e *Env, contactID ids.ContactID) ([]relstrength.Change, error) {
 	t.Helper()
 	var out []relstrength.Change
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		var err error
-		out, err = e.Contacts.ContactRelationshipChangesTx(ctx, tx, contactID, roomFixedNow, nil)
+		touches, zone, err := contactTouches(ctx, tx, contactID)
+		if err == nil {
+			out, err = e.Contacts.ContactRelationshipChangesTx(ctx, tx, contactID, roomFixedNow, nil, touches[contactID], zone)
+		}
 		return err
 	})
 	return out, err
@@ -740,6 +739,7 @@ func TestRelationshipChangesAreDerivedFromTheTimeline(t *testing.T) {
 		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
 			VALUES ($1, 'email', 'thread', '`+at+`', 'inbound', 'manual', 'human:x')`)
 		LinkActivity(t, owner, id, "contact", mine)
+		LinkActivitySender(t, owner, id, mine)
 	}
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)

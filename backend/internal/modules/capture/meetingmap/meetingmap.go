@@ -25,12 +25,12 @@ package meetingmap
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -47,7 +47,8 @@ const MaxBodyLen = 8000
 // the raw original reaches the Sink verbatim as evidence, so a field absent
 // here is not a field lost.
 type Event struct {
-	ID string
+	Private bool
+	ID      string
 	// ICalUID is the event's identity ACROSS providers, and ID is not: ID is
 	// whatever the provider numbered this event in its own store, so the same
 	// meeting read from Google and from Graph carries two of them and dedupes
@@ -82,20 +83,27 @@ type Event struct {
 	AllDay    bool
 	Organizer Actor
 	Attendees []Actor
+	// PartiesHidden: the provider withheld guests from this copy of the event.
+	PartiesHidden bool
+	// GoogleMeet says the event's conference is a Google Meet call.
+	GoogleMeet bool
+	// Documents are the files the provider lists as attached to the event.
+	Documents []Document
 }
 
-// Actor is one organizer or attendee. The address is all the rules need to
-// resolve the counterparty and the internal-vs-external classification; Room
-// says the provider marked this a booked room or device rather than a contact,
-// which each decoder answers in its own vendor's terms.
+// Actor is one organizer or attendee. The address resolves the counterparty
+// and the internal test. Room marks a booked room or device, in each vendor's
+// terms. Response is this attendee's own answer as a connector.Response
+// constant, or "" when the provider stated none; a no decides what their row grants.
 type Actor struct {
 	Email string
 	// Name is what the invitation called this party, or "" when the provider
 	// named nobody. It is the only full name an attendee-only contact ever
 	// gets: a contact minted from a bare invitation address is otherwise named
 	// by the local part of their own email.
-	Name string
-	Room bool
+	Name     string
+	Response string
+	Room     bool
 }
 
 // Meeting is the classified result of reading one event against the connected
@@ -111,14 +119,20 @@ type Meeting struct {
 	icalUID         string
 	subject         string
 	body            string
+	agenda          string
+	masked          bool
 	occurredAt      time.Time
 	allDay          bool
 	durationSeconds *int
+	private         bool
 	cancelled       bool
 	ownerDeclined   bool
-	hasExternal     bool // any party outside the OWNER's own domain — the floor, see Settle
+	hasExternal     bool // any party outside the OWNER's own domain; the sink judges the rest
+	partiesHidden   bool
+	ownerDomain     string
 	addresses       []string
 	participants    connector.Parties
+	notes           []capture.MeetingDocument
 }
 
 // Classify applies the meeting rules to one decoded event against the account
@@ -128,15 +142,19 @@ func Classify(ev Event, owner string) Meeting {
 	ownerDom := domainOf(owner)
 	attendeeEmails, external := classifyAttendees(ev.Attendees, ownerDom)
 	organizerDom := domainOf(ev.Organizer.Email)
+	body, masked := buildBody(ev, attendeeEmails)
 
 	return Meeting{
 		id:              strings.TrimSpace(ev.ID),
 		icalUID:         strings.TrimSpace(ev.ICalUID),
 		subject:         strings.TrimSpace(ev.Subject),
-		body:            buildBody(ev, attendeeEmails),
+		body:            body,
+		agenda:          agendaFingerprint(ev.Description),
+		masked:          masked,
 		occurredAt:      ev.StartsAt,
 		allDay:          ev.AllDay,
 		durationSeconds: eventDuration(ev),
+		private:         ev.Private,
 		cancelled:       ev.Cancelled,
 		ownerDeclined:   ev.OwnerDeclined,
 		// The organizer counts as a party: an externally-organized meeting is a
@@ -146,9 +164,12 @@ func Classify(ev Event, owner string) Meeting {
 		// the same rule classifyAttendees applies below: unknown is not
 		// internal. Reading it as internal instead would drop a real
 		// multi-party meeting on the strength of a malformed address.
-		hasExternal:  external > 0 || organizerIsExternal(ev.Organizer.Email, organizerDom, ownerDom),
-		addresses:    eventAddresses(ev, owner),
-		participants: meetingParties(ev, strings.ToLower(strings.TrimSpace(owner))),
+		hasExternal:   external > 0 || organizerIsExternal(ev.Organizer.Email, organizerDom, ownerDom),
+		partiesHidden: ev.PartiesHidden,
+		ownerDomain:   ownerDom,
+		addresses:     eventAddresses(ev, owner),
+		participants:  meetingParties(ev),
+		notes:         NotesDocuments(ev, owner),
 	}
 }
 
@@ -159,39 +180,43 @@ func Classify(ev Event, owner string) Meeting {
 func (m Meeting) Participants() connector.Parties { return m.participants }
 
 // meetingParties returns the organizer and attendees as participant rows,
-// excluding the account owner.
+// the account owner included when the provider lists them.
 //
-// The owner is excluded because capture stamps them separately from the
-// connection that produced the event — that row carries their user_id, which is
-// what the interaction graph joins on, whereas a row built from this header
-// would carry only an address and join nothing.
+// The owner's own role is the evidence that they take part, and capture binds
+// that row to their seat. A calendar that only holds a copy of somebody else's
+// meeting names them nowhere here. The sink's directional row for the owner
+// records only whose calendar the event came from.
 //
 // Organizer wins over attendee when the same address holds both, which is the
 // common case for a meeting somebody scheduled and then attended: organizing is
 // the stronger statement about their part in it.
-func meetingParties(ev Event, ownerLower string) connector.Parties {
-	seen := map[string]bool{}
-	if ownerLower != "" {
-		seen[ownerLower] = true
-	}
+func meetingParties(ev Event) connector.Parties {
+	seen := map[string]int{}
 
 	var out []connector.MessageParticipant
-	add := func(email, name, role string) {
-		address := strings.ToLower(strings.TrimSpace(email))
-		if address == "" || seen[address] {
+	add := func(actor Actor, role string) {
+		address := strings.ToLower(strings.TrimSpace(actor.Email))
+		if at, listed := seen[address]; listed {
+			// An organizer listed again as an attendee answers there.
+			if out[at].Response == "" {
+				out[at].Response = actor.Response
+			}
 			return
 		}
-		seen[address] = true
+		if address == "" {
+			return
+		}
+		seen[address] = len(out)
 		out = append(out, connector.MessageParticipant{
-			Email: address, Role: role, DisplayName: strings.TrimSpace(name),
+			Email: address, Role: role, DisplayName: strings.TrimSpace(actor.Name), Response: actor.Response,
 		})
 	}
-	add(ev.Organizer.Email, ev.Organizer.Name, connector.ParticipantRoleOrganizer)
+	add(ev.Organizer, connector.ParticipantRoleOrganizer)
 	for _, a := range ev.Attendees {
 		if a.Room {
 			continue
 		}
-		add(a.Email, a.Name, connector.ParticipantRoleAttendee)
+		add(a, connector.ParticipantRoleAttendee)
 	}
 
 	return connector.CapParticipants(out)
@@ -219,12 +244,18 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
 		Fields: capture.ActivityFields{
 			Kind:            "meeting",
+			ProviderPrivate: m.private,
 			Subject:         m.subject,
 			Body:            m.body,
-			OccurredAt:      m.occurredAt,
-			DurationSeconds: m.durationSeconds,
+			// The sink adds a mask of the subject to this.
+			CredentialsMasked: m.masked,
+			AgendaFingerprint: m.agenda,
+			OccurredAt:        m.occurredAt,
+			DateOnly:          m.allDay,
+			DurationSeconds:   m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
-			Direction: "",
+			Direction:        "",
+			MeetingDocuments: m.notes,
 		},
 		Source:     connectorName + ":" + m.id,
 		CapturedBy: "connector:" + connectorName,
@@ -240,7 +271,17 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		Participants:      m.participants.Participants,
 		WithheldParties:   m.participants.Withheld,
 		Addresses:         m.addresses,
+		OwnerDomainOnly:   m.ownerDomainOnly(),
+		PartiesIncomplete: m.partiesHidden,
 	}.WithProviderAttestedParticipants(true)
+}
+
+// ownerDomainOnly is the owner's domain when no party is outside it, else "".
+func (m Meeting) ownerDomainOnly() string {
+	if m.hasExternal || m.partiesHidden {
+		return ""
+	}
+	return m.ownerDomain
 }
 
 // organizerIsExternal reports whether the organizer is a party outside the
@@ -274,32 +315,20 @@ func classifyAttendees(attendees []Actor, ownerDom string) (emails []string, ext
 }
 
 // buildBody folds the organizer, the attendee list, and the event description
-// into the stored meeting body, bounded to a legible excerpt.
-func buildBody(ev Event, attendeeEmails []string) string {
+// into the stored meeting body, bounded to a legible excerpt. Credentials are
+// masked before the cut, so a key the cut would split is still found whole.
+// masked says the mask changed the body.
+func buildBody(ev Event, attendeeEmails []string) (body string, masked bool) {
 	header := "Organizer: " + orDash(strings.TrimSpace(ev.Organizer.Email))
 	if len(attendeeEmails) > 0 {
 		header += "\nAttendees: " + strings.Join(attendeeEmails, ", ")
 	}
-	body := header
-	if desc := strings.TrimSpace(ev.Description); desc != "" {
+	body = header
+	if desc := descriptionText(ev.Description); desc != "" {
 		body = header + "\n\n" + desc
 	}
-	return textcut.BytesMarked(body, MaxBodyLen, "…")
-}
-
-// AllDayStart anchors an all-day date (YYYY-MM-DD) at noon UTC.
-//
-// An all-day date is calendar-local with no timezone; reading it as midnight
-// UTC lands it on the PREVIOUS day for any zone west of UTC. Noon keeps the
-// intended calendar date across the whole ±12h range of real offsets, absent a
-// per-event timezone. Exported because every calendar provider has all-day
-// events and the off-by-one is the same one in each.
-func AllDayStart(date string) (time.Time, bool) {
-	t, err := time.Parse("2006-01-02", strings.TrimSpace(date))
-	if err != nil {
-		return time.Time{}, false
-	}
-	return t.Add(12 * time.Hour).UTC(), true
+	maskedBody := credentialmask.MaskText(body)
+	return textcut.BytesMarked(maskedBody, MaxBodyLen, "…"), maskedBody != body
 }
 
 // domainOf returns the lowercased domain part of an address, or "" if it
@@ -360,9 +389,9 @@ type Decode func(raw []byte, owner string) (Event, error)
 // CaptureOne parses, drops, cancels, or upserts ONE raw event: the whole of
 // what happens to a single event, for whichever calendar decoded it.
 //
-// A parse failure or a deliberate drop (solo, or inside the owner's domain) is a
-// no-op; only a real Sink write fault returns a non-nil error, which stops the
-// pull. A package function rather than a method so a pull holds no shared state.
+// A parse failure or a drop (no id, or a solo block) is a no-op. Only a real
+// Sink write fault returns an error, which stops the pull. A package function
+// rather than a method, so a pull holds no shared state.
 //
 // A cancelled or declined event reaches the sink as a CANCELLATION rather than
 // as nothing. The event was capturable once — that is exactly the case where a
@@ -373,6 +402,7 @@ type Decode func(raw []byte, owner string) (Event, error)
 func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, connectorName string, decode Decode) error {
 	ev, err := decode(raw, owner)
 	if err != nil {
+		countEvent(ctx, connectorName, "", OutcomeUnreadable)
 		return nil //nolint:nilerr // a single unparseable event is a skip, not a fatal pull error (mirrors the mail connectors)
 	}
 	m := Classify(ev, owner)
@@ -381,19 +411,16 @@ func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, con
 	// through to the upsert is the one wrong direction to fail in: a settlement
 	// added later and not handled here would put the event on the timeline as a
 	// booked meeting, which is precisely the row this path was written to stop.
-	switch _, settlement := m.Settle(); settlement {
+	reason, settlement := m.Settle()
+	switch settlement {
 	case SettleDrop:
+		countEvent(ctx, connectorName, m.id, "dropped_"+reason.Label())
 		return nil
 	case SettleCancel:
-		return cancelCaptured(ctx, sink, m, connectorName)
+		return cancelCaptured(ctx, sink, m, connectorName, reason)
 	case SettleCapture:
-		if _, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw)); err != nil {
-			if errors.Is(err, connector.ErrSkip) {
-				return nil
-			}
-			return err
-		}
-		return nil
+		_, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw))
+		return settleWrite(ctx, connectorName, m.id, OutcomeCaptured, err)
 	default:
 		return fmt.Errorf("meetingmap: %s settled as %d, which nothing here handles", m.ID(), settlement)
 	}
@@ -411,7 +438,7 @@ func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, con
 // pull that runs days later would otherwise record the meeting as having been
 // called off at the moment we noticed, and every question about when bookings
 // fell through would answer with the sync schedule instead of the calendar.
-func cancelCaptured(ctx context.Context, sink connector.Sink, m Meeting, connectorName string) error {
+func cancelCaptured(ctx context.Context, sink connector.Sink, m Meeting, connectorName string, reason Reason) error {
 	key := connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}
 	var err error
 	// The identity travels too where the sink can use it: an event matched onto
@@ -423,20 +450,15 @@ func cancelCaptured(ctx context.Context, sink connector.Sink, m Meeting, connect
 	} else if canceller, ok := sink.(connector.MeetingCanceller); ok {
 		err = canceller.CancelMeeting(ctx, key, m.occurredAt)
 	} else {
+		countEvent(ctx, connectorName, m.id, OutcomeCancelUnsupported)
 		return nil
 	}
-	if err != nil {
-		if errors.Is(err, connector.ErrSkip) {
-			return nil
-		}
-		return err
-	}
-	return nil
+	return settleWrite(ctx, connectorName, m.id, reason.Label(), err)
 }
 
 // NormalizeOne maps ONE raw event to its meeting activity, reporting a
 // deliberate drop as an ErrSkip-wrapped refusal. Pure — the test-guarded
-// surface a connector's Normalize composes.
+// surface a connector's Normalize composes. The sink, not this, judges internal.
 func NormalizeOne(raw []byte, owner, connectorName string, decode Decode) ([]connector.NormalizedRecord, error) {
 	ev, err := decode(raw, owner)
 	if err != nil {
@@ -475,12 +497,4 @@ func SettlementOf(raw []byte, owner string, decode Decode) (Settlement, error) {
 	}
 	_, settlement := Classify(ev, owner).Settle()
 	return settlement, nil
-}
-
-func eventDuration(event Event) *int {
-	if event.StartsAt.IsZero() || !event.EndsAt.After(event.StartsAt) {
-		return nil
-	}
-	seconds := int(event.EndsAt.Sub(event.StartsAt) / time.Second)
-	return capture.StorableDuration(&seconds)
 }

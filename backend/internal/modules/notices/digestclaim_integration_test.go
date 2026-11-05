@@ -186,3 +186,17 @@ func TestOnlySeatsWhoBatchedAClassAreDigestCandidates(t *testing.T) {
 		t.Fatalf("a seat already served is still due a morning: %v", after)
 	}
 }
+
+func TestOnlyTheRecipientOrSystemCanClaimADigest(t *testing.T) {
+	e := setupNotices(t)
+	for _, ctx := range []context.Context{context.Background(), e.asUser(e.other)} {
+		claimed, err := e.store.ClaimDigestRun(ctx, e.recipient, digestWindow.Day)
+		if claimed || !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Fatalf("foreign claim = %v, %v", claimed, err)
+		}
+	}
+	claimed, err := e.store.ClaimDigestRun(e.asUser(e.recipient), e.recipient, digestWindow.Day)
+	if err != nil || !claimed {
+		t.Fatalf("own claim = %v, %v", claimed, err)
+	}
+}

@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/emersion/go-message/mail"
+
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 )
 
 // SkipReason names why a message is intentionally dropped, or reports that
@@ -37,7 +39,7 @@ func (m Message) SkipReason() (string, bool) {
 	if m.autoReply {
 		return autoReplied, true
 	}
-	if isDeliverySystemSender(m.from) {
+	if mailidentity.IsDeliverySystemSender(m.from) {
 		return "delivery-system sender", true
 	}
 	// A report is known by its SHAPE, whoever sent it. Dropped for the same
@@ -48,44 +50,6 @@ func (m Message) SkipReason() (string, bool) {
 		return "delivery report", true
 	}
 	return "", false
-}
-
-// isDeliverySystemSender flags mail from the message-transport system itself —
-// a bounce, a DSN, a postmaster notice. There is no correspondent behind it and
-// nothing on the other end to have a relationship with, so it is dropped before
-// anything is written.
-//
-// Deliberately NARROWER than "looks automated". A no-reply or notifications
-// address is a real company writing to the workspace — a signed envelope,
-// an invoice, a shipping notice — and ADR-0072 §1 is explicit that such a
-// message keeps its place on the timeline while the tier gate suppresses the
-// contact and company derivation. Dropping it here would make that promise false
-// and would starve the T2 corroboration rule (CAP-PARAM-6), which exists to
-// recognize exactly these machine localparts, of the mail it judges.
-func isDeliverySystemSender(addr string) bool {
-	local, _, found := strings.Cut(strings.ToLower(addr), "@")
-	if !found {
-		return false
-	}
-	// BATV/prvs tags sit before any separator a normalization would strip. The
-	// scheme signs the RETURN PATH, which this never sees — matching From means
-	// a relay that rewrites From with a tag has its mail dropped. Rare, and it
-	// costs a timeline row rather than granting anything.
-	if strings.HasPrefix(local, "prvs=") || strings.HasPrefix(local, "msprvs1=") {
-		return true
-	}
-	// VERP encodes the original recipient into the bounce address
-	// (`bounces-12345@`, `bounce+tag@`), so the trailing tag is dropped before
-	// matching. `_` is stripped for parity with the T2 registry's own reading
-	// of these localparts (CAP-PARAM-6) — one spelling, two rules.
-	local, _, _ = strings.Cut(local, "+")
-	local = strings.NewReplacer(".", "", "-", "", "_", "").Replace(local)
-	local = strings.TrimRight(local, "0123456789")
-	switch local {
-	case "mailerdaemon", "postmaster", "bounce", "bounces":
-		return true
-	}
-	return false
 }
 
 // The two RFC 3834 values that mean a contact's mail reaches the tier gate:

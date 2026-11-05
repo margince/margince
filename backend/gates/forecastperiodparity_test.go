@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
 
 // Where the contract spells a forecasting period. Each is a separate authoring
@@ -62,8 +63,8 @@ func TestTheSiteListCoversEveryPeriodEnumInTheContract(t *testing.T) {
 	// — the defect this whole gate exists for. Under-recognition is the one way
 	// a gate must not break.
 	doc := loadContractDocument(t)
-	found := map[string]bool{}
-	walkPeriodEnums(doc, nil, found)
+	found, grains := map[string]bool{}, map[string][]string{}
+	walkPeriodEnums(doc, nil, found, grains)
 
 	named := map[string]bool{}
 	for _, site := range forecastPeriodSites {
@@ -81,26 +82,51 @@ func TestTheSiteListCoversEveryPeriodEnumInTheContract(t *testing.T) {
 	}
 }
 
-// walkPeriodEnums records every path whose enum admits `quarter`, which in this
-// contract is only ever a forecasting window.
+// walkPeriodEnums records every path whose enum admits `quarter`. One that
+// also admits `year` is a report period grain, which no forecast window is, and
+// goes to grains. Every other one is a forecasting window.
 //
 // The path recorded is the one this gate's own site list spells, so a site the
 // walk finds and the list omits names itself in the failure.
 //
 //craft:ignore naked-any a decoded YAML document is untyped by nature — mappings, sequences and scalars arrive as any, and the switch below is the narrowing
-func walkPeriodEnums(node any, at []string, found map[string]bool) {
+func walkPeriodEnums(node any, at []string, found map[string]bool, grains map[string][]string) {
 	switch shape := node.(type) {
 	case map[string]any:
-		if slices.Contains(enumOf(shape), "quarter") {
-			found[strings.Join(periodSitePath(at), "/")] = true
+		values := enumOf(shape)
+		if slices.Contains(values, string(reportperiod.GrainQuarter)) {
+			where := strings.Join(periodSitePath(at), "/")
+			if slices.Contains(values, string(reportperiod.GrainYear)) {
+				grains[where] = values
+			} else {
+				found[where] = true
+			}
 			return
 		}
 		for key, child := range shape {
-			walkPeriodEnums(child, append(append([]string{}, at...), key), found)
+			walkPeriodEnums(child, append(append([]string{}, at...), key), found, grains)
 		}
 	case []any:
 		for _, child := range shape {
-			walkPeriodEnums(child, at, found)
+			walkPeriodEnums(child, at, found, grains)
+		}
+	}
+}
+
+// A report period grain on the wire is one of the grains reportperiod cuts, and
+// the wire offers them all. A grain the kernel lacks is a bucket no label
+// resolves. One the wire lacks is a period a caller cannot name.
+func TestEveryReportGrainOnTheWireIsAGrainTheKernelCuts(t *testing.T) {
+	t.Parallel()
+	found, grains := map[string]bool{}, map[string][]string{}
+	walkPeriodEnums(loadContractDocument(t), nil, found, grains)
+	if len(grains) == 0 {
+		t.Fatal("the contract names no report period grain; this gate reads the wrong place")
+	}
+	want := []string{string(reportperiod.GrainMonth), string(reportperiod.GrainQuarter), string(reportperiod.GrainYear)}
+	for where, values := range grains {
+		if !slices.Equal(slices.Sorted(slices.Values(values)), want) {
+			t.Errorf("%s offers grains %v, want exactly %v", where, values, want)
 		}
 	}
 }

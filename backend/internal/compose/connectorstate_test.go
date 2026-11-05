@@ -113,3 +113,58 @@ func TestConnectStateCarriesReturnToThroughSignAndVerify(t *testing.T) {
 		t.Errorf("ReturnTo = %q, want %q", got.ReturnTo, "settings")
 	}
 }
+
+func TestConnectStateCarriesChainAndImportWindow(t *testing.T) {
+	s := newStateSigner([]byte("0123456789abcdef0123456789abcdef"))
+	now := time.Unix(1_700_000_000, 0)
+	token := s.sign(connectState{Provider: "gmail", Nonce: "n", ReturnTo: "settings", Then: "gcal", WindowMonths: 6}, now.Add(time.Minute))
+	got, err := s.verify(token, now)
+	if err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+	if got.Then != "gcal" || got.WindowMonths != 6 {
+		t.Errorf("Then, WindowMonths = %q, %d; want gcal, 6", got.Then, got.WindowMonths)
+	}
+	if got.Provider != "gmail" || got.ReturnTo != "settings" {
+		t.Errorf("Provider, ReturnTo = %q, %q; want gmail, settings", got.Provider, got.ReturnTo)
+	}
+}
+
+// A connect started before the chain existed is still in flight across a
+// deploy. Its state carries neither key and must land as a plain connect.
+func TestConnectStateMintedWithoutChainStillVerifies(t *testing.T) {
+	s := newStateSigner([]byte("0123456789abcdef0123456789abcdef"))
+	now := time.Unix(1_700_000_000, 0)
+	ws, user := "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222"
+	legacy := `{"ws":"` + ws + `","u":"` + user + `","p":"gmail","n":"n","rt":"onboarding","exp":1700000060}`
+
+	got, err := s.verify(signPayload(s, []byte(legacy)), now)
+	if err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+	if got.Then != "" || got.WindowMonths != 0 {
+		t.Errorf("Then, WindowMonths = %q, %d; want empty, 0", got.Then, got.WindowMonths)
+	}
+	if got.Provider != "gmail" || got.ReturnTo != "onboarding" || got.Workspace.String() != ws {
+		t.Errorf("legacy state decoded as %+v", got)
+	}
+}
+
+func TestConnectStateWithoutChainSignsNoChainKeys(t *testing.T) {
+	s := newStateSigner([]byte("0123456789abcdef0123456789abcdef"))
+	token := s.sign(connectState{Provider: "gcal", Nonce: "n"}, time.Unix(1_700_000_060, 0))
+	enc, _, _ := strings.Cut(token, ".")
+	payload, err := base64.RawURLEncoding.DecodeString(enc)
+	if err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &keys); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	for _, k := range []string{"th", "iw"} {
+		if _, ok := keys[k]; ok {
+			t.Errorf("payload carries %q for a state that ends the chain: %s", k, payload)
+		}
+	}
+}

@@ -226,9 +226,24 @@ func TestMCPOnTheAPIServesTheAPIsOwnToolSurface(t *testing.T) {
 	// carries only "read" and tools/list advertises only what the caller could
 	// actually invoke (§5.7). Comparing against the whole REST surface would
 	// assert the transport lies.
+	var listing struct {
+		Result struct {
+			Tools []struct {
+				Name string `json:"name"`
+			} `json:"tools"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal([]byte(got.Body), &listing); err != nil {
+		t.Fatalf("tools/list does not decode: %v", err)
+	}
 	var readable, refused int
 	for _, tool := range rest.Data {
-		listed := strings.Contains(got.Body, `"`+tool.Name+`"`)
+		listed := slices.ContainsFunc(listing.Result.Tools, func(offered struct {
+			Name string `json:"name"`
+		},
+		) bool {
+			return offered.Name == tool.Name
+		})
 		if tool.RequiredScope == "read" {
 			readable++
 			if !listed {

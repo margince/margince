@@ -14,7 +14,7 @@ package integration
 //     company's row version;
 //   - two readers of the same account get their own brief, because a brief
 //     written from one reader's row scope is not true for another's;
-//   - an agent is refused, and an account the caller cannot read has no
+//   - passportless work is refused, and an account the caller cannot read has no
 //     brief rather than a refusal that confirms it exists.
 
 import (
@@ -66,13 +66,19 @@ func (l *countingLane) Complete(context.Context, model.Request) (model.Response,
 }
 
 func briefService(e *Env, lane companybrief.Completer, routingVersion string) *companybrief.Service {
+	return briefServiceAt(e, lane, routingVersion, briefClock)
+}
+
+// briefServiceAt reads at the given instant. A brief reads no row dated after
+// its clock, so a fixture whose rows are dated later needs a clock after them.
+func briefServiceAt(e *Env, lane companybrief.Completer, routingVersion string, now time.Time) *companybrief.Service {
 	store := contacts.NewStore(e.DB())
 	view := company360.NewService(e.Pool, store, e.Deals, e.Projects, approvals.NewService(e.DB()),
-		func() time.Time { return briefClock })
+		func() time.Time { return now })
 	// The same store serves both halves of the brief: the 360 for how the
 	// account stands with us, its profile fields for what the company is.
 	return companybrief.NewService(e.Pool, view, store, lane, routingVersion,
-		func() time.Time { return briefClock })
+		func() time.Time { return now })
 }
 
 var briefReaderPerms = principal.Permissions{
@@ -349,8 +355,7 @@ func TestCompanyBriefHidesAnAccountOutOfRowScope(t *testing.T) {
 	}
 }
 
-// A brief is a reading aid for a contact. An agent reading records through a
-// passport has the records themselves.
+// Passportless work acts for nobody, so it has no reader to write a brief for.
 func TestCompanyBriefRefusesAnAgent(t *testing.T) {
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -359,8 +364,7 @@ func TestCompanyBriefRefusesAnAgent(t *testing.T) {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	agent := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		// The shape a passport really mints: the granting human's id rides
-		// along, so refusing on "no user" would prove nothing.
+		// A user id rides along, so refusing on "no user" would prove nothing.
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: briefReaderPerms,
 	})
 

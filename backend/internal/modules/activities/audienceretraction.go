@@ -46,23 +46,16 @@ import (
 // visibility and a narrowed signal is still the owner's — and that omission is a
 // boundary rather than a miss.
 //
-// The profile fields a signature enrichment wrote ARE retracted, through the
-// seam below. Only the ones nobody has taken over: a value a contact restored or
-// corrected stays, and RetractSignatureFieldsTx states which columns tell those
-// apart.
+// The caller retracts the signature fields in a transaction of its own. Their
+// writer locks the contact before the activity, and this function locks the
+// activity first.
 //
 // Idempotent: re-running deletes nothing more, which is what lets the consumer
 // that calls it retry.
-// SignatureFieldRetractor removes the profile fields one message's signature
-// wrote. contacts owns that table, so compose injects the edge, and it is required
-// rather than optional — a narrowing that skipped it would leave the message's
-// content on a record everybody reads.
-type SignatureFieldRetractor func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error
-
 // RetractDerivedForActivityTx collects what was derived from a message that has
 // just been narrowed, as described above.
 func RetractDerivedForActivityTx(
-	ctx context.Context, tx pgx.Tx, activityID ids.UUID, retractFields SignatureFieldRetractor,
+	ctx context.Context, tx pgx.Tx, activityID ids.UUID,
 ) error {
 	// THE ACTIVITY FIRST, BEFORE ANY DERIVED ROW. Both things this function
 	// removes have a concurrent writer that takes the activity and then the
@@ -111,10 +104,5 @@ func RetractDerivedForActivityTx(
 		 WHERE id = $1 AND capture_label IS NOT NULL`, activityID); err != nil {
 		return fmt.Errorf("activities: clearing the narrowed activity's attention label: %w", err)
 	}
-	// The profile fields this message's signature wrote, last and inside the
-	// same lock. A title or a phone number lifted from a signature block is the
-	// message's content restated on a record everybody can see, so a narrowing
-	// that left them behind would limit the message and publish what it said.
-	//
-	return retractFields(ctx, tx, activityID)
+	return nil
 }

@@ -34,6 +34,7 @@ package agents
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -52,6 +53,10 @@ type DuplicateCandidate struct {
 	OtherRecordID string `json:"other_record_id"`
 	// Confidence is the detection's own score, 0..1.
 	Confidence float64 `json:"confidence"`
+	// CanMerge and KeepID are the review queue's flags for this pair. KeepID is
+	// set when the caller may merge one way only: it names the record that survives.
+	CanMerge bool    `json:"can_merge"`
+	KeepID   *string `json:"keep_id,omitempty"`
 	// Evidence is the detection-time snapshot: the field that collided and the
 	// two values, as the matcher saw them. Passed through rather than
 	// paraphrased, because what a reviewer needs is what was actually compared.
@@ -65,8 +70,10 @@ type DuplicateCandidate struct {
 // members it can rely on ought to be the ones the contract names. The stored
 // snapshot is written by this system in exactly these five keys.
 type DuplicateEvidence struct {
-	// Field is the axis — "phone", "full_name", "email".
+	// Field is the axis, such as "phone" or "email". Label names it in the
+	// installation's language.
 	Field string `json:"field"`
+	Label string `json:"label,omitempty"`
 	// Left is the value on the record this call created and Right the one
 	// already here, in their stored form: detection writes the evidence from
 	// the created record's side, whichever order the pair's ids sort in.
@@ -83,11 +90,12 @@ type DuplicateEvidence struct {
 }
 
 // OpenDuplicatesFor answers the open candidates naming one record, or none.
+// A non-nil only keeps just those pair ids.
 //
 // It is a seam rather than a call into the contacts module because agents may not
 // import it (see .go-arch-lint.yml) — and should not: the injected reader is
 // what keeps this surface unable to reach a record table on its own.
-type OpenDuplicatesFor func(ctx context.Context, recordType string, id ids.UUID) ([]DuplicateCandidate, error)
+type OpenDuplicatesFor func(ctx context.Context, recordType string, id ids.UUID, only []ids.UUID) ([]DuplicateCandidate, error)
 
 // CodeDuplicateFiled is the warning a create carries when it filed a pair for
 // review, and CodeDuplicateCheckFailed when it could not find out.
@@ -101,6 +109,9 @@ const (
 	CodeDuplicateFiled       = "duplicate_filed_for_review"
 	CodeDuplicateCheckFailed = "duplicate_check_unavailable"
 )
+
+const duplicateCheckFailedMessage = "The record was created. Whether it duplicates one already here could not be checked, " +
+	"so treat this as unknown rather than as no duplicate."
 
 // duplicateWarning renders the human-readable half. It names the count and what
 // happens next, and deliberately does NOT say the record was rejected or
@@ -138,6 +149,44 @@ type createdRecord struct {
 	// TagOffer is present only when the caller proposed a word with offer_tag
 	// and it can be offered. It records an offer; nothing was applied.
 	TagOffer *TagOffer `json:"tag_offer,omitempty"`
+	// Changes names the fields the call set, as the record now holds them.
+	// Absent when the fields could not be named, which a warning then says.
+	Changes []FieldChange `json:"changes,omitempty"`
+}
+
+// employmentEdgeContact names the contact an employment-edge create gives an
+// employer to, and reports false for every other create.
+func employmentEdgeContact(recordType string, fields json.RawMessage) (ids.UUID, bool) {
+	if recordType != string(datasource.EntityRelationship) {
+		return ids.UUID{}, false
+	}
+	var edge struct {
+		Kind      string `json:"kind"`
+		ContactID string `json:"contact_id"`
+	}
+	if err := json.Unmarshal(fields, &edge); err != nil || edge.Kind != "employment" {
+		return ids.UUID{}, false
+	}
+	contact, err := ids.Parse(edge.ContactID)
+	return contact, err == nil
+}
+
+// reportCreateDuplicates is reportDuplicates for any create. An employment edge
+// is reported against its contact, limited to the pairs this create filed.
+// The write itself noted them in filed, so a concurrent writer's pair on the
+// same contact is not claimed.
+func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType string, fields json.RawMessage, id ids.UUID, filed []ids.UUID) []DuplicateCandidate {
+	contact, edge := employmentEdgeContact(recordType, fields)
+	if recordType == string(datasource.EntityRelationship) && !edge {
+		return nil
+	}
+	if !edge {
+		return t.reportDuplicates(ctx, recordType, id, nil)
+	}
+	if len(filed) == 0 {
+		return nil
+	}
+	return t.reportDuplicates(ctx, "contact", contact, filed)
 }
 
 // reportDuplicates tells the caller what this create filed for review.
@@ -152,15 +201,13 @@ type createdRecord struct {
 // asked. "The check could not run" says nothing about whether one exists —
 // folding them together would let a caller report "no duplicate found" for a
 // check that never happened, which is the failure this whole path corrects.
-func (t createRecord) reportDuplicates(ctx context.Context, recordType string, id ids.UUID) []DuplicateCandidate {
+func (t createRecord) reportDuplicates(ctx context.Context, recordType string, id ids.UUID, only []ids.UUID) []DuplicateCandidate {
 	if t.duplicates == nil {
 		return nil
 	}
-	found, err := t.duplicates(ctx, recordType, id)
+	found, err := t.duplicates(ctx, recordType, id, only)
 	if err != nil {
-		noteWarning(ctx, CodeDuplicateCheckFailed,
-			"The record was created. Whether it duplicates one already here could not be checked, "+
-				"so treat this as unknown rather than as no duplicate.")
+		noteWarning(ctx, CodeDuplicateCheckFailed, duplicateCheckFailedMessage)
 		return nil
 	}
 	if len(found) == 0 {
@@ -172,7 +219,11 @@ func (t createRecord) reportDuplicates(ctx context.Context, recordType string, i
 	w := duplicateWarning(len(found))
 	noteWarning(ctx, w.Code, w.Message)
 
+	lang := summaryIn(ctx, t.language).lang
 	for _, d := range found {
+		for i := range d.Evidence {
+			d.Evidence[i].Label = FieldLabel(lang, d.Evidence[i].Field)
+		}
 		// Each disclosed record is cited: naming a record to an agent hands it
 		// over, so the evidence list has to say so. Without this a create
 		// discloses up to five other records while citing only the one it wrote.

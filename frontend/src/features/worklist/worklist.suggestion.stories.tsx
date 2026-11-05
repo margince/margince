@@ -22,6 +22,7 @@ const companyId = "01a0e9f1-0000-7000-8000-0000000000c1";
 
 function suggestionRow(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a0e9f1-0000-7000-8000-000000000001",
     source: "deal_suggestion",
     category: "decisions",

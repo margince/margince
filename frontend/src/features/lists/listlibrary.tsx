@@ -7,6 +7,7 @@
 // view and a list read alike wherever they sit.
 
 import { type ReactNode, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import {
   Badge,
   Button,
@@ -22,8 +23,10 @@ import { useTruncationTooltip } from "../../design-system/tooltip";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { RECORDS_COUNT_LABEL } from "../../lib/filtersaddress";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
+import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import {
   isArchived,
   keyOf,
@@ -31,10 +34,8 @@ import {
   type LibraryItem,
   nameOf,
   resourceOf,
-} from "../../screens/library";
-import { EditFilterAction, mayEditFilter } from "./filterlistedit";
-import { RECORDS_COUNT_LABEL } from "./filtersaddress";
-import "../../screens/library.css";
+} from "./library";
+import "../voice-knowledge/library.css";
 import {
   type List,
   type ListRecordType,
@@ -65,8 +66,8 @@ const RECORD_TYPE_LABEL: Record<ListRecordType, MessageKey> = {
 
 /**
  * What a list is, in the reader's words rather than the wire's. A Live List
- * keeps itself current, so it alone wears info's tint and the breathing dot;
- * emerald stays the page's one primary action and indigo an agent's proposal.
+ * keeps itself current, so it alone wears info's tint and the breathing dot.
+ * The accent stays the page's one primary action, and indigo an agent's proposal.
  */
 export function ListKindBadge({
   list,
@@ -202,9 +203,9 @@ function LibraryName({
   return (
     <span className="library-name-cell">
       <span className="library-name-line">
-        <a className="library-name" href={hrefOf(item)}>
+        <AppLink className="library-name" href={hrefOf(item)}>
           {nameOf(item)}
-        </a>
+        </AppLink>
         {item.kind === "list" && <ListHealthBadge list={item.list} />}
         {isArchived(item) && <Badge>{t("record.archived")}</Badge>}
       </span>

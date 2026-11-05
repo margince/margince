@@ -107,12 +107,12 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 	seen := map[string]bool{}
 	for _, w := range encoded {
 		if w.raw == nil {
-			t.Errorf("%s encoded to nil bytes from a field that was set", w.entry.Key())
+			t.Errorf("%s encoded to nil bytes from a field that was set", w.key)
 		}
-		if seen[w.entry.Key()] {
-			t.Errorf("%s is encoded twice, so some other field is not encoded at all", w.entry.Key())
+		if seen[w.key] {
+			t.Errorf("%s is encoded twice, so some other field is not encoded at all", w.key)
 		}
-		seen[w.entry.Key()] = true
+		seen[w.key] = true
 	}
 }
 
@@ -130,7 +130,7 @@ func TestAnAbsentInstallationPatchFieldEncodesToNothing(t *testing.T) {
 	for _, w := range encoded {
 		if w.raw != nil {
 			t.Errorf("%s encoded %q from an absent field; the write loop would store it",
-				w.entry.Key(), string(w.raw))
+				w.key, string(w.raw))
 		}
 	}
 }

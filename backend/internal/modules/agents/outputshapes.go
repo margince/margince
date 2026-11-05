@@ -51,6 +51,7 @@ const (
 	schemaBoolean = "boolean"
 	schemaInteger = "integer"
 	schemaNumber  = "number"
+	schemaNull    = "null"
 )
 
 // rawMessageType is the one self-marshalling type the walk looks THROUGH rather
@@ -267,6 +268,11 @@ func describeType(t reflect.Type) (*jsonSchema, error) {
 		return &jsonSchema{Type: schemaArray, Items: items}, nil
 	case reflect.Map:
 		// A map's keys are the caller's, so only the value shape can be stated.
+		// A map of `any` says no more than that any member is allowed.
+		if t.Elem().Kind() == reflect.Interface {
+			open := true
+			return &jsonSchema{Type: schemaObject, AdditionalProperties: &additionalProperties{Closed: &open}}, nil
+		}
 		values, err := describeType(t.Elem())
 		if err != nil {
 			return nil, err
@@ -330,9 +336,9 @@ func tagBound(field reflect.StructField, tag string) (bound float64, set bool, e
 }
 
 // eachWireField visits the fields a struct puts on the wire, flattening
-// embedded ones exactly as encoding/json does: an anonymous struct field with no
-// json tag contributes its OWN fields at this level, which is what
-// UpdateWithStagedApprovalResult relies on to answer as a record plus a note.
+// embedded ones as encoding/json does. An anonymous struct field with no json
+// tag contributes its own fields at this level. UpdateResult relies on that to
+// answer as a record plus its changes.
 func eachWireField(t reflect.Type, visit func(name string, optional bool, field reflect.StructField) error) error {
 	for field := range t.Fields() {
 		tag := field.Tag.Get("json")

@@ -1,0 +1,22 @@
+name: transcript_future_attachment_is_a_current_promise_de
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  - "Mira: Ich werde das unterschriebene Formular am 8. September 2026 schicken."
+  - "Alex: Danke. Wir brauchen das Formular für die Prüfung."
+expect:
+  outcome: accepted
+  answer:
+    - line: 1
+      due_date: "2026-09-08"
+  rubric: >
+    Mira explicitly promises future delivery of the signed form on the stated
+    day. This is not a report of an attachment already sent. Preserve the
+    deliverable, promiser and exact day. The recipient's acknowledgement is
+    neither another promise nor evidence that delivery already happened.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

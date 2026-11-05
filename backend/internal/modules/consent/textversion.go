@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -196,14 +195,6 @@ func PublishTextVersionTx(ctx context.Context, tx pgx.Tx, in TextVersion) (ids.U
 // later boot — and the text somebody was shown in March would be gone in
 // September. Publishing all three costs two extra rows per template and keeps
 // each of them answerable.
-//
-// WHAT IT DOES NOT YET DO. consent_event.consent_text_version_id has no writer
-// anywhere in this tree, so nothing records WHICH of the three a given proof
-// was rendered from. This change makes all three resolvable; picking one is the
-// writer's job and that writer does not exist. When it lands it must take the
-// locale from the language the mail was actually staged in, not from
-// installation.base_language at read time, which is the value that can have
-// changed in between.
 func PublishControllerTemplatesTx(ctx context.Context, tx pgx.Tx, now time.Time) error {
 	for key, t := range controllerTemplates {
 		for _, language := range mailcopy.Languages() {

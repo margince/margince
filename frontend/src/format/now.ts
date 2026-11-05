@@ -97,7 +97,11 @@ export function formatElapsed(
   msSince: number,
   t: Translator,
   locale: Locale,
+  calendarDays?: number,
 ): string {
+  if (calendarDays !== undefined && calendarDays > 0) {
+    return t("elapsed.days", { days: formatNumber(calendarDays, locale) });
+  }
   const totalMinutes = Math.floor(msSince / 60_000);
   if (totalMinutes < 1) {
     return t("elapsed.justNow");
@@ -108,7 +112,7 @@ export function formatElapsed(
       minutes: formatNumber(totalMinutes, locale),
     });
   }
-  const days = Math.floor(totalHours / HOURS_PER_DAY);
+  const days = calendarDays ?? Math.floor(totalHours / HOURS_PER_DAY);
   if (days < 1) {
     return t("elapsed.hours", { hours: formatNumber(totalHours, locale) });
   }

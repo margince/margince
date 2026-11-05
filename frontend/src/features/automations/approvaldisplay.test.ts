@@ -108,6 +108,31 @@ describe("what a staged proposal shows", () => {
     ]);
   });
 
+  // The position sits beside the export's company and the title beside the
+  // contact, because "Use as job title" weighs the one against the other.
+  it("shows the export's position beside the contact's title", () => {
+    const fields = resolveDisplay(
+      "linkedin_match",
+      {
+        connection_name: "Ada B",
+        connection_company: "Helvetia",
+        connection_position: "Head of Sales",
+        contact_name: "Ada B",
+        contact_title: "Sales",
+        use_as_title: false,
+      },
+      t,
+      day,
+    );
+    expect(shown(fields).map((entry) => entry.field)).toEqual([
+      "connection_name",
+      "connection_company",
+      "connection_position",
+      "contact_name",
+      "contact_title",
+    ]);
+  });
+
   // Same shape, and the coincidence is the whole story: an agent that has used
   // exactly its limit is one that just hit the ceiling.
   it("keeps a usage figure that equals its own limit", () => {
@@ -219,4 +244,177 @@ describe("what a staged proposal shows", () => {
       }
     }
   });
+});
+
+describe("commitment responsibility", () => {
+  const day = (value: string) => value;
+  const names = new Map([
+    ["original", "Theo"],
+    ["assignee", "Mira"],
+  ]);
+  it.each([
+    [
+      { promiser_seat_id: "original", seat_id: "assignee" },
+      "Theo",
+      "Creates a task assigned to Mira.",
+    ],
+    [
+      { promiser_seat_id: "original" },
+      "Theo",
+      "Creates a task assigned to Theo.",
+    ],
+    [
+      { seat_id: "assignee" },
+      "Promiser unresolved",
+      "Creates a task assigned to Mira.",
+    ],
+    [
+      { promiser_seat_id: "missing-id", party: "Theo" },
+      "Theo",
+      "Creates a task assigned to Colleague name unavailable.",
+    ],
+    [
+      { party: "Mira", promiser_unresolved: true },
+      "Unverified: Mira",
+      "Creates a task assigned to Colleague name unavailable.",
+    ],
+    [
+      { promiser_seat_id: "missing-id" },
+      "Colleague name unavailable",
+      "Creates a task assigned to Colleague name unavailable.",
+    ],
+  ])(
+    "keeps original attribution separate from assignment: %j",
+    (change, promiser, effect) => {
+      const fields = resolveDisplay("commitment_task", change, t, day, names);
+      expect(fields.find((field) => field.field === "party")?.value).toBe(
+        promiser,
+      );
+      expect(fields.find((field) => field.field === "assignment")?.value).toBe(
+        effect,
+      );
+      expect(JSON.stringify(fields)).not.toContain("missing-id");
+    },
+  );
+});
+
+it("shows explicit decision responsibility independently of the task assignee", () => {
+  const fields = resolveDisplay(
+    "commitment_task",
+    { seat_id: "assignee" },
+    t,
+    (value) => value,
+    new Map([
+      ["assignee", "Theo"],
+      ["reviewer", "Mira"],
+    ]),
+    "reviewer",
+  );
+  expect(
+    fields.find((field) => field.field === "requested_decider")?.value,
+  ).toBe("Mira");
+  expect(fields.find((field) => field.field === "assignment")?.value).toBe(
+    "Creates a task assigned to Theo.",
+  );
+});
+
+it("does not infer a requested reviewer from agent authority", () => {
+  const fields = resolveDisplay(
+    "advance_deal",
+    { on_behalf_of: "reviewer" },
+    t,
+    (value) => value,
+  );
+  expect(fields.some((field) => field.field === "requested_decider")).toBe(
+    false,
+  );
+});
+it.each(LOCALES)(
+  "keeps an undated promise distinct from a fulfilled task in %s",
+  (locale) => {
+    const tr = (
+      key: Parameters<typeof translate>[1],
+      params?: Record<string, string>,
+    ) => translate(locale, key, params);
+    const fields = resolveDisplay(
+      "commitment_task",
+      { summary: "Send the revised scope", party: "Alex Beck" },
+      tr,
+      (day) => day,
+    );
+    expect(fields.find((field) => field.field === "due_date")?.value).toBe(
+      tr("approval.commitment.noDueDay"),
+    );
+    expect(
+      fields.find((field) => field.field === "promise_status")?.value,
+    ).toBe(tr("approval.commitment.notFulfilled"));
+  },
+);
+
+it.each(LOCALES)(
+  "keeps the named inactive assignee separate from the promiser in %s",
+  (locale) => {
+    const t = (
+      key: Parameters<typeof translate>[1],
+      params?: Record<string, string>,
+    ) => translate(locale, key, params);
+    const fields = resolveDisplay(
+      "commitment_task",
+      { promiser_seat_id: "original", seat_id: "assignee" },
+      t,
+      (day) => day,
+      new Map([
+        ["original", "Theo"],
+        ["assignee", "Mira"],
+      ]),
+      undefined,
+      true,
+    );
+    expect(fields.find((field) => field.field === "party")?.value).toBe("Theo");
+    expect(fields.find((field) => field.field === "assignment")?.value).toBe(
+      translate(locale, "approval.commitment.inactiveAssignment", {
+        name: "Mira",
+      }),
+    );
+  },
+);
+
+it("keeps the business reason beside a typed lifecycle preview", () => {
+  const fields = resolveDisplay(
+    "lifecycle_change",
+    {
+      because: "The buyer confirmed the agreement ended.",
+      current_lifecycle: "raw-old",
+      proposed_lifecycle: "raw-new",
+    },
+    t,
+    (value) => value,
+    new Map(),
+    undefined,
+    false,
+    {
+      version: 1,
+      state: "ready",
+      reviewer_reason: "record_authority",
+      changes: [
+        {
+          field: "lifecycle",
+          before: { kind: "lifecycle", text: "customer" },
+          after: { kind: "lifecycle", text: "former_customer" },
+        },
+      ],
+    },
+  );
+  expect(fields[0]).toMatchObject({
+    field: "because",
+    value: "The buyer confirmed the agreement ended.",
+    lead: true,
+  });
+  expect(
+    fields.some(
+      (field) => field.comparison !== undefined && field.comparison !== null,
+    ),
+  ).toBe(true);
+  expect(JSON.stringify(fields)).not.toContain("raw-old");
+  expect(JSON.stringify(fields)).not.toContain("raw-new");
 });

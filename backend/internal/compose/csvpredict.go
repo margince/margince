@@ -17,6 +17,7 @@ import (
 	"errors"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -84,6 +85,21 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 		why := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(refusal)
 		return outcome, &why, err
 	}
+	if err == nil && w.object == migration.ObjectContact && outcome != predictUnwritable && outcome != predictCollidesSkipped && link.problem == nil {
+		employer, previewErr := w.previewImportedEmployer(ctx, row, typed)
+		if why, refused := employerRefusalWhy(previewErr); refused {
+			problem := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Kind: migration.ProblemBrokenLink}.Because(why)
+			return predictUnwritable, &problem, nil
+		}
+		if previewErr != nil {
+			return outcome, nil, previewErr
+		}
+		w.rememberPredictedEmployer(row.ExternalID, employer)
+		if employer.Effect == contacts.ContactEmployerCreateEffect {
+			problem := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(migration.Why(migration.ReasonEmployerWillCreate, "name", textFields(row.Fields)[csvEmployerName]))
+			return outcome, cmp.Or(unknownOwner, &problem), nil
+		}
+	}
 	return outcome, cmp.Or(link.problem, unknownOwner), err
 }
 
@@ -115,9 +131,10 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 // predictCreatePath is what the commit will do with a row no previous run of
 // this importer landed.
 //
-// Two questions, in this order and the order matters. First, whether a contact's
-// address is already spoken for: uq_contact_email_dedupe is estate-wide, so the
-// store refuses that row whoever holds the address, and a preview promising a
+// Two kinds of question, in this order and the order matters. First, whether a
+// key the store refuses is already spoken for: a contact's or lead's address, a
+// company's domain, a lead's or company's LinkedIn URL. Each key is estate-wide,
+// so the store refuses that row whoever holds it, and a preview promising a
 // create would simply be wrong. It runs BEFORE the collision check and is not a
 // disclosure decision — the outcome is identical for an incumbent the caller can
 // see and one they cannot, which is what stops the commit's answer being an
@@ -143,6 +160,13 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 	if claimed {
 		return predictUnwritable, contactEmailClaimedWhy, nil
 	}
+	takenLead, err := w.leadEmailAlreadyHeld(ctx, row)
+	if err != nil {
+		return predictCreate, migration.Reason{}, err
+	}
+	if takenLead {
+		return predictUnwritable, naturalKeyTakenWhy, nil
+	}
 	takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
@@ -156,6 +180,13 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 	}
 	if takenLinkedIn {
 		return predictUnwritable, linkedInClaimedWhy, nil
+	}
+	contactHeld, err := w.leadRowContactHeld(ctx, row, typed)
+	if err != nil {
+		return predictCreate, migration.Reason{}, err
+	}
+	if contactHeld {
+		return predictUnwritable, contactHoldsLeadWhy, nil
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {

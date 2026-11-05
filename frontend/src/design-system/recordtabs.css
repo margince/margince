@@ -110,12 +110,45 @@
   min-inline-size: 0;
   display: flex;
   align-items: center;
+  position: relative;
   overflow-x: auto;
   scrollbar-width: none;
 }
 
 .recordtabs-strip::-webkit-scrollbar {
   display: none;
+}
+
+/* With no scrollbar, a tab cut at the strip's edge read as the last one. So
+   an end that hides tabs fades out, and only that end: a fade on a strip that
+   fits would promise tabs that are not there. The classes come from the
+   script that measures the scroll, so the fade is still. Focus scrolls a tab
+   clear of the fade, so the tab a keyboard stands on is never the faded one. */
+.recordtabs-strip {
+  /* A gradient takes no logical direction, so its start follows the strip's. */
+  --recordtabs-fade-from: 90deg;
+  --recordtabs-fade-start: 0px;
+  --recordtabs-fade-end: 0px;
+  scroll-padding-inline: var(--space-8);
+  mask-image: linear-gradient(
+    var(--recordtabs-fade-from),
+    transparent,
+    black var(--recordtabs-fade-start),
+    black calc(100% - var(--recordtabs-fade-end)),
+    transparent
+  );
+}
+.recordtabs-strip:dir(rtl) {
+  --recordtabs-fade-from: 270deg;
+}
+.recordtabs-strip:not(.is-clipped-start, .is-clipped-end) {
+  mask-image: none;
+}
+.recordtabs-strip.is-clipped-start {
+  --recordtabs-fade-start: var(--space-8);
+}
+.recordtabs-strip.is-clipped-end {
+  --recordtabs-fade-end: var(--space-8);
 }
 
 /* The current tab is marked by a rule under it rather than by a fill: the
@@ -154,9 +187,11 @@
   border-radius: var(--r-sm);
 }
 
+/* The ink's own colour underlines the tab in view, for the reason a pressed
+   filter pill is neutral: it says where the reader is, not what to press. */
 .recordtabs-tab[aria-pressed="true"] {
   color: var(--textPrimary);
-  border-block-end-color: var(--accent);
+  border-block-end-color: var(--textPrimary);
 }
 
 /* A record with ONE body draws it as a label rather than a button: the same
@@ -165,7 +200,7 @@
    answers nothing is a promise the strip cannot keep. */
 .recordtabs-tab[aria-current="page"] {
   color: var(--textPrimary);
-  border-block-end-color: var(--accent);
+  border-block-end-color: var(--textPrimary);
   cursor: default;
 }
 

@@ -40,7 +40,7 @@ var assignmentSelect = `
 	       a.user_id, a.team_id,
 	       COALESCE(u.display_name, t.name) AS subject_name,
 	       COALESCE(NOT (` + workforce.LiveMemberSQL("u") + `), t.archived_at IS NOT NULL, false) AS subject_inactive,
-	       a.role_id, r.key, r.label, r.active, r.sort_order,
+	       a.role_id, r.key, r.label, r.label_key, r.active, r.sort_order,
 	       a.source, a.version, a.created_at, a.updated_at, a.archived_at
 	  FROM record_assignment a
 	  JOIN record_role r ON r.id = a.role_id
@@ -59,6 +59,7 @@ type assignmentRow struct {
 	RoleID          ids.UUID
 	RoleKey         string
 	RoleLabel       string
+	RoleLabelKey    *string
 	RoleActive      bool
 	RoleSortOrder   int
 	Source          *string
@@ -73,7 +74,7 @@ func scanAssignmentRow(sc rowScanner) (assignmentRow, error) {
 	var company, deal, project, user, team *ids.UUID
 	if err := sc.Scan(&r.ID, &company, &deal, &project, &user, &team,
 		&r.SubjectName, &r.SubjectInactive,
-		&r.RoleID, &r.RoleKey, &r.RoleLabel, &r.RoleActive, &r.RoleSortOrder,
+		&r.RoleID, &r.RoleKey, &r.RoleLabel, &r.RoleLabelKey, &r.RoleActive, &r.RoleSortOrder,
 		&r.Source, &r.Version, &r.CreatedAt, &r.UpdatedAt, &r.ArchivedAt); err != nil {
 		return assignmentRow{}, err
 	}
@@ -108,6 +109,7 @@ func (r assignmentRow) wire() crmcontracts.RecordAssignment {
 		RoleId:          openapi_types.UUID(r.RoleID),
 		RoleKey:         &key,
 		RoleLabel:       &label,
+		RoleLabelKey:    r.RoleLabelKey,
 		RoleActive:      &active,
 		Source:          r.Source,
 		Version:         &version,

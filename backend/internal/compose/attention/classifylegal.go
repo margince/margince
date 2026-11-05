@@ -44,7 +44,6 @@ func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) rank
 	row.Because = because
 	return ranked{
 		ownerRef:   ownerFromAssignee(item.AssigneeId),
-		owner:      assigneeID(item.AssigneeId),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),

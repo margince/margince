@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // latestQualifyingEvent finds the most recent thing on the record that makes
@@ -47,8 +49,11 @@ import (
 // here — resolveCategory answers CategoryReplyToInbound from the anchor before
 // the legacy verdict is consulted — so a rep answering a months-old thread is
 // unaffected. The window governs contact the subject did not prompt.
-func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, eventSource, error) {
-	event, found, err := recordedQualifyingEvent(ctx, tx, contactID, since)
+//
+// address names the recipient the event must cover (requestCoversSQL); nil asks
+// about the contact as a whole, which only the legacy verdict does.
+func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time, address *string) (QualifyingEvent, eventSource, error) {
+	event, found, err := recordedQualifyingEvent(ctx, tx, contactID, since, address)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -148,9 +153,11 @@ func RecordSubjectInquiry(
 	return nil
 }
 
-// The `source` column's two machine values. A human's own claim writes 'human'
-// (qualifyingevent.go) and neither of these.
+// The `source` column's values. A user's own claim writes sourceKindHuman and
+// their agent's writes sourceKindAgent (qualifyingevent.go). The rest are machine.
 const (
+	sourceKindHuman = "human"
+	sourceKindAgent = "agent"
 	// sourceKindDerived: read off the timeline at send time.
 	sourceKindDerived = "derived"
 	// sourceKindCaptured: the door that took the event wrote it as it happened.
@@ -182,15 +189,17 @@ func stampQualifyingEvent(
 }
 
 // recordedQualifyingEvent reads a row a human or an integration wrote.
-func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, bool, error) {
+func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time, address *string) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
+	var id string
 	var sourceType, sourceID, note *string
 	err := tx.QueryRow(ctx, `
-		SELECT kind, occurred_at, source_entity_type, source_entity_id, note
+		SELECT id, kind, occurred_at, source_entity_type, source_entity_id, note
 		FROM consent_qualifying_event
-		WHERE contact_id = $1 AND occurred_at >= $2
+		WHERE contact_id = $1 AND occurred_at >= $2 AND retracted_at IS NULL
+		  AND ($3::text IS NULL OR `+requestCoversSQL("recorded_for_addresses", "$3")+`)
 		ORDER BY occurred_at DESC
-		LIMIT 1`, contactID, since).Scan(&event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
+		LIMIT 1`, contactID, since, address).Scan(&id, &event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -205,6 +214,9 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, s
 	}
 	if note != nil {
 		event.Note = *note
+	}
+	if handRecordedKinds[event.Kind] {
+		event.ID = id
 	}
 	return event, true, nil
 }
@@ -237,7 +249,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		JOIN activity_participant p ON p.activity_id = a.id
 		     AND p.role = 'from' AND p.contact_id = $1::uuid
 		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
-		  AND a.occurred_at >= $2
+		  AND `+occurredday.FromSQL("a", "$2")+`
 		ORDER BY a.occurred_at DESC
 		LIMIT 1`, contactID, since).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -319,14 +331,10 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		SELECT a.id, a.occurred_at
 		FROM activity a
 		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
-		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
-		  AND a.counterparty_email IS NULL
-		  AND a.captured_by LIKE 'connector:%'
-		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
-		  AND a.occurred_at >= $2
-		  AND a.occurred_at <= now() + $3::interval
+		WHERE `+capturedMeetingSQL+`
+		  AND `+occurredday.FromSQL("a", "$2")+`
 		ORDER BY a.occurred_at DESC
-		LIMIT 1`, contactID, since, meetingHorizonInterval).Scan(&activityID, &event.OccurredAt)
+		LIMIT 1`, contactID, since).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -338,6 +346,18 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	event.SourceEntityID = activityID
 	return event, true, nil
 }
+
+// capturedMeetingSQL is "activity a is a meeting that counts as evidence". A
+// connector captured it and it names no counterparty string. It was not declined
+// or abandoned, and it lies inside the diary horizon. A meeting a rep typed by
+// hand is not evidence of anything the contact did. meetingQualifyingEvent and
+// requestedNegotiation both read this one constant.
+const capturedMeetingSQL = `a.kind = 'meeting' AND a.archived_at IS NULL
+		  AND a.counterparty_email IS NULL
+		  AND a.captured_by LIKE 'connector:%'
+		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
+		  AND now() + interval '` + meetingHorizonInterval + `' >= a.occurred_at -- occurred_at raw: a 90-day diary horizon; a day entry near its far edge decides nothing
+		  `
 
 // meetingHorizonInterval is how far into the diary a meeting still says a
 // relationship is live.

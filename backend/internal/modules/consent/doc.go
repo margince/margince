@@ -8,24 +8,21 @@
 // gate answers per PURPOSE: a marketing grant never authorizes a
 // profiling use; unknown and withdrawn both block.
 //
-// Tables owned: consent_purpose, contact_consent, consent_event,
-// consent_doi_token, consent_qualifying_event,
-// preference_token (the buyer-facing preference center's token→tenant
-// resolver, B-E11.32), withdrawal_credential (the withdrawal-only link that
-// outlives it: it can stop mail and can neither read a consent state nor
-// grant, which is what makes a two-year life safe), confirm_token, contact_confirm_submission,
-// data_subject_request, communication_decision, communication_basis,
-// communication_suppression, communication_instruction (a named human's
-// decision that one refused message goes out anyway — beside the refusal, never
-// replacing it with a grant nobody made), communication_override (a rep's
-// standing vouch that outranks a machine-level refusal for one contact and
-// category, never a subject-level stop), communication_review (what a refused send leaves
-// behind, so the work is visible and the message can resume instead of being
-// retyped). Consumers (activities' send path) declare a
-// one-method authority interface; the composition root injects this module's
-// Gate and unsubscribe linker — consent never becomes an import edge between
-// siblings.
+// Tables owned: docs/reference/entity-model/consent.md.
 //
-// It also owns lead_privacy_notice, the record of a website lead's notice.
-// That record names nobody.
+// withdrawal_credential is the withdrawal-only link that outlives a preference
+// token. It can stop mail and can neither read a consent state nor grant, so a
+// two-year life is safe. communication_instruction is a named human's decision
+// that one refused message goes out anyway. It sits beside the refusal and never
+// replaces it with a grant nobody made. communication_override is a rep's
+// standing vouch that outranks a machine-level refusal for one contact and
+// category. It never outranks a subject-level stop. communication_review is what a refused send leaves behind, so the work
+// is visible and the message can resume instead of being retyped.
+// lead_privacy_notice, the record of a website lead's notice, names nobody.
+// privacy_request_proof is what a closed request did. It is kept for three
+// years past the year it closed in.
+//
+// Consumers (activities' send path) declare a one-method authority interface.
+// The composition root injects this module's Gate and unsubscribe linker, so
+// consent never becomes an import edge between siblings.
 package consent

@@ -8,6 +8,11 @@ import (
 	"fmt"
 	"mime/quotedprintable"
 	"strings"
+	"time"
+
+	"github.com/margince/margince/backend/internal/platform/mailwire"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // headerLineLimit is the RFC 5322 recommended line length. The hard limit is
@@ -22,11 +27,8 @@ const encodedWordLimit = 75
 // keeps each body line within 76 octets.
 func (s SMTP) compose(to, subject, textBody, messageID string) ([]byte, error) {
 	var msg bytes.Buffer
-	fmt.Fprintf(&msg, "From: %s\r\nTo: %s\r\nSubject: %s\r\n", s.FromAddress, to, foldedSubject(subject))
-	if messageID != "" {
-		fmt.Fprintf(&msg, "Message-ID: <%s>\r\n", messageID)
-	}
-	msg.WriteString("MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n" +
+	msg.WriteString(s.originHeaders(to, subject, messageID))
+	msg.WriteString(s.privacyHeaders() + "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n" +
 		"Content-Transfer-Encoding: quoted-printable\r\n\r\n")
 	body := quotedprintable.NewWriter(&msg)
 	if _, err := body.Write([]byte(textBody)); err != nil {
@@ -98,4 +100,54 @@ func plainASCII(text string) bool {
 		}
 	}
 	return true
+}
+
+func (s SMTP) composeAlternative(to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) ([]byte, error) {
+	if messageID == "" {
+		messageID = s.mintMessageID()
+	}
+	if htmlBody == "" {
+		return s.compose(to, subject, textBody, messageID)
+	}
+	var message strings.Builder
+	message.WriteString(s.originHeaders(to, subject, messageID))
+	message.WriteString(s.privacyHeaders() + "MIME-Version: 1.0\r\n")
+	body, err := mailwire.SMTPBody(connector.EmailMessage{Body: textBody, HTMLBody: htmlBody, MessageID: messageID, Inline: inline})
+	if err != nil {
+		return nil, err
+	}
+	message.WriteString(body)
+	return []byte(message.String()), nil
+}
+
+// originHeaders writes the headers every product message carries, in the
+// order RFC 5322 lists them. composeAlternative has already given the message
+// its identity, so no message leaves without a Message-ID.
+func (s SMTP) originHeaders(to, subject, messageID string) string {
+	return fmt.Sprintf("Date: %s\r\nFrom: %s\r\nTo: %s\r\nSubject: %s\r\nMessage-ID: <%s>\r\n",
+		s.now().Format(time.RFC1123Z), s.FromAddress, to, foldedSubject(subject), messageID)
+}
+
+// mintMessageID is a unique identity on the sender's own domain, the same one
+// helloName announces to the relay.
+func (s SMTP) mintMessageID() string {
+	return strings.ReplaceAll(ids.NewV7().String(), "-", "") + "@" + s.helloName()
+}
+
+func (s SMTP) now() time.Time {
+	if s.Now != nil {
+		return s.Now()
+	}
+	return time.Now()
+}
+
+// SendGrid's SMTP filter is per message; other relays ignore the extension.
+// https://www.twilio.com/docs/sendgrid/for-developers/sending-email/smtp-filters
+const relayPrivacyHeaders = "X-SMTPAPI: {\"filters\":{\r\n \"clicktrack\":{\"settings\":{\"enable\":0,\"enable_text\":false}},\r\n \"opentrack\":{\"settings\":{\"enable\":0}}}}\r\n"
+
+func (s SMTP) privacyHeaders() string {
+	if strings.EqualFold(s.Host, "smtp.sendgrid.net") {
+		return relayPrivacyHeaders
+	}
+	return ""
 }

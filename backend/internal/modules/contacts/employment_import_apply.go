@@ -227,6 +227,9 @@ func employmentGroup(episodes []employmentEvidence, req crmcontracts.EmploymentI
 }
 
 func employmentImportAction(req crmcontracts.EmploymentImportRequest) (string, error) {
+	if err := refuseUnknownEmploymentStatus(req.EmploymentStatus); err != nil {
+		return "", err
+	}
 	if err := validEmploymentAssertion(employmentKind, enumArg(req.EmploymentStatus), nil, nil); err != nil {
 		return "", err
 	}

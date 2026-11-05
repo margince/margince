@@ -71,6 +71,10 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
   report_schedule: { area: "analytics", label: "roles.object.report_schedule" },
   report_edition: { area: "analytics", label: "roles.object.report_edition" },
   sales_target: { area: "analytics", label: "roles.object.sales_target" },
+  sales_initiative: {
+    area: "analytics",
+    label: "roles.object.sales_initiative",
+  },
   reporting_framework: {
     area: "analytics",
     label: "roles.object.reporting_framework",
@@ -94,6 +98,7 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
   import_run: { area: "data", label: "roles.object.import_run" },
   finance: { area: "data", label: "roles.object.finance" },
   fx_rate: { area: "data", label: "roles.object.fx_rate" },
+  tax_rate: { area: "data", label: "roles.object.tax_rate" },
   data_coverage: { area: "data", label: "roles.object.data_coverage" },
   knowledge_corpus: { area: "data", label: "roles.object.knowledge_corpus" },
   knowledge_document: {
@@ -121,6 +126,7 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
     area: "company",
     label: "roles.object.installation_settings",
   },
+  legal_entity: { area: "company", label: "roles.object.legal_entity" },
   authentication_policy: {
     area: "company",
     label: "roles.object.authentication_policy",
@@ -128,6 +134,10 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
   oauth_application: {
     area: "company",
     label: "roles.object.oauth_application",
+  },
+  agent_client: {
+    area: "company",
+    label: "roles.object.agent_client",
   },
 
   privacy_request: {
@@ -144,6 +154,7 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
     label: "roles.object.retention_policy",
   },
   audit_log: { area: "governance", label: "roles.object.audit_log" },
+  data_task: { area: "governance", label: "roles.object.data_task" },
   job_health: { area: "governance", label: "roles.object.job_health" },
   extension_access: {
     area: "governance",

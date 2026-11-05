@@ -86,7 +86,7 @@ func movedSince(ctx context.Context, tx pgx.Tx, l listRow, since time.Time, out 
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		WITH moved AS (
 			SELECT ev.action, ev.entity_id, max(ev.occurred_at) AS at
 			FROM list_member_event ev
@@ -100,7 +100,8 @@ func movedSince(ctx context.Context, tx pgx.Tx, l listRow, since time.Time, out 
 		FROM ranked r LEFT JOIN %[7]s t ON t.id = r.entity_id
 		WHERE r.n <= $%[8]d ORDER BY r.action, r.n`,
 		arg(l.ID), arg(since), arg(memberEntered), arg(memberLeft), visible,
-		recordNameExpr(l.EntityType), pgx.Identifier{l.EntityType}.Sanitize(), arg(changeSummaryNamed)), args...)
+		recordNameExpr(l.EntityType), pgx.Identifier{l.EntityType}.Sanitize(), arg(changeSummaryNamed))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return err
 	}

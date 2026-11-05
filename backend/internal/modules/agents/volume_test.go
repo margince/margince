@@ -374,20 +374,22 @@ func TestTheRestChargePointsAreSafeWithNoMeter(t *testing.T) {
 func TestOneToolCallSpendsOneOfTheCallCeiling(t *testing.T) {
 	for name, tc := range map[string]struct {
 		tier      mcp.RiskTier
+		waits     bool
 		presented bool
 		wantCalls int
 		wantErr   error
 	}{
-		"auto-execute, nothing presented":               {tier: mcp.TierAutoExecute, wantCalls: 1},
-		"auto-execute, redeeming a presented approval":  {tier: mcp.TierAutoExecute, presented: true, wantCalls: 1},
-		"confirm-first, redeeming a presented approval": {tier: mcp.TierConfirmationRequired, presented: true, wantCalls: 1},
-		"confirm-first, staged and never run": {
-			tier: mcp.TierConfirmationRequired, wantCalls: 0, wantErr: apperrors.ErrRequiresApproval,
+		"confirm-first that waits even for its user, staged and never run": {
+			tier: mcp.TierConfirmationRequired, waits: true, wantCalls: 0, wantErr: apperrors.ErrRequiresApproval,
 		},
+		"auto-execute, nothing presented":                                {tier: mcp.TierAutoExecute, wantCalls: 1},
+		"auto-execute, redeeming a presented approval":                   {tier: mcp.TierAutoExecute, presented: true, wantCalls: 1},
+		"confirm-first, redeeming a presented approval":                  {tier: mcp.TierConfirmationRequired, presented: true, wantCalls: 1},
+		"confirm-first on a colleague's passport, run as that colleague": {tier: mcp.TierConfirmationRequired, wantCalls: 1},
 	} {
 		t.Run(name, func(t *testing.T) {
 			spec := readToolSpec("update_record")
-			spec.RequiredScope, spec.Tier = principal.ScopeWrite, tc.tier
+			spec.RequiredScope, spec.Tier, spec.WaitsEvenForItsUser = principal.ScopeWrite, tc.tier, tc.waits
 			r, charger, ctx := chargingRegistry(t, &servingTool{spec: spec},
 				withScope(principal.ScopeWrite), withApprovals(&recordingApprovals{}))
 

@@ -152,6 +152,7 @@ func (s *Store) stagedForOwnerOnly(ctx context.Context, targetType string, stage
 // retire is a status flip that keeps the row live, so a staged edit against a
 // retired field is still a live proposal.
 var sharedConfigExistence = map[string]string{
+	"user_admin":           `SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND archived_at IS NULL AND removed_at IS NULL AND NOT is_agent)`,
 	"product":              `SELECT EXISTS (SELECT 1 FROM product WHERE id = $1 AND archived_at IS NULL)`,
 	"tag":                  `SELECT EXISTS (SELECT 1 FROM tag WHERE id = $1 AND archived_at IS NULL)`,
 	"offer_template":       `SELECT EXISTS (SELECT 1 FROM offer_template WHERE id = $1 AND archived_at IS NULL)`,

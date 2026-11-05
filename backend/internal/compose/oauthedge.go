@@ -93,7 +93,15 @@ func oauthAdmits(r *http.Request, lim mcpLimiters) bool {
 		// at 600/min denies the mint while it lasts. Keying per real client
 		// behind a shared front end is the front end's job, which clientIP's own
 		// doc names.
-		perClient := lim.token.Allow(tokenBucketKey(peekFormField(r, "client_id"), ip))
+		// The handler names the client the same way, from the Basic header or
+		// the form, so the two cannot bucket one request under different ids.
+		// A malformed Basic header, which the handler refuses, names the form's.
+		presented, err := identity.ClientCredentials(r.Header, peekForm(r))
+		clientID := presented.ID()
+		if err != nil {
+			clientID = presented.FormID
+		}
+		perClient := lim.token.Allow(tokenBucketKey(clientID, ip))
 		perPeer := lim.peerCeiling.Allow(peerCeilingKey(peerGroupToken, ip))
 		return perClient && perPeer
 	case oauthAuthorizePath:
@@ -118,7 +126,7 @@ func oauthAdmits(r *http.Request, lim mcpLimiters) bool {
 		// is the token presented for revocation, so what is bounded is
 		// repetition of one token — a client revokes each token once — and a
 		// request carrying no token is the handler's 400 either way.
-		perToken := lim.revoke.Allow(presentedKey("token", ip, digestOf(peekFormField(r, "token"))))
+		perToken := lim.revoke.Allow(presentedKey("token", ip, digestOf(peekForm(r).Get("token"))))
 		perPeer := lim.peerCeiling.Allow(peerCeilingKey(peerGroupRevoke, ip))
 		return perToken && perPeer
 	case oauthRegisterPath:
@@ -196,14 +204,13 @@ func isFormURLEncoded(header string) bool {
 	return err == nil && mediaType == "application/x-www-form-urlencoded"
 }
 
-// peekFormField reads one field out of a form-encoded body WITHOUT consuming
-// it: ParseForm drains r.Body, and the handler behind this edge parses the same
-// body again, so whatever is read here is put back in front of the unread
-// remainder. The handler therefore still sees the request the client actually
-// sent — including the oversized or unreadable body it must answer 400 for.
-func peekFormField(r *http.Request, field string) string {
+// peekForm reads a form-encoded body without consuming it. ParseForm drains
+// r.Body, and the handler behind this edge parses the same body again. So what
+// is read here is put back in front of the unread remainder. The handler still
+// sees the request the client sent, an oversized or unreadable body included.
+func peekForm(r *http.Request) url.Values {
 	if !isFormURLEncoded(r.Header.Get("Content-Type")) {
-		return ""
+		return url.Values{}
 	}
 	read, err := io.ReadAll(io.LimitReader(r.Body, tokenFormPeek+1))
 	r.Body = io.NopCloser(io.MultiReader(bytes.NewReader(read), r.Body))
@@ -211,11 +218,11 @@ func peekFormField(r *http.Request, field string) string {
 		// A body this edge cannot read whole is one the handler will refuse
 		// anyway; the bucket falls back to its per-peer arm rather than
 		// inventing a refusal of its own here.
-		return ""
+		return url.Values{}
 	}
 	form, err := url.ParseQuery(string(read))
 	if err != nil {
-		return ""
+		return url.Values{}
 	}
-	return form.Get(field)
+	return form
 }

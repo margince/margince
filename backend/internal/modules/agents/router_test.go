@@ -385,6 +385,52 @@ func TestARoutedArgumentCarriesEveryTargetsWords(t *testing.T) {
 	}
 }
 
+// Two targets taking a list of words advertise every word in the list's items.
+func TestARoutedListCarriesEveryTargetsWords(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"colors":{"type":"array","items":{"type":"string","enum":["red","blue"]}}}`))
+	r.Register(shapedTarget("fake_b", `{"colors":{"type":"array","items":{"type":"string","enum":["blue","none"]}}}`))
+	r.Register(fakeRouter{name: "fake_ab", targets: map[string]string{"a": "fake_a", "b": "fake_b"}})
+	spec, _ := r.Spec("fake_ab")
+	var schema struct {
+		Properties map[string]struct {
+			Items struct {
+				Type string   `json:"type"`
+				Enum []string `json:"enum"`
+			} `json:"items"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	items := schema.Properties["colors"].Items
+	if got := strings.Join(items.Enum, ","); got != "blue,none,red" || items.Type != "string" {
+		t.Errorf("colors items = %+v, want strings of every target's words", items)
+	}
+}
+
+// A target that takes any word leaves the routed argument open, so its call is
+// not refused for a word the other target's list lacks.
+func TestARoutedArgumentIsOpenWhenOneTargetTakesAnyWord(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"provider":{"type":"string","enum":["gcal","graphcal"]}}`))
+	r.Register(shapedTarget("fake_b", `{"provider":{"type":"string"}}`))
+	r.Register(fakeRouter{name: "fake_ab", targets: map[string]string{"a": "fake_a", "b": "fake_b"}})
+	spec, _ := r.Spec("fake_ab")
+	var schema struct {
+		Properties map[string]struct {
+			Type string   `json:"type"`
+			Enum []string `json:"enum"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if provider := schema.Properties["provider"]; provider.Enum != nil || provider.Type != "string" {
+		t.Errorf("provider is advertised as %+v, want any string", provider)
+	}
+}
+
 // Two targets bounding one argument differently advertise the loosest bound, so
 // a value one target takes is never refused by a client holding the schema.
 func TestARoutedArgumentCarriesTheLoosestBound(t *testing.T) {
@@ -410,9 +456,58 @@ func TestARoutedArgumentCarriesTheLoosestBound(t *testing.T) {
 	}
 }
 
+// The loosest bound would promise a value a tighter action refuses, so the
+// description names the actions that stop lower.
+func TestARoutedBoundNamesTheActionsThatStopLower(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"limit":{"type":"integer","maximum":50},"size":{"type":"integer","description":"One page."}}`))
+	r.Register(shapedTarget("fake_b", `{"limit":{"type":"integer","maximum":25},"size":{"type":"integer","description":"One page."}}`))
+	r.Register(shapedTarget("fake_c", `{"limit":{"type":"integer","maximum":25},"size":{"type":"integer"}}`))
+	r.Register(fakeRouter{name: "fake_abc", targets: map[string]string{"a": "fake_a", "b": "fake_b", "c": "fake_c"}})
+	spec, _ := r.Spec("fake_abc")
+	var schema struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if got := schema.Properties["limit"].Description; got != "at most 25 for b, c." {
+		t.Errorf("limit = %q, want the actions that stop at 25 named", got)
+	}
+	if got := schema.Properties["size"].Description; got != "One page." {
+		t.Errorf("size = %q, want no note: no target bounds it", got)
+	}
+}
+
+// An action that sets no bound takes any value. Every bounded action is then
+// the tighter one and is named, at either end of the range.
+func TestARoutedBoundNamesEveryBoundedActionWhenOneIsUnbounded(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"n":{"type":"integer","minimum":1,"maximum":50}}`))
+	r.Register(shapedTarget("fake_b", `{"n":{"type":"integer","minimum":5,"maximum":25}}`))
+	r.Register(shapedTarget("fake_c", `{"n":{"type":"integer"}}`))
+	r.Register(fakeRouter{name: "fake_abc", targets: map[string]string{"a": "fake_a", "b": "fake_b", "c": "fake_c"}})
+	spec, _ := r.Spec("fake_abc")
+	var schema struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	want := "at most 25 for b; at most 50 for a; at least 5 for b; at least 1 for a."
+	if got := schema.Properties["n"].Description; got != want {
+		t.Errorf("n = %q, want %q", got, want)
+	}
+}
+
 func TestRegisterRefusesARouterThatRestatesOrConflicts(t *testing.T) {
 	for why, tc := range map[string]struct{ a, b, own string }{
 		"two shapes for one argument":  {`{"x":{"type":"integer"}}`, `{"x":{"type":"string"}}`, ``},
+		"two shapes for one list item": {`{"x":{"type":"array","items":{"type":"integer"}}}`, `{"x":{"type":"array","items":{"type":"string"}}}`, ``},
 		"a router restating a shape":   {`{"x":{"type":"integer"}}`, `{}`, `{"x":{"type":"integer","description":"d"}}`},
 		"a router naming no argument":  {`{"x":{"type":"integer"}}`, `{}`, `{"y":{"description":"d"}}`},
 		"a route field a target takes": {`{"action":{"type":"string"}}`, `{}`, ``},
@@ -451,5 +546,64 @@ func TestARoutedArgumentNamesTheActionsThatTakeIt(t *testing.T) {
 	}
 	if got := schema.Properties["x"].Description; got != "" {
 		t.Errorf("x = %q, want no action named for an argument every action takes", got)
+	}
+}
+
+// A colleague's agent is offered a router's waiting action as one that runs. The
+// router itself runs at once when all its actions now agree.
+func TestARoutersActionsAreOfferedAtTheTierAColleaguesAgentIsAdmittedOn(t *testing.T) {
+	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
+	r.Register(&argsTool{spec: targetSpec("fake_a", principal.ScopeWrite, mcp.TierAutoExecute)})
+	r.Register(unlistedStaging{&stagingTool{target: ids.NewV7()}})
+	r.Register(fakeRouter{name: "mixed", targets: map[string]string{"a": "fake_a", "send": "send_it"}})
+
+	var mixed mcp.ToolSpec
+	for _, spec := range r.Offered(passportCtx()) {
+		if spec.Name == "mixed" {
+			mixed = spec
+		}
+	}
+	if mixed.Tier != mcp.TierAutoExecute {
+		t.Errorf("the router is offered at tier %v, want auto-execute", mixed.Tier)
+	}
+	for _, action := range mixed.Actions {
+		if action.Tier != mcp.TierAutoExecute {
+			t.Errorf("action %s is offered at tier %v, want auto-execute", action.Action, action.Tier)
+		}
+	}
+	if len(mixed.Actions) != 2 {
+		t.Fatalf("the router offers %d actions, want 2", len(mixed.Actions))
+	}
+}
+
+// A router names only its actions that run at once and cannot be undone. A
+// client asks the user before those, and not before the others.
+func TestARouterAsksTheUserFirstOnlyForActionsItCannotUndo(t *testing.T) {
+	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
+	archive := targetSpec("fake_archive", principal.ScopeWrite, mcp.TierAutoExecute)
+	archive.AskUserFirst = true
+	r.Register(&argsTool{spec: archive})
+	r.Register(&argsTool{spec: targetSpec("fake_rename", principal.ScopeWrite, mcp.TierAutoExecute)})
+	// A human already approves this call, so the client is not told to ask.
+	merge := targetSpec("fake_merge", principal.ScopeWrite, mcp.TierConfirmationRequired)
+	merge.AskUserFirst = true
+	r.Register(&argsTool{spec: merge})
+	r.Register(fakeRouter{name: "change", targets: map[string]string{
+		"archive": "fake_archive", "rename": "fake_rename", "merge": "fake_merge",
+	}})
+
+	spec, ok := r.Spec("change")
+	if !ok {
+		t.Fatal("the router is not registered")
+	}
+	described := DescribeForClient(spec)
+	if !strings.Contains(described, "the action archive cannot be undone") {
+		t.Errorf("the router does not ask first for archive: %s", described)
+	}
+	if strings.Contains(described, "the actions ") {
+		t.Errorf("the router asks first for rename, which can be undone: %s", described)
+	}
+	if strings.Contains(described, "merge cannot be undone") {
+		t.Errorf("the router asks first for merge, which a human already approves: %s", described)
 	}
 }

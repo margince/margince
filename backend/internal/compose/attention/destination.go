@@ -58,6 +58,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	crmcontracts.WorklistItemSourceCustomerWaiting:   destinationToday,
 	crmcontracts.WorklistItemSourceLeadResponse:      destinationToday,
 	crmcontracts.WorklistItemSourceDealAtRisk:        destinationToday,
+	crmcontracts.WorklistItemSourceDealReview:        destinationToday,
 	crmcontracts.WorklistItemSourceMeeting:           destinationToday,
 	crmcontracts.WorklistItemSourceMeetingOutcome:    destinationToday,
 	crmcontracts.WorklistItemSourceWeeklyCommitment:  destinationToday,
@@ -89,6 +90,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	// Judgements. Work waits on a contact deciding.
 	crmcontracts.WorklistItemSourceApproval:            destinationReview,
 	crmcontracts.WorklistItemSourceDedupeCandidate:     destinationReview,
+	crmcontracts.WorklistItemSourceContactCase:         destinationReview,
 	crmcontracts.WorklistItemSourceDealSuggestion:      destinationReview,
 	crmcontracts.WorklistItemSourceTagSuggestion:       destinationReview,
 	crmcontracts.WorklistItemSourceIntroductionRequest: destinationReview,

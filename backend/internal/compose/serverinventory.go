@@ -4,13 +4,6 @@
 package compose
 
 // The inventory: which transport handler sets the contract surface is made of.
-//
-// Split from server.go, which the file itself already distinguished — that one
-// is how the surface is ASSEMBLED (New, the routes, the middleware); this is
-// what it is assembled FROM. The list grows with every module that gains a
-// transport, so keeping it beside the assembly meant a new handler set nudged
-// an unrelated file toward its ceiling.
-
 import (
 	"context"
 	"io"
@@ -25,11 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/compose/weekly"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
@@ -37,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -48,12 +41,12 @@ import (
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 )
 
-// Server satisfies crmcontracts.ServerInterface by embedding: every
-// module transport handler set together covers the full contract
-// surface.
+// Server satisfies crmcontracts.ServerInterface by embedding: every module
+// transport handler set together covers the full contract surface.
 type Server struct {
 	reportingHandlers
 	reportingExportHandlers
+	reportingReaderPreviewHandlers
 
 	authHandlers
 	contactsHandlers
@@ -65,6 +58,7 @@ type Server struct {
 	activitiesHandlers
 	approvalsHandlers
 	bulkHandlers
+	handoverHandlers
 	searchHandlers
 	consentHandlers
 	directedSendHandlers
@@ -83,14 +77,13 @@ type Server struct {
 	weeklyHandlers weekly.Handlers
 	// The day's one surface, assembled across approvals, dedupe and tasks.
 	// Named rather than embedded: briefs.Handlers already claims the
-	// unqualified name, and two embedded `Handlers` is a compile error rather
-	// than a decision anybody made.
+	// unqualified name.
 	attentionHandlers attention.Handlers
 	magicHandlers     magic.Handlers
 	// magicService is held so wireReversal can bind the undo judge to the SAME
-	// restore seam the reversal route uses — the receipt's offer and the write's
-	// refusal have to be one judgment.
+	// restore seam the reversal route uses: one judgment for offer and refusal.
 	magicService *magic.Service
+	homeCache    *homecache.Cache // Home's cached answers; forgetHomeOnWrite ends a writer's own answers
 	// The relationship-graph reads (ADR-0078): who knows this contact, and
 	// how a deal is covered.
 	network.Reads
@@ -124,8 +117,11 @@ type Server struct {
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers
+	conversationSuggestionHandlers
 	claimHandlers
+	ownershipRequestHandlers
 	dealCommitmentHandlers
+	promiseTakeOverHandlers
 	importHandlers
 	channelHandlers
 	traceHandlers
@@ -136,7 +132,9 @@ type Server struct {
 	exportBundleHandlers
 	agentBundleHandlers
 	companyRollupHandlers
-	strengthHandlers
+	reviewAnswerHandlers
+	companyOfferedHandlers
+	receiptHandlers
 	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
@@ -144,15 +142,18 @@ type Server struct {
 	embedReindexHandlers
 	rateRefreshHandlers
 	webhooksHandlers
+	webFormsHandlers
 	dataResetHandlers
 	jobHealthHandlers
+	dataTaskHandlers
 	captureHealthHandlers
+	dealViabilityHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
-	// The composed-extension inventory (handlers_extensions.go): stateless, it reads
-	// boot-written accessors, so it is embedded as the zero value.
+	automaticWorkHandlers
+	// Extension inventory, settings, transports: stateless, embedded as the zero value.
 	extensionsHandlers
-	// The transport directory (handlers_channelproviders.go): stateless, embedded the same way.
+	extensionSettingsHandlers
 	channelProvidersHandlers
 	company360Handlers
 	contact360Handlers
@@ -160,6 +161,8 @@ type Server struct {
 	contactBriefHandlers
 	meetingBriefHandlers
 	dealStatusHandlers
+	roomBriefHandlers
+	readerRenderingHandlers
 	contactResearchHandlers
 	contactDraftHandlers
 	leadDraftHandlers
@@ -195,7 +198,12 @@ type Server struct {
 	// it. In compose because the vocabulary is derived from the report catalog
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
+	salesDecisionHandlers
+	salesAssessmentHandlers
+	reportSetupHandlers
+	accountCoverageHandlers
 	analyticsContextHandlers
+	sdrSummaryHandlers
 	assuranceHandlers
 	// The check a human starts: the preview of a first pass, and the pass
 	// itself. In compose because a pass is assembled from the deals and
@@ -204,6 +212,7 @@ type Server struct {
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
+	initiativeHandlers
 
 	// signInProviders accumulates the federated sign-in providers this
 	// deployment composed, in registration order. It exists because each
@@ -222,20 +231,22 @@ type Server struct {
 	// configured — the route is absent otherwise, never open.
 	graphPush http.Handler
 
-	// mcpConnectorEnabled is the remote-connector deployment gate, set by
-	// WithMCPConnector from the deployment file. It governs the connector as
-	// ONE group — transport, authorization server, both discovery documents —
-	// and routes.go, where the group is mounted, carries why.
-	mcpConnectorEnabled bool
+	// mcpConnectorEnabled is the connector's deployment gate (WithMCPConnector): transport, authorization
+	// server and both discovery documents as one group, for the reason routes.go gives.
+	// clientRegistrationLimit is the same file's limit on automatic client registration; nil allows both.
+	mcpConnectorEnabled     bool
+	clientRegistrationLimit *identity.RegistrationMethods
 	// appViews holds the MCP App documents this api is serving. Nil for the
 	// worker and for an api that composed no views — see mcpappviews.go.
 	appViews *apps.Provider
 
-	// mcpAllowedOrigin is the scheme+host the connector's Origin guard
-	// admits and its 401 challenge points at — derived by WithMCPResource
-	// from the configured --public-base-url, never from a request header a
-	// caller controls.
-	mcpAllowedOrigin string
+	// mcpResource is the connector URL the discovery document names, and
+	// mcpAllowedOrigin its scheme+host, which the Origin guard admits and the 401
+	// challenge points at. WithMCPResource sets both from --public-base-url,
+	// never from a request header a caller controls.
+	mcpResource, mcpAllowedOrigin string
+	// mcpInputStateKey signs the questions a tool asks in the chat.
+	mcpInputStateKey string
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
 	// deployment's --metrics-token. Empty — the default — configures no
@@ -284,7 +295,7 @@ type Server struct {
 	// publishes to a client. Defaulted in New, so a composition never told
 	// about a deployment file still gets the compiled-in ceilings rather than
 	// zero — which would refuse every upload.
-	uploadLimits deployconfig.UploadLimits
+	uploadLimits UploadLimits
 
 	// blob is the object store, injected by WithBlobstore. When configured
 	// it feeds a /readyz probe and backs the attachment handlers; nil means
@@ -334,18 +345,10 @@ type Server struct {
 	// pinned baselines.
 	captureConfig CaptureConfig
 
-	// gmailAppConfigured records whether this DEPLOYMENT configured a Google app
-	// that could transmit under a user's mailbox grant — the one fact the send
-	// pre-flight cannot read off a capture_connection row, since the grant
-	// survives the app being removed and a mailbox connected on one deployment
-	// reads the same on another.
-	//
-	// It is a deployment fact, not a role fact: WithGmailCapture records it
-	// before its own transport gate and off canSync, so an installation holding
-	// client credentials but no state key — which mounts no api-side connect
-	// transport yet sends perfectly well from the worker — still counts as
-	// configured. False is the honest default for a composition never told about
-	// a Google app at all.
+	// gmailAppConfigured records whether the ENVIRONMENT carries a Google app.
+	// The send pre-flight asks googleAppResolver too, so false still finds an
+	// app stored in Settings. WithGmailCapture records it before its transport
+	// gate, so an installation with credentials but no state key still counts.
 	gmailAppConfigured bool
 	// graphAppConfigured is the Microsoft twin, recorded by WithGraphCapture on
 	// the same condition and read by the same pre-flight. It exists because
@@ -460,6 +463,8 @@ type Server struct {
 	// dealStatusSvc is held for the same reason: WithDealStatusWriter binds the
 	// deal_health lane onto the service the handler set already wraps.
 	dealStatusSvc *dealstatus.Service
+	// roomBriefSvc is held so WithDealRoomBriefWriter binds its lane.
+	roomBriefSvc *roombrief.Service
 
 	// companyDossierSvc and companyGrowthFitSvc are the company view's other two
 	// generated surfaces. They are held for WithGrowthFit's sake: rebinding one
@@ -477,7 +482,6 @@ type Server struct {
 	// the job queue, the event bus, the cache-flush announcement — injected by
 	// WithResetRuntime. Zero value = a Postgres-only reset, which is the honest
 	// posture for a role that wired no queue and no bus.
-	//
 	// dataResetHandlers holds a POINTER to this field rather than a copy:
 	// options run in the order the caller passed them, so a copy taken by
 	// WithDataReset would be the zero value whenever WithResetRuntime is listed
@@ -494,7 +498,3 @@ type Server struct {
 	// leaves /.well-known/security.txt unmounted.
 	securityTxt string
 }
-
-var _ crmcontracts.ServerInterface = Server{}
-
-type reportingHandlers = reporting.Handlers

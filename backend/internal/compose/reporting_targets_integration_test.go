@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -254,4 +255,220 @@ func TestReportingTargetFiltersApplyBeforePagination(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A rep reads the targets that measure them: their own, their team's and the
+// company's. Another rep's target and another team's stay out of the list and
+// answer a read by id as absent, and so does a teammate's. An allocation sums
+// colleagues' targets, so the rep gets none, while a seat that reads every owner
+// target does.
+func TestReportingRepReadsOwnTeamAndCompanyTargets(t *testing.T) {
+	e := setupForecast(t)
+	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	writer := reportingActor(e)
+	teammate := reportingTeammate(t, e)
+	created := map[string]crmcontracts.ReportingTarget{}
+	for name, scope := range map[string]crmcontracts.ReportingScope{
+		"own":        {Kind: "owner", Id: ptrUUID(e.Rep1)},
+		"teammate":   {Kind: "owner", Id: ptrUUID(teammate)},
+		"other rep":  {Kind: "owner", Id: ptrUUID(e.Rep3)},
+		"own team":   {Kind: "team", Id: ptrUUID(e.Team1)},
+		"other team": {Kind: "team", Id: ptrUUID(e.Team2)},
+		"company":    {Kind: "workspace"},
+	} {
+		target, err := service.CreateTarget(writer, crmcontracts.ReportingTargetInput{Metric: "meetings_held", Scope: scope, PeriodKind: "month", PeriodStart: openapi_types.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}, Value: 15, Reason: "Month plan"})
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		created[name] = target
+	}
+	rep := reportingRepSeat(e)
+	list, err := service.ListTargets(rep, nil, 100, reporting.TargetFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	listed := map[openapi_types.UUID]bool{}
+	for _, target := range list.Data {
+		listed[target.Id] = true
+	}
+	for name, want := range map[string]bool{"own": true, "own team": true, "company": true, "teammate": false, "other rep": false, "other team": false} {
+		if listed[created[name].Id] != want {
+			t.Errorf("%s target listed = %v, want %v", name, !want, want)
+		}
+		read, err := service.GetTarget(rep, ids.UUID(created[name].Id))
+		if want && err != nil {
+			t.Errorf("%s target read by id: %v", name, err)
+		}
+		if read.AllocatedValue != nil || read.AllocationDifference != nil {
+			t.Errorf("%s target shows the rep an allocation: %+v", name, read)
+		}
+		if !want && !errors.Is(err, apperrors.ErrNotFound) {
+			t.Errorf("%s target read by id = %v, want not found", name, err)
+		}
+	}
+	for _, target := range list.Data {
+		if target.AllocatedValue != nil || target.AllocationDifference != nil {
+			t.Errorf("listed target shows the rep an allocation: %+v", target)
+		}
+	}
+	company, err := service.GetTarget(writer, ids.UUID(created["company"].Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if company.AllocatedValue == nil || *company.AllocatedValue != 45 || company.AllocationDifference == nil {
+		t.Fatalf("a seat reading every owner target lost the allocation: %+v", company)
+	}
+	// The evaluation holds a figure against a target only when the reader may
+	// read that target, so naming another team does not reveal its target.
+	other := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team2)}, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{}}
+	for _, tc := range []struct {
+		name   string
+		reader context.Context
+		want   bool
+	}{{"writer", writer, true}, {"rep", rep, false}} {
+		result, err := service.Evaluate(tc.reader, other)
+		if err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+		if got := len(result.Metrics) == 1 && result.Metrics[0].Target != nil; got != tc.want {
+			t.Errorf("%s sees another team's target = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+// The attainment chart of a team sums its members' owner targets. A rep in the
+// team cannot read their colleagues' targets, so the chart gives them no sum.
+func TestReportingNarrowSeatGetsNoChartAllocation(t *testing.T) {
+	e := setupForecast(t)
+	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	writer := reportingActor(e)
+	teammate := reportingTeammate(t, e)
+	for _, scope := range []crmcontracts.ReportingScope{{Kind: "team", Id: ptrUUID(e.Team1)}, {Kind: "owner", Id: ptrUUID(e.Rep1)}, {Kind: "owner", Id: ptrUUID(teammate)}} {
+		if _, err := service.CreateTarget(writer, crmcontracts.ReportingTargetInput{Metric: "bookings_won", Scope: scope, PeriodKind: "month", PeriodStart: openapi_types.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}, Value: 1000000, Reason: "Month plan"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team1)}, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"bookings_won"}, Blocks: []crmcontracts.ReportingBlockKind{"owner_attainment"}}
+	for _, tc := range []struct {
+		name   string
+		reader context.Context
+		want   bool
+	}{{"writer", writer, true}, {"rep", reportingRepSeat(e), false}} {
+		result, err := service.Evaluate(tc.reader, selection)
+		if err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+		if len(result.Charts) != 1 {
+			t.Fatalf("%s: charts %+v", tc.name, result.Charts)
+		}
+		chart := result.Charts[0]
+		if got := chart.AllocatedTarget != nil && chart.AllocationDifference != nil; got != tc.want {
+			t.Errorf("%s sees the chart allocation = %v, want %v: %+v", tc.name, got, tc.want, chart)
+		}
+	}
+}
+
+// reportingTeammate is a second rep in Team1, beside Rep1.
+func reportingTeammate(t *testing.T, e *forecastEnv) ids.UUID {
+	t.Helper()
+	teammate := e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'teammate@forecast.test', 'Teammate')`)
+	if _, err := e.owner.Exec(context.Background(), `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, e.Team1, teammate); err != nil {
+		t.Fatal(err)
+	}
+	return teammate
+}
+
+// Leading a team is the team-lead grant plus membership of that team, so a lead
+// revises their team's target and sees its allocation. The company's sums owner
+// targets beyond the lead's teams and stays without one, and another team is
+// beyond their reach.
+func TestReportingTeamLeadRevisesLedTeamTarget(t *testing.T) {
+	e := setupForecast(t)
+	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	lead := e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'lead@forecast.test', 'Lead')`)
+	if _, err := e.owner.Exec(context.Background(), `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, e.Team1, lead); err != nil {
+		t.Fatal(err)
+	}
+	seat := reportingLeadSeat(e, lead)
+	input := crmcontracts.ReportingTargetInput{Metric: "meetings_held", Scope: crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team1)}, PeriodKind: "month", PeriodStart: openapi_types.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}, Value: 40, Reason: "Team plan"}
+	team, err := service.CreateTarget(seat, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	member := input
+	member.Scope = crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)}
+	member.Value = 25
+	if _, err := service.CreateTarget(seat, member); err != nil {
+		t.Fatal(err)
+	}
+	input.Value = 45
+	input.Reason = "Team plan raised"
+	if _, err := service.UpdateTarget(seat, ids.UUID(team.Id), team.Version, input); err != nil {
+		t.Fatalf("the lead could not revise their team's target: %v", err)
+	}
+	read, err := service.GetTarget(seat, ids.UUID(team.Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read.AllocationDifference == nil || *read.AllocationDifference != 20 {
+		t.Fatalf("the lead's team target lost its allocation: %+v", read)
+	}
+	company, err := service.CreateTarget(reportingActor(e), crmcontracts.ReportingTargetInput{Metric: "meetings_held", Scope: crmcontracts.ReportingScope{Kind: "workspace"}, PeriodKind: "month", PeriodStart: input.PeriodStart, Value: 90, Reason: "Company plan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read, err := service.GetTarget(seat, ids.UUID(company.Id)); err != nil || read.AllocatedValue != nil {
+		t.Fatalf("company target for a lead: %+v %v", read, err)
+	}
+	other := input
+	other.Scope = crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team2)}
+	if _, err := service.CreateTarget(seat, other); err == nil {
+		t.Fatal("a lead set a target for a team they do not lead")
+	}
+	// Team oversight reaches every team, so a seat holding it reads and revises
+	// the target it set for a team it is not in.
+	actor, ok := principal.Actor(seat)
+	if !ok {
+		t.Fatal("missing lead actor")
+	}
+	actor.Permissions.Objects["team_oversight"] = principal.ObjectGrant{Read: true}
+	oversight := principal.WithActor(seat, actor)
+	set, err := service.CreateTarget(oversight, other)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.GetTarget(oversight, ids.UUID(set.Id)); err != nil {
+		t.Fatalf("oversight cannot read the target it set: %v", err)
+	}
+	other.Reason = "Plan revised"
+	if _, err := service.UpdateTarget(oversight, ids.UUID(set.Id), set.Version, other); err != nil {
+		t.Fatalf("oversight cannot revise the target it set: %v", err)
+	}
+}
+
+// reportingLeadSeat is a team lead's grid: team row scope, the team-lead grant
+// and targets to set, a member of Team1 only.
+func reportingLeadSeat(e *forecastEnv, lead ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	grants := map[string]principal.ObjectGrant{"sales_target": {Read: true, Create: true, Update: true}, "team_lead": {Read: true, Create: true}}
+	for _, object := range []string{"report_definition", "reporting_framework", "deal", "pipeline", "installation_settings", "activity"} {
+		grants[object] = principal.ObjectGrant{Read: true}
+	}
+	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + lead.String(), UserID: lead, SeatType: principal.SeatFull, TeamIDs: []ids.UUID{e.Team1}, Permissions: principal.Permissions{RowScope: principal.RowScopeTeam, Objects: grants}})
+}
+
+// reportingRepSeat is Rep1 on a rep's grid: own row scope, a member of Team1,
+// and targets to read but not to set.
+func reportingRepSeat(e *forecastEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	grants := map[string]principal.ObjectGrant{}
+	for _, object := range []string{"report_definition", "reporting_framework", "sales_target", "deal", "pipeline", "installation_settings", "activity"} {
+		grants[object] = principal.ObjectGrant{Read: true}
+	}
+	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull, TeamIDs: []ids.UUID{e.Team1}, Permissions: principal.Permissions{RowScope: principal.RowScopeOwn, Objects: grants}})
 }

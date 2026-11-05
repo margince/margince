@@ -34,7 +34,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -68,15 +70,17 @@ type linkReconcileWorker struct {
 	pool     *pgxpool.Pool
 	store    *contacts.Store
 	pending  *capture.PendingStore
+	parties  *capture.Sink
 	receipts sweepRecorder
 	log      *slog.Logger
 }
 
-func newLinkReconcileWorker(pool *pgxpool.Pool, store *contacts.Store, log *slog.Logger) *linkReconcileWorker {
+func newLinkReconcileWorker(pool *pgxpool.Pool, store *contacts.Store, cfg CaptureConfig, log *slog.Logger) *linkReconcileWorker {
 	return &linkReconcileWorker{
 		pool:     pool,
 		store:    store,
 		pending:  capture.NewPendingStore(InstallationDB(pool)),
+		parties:  newCaptureSink(pool, cfg),
 		receipts: newSweepRecorder(pool),
 		log:      log,
 	}
@@ -96,14 +100,19 @@ const adoptStrandedPerTick = 200
 func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, workspace ids.UUID) error {
 	ctx = principal.WithWorkspaceID(ctx, workspace)
 	sweepCtx := w.systemContext(ctx, workspace)
+	leadsFiled, leadErr := w.repairLeadFilings(sweepCtx)
+	if leadErr == nil && leadsFiled > 0 {
+		w.log.InfoContext(ctx, "link reconcile: captured mail put back on its leads",
+			"workspace", workspace.String(), "activities", leadsFiled)
+	}
 	owed, err := w.store.ContactsOwedACohortRepair(sweepCtx, linkReconcileContactsPerTick)
 	if err != nil {
-		return jobs.FaultContext(ctx, errors.Join(err,
+		return jobs.FaultContext(ctx, errors.Join(leadErr, err,
 			w.receipts.skipped(sweepCtx, capture.SweepFiledMeetingHolds),
 			w.receipts.skipped(sweepCtx, capture.SweepStrandedContacts)))
 	}
 	var linked, promoted int64
-	var failed error
+	failed := errors.Join(leadErr, w.parties.RecoverPartyAdmissions(sweepCtx, 100))
 	for _, contact := range owed {
 		// Per contact, each on its own transaction, so one contact whose repair
 		// fails — a lock it could not take, a row a concurrent merge moved —
@@ -179,6 +188,21 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 	return jobs.FaultContext(ctx, errors.Join(failed, w.attachDomainBacklogs(sweepCtx, workspace)))
 }
 
+func (w *linkReconcileWorker) repairLeadFilings(ctx context.Context) (int, error) {
+	tasks := newLeadWorkTasks(InstallationDB(w.pool), w.log)
+	repair := capture.LeadFilingRepair{
+		Authority: identity.NewService(w.pool),
+		Filer:     ActivityLeadFiler{Tasks: &tasks},
+	}
+	var out datatask.BatchOut
+	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		var err error
+		out, err = repair.BatchTx(ctx, tx, datatask.BatchIn{Limit: linkReconcileContactsPerTick})
+		return err
+	})
+	return out.Changed, err
+}
+
 // askAboutStrandedContactsPerTick bounds the drain, on the same reasoning as
 // the meeting holds above: the population is finite and shrinks as it is
 // worked, so a small bound costs one probe a tick once it is empty.
@@ -245,12 +269,13 @@ func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context, lifted 
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := filedMeetingHeldClause("a", arg)
-		rows, err := tx.Query(ctx, `
+		query := `
 			SELECT a.id
 			  FROM activity a
-			 WHERE `+where+`
+			 WHERE ` + where + `
 			 ORDER BY a.occurred_at DESC, a.id
-			 LIMIT `+fmt.Sprintf("$%d", arg(liftFiledMeetingHoldsPerTick)), args...)
+			 LIMIT ` + fmt.Sprintf("$%d", arg(liftFiledMeetingHoldsPerTick))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("selecting the filed meetings still held: %w", err)
 		}
@@ -356,7 +381,7 @@ const linkReconcileActor = "link-reconcile"
 // publish refuse, so the sweep repaired nothing while looking like a job that
 // had simply not run yet.
 func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool, store *contacts.Store) *linkReconcileWorker {
-	return newLinkReconcileWorker(pool, store, slog.Default())
+	return newLinkReconcileWorker(pool, store, CaptureConfig{}, slog.Default())
 }
 
 // ReconcileWorkspaceForTest drives ONE workspace's turn from another package.

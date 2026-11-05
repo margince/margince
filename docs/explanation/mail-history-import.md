@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/capture/backfill.go backend/internal/modules/capture/backfillpager.go backend/internal/modules/capture/backfillyields.go backend/internal/modules/capture/gmail/backfill.go backend/internal/modules/capture/graph/backfill.go backend/internal/compose/costestimate backend/internal/compose/backfilltransport.go frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/mailcoverage.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/syncsnapshot.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/registry_connections.go backend/internal/compose/mailcapturecoverageseam.go backend/internal/compose/mailcoverage/coverage.go -->
 # Mail history import: the capped scan back in time and its cost
 
 Connecting a mailbox starts *standing sync*: from then on, new mail comes in. A new connection is also
@@ -114,7 +115,7 @@ The run is a row with a state machine, paged by the worker:
 ```text
    queued ──▶ running ──▶ done
                  │
-                 ├──▶ cancelled   (the human stopped it, or the connection changed under it)
+                 ├──▶ cancelled   (the user or their agent stopped it, or the connection changed under it)
                  └──▶ error       (a non-transient fault, or too many consecutive transient ones)
 ```
 
@@ -137,6 +138,11 @@ wait that is twice as long each time. The wait keeps to the provider's own `Retr
 longer, since coming back early only gets refused again. Anything else ends the run at once. The
 ladder of failures that may pass is capped at 10 **in a row**. A committed page sets it back to zero, so
 faults the import already passed never end it.
+
+A run whose member may no longer capture ends with the class `forbidden`, before the page reads a
+credential. The start is refused the same way (`403 role_cannot_capture`). An admin can give the
+member a role that captures again. The next sync that works then puts the run back in the queue,
+as it does for a run a revoked credential ended.
 
 ## What the run learns about itself
 
@@ -216,7 +222,7 @@ total.
 | the count and page fetch at the provider end | `internal/modules/capture/gmail/backfill.go`, `.../graph/backfill.go` |
 | the cost estimate code | `internal/compose/costestimate/` |
 | HTTP surface | `internal/compose/backfilltransport.go` |
-| the consent screen | `frontend/src/screens/backfill.tsx` |
+| the consent screen | `frontend/src/features/capture/backfill.tsx` |
 
 ## Where to go next
 
@@ -226,3 +232,28 @@ total.
   routing, the token meter, and the rate table the estimate prices against.
 - [privacy-and-consent.md](privacy-and-consent.md): what happens to imported personal data later.
 - [how-to/connect-a-mailbox.md](../how-to/connect-a-mailbox.md): connect a mailbox and run one.
+
+## What the history can prove
+
+A date on a contact or deal describes recorded mail. It cannot prove that nobody replied outside
+these records. The [capture read](../../backend/internal/modules/capture/mailcoverage.go) reports
+what the calling human can check about their own mailboxes, for the time window the card asks about.
+It passes no mailbox address or colleague account to the card.
+
+A sync that works is not proof of a complete Inbox and Sent history. Neither is a cursor or a
+finished history import. The import has a cap. Some messages can fail, and a provider can start
+again from a later point. The read cannot call that full history.
+
+A calendar connection supplies no mail history. A reader who cannot read connections gets no claim of complete history.
+
+The connection keeps the last try and last success apart. A failed try moves `last_synced_at`,
+while `last_success_at` stays at the last good sync. Health and the connection screen use the good
+sync when they say when mail last came through. A new account does not keep the old account's
+sync times. A pull that returns after a disconnect or a new grant cannot mark that new grant failed.
+
+Each good sync adds to `sync_revision`, even when no new mail moves its cursor.
+An older pull cannot replace a newer good result. A good pull can clear a failed try from the same starting point.
+The cursor, number and health commit together.
+
+Deal and contact cards share this read and the notice it draws. Their words name missing *recorded*
+mail. Tasks a human kept and requests on record stay in place even when capture has gaps.

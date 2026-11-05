@@ -1,0 +1,34 @@
+name: scan_never_advises_a_deal_for_a_partner
+task: account_scan
+site: company_scan
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  name: Brückner Systemhaus KG
+  industry: IT services
+  partner: true
+  contacts:
+    - label: olaf
+      name: Olaf Brückner
+  messages:
+    - label: his_ask
+      kind: email
+      direction: inbound
+      subject: "Partner price list for Q4"
+      at: "2026-09-10T11:20:00Z"
+      text: "We have two customers lined up for the fleet module. Could you send us the updated partner price list for Q4 before Friday?"
+      thread: t1
+expect:
+  outcome: accepted
+  answer: [his_ask]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    The account is a partner, so its customers are sold through the partner
+    programme, never as a deal of ours. His question is open and needs a
+    reply before Friday. Score high when the scan raises question_unanswered
+    on his ask, quoting it, with the action draft_reply. Score low for any
+    finding that advises opening a deal or raises need_raised about his two
+    customers.

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -44,18 +45,28 @@ type OverdueLoad struct {
 //
 // A task aged out of the Worklist is not counted unless its assignee pinned it,
 // so the figure a lead reads is the one the rep's own day shows.
-const overdueLoadSQL = `
+var overdueLoadSQL = `
 	SELECT COALESCE(a.assignee_id, '00000000-0000-0000-0000-000000000000'::uuid), count(*)
 	  FROM activity a
 	 WHERE a.kind = 'task' AND NOT a.is_done
 	   AND a.archived_at IS NULL
-	   AND a.due_at IS NOT NULL AND a.due_at < $%[1]d
+	   AND ` + storekit.TaskDueSQL("a") + ` IS NOT NULL AND ` + storekit.TaskDueSQL("a") + ` %[4]s $%[1]d
 	   AND %[2]s
 	   AND %[3]s
+	   %[5]s
 	 GROUP BY 1`
 
 // OverdueLoadByAssignee counts each contact's open tasks already past due.
 func (s *Store) OverdueLoadByAssignee(ctx context.Context, asOf time.Time) ([]OverdueLoad, error) {
+	return s.taskLoadByAssignee(ctx, asOf, false)
+}
+
+// CommitmentLoadByAssignee counts current conversation promises due at the given instant.
+func (s *Store) CommitmentLoadByAssignee(ctx context.Context, asOf time.Time) ([]OverdueLoad, error) {
+	return s.taskLoadByAssignee(ctx, asOf, true)
+}
+
+func (s *Store) taskLoadByAssignee(ctx context.Context, asOf time.Time, commitments bool) ([]OverdueLoad, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -64,15 +75,24 @@ func (s *Store) OverdueLoadByAssignee(ctx context.Context, asOf time.Time) ([]Ov
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		instant := arg(asOf)
-		scope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
+		scope, err := auth.ActivityContentClause(ctx, "a", arg)
 		if err != nil {
 			return err
 		}
 		if scope == "" {
 			scope = scopeUnbounded
 		}
-		agedOut := worklistAgeOutClause(asOf, "a.assignee_id", arg)
-		rows, err := tx.Query(ctx, fmt.Sprintf(overdueLoadSQL, instant, scope, agedOut), args...)
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return err
+		}
+		agedOut := worklistAgeOutClause(asOf, "a.assignee_id", identities, arg)
+		comparison, source := "<", ""
+		if commitments {
+			comparison = "<="
+			source = fmt.Sprintf("AND a.source_system = $%d", arg(CommitmentTaskSource))
+		}
+		rows, err := tx.Query(ctx, fmt.Sprintf(overdueLoadSQL, instant, scope, agedOut, comparison, source), args...)
 		if err != nil {
 			return err
 		}

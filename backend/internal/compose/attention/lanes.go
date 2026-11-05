@@ -23,8 +23,9 @@ import (
 // CountPending is separate because the lane is bounded and the count is not: a
 // reader with forty decisions is told forty, then shown the nine worth a sitting.
 type Approvals interface {
+	PendingInScope(ctx context.Context, in ApprovalQuery, named []ids.ApprovalID) (map[ids.ApprovalID]bool, error)
 	ListWire(ctx context.Context, in ApprovalQuery) ([]crmcontracts.Approval, error)
-	CountPending(ctx context.Context) (int, error)
+	CountPending(ctx context.Context, in ApprovalQuery) (int, error)
 }
 
 // MachineSender answers whether an address belongs to a sending system rather
@@ -49,8 +50,11 @@ type StagedFacts struct {
 // the engine's own input on purpose: the feed reads one page of one status and
 // takes no part in choosing scope, which stays the engine's to decide.
 type ApprovalQuery struct {
-	Status string
-	Limit  int
+	RequestedForReader bool
+	RequestedForOwners []ids.UUID
+	OnlyUnassigned     bool
+	Status             string
+	Limit              int
 }
 
 // Duplicates is the dedupe queue, read through the contacts module. Every method
@@ -139,17 +143,17 @@ const (
 
 // Tasks is the open-task read, through the activities module.
 //
-// The scope belongs in the QUERY and not in a filter afterwards: the store
-// bounds what it returns, so narrowing later would cut a colleague's twelve
-// rows out of a page of twelve and leave the reader's own overdue task
-// unreachable behind them.
+// The scope belongs in the QUERY and not in a filter afterwards, because the
+// store bounds what it returns. Narrowing later would fill a page of twelve
+// with a colleague's rows and hide the reader's own overdue task. The team argument is TaskWindow.Team: the seats a
+// team view keeps, plus unassigned work. Nil reads the scope unnarrowed.
 type Tasks interface {
-	OpenForViewer(ctx context.Context, asOf, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
+	OpenForViewer(ctx context.Context, asOf, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
 	// CountOpenForViewer answers how many there ARE under the same narrowing,
 	// which is not the page length: the lane is capped at a dozen, so a badge
 	// showing the cap tells a reader with thirteen that they have twelve, and
 	// there is no second page to reach the thirteenth by.
-	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID) (int, error)
+	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID, team []ids.UUID) (int, error)
 	// UpcomingForViewer answers the work due AFTER the day's end, up to a
 	// horizon, under the same narrowing.
 	//
@@ -157,15 +161,28 @@ type Tasks interface {
 	// not compete: a full day's backlog would fill a shared limit before a
 	// single upcoming row was reached, and the reader who most needs next
 	// week's deadline is exactly the one who would never see it.
-	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
+	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
+	// RemindersForViewer answers every one of the reader's tasks whose reminder
+	// is due, latest reminder first. Not under the day's cap, which orders by
+	// due date, and not under any cap, because the lane's count counts them all.
+	RemindersForViewer(ctx context.Context, asOf time.Time) ([]Task, error)
 }
 
 // Task is one piece of agreed work.
 type Task struct {
+	SourceActivityID *ids.UUID
+	Recipients       []crmcontracts.WorklistPromiseRecipient
+	// Commitment marks a task written for a promise read out of a message.
+	Commitment bool
+	// MayBeDone is the question whether our later mail kept the promise, set
+	// when one asks it (momentaction.DoneKey).
+	MayBeDone              *crmcontracts.WorklistMayBeDone
 	LeadResponseEscalation bool
 	ID                     ids.UUID
 	Subject                string
 	DueAt                  *time.Time
+	// DueHasTime is true when DueAt names an agreed time of day.
+	DueHasTime bool
 	// The record this task was raised for, when it names one. A follow-up task
 	// says "Follow up with the new lead" and nothing else, so without the link
 	// the row is a sentence the reader cannot act on: the lane knows which lead
@@ -190,6 +207,8 @@ type Task struct {
 	// ReadOnly says the reader may see the task but not change it, so the row
 	// offers no verb that writes to it.
 	ReadOnly bool
+	// ReminderDue says the reader is the assignee and the reminder came due.
+	ReminderDue bool
 }
 
 // Receipts is what the system did on its own, most recent first.
@@ -204,6 +223,7 @@ type Receipt struct {
 	ID              ids.UUID
 	Kind            string
 	Summary         string
+	SummaryParts    *crmcontracts.ApprovalSummaryParts
 	OccurredAt      time.Time
 	// The record the decision was about, carried from the approval it came
 	// from. A reader told the system sent something on their behalf wants the
@@ -213,6 +233,8 @@ type Receipt struct {
 	// state: not every approval is about one.
 	TargetType string
 	TargetID   ids.UUID
+	// TargetLabel is the target's name as the decision was staged.
+	TargetLabel *string
 	// Undo names the audit row the record-history restore route puts back, on
 	// a receipt for work that was APPLIED rather than approved.
 	//
@@ -220,6 +242,12 @@ type Receipt struct {
 	// already a decision somebody can revisit through the record, and a
 	// correction somebody has already reversed has no second undo in it.
 	Undo *ReceiptUndo
+	// Actor is who did it, as the audit trail spells them. A zero Type means
+	// the source could not say.
+	Actor ReceiptActor
+	// SourceActivityID is the message the act was read from; zero when it
+	// cites none.
+	SourceActivityID ids.UUID
 }
 
 // ReceiptUndo is what a receipt needs to offer a way back.
@@ -243,8 +271,9 @@ type FailedEffects interface {
 
 // FailedEffect is one approved decision whose promised work never happened.
 type FailedEffect struct {
-	ID   ids.UUID
-	Kind string
+	ID      ids.UUID
+	Kind    string
+	Summary *string
 	// Sentence is the server's own line about what did not run, written for
 	// the reader when the failure was recorded.
 	Sentence string
@@ -383,6 +412,7 @@ type Commitments interface {
 // checkable against what was actually written, and a card that showed only the
 // paraphrase would be asking the reader to trust the extractor.
 type Commitment struct {
+	ActivityID  ids.UUID
 	ID          ids.UUID
 	ContactID   ids.UUID
 	Body        string
@@ -422,8 +452,9 @@ type DealFacts interface {
 // DealFigures is what a card needs to state a deal's commercial case: what it
 // is worth, when it was meant to land, and who answers for it.
 type DealFigures struct {
+	Closed               bool
 	CloseDateProvisional *bool
-	ForecastCategory     *string
+	WinProbability       *int
 	StageID              ids.UUID
 	// StageWinProbability is the probability recorded on the deal's stage: a
 	// fact beside the deal's own money, never a weighting of it. A pointer
@@ -450,11 +481,12 @@ type Notices interface {
 
 // UnreadNotice is one line still waiting to be seen.
 type UnreadNotice struct {
-	Origin  *crmcontracts.NoticeOrigin
-	ID      ids.UUID
-	Kind    string
-	Subject string
-	Body    string
+	ApprovalID *ids.ApprovalID
+	Origin     *crmcontracts.NoticeOrigin
+	ID         ids.UUID
+	Kind       string
+	Subject    string
+	Body       string
 	// Target names the record the notice is about, when it names one. Empty
 	// type means it names none — a capture backlog, a coach's word — and the
 	// row then carries no subject, which is what it carried before any notice
@@ -462,39 +494,4 @@ type UnreadNotice struct {
 	TargetType string
 	TargetID   ids.UUID
 	CreatedAt  time.Time
-}
-
-// Introductions is the asks waiting on THIS reader to answer — a colleague
-// wanting them to open a door.
-//
-// Per-user like Notices, and for the same reason: the ask names one colleague,
-// so there is no wider tier for it to widen to. The `team` and `all` scopes
-// reach shared record-bearing work, not the question of whose favour somebody
-// else asked for.
-//
-// Without this lane an ask reached its colleague only if they happened to open
-// that contact's Network tab, so one nobody went looking for expired unanswered
-// — which reads to the requester exactly like a refusal.
-type Introductions interface {
-	Pending(ctx context.Context, limit int) ([]PendingIntroduction, error)
-}
-
-// PendingIntroduction is one colleague's ask, as the queue draws it.
-//
-// It names the CONTACT the introduction would be to, which is what the
-// colleague is deciding about. No display name travels: resolving one is a read
-// of that contact's record, and fillSubjectLabels already makes it under the
-// reader's own grants (labels.go). A name carried here would be a second,
-// ungated answer to the question that pass exists to ask.
-type PendingIntroduction struct {
-	ID        ids.UUID
-	ContactID ids.UUID
-	// Reason is the requester's own sentence for why the ask is worth making,
-	// written by them at the time. Never composed here: this queue puts no
-	// words in a colleague's mouth.
-	Reason      string
-	RequestedAt time.Time
-	// DueAt is when the ask lapses. It is what this lane orders by, so the one
-	// about to expire is the one a reader sees first.
-	DueAt time.Time
 }

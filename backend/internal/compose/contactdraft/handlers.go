@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -52,13 +53,8 @@ func decodeRequest(w http.ResponseWriter, r *http.Request) (Request, bool) {
 	if !httperr.Decode(w, r, &body) {
 		return Request{}, false
 	}
-	var req Request
-	if body.Intent != nil {
-		req.Intent = *body.Intent
-	}
-	if body.RewriteOf != nil {
-		req.RewriteOf = *body.RewriteOf
-	}
+	steering := draftfloor.NewSteering(body.Intent, body.RewriteOf)
+	req := Request{Intent: steering.Intent, RewriteOf: steering.RewriteOf}
 	if body.AboutActivityId != nil {
 		about := ids.From[ids.ActivityKind](ids.UUID(*body.AboutActivityId))
 		req.AboutActivityID = &about

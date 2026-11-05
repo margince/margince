@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/scheduling_alias.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
 # Meetings and booking
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
@@ -28,10 +29,35 @@ To fix a Margince invitation that shows **Invitation needs attention**, open the
 Retry sends the same invitation again, so the guest does not get a second one. The time stays held for you while Margince is not sure the invitation went out.
 Also called: resend invite, invitation failed, calendar refused.
 
+### What happens when my calendar refuses Margince?
+When your calendar refuses Margince, for example because its connection ran out or it lost permission to add events, Margince stops trying. Every invitation still waiting on that calendar is paused, and each shows **Your calendar refused Margince**. You get one notification about it, not one per meeting.
+1. Choose **Reconnect calendar** on any paused meeting, or go to **Settings → Connections**.
+2. Reconnect the calendar with permission to add events.
+The paused invitations then go out on their own. You do not need to retry each one.
+Also called: calendar disconnected, invitations paused, reconnect calendar.
+
 ### How do I move a meeting to another time?
 To move a Margince meeting, open it from its line on the timeline and choose **Reschedule**. Pick the new time and choose **Confirm new time**.
 Your current time stays held until the calendar accepts the change. The meeting moves in Margince only once the calendar provider takes the new time. A meeting you move keeps the video call it already has.
+
+A move to a new start clears **Held** or **No-show**, so the meeting asks how it went again once the new time has passed.
 Also called: reschedule, change the time, postpone a meeting.
+
+### How do I record what came of a meeting?
+A meeting that took place takes one press: **Held** on its Worklist row. A customer meeting that
+has started with no outcome also shows **Held** and **Add notes** on the contact's **Meetings** tab
+and on the timeline. To say more, or to record a no-show, press **Add notes**:
+1. Pick **Held** or **No-show** and write what was said. Change any of your company's own fields
+   for meetings here too.
+2. Change **Date** only if the meeting was on another day.
+3. Press **Log**.
+The meeting keeps its start time. A meeting moved to another day keeps its time of day there. One
+moved to today at an hour still to come is filed a minute before you save. **Held** and **No-show**
+wait for the meeting to start. A meeting with a date but no time waits until that day is over.
+
+Press **Mark as canceled** on the row for a meeting that did not happen. A meeting with a Margince
+invitation takes only **Held** or **No-show**, because its notes and date follow the invitation.
+Also called: mark a meeting held, meeting outcome, no-show, meeting happened.
 
 ### How do I cancel a meeting?
 To cancel a Margince meeting, open it from its line on the timeline and choose **Cancel meeting**. Confirm "Cancel this meeting and notify the attendee?".
@@ -40,7 +66,7 @@ Also called: call off a meeting, delete a meeting.
 
 ### How do I offer a contact a few times to choose from?
 To offer times in Margince, open the contact's **Meetings** tab, choose **Book a meeting**, then choose **Propose times**.
-1. Pick two or three **Times to offer** in the calendar.
+1. Pick two or three **Times to offer** in the calendar. Two times you offer cannot share a minute.
 2. Choose **Review email**, read the email, and send it.
 The contact gets a personal link with your times. It books one meeting, and runs out after 7 days or at the last time offered.
 Also called: suggest times, propose a slot, send options.
@@ -53,7 +79,7 @@ The guest's link stops working at once. The tab lists only your own links that a
 Also called: cancel a proposal, revoke a booking link, withdraw an invitation.
 
 ### How do I get a reminder email before a meeting?
-To send your guest a reminder in Margince, open **Settings → Meetings** and turn on **Email reminder one hour before**. Then choose **Save settings**.
+To send your guest a reminder in Margince, open **Settings → Meetings** and, under **What guests see**, turn on **Reminder email**. It saves at once.
 The reminder goes from your connected mailbox, an hour before each future meeting. It gives the time in your time zone and names that zone. The meeting page shows "Email reminder scheduled.", "Email reminder queued for delivery." or "The reminder could not be sent."
 Also called: meeting reminder, remind the guest, notification before a call.
 
@@ -69,11 +95,33 @@ If Margince cannot read a calendar it needs, it shows no times at all, rather th
 
 Margince checks your hours, notice and live calendar again each time a guest books or a meeting moves. It checks your calendar once more right before it writes the event. Another calendar app can still book the same time in the second between that check and the write.
 
+### How do I choose a short address for my booking link?
+<!-- opens: settings/meetings -->
+To give your booking link a short address in Margince, open Settings → **Meetings**, choose **Edit link** on the link, and fill **Short address**.
+1. Type a name such as `alex`: 3 to 30 characters, made of small letters, numbers and `-`.
+2. Choose **Save address**. The link becomes `/book/alex`.
+Your long address keeps working. Anyone who guesses a short address sees your booking page and your free times.
+Also called: custom booking URL, personal booking address, friendly address.
+
+A short address belongs to one booking page at a time. Margince refuses one that another link uses or has ever used. Some words are kept back, such as `preview`.
+
+When you change or remove your short address, the old one stops working at once. Margince asks first. You can take your old address back at any time. Nobody else can ever take it, so guests who kept it never reach someone else's page. **Replace address** ends the short address too, and you can choose it again after.
+
 ## What your guest sees
 
-The Margince booking page shows your name from **Settings → Account**, and your company name and logo from the company profile. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
+The Margince booking page shows your name from **Settings → Account**, and the name and logo of the company you work for. An Admin sets that company under **Legal entities**. Unless an Admin sets one, that is your company profile. A company with no logo shows its name only. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
 
-Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace link** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
+Your booking link has the form `https://<your Margince address>/book/<code>`. With a short address it is `/book/<your short address>`, and the long form still works. A short address works in capital or small letters. A link in the old form, with `/#/book/` in it, still opens the same page. The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name.
+
+When you paste the link into chat or email, the preview card shows your name and the company name. It also shows the meeting title and how long the meeting takes. It shows the company logo when there is one. Without a logo the card is text only.
+
+A paused page gives a card that names nobody. A replaced or unknown address gives no card. The card never shows guest details.
+
+If your account is suspended or removed, your page and your short address stop working. Nobody else can take your short address, so it never leads to someone else's page.
+
+A page is paused when **Accept bookings** is off. It is also paused when your calendar cannot take bookings: none is set, it is read-only, or it is disconnected. A guest who opens a paused page reads that you are not taking bookings through it right now. The page names you and shows nothing else: no free times, no meeting details. **My booking link** in the account menu shows **Paused** while it is. A personal link you sent stays open while your calendar can take its booking, even when **Accept bookings** is off.
+
+Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace address** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 
 Every calendar invitation carries a private link that lets the guest move or cancel the meeting. Anyone who can read the full invitation, such as a colleague who manages your calendar, can use that link too. Think about who can read your calendar.
 
@@ -83,6 +131,6 @@ A guest gives consent to the meeting separately from any marketing consent, and 
 
 ## When the calendar adds no video call
 
-**Add a video call link to new meetings** asks your calendar for the link when the meeting is created. Google Calendar adds Google Meet. Outlook adds its own default, Microsoft Teams for a work or school Microsoft 365 account.
+Your booking link can use Google Meet or Microsoft Teams as its **Video call**. Then Margince asks your calendar for the link when the meeting is created. You pick it under **Edit link**. Google Meet needs bookings to land in a Google calendar, and Microsoft Teams in a Microsoft 365 calendar.
 
 The link can take a few seconds to appear. Until then the meeting says "The link appears once the calendar accepts the invitation." If the calendar makes no link, the invitation still goes out. The meeting says "The calendar did not add a video link. Add one in your calendar."

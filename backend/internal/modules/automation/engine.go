@@ -192,6 +192,10 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 // record one check saw change, so it fans out first.
 func (e *WorkflowEngine) dispatch(ctx context.Context, h workflow.Handler, ev workflow.Event, version int64) error {
 	if rule, ok := h.(listRule); ok {
+		// Before the fan-out, so a check that moved no records still stops the rule.
+		if stop, err := e.stopIfSetterRevoked(ctx, ev); stop || err != nil {
+			return err
+		}
 		return e.fireListRule(ctx, rule, ev, version)
 	}
 	return e.runOne(ctx, h, ev)
@@ -410,6 +414,14 @@ func stageForApproval(ctx context.Context, approvals Approvals, language baselan
 	if len(raw) == 0 {
 		raw = json.RawMessage(`{}`)
 	}
+	summary := fmt.Sprintf(summaryIn(ctx, language).stagedAction, action.Kind, action.Target.Type, action.Target.ID)
+	if action.Kind == workflow.ActionEmitFlowEvent {
+		request, err := ReadConfirmationRequest(raw)
+		if err != nil {
+			return ids.ApprovalID{}, err
+		}
+		summary = fmt.Sprintf(summaryIn(ctx, language).confirmation, request.Question)
+	}
 	canonical, diffHash, err := diffhash.Canonical(raw)
 	if err != nil {
 		return ids.ApprovalID{}, fmt.Errorf("automation: canonicalizing %s for staging: %w", action.Kind, err)
@@ -420,20 +432,19 @@ func stageForApproval(ctx context.Context, approvals Approvals, language baselan
 		DiffHash:       diffHash,
 		TargetType:     string(action.Target.Type),
 		TargetID:       action.Target.ID,
-		Summary:        fmt.Sprintf(summaryIn(ctx, language).stagedAction, action.Kind, action.Target.Type, action.Target.ID),
+		Summary:        summary,
 	})
 }
 
 // HeldDraftKind is the staging kind an automation-composed email waits under.
 //
-// It is deliberately NOT send_email, which is the kind an agent's own 🟡 send
-// stages under. Two reasons, and either alone would be enough. The pin: this
-// kind waives the target version pin (approvals' contextTargetKinds) because a
-// draft waits in an inbox while ordinary work bumps the message it answers —
-// and send_email must keep its pin, so sharing the name would silently waive
-// it for agent sends too. The effect: the release executor is registered per
-// kind, and an agent's staged send must not acquire an executor that fires it
-// on approval when its own surface redeems it by token.
+// It differs from send_email, the kind an agent's send stages under when a
+// tier floor makes it confirm first. Two reasons, and either alone would be enough.
+// The pin: this kind waives the target version pin (approvals' contextTargetKinds).
+// A draft waits in an inbox while ordinary work bumps the message it answers.
+// send_email must keep its pin, so a shared name would waive it for agent sends too.
+// The effect: the release executor is registered per kind. An agent's staged
+// send is redeemed by token, so it must not gain an executor that fires it on approval.
 const HeldDraftKind = "held_draft"
 
 // stageHeldDraft puts one composed draft in front of a human.

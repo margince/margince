@@ -95,8 +95,21 @@ type companyPhrases struct {
 	TasksEarliestDue phrase // task phrase, date
 	OpenTaskNamed    phrase // task name
 	OpenTaskDue      phrase // task name, date
+	OpenTaskHeld     phrase // task name, holder
+	OpenTaskHeldDue  phrase // task name, holder, date
 	OpenDealNamed    phrase // deal name
 	DealStalledMark  phrase
+
+	// A promise from a conversation. Ours names nobody, because nothing on file
+	// says who owns it; theirs names the contact who made it.
+	OpenCommitmentOne       phrase
+	OpenCommitmentMany      phrase // count
+	OpenCommitmentOurs      phrase // claim
+	OpenCommitmentOursDue   phrase // claim, date
+	OpenCommitmentTheirs    phrase // holder, claim
+	OpenCommitmentTheirsDue phrase // holder, claim, date
+	OpenCommitmentUnnamed   phrase // stands for the holder when the contact has no name
+	OpenWorkIncomplete      phrase
 
 	// DateLayout is a Go reference layout. Only English may name a month in
 	// words: time.Format writes the `Jan` token as an English abbreviation
@@ -218,10 +231,41 @@ var floor = companyPhrases{
 		En: "Open task: %q, due %s.", De: "Offene Aufgabe: %q, fällig am %s.",
 		Vi: "Công việc đang mở: %q, đến hạn %s.",
 	},
+	OpenTaskHeld: phrase{
+		En: "Open task: %q, assigned to %s.", De: "Offene Aufgabe: %q, zugewiesen an %s.",
+		Vi: "Công việc đang mở: %q, giao cho %s.",
+	},
+	OpenTaskHeldDue: phrase{
+		En: "Open task: %q, assigned to %s, due %s.", De: "Offene Aufgabe: %q, zugewiesen an %s, fällig am %s.",
+		Vi: "Công việc đang mở: %q, giao cho %s, đến hạn %s.",
+	},
 	OpenDealNamed: phrase{
 		En: "Open deal: %s", De: "Offener Deal: %s", Vi: "Cơ hội đang mở: %s",
 	},
 	DealStalledMark: phrase{En: "stalled", De: "stockend", Vi: "đang chững lại"},
+
+	OpenCommitmentOne:  phrase{En: "1 open commitment", De: "1 offene Zusage", Vi: "1 cam kết đang mở"},
+	OpenCommitmentMany: phrase{En: "%d open commitments", De: "%d offene Zusagen", Vi: "%d cam kết đang mở"},
+	OpenCommitmentOurs: phrase{
+		En: "Our commitment: %q.", De: "Unsere Zusage: %q.", Vi: "Cam kết của chúng ta: %q.",
+	},
+	OpenCommitmentOursDue: phrase{
+		En: "Our commitment: %q, due %s.", De: "Unsere Zusage: %q, fällig am %s.",
+		Vi: "Cam kết của chúng ta: %q, đến hạn %s.",
+	},
+	OpenCommitmentTheirs: phrase{
+		En: "Commitment from %s: %q.", De: "Zusage von %s: %q.", Vi: "Cam kết từ %s: %q.",
+	},
+	OpenCommitmentTheirsDue: phrase{
+		En: "Commitment from %s: %q, due %s.", De: "Zusage von %s: %q, fällig am %s.",
+		Vi: "Cam kết từ %s: %q, đến hạn %s.",
+	},
+	OpenCommitmentUnnamed: phrase{En: "the contact", De: "dem Kontakt", Vi: "liên hệ"},
+	OpenWorkIncomplete: phrase{
+		En: "This list may not show everything that is open: some records are hidden from you or lie beyond the first page.",
+		De: "Diese Liste zeigt womöglich nicht alles Offene: Manches ist für Sie nicht sichtbar oder steht jenseits der ersten Seite.",
+		Vi: "Danh sách này có thể chưa đầy đủ: một số mục bị ẩn với bạn hoặc nằm ngoài trang đầu.",
+	},
 
 	DateLayout: phrase{En: "2 Jan 2006", De: "2.1.2006", Vi: "2/1/2006"},
 }

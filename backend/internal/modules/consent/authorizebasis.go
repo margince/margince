@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -59,6 +60,17 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 	}
 	if live {
 		return nil
+	}
+	// Locked here and not earlier, so a send that records nothing and a send
+	// whose basis already stands take no lock at all.
+	//
+	// A merge archives the retired record and carries its consent rows across.
+	// A basis written after the carry had passed would sit on a record no read
+	// returns. The installation could then not say what it relied on for a
+	// message it sent. The lock refuses an archived subject, so a send
+	// authorized mid-merge is refused and retried against the survivor.
+	if err := lockSendSubject(ctx, tx, subject); err != nil {
+		return err
 	}
 	validUntil := time.Now().Add(basisLifetime(res.Category, w))
 	var contactID, leadID *string
@@ -181,4 +193,18 @@ func threadKeyOf(ctx context.Context, tx pgx.Tx, anchor ids.UUID) string {
 		return ""
 	}
 	return *key
+}
+
+// lockSendSubject takes the subject's row before a send writes evidence onto
+// it, in the order the merge takes them: the subject's row first.
+//
+// It refuses a subject a merge has retired, because `LockSubjectLive` requires
+// `archived_at IS NULL`. The caller sees `apperrors.ErrNotFound`, so the send
+// is refused rather than recorded against a record nobody reads.
+func lockSendSubject(ctx context.Context, tx pgx.Tx, subject subjectRef) error {
+	id, err := ids.Parse(subject.ID)
+	if err != nil {
+		return fmt.Errorf("consent: the send subject %q is not an id: %w", subject.ID, err)
+	}
+	return auth.LockSubjectLive(ctx, tx, subject.Kind, id)
 }

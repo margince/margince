@@ -19,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -75,8 +76,18 @@ func (s *Store) recordLeadNearMatch(ctx context.Context, tx pgx.Tx, lead crmcont
 	if !match.found {
 		return nil
 	}
-	return recordNearMatch(ctx, tx, entityLead, ids.UUID(lead.Id), match.id.UUID, match.confidence,
+	_, err = recordNearMatch(ctx, tx, entityLead, ids.UUID(lead.Id), match.id.UUID, match.confidence,
 		nearMatchEvidence(fieldFullName, deref(lead.FullName), match.incumbent, match.confidence), lead.Source, by)
+	return err
+}
+
+// leadEmailDomain is what a lead row stores beside its address for the
+// duplicate matchers: the folded domain, or nil with no address.
+func leadEmailDomain(email *string) *string {
+	if email == nil {
+		return nil
+	}
+	return owndomain.StoredOfAddress(*email)
 }
 
 // fuzzyLead is the lead-internal PO-F-1 analogue: name similarity carries the
@@ -99,12 +110,12 @@ func (s *Store) fuzzyLead(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead
 		}
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT id, full_name, company_name, coalesce(split_part(email, '@', 2), '')
+		SELECT id, full_name, company_name, coalesce(email_domain_folded, '')
 		  FROM lead
 		 WHERE archived_at IS NULL AND id <> $1
 		   AND (f_fold_apostrophes(lower(coalesce(full_name, ''))) % f_fold_apostrophes(lower($2))
 		        OR ($3 <> '' AND lower(company_name) = lower($3))
-		        OR ($4 <> '' AND lower(split_part(email, '@', 2)) = $4))`,
+		        OR ($4 <> '' AND email_domain_folded = $4))`,
 		lead.Id, name, company, domain)
 	if err != nil {
 		return leadNearMatch{}, fmt.Errorf("dedupe lead candidate set: %w", err)

@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 const (
@@ -44,9 +45,16 @@ type AwaitedReply struct {
 	DealID     ids.UUID
 	// Recipients is who a meeting follow-up goes to, ContactID first.
 	Recipients []ids.UUID
+	// Precision says SentAt is a date's anchor when it is day.
+	Precision crmcontracts.OccurredPrecision
 	// Present when the reader may read the message, which is what the
 	// composer drafts the follow-up from.
 	EmailSummary *crmcontracts.EmailSummary
+}
+
+// sent is SentAt read by its precision, which is what a day count needs.
+func (a AwaitedReply) sent() occurredday.Moment {
+	return occurredday.Moment{At: a.SentAt, DateOnly: occurredday.IsDay(a.Precision)}
 }
 
 // followUpRead is the reader's follow-ups, read per request like planRows:
@@ -80,7 +88,8 @@ func (s *Service) WithAwaiting(a Awaiting) *Service {
 // reader's own. They ride the reader's own day and the team and all views
 // that include it, never a colleague's queue or the unassigned one.
 // The two reads fail apart, so one stumbling keeps the other's rows.
-func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service, []*crmcontracts.WorklistSourceUnavailable) {
+func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time, loc *time.Location) (*Service, []*crmcontracts.WorklistSourceUnavailable) {
+	defer timeStage(ctx, "awaiting")()
 	scoped := *s
 	if s.awaiting == nil || s.taskScope == TasksOwnedBy || s.taskScope == TasksUnassigned {
 		return &scoped, nil
@@ -92,10 +101,10 @@ func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service
 		read: repliesErr == nil, cut: cut, meetingsRead: meetingsErr == nil, meetingsCut: meetingsCut,
 	}
 	for _, row := range replies {
-		scoped.followUps.rows = append(scoped.followUps.rows, classifyAwaiting(row, asOf))
+		scoped.followUps.rows = append(scoped.followUps.rows, classifyAwaiting(row, asOf, loc))
 	}
 	for _, meeting := range meetings {
-		if row, actionable := classifyMeetingFollowUp(meeting, asOf); actionable {
+		if row, actionable := classifyMeetingFollowUp(meeting, asOf, loc); actionable {
 			scoped.followUps.rows = append(scoped.followUps.rows, row)
 		}
 	}
@@ -130,14 +139,15 @@ func (s *Service) readFollowUps(
 // classifyAwaiting is one follow-up row. It is the reader's own promise to
 // keep the conversation going, so it ranks with promises, below a customer
 // who is waiting on them.
-func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
-	days := daysSince(awaited.SentAt, asOf)
+func classifyAwaiting(awaited AwaitedReply, asOf time.Time, loc *time.Location) ranked {
+	days := calendarDaysSince(awaited.sent(), asOf, loc)
 	row := crmcontracts.WorklistItem{
-		Id:          awaited.ActivityID.String(),
-		Source:      sourceAwaitingReply,
-		Category:    crmcontracts.WorklistItemCategoryTasks,
-		Level:       levelPromise,
-		Consequence: crmcontracts.WorklistItemConsequenceNone,
+		Id:           awaited.ActivityID.String(),
+		Source:       sourceAwaitingReply,
+		SourceRecord: subjectOf("activity", awaited.ActivityID),
+		Category:     crmcontracts.WorklistItemCategoryTasks,
+		Level:        levelPromise,
+		Consequence:  crmcontracts.WorklistItemConsequenceNone,
 		Because: []crmcontracts.WorklistReason{
 			reason("you_wrote_last", nil), reason("no_reply_days", daysValue(days)),
 		},
@@ -163,6 +173,7 @@ func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
 	}
 	sent := awaited.SentAt
 	row.OccurredAt = &sent
+	row.OccurredPrecision = precisionOf(&awaited.Precision)
 	anchor := openapi_types.UUID(awaited.ActivityID)
 	row.Move = &crmcontracts.WorklistMove{Action: crmcontracts.WorklistMoveActionDraftReply, ActivityId: &anchor}
 	return ranked{
@@ -175,14 +186,15 @@ func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
 // meeting is not a message to answer, so the composer writes a fresh message
 // to everyone it was with. With nobody on file the row opens the deal or the
 // company instead; with neither there is nothing to act on, and no row.
-func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time) (ranked, bool) {
-	days := daysSince(met.SentAt, asOf)
+func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time, loc *time.Location) (ranked, bool) {
+	days := calendarDaysSince(met.sent(), asOf, loc)
 	row := crmcontracts.WorklistItem{
-		Id:          met.ActivityID.String(),
-		Source:      sourceMeetingFollowUp,
-		Category:    crmcontracts.WorklistItemCategoryMeetings,
-		Level:       levelPromise,
-		Consequence: crmcontracts.WorklistItemConsequenceNone,
+		Id:           met.ActivityID.String(),
+		Source:       sourceMeetingFollowUp,
+		SourceRecord: subjectOf("activity", met.ActivityID),
+		Category:     crmcontracts.WorklistItemCategoryMeetings,
+		Level:        levelPromise,
+		Consequence:  crmcontracts.WorklistItemConsequenceNone,
 		Because: []crmcontracts.WorklistReason{
 			reason("met_days_ago", daysValue(days)), reason("nothing_sent_since", nil),
 		},
@@ -211,6 +223,7 @@ func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time) (ranked, bool) {
 	}
 	held := met.SentAt
 	row.OccurredAt = &held
+	row.OccurredPrecision = precisionOf(&met.Precision)
 	return ranked{
 		item: row, waitingDays: days, waitingRank: orderingAge(days), occurredAt: held,
 		ownerRef: ownedByWhoeverIsReading(), contact: met.ContactID,

@@ -5,8 +5,7 @@
 // the connection registry, the metered run ledger, the per-pool credit
 // reservations, and the adapters that talk to the vendors.
 //
-// Tables owned: provider_connection, provider_connection_budget, provider_run,
-// provider_run_reservation, provider_run_category.
+// Tables owned: docs/reference/entity-model/integrations.md.
 //
 // contact_provider_claim is NOT owned here. What a purchased value MEANS, and
 // how it renders beside a contact's own data, is the domain's judgment —

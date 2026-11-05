@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/design-system/readerrendering.tsx backend/internal/compose/readerrendering frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go -->
 # What the AI does, and what it does not
 
 What the AI makes for you, and how to read it. The rules that limit it (the
@@ -10,17 +11,17 @@ two tiers, what waits for a human, passports and allowances) are on
 ### What does the AI do in Margince?
 The AI in Margince drafts emails, reads deal documents for deal fields, and fills in company records from the web. It answers questions from a document set you filed, and ranks your Morning brief during the night.
 
-Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change you can switch off in **Settings → Agents**.
+Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change. You can turn off each kind of automatic change in **Settings → AI access**, on the **Agent rules** tab under **For developers**.
 Also called: AI features, assistant, copilot, what can Margince AI do.
 
 ### Can the AI send email on my behalf?
-Inside the app, no: **Draft with AI** in the email composer writes a draft, and only you press **Send**. An outside agent you connected can send as you, at once, if it holds the **Send messages** permission. The screen where you allow that says it "sends messages as you, without asking first".
+Inside the app, no: **Draft email** in the email composer writes a draft, and only you press **Send**. An outside agent you connected can send as you, at once, if it holds the **Send messages** permission. The screen where you allow that says it "sends messages as you, without asking first".
 
-The one exception is an installation that set a [send floor](agents-and-passports.md#your-installation-can-be-stricter), which turns every agent send into an approval. Every send still needs recorded consent for its purpose. The Morning brief agent that runs during the night can never send.
+Every send still needs recorded consent for its purpose. The Morning brief agent that runs during the night can never send.
 Also called: auto-send, send without asking, AI emails customers.
 
 ### How do I draft an email with AI?
-To have Margince draft an email, open the composer from a contact's page and choose **Draft with AI**. The button reads **Email**, or **Write** where there are several channels. The composer is where you confirm: it says "Review and edit the draft. Sending cannot be undone."
+To have Margince draft an email, open the composer from a contact's page and choose **Draft email**. The button on the page reads **Email**, or **Write** where there are several channels. The composer is where you confirm: nothing goes out until you press **Send**.
 
 Check and edit the draft, fill in **Reason for contact** when it asks, then choose **Send**; nothing asks again. The AI never adds a sign-off; you set your signature in **Settings → Account**.
 Also called: AI writer, write a reply, compose with AI.
@@ -31,18 +32,36 @@ To fill deal fields from a file, open the company's **Documents** tab and file t
 Margince shows each field it found with the text it read it from. Choose **Accept {count} fields** to save them, or **Dismiss**. Nothing is written to the deal until you accept. A document filed on the company offers no reading.
 Also called: extract from contract, read a PDF, parse an offer.
 
+### Can I read a note or an email in my own language?
+Yes. Under a note, email, meeting or call written in another language, choose **Show in my language**. Margince shows what the text says in the language you set for yourself. Names, amounts, dates, links, promises and open questions stay as they were. It is marked as written by AI, and **Show original** brings the original back.
+
+The button also shows when Margince cannot tell which language a text is in. If the text is already in your language, it says so. Nothing is saved: the version in your language is for you, and nobody else sees it. A text that is too long is refused with that reason; read the original instead.
+Also called: translation, show in English, read in German.
+
+### Which language does the AI write in?
+Summaries on a record, such as the company overview or the relationship summary, are read by everyone who can open the record. They use the language your administrator set for the installation. An answer only you see, such as **Ask about this company**, uses the language you set for yourself.
+Also called: AI language, wrong language, summary in English.
+
 ### What happens to my mail and enrichment while the AI provider is down?
 While an AI provider is down, out of credit or refusing its key, Margince stops calling it.
 Mail questions and company enrichment wait, and try again at the next check, without using up their tries.
 That holds for the call that first finds the credit gone, the key refused or the host out of reach too.
 
 Requests you make yourself fail at once, with a message to contact your system administrator.
-Your administrator sees why under **Settings**, **System health**, in **AI provider status**.
+Your administrator sees why under **Settings**, **System health**, **Diagnostics**, then **AI availability**.
 Also called: AI outage, no credit, mail stuck unsure, enrichment stopped.
+
+### Why does a project's health say the AI set it?
+Once a day, Margince checks each project in the **Pursuing** or **Delivering** phase. The AI marks it **At risk** when nothing was filed on it for 30 days. It does the same when an open task on it is past its due date. When both are true, it marks it **Off track**.
+The reading on the project page carries the AI tag and one sentence that says why. The project's owner gets a notice with the same sentence.
+
+To take the reading back, press **Undo the AI reading** beside it. The reading from before stands again; if there was none, the project reads as not judged. After a reading you record or an undo, the AI leaves the project alone until something new is filed on it.
+To stop the notices, change **Project health set by the AI** under Settings → **Notifications**.
+Also called: automatic project health, AI project status.
 
 ## What the AI does for you
 
-**Drafting.** The AI writes email drafts (**Draft with AI**). It does not send
+**Drafting.** The AI writes email drafts (**Draft email**). It does not send
 them. Your email signature is yours: the app notes "AI drafts never add a
 sign-off."
 
@@ -69,9 +88,7 @@ question**. See [Documents and files](documents-and-files.md). It answers only
 from the set of documents you filed, and refuses a question that set does not
 cover.
 
-Only a human can ask a document set. An agent is refused, whatever its passport
-allows. See [Agents, passports and what they may
-do](agents-and-passports.md#things-the-ai-is-refused-outright).
+An agent can ask a document set for you if its passport has **Buy contact data**, the permission that also covers AI work like this. It gets the same answer you would, with the same passages under each sentence, for the sets you may read.
 
 **The brief during the night.** The Morning brief looks at your companies during
 the night and ranks what most needs your first hour. If it found nothing, it
@@ -106,18 +123,43 @@ Where Margince can say who put a value there, it does. The trust marks are:
   name
 - "Automated by {agent}", or "Automated by an agent" when the passport has no
   name to show
+- "Made by {agent} for {colleague}" on a contact, company, deal or activity an
+  agent made. It names the tool, such as Claude, and the colleague the agent
+  worked for. It reads "Made by an agent for {colleague}" when the tool is not
+  recorded. Without the colleague it reads "Automated by {agent}" or "Automated by an agent".
 - "System task: {job}", naming the job in words such as "Mail participant
   fill-in", or plain "System task" when the job has no name to show.
   This is the installation's own work, such as a planned sweep or a run that
   makes up for lost time. It has a different name from an agent, so you know whether a model
   decided something or Margince did routine work.
-- "Via {connector}": it came from a connected mailbox
+- "Sent by Margince for you" or "Sent by Margince for a colleague": Margince mailed it from the
+  installation's own address, such as a privacy notice. It reads plain "Sent by Margince" when no
+  member is named, and "From {address}" follows when Margince has that address.
+- "Via {connector}": it came from a connected mailbox, named as you know it, such as "Via Gmail"
 - "Imported from {upload}": a CSV import created the company, contact or lead,
-  and {upload} is the name you set for the upload. It reads plain "Imported"
-  when the upload has no name.
+  and {upload} is the name you set for the upload. An upload named after a
+  system you use reads as that system, such as "Imported from HubSpot". It reads
+  plain "Imported" when the upload has no name.
 - On a field change an agent made, the name of your own agent passport. A
   colleague's passport reads "An agent".
 - "Source not recorded": when nobody knows where it came from
+
+## What your agent can set up, and what stays yours
+An agent acting for you can set up pipelines and open stages, custom fields and automations, and change an existing web form. Creating a web form stays yours. It can change price and tax sheets, and your own name, language, hours and voice.
+
+It can upload a logo, a vCard or your LinkedIn export. A vCard from your agent fills blanks and replaces nothing a contact already holds. It asks you first where its tool says so. That covers a custom field, a removal, a change to your name and a rule it turns on.
+
+A rule it set up stops at its next run after you revoke its passport, and a run already under way can finish. Margince tells you it stopped; resume the rule and it runs with no agent behind it. A contact's details cost credits, so it needs a daily limit on the connection, and it pays for a detail only when it names one.
+
+These stay with you, in the app, because they would give it more than you want to give:
+
+- which AI model runs and where your text goes, and how far the product moves deals by itself;
+- your base currency, your legal rules, and what a contact data provider may sell you;
+- what the product tells you about your agent, and the claims and drafts you corrected;
+- the margin tier of a partner and whether a stage counts as won or lost;
+- a web form's secret, consent wording and allowed sites, and the rules Margince starts with;
+- a sample of your writing you filed or left out;
+- passwords, secrets and connecting a mailbox, and anything that removes data for good.
 
 ## Seeing work in progress
 
@@ -171,8 +213,8 @@ timing, how quickly things move, and how warm the contact is.
 The **AI** group in Settings holds four pages: **AI usage**, **AI models**,
 **AI call log** and **Automations**.
 
-In **Settings → Agents** you create your own passports, connect MCP clients, and
-switch **Automatic changes** on or off.
+In **Settings → AI access** you connect your AI tool. Under **For developers**
+there, you create your own passports on **API keys** and switch **Automatic changes** on or off on **Agent rules**.
 
 The full record of actions is in **Settings → Audit log**: every action, with the
 human, agent or connected system that did it.

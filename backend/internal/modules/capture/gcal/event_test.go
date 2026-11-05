@@ -78,17 +78,13 @@ func TestParseEventMapsMeetingActivity(t *testing.T) {
 	}
 }
 
-func TestAMeetingInsideTheOwnersDomainIsDroppedByTheFloor(t *testing.T) {
-	// The floor: what the owner's own domain alone proves internal is dropped
-	// here, without consulting any registry. The workspace's registered domains
-	// are wider and are applied by the writer, which can only widen this — an
-	// internal meeting stored while that set is empty would be readable by the
-	// whole workspace.
+// A meeting inside the owner's domain reaches the writer stating so. Only the
+// writer can read the workspace's own domains, so it decides.
+func TestAMeetingInsideTheOwnersDomainStatesItsDomain(t *testing.T) {
 	raw := eventJSON(t, "evt-3", "confirmed", "Standup", "2026-07-16T09:00:00Z",
 		gcalOwner, gcalOwner, "peer@myco.com", "boss@myco.com")
-	reason, skip := mustParse(t, raw).SkipReason()
-	if !skip || reason != "no party outside the owner's domain" {
-		t.Fatalf("got (%q, skip=%v), want the owner-domain floor to drop it", reason, skip)
+	if got := mustParse(t, raw).ToRecord(connectorName, raw).OwnerDomainOnly; got != "myco.com" {
+		t.Fatalf("OwnerDomainOnly = %q, want myco.com", got)
 	}
 }
 
@@ -305,10 +301,12 @@ func roomEventJSON(t *testing.T, id string, flagged bool, attendees ...string) [
 // customer touch and drafted a recap to a colleague.
 func TestABookedRoomDoesNotMakeAColleaguesOnlyMeetingExternal(t *testing.T) {
 	for _, flagged := range []bool{true, false} {
-		raw := roomEventJSON(t, "evt-room", flagged, gcalOwner, "peer@myco.com")
-		reason, skip := mustParse(t, raw).SkipReason()
-		if !skip || reason != "no party outside the owner's domain" {
-			t.Errorf("resource flag %v: got (%q, skip=%v), want the owner-domain floor to drop it", flagged, reason, skip)
+		for _, domain := range []string{"resource.calendar.google.com", "RESOURCE.CALENDAR.GOOGLE.COM", "resource.calendar.google.com.", "resource．calendar.google.com"} {
+			raw := roomEventJSON(t, "evt-room", flagged, gcalOwner, "peer@myco.com")
+			raw = []byte(strings.ReplaceAll(string(raw), "resource.calendar.google.com", domain))
+			if got := mustParse(t, raw).ToRecord(connectorName, raw).OwnerDomainOnly; got != "myco.com" {
+				t.Errorf("resource flag %v, domain %q: OwnerDomainOnly=%q want myco.com", flagged, domain, got)
+			}
 		}
 	}
 }
@@ -327,8 +325,8 @@ func TestABookedRoomIsNeitherAnAddressNorAParticipant(t *testing.T) {
 			t.Errorf("participants list the room %q", p.Email)
 		}
 	}
-	if len(rec.Participants) != 1 || rec.Participants[0].Email != "client@acme.com" {
-		t.Errorf("Participants = %+v, want the one guest", rec.Participants)
+	if len(rec.Participants) != 2 || rec.Participants[1].Email != "client@acme.com" {
+		t.Errorf("Participants = %+v, want the organizing owner and the one guest", rec.Participants)
 	}
 }
 
@@ -417,5 +415,40 @@ func TestCalendarCapturePreservesTheProviderDuration(t *testing.T) {
 	fields, ok := record.Fields.(capture.ActivityFields)
 	if !ok || fields.DurationSeconds == nil || *fields.DurationSeconds != 9000 {
 		t.Fatalf("lost duration: %+v", record.Fields)
+	}
+}
+
+// The Drive attachments and the Meet conference reach the meeting's record, so
+// the sink can record the notes Google attached.
+func TestAMeetEventsNotesReachTheRecord(t *testing.T) {
+	t.Parallel()
+	raw, err := json.Marshal(map[string]any{
+		"id": "evt-notes", "iCalUID": "evt-notes@google.com", "status": "confirmed", "summary": "Review",
+		"start":     map[string]string{"dateTime": "2026-10-30T10:00:00Z"},
+		"end":       map[string]string{"dateTime": "2026-10-30T11:00:00Z"},
+		"organizer": map[string]string{"email": "owner@myco.example"},
+		"attendees": []map[string]any{{"email": "owner@myco.example", "self": true}, {"email": "buyer@client.example"}},
+		"conferenceData": map[string]any{
+			"conferenceSolution": map[string]any{"key": map[string]any{"type": "hangoutsMeet"}},
+		},
+		"attachments": []map[string]any{{
+			"fileId": "1notesFileId0123", "title": "Review - Notes by Gemini",
+			"mimeType": "application/vnd.google-apps.document", "fileUrl": "https://drive.google.com/open?id=1notesFileId0123",
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec, err := RecordOf(raw, "owner@myco.example")
+	if err != nil {
+		t.Fatalf("RecordOf: %v", err)
+	}
+	fields, ok := rec.Fields.(capture.ActivityFields)
+	if !ok {
+		t.Fatalf("Fields is %T", rec.Fields)
+	}
+	want := []capture.MeetingDocument{{FileID: "1notesFileId0123", Title: "Review - Notes by Gemini", Kind: capture.MeetingDocumentNotes}}
+	if !slices.Equal(fields.MeetingDocuments, want) {
+		t.Errorf("meeting documents = %+v, want %+v", fields.MeetingDocuments, want)
 	}
 }

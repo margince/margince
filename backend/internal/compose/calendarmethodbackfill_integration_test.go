@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -124,13 +125,13 @@ func TestACapturedDeclineIsOwedNothing(t *testing.T) {
 	}
 }
 
-func TestTheBackfillReadsTheMethodOfAnOwedDecline(t *testing.T) {
+func TestTheBackfillReadsTheMethodOfALegacyDecline(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	decline := o.captureRaw(t, declineMail(o.seat, o.now.Add(-time.Hour)))
 	o.asCapturedBeforeTheColumn(t, decline, time.Hour)
-	if !o.owed(t, decline) {
-		t.Fatal("the decline without its method is not owed; the pass below would prove nothing")
+	if o.calendarMethod(t, decline) != "" || o.owed(t, decline) {
+		t.Fatal("legacy unjudged decline must lack its method without claiming a reply")
 	}
 
 	if n := runCalendarMethodBackfill(t, o, nil); n != 1 {
@@ -217,8 +218,7 @@ func (o *owedEnv) slimmedOriginalOf(t *testing.T, blob blobstore.Store, message 
 	var payload []byte
 	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT rc.payload FROM raw_capture rc
-			JOIN activity a ON rc.id = a.raw_capture_id
-			  OR (a.raw_capture_id IS NULL AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
+			JOIN activity a ON `+storekit.StoredOriginalSQL("a", "rc")+`
 			WHERE a.id = $1`, message).Scan(&payload)
 	}); err != nil {
 		t.Fatalf("reading the original: %v", err)
@@ -240,8 +240,8 @@ func TestTheBackfillRestoresASlimmedOriginalToReadItsMethod(t *testing.T) {
 	decline := o.captureWithFiles(t, blob, outlookDecline("pat@customer.example", o.seat, o.now.Add(-time.Hour)))
 	o.slimmedOriginalOf(t, blob, decline)
 	o.asCapturedBeforeTheColumn(t, decline, time.Hour)
-	if !o.owed(t, decline) {
-		t.Fatal("the decline without its method is not owed; the pass below would prove nothing")
+	if o.calendarMethod(t, decline) != "" || o.owed(t, decline) {
+		t.Fatal("legacy unjudged decline must lack its method without claiming a reply")
 	}
 
 	if n := runCalendarMethodBackfill(t, o, blob); n != 1 {
@@ -325,8 +325,8 @@ func TestTheBackfillReadsOnlyTheMessagesOwnStoredParts(t *testing.T) {
 	forged := bytes.Replace(stolen, []byte("Message-ID: <outlook-"), []byte("Message-ID: <forged-"), 1)
 	forgery := o.captureWithFiles(t, blob, forged)
 	o.asCapturedBeforeTheColumn(t, forgery, time.Hour)
-	if !o.owed(t, forgery) {
-		t.Fatal("the forged mail is not owed; the pass below would not read it")
+	if o.calendarMethod(t, forgery) != "" || o.owed(t, forgery) {
+		t.Fatal("unjudged forged mail must lack its method without claiming a reply")
 	}
 
 	runCalendarMethodBackfill(t, o, blob)

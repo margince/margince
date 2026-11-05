@@ -29,10 +29,10 @@ func TestTheBacklogNoticeIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
 
 	SetBaseLanguage(ctx, t, e.Pool, "de")
 	subject, body := raiseBacklogNotice(ctx, t, e, e.Rep1, 4)
-	if !strings.Contains(subject, "wartet auf die Klassifizierung") {
+	if !strings.Contains(subject, "für dein Team noch nicht verfügbar") {
 		t.Errorf("the installation is set to German and the notice reads %q", subject)
 	}
-	if !strings.Contains(body, "ohne Antwort: 4") {
+	if !strings.Contains(body, "Absender mit ausstehender Prüfung: 4") {
 		t.Errorf("the German body reads %q, and should count the waiting decisions", body)
 	}
 
@@ -44,10 +44,10 @@ func TestTheBacklogNoticeIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
 	// German row back and pass.
 	SetBaseLanguage(ctx, t, e.Pool, "en")
 	subject, body = raiseBacklogNotice(ctx, t, e, e.Rep2, 7)
-	if !strings.Contains(subject, "waiting on the classifier") {
+	if !strings.Contains(subject, "not yet available to your team") {
 		t.Errorf("the installation was changed to English and the notice reads %q", subject)
 	}
-	if !strings.Contains(body, "without an answer: 7") {
+	if !strings.Contains(body, "Senders awaiting review: 7") {
 		t.Errorf("the English body reads %q, and should count the waiting decisions", body)
 	}
 }

@@ -1,0 +1,13 @@
+package plantedother
+
+type inner struct{ Code string }
+
+type outer struct{ in inner }
+
+func set(o *outer) { o.in.Code = "not_a_problem" }
+
+func setAll(rows []inner) {
+	for i := range rows {
+		rows[i].Code = "not_a_problem"
+	}
+}

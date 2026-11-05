@@ -77,9 +77,8 @@
    very line a citation points at. */
 .md-code {
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgWell);
   font: var(--fontBodySmall);
   white-space: pre-wrap;
 }
@@ -95,8 +94,14 @@
   background: var(--bgChip);
 }
 
+/* The global reset makes `strong` inherit its weight. `.md-strong` is on the
+   element itself, so `InlineMarkdown`, which has no `.md` around it, is bold too. */
+.md-strong {
+  font-weight: var(--fontWeightBold);
+}
+
 .md a {
-  color: var(--accent);
+  color: var(--accentText);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

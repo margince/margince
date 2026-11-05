@@ -27,7 +27,7 @@ import {
   stub,
   type Worklist,
   type WorklistItem,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -45,6 +45,7 @@ const waitingEmail: WorklistItem = row({
   email_summary: {
     activity_id: MESSAGE_ID,
     occurred_at: "2026-08-29T09:15:00Z",
+    occurred_precision: "instant",
     version: 4,
     subject: "Re: the renewal quote",
     preview: "Can you hold the price until Friday?",

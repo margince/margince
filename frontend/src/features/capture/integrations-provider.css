@@ -1,0 +1,104 @@
+/* The contact-data provider, drawn inside the Integrations panel.
+ *
+ * The block answers four questions, and the layout has to keep them apart: who
+ * this provider is, how the key is managed, whether new contacts are enriched
+ * automatically, and what each side says was spent. Run together as one column
+ * of prose — the first version — a reader could not tell the provider's balance
+ * from our own accounting, which is the one confusion this block exists to
+ * prevent.
+ *
+ * The separation is the settings row language now (design-system/settingrow.css)
+ * rather than a device this sheet draws: the two ANSWERS sit in the right column
+ * at the page's one x, and the two READINGS take the full width below their own
+ * labels, because a table is the subject and not an answer to a question. What
+ * is left here is the intervals a reading owes the row it sits in.
+ */
+
+/* Identity: the credential row's name and state. Wraps rather than
+ * overflowing: a provider key and a status pill outgrow a 390px row on their
+ * own. */
+.provider-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* The provider NAMES the block it heads. A registry key has no spaces to break
+ * on, so it wraps anywhere rather than pushing the badge off the row. */
+.provider-name {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The panel's opening body — the card's own sentence and its posture line. The
+ * gate under it renders into its own padded body, so this one stops at the text
+ * rather than paying for the interval twice. */
+.provider-intro {
+  padding-bottom: 0;
+}
+
+/* A reading inside a stacked row's control column. The column is a flex row, so
+ * without `min-width: 0` the spend table sizes to its widest line and takes the
+ * card with it instead of scrolling inside its own box. */
+.provider-reading {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* A qualifier under the reading it qualifies. No margin of its own: it sits in
+ * `.provider-reading`'s grid, which owns the interval — a margin on top of the
+ * gap would space this pair differently from every other row on the page. */
+.provider-block-hint {
+  margin: 0;
+}
+
+/* One row per credit pool. The grid's term/value split is proportional, so on a
+ * wide panel a five-letter pool name would sit at one end of a 400px column and
+ * its balance at the other, with the reader's eye asked to bridge the gap. The
+ * pair is a READING and reads as one thing, so the list stops at the measure
+ * where it still does. */
+.provider-pools {
+  max-width: 34rem;
+}
+
+/* Why the write a row just started was refused, under that row at its full
+ * width. Not a row of its own — it belongs to the decision above it — so it
+ * carries no hairline and only the interval that separates it from the label
+ * it answers. */
+.settinglist > .provider-row-note {
+  padding-bottom: var(--space-3);
+  border-top: 0;
+}
+
+/* The lead caption over the buy switches. A `.settingrow` is the only child of
+   the list that pays for its own interval, so a plain block owes its own — and
+   the two sentences read as separate paragraphs rather than one run-on. */
+.settinglist > .provider-free-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+}
+
+/* The two sentences under the lookup switch. A description is one <p>, and the
+   jurisdiction half has to read as its own paragraph rather than as a clause
+   glued to the end of the pricing one — an operator scanning for the reason to
+   switch this off is reading for a break that a collapsed newline never gives. */
+.provider-hint-para {
+  display: block;
+}
+
+.provider-hint-para + .provider-hint-para {
+  margin-top: var(--space-2);
+}
+
+/* The backlog figure, typed like every other number on this card: a count that
+   changes between reads should not shift the row's width as its digits change. */
+.provider-backlog-count {
+  font-variant-numeric: tabular-nums;
+}

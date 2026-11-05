@@ -4,15 +4,12 @@
  * Colours read tokens only; the conformance gate enforces it. */
 
 .card {
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-rest);
   padding: var(--padCard);
 }
 .card-inset {
-  background: var(--bgInset);
-  border: 0;
   box-shadow: none;
 }
 
@@ -47,7 +44,7 @@
   cursor: default;
 }
 .table > tbody > tr:hover > td {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* bleed: the table spans the pane, and its outer cells keep the pane's padding
    so the first column lines up with a PanelBody's text. A table opened from a
@@ -118,13 +115,10 @@
   position: sticky;
   inset-inline-start: 0;
   z-index: 1;
-  background: var(--bgPage);
-}
-.panel .table-scroll-sticky > table > * > tr > :first-child {
-  background: linear-gradient(var(--pane), var(--pane)), var(--bgPage);
+  background: var(--ground);
 }
 .table-scroll-sticky > .table > tbody > tr:hover > :first-child {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* The edge shows only once a column has slid under it. */
 @container scroll-state(scrollable: inline-start) {
@@ -241,10 +235,10 @@
   gap: var(--space-1);
   align-items: center;
   text-align: center;
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-5) var(--padCard);
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .empty-plate-title {
   margin: 0;
@@ -282,7 +276,6 @@
   z-index: 50;
 }
 .modal {
-  background: var(--bgElevated);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   padding: 22px;
@@ -449,6 +442,11 @@
   min-block-size: 0;
   overflow-y: auto;
 }
+/* The body scrolls, so no card in it may shrink to fit: a panel is
+   `overflow: hidden` and would clip its content instead. */
+.modal-drawer:has(> .drawer-head) > .drawer-body.form-stack > * {
+  flex-shrink: 0;
+}
 /* The READING drawer: its bands are sticky so close and commit stay in reach
    however long the body runs. */
 .modal-drawer-wide {
@@ -489,7 +487,7 @@
   top: 0;
   z-index: 1;
   padding: var(--space-5) var(--space-5) var(--space-4);
-  background: var(--bgElevated);
+  background: var(--ground);
   border-bottom: 1px solid var(--borderSubtle);
 }
 .modal-drawer-wide > .drawer-body {
@@ -503,7 +501,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
-  background: var(--bgElevated);
+  background: var(--ground);
   border-top: 1px solid var(--borderSubtle);
 }
 /* A form or drawer whose body is one `.form-stack` scrolls that body, keeping
@@ -583,11 +581,14 @@
     padding: 0;
   }
   /* The actions sit at the foot of the sheet rather than after the content,
-     so a long form does not bury its own confirm button. */
+     so a long form does not bury its own confirm button. A sticky foot stops
+     at the dialog's padding, and the shadow fills that padding below it, so
+     text scrolling under the row cannot show beneath the buttons. */
   .modal .actions {
     position: sticky;
     bottom: 0;
-    background: var(--bgElevated);
+    background: var(--ground);
+    box-shadow: 0 var(--space-6) 0 var(--ground);
     padding-top: var(--space-3);
   }
 }
@@ -792,11 +793,9 @@
    strip, a segmented row, any option whose name is followed by how much sits
    behind it. Declared here rather than by each host, because every host that
    styled it reached a slightly different answer and the same record then drew
-   one figure two ways.
-   Its own ink, not the host's: a quiet label's --textSecondary reads under
-   4.5:1 on the chip in dark, so the figure stays primary. The minimum width is what keeps a
-   column of chips the same size from 1 to 99, and the centring is what keeps
-   the digit in the middle of it. */
+   one figure two ways. The minimum width is what keeps a column of chips the
+   same size from 1 to 99, and the centring is what keeps the digit in the
+   middle of it. */
 .optioncount {
   display: flex;
   justify-content: center;
@@ -810,7 +809,7 @@
 }
 
 .segmented {
-  border: 0;
+  border: 1px solid var(--groundEdge);
   margin: 0;
   display: inline-flex;
   /* An unwrapped inline-flex does not shrink: it sets its own minimum width and
@@ -823,7 +822,8 @@
   background: var(--bgChip);
   color: var(--textPrimary);
   border-radius: var(--r-sm);
-  padding: 3px;
+  /* 2px plus the 1px edge: the option's --segmentPaddingY again. */
+  padding: 2px;
   gap: 2px;
 }
 .segmented button {
@@ -844,8 +844,11 @@
   /* Unselectable, for `.checkfield`'s reason. */
   user-select: none;
 }
+.segmented button:hover:where(:not(:disabled)) {
+  background: var(--groundHover);
+}
 .segmented button[aria-pressed="true"] {
-  background: var(--bgElevated);
+  background: var(--segmentPressed);
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
   box-shadow: var(--shadow-rest);
@@ -1060,10 +1063,12 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* The opaque inset ground, not the chip fill: the option's detail line is in
+   the secondary ink, which does not clear AA on the chip. */
 .recordpicker-option[aria-pressed="true"] {
-  border-color: var(--accent);
-  color: var(--accentText);
-  background: var(--accentLight);
+  border-color: var(--borderStrong);
+  color: var(--textPrimary);
+  background: var(--bgInset);
 }
 .recordpicker-selected {
   display: flex;
@@ -1071,9 +1076,9 @@
   gap: var(--space-2);
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--accentLight);
+  background: var(--bgInset);
   color: var(--textPrimary);
 }
 .recordpicker-selected-text {
@@ -1579,6 +1584,13 @@ span.error-line {
   border-color: var(--accent);
   box-shadow: var(--focus-glow);
 }
+/* A note that grows with what is typed, from three lines up to ten, then
+   scrolls. Dragging the corner still resizes it. */
+.textarea-grow {
+  field-sizing: content;
+  min-block-size: calc(3lh + 2 * var(--inputPaddingY) + 2px);
+  max-block-size: calc(10lh + 2 * var(--inputPaddingY) + 2px);
+}
 
 .table-scroll {
   /* Contains absolutely placed cell content (sr-only labels) so it scrolls with the table. */
@@ -1771,6 +1783,12 @@ span.error-line {
   position: relative;
   display: inline-flex;
 }
+/* `inline`: the trigger rides a line of text the way `.icon-action-inline` does. */
+.overflow-menu-inline {
+  align-items: center;
+  block-size: 1lh;
+  vertical-align: top;
+}
 /* Fixed and portalled to its layer: the dialog's overlay, or the body. It is
    positioned against the trigger's viewport rectangle, so a card that hides
    its own overflow cannot clip it. */
@@ -1810,7 +1828,6 @@ span.error-line {
   padding: var(--controlGap);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
 }
 /* An author-level `display` beats the UA stylesheet's `[hidden] {display:none}`,
@@ -1838,6 +1855,11 @@ span.error-line {
  * The transition is NOT redeclared: .btn already tweens background-color and
  * color over --dur-state/--ease-out, which is the highlight travel a menu
  * wants, and a second declaration here would be a second answer to it. */
+/* A line keeps its height under the cap, so a capped panel scrolls; a shrunk
+   line squeezed its words into a strip too thin to read or press. */
+.overflow-menu-items > * {
+  flex-shrink: 0;
+}
 .overflow-menu-items .btn {
   width: 100%;
   justify-content: flex-start;
@@ -1880,7 +1902,7 @@ span.error-line {
    ring is drawn INSIDE the row — the panel's inset is --space-1, and an
    outline offset outward from a row would be clipped by it. */
 .overflow-menu-items .btn:hover:not(:disabled) {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
   /* .btn-primary and .btn-danger lift a pixel on hover. A row in a list does
      not move under the pointer travelling down it. */
@@ -1905,42 +1927,36 @@ span.error-line {
    arrives as `aria-expanded`, as `aria-pressed`, or as the primary variant a
    caller reaches for to draw the same thing, and stripping the fill above took
    the whole signal with it. It says so here the way the Select's chosen option
-   does (select.css, [aria-selected="true"]): accent ink, a little more weight,
-   and the accent's own quiet ground — not the filled bar, which in a list
-   claims to be the panel's one action rather than one row's state. */
+   does: the pressed filter pill's neutral ground and the primary ink, not the
+   filled bar, which in a list claims to be the panel's one action rather than
+   one row's state. */
 .overflow-menu-items .btn-primary,
 .overflow-menu-items .btn[aria-expanded="true"],
-.overflow-menu-items .btn[aria-pressed="true"] {
-  background: var(--accentLight);
-  color: var(--accentText);
-}
+.overflow-menu-items .btn[aria-pressed="true"],
 .overflow-menu-items .btn-primary:hover:not(:disabled),
 .overflow-menu-items .btn[aria-expanded="true"]:hover:not(:disabled),
 .overflow-menu-items .btn[aria-pressed="true"]:hover:not(:disabled) {
-  background: var(--accentMed);
-  color: var(--accentText);
+  background: var(--bgChip);
+  color: var(--textPrimary);
 }
 
 /* One reading at the top of a record. The tile stays neutral and only the
    VALUE takes a tone: a row of coloured boxes reads as a dashboard, and the
    reader is meant to see three facts rather than a traffic light.
    The interval between a reading's three lines — what it is, the figure, what
-   the figure rests on — is the CARD's, not the row's. ReadingsGrid used to open
-   it up to --space-2 for its own cards while a strip's kept --space-1, which is
-   one reading drawn two ways on two pages of the same record.
+   the figure rests on — is the CARD's, not the row's, so one reading draws one
+   way on every row that holds it.
    Each line carries its OWN interval below it rather than one flex `gap` over
    all of them, because the three are not equal: a name sits close to the figure
    it names, and the figure stands further off the basis under it. */
 .stat-card {
   display: flex;
   flex-direction: column;
-  padding: var(--space-4);
-  /* The pane, not the card: a reading sits on translucent ground with a
-     hairline, the same surface every zone of a record uses, so a row of them
-     reads as five panes of one page rather than five boxes on it. */
-  border: 1px solid var(--paneEdge);
+  padding: var(--padCard);
+  /* The pane's hairline, the edge every zone of a record uses, so a row of
+     them reads as five panes of one page rather than five boxes on it. */
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
-  background: var(--pane);
   box-shadow: var(--shadow-rest);
   min-width: 0;
   /* The ground the door stretches over (`.stat-card-open::after`). A card
@@ -1994,6 +2010,31 @@ span.error-line {
 }
 [data-density="compact"] .stat-card-foot {
   padding-top: var(--space-1);
+}
+/* A plate's name and its badge share one row; the name wraps inside it, never
+   under the badge. */
+[data-density="plate"] .stat-card-label {
+  flex-wrap: nowrap;
+}
+/* The plate's figure: body size at the medium weight, so four figures and
+   their labels sit in one band at the foot of a card (statstrip.css). */
+[data-density="plate"] .stat-card-value {
+  font: var(--fontBodyLarge);
+  font-weight: var(--fontWeightMedium);
+  font-variant-numeric: tabular-nums;
+}
+/* A lead plate heads an Analytics card: its first figure is the one the view
+   leads with, and the rest stand a step under it (statstrip.tsx `lead`). */
+.stat-strip[data-lead] .stat-card-value {
+  font: var(--fontHeadingMedium);
+  font-variant-numeric: tabular-nums;
+}
+.stat-strip[data-lead] > :first-child .stat-card-value {
+  font: var(--fontDisplayFigure);
+  font-variant-numeric: tabular-nums;
+}
+.stat-strip[data-lead] .stat-card-basis::before {
+  font: var(--fontHeadingXXSmall);
 }
 
 /* Nothing left to declare between two adjacent StatCards. A free-standing card
@@ -2254,9 +2295,6 @@ span.error-line {
 .stat-card-meter-segments .stat-card-meter-fill {
   flex: 1;
 }
-.stat-card-meter-empty {
-  background: var(--bgHover);
-}
 .stat-card-meter-fill {
   display: block;
   block-size: 100%;
@@ -2276,6 +2314,14 @@ span.error-line {
 }
 .stat-card-info ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--info);
+}
+.stat-card-meter-ai .stat-card-meter-fill {
+  background: var(--ai);
+}
+/* An empty segment is the track, whatever the tone. It matches the tone rules'
+   weight and comes after them, so no fill colour reaches it. */
+.stat-card-meter .stat-card-meter-fill.stat-card-meter-empty {
+  background: var(--bgHover);
 }
 
 /* The four tones a reading's figure can carry, and the ONE place each is
@@ -2303,7 +2349,7 @@ span.error-line {
    see StatCard's `alert` docblock. Two classes deliberately, so this beats a
    strip's own `> *` background reset regardless of stylesheet order. */
 .stat-card.stat-card-alert {
-  background: var(--dangerBg);
+  background-image: linear-gradient(var(--dangerBg), var(--dangerBg));
 }
 
 /*
@@ -2335,7 +2381,7 @@ span.error-line {
    off one host and invisible on the next. --bgElevated is the one ground in the
    ladder that is a step off the track on every host. */
 .segmented button:active:not(:disabled) {
-  background-color: var(--bgElevated);
+  background-color: var(--segmentPressed);
   transition-duration: var(--dur-tap);
 }
 /* The strip's own disabled state, which it did not have: a segment nobody may

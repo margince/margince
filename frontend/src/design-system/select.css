@@ -92,7 +92,6 @@
   max-width: min(24rem, var(--popupRoom, 90vw));
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
@@ -133,7 +132,6 @@
 }
 .select-option-check {
   flex: none;
-  color: var(--accentText);
 }
 /* The mark before a label — a colour swatch, a provider glyph — in the list and
    on the closed face alike. It never shrinks and never grows: a swatch that
@@ -147,13 +145,13 @@
    One treatment for both, because they are one state: the popup tracks a single
    active option through `aria-activedescendant`, whichever input moved it. */
 .select-option.is-active {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
+/* The held option is marked by its tick and weight in the primary ink: a
+   chosen value is where the reader is, so it stays neutral. */
 .select-option[aria-selected="true"] {
-  color: var(--accentText);
-}
-.select-option[aria-selected="true"].is-active {
-  background: var(--accentLight);
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
 }
 /* A disabled option stays listed and stays readable — a choice this workspace
    cannot make right now is information — but it takes no hover treatment,

@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -89,7 +88,7 @@ func newDocumentHarness(t *testing.T, perms principal.Permissions) documentHarne
 	t.Helper()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
-	limits := deployconfig.Config{}.EffectiveUploads()
+	limits := DefaultUploadLimits()
 	limits.Attachment = documentAgentLimit
 	srv := &Server{blob: blob, uploadLimits: limits}
 	seat := documentSeat{perms: perms, teams: []ids.UUID{e.Team1}}
@@ -168,7 +167,7 @@ func (h documentHarness) attach(t *testing.T, args map[string]any) (agents.Attac
 
 func (h documentHarness) list(t *testing.T, entityType string, id ids.UUID) (agents.DocumentPage, error) {
 	t.Helper()
-	return callTool[agents.DocumentPage](t, h, "list_documents",
+	return callTool[agents.DocumentPage](t, h, "list_record_documents",
 		map[string]any{"entity_type": entityType, "entity_id": id.String()})
 }
 
@@ -461,7 +460,7 @@ func TestListDocumentsWalksADealsFilesPageByPage(t *testing.T) {
 	args := map[string]any{"entity_type": "deal", "entity_id": deal.String(), "limit": 1}
 	pages := 0
 	for ; pages < len(want)+1; pages++ {
-		page, err := callTool[agents.DocumentPage](t, h, "list_documents", args)
+		page, err := callTool[agents.DocumentPage](t, h, "list_record_documents", args)
 		if err != nil {
 			t.Fatalf("page %d: %v", pages+1, err)
 		}

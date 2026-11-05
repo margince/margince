@@ -27,12 +27,15 @@ func (s *Store) RecordLogoIntent(ctx context.Context, base string) error {
 	return storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindLogo, base+trimmedLogoSuffix)
 }
 
+// columnLogoKey is the wide mark's column, named alike on every table that carries one.
+const columnLogoKey = "logo_object_key"
+
 // LogoKeyColumns is every column that may hold a mark's key, by table.
 //
-// ALL FOUR, because a reference check that misses one calls a live mark unreferenced
-// and the sweep then deletes the bytes behind somebody's logo. A company carries a
-// wide mark and an icon, and a site read carries the pair it resolved before any
-// company adopted them.
+// Every one, because a check that misses one calls a live mark unreferenced, and
+// the sweep then deletes the bytes behind somebody's logo. A company carries a wide
+// mark and an icon. A site read carries the pair it resolved before a company adopted
+// them. A legal entity carries its own wide mark.
 //
 // The query below is built from this list, so the columns are named once.
 //
@@ -40,8 +43,9 @@ func (s *Store) RecordLogoIntent(ctx context.Context, base string) error {
 // — it reads the committed schema and fails both ways: a mark column this list omits,
 // and a column named here that the schema does not have.
 var LogoKeyColumns = map[string][]string{
-	companyEntity: {"logo_object_key", "logo_icon_object_key"},
-	"site_read":   {"logo_object_key", "logo_icon_object_key"},
+	companyEntity:  {columnLogoKey, "logo_icon_object_key"},
+	"site_read":    {columnLogoKey, "logo_icon_object_key"},
+	"legal_entity": {columnLogoKey},
 }
 
 // markTableClauses spells each table's read as a LITERAL, so `FROM company` appears
@@ -52,8 +56,9 @@ var LogoKeyColumns = map[string][]string{
 // leaves none. A read this file genuinely makes must stay visible to the gate that
 // polices them, even when the gate would then rule it harmless.
 var markTableClauses = map[string]string{
-	companyEntity: "NOT EXISTS (SELECT 1 FROM company t WHERE %s)",
-	"site_read":   "NOT EXISTS (SELECT 1 FROM site_read t WHERE %s)",
+	companyEntity:  "NOT EXISTS (SELECT 1 FROM company t WHERE %s)",
+	"site_read":    "NOT EXISTS (SELECT 1 FROM site_read t WHERE %s)",
+	"legal_entity": "NOT EXISTS (SELECT 1 FROM legal_entity t WHERE %s)",
 }
 
 // unreferencedMarkQuery builds the check from LogoKeyColumns.

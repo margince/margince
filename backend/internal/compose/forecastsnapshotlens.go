@@ -20,9 +20,26 @@ import (
 )
 
 // newForecastStore is the one way compose builds a forecasting store, so every
-// snapshot read passes through forecastSnapshotLens.
+// snapshot read passes through forecastSnapshotReadLens.
 func newForecastStore(db *database.DB) *forecasting.Store {
-	return forecasting.NewStore(db).WithSnapshotLens(forecastSnapshotLens)
+	return forecasting.NewStore(db).WithSnapshotLens(forecastSnapshotReadLens)
+}
+
+// forecastSnapshotReadLens is forecastSnapshotLens for a snapshot read whole,
+// such as a movement or a call's baseline. A frozen total of a population is
+// that population's figure, so it meets the small-group floor as a live one
+// does.
+func forecastSnapshotReadLens(
+	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, pipelineID *ids.UUID, rows []forecasting.Contribution,
+) ([]forecasting.Contribution, error) {
+	readable, err := forecastSnapshotLens(ctx, tx, scope, pipelineID, rows)
+	if err != nil {
+		return nil, err
+	}
+	if err := requireRequestedPopulationFloor(ctx, tx, requestedFromForecastScope(scope)); err != nil {
+		return nil, err
+	}
+	return readable, nil
 }
 
 func newForecastStoreFor(pool *pgxpool.Pool) *forecasting.Store {
@@ -32,15 +49,14 @@ func newForecastStoreFor(pool *pgxpool.Pool) *forecasting.Store {
 // forecastSnapshotLens holds a frozen snapshot to what the live forecast would
 // show this caller, since its rows carry the same per-deal figures.
 //
-// The population must be one the caller may measure (the same resolution
-// GetForecast applies), or the snapshot is not found: whether somebody else's
-// forecast was frozen is itself the disclosure. Deals the caller cannot read are
-// dropped, and an amount a field mask withholds is nulled exactly as the live
-// reading nulls it, so a movement cannot print a figure the forecast hid.
+// The caller must be allowed to assert about the population, or the snapshot
+// is not found, because whether it was frozen is itself the disclosure. Deals
+// the caller cannot read are dropped. A masked amount is nulled as the live
+// reading nulls it, so a movement prints no figure the forecast hid.
 func forecastSnapshotLens(
 	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, pipelineID *ids.UUID, rows []forecasting.Contribution,
 ) ([]forecasting.Contribution, error) {
-	if _, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(scope)); err != nil {
+	if _, err := ResolveAssertionScope(ctx, tx, requestedFromForecastScope(scope)); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil, apperrors.ErrNotFound
 		}

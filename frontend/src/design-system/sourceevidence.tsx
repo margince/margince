@@ -2,13 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { formatDateTime } from "../format/format";
+import { formatActivityWhen } from "../format/activitywhen";
 import { useLocale, useT } from "../i18n";
 import { useActivity } from "../lib/activityread";
-import { useRecordZone } from "../lib/recordzone";
+import type { SourceOpenerFor } from "../lib/opensource";
+import { ProblemError, problemCode } from "../lib/problem";
+import { useViewerZone } from "../lib/viewerzone";
 import { Button } from "./atoms";
 import { SourceEmailPanel } from "./sourceemailpanel";
-import { SurfaceState } from "./surfacestate";
+import { type SectionState, SurfaceState } from "./surfacestate";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -26,56 +28,84 @@ type Activity = components["schemas"]["Activity"];
  */
 export function SourceEvidence({
   activityId,
-  onOpenTranscript,
+  openerFor,
 }: Readonly<{
   activityId: string;
-  /** Open the transcript reader, which the host owns along with its drawer. */
-  onOpenTranscript: (id: string) => void;
+  /** The host's opener for the whole source (`useSourceOpener`). A source it
+   *  cannot open gets no button. */
+  openerFor: SourceOpenerFor;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // The kind decides the form, so it is resolved before either is drawn. The
   // PLAIN activity read, not the email presentation: that endpoint refuses any
   // kind but `email`, so asking it first would 404 on every transcript.
   const query = useActivity(activityId);
-  // A failed lookup is SAID, not swallowed. Returning nothing here removed the
-  // evidence altogether — no panel, no button, no reason — and the email
-  // panel's own failure arm cannot help, because a kind nobody resolved never
-  // mounts it.
-  if (query.isError) {
+  const source: Activity | undefined = query.data;
+  const code =
+    query.error instanceof ProblemError
+      ? problemCode(query.error.problem)
+      : null;
+  const unavailable = code === "permission_denied" || code === "not_found";
+  let state: SectionState = "ready";
+  if (unavailable || source?.content_state === "withheld") state = "withheld";
+  else if (query.isError) state = "failed";
+  else if (!source) state = "loading";
+  if (state !== "ready" || !source) {
     return (
       <SurfaceState
-        label={t("tasks.sourceEmail")}
+        label={t("stat.evidence")}
         labelLevel="h4"
-        state="failed"
+        state={state}
         emptyLabel={t("email.detail.none")}
         loadingLabel={t("email.detail.loading")}
-        detail={{ onRetry: () => void query.refetch() }}
+        detail={
+          state === "failed"
+            ? { onRetry: () => void query.refetch() }
+            : { withheldReason: t("email.detail.withheldReason") }
+        }
       >
         {null}
       </SurfaceState>
     );
   }
-  const source: Activity | undefined = query.data;
-  // Nothing is drawn until the kind is known. A button that appeared and then
-  // vanished as the read landed would offer a verb this task does not have.
-  if (!source) {
-    return null;
-  }
+  const open = openerFor({
+    id: source.id,
+    kind: source.kind,
+    contentState: source.content_state,
+  });
   if (source.kind === "email") {
     return (
       <SourceEmailPanel
         activityId={activityId}
-        formatWhen={(iso) => formatDateTime(iso, locale, recordZone)}
+        formatWhen={(at, precision) =>
+          formatActivityWhen(at, precision, locale, readerZone)
+        }
+        onOpenThread={open}
       />
     );
   }
   return (
     <div>
-      <Button variant="ghost" onClick={() => onOpenTranscript(activityId)}>
-        {t("tasks.openSource")}
-      </Button>
+      <p className="t-caption">
+        {[
+          formatActivityWhen(
+            source.occurred_at,
+            source.occurred_precision,
+            locale,
+            readerZone,
+          ),
+          source.subject,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
+      {open && (
+        <Button variant="ghost" aria-haspopup="dialog" onClick={open}>
+          {t("tasks.openSource")}
+        </Button>
+      )}
     </div>
   );
 }

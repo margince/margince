@@ -10,8 +10,8 @@
 // signal is attributable at COMPANY level only — the resolver never
 // creates a contact row, sets resolved_contact_id only under a recorded
 // consent grant, and drops what it cannot attribute to a company.
-// The warm room proposes; the rep sends — every proposed outbound rides
-// the 🟡 confirm-first send tool, never this module.
+// The warm room proposes and the rep sends. Every proposed outbound goes
+// through a send tool that needs the passport's send scope, never this module.
 //
-// Tables owned: signal, signal_resolution.
+// Tables owned: docs/reference/entity-model/signals.md.
 package signals

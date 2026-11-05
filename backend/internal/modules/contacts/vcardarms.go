@@ -14,10 +14,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -31,9 +34,10 @@ import (
 // hold the subject before it holds anything else or the two deadlock and an
 // Art. 17 fulfilment fails on a path an ordinary seat can drive.
 func (s *Store) updateMatchedByCard(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
+	ctx context.Context, tx pgx.Tx, match ContactResolution,
 	entry VCardEntry, source ids.UUID, result *VCardResult,
 ) error {
+	contactID := match.ContactID
 	// The card names somebody who exists, so the caller's authority over THAT
 	// ROW decides whether this card may touch it — the contact:create grant that
 	// let them start the import says nothing about a record they cannot see.
@@ -42,6 +46,13 @@ func (s *Store) updateMatchedByCard(
 	// leaves one card out is an import nobody can audit, and the reader can act
 	// on "you may not write this one".
 	if err := auth.HoldWritableLive(ctx, tx, entityContact, contactID.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) && match.MatchedLane == LaneEmail && len(entry.Emails) > 0 {
+			// A colleague's contact the importer cannot see holds the address:
+			// the held refusal, which fails this card's transaction.
+			if refusal := claimedEmailRefusal(ctx, tx, entry.Emails[0].Value, contactID); !isDuplicateEmail(refusal) {
+				return refusal
+			}
+		}
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 			// Deliberately says nothing about WHAT was matched. The two refusals
 			// are one sentence because telling them apart would confirm that the
@@ -64,7 +75,20 @@ func (s *Store) updateMatchedByCard(
 	}
 	result.Outcome = VCardUpdated
 	result.ContactID = &contactID
-	return s.fillFromVCard(ctx, tx, contactID, entry)
+	st, err := s.fillFromVCard(ctx, tx, contactID, entry)
+	if err != nil {
+		return err
+	}
+	address, err := fillAddressFromCard(ctx, tx, contactID, entry, st.corrected[fieldAddress])
+	if err != nil {
+		return err
+	}
+	held, err := liveEmails(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	result.Fields = updatedReport(entry, st, held, address)
+	return nil
 }
 
 // createFromCard turns a card nobody matched into a contact.
@@ -106,7 +130,42 @@ func (s *Store) createFromCard(
 	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
 	result.Outcome = VCardCreated
 	result.ContactID = &created
-	return s.attachVCardEmployer(ctx, tx, created, entry)
+	url, err := s.completeCardCreate(ctx, tx, contact, entry)
+	if err != nil {
+		return err
+	}
+	result.Fields = createdReport(contact, entry, url)
+	return nil
+}
+
+// completeCardCreate writes what the contact create does not carry: the
+// URL the social slot did not take.
+//
+// That URL is usually the company site, and it lands as evidence as it does on
+// a matched contact. It returns that URL's outcome, or nil when none was filed.
+func (s *Store) completeCardCreate(ctx context.Context, tx pgx.Tx, contact crmcontracts.Contact, entry VCardEntry) (*statedField, error) {
+	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+	url, ok := cardURLField(entry)
+	if !ok || (contact.Social != nil && (*contact.Social)[profileURLField] != nil) {
+		return nil, nil //nolint:nilnil // a card whose URL the social slot took files nothing more
+	}
+	card, err := readyObservedCard(ctx, tx, entry)
+	if err != nil {
+		return nil, err
+	}
+	outcome, err := applyObservedField(ctx, tx, created, observedField{
+		Field: url.name, Value: url.value, Evidence: card.Evidence, SourceRef: card.SourceRef,
+		Source: card.Source, CapturedBy: card.CapturedBy, ObservedAt: card.ObservedAt,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if outcome.landed() {
+		if err := auditCardFields(ctx, tx, created, []string{url.name}); err != nil {
+			return nil, err
+		}
+	}
+	return &statedField{cardField: url, outcome: outcome}, nil
 }
 
 // errCardSourceNarrowed rolls back the contact a refused card had already minted.
@@ -116,3 +175,91 @@ func (s *Store) createFromCard(
 // transaction. The caller recognises this one error and reports the card's own
 // outcome, which the arm has already filled in.
 var errCardSourceNarrowed = errors.New("contacts: the message this card arrived on is no longer readable here")
+
+// vcardRecordAddress is the card's address in the record's parts. A card
+// staged before the parts were read carries only the one line, which goes
+// through the splitter every other line-1 writer uses.
+func vcardRecordAddress(entry VCardEntry) *crmcontracts.Address {
+	if parts := addressOrNil(entry.PostalAddress); parts != nil {
+		return parts
+	}
+	line := strings.TrimSpace(entry.Address)
+	if line == "" {
+		return nil
+	}
+	if split, ok := SplitAddressText(line); ok {
+		return &split
+	}
+	return &crmcontracts.Address{Line1: &line}
+}
+
+// skipHeldCard answers a card whose address a colleague's contact holds. The
+// colleague is asked to share it, and the card is skipped with the refusal's
+// own words. Any other error passes through. A mailed card is the machine's
+// work: a live lead's card is skipped with the reason and offers no convert.
+func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name string, mailed bool) (VCardResult, error) {
+	err = s.AskHolderToShare(ctx, err)
+	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
+		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: held.Error()}, nil
+	}
+	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardErasedAddress}, nil
+	}
+	if held, ok := errors.AsType[*LeadHoldsIdentityError](err); ok {
+		if mailed {
+			return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardLeadHoldsMailed}, nil
+		}
+		skipped := VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardLeadHolds}
+		if len(held.LeadIDs) > 0 {
+			skipped.LeadID = &held.LeadIDs[0]
+		}
+		return skipped, nil
+	}
+	return VCardResult{}, err
+}
+
+// vcardLeadHolds is the reason a card for somebody who is already a lead creates
+// nothing. Somebody is a lead or a contact, never both.
+const vcardLeadHolds = "this card names somebody who is already a lead; convert the lead instead"
+
+// vcardLeadHoldsMailed is the same skip for a card that came with mail, which
+// nobody is there to answer. The lead is left as it is.
+const vcardLeadHoldsMailed = "this card names somebody who is already a lead, so it was not imported"
+
+// vcardExistsReason is what a model-read card gets when its address already
+// belongs to a contact. A reading of a photo is a guess about the print, and a
+// guess must not overwrite a record.
+const vcardExistsReason = "this contact already exists; a card read from a photo never changes an existing contact"
+
+// skipModelReadMatch reports a model-read card whose address matches a contact.
+// The contact is named only when the caller may read it, as in the near-match
+// arm of importOneVCard.
+func skipModelReadMatch(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, result *VCardResult) error {
+	result.Outcome = VCardSkipped
+	result.Reason = vcardExistsReason
+	visible, err := auth.VisibleTo(ctx, tx, entityContact, contactID.UUID)
+	if err != nil {
+		return fmt.Errorf("contacts: probing a matched contact's visibility: %w", err)
+	}
+	if visible {
+		result.ContactID = &contactID
+	}
+	return nil
+}
+
+// proposeModelReadCard reports a model-read card nobody matched. Nothing is
+// written: the staging call that follows turns it into an approval, and the
+// contact exists only once a human accepts that.
+func proposeModelReadCard(ctx context.Context, tx pgx.Tx, source ids.UUID, result *VCardResult) error {
+	narrowed, err := sourceIsNarrowed(ctx, tx, source)
+	if err != nil {
+		return err
+	}
+	if narrowed {
+		result.Outcome = VCardSkipped
+		result.Reason = vcardSourceNarrowed
+		return nil
+	}
+	result.Outcome = VCardProposed
+	return nil
+}

@@ -9,11 +9,12 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
+import { DateInput, type ISODate } from "../design-system/dateinput";
 import { Select } from "../design-system/select";
-import { endOfDayInZone, viewerZone } from "../format/timezone";
+import { dueInstant } from "../format/calendarday";
 import { useT } from "../i18n";
-import { useRoster } from "./entityref";
+import { useViewerZone } from "../lib/viewerzone";
+import { useRoster, useRosterHint, useRosterPartial } from "./entityref";
 
 type BulkTask = components["schemas"]["BulkTask"];
 
@@ -30,7 +31,9 @@ export function TaskVerb({
   const [subject, setSubject] = useState("");
   const [due, setDue] = useState<ISODate | "">("");
   const [assigneeId, setAssigneeId] = useState("");
+  const readerZone = useViewerZone();
   const roster = useRoster("user", open);
+  const rosterHint = useRosterHint(roster, useRosterPartial("user", open));
   const start = () => {
     setSubject("");
     setDue("");
@@ -53,7 +56,7 @@ export function TaskVerb({
           setOpen(false);
           onReady({
             subject: subject.trim(),
-            due_at: due === "" ? undefined : endOfDayInZone(due, viewerZone()),
+            due_at: due === "" ? undefined : dueInstant(due, readerZone),
             assignee_id: assigneeId === "" ? undefined : assigneeId,
           });
         }}
@@ -73,13 +76,11 @@ export function TaskVerb({
             <DateInput
               {...control}
               value={due}
-              onChange={(event) =>
-                setDue(isISODate(event.target.value) ? event.target.value : "")
-              }
+              onChange={(event) => setDue(event.target.value)}
             />
           )}
         </Field>
-        <Field label={t("bulk.taskAssignee")}>
+        <Field label={t("bulk.taskAssignee")} hint={rosterHint}>
           {(control) => (
             <Select
               {...control}

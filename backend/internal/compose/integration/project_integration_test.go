@@ -14,13 +14,17 @@ package integration
 import (
 	"context"
 	"errors"
+	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -500,7 +504,7 @@ func TestRelinkReplacesOnlyTheLinksTheCallerCanSee(t *testing.T) {
 	// One activity linked to the other rep's private account and to a contact
 	// the attacker owns. The contact link is how they reach the activity at all.
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "company", EntityID: theirs},
 			{EntityType: "contact", EntityID: contact},
@@ -578,7 +582,7 @@ func TestMovingAnActivityBetweenProjectsReplacesTheLinkItCannotSee(t *testing.T)
 	contact := e.SeedContact(t, "Reachable Contact", &e.Rep3)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "project", EntityID: theirs.ID.UUID},
 			{EntityType: "contact", EntityID: contact},
@@ -639,7 +643,7 @@ func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 	contact := e.SeedContact(t, "Findable Contact", nil)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "project", EntityID: project.ID.UUID},
 			{EntityType: "contact", EntityID: contact},
@@ -750,6 +754,65 @@ func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
 	}
 }
 
+// The owner named at create is an assignment, so the row scope that bounds
+// reassignment must bound it too.
+func TestAProjectMayBeCreatedForAColleagueTheCreatorMayAssignTo(t *testing.T) {
+	e := Setup(t)
+	company := companyIDOf(e.SeedCompany(t, "BAER Pharma", &e.Rep1))
+	projectSeat := func(user ids.UUID, scope principal.RowScope) context.Context {
+		return e.As(user, []ids.UUID{e.Team1}, principal.Permissions{
+			RoleKeys: []string{roleRep},
+			Objects: map[string]principal.ObjectGrant{
+				"project":  {Create: true, Read: true, Update: true},
+				objCompany: {Read: true},
+			},
+			RowScope: scope,
+		})
+	}
+	teamScoped := projectSeat(e.Rep2, principal.RowScopeTeam)
+	rep := projectSeat(e.Rep1, principal.RowScopeOwn)
+	colleague := ids.From[ids.UserKind](e.Rep2)
+	teammate := ids.From[ids.UserKind](e.Rep1)
+
+	t.Run("a team-scoped creator creates a project owned by a teammate", func(t *testing.T) {
+		p, err := e.Projects.CreateProject(teamScoped, projects.CreateProjectInput{
+			Name: "Rollout for a teammate", CompanyID: company, Source: "manual", OwnerID: &teammate,
+		})
+		if err != nil {
+			t.Fatalf("a team-scoped creator naming a teammate as owner → %v, want it created", err)
+		}
+		if p.OwnerId == nil || ids.UUID(*p.OwnerId) != e.Rep1 {
+			t.Fatalf("owner = %v, want the named teammate %s", p.OwnerId, e.Rep1)
+		}
+	})
+
+	t.Run("a rep may not create a project owned by a colleague", func(t *testing.T) {
+		const name = "Rollout handed off at birth"
+		_, err := e.Projects.CreateProject(rep, projects.CreateProjectInput{
+			Name: name, CompanyID: company, Source: "manual", OwnerID: &colleague,
+		})
+		if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+			t.Fatalf("a rep creating a project owned by a colleague → %v, want AssigneeNotAllowedError", err)
+		}
+		if n := e.WsCount(t, `SELECT count(*) FROM project WHERE name = $1`, name); n != 0 {
+			t.Errorf("the refused create landed %d project row(s), want 0", n)
+		}
+	})
+
+	t.Run("the same rep may not reassign their own project to that colleague", func(t *testing.T) {
+		p, err := e.Projects.CreateProject(rep, projects.CreateProjectInput{
+			Name: "Rollout kept by its creator", CompanyID: company, Source: "manual",
+		})
+		if err != nil {
+			t.Fatalf("a rep creating their own project: %v", err)
+		}
+		_, err = e.Projects.UpdateProject(rep, projectIDOf(ids.UUID(p.Id)), projects.UpdateProjectInput{OwnerID: &colleague})
+		if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+			t.Fatalf("a rep reassigning their project to a colleague → %v, want AssigneeNotAllowedError", err)
+		}
+	})
+}
+
 // A reason of spaces is no reason: closing refuses it the way it refuses none,
 // and nothing is written to the project or its history.
 func TestClosingAProjectWithABlankReasonIsRefused(t *testing.T) {
@@ -765,5 +828,47 @@ func TestClosingAProjectWithABlankReasonIsRefused(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM project_phase_history WHERE project_id = $1`, p.ID); n != 1 {
 		t.Errorf("history rows = %d, want only the creation row", n)
+	}
+}
+
+// The handler turns a null key into a clear.
+func TestAProjectPatchSentOwnerNullReleasesTheProject(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	company := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Release Account"})
+	var created struct {
+		ID      string  `json:"id"`
+		Version int64   `json:"version"`
+		OwnerID *string `json:"owner_id"`
+	}
+	if status := e.Call(t, "POST", "/v1/projects", AnyMap{"name": "Release Engagement", "company_id": company, "source": "manual"}, nil, &created); status != http.StatusCreated {
+		t.Fatalf("create project → %d, want 201", status)
+	}
+	if created.OwnerID == nil {
+		t.Fatal("the project started unowned; a project defaults to its creator")
+	}
+
+	var released struct {
+		Version int64   `json:"version"`
+		OwnerID *string `json:"owner_id"`
+	}
+	if status := e.Call(t, "PATCH", "/v1/projects/"+created.ID, AnyMap{"owner_id": nil},
+		map[string]string{"If-Match": strconv.FormatInt(created.Version, 10)}, &released); status != http.StatusOK {
+		t.Fatalf("patching owner_id to null → %d, want 200", status)
+	}
+	if released.OwnerID != nil {
+		t.Errorf("the answer still names owner %s after null", *released.OwnerID)
+	}
+	if released.Version != created.Version+1 {
+		t.Errorf("version = %d, want %d", released.Version, created.Version+1)
+	}
+	if n := countOwned(t, e, `SELECT count(*) FROM project WHERE id = $1 AND owner_id IS NULL`, created.ID); n != 1 {
+		t.Errorf("rows with the owner cleared = %d, want 1", n)
+	}
+	const audited = `SELECT count(*) FROM audit_log
+		WHERE entity_type = 'project' AND entity_id = $1 AND action = 'update'
+		  AND before->>'owner_id' = $2 AND after->>'owner_id' IS NULL AND after ? 'owner_id'`
+	if n := countOwned(t, e, audited, created.ID, *created.OwnerID); n != 1 {
+		t.Errorf("update audit rows showing the owner go from %s to null = %d, want 1", *created.OwnerID, n)
 	}
 }

@@ -272,7 +272,7 @@ func (s *Store) SendMessage(ctx context.Context, anchorID ids.ActivityID, in Sen
 	// the transaction holds writes only, and the whole send is refused when one
 	// file cannot be resolved, because a message carrying fewer files than the
 	// sender attached is one nobody is told is wrong.
-	files, err := s.resolveAttachments(ctx, in.AttachmentIDs)
+	files, err := s.PreviewSendAttachments(ctx, in.AttachmentIDs)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -428,7 +428,7 @@ type outboundChannelMessage struct {
 // where the receipt is recorded.
 func (m outboundChannelMessage) activity() LogActivityInput {
 	direction := "outbound"
-	return LogActivityInput{
+	return SentRecord(LogActivityInput{
 		// The two axes, stated separately (ADR-0107/A158). The reply IS a
 		// message; what carries it is the anchor's own transport. Capture's
 		// reply-match reads the PAIR — kind to separate mail from channel,
@@ -440,13 +440,16 @@ func (m outboundChannelMessage) activity() LogActivityInput {
 		Body:            &m.in.Body,
 		Direction:       &direction,
 		Links:           m.links,
-		Source:          sourceManual,
+		// A send's links are what its caller named, and probeLinkTargets
+		// answered for them before this insert.
+		LinksFromRequest: true,
+		Source:           sourceManual,
 		// The same conversation the anchor is filed under: capture's
 		// reply-detection joins an inbound message against outbound activities
 		// on this key, so a reply filed anywhere else is a reply that
 		// conversation never had.
 		ThreadKey: m.conversation.threadKey,
-	}
+	})
 }
 
 // delivery is the same message as the delivery machinery receives it.

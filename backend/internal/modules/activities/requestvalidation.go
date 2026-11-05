@@ -3,6 +3,8 @@
 
 package activities
 
+import "github.com/margince/margince/backend/internal/shared/apperrors"
+
 // RequestAcceptanceFieldError identifies a request/task pairing the caller can correct.
 type RequestAcceptanceFieldError struct {
 	Field   string
@@ -15,3 +17,11 @@ func (e *RequestAcceptanceFieldError) Error() string { return e.Message }
 func (e *RequestAcceptanceFieldError) FieldFault() (field, code, message string) {
 	return e.Field, "invalid_request_acceptance", e.Message
 }
+
+type requestHeldError struct{}
+
+func (*requestHeldError) Error() string {
+	return "This request cannot be accepted here. Refresh the request before trying again."
+}
+func (*requestHeldError) Unwrap() error                    { return apperrors.ErrConflict }
+func (e *requestHeldError) MessageFault() (string, string) { return "conflict", e.Error() }

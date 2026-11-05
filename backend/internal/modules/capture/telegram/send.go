@@ -51,9 +51,9 @@ var (
 )
 
 // Descriptor is the registry's static metadata. The tier and scope describe the
-// CAPTURE surface this descriptor governs, which reads and never writes; the
-// outbound send is a governed operation on the activity surface and carries its
-// own confirm-first tier there, exactly as mail's does.
+// capture surface this descriptor governs, which reads and never writes.
+// The outbound send is a governed operation on the activity surface. There it
+// needs the passport's send scope, as mail's does.
 func (c *Connector) Descriptor() connector.Descriptor {
 	return connector.Descriptor{
 		Name:     ProviderName,

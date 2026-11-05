@@ -10,9 +10,8 @@ package company360
 // while the situation holds and re-arms by itself when the evidence changes.
 //
 // A row is written ONLY for a fingerprint the rules currently produce for this
-// account and this caller. That is what bounds the table: one row per suggestion
-// a human actually clicked, so it grows with use rather than with whatever a
-// client chooses to send. No retention cap is needed, and no judgment is ever
+// account and this caller. That bounds the table to one row per suggestion a
+// colleague actually set aside. It grows with use, not with what a client sends. No retention cap is needed, and no judgment is ever
 // deleted to make room for another.
 //
 // The two obvious alternatives are both wrong. Accepting any
@@ -43,13 +42,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// DismissSuggestion records that this human does not want this advice.
+// DismissSuggestion records that this colleague, or their agent for them, does
+// not want this advice.
 func (s *Service) DismissSuggestion(
 	ctx context.Context, companyID ids.CompanyID, fingerprint string, within *ids.ProjectID,
 ) error {
-	// An agent has no opinion to record, and consuming a human's dismissal on
-	// their behalf would silence advice they never saw.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// An agent records the dismissal for the user it acts for; one with no
+	// passport acts for nobody, so has no opinion to record.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
@@ -67,17 +67,16 @@ func (s *Service) DismissSuggestion(
 			return err
 		}
 		// After the record gate, so a caller who may not read this account gets the
-		// same 404 whatever they put in the body. The shape check alone is
-		// account-independent, but the raisesSuggestion call below is not — keeping
-		// both on this side of the gate means there is one order to reason about.
+		// same 404 whatever they put in the body. The raisesSuggestion call below
+		// depends on the account, so both checks stay on this side of the gate.
 		if !isFingerprint(fingerprint) {
 			return httperr.Validation("fingerprint", "malformed",
 				"dismiss a suggestion by the fingerprint it was served with, unchanged")
 		}
-		// The SAME gate the scoped page passes before it renders anything. A
-		// dismissal that narrowed to a project the caller cannot open would
-		// answer 204 for a fingerprint they could never have been served, and
-		// the shape of that answer is how you probe for a project's existence.
+		// The same gate the scoped page passes before it renders anything. A
+		// dismissal narrowed to a project the caller cannot open would answer 204
+		// for a fingerprint they were never served. That answer would reveal that
+		// the project exists.
 		if within != nil {
 			if err := activities.RequireProjectScope(ctx, tx, *within); err != nil {
 				return err
@@ -88,15 +87,13 @@ func (s *Service) DismissSuggestion(
 			return err
 		}
 		if !raises {
-			// Nothing to dismiss, and that is a success rather than an error. Either
-			// the situation resolved between the render and the click — in which case
-			// the suggestion is already gone and storing a row would change nothing —
-			// or the fingerprint was never served, in which case there is nothing to
-			// silence. Saying which would answer a question the caller has no business
-			// asking.
+			// Nothing to dismiss, and that is a success. Either the situation resolved
+			// between the render and the click, so the suggestion is already gone, or the
+			// fingerprint was never served. Saying which would answer a question the
+			// caller has no business asking.
 			return nil
 		}
-		// The row's existence IS the dismissal, so a repeat click is a no-op. Nothing
+		// The row's existence is the dismissal, so a repeat click is a no-op. Nothing
 		// reads a dismissal's age, and the id is a v7 uuid, so the instant stays
 		// recoverable for support without a column nobody reads.
 		_, err = tx.Exec(ctx, `
@@ -111,11 +108,11 @@ func (s *Service) DismissSuggestion(
 	})
 }
 
-// RestoreSuggestion clears this human's dismissal of one fingerprint on this
+// RestoreSuggestion clears this colleague's dismissal of one fingerprint on this
 // account: the undo behind "Not now". It asks the same gates the dismissal
 // asks, so the readers who may set an item aside are the ones who may undo it.
 func (s *Service) RestoreSuggestion(ctx context.Context, companyID ids.CompanyID, fingerprint string) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
@@ -161,7 +158,7 @@ func (s *Service) raisesSuggestion(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, fingerprint string,
 	within *ids.ProjectID,
 ) (bool, error) {
-	facts, err := readSignalFacts(ctx, tx, companyID)
+	facts, err := readSignalFacts(ctx, tx, companyID, now)
 	if err != nil {
 		return false, err
 	}
@@ -176,7 +173,11 @@ func (s *Service) raisesSuggestion(
 	if err != nil {
 		return false, err
 	}
-	in, err := gatherSuggestionInputs(ctx, tx, companyID, now, facts, heading, base, AssembleOptions{ProjectID: within})
+	loc, err := identity.ZoneAppliedTx(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	in, err := gatherSuggestionInputs(ctx, tx, companyID, now, facts, heading, base, AssembleOptions{ProjectID: within}, identity.BaseLanguageForRecord(ctx, tx), loc)
 	if err != nil {
 		return false, err
 	}

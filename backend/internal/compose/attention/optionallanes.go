@@ -55,6 +55,7 @@ func (s *Service) collect(ctx context.Context, l optionalLane, named laneRoll) l
 	if !l.bound {
 		return named
 	}
+	defer timeStage(ctx, l.name)()
 	var items []crmcontracts.AttentionItem
 	err := s.degradable(ctx, laneBudget, func(context.Context) error {
 		var err error
@@ -127,7 +128,10 @@ func (s *Service) optionalLanes(
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				booked, err := s.meetings.Today(ctx, asOf, until, plannedCap, s.taskScope, s.taskOwner)
+				booked, more, err := s.meetingsAhead(ctx, asOf, until)
+				if err == nil {
+					out.MeetingsMoreAvailable = &more
+				}
 				return renderEach(booked, meetingItem), err
 			},
 			into: &out.Meetings, count: &out.Counts.Meetings,
@@ -145,11 +149,7 @@ func (s *Service) optionalLanes(
 				// nobody has closed off does not. Opening this window at the
 				// day's start made an unanswered meeting disappear overnight
 				// with its status still unset and nothing left to raise it.
-				began, err := s.unansweredSince(ctx, asOf)
-				if err != nil {
-					return nil, err
-				}
-				over, err := s.meetingsAwaitingOutcome.Since(ctx, began, asOf, plannedCap, s.taskScope, s.taskOwner)
+				over, err := s.meetingsOwingAnOutcome(ctx, asOf)
 				return renderEach(over, meetingAwaitingOutcomeItem), err
 			},
 			into: &out.MeetingsUnreported, count: &out.Counts.MeetingsUnreported,
@@ -157,13 +157,7 @@ func (s *Service) optionalLanes(
 		{
 			name: "at_risk", bound: s.atRisk != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				// The lane's own cut flag is not read here: boundedSources
-				// answers truncation for /attention's whole page from the row
-				// counts, and moving this one source off that reading would
-				// leave two spellings of "was this cut" side by side. The team
-				// board, which has no row counts to fall back on, reads the flag.
-				risky, _, err := s.atRisk.Quiet(ctx)
-				return renderEach(risky, riskItem), err
+				return s.readRisk(ctx, out)
 			},
 			into: &out.AtRisk, count: &out.Counts.AtRisk,
 		},
@@ -211,9 +205,12 @@ func (s *Service) optionalLanes(
 			into: &out.NoticeCases, count: &out.Counts.NoticeCases,
 		},
 		{
-			name: "relationship_decay", bound: s.decay != nil,
+			name: "relationship_decay", bound: s.decay != nil && !s.omitDecay,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				lapsed, err := s.decay.Lapsed(ctx)
+				lapsed, more, err := s.decay.Lapsed(ctx, s.taskScope, s.taskOwner)
+				if err == nil {
+					out.RelationshipDecayMoreAvailable = &more
+				}
 				return renderEach(lapsed, lapsedItem), err
 			},
 			into: &out.RelationshipDecay, count: &out.Counts.RelationshipDecay,
@@ -241,10 +238,10 @@ func (s *Service) operationalLanes(
 		{
 			name: "domain_questions", bound: s.domainQuestions != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				// No window and no page cut: an open question waits until
-				// somebody answers it, and a bound would hide the oldest —
-				// which are exactly the reader's real backlog.
 				questions, err := s.domainQuestions.OpenDomainQuestions(ctx)
+				if err == nil {
+					out.DomainQuestionsMoreAvailable = new(len(questions) >= DomainQuestionLimit)
+				}
 				return renderEach(questions, domainQuestionItem), err
 			},
 			into: &out.DomainQuestions, count: &out.Counts.DomainQuestions,
@@ -266,7 +263,14 @@ func (s *Service) operationalLanes(
 				// it — aging out unseen would undo the transport's one
 				// promise.
 				unread, err := s.notices.Unread(ctx, doneCap)
-				return renderEach(unread, noticeItem), err
+				if err != nil {
+					return nil, err
+				}
+				kept, err := s.noticesWithoutDecisions(ctx, unread)
+				if err == nil {
+					out.NoticesMoreAvailable = new(len(unread) >= doneCap)
+				}
+				return renderEach(kept, noticeItem), err
 			},
 			into: &out.Notices, count: &out.Counts.Notices,
 		},
@@ -357,4 +361,17 @@ func fill(
 		assign()
 		return omitted, nil
 	}
+}
+
+func (s *Service) readRisk(ctx context.Context, out *crmcontracts.Attention) ([]crmcontracts.AttentionItem, error) {
+	owners, err := s.recordOwners(ctx)
+	if err != nil {
+		return nil, err
+	}
+	risky, cut, err := s.atRisk.Quiet(ctx, owners)
+	if err != nil {
+		return nil, err
+	}
+	out.AtRiskMoreAvailable = &cut
+	return renderEach(risky, riskItem), nil
 }

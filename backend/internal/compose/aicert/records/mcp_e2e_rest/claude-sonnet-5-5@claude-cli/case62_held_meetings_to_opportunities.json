@@ -1,0 +1,24 @@
+{
+  "scenario": "case62_held_meetings_to_opportunities",
+  "criteria": [
+    1
+  ],
+  "passed": 0,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "rest",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 28,
+    "output_tokens": 4310,
+    "cache_creation_input_tokens": 101756,
+    "cache_read_input_tokens": 558263,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.506
+  }
+}

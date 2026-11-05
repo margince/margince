@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -28,6 +29,7 @@ import (
 // TestEverySourceOffersAWayOffTheList holds that each one does.
 var doneInPlace = map[crmcontracts.WorklistItemSource]bool{
 	crmcontracts.WorklistItemSourceAwaitingReply:       true,
+	crmcontracts.WorklistItemSourceDomainQuestion:      true,
 	crmcontracts.WorklistItemSourceMeetingFollowUp:     true,
 	crmcontracts.WorklistItemSourceDealAtRisk:          true,
 	crmcontracts.WorklistItemSourceMeeting:             true,
@@ -41,6 +43,8 @@ var doneInPlace = map[crmcontracts.WorklistItemSource]bool{
 	crmcontracts.WorklistItemSourceUndelivered:         true,
 	crmcontracts.WorklistItemSourceDsr:                 true,
 	crmcontracts.WorklistItemSourceNoticeCase:          true,
+	// Done sets a case aside for this owner alone; the other owners keep it.
+	crmcontracts.WorklistItemSourceContactCase: true,
 }
 
 // DoneStore keeps the reader's own Done set. OPTIONAL: unbound, no row is ever
@@ -61,6 +65,9 @@ type doneState struct {
 	at    map[RowRef]time.Time
 	zone  *time.Location
 	probe func([]ranked)
+	// asked are the rows a Done check looks for, by source. A tail may hold
+	// them below the ranked rows.
+	asked map[crmcontracts.WorklistItemSource][]ids.UUID
 }
 
 // offersDone is whether a source's rows offer Done. dispositionsFor answers
@@ -71,6 +78,9 @@ func offersDone(source crmcontracts.WorklistItemSource) bool {
 
 // dispositionsFor is what a row offers a reader who is putting it down.
 func dispositionsFor(row ranked, reader ids.UUID) []crmcontracts.WorklistItemDispositions {
+	if domainMaintenanceBatch(row) {
+		return nil
+	}
 	if row.item.Source == sourceWaiting {
 		return waitingDispositions(row, reader)
 	}
@@ -85,7 +95,7 @@ func dispositionsFor(row ranked, reader ids.UUID) []crmcontracts.WorklistItemDis
 // day with every lane's own grant and row scope. A row on no scope the reader holds is
 // not found.
 func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
-	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
+	if actor, ok := principal.Actor(ctx); !ok || !actor.HumanOrItsAgent() {
 		return apperrors.ErrPermissionDenied
 	}
 	if s.marked.store == nil {
@@ -94,9 +104,26 @@ func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
 	missing := make(map[RowRef]bool, len(rows))
 	for _, row := range rows {
 		if !offersDone(crmcontracts.WorklistItemSource(row.Source)) {
-			return fmt.Errorf("attention: a %q row offers no Done: %w", row.Source, apperrors.ErrInvalidArgument)
+			return httperr.Validation("rows", "not_doneable", fmt.Sprintf("a %q row offers no Done", row.Source))
 		}
 		missing[row] = true
+	}
+	if s.domainQuestions != nil {
+		for row := range missing {
+			if row.Source != string(sourceDomainQuestion) {
+				continue
+			}
+			visible, err := s.domainQuestions.OwnsDomainQuestion(ctx, row.RowID)
+			if err != nil {
+				return err
+			}
+			if visible {
+				delete(missing, row)
+			}
+		}
+	}
+	if len(missing) == 0 {
+		return s.marked.store.MarkDone(ctx, rows)
 	}
 	for _, scope := range scopeOptionsFor(ctx) {
 		if err := s.dropShown(ctx, scope, missing); err != nil {
@@ -122,9 +149,18 @@ func (s *Service) ReopenRows(ctx context.Context, rows []RowRef) error {
 // scope, its group members included, with nothing hidden as done.
 func (s *Service) dropShown(ctx context.Context, scope string, missing map[RowRef]bool) error {
 	probe := *s
+	probe.marked.asked = map[crmcontracts.WorklistItemSource][]ids.UUID{}
+	for row := range missing {
+		if id, err := ids.Parse(row.RowID); err == nil {
+			source := crmcontracts.WorklistItemSource(row.Source)
+			probe.marked.asked[source] = append(probe.marked.asked[source], id)
+		}
+	}
 	probe.marked.probe = func(candidates []ranked) {
 		for _, row := range candidates {
-			delete(missing, refOf(row))
+			if !domainMaintenanceBatch(row) {
+				delete(missing, refOf(row))
+			}
 			for _, member := range row.members {
 				delete(missing, RowRef{Source: member.Source, RowID: member.RowID})
 			}
@@ -141,7 +177,8 @@ func (s *Service) readingDone(ctx context.Context, day crmcontracts.Attention) (
 	if s.marked.store == nil || s.marked.probe != nil {
 		return s, nil
 	}
-	candidates := classifyDay(day, day.AsOf, s.money)
+	// The refused rows are reported by worklistFrom, which admits the same day.
+	candidates, _ := admitBySource(ctx, classifyDay(day, day.AsOf, s.money))
 	among := make([]RowRef, 0, len(candidates))
 	for _, row := range candidates {
 		among = append(among, refOf(row))
@@ -193,6 +230,9 @@ func cameBack(row ranked, doneAt, asOf time.Time, zone *time.Location) bool {
 	after := func(moment *time.Time) bool {
 		return moment != nil && moment.After(doneAt) && !moment.After(asOf)
 	}
+	if row.item.Source == crmcontracts.WorklistItemSourceDomainQuestion {
+		return after(&row.subjectMovedAt)
+	}
 	if after(row.item.OccurredAt) || after(&row.subjectMovedAt) || after(&row.newestMember) {
 		return true
 	}
@@ -204,4 +244,9 @@ func cameBack(row ranked, doneAt, asOf time.Time, zone *time.Location) bool {
 		return !deals.CloseIsOverdue(*due, doneAt, zone) && deals.CloseIsOverdue(*due, asOf, zone)
 	}
 	return after(due)
+}
+
+// A bounded maintenance group cannot dismiss unseen members; review defers each question.
+func domainMaintenanceBatch(row ranked) bool {
+	return row.item.Batch != nil && row.item.Batch.Key == domainQuestionsBatchKey
 }

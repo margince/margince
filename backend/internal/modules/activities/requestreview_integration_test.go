@@ -32,7 +32,7 @@ func TestAnotherReaderSeesCoverageWithoutReadingAPrivateReminder(t *testing.T) {
 	other.UserID, other.ID = e.other, "human:"+e.other.String()
 	other.Permissions.Objects["activity"] = principal.ObjectGrant{Read: true, Create: true}
 	reader := principal.WithActor(e.as(), other)
-	summaries, err := store.EmailSummariesByID(reader, []ids.UUID{id})
+	summaries, err := readingAtRequest(store).EmailSummariesByID(reader, []ids.UUID{id})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,8 +51,27 @@ func TestAnotherReaderSeesCoverageWithoutReadingAPrivateReminder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A request task reaches whoever may read the mail it was read out of, and
+	// no further.
+	//
+	// So the test is that it never reaches wider, rather than that it is always
+	// private. This mail is the workspace's, so its task is too, and a task
+	// drawn from limited mail is narrowed instead.
+	var mail, task string
+	if err := e.owner.QueryRow(t.Context(),
+		`SELECT audience FROM activity WHERE id = $1`, id).Scan(&mail); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.owner.QueryRow(t.Context(),
+		`SELECT audience FROM activity WHERE source_activity_id = $1 AND kind = 'task'`, id).Scan(&task); err != nil {
+		t.Fatal(err)
+	}
+	if mail != "workspace" && task == "workspace" {
+		t.Fatalf("the request task reaches the workspace where its mail reaches only %q", mail)
+	}
 	for _, row := range rows {
-		if row.SourceActivityId != nil && ids.UUID(*row.SourceActivityId) == id && row.Subject != nil {
+		if row.SourceActivityId != nil && ids.UUID(*row.SourceActivityId) == id &&
+			row.Subject != nil && mail != "workspace" {
 			t.Fatal("coverage disclosed private task content")
 		}
 	}
@@ -70,8 +89,8 @@ func TestConflictingNoiseLabelStaysReviewableWithoutAutomaticAssignment(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if source.Summary.RequestHasReminder == nil || *source.Summary.RequestHasReminder || source.Summary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
-		t.Fatal("conflicting topic either assigned or lost the confirmed request")
+	if source.Summary.RequestHasReminder == nil || *source.Summary.RequestHasReminder || source.Summary.Move != crmcontracts.EmailSummaryMoveNone {
+		t.Fatal("conflicting automatic judgments manufactured a reply obligation or reminder")
 	}
 	review, _, err := store.ListActivities(e.as(), ListActivitiesInput{RequestReviewAsOf: &at})
 	if err != nil {
@@ -109,7 +128,7 @@ func TestUnthreadedUnclassifiedMailNeedsRequestEvidence(t *testing.T) {
 		}
 	}
 	assertListed(false)
-	if _, err := store.SetCaptureLabel(asClassifier(e), ids.UUID(source.Id), "meeting"); err != nil {
+	if _, err := labelCurrent(asClassifier(e), store, ids.UUID(source.Id), "meeting"); err != nil {
 		t.Fatal(err)
 	}
 	assertListed(true)
@@ -171,7 +190,7 @@ func TestDifferentRequestsInOneConversationNeedSeparateResolution(t *testing.T) 
 	subject, direction := "Re: rollout", "inbound"
 	requests := []ids.UUID{}
 	for _, body := range []string{"Please send meeting slots.", "Please also send the signed DPA."} {
-		source, _, err := store.LogActivity(reader, LogActivityInput{Kind: "email", Subject: &subject, Body: &body, Direction: &direction, ThreadKey: "two-requests", OccurredAt: &requestInstant, Source: "test", Links: []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}})
+		source, _, err := store.LogActivity(reader, LogActivityInput{Kind: "email", Subject: &subject, Body: &body, Direction: &direction, ThreadKey: "two-requests", OccurredAt: &requestInstant, Source: "test", EmailTo: []string{seatAddress(e.rep)}, Links: []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -255,5 +274,33 @@ func TestPrivateReplyStillAnswersAnUnclassifiedThread(t *testing.T) {
 		if row.Id == source.Id {
 			t.Fatal("private reply was ignored by the conversation fallback")
 		}
+	}
+}
+
+func TestAcceptingAReadableColleagueReminderDoesNotClaimSuccess(t *testing.T) {
+	e := setupLoad(t)
+	source := seedEmailRequest(t, e, "Send the report", "commitment", OwedVerdictAsksUs)
+	store := storeKnowing(e)
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	var task ids.UUID
+	if err := e.owner.QueryRow(e.as(), `SELECT id FROM activity WHERE source_system='email_request' AND source_activity_id=$1`, source).Scan(&task); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.SetAudience(e.asSeat(e.rep), ids.From[ids.ActivityKind](task), SetAudienceInput{Audience: "selected", Members: []AudienceMember{{SubjectType: "user", SubjectID: e.rep}, {SubjectType: "user", SubjectID: e.other}}}); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := store.LogActivity(e.asSeat(e.other), LogActivityInput{Kind: "task", RequestActivityID: &source, Source: "manual"})
+	var held *requestHeldError
+	if !errors.Is(err, apperrors.ErrConflict) || !errors.As(err, &held) {
+		t.Fatalf("accepting colleague reminder returned %v, want actionable conflict", err)
+	}
+	got, err := store.GetActivity(e.asSeat(e.rep), ids.From[ids.ActivityKind](task), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AssigneeId == nil || ids.UUID(*got.AssigneeId) != e.rep {
+		t.Fatal("failed acceptance changed another seat's assignment")
 	}
 }

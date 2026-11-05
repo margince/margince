@@ -82,7 +82,15 @@ const (
 	// observedReplaced: the value landed AND retired an older one, which is
 	// the case an undo exists for.
 	observedReplaced
+	// observedRestated: the row was not written because it already holds this
+	// value from a statement at least as recent.
+	observedRestated
 )
+
+// landed reports whether the record carries the statement's value afterwards.
+func (o observedOutcome) landed() bool {
+	return o == observedApplied || o == observedConfirmed || o == observedReplaced
+}
 
 // applyObservedField writes one dated statement of a single-answer field,
 // superseding what is older. A phone is a list and goes through
@@ -117,6 +125,14 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	if err != nil {
 		return observedSkipped, err
 	}
+	held, err := heldFieldValue(ctx, tx, contactID, f.Field)
+	if err != nil {
+		return observedSkipped, err
+	}
+	wrote := observedApplied
+	if seeded != "" || (held != "" && held != f.Value) {
+		wrote = observedReplaced
+	}
 
 	// Nil rather than the zero time, so the statement below takes the
 	// transaction's own clock. A zero time.Time sent as a timestamp is year 1,
@@ -132,8 +148,14 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		Source: f.Source, CapturedBy: f.CapturedBy, Confidence: f.Confidence,
 		ObservedAt: observedAt, Superseded: seeded,
 	}, supersedeOnNewerObservation)
-	if err != nil || !landed {
+	if err != nil {
 		return observedSkipped, err
+	}
+	if !landed {
+		if held == f.Value {
+			return observedRestated, nil
+		}
+		return observedSkipped, nil
 	}
 
 	column, mirrored := observedFieldColumn(f.Field)
@@ -141,7 +163,7 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		// role, linkedin, company_name, website: no column to fill. company_name in
 		// particular must never touch a company — the promotion pass
 		// weighs these rows and decides that separately.
-		return observedApplied, nil
+		return wrote, nil
 	}
 	if observedNameFields[f.Field] {
 		guessed, err := splitNameIsCapturesGuessTx(ctx, tx, contactID)
@@ -152,7 +174,7 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		// evidence. A reader comparing it against the name on the page can see
 		// that a colleague's answer was kept. Only the column is left alone.
 		if !guessed {
-			return observedApplied, nil
+			return wrote, nil
 		}
 	}
 	tag, err := tx.Exec(ctx, `
@@ -175,7 +197,20 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		}
 		return observedConfirmed, nil
 	}
-	return observedApplied, nil
+	return wrote, nil
+}
+
+// heldFieldValue is the single-answer value the evidence row holds before a
+// statement lands, or empty when no row holds one.
+func heldFieldValue(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, field string) (string, error) {
+	var value string
+	err := tx.QueryRow(ctx, `
+		SELECT value FROM contact_profile_field
+		 WHERE contact_id = $1 AND field = $2 AND value_key = ''`, contactID, field).Scan(&value)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return "", fmt.Errorf("contacts: reading the %s a statement would replace: %w", field, err)
+	}
+	return value, nil
 }
 
 // observedFieldColumn maps a field to the contact column that displays it, when

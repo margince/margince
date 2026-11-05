@@ -150,3 +150,25 @@ func assertDownRecordsEveryDuty(ctx context.Context, t *testing.T, conn *pgx.Con
 		t.Errorf("after the rollback the duty the upgrade closed is %q, want open", state)
 	}
 }
+
+func execFile(ctx context.Context, t *testing.T, conn *pgx.Conn, path string) {
+	t.Helper()
+	sql, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, string(sql)); err != nil {
+		t.Fatalf("%s: %v", path, err)
+	}
+}
+
+func caseAndKind(ctx context.Context, t *testing.T, conn *pgx.Conn, caseID string) (state, kind string) {
+	t.Helper()
+	if err := conn.QueryRow(ctx, `
+		SELECT n.state, e.kind FROM privacy_notice_case n
+		  JOIN contact_acquisition_evidence e ON e.id = n.acquisition_id
+		 WHERE n.id = $1`, caseID).Scan(&state, &kind); err != nil {
+		t.Fatal(err)
+	}
+	return state, kind
+}

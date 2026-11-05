@@ -14,6 +14,8 @@ the same rules as its users.
 
 The product site is [margince.com](https://margince.com). This repository holds the source code.
 
+Margince is source-available, not open source. [LICENSING.md](LICENSING.md) explains what you may do with it.
+
 ## Use it
 
 The [handbook](docs/handbook/README.md) explains the app for the teams who use it. It has no code.
@@ -34,7 +36,8 @@ Stop it with `make dev-stop`. Without step 3 the app starts empty, the way a new
 first admin password is then in `config/margince-admin-password`, and the app asks you to change it.
 
 Each git worktree gets its own database and ports, so two copies can run at the same time.
-[docs/reference/make-targets.md](docs/reference/make-targets.md) lists every command.
+[docs/reference/make-targets.md](docs/reference/make-targets.md) lists every command. To change a
+setting, read [docs/how-to/change-a-setting.md](docs/how-to/change-a-setting.md).
 
 ## Work on the code
 
@@ -44,7 +47,7 @@ Each git worktree gets its own database and ports, so two copies can run at the 
   and the order to read it in.
 - [docs/README.md](docs/README.md): all the documentation.
 
-`make check` is the test that every pull request must pass. Run it before you push.
+`make check` is the test that every pull request must pass. Run it before a pull request leaves draft.
 
 The core is a Go module in `backend/` and a React app in `frontend/`. The API contract is
 `backend/api/crm.yaml`. The server code and the web app's types are built from it, so the two cannot
@@ -73,26 +76,32 @@ provider. [docs/reference/ai-egress.md](docs/reference/ai-egress.md) lists, for 
 - Phone calls and click-to-call.
 - A hosted service or many companies in one installation. One installation serves one company.
 
-Open work is in [GitHub issues](https://github.com/margince/margince/issues), and past releases are in
-[CHANGELOG.md](CHANGELOG.md).
+Open work is in [GitHub issues](https://github.com/margince/margince/issues), and past releases are on the
+[releases page](https://github.com/margince/margince/releases).
 
 ## Security
+
+Using Margince and something is wrong? The handbook's
+[Report a problem](docs/handbook/report-a-problem.md) says how to tell us, and what to leave out.
 
 Report a security problem in private, as [SECURITY.md](SECURITY.md) explains. Do not open a public issue
 for it.
 
 ## License
 
-Margince uses the Business Source License 1.1 ([LICENSE](LICENSE)). The source is public. You may read,
-run and change it. [LICENSING.md](LICENSING.md) explains the license, and why you accept [CLA.md](CLA.md) to send code.
+Margince is source-available under the Business Source License 1.1 ([LICENSE](LICENSE)). The source is
+public. You may read, run and change it. [LICENSING.md](LICENSING.md) explains the license, and why you
+accept [CLA.md](CLA.md) to send code.
 
-- You may use it free in production for your own company, up to 10 seats. The limit is for all your
+- You may use it free in production for your own company, up to 3 seats. The limit is for all your
   installations and the companies you own or that own you. A seat is a named user. AI agents and
   service accounts are not seats.
 - To host it as a service for other companies, you need a hosting partner agreement with Gradion.
 - Each release becomes Apache 2.0 no later than two years after it ships.
 
 Outside `dev` and `test` mode, the server needs a license token from Gradion to start, even for one
-seat. Today you ask us for that token. If this blocks you, please say so in an issue.
+seat. For up to 3 seats, ask for a free token with the
+[free license form](https://dist.margince.com/free-license). It lasts one year. If this blocks you, please say so
+in an issue.
 
 Prices are on [margince.com](https://margince.com). Margince is built by [Gradion](https://gradion.com).

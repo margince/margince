@@ -201,46 +201,11 @@ function findingsIn(path: string, source: string): Finding[] {
   return found;
 }
 
-/**
- * This gate's own ceiling, because it does not belong to the population
- * `vitest.budget.ts` measures.
- *
- * That ceiling is arithmetic over WAITING — the longest chain of one-second
- * waiters a test legitimately composes, plus the slowest measured test. This
- * gate waits for nothing. It type-parses every source file in the tree, so its
- * cost is the corpus, and the two numbers have no relationship at all. It sat
- * under that ceiling only while the tree was small enough for the coincidence
- * to hold, and stopped when the tree grew: `Test timed out in 13437ms` on main,
- * on two consecutive runs, with every assertion in it passing.
- *
- * Derived per FILE and then multiplied out, not picked whole: a budgeted corpus
- * at 40ms each. The invariant is that the budgeted count stays AHEAD of the
- * real one, and the assertion below is what makes the ceiling arrive as a named
- * count rather than as a timeout when it stops being. The margin rule is the
- * one that survived three raises: size it against this tree's merge rate, never
- * to the round number above today's count. A budget with thirty files of slack
- * fails next week, and every raise that only cleared the current tree was
- * followed by another. Measured at ~3.3ms per file on an idle ten-core machine
- * and unchanged under eight spinners — the cost is the parse, not contention
- * for a core. A CI runner is smaller and saturated by the rest of the suite
- * running in parallel, and needed more than 12.5ms per file there, so the
- * allowance is an order of magnitude over the local measurement rather than a
- * margin trimmed to fit.
- *
- * Written as the product so the derivation is in the code and not only here.
- * scripts/test-budget.test.ts refuses a timeout it cannot statically fold —
- * correctly, since a ceiling no reader can evaluate is one no reader can audit
- * — and it rejected a first version that multiplied by `sourceFiles().length`
- * at runtime. Two constants fold; a directory walk does not.
- *
- * What that costs is that the number cannot scale ITSELF, so the corpus size it
- * assumes is asserted in the test body instead: the tree outgrowing this budget
- * fails by name and count rather than returning as an opaque timeout.
- */
+// This AST scan needs a corpus budget, separate from tests that wait for UI changes.
+// Static constants keep the timeout auditable by the test-budget gate.
 const PARSE_BUDGET_PER_FILE_MS = 40;
-// About a month of headroom at the growth measured on main when this was set —
-// roughly fifty source files a day, over a corpus of just past 2,000.
-const BUDGETED_CORPUS_FILES = 3_500;
+// Headroom for source growth; the census below fails before the scan outgrows it.
+const BUDGETED_CORPUS_FILES = 5_000;
 const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("one plural rule", () => {

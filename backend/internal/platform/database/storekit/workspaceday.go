@@ -6,6 +6,8 @@ package storekit
 import (
 	"fmt"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // LoadZone resolves an IANA zone name to a *time.Location, wrapping the failure
@@ -41,8 +43,7 @@ func LoadZone(name string) (*time.Location, error) {
 // bind read back unchanged. A value carrying the local wall time would bind as
 // a different day west of UTC — the exact off-by-one this helper exists to end.
 func WorkspaceDay(t time.Time, loc *time.Location) time.Time {
-	local := t.In(loc)
-	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
+	return elapsed.CalendarDay(t, loc)
 }
 
 // AsDate reduces a value to the calendar date it ALREADY names — its UTC

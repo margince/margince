@@ -3,25 +3,14 @@ import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
-import { routeHash } from "../../lib/router";
-import { hashWithParams, useUrlParams } from "../../lib/urlstate";
+import { useUrlParams } from "../../lib/urlstate";
 import { ApprovalBundleReview } from "../worklist/worklist.bundle";
 import { useApproval, worklistKey } from "../worklist/worklist.queries";
 import { ApprovalRow } from "./approvalrow";
 
-/** The address parameter that opens one decision over Home. */
-export const APPROVAL_PARAM = "approval";
+export { APPROVAL_PARAM, approvalHref } from "./approvalhref";
 
-/**
- * The address of one pending decision. Every surface that announces a decision
- * links here, so the reader arrives at that decision and not at the queue.
- */
-export function approvalHref(id: string): string {
-  return hashWithParams(
-    routeHash({ screen: "home" }),
-    new Map([[APPROVAL_PARAM, id]]),
-  );
-}
+import { APPROVAL_PARAM } from "./approvalhref";
 
 /**
  * One decision, fetched whole and answered in a drawer: the same ApprovalRow

@@ -16,14 +16,14 @@
 // Two shapes the contract carries are NOT here, and their absence is the
 // design rather than a gap:
 //
-//   - Custom fields. A record's `additional_properties` needs the field
-//     catalog, and reading the catalog opens a second transaction — the very
-//     acquire the port's tx-borrowing seams exist to avoid. The port refuses a
-//     write that carries them rather than dropping them silently.
-//   - `format: uuid` and `format: email` as their own Go types. They generate
-//     openapi_types.UUID, which this package may not import (`pkg-purity` is a
-//     strict depguard over backend/pkg), and a unit handles both as strings
-//     anyway — extension.Caller.UserID is a string for the same reason.
+//   - Custom fields on a WRITE. The port refuses a write that carries them
+//     rather than dropping them silently. A read returns them in
+//     `additional_properties`, keyed by column name.
+//   - `format: uuid`, `format: email` and `format: date` as their own Go types.
+//     They generate openapi_types, which this package may not import
+//     (`pkg-purity` is a strict depguard over backend/pkg), and a unit handles
+//     all three as strings anyway — extension.Caller.UserID is a string for the
+//     same reason. A date is the text `2026-01-31`.
 //
 //margince:extension-surface
 package crm
@@ -36,6 +36,6 @@ package crm
 // and a pruning pass would empty the package while the manifest still looked
 // right.
 
-//go:generate go run github.com/margince/margince/backend/tools/contract-subset -in ../../../api/crm.yaml -out .build/subset31.yaml -schemas Activity,CreateActivityRequest
+//go:generate go run github.com/margince/margince/backend/tools/contract-subset -in ../../../api/crm.yaml -out .build/subset31.yaml -schemas Activity,CreateActivityRequest,Deal,Company,Signal
 //go:generate go run github.com/margince/margince/backend/tools/contract-overlay -in .build/subset31.yaml -out .build/subset30.yaml
 //go:generate go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.1 --config oapi.yaml .build/subset30.yaml

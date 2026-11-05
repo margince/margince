@@ -291,3 +291,39 @@ func TestAChunkAfterABlankLinePointsAtItsOwnText(t *testing.T) {
 		t.Fatalf("the last chunk points at line %d, which is blank", last.StartLine)
 	}
 }
+
+func TestAnAuthorNoteLineIsNotPassageText(t *testing.T) {
+	page := "<!-- prose:plain -->\n<!-- describes: backend/internal/modules/comms -->\n# Sending mail\n\nA rep sends from the deal.\n"
+	got := ChunkText(page)
+	if len(got) != 1 {
+		t.Fatalf("got %d chunks, want 1", len(got))
+	}
+	if strings.Contains(got[0].Text, "<!--") || strings.Contains(got[0].Text, "backend/") {
+		t.Fatalf("chunk carries an author note: %q", got[0].Text)
+	}
+	if got[0].StartLine != 3 {
+		t.Fatalf("StartLine = %d, want 3: the title is the page's third line", got[0].StartLine)
+	}
+}
+
+func TestACommentInsideALineStaysText(t *testing.T) {
+	for _, line := range []string{
+		"Press **Save** <!-- the card's own label --> to keep it.",
+		"<!-- a --> Press **Save** to keep it. <!-- b -->",
+	} {
+		got := ChunkText(line)
+		if len(got) != 1 || !strings.Contains(got[0].Text, "Save") {
+			t.Fatalf("ChunkText(%q) lost the prose around its comments: %+v", line, got)
+		}
+	}
+}
+
+func TestACommentOverSeveralLinesKeepsTheLineCount(t *testing.T) {
+	got := ChunkText("<!--\n  a note\n  over lines\n-->\n# Title\n\nBody.\n")
+	if len(got) != 1 {
+		t.Fatalf("got %d chunks, want 1", len(got))
+	}
+	if got[0].StartLine != 1 || !strings.Contains(got[0].Text, "# Title") {
+		t.Fatalf("a comment over several lines moved the text: StartLine %d, %q", got[0].StartLine, got[0].Text)
+	}
+}

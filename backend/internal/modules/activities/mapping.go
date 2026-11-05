@@ -192,16 +192,32 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		Subject:    req.Subject,
 		Body:       req.Body,
 		OccurredAt: req.OccurredAt,
-		DueAt:      req.DueAt,
-		RemindAt:   req.RemindAt,
-		AssigneeID: idArg[ids.UserKind](req.AssigneeId),
-		IsDone:     req.IsDone,
+		// Checked by the store, which also decides what a new time alone means.
+		OccurredPrecision: (*string)(req.OccurredPrecision),
+		DueAt:             req.DueAt,
+		DueHasTime:        req.DueHasTime,
+		RemindAt:          req.RemindAt,
+		AssigneeID:        idArg[ids.UserKind](req.AssigneeId),
+		IsDone:            req.IsDone,
 		// Carried, not checked here: the kind this must pair with belongs to the
 		// stored row, and only the store has read it. UpdateActivity refuses the
 		// mismatch with the same MeetingStatusKindError create raises.
 		MeetingStatus: meetingStatusArg(req.MeetingStatus),
+		CallOutcome:   callOutcomeArg(req.CallOutcome),
 		IfVersion:     ifVersion,
+		CustomFields:  req.AdditionalProperties,
 	}
+}
+
+// callOutcomeArg unwraps the contract's enum. A null is not a value here: it
+// arrives in the patch's Clear list (httperr.ClearedFields) and clears the
+// outcome, while a field left out changes nothing.
+func callOutcomeArg(outcome *crmcontracts.UpdateActivityRequestCallOutcome) *string {
+	if outcome == nil || *outcome == "" {
+		return nil
+	}
+	s := string(*outcome)
+	return &s
 }
 
 // meetingStatusArg unwraps the contract's enum into the store's plain string.
@@ -313,17 +329,19 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		return LogActivityInput{}, err
 	}
 	in := LogActivityInput{
-		Kind:         string(req.Kind),
-		Subject:      req.Subject,
-		Body:         req.Body,
-		OccurredAt:   req.OccurredAt,
-		DueAt:        req.DueAt,
-		RemindAt:     req.RemindAt,
-		SourceSystem: req.SourceSystem,
-		SourceID:     req.SourceId,
-		Source:       req.Source,
-		Author:       author,
-		AssigneeID:   idArg[ids.UserKind](req.AssigneeId),
+		Recommendation: req.Recommendation,
+		Kind:           string(req.Kind),
+		Subject:        req.Subject,
+		Body:           req.Body,
+		OccurredAt:     req.OccurredAt,
+		DueAt:          req.DueAt,
+		DueHasTime:     req.DueHasTime != nil && *req.DueHasTime,
+		RemindAt:       req.RemindAt,
+		SourceSystem:   req.SourceSystem,
+		SourceID:       req.SourceId,
+		Source:         req.Source,
+		Author:         author,
+		AssigneeID:     idArg[ids.UserKind](req.AssigneeId),
 	}
 	if err := optionalFieldsFrom(req, &in); err != nil {
 		return LogActivityInput{}, err
@@ -348,6 +366,10 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 	if err := importedProvenanceFrom(req, &in); err != nil {
 		return LogActivityInput{}, err
 	}
+	if err := refuseNonCustomKeys(req.AdditionalProperties); err != nil {
+		return LogActivityInput{}, err
+	}
+	in.CustomFields = req.AdditionalProperties
 	// The task create's own rule, held on this door too: a task is its subject.
 	// Last, so a refusal of a field the caller sent wins over a missing subject.
 	if in.Kind == string(crmcontracts.CreateActivityRequestKindCreateActivityRequestKindTask) {
@@ -361,6 +383,9 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		}
 		in.Subject = &subject
 	}
+	if err := CheckEntryHasContent(in.Kind, in.Subject, in.Body, in.CallOutcome); err != nil {
+		return LogActivityInput{}, err
+	}
 	return in, nil
 }
 
@@ -370,6 +395,9 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 // duration rules are the pieces of CheckKindFields, asked where they were.
 // Every branch here means "the caller said nothing, so leave it alone".
 func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
+	if err := followUpFieldsFrom(req, in); err != nil {
+		return err
+	}
 	if req.RequestActivityId != nil {
 		if string(req.Kind) != string(crmcontracts.ActivityKindTask) {
 			return &RequestAcceptanceFieldError{Field: "request_activity_id", Message: "Only a task can accept a request."}
@@ -388,12 +416,25 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 		d := string(*req.Direction)
 		in.Direction = &d
 	}
+	if req.OccurredPrecision != nil {
+		in.OccurredPrecision = string(*req.OccurredPrecision)
+	}
 	if err := checkMeetingStatusKind(in.Kind, meetingStatusOf(req.MeetingStatus)); err != nil {
+		return err
+	}
+	if err := checkTaskFieldsKind(in.Kind, taskFields{dueAt: req.DueAt, remindAt: req.RemindAt, assignee: idArg[ids.UserKind](req.AssigneeId)}); err != nil {
 		return err
 	}
 	if req.MeetingStatus != nil {
 		m := string(*req.MeetingStatus)
 		in.MeetingStatus = &m
+	}
+	if req.CallOutcome != nil {
+		outcome := string(*req.CallOutcome)
+		if err := checkCallOutcomeKind(in.Kind, &outcome); err != nil {
+			return err
+		}
+		in.CallOutcome = &outcome
 	}
 	// Only a meeting has a host to name. A caller who sends one on a mail or a
 	// task is refused rather than having it dropped: the field they meant to set

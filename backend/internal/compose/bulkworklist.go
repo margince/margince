@@ -57,6 +57,9 @@ func (t worklistBulkTarget) lockItem(ctx context.Context, tx pgx.Tx, id ids.UUID
 
 func (t worklistBulkTarget) lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error) {
 	item, err := t.lockItem(ctx, tx, id)
+	if err == nil && item.promise {
+		return bulkRow{}, apperrors.ErrNotFound
+	}
 	return item.row, err
 }
 
@@ -89,6 +92,11 @@ func applyCompletion(
 	if err != nil {
 		skip, classifyErr := classify(err)
 		return bulkApplied{}, skip, classifyErr
+	}
+	// A taskless team claim has no personal assignee. Old batch undo still
+	// restores its prior state through the original record writer.
+	if forward && found.promise {
+		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNotFound), nil
 	}
 	if found.row.version != item.Version {
 		return bulkApplied{}, skipped(moved), nil

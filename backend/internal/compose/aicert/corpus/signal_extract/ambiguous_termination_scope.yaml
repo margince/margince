@@ -1,0 +1,18 @@
+name: ambiguous_termination_scope
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+- direction: inbound
+  subject: Engagement decision
+  sent: '2026-09-08'
+  body: "We decided to stop working with you. I cannot confirm whether this applies to the pilot or the whole account."
+expect:
+  outcome: accepted
+  answer:
+  - kind: contract_ended
+    message: 1
+    lifecycle_scope: unknown
+  judge: none
+  judge_none_reason: The cited words distinguish the extent of the ending from continuing work without inferring that one engagement ends the account.

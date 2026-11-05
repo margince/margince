@@ -46,7 +46,7 @@ func TestTheGroundingNamesEveryRecordTheInputHolds(t *testing.T) {
 	scoped := ids.From[ids.ProjectKind](project)
 
 	in := FromView(view, Request{ProjectID: &scoped, Envelope: envelopeAt(textlang.English, convstate.BandWeeks)})
-	got, err := in.Grounding(datasource.EntityContact)
+	got, err := in.Grounding()
 	if err != nil {
 		t.Fatalf("grounding: %v", err)
 	}

@@ -8,14 +8,16 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
-import { WorklistScreen } from "./worklist";
+import { en } from "../../i18n/en";
 import {
   day,
   jsonResponse,
   renderWorklist,
   row,
   stub,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
+import { WorklistScreen } from "./worklist";
+import { tomorrowMorning } from "./worklist.briefverbs";
 
 // A brief item is seller work, and it is answerable where it is ranked.
 //
@@ -110,16 +112,29 @@ describe("a brief item is answerable from the queue", () => {
     renderWorklist();
 
     await screen.findByText(/Advance the Northstar deal/);
-    expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: en["brief.act"] })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Snooze" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeTruthy();
+  });
+
+  it("opens the deal without claiming to perform its work", async () => {
+    const fetched = stubWrites();
+    renderWorklist();
+    const link = await screen.findByRole("link", { name: en["deal.openDeal"] });
+    expect(link.getAttribute("href")).toBe(
+      "/r/deals/01a05500-0000-7000-8000-0000000000bb#/deals/01a05500-0000-7000-8000-0000000000bb",
+    );
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+    expect(writes(fetched)).toEqual([]);
   });
 
   it("acts through the brief's own act endpoint", async () => {
     const fetched = stubWrites();
     renderWorklist();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Done" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["brief.act"] }),
+    );
 
     await waitFor(() => {
       expect(writes(fetched)).toEqual([
@@ -247,7 +262,7 @@ describe("a brief item is answerable from the queue", () => {
     const held = stubHeldWrite();
     renderWorklist();
 
-    const done = await screen.findByRole("button", { name: "Done" });
+    const done = await screen.findByRole("button", { name: en["brief.act"] });
     await userEvent.click(done);
     await userEvent.click(done);
     held.release();
@@ -268,7 +283,7 @@ describe("a brief item is answerable from the queue", () => {
     const held = stubHeldRefetch();
     renderWorklist();
 
-    const done = await screen.findByRole("button", { name: "Done" });
+    const done = await screen.findByRole("button", { name: en["brief.act"] });
     await userEvent.click(done);
     // The write has settled: one POST is on the record.
     await waitFor(() => {
@@ -304,7 +319,7 @@ describe("a brief item is answerable from the queue", () => {
     await waitFor(() => {
       expect(document.querySelectorAll(".worklist-list li")).toHaveLength(1);
     });
-    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+    expect(screen.queryByRole("button", { name: en["brief.act"] })).toBeNull();
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
 
@@ -323,7 +338,9 @@ describe("a brief item is answerable from the queue", () => {
     );
     renderWorklist();
 
-    expect(await screen.findByRole("button", { name: "Done" })).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: en["brief.act"] }),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Snooze" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
@@ -339,7 +356,9 @@ describe("a brief item is answerable from the queue", () => {
     stubRefusedAnswer();
     renderUnderAToastRegion();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Done" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["brief.act"] }),
+    );
 
     expect(await screen.findByText(A_CONFLICT)).toBeTruthy();
   });
@@ -539,5 +558,35 @@ describe("a brief item folded into a deal at risk stays answerable", () => {
     await screen.findByText(/Northstar has gone quiet/);
     expect(screen.queryByRole("button", { name: "Snooze" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+  });
+});
+
+// Set aside returns the item at 08:00 tomorrow on the reader's clock, and that
+// moment is the one stored, whatever zone the browser runs in. 15:00Z on
+// 10 September is 22:00 in Ho Chi Minh City (already the 10th's evening) and
+// 11:00 in New York, so "tomorrow" is the 11th in New York and 08:00 there is
+// 12:00Z.
+describe("tomorrowMorning", () => {
+  it("is 08:00 on the next day of the reader's zone, not the browser's", () => {
+    const now = Date.parse("2026-09-10T15:00:00Z");
+    expect(tomorrowMorning(now, "America/New_York")).toBe(
+      "2026-09-11T12:00:00.000Z",
+    );
+    expect(tomorrowMorning(now, "Asia/Ho_Chi_Minh")).toBe(
+      "2026-09-11T01:00:00.000Z",
+    );
+  });
+
+  it("does not move with the browser's own zone", () => {
+    const real = Intl.DateTimeFormat().resolvedOptions();
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+      ...real,
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+    const now = Date.parse("2026-09-10T15:00:00Z");
+    expect(tomorrowMorning(now, "America/New_York")).toBe(
+      "2026-09-11T12:00:00.000Z",
+    );
+    vi.restoreAllMocks();
   });
 });

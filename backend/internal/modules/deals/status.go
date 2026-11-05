@@ -3,7 +3,11 @@
 
 package deals
 
-import "github.com/margince/margince/backend/internal/shared/kernel/values"
+import (
+	"slices"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
 
 // DealStatus and StageSemantic are the deal lifecycle vocabulary — the
 // Go spelling of the deal_status and stage semantic CHECKs (0006), kept
@@ -31,6 +35,14 @@ const (
 	SemanticWon  StageSemantic = "won"
 	SemanticLost StageSemantic = "lost"
 )
+
+// Status is the deal outcome established by entering this stage.
+func (s StageSemantic) Status() DealStatus {
+	if s.Terminal() {
+		return DealStatus(s)
+	}
+	return DealOpen
+}
 
 // Terminal reports whether a stage closes the deal.
 func (s StageSemantic) Terminal() bool { return s == SemanticWon || s == SemanticLost }
@@ -129,10 +141,7 @@ func (k CriterionKind) BuyerMilestone() bool {
 
 // ParseCriterionKind is the config seam's membership check.
 func ParseCriterionKind(raw string) (CriterionKind, error) {
-	switch k := CriterionKind(raw); k {
-	case CriterionBuyerConfirmed, CriterionEventHeld, CriterionDocumentSigned,
-		CriterionRoleIdentified, CriterionTermsAccepted, CriterionCustom,
-		CriterionLegalReviewed:
+	if k := CriterionKind(raw); slices.Contains(allCriterionKinds, k) {
 		return k, nil
 	}
 	return "", &values.ParseError{

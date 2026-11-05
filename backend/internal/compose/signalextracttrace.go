@@ -52,8 +52,8 @@ func (r *ThreadReadings) ReadThread(
 		row := tx.QueryRow(ctx, threadOfferQuery,
 			now.Add(-extractSettleHours*time.Hour), threadOfferPassCap,
 			extractRefusalCap, now.Add(-extractParkFor), threadKey)
-		switch err := row.Scan(&out.ReachesOneAccount, &out.IsOneBodyOfWork,
-			&out.IsFullyOpen, &out.HasANamedReader, &out.HasSettled,
+		switch err := row.Scan(&out.HasAHumanSender, &out.ReachesOneAccount, &out.IsOneBodyOfWork,
+			&out.IsFullyOpen, &out.IsFullyRead, &out.HasANamedReader, &out.HasSettled,
 			&out.IsParked, &out.HasMoved, &out.Scanned); {
 		case err == pgx.ErrNoRows:
 			// The message carries a thread key and the extractor sees no

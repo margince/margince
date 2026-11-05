@@ -48,6 +48,12 @@ func (e *dedupeEnv) seedMessage(t *testing.T, contactID ids.ContactID, thread st
 		_, err := tx.Exec(ctx, `
 			INSERT INTO activity_link (activity_id, entity_type, contact_id)
 			VALUES ($1, 'contact', $2)`, id, contactID)
+		if err != nil || direction != "inbound" {
+			return err
+		}
+		// Capture names the contact as the sender of what they wrote.
+		_, err = tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'from', $2)`, id, contactID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a channel message: %v", err)

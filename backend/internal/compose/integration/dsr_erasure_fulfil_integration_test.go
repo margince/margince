@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -91,7 +92,7 @@ func TestFulfillErasureHTTPRefusesASyntacticallyValidButNonexistentSubject(t *te
 	e := Setup(t)
 	h, store, id := setupErasureDSR(t, e, ids.NewV7().String())
 
-	w := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","resolution":"verified by phone"}`)
+	w := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","resolution":"verified by phone","identity_check":"id_document"}`)
 
 	if w.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("a well-formed but nonexistent subject must be refused 422, got %d: %s", w.Code, w.Body)
@@ -122,7 +123,7 @@ func TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments(t *testing.T) {
 	contactID := e.SeedContact(t, "Erasure Subject", nil)
 	h, _, id := setupErasureDSR(t, e, contactID.String())
 
-	first := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","resolution":"verified in person"}`)
+	first := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","resolution":"verified in person","identity_check":"in_person"}`)
 	if first.Code != http.StatusOK {
 		t.Fatalf("first fulfilment of a real contact must succeed, got %d: %s", first.Code, first.Body)
 	}
@@ -147,10 +148,10 @@ type gatedEraser struct {
 	release chan struct{}
 }
 
-func (g *gatedEraser) EraseContact(ctx context.Context, contactID ids.UUID, reason string) error {
+func (g *gatedEraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error) {
 	close(g.entered)
 	<-g.release
-	return g.inner.EraseContact(ctx, contactID, reason)
+	return g.inner.EraseContactCounted(ctx, contactID, reason)
 }
 
 // errLockHeld marks the one expected failure of the probe below — the row is
@@ -218,7 +219,7 @@ func TestFulfillErasureHoldsTheRequestLockedAcrossTheErase(t *testing.T) {
 
 	done := make(chan *httptest.ResponseRecorder, 1)
 	go func() {
-		done <- fulfilErasureDSR(t, e, h, created.ID, `{"status":"fulfilled","resolution":"verified"}`)
+		done <- fulfilErasureDSR(t, e, h, created.ID, `{"status":"fulfilled","resolution":"verified","identity_check":"id_document"}`)
 	}()
 
 	<-gate.entered // the scrub is running ⇒ the request lock must be held now

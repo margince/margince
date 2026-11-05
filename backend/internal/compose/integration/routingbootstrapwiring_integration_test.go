@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 func TestADeclaredBindingReachesTheDatabaseThroughTheRealBootstrap(t *testing.T) {
@@ -51,13 +50,13 @@ func TestADeclaredBindingReachesTheDatabaseThroughTheRealBootstrap(t *testing.T)
 	// assembled in a test is a shape the deployment file cannot produce — which
 	// is how the pointer-typed spelling of this field passed its tests while
 	// refusing every real binding.
-	cfg, err := deployconfig.Parse([]byte(`version: 1
+	cfg, err := bootstrapFrom(t, `version: 1
 workspace:
   name: Bootstrap Wiring
 bootstrap_admin:
   email: admin@wiring.test
   display_name: Wiring Admin
-  password_file: ` + pwFile + `
+  password_file: `+pwFile+`
 seeds:
   ai_routing:
     profile: sovereign
@@ -67,7 +66,7 @@ seeds:
       premium: {provider: ollama, model: wiring-model}
       frontier: {provider: ollama, model: wiring-model}
     embeddings: {provider: ollama, model: wiring-embed, dimensions: 8}
-`))
+`)
 	if err != nil {
 		t.Fatalf("parsing the deployment file: %v", err)
 	}

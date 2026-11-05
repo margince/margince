@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -180,7 +181,7 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		return crmcontracts.MeetingBrief{}, nil, err
 	}
 	if coached {
-		plan.ManagerCoaching = wireCoaching(coachingFor(written.plan))
+		plan.ManagerCoaching = wireCoaching(briefCopyFor(in.Language).coachingFor(written.plan))
 	}
 	var filed *ids.UUID
 	if in.Project != nil {
@@ -215,11 +216,12 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 // contract's field is optional, and an empty array on the wire invites a client
 // to render an empty "what you cannot see" heading.
 func omissions(in Input) *[]crmcontracts.MeetingBriefOmission {
+	words := briefCopyFor(in.Language)
 	var out []crmcontracts.MeetingBriefOmission
 	if in.RoomHidden {
 		out = append(out, crmcontracts.MeetingBriefOmission{
 			Source: "deal_room",
-			Reason: "You do not have access to Deal Rooms, so what the buyer did in this deal's room is not in this brief.",
+			Reason: words.Say(omissionWords.Room),
 		})
 	}
 	// A history this caller may not read is the difference between a quiet
@@ -230,23 +232,13 @@ func omissions(in Input) *[]crmcontracts.MeetingBriefOmission {
 	if withheld := withheldCount(in.History); withheld > 0 {
 		out = append(out, crmcontracts.MeetingBriefOmission{
 			Source: "activity_history",
-			Reason: fmt.Sprintf(
-				"%s in this account %s not yours to read, so the account arc is built from the rest.",
-				plural(withheld, "conversation"), isAre(withheld)),
+			Reason: words.withheldHistory(withheld),
 		})
 	}
 	if len(out) == 0 {
 		return nil
 	}
 	return &out
-}
-
-// isAre keeps the omission sentence grammatical for one and for many.
-func isAre(count int) string {
-	if count == 1 {
-		return "is"
-	}
-	return "are"
 }
 
 // foldRoom turns what the transaction read into the shape the writers take.
@@ -259,7 +251,7 @@ func (s *Service) foldRoom(
 	room meeting,
 	perAttendee map[ids.UUID][]crmcontracts.ConversationClaim,
 	earlier []priorMeeting,
-	lastSpoke *time.Time,
+	lastSpoke *Occurred,
 	moves []DealMoveIn,
 	roomHidden bool,
 	history []HistoryIn,
@@ -291,15 +283,17 @@ func (s *Service) foldRoom(
 // may be seen — there is no attendee whose history the count would be of.
 func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, requested *ids.ProjectID) (Input, *crmcontracts.ProjectScope, error) {
 	var room meeting
+	language := identity.BaseLanguageForPrompt(ctx, s.pool)
 	var scope *ids.ProjectID
 	var perAttendee map[ids.UUID][]crmcontracts.ConversationClaim
 	var earlier []priorMeeting
-	var lastSpoke *time.Time
+	var lastSpoke *Occurred
 	var moves []DealMoveIn
 	var roomHidden bool
 	var history []HistoryIn
 	var excerpts []ExcerptIn
 	var seats []ids.UUID
+	var zone *time.Location
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The requested project is gated BEFORE the meeting is read, because
 		// the meeting read already narrows by it (the attendees' last-touch
@@ -309,10 +303,14 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 				return err
 			}
 		}
-		loaded, err := s.readMeeting(ctx, tx, activityID, requested)
+		loaded, err := s.readMeeting(ctx, tx, activityID, requested, s.now().UTC())
 		if err != nil {
 			return err
 		}
+		if zone, err = identity.ZoneAppliedTx(ctx, tx); err != nil {
+			return err
+		}
+		loaded.Opens = opensAt(loaded, zone)
 		room = loaded
 		chosen, err := resolveScope(loaded, requested)
 		if err != nil {
@@ -341,24 +339,11 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 			return err
 		}
 		excerpts, err = s.readExcerpts(ctx, tx,
-			excerptTargets(clusterThreads(threadsOf(history))))
+			excerptTargets(clusterThreads(threadsOf(history), zone)))
 		if err != nil {
 			return err
 		}
-		spoke, ever, err := s.readLastSpoke(ctx, tx, loaded, scope, s.now().UTC())
-		if err != nil {
-			return err
-		}
-		if !ever {
-			// No baseline is FIRST CONTACT, and nothing has moved "since" a
-			// conversation that never happened.
-			return nil
-		}
-		lastSpoke = &spoke
-		if loaded.Deal == nil {
-			return nil
-		}
-		moves, roomHidden, err = s.readDealMoves(ctx, tx, loaded.Deal.ID, spoke, s.now().UTC())
+		lastSpoke, moves, roomHidden, err = s.readSinceLastSpoke(ctx, tx, loaded, scope, language)
 		return err
 	})
 	if err != nil {
@@ -366,22 +351,24 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	}
 
 	in := s.foldRoom(room, perAttendee, earlier, lastSpoke, moves, roomHidden, history, excerpts, seats)
-	if len(room.Attendees) == 0 {
-		// Nobody in the room this caller may see. The header still stands, and
-		// assembling a 360 for a contact nobody named would be a read of a
-		// record this brief has no reason to touch.
-		return in, nil, nil
+	in.Language = language
+	in.Zone = zone
+	var viewScope *crmcontracts.ProjectScope
+	// With nobody in the room this caller may see, there is no 360 to read.
+	// The header still stands.
+	if len(room.Attendees) > 0 {
+		// Scoped like the claims above. A meeting on one engagement must not
+		// take the account's other engagement as this room's recent history.
+		view, err := s.view.AssembleScoped(ctx, ids.From[ids.ContactKind](room.Attendees[0].ContactID),
+			contact360.AssembleOptions{ProjectID: scope})
+		if err != nil {
+			return Input{}, nil, err
+		}
+		WithCounterpart(&in, view)
+		viewScope = view.Scope
 	}
-	// Scoped like the claims above: the lead attendee's page read for a
-	// meeting on one engagement must not describe the account's other
-	// engagement as this room's recent history.
-	view, err := s.view.AssembleScoped(ctx, ids.From[ids.ContactKind](room.Attendees[0].ContactID),
-		contact360.AssembleOptions{ProjectID: scope})
-	if err != nil {
-		return Input{}, nil, err
-	}
-	WithCounterpart(&in, view)
-	return in, view.Scope, nil
+	fileUnderDeal(&in)
+	return in, viewScope, nil
 }
 
 // resolveScope resolves the project the brief's reads are narrowed by.

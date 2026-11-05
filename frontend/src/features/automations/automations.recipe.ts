@@ -3,7 +3,7 @@
 
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { humanizeToken } from "../../screens/audit";
+import { humanizeToken } from "../settings/audit";
 
 // The catalog's trigger and action vocabularies, in the words a reader uses.
 // Both sets are closed on the server (catalog_triggers.go, catalog_actions.go).

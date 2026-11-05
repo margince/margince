@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -44,8 +43,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err != nil || found {
 		return invited, false, counterpartyDecision{}, err
 	}
-	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
-	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
+	if fields, err = settledFields(ctx, tx, rec, fields); err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
 	// Whose credential carried this record, asked ONCE and carried to both the
 	// birth decision and this seat's import row — the two readers of it, and the
 	// same argument the birth decision makes for itself below.
@@ -73,6 +73,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// cross-door resolution.
 	known, alreadyFiled, err := s.activityHoldingIdentity(ctx, tx, rec)
 	if err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
+	if known, err = s.foldOwnDuplicate(ctx, tx, known, alreadyFiled, rec); err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
 	// The row the other door filed IS the row this capture is about, so the
@@ -120,7 +123,8 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		// vetted the seat.
 		//
 		//   - alreadyFiled: the id came from the identity resolve, which answers
-		//     only for a row the SAME SEAT captured. Theirs to take over.
+		//     only for a row the SAME SEAT captured, or an import or meeting that
+		//     names an address this seat proved. Theirs to take over.
 		//   - otherwise: the id came from upsertActivity's ON CONFLICT on the
 		//     natural key, gated only by EnsureActivityVisible — a DISCOVER
 		//     check that admits any row this seat can merely see. An outbound
@@ -140,7 +144,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		}
 		if asserted && alreadyFiled && s.takeOverAsserted != nil {
 			err := s.takeOverAsserted(
-				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec))
+				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec), senderIsMachine(rec, fields))
 			// Archived under us between the resolve and here — an erasure racing
 			// this capture. Skipping advances the watermark; propagating would
 			// stall this mailbox on this message on every pass forever.
@@ -150,15 +154,12 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			if err != nil {
 				return datasource.EntityRef{}, false, counterpartyDecision{}, err
 			}
-			if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
-				return datasource.EntityRef{}, false, counterpartyDecision{}, err
-			}
-			if err := s.joinThread(ctx, tx, id, rec, false); err != nil {
+			if err := s.finishTakeOver(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 				return datasource.EntityRef{}, false, counterpartyDecision{}, err
 			}
 			return ref, false, counterpartyDecision{}, nil
 		}
-		same, err := replayClaimIsProvenTx(ctx, tx, id, fields, rec.Parts)
+		same, err := arrivalIsProvenTx(ctx, tx, id, fields, rec.Parts, alreadyFiled)
 		if err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
@@ -202,6 +203,21 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	return ref, true, decision, nil
 }
 
+// finishTakeOver is what a row this capture took over from an import still owes:
+// this seat's import, its thread, and the guests the calendar lists.
+func (s *Sink) finishTakeOver(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
+	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision, memberBound bool,
+) error {
+	if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
+		return err
+	}
+	if err := s.joinThread(ctx, tx, id, rec, false); err != nil {
+		return err
+	}
+	return s.stampLaterGuests(ctx, tx, id, rec)
+}
+
 // finishNewActivity completes an activity row this capture just minted. It runs
 // only for a genuinely new row: a replay writes none of it, which is what makes
 // an at-least-once sync loop cost no duplicate audit entries.
@@ -240,7 +256,7 @@ func (s *Sink) finishNewActivity(
 	// owner is known — every consumer downstream sees an activity whose
 	// captured_by reads `connector:gmail` and cannot recover the human behind
 	// it. The participant rows are the record of that fact.
-	if err := stampMessageEnds(ctx, tx, id, actorUserID(ctx), fields, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, actorUserID(ctx), fields, rec); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// Everyone else who was in it — the CCs, the meeting's organizer and
@@ -249,12 +265,7 @@ func (s *Sink) finishNewActivity(
 	// The party list is OURS to trust only when the PROVIDER stated it — our own
 	// mailbox owner attested as the sender, or a calendar enumerating its
 	// attendees. On anything inbound it is the sender's text.
-	if err := StampFurtherParticipants(ctx, tx, id, fields.Kind, fields.ChannelProvider,
-		ParticipantListAttested(rec), rec.Participants); err != nil {
-		return counterpartyDecision{}, err
-	}
-	if err := StampSeatsPastTheCap(ctx, tx, id, fields.Kind,
-		ParticipantListAttested(rec), rec.WithheldParties); err != nil {
+	if err := stampBirthParties(ctx, tx, id, rec, fields); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// And the names those rows just recorded, for an attendee who is ALREADY a
@@ -296,9 +307,17 @@ func (s *Sink) finishNewActivity(
 	// resolved on the participant rows, so the links come from there — BEFORE
 	// the audience limiter, which decides what a link-less record is born as.
 	derivedLinks := 0
+	// Mail private to this seat goes on no lead, as it creates no contact.
+	private, _, err := messageIsPrivateTx(ctx, tx, rec, fields)
+	if err != nil {
+		return counterpartyDecision{}, err
+	}
 	if fields.Kind == meetingKind {
-		derivedLinks, err = s.linkResolvedMeetingParticipants(ctx, tx, id, len(rec.Links))
+		derivedLinks, err = s.linkResolvedMeetingParticipants(ctx, tx, id, len(rec.Links), private)
 		if err != nil {
+			return counterpartyDecision{}, err
+		}
+		if err := s.recordMeetingDocuments(ctx, tx, id, rec, false); err != nil {
 			return counterpartyDecision{}, err
 		}
 	}
@@ -317,11 +336,11 @@ func (s *Sink) finishNewActivity(
 	// hold. The meeting arm feeds the count because an attendee link means a
 	// record stands behind the meeting; a cc'd contact is not that claim.
 	if fields.Kind != meetingKind && decision.traceOutcome != TraceSuppressed {
-		if err := s.linkResolvedMailParticipants(ctx, tx, id, len(rec.Links)); err != nil {
+		if err := s.linkResolvedMailParticipants(ctx, tx, id, len(rec.Links), private); err != nil {
 			return counterpartyDecision{}, err
 		}
 	}
-	if err := limitLinkLessAudience(ctx, tx, id, rec, decision, derivedLinks); err != nil {
+	if err := limitLinkLessAudience(ctx, tx, id, rec, fields.Kind, decision, derivedLinks); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// This mailbox's own record of having imported the message, and the
@@ -364,20 +383,11 @@ func (s *Sink) upsertActivity(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 	fields ActivityFields, birth birthDecision,
 ) (ids.ActivityID, bool, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, capturedActivityObject, principal.ActionCreate); err != nil {
 		return ids.ActivityID{}, false, err
 	}
-	// Attested outbound is the ONLY write that turns "does this workspace
-	// correspond with them" from no to yes, and a verdict acts on that answer
-	// inside its own transaction — so the two serialize here rather than racing.
-	// Taken only for the attested row: inbound mail cannot change the answer,
-	// and locking every capture insert on its sender would serialize a busy
-	// address against itself for nothing.
-	if rec.Counterparty.SentByOwner() {
-		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
-			correspondence.LockIdentity(rec.Counterparty.Email)); err != nil {
-			return ids.ActivityID{}, false, err
-		}
+	if err := lockActivityInsertTx(ctx, tx, rec); err != nil {
+		return ids.ActivityID{}, false, err
 	}
 	var id ids.ActivityID
 	query, args := capturedActivityInsert(ctx, rec, fields, birth)
@@ -395,6 +405,11 @@ func (s *Sink) upsertActivity(
 		}
 		if err := storekit.StampFields(ctx, tx, "activity", id.UUID, captureSource(rec), rec.CapturedBy, stamps); err != nil {
 			return ids.ActivityID{}, false, err
+		}
+		if rec.Counterparty.SentByOwner() {
+			if err := repairStrangerFactsTx(ctx, tx, rec.Counterparty.Email); err != nil {
+				return ids.ActivityID{}, false, err
+			}
 		}
 		return id, true, nil
 	}
@@ -423,6 +438,29 @@ func (s *Sink) upsertActivity(
 	return id, false, nil
 }
 
+// occurredPrecision is the activity column's word for DateOnly.
+func (f ActivityFields) occurredPrecision() string {
+	if f.DateOnly {
+		return string(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
+	}
+	return string(crmcontracts.OccurredPrecisionOccurredPrecisionInstant)
+}
+
+// settledFields fills in what the capture does not take as sent. That is the
+// time and its day anchor, the storable length, and the envelope's judgement.
+func settledFields(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields) (ActivityFields, error) {
+	var err error
+	if fields.DateOnly {
+		if fields.OccurredAt, err = dayAnchor(fields.OccurredAt); err != nil {
+			return fields, err
+		}
+	}
+	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
+	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
+	fields.judged, err = judgeEnvelopeTx(ctx, tx, rec, fields)
+	return fields, err
+}
+
 // defaultOccurredAt fills a provider payload that carried no timestamp:
 // capture time is the honest fallback — better a coarse "when we saw
 // it" than a zero time sorting the record to the beginning of history.
@@ -438,16 +476,17 @@ func defaultOccurredAt(occurredAt time.Time) time.Time {
 func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision) (string, []any) {
 	occurredAt := fields.OccurredAt
 	audience, audienceReason := birth.bornAudience()
+	// The label reads the opening: an envelope block is English in any language.
 	args := []any{
 		fields.Kind, nullableString(fields.ChannelProvider), nullableString(fields.Subject), nullableString(fields.Body), occurredAt, nullableString(fields.Direction),
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), nullableString(rec.ThreadKey), nullableString(correspondence.Fold(rec.Counterparty.Email)),
-		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
+		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.OfMessage(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
+		fields.judged.foreignLink, fields.judged.senderWasStranger, inboundSenderAuthenticated(rec, fields), string(fields.BodyCompleteness.stored()), senderIsMachine(rec, fields),
+		fields.occurredPrecision(),
+		nullableID(fields.InvitationFromSeat),
+		nullableString(fields.AgendaFingerprint),
 	}
-	placeholders := make([]string, len(args))
-	for i := range args {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
-	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method)
- VALUES (` + strings.Join(placeholders, ",") + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint)
+ VALUES (` + storekit.Placeholders(args) + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

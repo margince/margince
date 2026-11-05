@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SegmentedControl } from "./atoms";
+import { Callout } from "./callout";
 import {
   DeckQueue,
   DeckSurface,
@@ -13,7 +14,7 @@ import { DeckItemCard } from "./decisiondeck.item";
 import { DeckStack, type Leaving, useDeckDrag } from "./decisiondeck.stack";
 import {
   deckKeyHandler,
-  itemLapsed,
+  itemAcceptable,
   verdictSends,
 } from "./decisiondeck.verdicts";
 import { usePrefersReducedMotion } from "./motion";
@@ -95,6 +96,7 @@ export function DecisionDeck({
   listRest,
 }: DecisionDeckProps) {
   const reduced = usePrefersReducedMotion();
+  const [acceptanceChanged, setAcceptanceChanged] = useState(false);
   // THE LIST IS THE DEFAULT, for every reader.
   //
   // A deck answers one decision at a time and hides the rest behind it, which
@@ -149,7 +151,7 @@ export function DecisionDeck({
     // A lapsed proposal cannot be accepted, and the guard lives here rather than
     // only on the card: the card withholds the button, and the keyboard and the
     // swipe reach the same verdict without one.
-    if (verdict === "accept" && itemLapsed(item, now)) {
+    if (verdict === "accept" && !itemAcceptable(item, now, chips)) {
       return;
     }
     const entry = { id: item.id, verdict };
@@ -176,12 +178,25 @@ export function DecisionDeck({
     if (staged.length === 0 || commitState === "sending") {
       return;
     }
-    onCommit(staged);
+    const unavailable = new Set(
+      items
+        .filter((item) => !itemAcceptable(item, now, chips))
+        .map((item) => item.id),
+    );
+    const answerable = staged.filter(
+      (entry) => entry.verdict !== "accept" || !unavailable.has(entry.id),
+    );
+    if (answerable.length !== staged.length) {
+      setStaged(answerable);
+      setAcceptanceChanged(true);
+    }
+    if (answerable.length === 0) return;
+    onCommit(answerable);
     // The tray keeps only what is now in flight: a verdict that sends nothing
     // has done everything it will do at the press, so it leaves the tray and
     // the deck rather than sitting under a control that can be pressed again
     // to no effect.
-    const quiet = staged.filter((entry) => !verdictSends(entry));
+    const quiet = answerable.filter((entry) => !verdictSends(entry));
     if (quiet.length > 0) {
       setDeferred((prev) => [...prev, ...quiet.map((entry) => entry.id)]);
       setStaged((prev) => prev.filter(verdictSends));
@@ -303,10 +318,17 @@ export function DecisionDeck({
     />
   );
   const tray =
-    trayBar || notice ? (
+    trayBar || notice || acceptanceChanged ? (
       <>
         {trayBar}
         {notice}
+        {acceptanceChanged && (
+          <Callout
+            tone="warning"
+            kind="outcome"
+            title={labels.acceptanceChanged}
+          />
+        )}
       </>
     ) : null;
 

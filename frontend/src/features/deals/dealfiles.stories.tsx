@@ -1,0 +1,213 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import type { components } from "../../api/schema";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { LocaleProvider } from "../../i18n";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+} from "../../testing/story-utils";
+import { DealFiles, dealDocumentsKey } from "./dealfiles";
+
+// The deal's Files area with both kinds of row — an upload and a captured
+// email attachment — the empty state, and a hide with its Undo and its
+// refusal, so each reads right without a mailbox on a running stack.
+
+const meta: Meta<typeof DealFiles> = {
+  title: "Records/Deal 360/Files",
+  component: DealFiles,
+  parameters: { layout: "padded" },
+};
+export default meta;
+type Story = StoryObj<typeof DealFiles>;
+
+type Deal = components["schemas"]["Deal"];
+
+// The deal the files hang off, as served to the rep who owns it: `writable`
+// is what the upload and the row verbs are drawn on.
+const DEAL = {
+  id: "deal-1",
+  name: "Fleet retrofit",
+  pipeline_id: "pl",
+  stage_id: "s1",
+  status: "open",
+  source: "manual",
+  captured_by: "human:u1",
+  writable: true,
+  version: 1,
+  created_at: "2026-08-01T00:00:00Z",
+  updated_at: "2026-08-01T00:00:00Z",
+} as Deal;
+
+const UPLOAD = {
+  hidden: false,
+  attachment: {
+    id: "att-up",
+    entity_type: "deal",
+    entity_id: "deal-1",
+    filename: "Acme-pricing-v3.pdf",
+    title: "Pricing proposal",
+    category: "offer",
+    source: "upload",
+    captured_by: "human:u1",
+    created_at: "2026-08-20T09:00:00Z",
+  },
+};
+
+const CAPTURED = {
+  hidden: false,
+  attachment: {
+    id: "att-mail",
+    entity_type: "activity",
+    entity_id: "act-1",
+    filename: "MSA-redline.docx",
+    category: "email_attachment",
+    source: "gmail",
+    captured_by: "human:u1",
+    created_at: "2026-08-21T09:00:00Z",
+  },
+  origin: {
+    activity_id: "act-1",
+    kind: "email",
+    subject: "Re: MSA",
+    occurred_at: "2026-08-21T08:55:00Z",
+    counterparty_email: "laura@buyer.example",
+  },
+};
+
+// Both the seeded cache AND the routes are answered, and both are load-bearing:
+// data written with setQueryData is stale the moment it lands, so the mount
+// fires a background refetch of each key that went to the real network and came
+// back 404. In jsdom nothing noticed; in the render gate's browser that 404 is a
+// console error and the story fails on it.
+function Served({
+  docs,
+  writes,
+  children,
+}: Readonly<{ docs: unknown[]; writes?: RouteMap; children: ReactNode }>) {
+  const documents = { data: docs, page: {} };
+  const session = {
+    user: { id: "u1" },
+    authorization: {
+      seat_type: "full",
+      objects: {
+        deal: { create: true, read: true, update: true, delete: true },
+      },
+    },
+  };
+  installFetchStub({
+    "GET /deals/deal-1/documents": () => jsonResponse(documents),
+    "GET /me": () => jsonResponse(session),
+    ...writes,
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(dealDocumentsKey("deal-1", false), documents);
+  client.setQueryData(["me"], session);
+  return (
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {children}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>
+  );
+}
+
+/** An upload beside an emailed file: one can be deleted, the other hidden. */
+export const Mixed: Story = {
+  render: () => (
+    <Served docs={[CAPTURED, UPLOAD]}>
+      <DealFiles deal={DEAL} />
+    </Served>
+  ),
+};
+
+/** A deal with nothing on it yet. */
+export const Empty: Story = {
+  render: () => (
+    <Served docs={[]}>
+      <DealFiles deal={DEAL} />
+    </Served>
+  ),
+};
+
+const HIDE_ROUTE = "/deals/deal-1/documents/att-mail/hide";
+
+const pressHide: Story["play"] = async ({ canvasElement }) => {
+  const user = userEvent.setup();
+  await user.click(
+    await within(canvasElement).findByRole("button", {
+      name: "Actions for MSA-redline.docx",
+    }),
+  );
+  await user.click(
+    await within(document.body).findByRole("button", {
+      name: "Hide from this deal",
+    }),
+  );
+};
+
+/** Hide runs at once: no dialog, and the toast's Undo is the way back. */
+export const HideOffersUndo: Story = {
+  render: () => (
+    <Served
+      docs={[CAPTURED, UPLOAD]}
+      writes={{
+        [`PUT ${HIDE_ROUTE}`]: () => new Response(null, { status: 204 }),
+        [`DELETE ${HIDE_ROUTE}`]: () => new Response(null, { status: 204 }),
+      }}
+    >
+      <DealFiles deal={DEAL} />
+    </Served>
+  ),
+  play: async (context) => {
+    await pressHide(context);
+    const undo = await within(document.body).findByRole("button", {
+      name: "Undo",
+    });
+    await waitFor(() => expect(undo).toBeVisible());
+    await expect(
+      within(document.body).queryByRole("dialog"),
+    ).not.toBeInTheDocument();
+  },
+};
+
+/** A refused hide has no dialog to land in, so it stays as a danger toast. */
+export const HideRefused: Story = {
+  render: () => (
+    <Served
+      docs={[CAPTURED, UPLOAD]}
+      writes={{
+        [`PUT ${HIDE_ROUTE}`]: () =>
+          jsonResponse(
+            { detail: "The message this file came with was deleted." },
+            409,
+          ),
+      }}
+    >
+      <DealFiles deal={DEAL} />
+    </Served>
+  ),
+  play: async (context) => {
+    await pressHide(context);
+    const close = await within(document.body).findByRole("button", {
+      name: "Close",
+    });
+    await waitFor(() => expect(close).toBeVisible());
+    await expect(
+      within(document.body).getByText(
+        "The message this file came with was deleted.",
+      ),
+    ).toBeVisible();
+  },
+};

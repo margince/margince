@@ -10,6 +10,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -32,16 +33,15 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
-	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
-	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -49,10 +49,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := run(ctx, os.Args[1:], os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, "worker:", err)
+	if err := start(ctx, os.Args[1:], os.Stdout); err != nil {
+		fmt.Fprintln(os.Stderr, config.RoleWorker.Refusal(err))
 		os.Exit(1)
 	}
+}
+
+// start is --version when args ask for it, and the boot otherwise.
+func start(ctx context.Context, args []string, stdout io.Writer) error {
+	if buildinfo.AsksForVersion(args) {
+		_, err := fmt.Fprintln(stdout, buildinfo.VersionLine("margince-worker"))
+		return err
+	}
+	return run(ctx, args, stdout)
 }
 
 // run is the worker's boot sequence — the debug subcommands, flags,
@@ -63,13 +72,15 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if handled, err := runDebugSubcommand(ctx, args, stdout); handled {
 		return err
 	}
+	if checked, err := checkWorkerConfig(workerFlags(args), config.Environ(), stdout); checked || err != nil {
+		return err
+	}
 
-	boot, err := configureWorker(args, stdout)
+	boot, err := configureWorker(workerFlags(args), stdout)
 	if err != nil {
 		return err
 	}
-	cfg, deployCfg, logger := boot.cfg, boot.deploy, boot.log
-	config.WarnUndeclared(logger, cfg.unknownVars)
+	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
 	pool, err := database.NewPool(ctx, cfg.dsn)
 	if err != nil {
@@ -80,8 +91,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err := assertMayWorkAgainst(ctx, pool, logger); err != nil {
 		return err
 	}
-	resolveVault := workerVault(ctx, pool)
-	if handled, err := runDatabaseSubcommand(ctx, pool, resolveVault, args, stdout); handled {
+	resolveVault := workerVault(ctx, pool, cfg.settings)
+	if handled, err := runDatabaseSubcommand(ctx, pool, resolveVault, cfg.settings, args, stdout); handled {
 		return err
 	}
 
@@ -111,7 +122,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// the pool and after the release assertion, for the same reasons the license
 	// does. A nil vault IS an unconfigured deployment; keyvault.ForRole carries
 	// why nothing downstream is handed a flag beside it.
-	vault, err := admitBoot(ctx, logger, pool, resolveVault, cfg, deployCfg)
+	vault, err := admitBoot(ctx, logger, pool, resolveVault, cfg)
 	if err != nil {
 		return err
 	}
@@ -139,14 +150,15 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// answers "still starting" until started.complete below, so coming up
 	// early never makes this replica look ready before it can work.
 	started := &bootGate{}
-	observe, err := startObserveListener(ctx, cfg, pool, rdb, started, logger)
-	if err != nil {
-		return err
+	stopObserve, atHead, err := observeUntilAtHead(ctx, cfg, pool, rdb, started, logger)
+	defer stopObserve()
+	if err != nil || !atHead {
+		// A release refusal also ends the wait. It must still exit non-zero.
+		return cmp.Or(err, releaseSkewRefusal(releaseSkewErr))
 	}
-	defer observe.Stop()
 
 	//nolint:contextcheck // boot-time wiring: the model path outlives any request context (cmd/api resolves the same path under the same waiver)
-	modelPath, err := selectModelPath(ctx, workerModelPathSpec(cfg, deployCfg), pool, logger)
+	modelPath, err := selectModelPath(ctx, workerModelPathSpec(cfg, bootstrap), pool, logger)
 	if err != nil {
 		return err
 	}
@@ -155,7 +167,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// this it would keep serving whatever binding it resolved at boot while the
 	// api served the new one, which is the two-roles-disagree failure moving
 	// routing into the database was meant to end (compose/routingwatcher).
-	go compose.NewRoutingWatcher(pool, &modelPath, config.FromOS, logger).Run(ctx)
+	go compose.NewRoutingWatcher(pool, &modelPath, compose.RoutingKeys(cfg.settings), logger).Run(ctx)
 
 	// The lanes' lifetime is created and DEFERRED HERE, before anything can
 	// start on it. That ordering used to live inside startEventLanes and be
@@ -177,7 +189,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 
 	// The operator relay, resolved in THIS role. Unattended work runs here, so
 	// the weekly retrospective's mail has no request to arrive on.
-	weeklyMail := weeklyMailConfig(ctx, cfg, deployCfg, pool, vault, logger)
+	weeklyMail := weeklyMailConfig(ctx, cfg, pool, vault, lanes.blob, logger)
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
 	stopJobs, err := startJobRunner(ctx, pool, vault,
@@ -240,12 +252,12 @@ func registerComposedExtensions() ([]extension.Extension, error) {
 	return extensions, nil
 }
 
-// workerBoot is everything decided before this process touches a network: the
-// parsed flags, the deployment file, the composed extension set, and the
-// logger the phases after it report through.
+// workerBoot is everything decided before this process touches a network.
+// That is the parsed flags, the file's seeds, the composed extension set, and
+// the logger the phases after it report through.
 type workerBoot struct {
 	cfg        workerConfig
-	deploy     deployconfig.Config
+	deploy     deployconfig.Bootstrap
 	extensions []extension.Extension
 	log        *slog.Logger
 }
@@ -261,7 +273,7 @@ type workerBoot struct {
 // of them opens a connection, so a deployment misconfigured in any of these
 // ways fails before a pool, a bus client or a listener exists to clean up.
 func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
-	cfg, err := parseWorkerFlags(args)
+	cfg, loaded, err := loadWorkerConfig(args, config.Environ())
 	if err != nil {
 		return workerBoot{}, err
 	}
@@ -269,7 +281,8 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	if err != nil {
 		return workerBoot{}, err
 	}
-	deployCfg, err := loadDeployment(&cfg)
+	compose.BindExtensionEgress(cfg.posture)
+	bootstrap, err := loadBootstrap(cfg)
 	if err != nil {
 		return workerBoot{}, err
 	}
@@ -277,27 +290,13 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	if err != nil {
 		return workerBoot{}, err
 	}
-	cfg.captureConfig = compose.CaptureConfigFromDeploy(deployCfg.Capture, log)
-	compose.WarnStaleRates(deployCfg.Rates, log)
+	loaded.Report(log)
+	cfg.captureConfig = compose.CaptureConfigFromDeploy(cfg.settings, log)
+	compose.WarnStaleRates(cfg.settings, log)
 	// See cmd/api/main.go's identical comment: AllowTestMailbox is an
 	// operations.* kill switch, not a capture.* tuning knob.
-	cfg.captureConfig.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
-	return workerBoot{cfg: cfg, deploy: deployCfg, extensions: extensions, log: log}, nil
-}
-
-// newWorkerLogger builds this role's correlation-aware logger from the
-// operator's --log-level and --log-format, and installs it as the process
-// default. Every process role shares the one level/format vocabulary, and a
-// typo in either is a boot error rather than a silent fallback to a level
-// nobody asked for.
-//
-// THE DEFAULT MATTERS MOST IN THIS ROLE. Every job runs here, and a job's
-// failure reaches an operator through jobs.faultFor, which logs through the
-// package-level slog functions — so before this role installed its handler,
-// the one line a postponed tick leaves anywhere went to the stdlib default
-// while everything else went to the operator's configured sink.
-func newWorkerLogger(cfg workerConfig, stdout io.Writer) (*slog.Logger, error) {
-	return httpserver.InstallProcessLogger(stdout, cfg.logLevel, cfg.logFormat)
+	cfg.captureConfig.AllowTestMailbox = config.Val(cfg.settings, ps.AllowTestMailbox)
+	return workerBoot{cfg: cfg, deploy: bootstrap, extensions: extensions, log: log}, nil
 }
 
 // runResumeSubscriber consumes cg:overnight-agent: approval decisions
@@ -369,9 +368,9 @@ func runGroupSubscriber(ctx context.Context, rdb *redis.Client, group kevents.Gr
 // workerVault is the process's one resolution of its key vault, made on first
 // use. Only the subcommands that need a vault ask for it, so the rest run
 // without one.
-func workerVault(ctx context.Context, pool *pgxpool.Pool) func() (keyvault.Vault, error) {
+func workerVault(ctx context.Context, pool *pgxpool.Pool, settings *config.Config) func() (keyvault.Vault, error) {
 	return sync.OnceValues(func() (keyvault.Vault, error) {
-		return keyvault.ForRole(ctx, "worker", pool, config.FromOS)
+		return keyvault.ForRole(ctx, "worker", pool, settings)
 	})
 }
 
@@ -387,7 +386,7 @@ func workerVault(ctx context.Context, pool *pgxpool.Pool) func() (keyvault.Vault
 // hands back the vault it resolved.
 func admitBoot(
 	ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool,
-	resolveVault func() (keyvault.Vault, error), cfg workerConfig, deployCfg deployconfig.Config,
+	resolveVault func() (keyvault.Vault, error), cfg workerConfig,
 ) (keyvault.Vault, error) {
 	if err := compose.RequireCompiledInCountry(ctx, pool); err != nil {
 		return nil, err
@@ -396,13 +395,13 @@ func admitBoot(
 	if err != nil {
 		return nil, err
 	}
-	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, deployCfg, logger); err != nil {
+	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, cfg.settings, logger); err != nil {
 		return nil, err
 	}
-	if err := ensureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture); err != nil {
+	if err := ensureLicense(ctx, logger, pool, vault, cfg); err != nil {
 		return nil, err
 	}
-	return vault, requireUsablePublicOrigin(cfg, deployCfg)
+	return vault, requireUsablePublicOrigin(cfg)
 }
 
 // requireUsablePublicOrigin refuses to start a sending worker whose
@@ -421,8 +420,8 @@ func admitBoot(
 // link: the send-time guard in activities refuses every tokenized message
 // on the same rule. What is lost is the early failure, not the
 // protection.
-func requireUsablePublicOrigin(cfg workerConfig, deployCfg deployconfig.Config) error {
-	if !deployCfg.Email.Enabled && !cfg.gmailAppWired() {
+func requireUsablePublicOrigin(cfg workerConfig) error {
+	if !config.Val(cfg.settings, compose.EmailEnabled) && !cfg.gmailAppWired() {
 		return nil
 	}
 	if err := netguard.RequirePublicOrigin("--public-base-url", cfg.publicBaseURL, cfg.posture); err != nil {
@@ -431,8 +430,8 @@ func requireUsablePublicOrigin(cfg workerConfig, deployCfg deployconfig.Config) 
 	return nil
 }
 
-func ensureLicense(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, deployCfg deployconfig.Config, posture runtimeenv.Environment) error {
-	_, err := compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, posture, config.FromOS)
+func ensureLicense(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg workerConfig) error {
+	_, err := compose.EnsureLicense(ctx, logger, pool, vault, cfg.settings, cfg.posture)
 	return err
 }
 

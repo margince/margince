@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -153,7 +152,7 @@ func TestARateLimitedSyncHonoursTheProvidersRetryAfter(t *testing.T) {
 func setMailSyncSeconds(ctx context.Context, t *testing.T, ws ids.WorkspaceID, seconds int) {
 	t.Helper()
 	_, pool := setupCaptureDB(t)
-	store := capture.NewSettings(settings.New(pool, settings.NewRegistry(capture.Definitions()...)))
+	store, _ := captureSettingsStore(t, pool)
 	save := func(ctx context.Context, value int) error {
 		admin := principal.WithWorkspaceID(ctx, ws.UUID)
 		admin = principal.WithCorrelationID(admin, ids.NewV7())

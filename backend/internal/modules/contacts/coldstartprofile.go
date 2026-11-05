@@ -111,8 +111,11 @@ func (s *Store) ApplyColdStartProfileTx(ctx context.Context, tx pgx.Tx, in Apply
 	if len(in.Fields) == 0 {
 		return ids.CompanyID{}, errors.New("contacts: an accepted coldstart proposal carries no fields")
 	}
-	companyID, err := applyColdStartTx(ctx, tx, in, host, by)
+	companyID, changed, err := applyColdStartTx(ctx, tx, in, host, by)
 	if err != nil {
+		return ids.CompanyID{}, err
+	}
+	if err := s.locateLandedAddress(ctx, tx, companyID, changed); err != nil {
 		return ids.CompanyID{}, err
 	}
 	// A VAT number a read just extracted has not been checked, and this is
@@ -127,11 +130,9 @@ func (s *Store) ApplyColdStartProfileTx(ctx context.Context, tx pgx.Tx, in Apply
 	return companyID, nil
 }
 
-// applyColdStartTx resolves-or-creates the target company, fills the
-// accepted fields (evidence for every one, columns only when empty), and
-// runs the write shape — create vs update chosen by whether the company was
-// just minted — all inside the caller's transaction.
-func applyColdStartTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileInput, host, by string) (ids.CompanyID, error) {
+// applyColdStartTx resolves the target and applies accepted evidence inside the
+// caller's transaction. It returns the changed columns used by audit and geocoding.
+func applyColdStartTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileInput, host, by string) (ids.CompanyID, map[string]any, error) {
 	wsID := workspaceID(ctx)
 	// Same pair of rules as ApplyDeepReadTx: only when a name is coming, and
 	// then before the row lock the image read takes. Stated here rather than
@@ -139,15 +140,15 @@ func applyColdStartTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileIn
 	// not depend on which branch that step happens to follow.
 	if carriesCompanyName(in.Fields) {
 		if err := lockCompanyNameWrites(ctx, tx); err != nil {
-			return ids.CompanyID{}, err
+			return ids.CompanyID{}, nil, err
 		}
 	}
 	companyID, created, err := resolveOrCreateColdStartCompany(ctx, tx, host, by, in.Fields)
 	if err != nil {
-		return ids.CompanyID{}, err
+		return ids.CompanyID{}, nil, err
 	}
 	if err := gateResolvedColdStartTarget(ctx, tx, companyID, created); err != nil {
-		return ids.CompanyID{}, err
+		return ids.CompanyID{}, nil, err
 	}
 	// The columns as they stand before the apply, including display_name: a
 	// created company gets its name here, and that is a column change a
@@ -161,17 +162,25 @@ func applyColdStartTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileIn
 	if created {
 		before = emptyColdStartColumnImages()
 	} else if before, err = readColdStartColumnImages(ctx, tx, companyID); err != nil {
-		return ids.CompanyID{}, err
+		return ids.CompanyID{}, nil, err
+	}
+	rowsBefore, err := readProfileFieldImages(ctx, tx, companyID)
+	if err != nil {
+		return ids.CompanyID{}, nil, err
 	}
 	applied, err := applyEvidenceFields(ctx, tx, wsID, companyID, by, in.Fields)
 	if err != nil {
-		return ids.CompanyID{}, err
+		return ids.CompanyID{}, nil, err
 	}
 	after, err := readColdStartColumnImages(ctx, tx, companyID)
 	if err != nil {
-		return ids.CompanyID{}, err
+		return ids.CompanyID{}, nil, err
 	}
-	before, after = storekit.ChangedColumns(before, after)
+	rowsAfter, err := readProfileFieldImages(ctx, tx, companyID)
+	if err != nil {
+		return ids.CompanyID{}, nil, err
+	}
+	before, after = changedColdStartColumns(before, after)
 
 	action := "update"
 	if created {
@@ -181,17 +190,17 @@ func applyColdStartTx(ctx context.Context, tx pgx.Tx, in ApplyColdStartProfileIn
 	// operation's metadata rides audit_log.evidence, which is the column for
 	// it: anything placed in the images is projected by field history as a
 	// change to a field of that name (storekit.AuditWithEvidence).
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", companyID.UUID, before, after, map[string]any{
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", companyID.UUID, before, after, withProfileFieldReceipts(map[string]any{
 		auditKeySource: companySourceSiteRead, auditKeySourceURL: in.SourceURL, auditKeyFields: applied,
-	})
+	}, profileFieldReceipts(rowsBefore, rowsAfter, after)))
 	if err != nil {
-		return ids.CompanyID{}, fmt.Errorf("audit coldstart apply: %w", err)
+		return ids.CompanyID{}, nil, fmt.Errorf("audit coldstart apply: %w", err)
 	}
 	payload := coldStartApplyPayload(created, in, host, by, applied)
 	if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, payload); err != nil {
-		return ids.CompanyID{}, fmt.Errorf("emit %s: %w", payload.EventType(), err)
+		return ids.CompanyID{}, nil, fmt.Errorf("emit %s: %w", payload.EventType(), err)
 	}
-	return companyID, nil
+	return companyID, after, nil
 }
 
 // coldStartApplyPayload builds the company-side event an accepted
@@ -247,25 +256,12 @@ func resolveOrCreateColdStartCompany(ctx context.Context, tx pgx.Tx, host, by st
 	// ('dossier') — read from the site and human-confirmed, but NOT a raw human
 	// edit ('human' is reserved for UpdateCompany) — so a later human edit
 	// still wins while a weaker signature/domain source cannot clobber it.
-	displayName := DisplayNameFromDomain(host)
-	if displayName == "" {
-		displayName = host
-	}
-	nameSource := nameSourceDomain
-	legal := fieldValue(fields, fieldLegalName)
-	if legal != "" {
-		displayName = legal
-		nameSource = nameSourceDossier
-	}
-
+	candidate, nameSource := coldStartCandidate(host, fields)
+	displayName := candidate.DisplayName
 	// PO-F-2 rather than a bare domain lookup: the site's own legal name is the
 	// strongest signal this path has, and a company already captured from a
 	// different domain collides on exactly that name and on nothing else.
-	match, err := DedupeCompanyForCreate(ctx, tx, CompanyCandidate{
-		DisplayName: displayName,
-		LegalName:   legal,
-		Domains:     []string{host},
-	})
+	match, err := DedupeCompanyForCreate(ctx, tx, candidate)
 	if err != nil {
 		return ids.CompanyID{}, false, err
 	}
@@ -283,7 +279,7 @@ func resolveOrCreateColdStartCompany(ctx context.Context, tx pgx.Tx, host, by st
 	if err != nil {
 		return ids.CompanyID{}, false, err
 	}
-	if err := match.recordIfReview(ctx, tx, companyID, coldStartSource, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, companyID, coldStartSource, by); err != nil {
 		return ids.CompanyID{}, false, err
 	}
 	return companyID, true, nil
@@ -420,4 +416,23 @@ func UnmarshalColdStartFields(raw json.RawMessage) (string, []ColdStartFieldInpu
 		})
 	}
 	return proposal.SourceURL, fields, nil
+}
+
+func coldStartCandidate(host string, fields []ColdStartFieldInput) (CompanyCandidate, string) {
+	displayName := DisplayNameFromDomain(host)
+	if displayName == "" {
+		displayName = host
+	}
+	nameSource := nameSourceDomain
+	legal := fieldValue(fields, fieldLegalName)
+	if legal != "" {
+		displayName = legal
+		nameSource = nameSourceDossier
+	}
+
+	candidate := CompanyCandidate{DisplayName: displayName, LegalName: legal, Domains: []string{host}}
+	if address, split := SplitAddressText(fieldValue(fields, fieldRegisteredAddress)); split {
+		candidate.Address = &address
+	}
+	return candidate, nameSource
 }

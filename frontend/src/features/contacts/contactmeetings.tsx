@@ -1,7 +1,7 @@
 import { Link } from "lucide-react";
 import { type Ref, useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import { ActionRow } from "../../design-system/actionrow";
+import { RecordMeetingOutcome } from "../../components/meetingoutcome";
 import { Badge, Button, type ButtonVariant } from "../../design-system/atoms";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import {
@@ -22,17 +22,20 @@ import {
 } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { entityTimelineKeys } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
+import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { useMe } from "../../lib/session";
-import { useSchedulingProfile } from "../../screens/scheduling-profile-query";
+import { HeldMeetingsTable } from "./contactmeetings.held";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
   type CopiedLink,
   useMeetingProposals,
   WaitingSection,
 } from "./contactmeetings.waiting";
+import { momentDrafts } from "./contactpage.drawers";
 import "./contact360.css";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -63,9 +66,9 @@ export function MeetingBriefAction({
 }: Readonly<{
   activity: Pick<Activity, "id" | "kind" | "content_state"> | undefined;
   onBriefMeeting?: (activityId: string) => void;
-  // Indigo for the next meeting, where a reader is about to walk in and the
-  // verb is the card's own lead; the default ghost for a meeting already
-  // held, where the brief is one of several equal ways to look back.
+  // Filled for the next meeting: a reader is about to walk in, and the verb is
+  // the card's lead. `aiQuiet` for a meeting already held, where the brief is
+  // one of several equal ways to look back.
   variant?: ButtonVariant;
 }>) {
   const t = useT();
@@ -99,8 +102,10 @@ function MeetingMomentAction({
     return null;
   }
   const blocked = action.state === "blocked";
+  const drafts = momentDrafts(action);
   return (
     <Button
+      variant={drafts ? "aiQuiet" : "ghost"}
       onClick={() => onAction(action)}
       reason={
         blocked
@@ -217,7 +222,7 @@ export function ContactMeetingsTab({
     (next ? 1 : 0) + ahead.length,
     loading,
   );
-  // An AI verb among equals on every row: the quiet indigo, where the next
+  // An AI verb among equals on every row: outlined with its ✦, where the next
   // meeting leads with the filled one.
   const briefOf = (activity: Activity) => (
     <MeetingBriefAction
@@ -225,6 +230,18 @@ export function ContactMeetingsTab({
       onBriefMeeting={onBriefMeeting}
       variant="aiQuiet"
     />
+  );
+  const contactId = view?.contact.id;
+  const heldVerbs = (activity: Activity) => (
+    <>
+      {contactId && (
+        <RecordMeetingOutcome
+          activity={activity}
+          invalidateKeys={entityTimelineKeys("contact", contactId)}
+        />
+      )}
+      {briefOf(activity)}
+    </>
   );
   return (
     <div className="record-stack pe-meetings">
@@ -293,13 +310,7 @@ export function ContactMeetingsTab({
         detail={{ onRetry: () => void listed.refetch() }}
         footer={listed.hasNextPage ? <LoadMoreButton query={listed} /> : null}
       >
-        {held.map((activity) => (
-          <MeetingRow
-            key={activity.id}
-            activity={activity}
-            verbs={briefOf(activity)}
-          />
-        ))}
+        {held.length > 0 && <HeldMeetingsTable held={held} verbs={heldVerbs} />}
       </RailPanel>
     </div>
   );
@@ -386,16 +397,13 @@ function MeetingsToolbar({
   const bookingLink = useBookingLink(copied);
   return (
     <PanelBody className="pe-meetings-toolbar">
-      <ActionRow
-        primary={
-          <BookMeeting
-            view={view}
-            loading={loading}
-            canBook={canBook}
-            ref={bookButton}
-          />
-        }
-      >
+      <div className="pe-meetings-verbs">
+        <BookMeeting
+          view={view}
+          loading={loading}
+          canBook={canBook}
+          ref={bookButton}
+        />
         {bookingLink.url && (
           <Button onClick={bookingLink.copy.copy}>
             <Link aria-hidden="true" />
@@ -406,7 +414,7 @@ function MeetingsToolbar({
             )}
           </Button>
         )}
-      </ActionRow>
+      </div>
       {bookingLink.copy.notice && (
         <div className="pe-copy-notice">
           {bookingLink.copy.notice}

@@ -22,9 +22,12 @@ import (
 
 // BulkTask is one task as a bulk change found it under its row lock.
 type BulkTask struct {
-	Subject string
-	Version int64
-	Done    bool
+	Subject          string
+	Version          int64
+	Done             bool
+	SourceSystem     *string
+	SourceID         *string
+	SourceActivityID *ids.UUID
 }
 
 // LockTaskForBulkTx takes the row lock a bulk change holds for its whole
@@ -39,9 +42,9 @@ func (s *Store) LockTaskForBulkTx(ctx context.Context, tx pgx.Tx, id ids.Activit
 	}
 	var task BulkTask
 	err := tx.QueryRow(ctx, `
-		SELECT coalesce(subject, ''), version, is_done FROM activity
+		SELECT coalesce(subject, ''), version, is_done, source_system, source_id, source_activity_id FROM activity
 		 WHERE id = $1 AND kind = 'task' AND archived_at IS NULL
-		   FOR UPDATE`, id.UUID).Scan(&task.Subject, &task.Version, &task.Done)
+		   FOR UPDATE`, id.UUID).Scan(&task.Subject, &task.Version, &task.Done, &task.SourceSystem, &task.SourceID, &task.SourceActivityID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return BulkTask{}, apperrors.ErrNotFound
 	}

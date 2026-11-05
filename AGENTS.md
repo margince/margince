@@ -74,6 +74,10 @@ one you checked in the code; history goes in git. A new page goes in the folder 
 names, in that page's table "One job per page". What a user of the app sees goes in `docs/handbook/`,
 never in `reference/` or `how-to/`, which are for those who build or run Margince.
 
+A list the code holds is linked, never typed again. An explanation or handbook page names its code
+in a `describes:` line. A PR that changes that code says whether the page still holds
+(`make docs-describing`).
+
 **A red `main` is claimed once.** Before you look into a failure that is not yours, run
 `gh pr list --state open --label "claim: main-red"` and read the bodies; each names the tests it
 covers. Old claims, how to release one, and why two half fixes leave `main` red:
@@ -115,7 +119,7 @@ without labels tells the next reader something false. All the labels:
 
 ## Build and test
 
-`make check` is the merge gate (`craft-static` + `check-backend` + `check-fe`). Run it before you push.
+`make check` is the merge gate (`craft-static` + `check-backend` + `check-fe`).
 `make test-integration` is the lane with a real Postgres and needs `make db-up`. Without a database
 it fails with an error instead of skipping, because a skipped security gate looks the same as a
 passing one.
@@ -163,18 +167,28 @@ because the sandbox may not see the host's key store. Every mutation on GitHub n
 Commands that only read (`git status`, `diff`, `log`) can run in the sandbox.
 
 1. Branch off `main`: `git switch -c <type>/<slug> origin/main`.
-2. Run `make check` before you push, `frontend/` and `craft static --strict` included. `check` does
-   not reach the integration lane. For a backend Go change, also run `make test-it DIR=<pkg>` for
-   each integration package it touches. CI runs the whole lane on every non-draft PR that changes
+2. Open a draft PR at your first push, so its `Closes #N` shows your claim, and push as you go. A
+   push to a draft skips every gate (its green `ci` proves nothing) and needs no local one.
+3. Before you mark the PR ready, run `make check`, `frontend/` and `craft static --strict` included.
+   With write access, `gh workflow run ci.yml --ref <branch>` runs the same gate on GitHub instead.
+   It tests the branch head, so merge `origin/main` first. `check` does not reach the integration
+   lane. For a Go change, run `make test-it DIR=<pkg>` for each integration package it touches, or
+   let CI run the lane. CI runs it from that command or on a non-draft PR whose diff touches
    `backend/`; `make check-all` runs it locally.
-3. Push and open a PR.
-4. CI, CodeRabbit and SonarCloud must all pass. Deal with review findings; do not dismiss them.
-5. Merge only when all checks are green: `gh pr merge <n> --squash`, then remove the branch.
+4. Mark the PR ready. The release notes print its title. Use `feat(scope): …`, `fix(scope): …` or
+   `perf(scope): …` for what a user or operator notices. Add `!` (`fix(api)!: …`) when it breaks a
+   setting, an API client or an upgrade; such a title lists under **Breaking**.
+5. CI, CodeRabbit and SonarCloud must all pass. Deal with review findings; do not dismiss them.
+6. Merge only when all checks are green: `gh pr merge <n> --squash`, then remove the branch.
 
 **Commit only product.** Before `git add`, check `git status` for files the build leaves behind
 (`node_modules/`, `.pnpm-store/`, built programs), working notes and screen images. Working notes go
 in the session scratchpad. `.gitignore` already covers the files we know about; a new path of this
 kind is still yours to keep out, and to add there.
+
+**Paid lanes are optional in a PR.** Never run `make e2e-ai` or `make e2e-llm` to finish one, and never stop to ask if
+you may: a loop has no one to answer. In the PR body, list each record and its state that `make e2e-ai-report` shows as
+not `current`. Run a paid lane only if the request asks. After you change a tool, gate or role, run `make test-roles` (it needs `make db-up`).
 
 ## Layout
 
@@ -183,8 +197,11 @@ The DAG is `shared → platform → modules → compose → cmd`, and three tool
 
 1. **A module never imports a sibling or `compose`.** If A needs B,
    `compose` injects the edge.
-2. **A module writes only the tables it owns**, declared in its `doc.go` and gated
-   by `backend/gates/tableownership_test.go`.
+2. **A module writes only the tables it owns.** `tableOwners`
+   (`backend/gates/tableownerregistry_test.go`) declares the owner, and
+   `backend/gates/tableownership_test.go` holds the writes to it. The pages in
+   `docs/reference/entity-model/` are built from that map. A `doc.go` names its page
+   and never copies the list.
 3. **Two module shapes, and only two**: *Handlers→Store* for CRUD modules,
    *Handlers→Service* for engine modules. Do not make up a third.
 4. **`internal/contracts/` and `*_gen.go` are generated** from
@@ -212,6 +229,10 @@ package name is not enough.
   `migrations/testdata/head_catalog.txt` in the same commit. Why the two past edits to shipped
   migrations are safe, and why no rule follows from them:
   [docs/how-to/apply-migrations.md](docs/how-to/apply-migrations.md).
+- **A large correction in a core migration**: use a data task to change many rows. A small table
+  can use a migration if `backend/migrationrewrites.txt` states its size and why the work fits when
+  the API starts. Keep each shipped task in the code for every supported upgrade. See
+  [docs/how-to/add-a-data-task.md](docs/how-to/add-a-data-task.md).
 - **The `database.WithWorkspaceTx` contract**: every tenant query goes through it, and no path
   reaches tenant data without it. `scripts/check-rls-store-path.sh` holds this. No table has
   row-level security: a unit table declares no `workspace_id` and no policy, and `extmigrategate`

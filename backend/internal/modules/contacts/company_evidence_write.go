@@ -93,7 +93,9 @@ func writeEvidence[T any](
 	}
 
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := ensureCompanyWritable(ctx, tx, companyID); err != nil {
+		// Held, the order a technical lookup and its Undo take: company, then
+		// its facts. An Undo judging the facts cannot interleave with this.
+		if err := auth.HoldWritableLive(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
 		// The transaction's own clock, so every row this write stamps agrees

@@ -416,3 +416,22 @@ func TestAResetMailIsWrittenInTheInstallationsLanguage(t *testing.T) {
 		t.Errorf("the localized mail carries no reset link: %q", mail.body)
 	}
 }
+
+func TestAResetMailUsesTheRecipientsSavedLanguage(t *testing.T) {
+	e := setupRevocationEnv(t, "reset-recipient-lang")
+	ctx := e.wsOnlyCtx()
+	if _, err := e.svc.SaveMyLocale(principal.WithCorrelationID(withHumanPrincipal(ctx, e.member), ids.NewV7()), "vi"); err != nil {
+		t.Fatal(err)
+	}
+	mail := &capturedMail{}
+	h := NewHandlers(e.svc).WithPasswordReset(mail).WithPasswordLinkBase("https://crm.example.test")
+	sent := make(chan struct{})
+	h.resetSendStarted = func() { close(sent) }
+	rec := httptest.NewRecorder()
+	h.RequestPasswordReset(rec, httptest.NewRequest(http.MethodPost, "/v1/auth/forgot-password", strings.NewReader(`{"email":"`+e.member.Email+`"}`)).WithContext(ctx))
+	<-sent
+	words := mailcopy.For("vi")
+	if rec.Code != http.StatusAccepted || mail.subject != words.ResetSubject || !strings.Contains(mail.body, words.ResetIntro) {
+		t.Fatalf("reset ignored saved recipient language: %d %q", rec.Code, mail.subject)
+	}
+}

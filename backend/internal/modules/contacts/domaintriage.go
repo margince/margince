@@ -20,8 +20,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The verdicts a domain can carry. Only Pending leaves the question open.
@@ -36,12 +37,10 @@ const (
 	// company that is emphatically not the sender's employer (live.fr is
 	// Microsoft's), so it must not become their company either.
 	DomainProvider = "provider"
-	// DomainNoSite — nothing identified a company. Whether one nonetheless
-	// EXISTS depends on which path got here, and company_id says which: a
-	// site that could not be read falls to the sender's name and creates the
-	// company when that name does not explain the domain, while a landing page
-	// the classifier read as parked creates nothing. Both are settled, and both
-	// mean the same thing for the next message — stop asking.
+	// DomainNoSite: nothing identified a company. The classifier read the
+	// landing page as parked, and no company is created. A site that could not
+	// be read never lands here: it settles personal when the sender's name
+	// explains the domain, and stays pending otherwise.
 	DomainNoSite = "no_site"
 )
 
@@ -50,6 +49,7 @@ const (
 	DomainSourceSiteRead  = "site_read"
 	DomainSourceHeuristic = "heuristic"
 	DomainSourceHuman     = "human"
+	DomainSourceAgent     = "agent"
 )
 
 // The retry bound and backoff for a domain whose triage keeps failing — the
@@ -81,9 +81,12 @@ const (
 
 // DomainDisposition is one domain's standing verdict.
 type DomainDisposition struct {
-	Domain string
-	Status string
-	Source string
+	PendingReason string
+	Evidence      string
+	SiteReadID    *ids.UUID
+	Domain        string
+	Status        string
+	Source        string
 	// OwnerID is the human whose connection surfaced the domain, and it is a
 	// POINTER because the row's own FK clears it when that human is deleted.
 	// Reading it as a zero uuid would forge an owner no app_user row matches,
@@ -136,11 +139,11 @@ func readDispositionTx(ctx context.Context, tx pgx.Tx, domain string) (DomainDis
 	var companyID *ids.UUID
 	err := tx.QueryRow(ctx, `
 		SELECT domain, status, source, owner_id, company_id, attempts,
-		       COALESCE(admission, ''), last_evidence_at
+		       COALESCE(admission, ''), last_evidence_at, COALESCE(pending_reason, ''), site_read_id, COALESCE(evidence, '')
 		FROM company_domain_disposition
 		WHERE domain = $1
 		FOR UPDATE`, domain).Scan(&d.Domain, &d.Status, &source, &d.OwnerID, &companyID,
-		&d.Attempts, &d.Admission, &d.LastEvidenceAt)
+		&d.Attempts, &d.Admission, &d.LastEvidenceAt, &d.PendingReason, &d.SiteReadID, &d.Evidence)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return DomainDisposition{}, false, nil
 	}
@@ -175,9 +178,12 @@ func recordPendingDispositionTx(
 		INSERT INTO company_domain_disposition (domain, status, owner_id, last_evidence_at)
 		VALUES ($1, 'pending', $2, $3)
 		ON CONFLICT (domain) DO NOTHING`,
-		domain, ownerID, evidenceAt)
+		domain, domainQuestionOwner(ownerID), evidenceAt)
 	if err != nil {
 		return false, fmt.Errorf("contacts: opening the disposition question for %s: %w", domain, err)
+	}
+	if err := recordDomainQuestionReader(ctx, tx, domain, ownerID, evidenceAt); err != nil {
+		return false, err
 	}
 	return tag.RowsAffected() > 0, nil
 }
@@ -231,13 +237,11 @@ func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID
 	var occurred *time.Time
 	err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at)
-		  FROM activity a
-		  LEFT JOIN activity_participant ap ON ap.activity_id = a.id
+		  FROM activity a LEFT JOIN activity_participant ap ON ap.activity_id = a.id AND NOT ap.past_party_cap
 		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
-		   AND a.occurred_at <= now() + $3::interval
-		   AND (lower(split_part(ap.address, '@', 2)) = $1
-		    OR lower(split_part(ap.address, '@', 2)) LIKE '%.' || `+storekit.EscapeLikeSQL("$1")+`
-		    OR a.id = $2)`, domain, activityID, mailClockSkewAllowance).Scan(&occurred)
+		   AND `+occurredday.BegunSQL("a", "now() + $3::interval")+`
+		   AND (`+owndomain.CoversSQL("ap.address_domain_folded", "$1")+` OR a.id = $2)`,
+		owndomain.Fold(domain), activityID, mailClockSkewAllowance).Scan(&occurred)
 	if err != nil {
 		return nil
 	}
@@ -301,10 +305,6 @@ func (s *Store) ListDueDomains(ctx context.Context, limit int) ([]DueDomain, err
 			  -- vendor's real corporate site, answer "company", and create
 			  -- exactly the record the refusal exists to prevent.
 			  AND d.admission IS DISTINCT FROM 'suppressed'
-			  -- A domain nobody is accountable for may not mint rows, so it is
-			  -- not worth a crawl either (ResolveDomainTriage stamps the company's
-			  -- owner from this column).
-			  AND d.owner_id IS NOT NULL
 			  AND d.next_attempt_at IS NOT NULL
 			  AND d.next_attempt_at <= now()
 			  AND d.attempts < $1
@@ -378,7 +378,6 @@ func (s *Store) ExhaustedDomains(ctx context.Context, limit int) ([]DueDomain, e
 			SELECT domain FROM company_domain_disposition
 			WHERE status = 'pending'
 			  AND admission IS DISTINCT FROM 'suppressed'
-			  AND owner_id IS NOT NULL
 			  AND next_attempt_at IS NOT NULL
 			  AND next_attempt_at <= now()
 			  AND attempts >= $1
@@ -453,7 +452,7 @@ func (s *Store) RetireStaleTriageRead(ctx context.Context, domain string) error 
 // mail.acme.com works at the same place as someone at acme.com.
 func OnDomain(ctx context.Context, tx pgx.Tx, domain string) ([]DomainContact, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT p.id, p.full_name, split_part(pe.email, '@', 1)
+		SELECT p.id, p.full_name, pe.email
 		FROM contact_email pe
 		JOIN contact p ON p.id = pe.contact_id
 		WHERE p.archived_at IS NULL
@@ -462,11 +461,9 @@ func OnDomain(ctx context.Context, tx pgx.Tx, domain string) ([]DomainContact, e
 		  -- in, an old mailbox on this domain could turn a personal-domain
 		  -- refusal into a company, or the reverse.
 		  AND pe.archived_at IS NULL
-		  AND (split_part(pe.email, '@', 2) = $1
-		       -- A literal suffix compare, never LIKE: the domain reaches here
-		       -- from a forgeable header, and '%' in a LIKE pattern would match
-		       -- every address in the workspace.
-		       OR right(split_part(pe.email, '@', 2), length($1) + 1) = '.' || $1)`, domain)
+		  -- A literal suffix compare, never LIKE: the domain reaches here from a
+		  -- forgeable header, and '%' in a LIKE pattern would match every address.
+		  AND `+owndomain.CoversSQL("pe.email_domain_folded", "$1"), owndomain.Fold(domain))
 	if err != nil {
 		return nil, fmt.Errorf("contacts: listing the contacts on %s: %w", domain, err)
 	}
@@ -478,10 +475,11 @@ func OnDomain(ctx context.Context, tx pgx.Tx, domain string) ([]DomainContact, e
 	var out []DomainContact
 	for rows.Next() {
 		var id ids.UUID
-		var name, local string
-		if err := rows.Scan(&id, &name, &local); err != nil {
+		var name, address string
+		if err := rows.Scan(&id, &name, &address); err != nil {
 			return nil, fmt.Errorf("contacts: scanning a contact on %s: %w", domain, err)
 		}
+		local, _, _ := strings.Cut(address, "@")
 		at, seen := byContact[id]
 		if !seen {
 			byContact[id] = len(out)

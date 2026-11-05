@@ -17,16 +17,22 @@ import { defineConfig } from "@playwright/test";
 // run does not collect the benchmark, and `make bench-mobile` collects NOTHING
 // else. It is the same posture as the Go `bench` build tag.
 const benchMobile = process.env.MARGINCE_BENCH_MOBILE === "1";
+// The Home benchmark (`make bench-home`) is the same kind of run: it measures a
+// production build against a live api, so the normal run never collects it.
+const benchHome = process.env.MARGINCE_BENCH_HOME === "1";
+const benchSpecs = ["**/perf-mobile.spec.ts", "**/bench-home.spec.ts"];
 
 export default defineConfig({
   testDir: "./e2e",
   ...(benchMobile
     ? { testMatch: ["**/perf-mobile.spec.ts"] }
-    : { testIgnore: ["**/perf-mobile.spec.ts"] }),
+    : benchHome
+      ? { testMatch: ["**/bench-home.spec.ts"] }
+      : { testIgnore: benchSpecs }),
   // A throttled profile spends most of its budget waiting, and the default 30s
   // is a per-test bound that a 20-sample loop over a slow link will exceed for
   // reasons that are the point rather than a fault.
-  timeout: benchMobile ? 300_000 : 30_000,
+  timeout: benchMobile || benchHome ? 300_000 : 30_000,
   fullyParallel: true,
   use: {
     baseURL: process.env.BASE_URL ?? "http://localhost:4317",

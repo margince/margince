@@ -2,29 +2,29 @@ import { Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
+  Button,
   EmptyState,
   Kbd,
   PendingBody,
   SearchField,
 } from "../design-system/atoms";
+import { useBackdropDismiss } from "../design-system/backdrop";
 import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
+import { Eyebrow } from "../design-system/eyebrow";
 import { usePresence } from "../design-system/presence";
-import { useLocale, useT } from "../i18n";
-import { useHoldsAdminRole } from "../lib/capability";
+import { holdsEveryWord, searchWords } from "../format/collate";
+import { useT } from "../i18n";
+import { ENTITY } from "../lib/entity";
 import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
-import { openAsk } from "../lib/urlstate";
-import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
-import { useVisibleSettingsPages } from "../screens/settingsnav";
-import { settingsHref } from "../screens/settingsrouting";
-import { settingsPageAliases } from "../screens/settingssearch";
-import {
-  CUSTOM_SCREEN,
-  customPaletteScreens,
-  resolveCustomLabel,
-} from "./custom";
-import { CREATE_ID, NAV } from "./nav";
+import { SEARCH_HIT_KIND_KEY, searchHitHasCard } from "../lib/searchkinds";
+import { openAsk, type UrlParams } from "../lib/urlstate";
+import { modifierCap } from "./hotkeys";
+import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
+import { useConfigurationCommand } from "./paletteconfiguration";
+import { usePaletteRecents } from "./paletterecents";
+import { type RecentEntry, recentIdentity } from "./paletterecents.storage";
 import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 
@@ -57,133 +57,34 @@ export type Command = {
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.
   route?: Route;
+  // How the page at `route` opens narrowed: the query half of the address.
+  dials?: UrlParams;
+  // Execution provenance keeps replay separate from recording a new search.
+  executedQuery?: string;
+  searchedRecord?: Extract<RecentEntry, { kind: "record" }>;
+  recent?: RecentEntry;
+  pending?: boolean;
 };
 
-/** The commands whose label, subtitle or one keyword holds the whole query. */
+/** The commands whose label, subtitle and keywords hold every query word. */
 export function matchingCommands(
   commands: readonly Command[],
   query: string,
 ): readonly Command[] {
-  const needle = query.trim().toLowerCase();
-  if (!needle) {
+  const words = searchWords(query);
+  if (words.length === 0) {
     return commands;
   }
-  return commands.filter(
-    (command) =>
-      command.label.toLowerCase().includes(needle) ||
-      (command.subtitle ?? "").toLowerCase().includes(needle) ||
-      (command.keywords ?? []).some((word) =>
-        word.toLowerCase().includes(needle),
-      ),
+  return commands.filter((command) =>
+    holdsEveryWord(words, [
+      command.label,
+      command.subtitle ?? "",
+      ...(command.keywords ?? []),
+    ]),
   );
 }
 
-export function useBuiltinCommands(): Command[] {
-  const t = useT();
-  const { locale } = useLocale();
-  // The same table the settings rail walks, not a second opinion about it: a
-  // palette reading its own list offers a page the rail no longer lists.
-  const visible = useVisibleSettingsPages();
-  // Company profile draws its website card for an admin seat only, so only an
-  // admin finds the page by that card's words; any other seat would land on none.
-  const isAdmin = useHoldsAdminRole();
-  return useMemo(() => {
-    const screens: Command[] = NAV.map((item) => ({
-      id: `screen:${item.screen}`,
-      label: t(item.labelKey),
-      // The route id is the screen's stable English name and doubles as its
-      // alias, so a destination stays findable under it in every locale. The
-      // row's own aliases (app/nav.ts) ride alongside it, which is what keeps a
-      // word a reader already learned pointing at the row that carries it.
-      keywords: [item.screen, ...(item.aliases ?? [])],
-      type: "screen",
-      route: { screen: item.screen },
-    }));
-    // A fork's own screens (app/custom.ts), asked for by name here rather than
-    // inherited from a rail entry: the rail is where things LIVE and the palette
-    // is what you can DO, and a fork screen can honestly want one without the
-    // other — a surface opened from a record has no rail row and is still worth
-    // finding by typing its name. So this reads `palette`, not `nav`.
-    //
-    // Empty upstream, like every other arm of this seam.
-    const forkScreens: Command[] = customPaletteScreens().map((screen) => ({
-      id: `screen:${CUSTOM_SCREEN}/${screen.key}`,
-      label: resolveCustomLabel(screen.palette.label, locale, t),
-      keywords: [screen.key],
-      type: "screen",
-      route: { screen: CUSTOM_SCREEN, id: screen.key },
-    }));
-    const actions: Command[] = [
-      {
-        id: "action:new-deal",
-        label: t("action.newDeal"),
-        type: "action",
-        route: { screen: "deals", id: CREATE_ID },
-      },
-      {
-        id: "action:booking",
-        label: t("action.booking"),
-        type: "action",
-        route: { screen: "book" },
-      },
-    ];
-    // Every settings entry, derived from the register rather than hand-listed.
-    // No settings entry is a rail row, so nothing else reaches them: a
-    // hand-listed set omits entries only a reader who already knows the
-    // shelving can open, where deriving brings a new tab here for free.
-    //
-    // Gated on the SAME predicate the settings level uses, because that level
-    // answers an entry the principal may not open with the access boundary — so
-    // an ungated command would be a shortcut to a refusal.
-    // Only the admin half has a predicate; the `you` half is every reader's.
-    const settingsScreens: Command[] = visible.map((page) => ({
-      id: `screen:settings-${page.id}`,
-      label: t(`settings.tab.${page.id}`),
-      keywords: [
-        page.id,
-        ...settingsPageAliases(page.id, { holdsAdminRole: isAdmin }),
-        ...(page.id === "company" && isAdmin
-          ? [t("settings.companyRefresh")]
-          : []),
-      ],
-      type: "screen",
-      route: settingsHref(page.id),
-    }));
-    // The scheduled queue, which is off the rail deliberately — a queue of one
-    // contact's own unsent mail is not an eleventh destination (pagemeta.ts says
-    // so) — and was therefore reachable only by typing the address. The
-    // composer that queued a message is one door; this is the other, for the
-    // rep who closed that toast an hour ago and now wants the message back.
-    //
-    // Beside the settings shortcuts rather than among the rail screens above,
-    // because those are built FROM the rail: a command for a screen the rail
-    // does not carry belongs where the other off-rail ones already are.
-    const offRailScreens: Command[] = [
-      {
-        id: `screen:${SCHEDULED_SCREEN}`,
-        label: t("nav.scheduled"),
-        // The words a rep would type for it, which are not the words on the
-        // page: they think of the CONTROL they used, not the destination. So
-        // the alias is that control's own label — already translated, so it is
-        // the right words in each language rather than English prose a German
-        // or Vietnamese reader would never type.
-        //
-        // The route id rides along beside it for the reason every rail command
-        // above carries one: a stable English name that survives a relabel.
-        keywords: [SCHEDULED_SCREEN, t("compose.scheduleSend")],
-        type: "screen",
-        route: { screen: SCHEDULED_SCREEN },
-      },
-    ];
-    return [
-      ...screens,
-      ...forkScreens,
-      ...actions,
-      ...offRailScreens,
-      ...settingsScreens,
-    ];
-  }, [t, visible, locale, isAdmin]);
-}
+export { useBuiltinCommands } from "./palettecommands";
 
 export function CommandPalette({
   open,
@@ -198,7 +99,7 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   // The row the reader moved to with the arrows; null until they do, which
   // leaves Enter to defaultSelection.
-  const [picked, setPicked] = useState<number | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const overlay = useRef<HTMLDivElement>(null);
 
@@ -227,51 +128,109 @@ export function CommandPalette({
     }
   }, [open]);
 
-  const filtered = useMemo(
+  const matched = useMemo(
     () => matchingCommands(commands, query),
     [commands, query],
   );
+  const setting = useConfigurationCommand(query, commands, matched);
+  const filtered = setting ? [...matched, setting] : matched;
 
   // RS-1: live record hits from /search, plus a "see all" row that lands
   // on the full results screen. Row order: builtin matches, then see-all,
   // then records, so the row Enter takes on a half-typed name is one arrow
   // above the hits it summarises.
   const search = useSearchCommands(query);
+  const recents = usePaletteRecents(open, !query.trim());
+  const recentCommands: Command[] = recents.entries.map((entry) => ({
+    id: `recent:${recentIdentity(entry)}`,
+    label: entry.kind === "query" ? entry.text : entry.label,
+    subtitle:
+      entry.kind === "record"
+        ? t(SEARCH_HIT_KIND_KEY[entry.entity_type])
+        : undefined,
+    type: entry.kind === "query" ? "action" : "record",
+    group: t("palette.recent"),
+    recent: entry,
+    pending: recents.activating === recentIdentity(entry),
+    route:
+      entry.kind === "record"
+        ? ENTITY[entry.entity_type].route(entry.id)
+        : undefined,
+    mark:
+      entry.kind === "record" && searchHitHasCard(entry.entity_type)
+        ? { identity: entry.id, name: entry.label, logo: entry.logo }
+        : undefined,
+  }));
   const seeAll: Command | null = query.trim()
     ? {
         id: "search:all",
+        executedQuery: query.trim(),
         label: t("palette.seeAll", { query: query.trim() }),
         type: "action",
         route: { screen: "search", id: encodeURIComponent(query.trim()) },
       }
     : null;
 
-  // Asking leads, always. The palette answers two different questions — where
-  // do I go, and what does this company know — and only the first has a list of
-  // destinations to scan. A reader who came to ASK had to type something and
-  // then hunt past every screen whose name happened to match it, so the row sat
-  // last on the one journey it exists for. It carries the query when there is
-  // one and opens an empty box when there is not; either way it goes nowhere.
-  const rows = [...filtered, ...(seeAll ? [seeAll] : []), ...search.commands];
+  const handbook = usePaletteAsk(query, open, filtered.length);
+  const rows = [
+    ...recentCommands,
+    ...(handbook.row ? [handbook.row] : []),
+    ...filtered,
+    ...(seeAll ? [seeAll] : []),
+    ...search.commands,
+  ];
   const clamp = (index: number) =>
     Math.max(0, Math.min(index, rows.length - 1));
-  const selected = picked ?? defaultSelection(rows, filtered.length, query);
+  const selected = paletteSelection(
+    rows,
+    filtered.length,
+    query,
+    picked,
+    recents.pending,
+  );
+  const focusSearch = () => {
+    setPicked(null);
+    panel.current
+      ?.querySelector<HTMLInputElement>('input[type="search"]')
+      ?.focus();
+  };
 
   const run = (command: Command) => {
-    onClose();
+    if (command.pending) return;
     if (command.id === "ask-ai") {
-      openAsk(query.trim());
+      handbook.ask();
       return;
     }
+    if (command.recent?.kind === "query") {
+      setQuery(command.recent.text);
+      focusSearch();
+      return;
+    }
+    if (command.recent?.kind === "record") {
+      void recents.openRecord(
+        command.recent,
+        () => {
+          onClose();
+          if (command.route) navigate(command.route);
+        },
+        focusSearch,
+      );
+      return;
+    }
+    if (command.executedQuery)
+      void recents.remember(command.executedQuery, command.searchedRecord);
+    onClose();
     if (command.route) {
-      navigate(command.route);
+      navigate(command.route, command.dials);
     }
   };
+
+  const leaving = state === "closing";
+  const backdrop = useBackdropDismiss(onClose, leaving);
 
   if (!mounted) {
     return null;
   }
-  const leaving = state === "closing";
 
   return (
     // The two a11y suppressions this element carried are gone rather than kept:
@@ -289,14 +248,7 @@ export function CommandPalette({
       inert={leaving}
       aria-hidden={leaving || undefined}
       ref={overlay}
-      onClick={(event) => {
-        if (leaving) {
-          return;
-        }
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
+      {...backdrop}
     >
       <div
         className="palette"
@@ -317,25 +269,26 @@ export function CommandPalette({
             placeholder={t("palette.placeholder")}
             aria-label={t("palette.aria")}
             onChange={(event) => {
+              recents.cancel();
               setQuery(event.target.value);
               setPicked(null);
             }}
             onKeyDown={(event) => {
-              // No Escape arm here: `useDialogFocus` answers it for the whole
-              // dialog. It was wired to this input alone, so Escape pressed
-              // while focus sat on a result row — which is where the arrow keys
-              // put a reader — did nothing at all.
+              // No Escape arm here: `useDialogFocus` answers it for the whole dialog.
               if (event.key === "ArrowDown") {
                 event.preventDefault();
-                setPicked(clamp(selected + 1));
+                setPicked(rows[clamp(selected + 1)]?.id ?? null);
               } else if (event.key === "ArrowUp") {
                 event.preventDefault();
-                setPicked(clamp(selected - 1));
+                setPicked(rows[clamp(selected - 1)]?.id ?? null);
               } else if (
                 event.key === "Enter" &&
                 !isImeCommit(event) &&
                 rows[selected]
               ) {
+                // Closing returns focus to the opener, and Enter's keypress would
+                // then activate it: the top-bar search button reopens the palette.
+                event.preventDefault();
                 run(rows[selected]);
               }
             }}
@@ -345,6 +298,14 @@ export function CommandPalette({
               beside the search box are. */}
           <Kbd>{"esc"}</Kbd>
         </div>
+        {handbook.shown ? (
+          <PaletteAnswer
+            pending={handbook.mutation.isPending}
+            error={handbook.mutation.error}
+            result={handbook.mutation.data}
+            onLeave={onClose}
+          />
+        ) : null}
         <div className="palette-list">
           {/* A failed search says so and keeps the builtin commands beside it.
               Neither an EmptyState nor `danger`: the list is not empty, and the
@@ -364,15 +325,10 @@ export function CommandPalette({
               when one query replaces another under it — a reader typing through
               a slow search should see one steady bar, not one that blinks out
               and returns per letter. */}
-          {/* Asking, always, and deliberately NOT one of the options below.
-              The palette answers two questions — where do I go, and what does
-              this company know — and only the first has a list to scan. Pinned
-              into that list it took the first row, which is the row Enter
-              presses, so a reader typing a screen name would have asked about
-              it instead of going there. Here it is reachable on sight and by
-              Tab, and it carries whatever is typed into the box rather than
-              asking it: a question matched mid-word is one still being
-              written. */}
+          {/* The drawer that asks one set of the reader's choosing, outside the
+              rows so Enter on a screen name never opens it. It carries what is
+              typed into the box rather than asking it. A question the box can
+              read as one gets its own "Ask Margince" row below instead. */}
           <button
             type="button"
             className="palette-ask t-body"
@@ -395,6 +351,29 @@ export function CommandPalette({
           {rows.length === 0 && !search.pending && !search.failed && (
             <EmptyState>{t("palette.empty")}</EmptyState>
           )}
+          {!query.trim() && recents.hasStored && (
+            <Eyebrow
+              as="h2"
+              size="xxsmall"
+              className="palette-group"
+              action={
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    recents.clear();
+                    focusSearch();
+                  }}
+                >
+                  {t("palette.clearRecent")}
+                </Button>
+              }
+            >
+              {t("palette.recent")}
+            </Eyebrow>
+          )}
+          {!query.trim() && recents.pending && (
+            <PendingBody label={t("common.loading")} lines={1} />
+          )}
           {rows.map((command, index) => (
             <PaletteRow
               key={command.id}
@@ -410,15 +389,17 @@ export function CommandPalette({
   );
 }
 
-// Where Enter lands before the reader picks a row. A destination the words
-// matched keeps it: typing "pipeline" means going to Deals. A record found by
-// search does not, because half a name is still a search: Enter takes the
-// see-all row, which then leads the list, unless the words name a record whole.
-function defaultSelection(
+// Selection follows identity so validation cannot move an arrow-picked target.
+// Empty-box Enter waits until the recent list has been checked.
+function paletteSelection(
   rows: readonly Command[],
   destinations: number,
   query: string,
+  picked: string | null,
+  pending: boolean,
 ): number {
+  if (picked !== null) return rows.findIndex((row) => row.id === picked);
+  if (!query.trim() && pending) return -1;
   if (destinations > 0) {
     return 0;
   }
@@ -429,22 +410,15 @@ function defaultSelection(
   return Math.max(named, 0);
 }
 
-// Global ⌘K / Ctrl+K binding (AC-shell-3).
-// Both chords work, but an affordance may only advertise ONE and it has to be
-// the one the reader's keyboard has: a Windows user told to press ⌘K is told to
-// press a key that is not there. Pure in its argument, so the call site passes
-// `navigator.platform` and this stays testable without stubbing it.
+const PALETTE_KEY = "k";
+
 /**
- * The chord as its KEYS, because the one surface that draws it draws a cap per
- * key (app/topbar.tsx).
- *
- * Keys rather than a joined string, and no regex: the top bar used to split a
- * "⌘K" label with a lookbehind, which is a parse-time SyntaxError on an engine
- * without lookbehind (Safari before 16.4) — a blank app rather than a
- * plain-looking shortcut.
+ * The ⌘K / Ctrl K chord as one cap per key. Both modifiers work, but a surface
+ * shows only the one the reader's keyboard has. Pure in `platform`, so a test
+ * needs no stub.
  */
 export function paletteHotkeyCaps(platform: string): readonly string[] {
-  return /mac|iphone|ipad|ipod/i.test(platform) ? ["⌘", "K"] : ["Ctrl", "K"];
+  return [modifierCap(platform), PALETTE_KEY.toUpperCase()];
 }
 
 export function usePaletteHotkey(
@@ -453,7 +427,10 @@ export function usePaletteHotkey(
 ) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === PALETTE_KEY
+      ) {
         event.preventDefault();
         // An open dialog makes the rest of the app unreachable, the palette with
         // it; asked only while closed, so the palette's own box never blocks it.

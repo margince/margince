@@ -29,10 +29,16 @@ func (h Handlers) oauthRevoke(w http.ResponseWriter, r *http.Request) {
 		oauthError(w, http.StatusBadRequest, "invalid_request", "token is required")
 		return
 	}
-	err := h.svc.revokeToken(r.Context(), revokeTokenInput{
-		Token:         token,
-		TokenTypeHint: r.PostForm.Get("token_type_hint"),
-	})
+	clientID, confidential, refusal := h.authenticateClient(r.Context(), r.Header, r.PostForm)
+	if refusal != nil {
+		refusal.write(w)
+		return
+	}
+	in := revokeTokenInput{Token: token, TokenTypeHint: r.PostForm.Get("token_type_hint")}
+	if confidential {
+		in.AuthenticatedClient = clientID
+	}
+	err := h.svc.revokeToken(r.Context(), in)
 	// RFC 7009 §2.2: the server answers 200 whether a token was actually
 	// revoked or was never valid to begin with — anything else would turn
 	// this endpoint into an oracle for whether a token string is real.

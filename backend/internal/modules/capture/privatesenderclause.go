@@ -10,7 +10,11 @@
 
 package capture
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
+)
 
 // PrivateSenderClause excludes a contact THIS reader's own sender verdict called
 // anything but a business counterparty.
@@ -27,6 +31,11 @@ import "fmt"
 // silently suppresses the second rep's reconnect — one colleague's privacy
 // decision deciding another contact's pipeline.
 //
+// `vendor_pitch` is not in the list: that verdict lives on the contact as
+// relationship_mark, which every reader shares and a human can set or clear.
+// The per-owner ledger row would disagree with it after a clear, or between
+// two mailbox owners.
+//
 // The owner's OWN correction outranks the machine, both ways. `business`
 // readmits a sender the classifier called noise; `keep_out` withdraws one it
 // called real. Reading the kind alone leaves a corrected contact excluded
@@ -38,7 +47,7 @@ import "fmt"
 // are NOT business, and a new kind must be judged rather than silently
 // inherited — TestEveryVerdictKindIsJudgedByTheReconnectLane holds it.
 func PrivateSenderClause(alias, readerPos string) string {
-	return fmt.Sprintf(`NOT EXISTS (
+	return fmt.Sprintf(`(NOT EXISTS (
 		SELECT 1 FROM contact_email pe
 		  LEFT JOIN capture_pending_counterparty cp
 		         ON cp.email = lower(pe.email) AND cp.owner_id = %[2]s
@@ -48,6 +57,8 @@ func PrivateSenderClause(alias, readerPos string) string {
 		   AND pe.archived_at IS NULL
 		   AND (so.decision = '%[4]s'
 		     OR (so.decision IS DISTINCT FROM '%[3]s'
-		         AND cp.kind IN ('personal', 'advisor', 'newsletter', 'transactional', 'spam'))))`,
-		alias, readerPos, OverrideBusiness, OverrideKeepOut)
+		         AND cp.kind IN ('personal', 'advisor', 'newsletter', 'transactional', 'spam'))))
+	  AND NOT EXISTS (SELECT 1 FROM contact mk
+	                   WHERE mk.id = %[1]s.contact_id AND NOT (%[5]s)))`,
+		alias, readerPos, OverrideBusiness, OverrideKeepOut, relationshipmark.NotMarkedSQL("mk"))
 }

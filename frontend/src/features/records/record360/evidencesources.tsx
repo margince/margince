@@ -1,0 +1,150 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// The basis under an action, where the words are what the reader acts on.
+//
+// Citations is the compact form: chips inside a sentence, a reference beside
+// prose, everything on one line because the prose is the claim and the chips
+// are the receipts. That is right for a brief and wrong here. A suggestion says
+// "follow up on the fallback decision" and a recommended move says "they asked
+// and nobody answered" — the reader's next act is to READ THE MESSAGE, so the
+// message gets a row of its own with the subject, the sender and the preview,
+// which is exactly EmailEntry.
+//
+// It is a separate component rather than a mode on Citations because of where
+// each is mounted. Citations renders inline, inside a <p>, an <li> and a
+// <span>; EmailEntry is a block row and cannot legally go there. One component
+// answering both would be a block element that has to promise never to be a
+// block, which is the promise nothing checks.
+//
+// Two wire shapes feed it. The shared citation carries an account's evidence;
+// the deal card's basis is DealNextBestActionEvidence, its own schema with its
+// own text field. They are adapted here rather than merged upstream, because
+// they are genuinely different rows that happen to name the same message.
+
+import {
+  Citations,
+  type Cited,
+  type OpenReceipt,
+} from "../../../components/citations";
+import { EmailEntry } from "../../../design-system/emailentry";
+import { formatActivityWhen } from "../../../format/activitywhen";
+import { useLocale } from "../../../i18n";
+// The basis block is styled beside the citation chips it falls back to, in the
+// stylesheet those rules already live in.
+import "../../companies/company360.css";
+import { useViewerZone } from "../../../lib/viewerzone";
+
+/**
+ * One line of an action's basis, in the shape this component draws.
+ *
+ * `summary` is present when the line rests on a message this reader may have a
+ * summary of; `cited` is the same line as a citation, for everything else. A
+ * line always has one or the other — a message is drawn as a message, and
+ * anything else falls back to the compact citation path.
+ */
+type Source =
+  | { kind: "email"; key: string; summary: NonNullable<Cited["email_summary"]> }
+  | { kind: "cited"; key: string; cited: Cited };
+
+/** The shared citation shape as sources. */
+export function fromCitations(evidence: readonly Cited[]): Source[] {
+  return evidence.map((cited, index) => {
+    const summary =
+      cited.entity_type === "activity" ? cited.email_summary : null;
+    return summary
+      ? { kind: "email", key: `email:${summary.activity_id}`, summary }
+      : {
+          kind: "cited",
+          key: `cited:${cited.entity_type}:${cited.entity_id}:${index}`,
+          cited,
+        };
+  });
+}
+
+/**
+ * EvidenceSources draws an action's basis as rows.
+ *
+ * A message this reader may open is a pressable EmailEntry; a withheld one is
+ * the same row with its words gone and no opener, which says the exchange
+ * happened and its content is not theirs. Everything else goes back to
+ * Citations, so a basis mixing a message and a deal renders both correctly
+ * without this component learning what a deal is.
+ */
+export function EvidenceSources({
+  sources,
+  onOpenEmail,
+  onOpenRecord,
+  onOpenReceipt,
+  nameOf,
+}: Readonly<{
+  sources: readonly Source[];
+  onOpenEmail?: (activityId: string) => void;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
+  /**
+   * The record's own name, from a page that already holds it — passed straight
+   * through to the citations this component falls back to. A message needs
+   * none: its subject IS its name, and the server sent it.
+   */
+  nameOf?: (
+    entityType: Cited["entity_type"],
+    entityId: string,
+  ) => string | undefined;
+}>) {
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
+  const cited = sources.flatMap((source) =>
+    source.kind === "cited" ? [source.cited] : [],
+  );
+  const messages = sources.flatMap((source) =>
+    source.kind === "email" ? [source] : [],
+  );
+  if (messages.length === 0 && cited.length === 0) {
+    return null;
+  }
+  return (
+    <div className="co-evidence-sources">
+      {messages.map((source) => {
+        const withheld = source.summary.display_status === "withheld";
+        const timestamp = formatActivityWhen(
+          source.summary.occurred_at,
+          source.summary.occurred_precision,
+          locale,
+          readerZone,
+        );
+        // The withheld branch states its reason rather than passing an
+        // undefined opener: EmailEntry refuses to be silently unopenable, and
+        // "the content is not this reader's" is a different fact from "this
+        // surface mounts no drawer".
+        return withheld ? (
+          <EmailEntry
+            key={source.key}
+            summary={source.summary}
+            timestamp={timestamp}
+            onOpen={undefined}
+            whyNotOpenable="withheld"
+          />
+        ) : (
+          <EmailEntry
+            key={source.key}
+            summary={source.summary}
+            timestamp={timestamp}
+            {...(onOpenEmail
+              ? { onOpen: () => onOpenEmail(source.summary.activity_id) }
+              : { onOpen: undefined, whyNotOpenable: "noReader" as const })}
+          />
+        );
+      })}
+      {cited.length > 0 && (
+        <Citations
+          evidence={cited}
+          nameOf={nameOf}
+          onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
+          onOpenEmail={onOpenEmail}
+        />
+      )}
+    </div>
+  );
+}

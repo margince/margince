@@ -12,7 +12,7 @@ import {
   row,
   stub,
   type WorklistItem,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 // The ranked queue, and the ways it can mislead the reader reading it.
 //
@@ -55,7 +55,7 @@ describe("what the ranked queue tells a reader", () => {
 
     expect(
       await screen.findByText(
-        "No tasks due today or overdue. Later tasks are on each record’s Tasks tab.",
+        "No tasks due today or overdue. Later tasks are under Upcoming and backlog.",
       ),
     ).toBeTruthy();
     // The unqualified sentence is the one that misled: it must not be what a
@@ -232,7 +232,7 @@ describe("what the ranked queue tells a reader", () => {
         const target = call[0];
         return target instanceof Request ? target.url : String(target);
       });
-      expect(urls.some((url) => url.includes("filter=decisions"))).toBe(true);
+      expect(urls.some((url) => url.includes("view=decisions"))).toBe(true);
     });
   });
 
@@ -295,10 +295,12 @@ describe("what the ranked queue tells a reader", () => {
       name: "Open privacy request",
     });
     const dsr = "01a05500-0000-7000-8000-00000000dddd";
-    expect(request.getAttribute("href")).toBe(`#/settings/privacy?case=${dsr}`);
+    expect(request.getAttribute("href")).toBe(
+      `/#/settings/privacy?case=${dsr}`,
+    );
   });
 
-  it("says what happens if the reader does nothing", async () => {
+  it("omits generic consequence narration", async () => {
     stub(
       day({
         queue: [row({ title: "Send the proposal" })],
@@ -307,10 +309,11 @@ describe("what the ranked queue tells a reader", () => {
     );
     renderWorklist();
 
-    expect(await screen.findByText("If ignored, the task slips.")).toBeTruthy();
+    await screen.findByText("Send the proposal");
+    expect(screen.queryByText("If ignored, the task slips.")).toBeNull();
   });
 
-  it("says why a row sits above the one below it", async () => {
+  it("preserves server ordering without comparison narration", async () => {
     stub(
       day({
         queue: [
@@ -330,7 +333,8 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    expect(await screen.findByText(/Ranked above the next item:/)).toBeTruthy();
+    await screen.findByText("Closing tomorrow");
+    expect(screen.queryByText(/Ranked above the next item:/)).toBeNull();
     // The server's order is the page's order. Rendering the rows sorted or
     // reversed would still show a reason line, so the DOM order is what this
     // asserts.
@@ -396,15 +400,7 @@ describe("what the ranked queue tells a reader", () => {
     expect(container.textContent).not.toContain("worklist.because");
   });
 
-  // The reasons past the third go behind a tap — NOT away.
-  //
-  // A cap that dropped them was tried and abandoned: the reasons that matter
-  // most are appended LAST, because they are applied late. `pinned` drives the
-  // row to the top and is appended by applyPins after everything else;
-  // `expected_revenue` is absorbed onto a waiting row last and is a ranking
-  // comparator. A head-of-list cut takes exactly the facts that decided where
-  // the row sits.
-  it("folds the reasons past the third rather than dropping them", async () => {
+  it("shows concrete reasons directly without ranking narration", async () => {
     stub(
       day({
         queue: [
@@ -427,47 +423,19 @@ describe("what the ranked queue tells a reader", () => {
     const { container } = renderWorklist();
 
     await screen.findByText("A buyer is waiting on a funded deal");
-    const fold = container.querySelector("details.worklist-row-because-fold");
-    expect(fold).not.toBeNull();
-    // Read the two halves SEPARATELY. Asserting over the whole page cannot
-    // tell "in the summary" from "in the fold", so it passes just as well on a
-    // row that put the strongest reasons behind the tap — which is the exact
-    // inversion this component exists to prevent.
-    const summary = fold?.querySelector("summary")?.textContent ?? "";
-    const hidden = fold?.querySelector("p")?.textContent ?? "";
-
-    // THE SERVER'S ORDER, kept. `because` arrives "in the order they were
-    // weighed", so the head is the strongest three and the fold falls in the
-    // right place by construction. Nothing held that until now: reversing the
-    // list before the slice passed every test in this file, and a reversed
-    // fold buries the weak reasons and promotes the ones a reader already has.
-    // Positions, checked for PRESENCE first. indexOf answers -1 for a phrase
-    // that is not there, and -1 is less than every real index — so an ordering
-    // assertion alone passes when the reason it names has vanished entirely.
-    const at = (kind: "buyer_wrote_last" | "stale" | "no_reply_history") => {
-      const found = summary.indexOf(en[`worklist.because.${kind}`]);
-      expect(found, `${kind} is missing from the summary`).toBeGreaterThan(-1);
-      return found;
-    };
-    expect(at("buyer_wrote_last")).toBeLessThan(at("stale"));
-    expect(at("stale")).toBeLessThan(at("no_reply_history"));
-
-    // The rest are PRESENT — folded, never discarded — and specifically NOT in
-    // the summary. The one that decided the rank is in here, which is the whole
-    // reason a cap was wrong.
-    for (const kind of ["asks_nothing", "expected_revenue"] as const) {
-      expect(hidden).toContain(en[`worklist.because.${kind}`]);
-      expect(summary).not.toContain(en[`worklist.because.${kind}`]);
+    expect(
+      container.querySelector("details.worklist-row-because-fold"),
+    ).toBeNull();
+    const annotation = container.querySelector(".worklist-row-because");
+    for (const kind of [
+      "buyer_wrote_last",
+      "stale",
+      "no_reply_history",
+      "asks_nothing",
+      "expected_revenue",
+    ] as const) {
+      expect(annotation?.textContent).toContain(en[`worklist.because.${kind}`]);
     }
-
-    // The count names how many are ACTUALLY hidden, so a reader can decide
-    // whether to spend the tap. Asserted as the whole rendered phrase against
-    // the summary alone: `toContain("2")` matched any digit 2 anywhere on the
-    // page, so a summary promising "+22 more reasons" over two hidden facts
-    // passed it.
-    expect(summary).toContain(
-      en["worklist.because.more_other"].replace("{count}", "2"),
-    );
   });
 
   // Three reasons still fit on one line at 390px, so folding them would cost a
@@ -564,12 +532,20 @@ describe("what the ranked queue tells a reader", () => {
     stub(
       day({
         queue: [row()],
-        summary: { urgent: 1234, due: 0, lower_priority: 0, total: 1 },
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1234 },
+        counts: [
+          {
+            category: "tasks",
+            considered: 1234,
+            shown: 1,
+            more_available: false,
+          },
+        ],
       }),
     );
     renderWorklist("de");
 
-    expect(await screen.findByText(/1\.234/)).toBeTruthy();
+    expect(await screen.findByText("1.234 offene Punkte")).toBeTruthy();
   });
 
   it("offers no scope control when the reader has one scope", async () => {
@@ -636,11 +612,11 @@ describe("what the ranked queue tells a reader", () => {
 // The lead lane, on the screen.
 //
 // The lane, its dedupe and its bounds are proved in Go. What none of that can
-// see is the half of the same invariant that lives here: a source, a category
-// and three reason kinds each have to be REGISTERED in worklist.copy.ts before
-// a word of them reaches a reader. An unregistered one does not error — it
-// renders a fallback, or silently drops the figure it was carrying — so the
-// backend can be entirely correct while the row says nothing.
+// see is the half of the same invariant that lives here. A source, a category
+// and three reason kinds each have to be registered in lib/worklistcopy.ts
+// before a word of them reaches a reader. An unregistered one does not error.
+// It renders a fallback, or drops the figure it was carrying, so the backend
+// can be correct while the row says nothing.
 describe("a lead still owed its first reply", () => {
   function leadRow(over: Partial<WorklistItem> = {}): WorklistItem {
     return row({
@@ -699,7 +675,7 @@ describe("a lead still owed its first reply", () => {
 
     const link = await screen.findByRole("link", { name: "Weber GmbH" });
     expect(link.getAttribute("href")).toBe(
-      "#/leads/11111111-2222-4333-8444-555555555555",
+      "/#/leads/11111111-2222-4333-8444-555555555555",
     );
   });
 
@@ -762,7 +738,7 @@ describe("an introduction ask on the queue", () => {
     // mentioned anywhere else, and landing a colleague on the overview leaves
     // them to go and find it.
     expect(verb.getAttribute("href")).toBe(
-      "#/contacts/018f3a1b-0000-7000-8000-000000000010/network",
+      "/r/contacts/018f3a1b-0000-7000-8000-000000000010#/contacts/018f3a1b-0000-7000-8000-000000000010/network",
     );
   });
 
@@ -794,86 +770,10 @@ describe("an introduction ask on the queue", () => {
     // Wait for the queue itself to render before asserting an absence: a
     // findBy on a link that must NOT exist would pass against a page that had
     // not drawn anything yet.
-    await screen.findByText(/0 urgent/);
+    await screen.findByText(/Send the retrofit quote/);
     // A "Decide" LINK beside an inline decision card would ask the reader to
     // choose between answering here and going somewhere to answer.
     expect(screen.queryByRole("link", { name: "Decide" })).toBeNull();
-  });
-});
-
-describe("one obligation is drawn once", () => {
-  // The top row IS the one thing to do next, and the page no longer says so a
-  // second time. A focus card above the queue drew that row whole and a Next-up
-  // list drew the three after it as titles, so a reader counting their morning
-  // off this screen counted the first four rows twice.
-  //
-  // What replaced it: the first row is selected on arrival, which puts it in
-  // the context pane without drawing it again.
-  it("draws the top row once, not once on a card and once in the queue", async () => {
-    stub(
-      day({
-        queue: [
-          row({
-            id: "focus-me",
-            title: "Northstar renewal",
-            band: "now",
-            primary_action: "act",
-            source: "deal_at_risk",
-            category: "deals_at_risk",
-            level: 3,
-            subject: {
-              type: "deal",
-              id: "01a05500-0000-7000-8000-0000000000cc",
-              label: "Northstar",
-            },
-          }),
-        ],
-        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
-      }),
-    );
-    renderWorklist();
-
-    expect(await screen.findAllByText(/Northstar renewal/)).toHaveLength(1);
-  });
-
-  // Review work is judgement the queue collects, not a rep's next action. It
-  // still belongs on the page — what it must not do is claim the top of it.
-  it("keeps review work on the page without promoting it", async () => {
-    stub(
-      day({
-        queue: [
-          row({
-            id: "dupe",
-            title: "Two Acme records",
-            band: "review",
-            primary_action: "merge",
-            source: "dedupe_candidate",
-            category: "decisions",
-            level: 6,
-          }),
-        ],
-        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
-      }),
-    );
-    renderWorklist();
-
-    expect(await screen.findAllByText(/Two Acme records/)).toHaveLength(1);
-  });
-
-  // A row the server named no verb for is still real work and still drawn. It
-  // simply has nothing to press, which the row says by drawing no control.
-  it("draws a row the server named no verb for", async () => {
-    stub(
-      day({
-        queue: [
-          row({ id: "verbless", title: "Something happened", band: "now" }),
-        ],
-        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
-      }),
-    );
-    renderWorklist();
-
-    expect(await screen.findAllByText(/Something happened/)).toHaveLength(1);
   });
 });
 
@@ -975,63 +875,3 @@ describe("the draft_reply verb says what the click does", () => {
     ).toBeNull();
   });
 });
-
-// One obligation, drawn once.
-//
-// The page used to render its first item up to three times — as a focus card,
-// as the head of a "next up" strip, and again as a row in the queue. Three
-// drawings of one thing is not emphasis; it is a reader counting their morning
-// wrong, and a rep who answers the focus card then meets the same customer
-// twice on the way down.
-//
-// Counted over every `.worklist-row-title` ON THE PAGE, not within its list
-// items. The duplication this guards against renders OUTSIDE the queue's <ol>
-// — a card above it drawing the top row again — so a walk over <li> elements
-// filters out the one shape of the defect the test is named for. It passed for
-// exactly that reason while the screen showed the duplication.
-//
-// Titles rather than identities, and the fixture is built so that is sound:
-// three rows, three distinct titles. Two rows may honestly share a title in
-// production — two tasks called "Follow up" are two obligations — so this
-// fixture must keep them distinct for the count to mean what it says, which is
-// what `seen.size` being asserted at 3 holds.
-describe("every obligation is drawn once", () => {
-  it("AC-WORKLIST-SDR-02: renders no row twice, including the one at the top", async () => {
-    stub(
-      day({
-        queue: [
-          row({
-            id: "a",
-            source: "customer_waiting",
-            title: "Kirsten replied",
-          }),
-          row({ id: "b", source: "task", title: "Send the quote" }),
-          row({ id: "c", source: "meeting", title: "Quarterly review" }),
-        ],
-        summary: { urgent: 1, due: 1, lower_priority: 1, total: 3 },
-      }),
-    );
-
-    const { container } = renderWorklist();
-    await screen.findByText("Kirsten replied");
-
-    // Over the WHOLE page, not over its list items. The focus card this test
-    // exists to keep away drew its copy OUTSIDE any <li>, so walking list items
-    // filtered the duplicate out and the test passed while the screen showed
-    // exactly the duplication it names.
-    const drawn = [...container.querySelectorAll(".worklist-row-title")].map(
-      (title) => title.textContent ?? "",
-    );
-    const seen = new Map<string, number>();
-    for (const title of drawn.filter(Boolean)) {
-      seen.set(title, (seen.get(title) ?? 0) + 1);
-    }
-
-    const twice = [...seen.entries()].filter(([, times]) => times > 1);
-    expect(twice).toEqual([]);
-    expect(seen.size).toBe(3);
-  });
-});
-
-// Done, and the way back from it.
-//

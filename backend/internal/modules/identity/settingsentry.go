@@ -16,12 +16,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
@@ -30,6 +37,9 @@ import (
 // settings surface. Read is broad — a rep seeing amounts in the base currency
 // benefits from knowing which one it is — and write is admin/ops.
 const installationSettingsObject = "installation_settings"
+
+// installationAuditVerb is the verb an installation setting's change is audited under.
+const installationAuditVerb = "update"
 
 // authenticationPolicyObject gates the sign-in half of the installation's
 // settings, read apart from the rest.
@@ -57,22 +67,26 @@ const SettingsObject = installationSettingsObject
 // Name is the company's display name. Seeded from margince.yaml at
 // bootstrap; an administrator saving the anchor company's display name writes it from
 // then on (compose/installationname.go).
-var Name = settings.Define[string](
-	"installation.name",
-	installationSettingsObject,
-	"update",
-	"",
-	func(v string) error {
+var Name = config.DefineStored(config.Spec[string]{
+	Key:  "installation.name",
+	Env:  "MARGINCE_INSTALLATION_NAME",
+	Type: config.String,
+	Validate: func(v string) error {
 		if code, why := values.CompanyNameFault(v); code != "" {
 			return errors.New(why)
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+	Doc: "The company's name. Set at boot, it also refuses a different name on the company profile.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
 // Timezone is the IANA reporting-period zone every period boundary is
 // computed in. Distinct from a user's own timezone (app_user.timezone), which
 // only affects how times are displayed to them.
+//
+// Database-only, unlike the settings beside it. SQL reads this row directly
+// (the brief-run local day, the share frame). A boot value would split Go from
+// SQL.
 var Timezone = settings.Define[string](
 	"installation.timezone",
 	installationSettingsObject,
@@ -108,13 +122,16 @@ var Timezone = settings.Define[string](
 // injects the probe, the way every cross-module edge is wired (ADR-0054).
 // Until it does, this setting is changeable — which is why the injection is
 // asserted by a fitness test rather than left to wiring discipline.
+//
+// Database-only like Timezone: rollup views and the freeze probe read this row
+// in SQL, so a boot value would split Go from SQL.
 var BaseCurrency = settings.Define[string](
 	"installation.base_currency",
 	installationSettingsObject,
 	"update",
 	"EUR",
 	func(v string) error {
-		if !values.ValidCurrency(v) {
+		if !values.AssignableCurrency(v) {
 			return errors.New("a base currency is three uppercase ISO-4217 letters, like EUR")
 		}
 		return nil
@@ -125,28 +142,46 @@ var BaseCurrency = settings.Define[string](
 	// refuse a seat that may read the deals.
 	MachineryApplied()
 
-// Country is where this installation is established, as a lower-case ISO
-// 3166-1 alpha-2 code. Empty means unstated, and unstated is the strict answer
-// rather than a permissive one: with no country to resolve, the outbound
-// authorization engine falls back to the floor every jurisdiction shares —
-// consent, with no exception — instead of picking a lenient default nobody
-// chose.
+// baseCurrencyLockProbe is the deals module's answer to why BaseCurrency cannot
+// change. Nil until compose injects it, and nil reads as changeable.
+var baseCurrencyLockProbe func(context.Context, pgx.Tx) (currencylock.Lock, bool, error)
+
+// BaseCurrencyLockWired reports whether the read has a probe. HasFreezeProbe
+// sees only the write's slot, and a read without one reports "changeable".
+func BaseCurrencyLockWired() bool { return baseCurrencyLockProbe != nil }
+
+// LockBaseCurrencyWith wires one probe into both the read and the write, so a
+// client is shown the same facts a PATCH is refused on.
+func LockBaseCurrencyWith(probe func(context.Context, pgx.Tx) (currencylock.Lock, bool, error)) {
+	baseCurrencyLockProbe = probe
+	BaseCurrency.WithFreeze(func(ctx context.Context, tx pgx.Tx) (bool, string, error) {
+		lock, locked, err := probe(ctx, tx)
+		if err != nil || !locked {
+			return false, "", err
+		}
+		return true, lock.Refusal(), nil
+	})
+}
+
+// Country is where this installation's default legal entity is established, as
+// a lower-case ISO 3166-1 alpha-2 code. Empty means unstated.
 //
-// It is the input to jurisdiction resolution, not a display field. Which
-// messaging rules bind an outbound message follows from where the CONTROLLER
-// is established as well as where the recipient is, and this names the first
-// half. A wrong value here is a compliance fact, not a cosmetic one, which is
-// why it validates as a code rather than accepting free text.
+// It selects the data-protection rules: request deadlines, the controller and
+// privacy-contact disclosures of mail the default entity sends, and the
+// retention floor. Marketing rules do not follow it; they follow each
+// recipient's country (consent/ruleselectors.go). A wrong value here is a
+// compliance fact, not a cosmetic one, which is why it validates as a code
+// rather than accepting free text.
 //
 // Lower-case because that is the spelling jurisdiction.Code carries and a pack
 // declares; accepting either case here would make "DE" and "de" two
 // installations as far as rule lookup is concerned.
-var Country = settings.Define[string](
-	"installation.country",
-	installationSettingsObject,
-	"update",
-	"",
-	func(v string) error {
+var Country = config.DefineStored(config.Spec[string]{
+	Key:     "installation.country",
+	Env:     "MARGINCE_INSTALLATION_COUNTRY",
+	Type:    config.String,
+	Default: config.Some(""),
+	Validate: func(v string) error {
 		if v == "" {
 			return nil
 		}
@@ -161,12 +196,11 @@ var Country = settings.Define[string](
 		}
 		return nil
 	},
-	// MachineryApplied because the outbound authorization engine reads it while
-	// applying the posture to its OWN write — the case that declaration exists
-	// for, and its doc's own words: "the posture must bind whoever the acting
-	// principal happens to be". A send runs under whatever credential asked for
-	// it, and which jurisdiction's rules bind that message is not a fact the
-	// asker's read grants may vary.
+	Doc: "Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none.",
+	// MachineryApplied because the send path reads it while applying the
+	// posture to its own write, the case that declaration exists for. A send
+	// runs under whatever credential asked for it. Which rules bind that
+	// message is not a fact the asker's read grants may vary.
 	//
 	// Without it CountryOf's settings.ApplyTx refuses, and every send job fails
 	// with "installation.country is not declared MachineryApplied" — which is
@@ -176,29 +210,125 @@ var Country = settings.Define[string](
 	// It discloses a jurisdiction code through behaviour, which is the weakest
 	// thing this flag can leak and is already public: an installation's country
 	// is inferable from the rules its own outbound mail obeys.
-).AsInstallationIdentity().MachineryApplied()
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
-// Definitions is identity's contribution to the settings registry.
+// ExtensionOverwritesEditedFields holds, per composed unit name, whether that
+// unit's feed may overwrite a field a user last edited. A unit absent from
+// the map reads false: the feed leaves what a user edited and reports it.
+//
+// Machinery-applied because the ingress landing reads it under the feed's own
+// service-member authority, which holds no installation_settings grant. The
+// value shapes how the write behaves and is answered to no one.
+var ExtensionOverwritesEditedFields = settings.Define[map[string]bool](
+	"identity.extension_overwrites_edited_fields", installationSettingsObject, installationAuditVerb, map[string]bool{}, nil,
+).MachineryApplied()
+
+// ExtensionOverwritesEditedFieldsOf answers whether one unit may overwrite a
+// field a user last edited, through the settings read gate.
+func ExtensionOverwritesEditedFieldsOf(ctx context.Context, store *settings.Store, unit string) (bool, error) {
+	perUnit, err := settings.Get(ctx, store, ExtensionOverwritesEditedFields)
+	return perUnit[unit], err
+}
+
+// SetExtensionOverwritesEditedFields saves one unit's choice and keeps every
+// other unit's. An admin's act alone: it decides whether a feed may undo what
+// a colleague typed. The map is read under the write lock so two admins
+// changing two units cannot lose one change.
+func SetExtensionOverwritesEditedFields(ctx context.Context, store *settings.Store, unit string, on bool) error {
+	if err := auth.RequireAdmin(ctx); err != nil {
+		return err
+	}
+	return store.WriteTx(ctx, func(tx pgx.Tx) error {
+		return setOverwritesTx(ctx, store, tx, unit, on)
+	})
+}
+
+func setOverwritesTx(ctx context.Context, store *settings.Store, tx pgx.Tx, unit string, on bool) error {
+	if err := settings.LockForWrite(ctx, tx, ExtensionOverwritesEditedFields.Key()); err != nil {
+		return err
+	}
+	perUnit, err := settings.ApplyTx(ctx, tx, ExtensionOverwritesEditedFields)
+	if err != nil {
+		return err
+	}
+	next := maps.Clone(perUnit)
+	if next == nil {
+		next = map[string]bool{}
+	}
+	next[unit] = on
+	return settings.SetTx(ctx, store, tx, ExtensionOverwritesEditedFields, next)
+}
+
+// ExtensionSettingValues holds the values an admin gave the settings the
+// composed units declare, keyed "<unit>/<setting key>". A setting absent from
+// the map reads as its declared default. The read gate is the installation
+// settings object, so only an admin sees them: no unit or feed reads them.
+var ExtensionSettingValues = settings.Define[map[string]string](
+	"identity.extension_setting_values", installationSettingsObject, installationAuditVerb, map[string]string{}, nil,
+)
+
+// ExtensionSettingValuesOf reads every stored unit setting value, through the
+// settings read gate.
+func ExtensionSettingValuesOf(ctx context.Context, store *settings.Store) (map[string]string, error) {
+	return settings.Get(ctx, store, ExtensionSettingValues)
+}
+
+// SetExtensionSettings saves one unit's governance switch and the given values
+// of its declared settings in one transaction. A form is saved whole or not at
+// all. Every other value stays as it was. Only an admin may call it. Each
+// map is read under its write lock. Two admins changing two settings cannot
+// lose one change.
+func SetExtensionSettings(ctx context.Context, store *settings.Store, unit string, overwrites bool, changes map[string]string) error {
+	if err := auth.RequireAdmin(ctx); err != nil {
+		return err
+	}
+	return store.WriteTx(ctx, func(tx pgx.Tx) error {
+		if err := setOverwritesTx(ctx, store, tx, unit, overwrites); err != nil {
+			return err
+		}
+		if len(changes) == 0 {
+			return nil
+		}
+		if err := settings.LockForWrite(ctx, tx, ExtensionSettingValues.Key()); err != nil {
+			return err
+		}
+		stored, err := settings.GetTx(ctx, tx, ExtensionSettingValues)
+		if err != nil {
+			return err
+		}
+		next := maps.Clone(stored)
+		if next == nil {
+			next = map[string]string{}
+		}
+		for key, value := range changes {
+			next[unit+"/"+key] = value
+		}
+		return settings.SetTx(ctx, store, tx, ExtensionSettingValues, next)
+	})
+}
+
+// Definitions is identity's share of the settings registry that the
+// configuration registry does not hold.
 func Definitions() []settings.Definition {
-	return append([]settings.Definition{
-		Name,
-		Timezone,
-		BaseCurrency,
-		BaseLanguage,
-		DateFormat,
-		TimeFormat,
-		Country,
-		FiscalYearStartMonth,
-		DeadWorkBannerHours,
-		OAuthAccessTokenTTLMinutes,
-		ForecastForwardMeasure,
-		EnabledOidcProviders,
-		RequireSSO,
-		RequireMFA,
-		OidcGroupRoleMap,
-		SMTPPasswordRef,
-		LicenseTokenRef,
-	}, append(append(scheduleDefinitions(), sendPacingDefinitions()...), agentAllowanceDefinitions()...)...)
+	return []settings.Definition{
+		Timezone, BaseCurrency, AgentWindowNextHours, AgentWindowNextFrom, SMTPPasswordRef, LicenseTokenRef,
+		ExtensionOverwritesEditedFields, ExtensionSettingValues,
+	}
+}
+
+// Settings is identity's contribution to the configuration registry.
+func Settings() []config.Any {
+	out := []config.Any{
+		Name, Country, BaseLanguage, DateFormat, TimeFormat, FiscalYearStartMonth, DeadWorkBannerHours,
+		ForecastForwardMeasure, EnabledOidcProviders, RequireSSO, RequireMFA, OidcGroupRoleMap,
+		OAuthAccessTokenTTLMinutes, DynamicClientRegistration, MetadataDocumentClients,
+		CallWhatsApp, CallTelegram, CallZalo, IndividualPerformance, ForecastSelfCorrecting,
+		ForecastLikelyThreshold,
+	}
+	for _, s := range ScheduleSettings() {
+		out = append(out, s)
+	}
+	return slices.Concat(out, sendPacingSettings(), agentAllowanceSettings())
 }
 
 // BaseCurrencyOf resolves the installation's reporting currency inside a
@@ -257,6 +387,16 @@ func TimezoneAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.ApplyTx(ctx, tx, Timezone)
 }
 
+// ZoneAppliedTx is TimezoneAppliedTx resolved to a location. A compose read
+// uses it to get the zone a calendar day or "N days ago" is counted in.
+func ZoneAppliedTx(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
+	name, err := TimezoneAppliedTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	return storekit.LoadZone(name)
+}
+
 // NameOf resolves the installation's display name inside a transaction the
 // caller already holds.
 //
@@ -266,7 +406,7 @@ func TimezoneAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
 // installation-identity settings are seeded together at bootstrap, so a tree
 // where one is unset has the other two unset as well.
 func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.RequireTx(ctx, tx, Name)
+	return config.StoredRequireTx(ctx, tx, config.Bound(), Name)
 }
 
 // InstallationNameOf reads the installation's own display label inside a
@@ -283,6 +423,10 @@ func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // stored name is a misconfiguration that must not turn a working page
 // into a 500.
 func InstallationNameOf(ctx context.Context, tx pgx.Tx) (string, error) {
+	// A name a boot source sets answers without the row.
+	if name, ok := config.BootVal(config.Bound(), Name); ok {
+		return name, nil
+	}
 	var name string
 	err := tx.QueryRow(
 		ctx,
@@ -316,7 +460,7 @@ func InstallationNameForPublicPage(ctx context.Context, pool *pgxpool.Pool) (str
 // string — which resolves to no jurisdiction and therefore adds no
 // jurisdiction-specific permission to anybody's mail.
 func CountryOf(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
-	code, err := settings.ApplyTx(ctx, tx, Country)
+	code, err := config.StoredApplyTx(ctx, tx, config.Bound(), Country)
 	if err != nil {
 		return "", err
 	}
@@ -343,5 +487,5 @@ func CountryOf(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
 // answer mailcopy falls back to, so an installation that has never chosen gets
 // what it got before this existed.
 func LanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.ApplyTx(ctx, tx, BaseLanguage)
+	return config.StoredApplyTx(ctx, tx, config.Bound(), BaseLanguage)
 }

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/lib/independentedit.ts -->
 # Editing records while other work is running
 
 Editing in the **Details** panel of a company, contact, deal or lead writes only

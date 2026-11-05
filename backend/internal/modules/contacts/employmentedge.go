@@ -18,7 +18,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -36,6 +38,13 @@ import (
 func attachToSettledVerdict(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, domain string, prior DomainDisposition, res *EnsureCounterpartyResult) error {
 	if prior.CompanyID == nil {
 		return nil
+	}
+	if err := lockContactForAttach(ctx, tx, res.ContactID); err != nil {
+		return err
+	}
+	visible, err := auth.VisibleTo(ctx, tx, companyEntity, prior.CompanyID.UUID)
+	if err != nil || !visible {
+		return err
 	}
 	live, err := companyIsLive(ctx, tx, *prior.CompanyID)
 	if err != nil || !live {
@@ -78,6 +87,10 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err := lockContactForAttach(ctx, tx, contactID); err != nil {
 		return err
 	}
+	// The seat check before the employment lock: contacts/lockorder.go.
+	if seat, err := contactIsSeatTx(ctx, tx, contactID.UUID); err != nil || seat {
+		return err
+	}
 	// And the same per-contact lock every other writer of this contact's
 	// current-primary employment takes. The contact row lock above answers a
 	// different question — is this contact still here — and the two writers that
@@ -100,7 +113,7 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 			WHERE contact_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
-		contactID, companyID, in.Source, in.CapturedBy, domain, in.ActivityID, mailClockSkewAllowance).Scan(&edgeID)
+		contactID, companyID, in.Source, in.CapturedBy, owndomain.Fold(domain), in.ActivityID, mailClockSkewAllowance).Scan(&edgeID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Either guard skipped it: the contact already has a current primary
 		// employer, or this exact edge already exists. Only the second has
@@ -110,7 +123,10 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err != nil {
 		return fmt.Errorf("contacts: insert employment edge: %w", err)
 	}
-	return auditCapturedEmployment(ctx, tx, edgeID, contactID, companyID, relationshipOriginCapture)
+	if err := auditCapturedEmployment(ctx, tx, edgeID, contactID, companyID, relationshipOriginCapture); err != nil {
+		return err
+	}
+	return fileEmployerTwins(ctx, tx, contactID, in.CapturedBy)
 }
 
 // adoptDispositionForCompany settles a domain onto the company that already
@@ -125,6 +141,8 @@ func adoptDispositionForCompany(ctx context.Context, tx pgx.Tx, domain string, c
 		UPDATE company_domain_disposition
 		   SET status = $2, source = $3, company_id = $4,
 		       evidence = 'a human put a company on this domain',
+		       -- A settled row holds no open question (pending_reason_shape).
+		       pending_reason = NULL, candidate_company_id = NULL, site_unreadable = false,
 		       next_attempt_at = NULL, updated_at = now()
 		 WHERE domain = $1
 		   AND (status <> $2 OR company_id IS DISTINCT FROM $4)
@@ -140,13 +158,9 @@ func adoptDispositionForCompany(ctx context.Context, tx pgx.Tx, domain string, c
 	return nil
 }
 
-// deferCompanyToTriage handles a domain with no company behind it yet: decide
-// whether the question is even worth asking, and if it is, open it.
-//
-// Nothing is created here on purpose. The contact is already committed and the
-// message is already on their timeline; what is withheld is a company row that
-// nothing yet justifies. ADR-0063's create-on-sight is what manufactured
-// "Kestner" from a man's own domain, and no later evidence removed it.
+// deferCompanyToTriage records a durable question for an unclaimed domain.
+// Classification keeps personal and service domains from becoming employers.
+
 func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, base string, res *EnsureCounterpartyResult) error {
 	// Consumer mail is answered by the domain itself and needs no crawl to
 	// settle. The sink's tier ladder usually catches it first; this repeats the
@@ -173,7 +187,7 @@ func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCo
 		// again. New mail is new evidence, so it rearms the question: a company
 		// whose site was down when we first looked gets another chance the next
 		// time somebody there writes, instead of waiting for a human forever.
-		return reopenWithheldDispositionTx(ctx, tx, base, in.OwnerID, newestEvidenceFor(ctx, tx, base, in.ActivityID))
+		return reopenWithheldDispositionTx(ctx, tx, base, in.OwnerID, newestEvidenceFor(ctx, tx, base, in.ActivityID), false)
 	}
 	opened, err := recordPendingDispositionTx(ctx, tx, base, in.OwnerID,
 		newestEvidenceFor(ctx, tx, base, in.ActivityID))

@@ -38,6 +38,8 @@ func TestEveryVerdictKindIsJudgedByTheReconnectLane(t *testing.T) {
 		KindContact:       true,
 		KindRoleMailbox:   true,
 		KindCompanySender: true,
+		// Judged by contact.relationship_mark, not by the per-owner ledger.
+		KindVendorPitch: true,
 	}
 	clause := PrivateSenderClause("e", "$1")
 	for _, kind := range all {

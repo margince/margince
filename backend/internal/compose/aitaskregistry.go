@@ -10,6 +10,7 @@ package compose
 
 import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/reportsetup"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -57,6 +58,10 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskDraftReply, "intro_note", introNoteCases{})
 	oneShot(ai.TaskProposeRoles, "committee", proposeRolesCases{})
 	oneShot(ai.TaskNlSearch, "filter_propose", filterProposeCases{})
+	oneShot(ai.TaskReaderRendering, "activity_text", readerRenderingCases{})
+	oneShot(ai.TaskReportInterpret, "sales_assessment", salesAssessmentCases{})
+	oneShot(ai.TaskReportSetup, "initiative_setup", reportSetupCases{site: reportsetup.SiteInitiative})
+	oneShot(ai.TaskReportSetup, "custom_report_setup", reportSetupCases{site: reportsetup.SiteCustomReport})
 	oneShot(ai.TaskBriefRanking, "rank", briefRankingCases{})
 	oneShot(ai.TaskWeeklyReview, "narrative", weeklyNarrativeCases{})
 	oneShot(ai.TaskWeeklyLearnings, "learn", weeklyLearningsCases{})
@@ -73,8 +78,10 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskSummarize, "company_ask", companyAskCases{})
 	oneShot(ai.TaskSummarize, "company_dossier", companyDossierCases{})
 	oneShot(ai.TaskSummarize, "contact_brief", contactBriefCases{})
+	oneShot(ai.TaskSummarize, "deal_room_brief", roomBriefCases{})
 	oneShot(ai.TaskTranscriptPropose, "next_steps", transcriptProposeCases{})
 	oneShot(ai.TaskDocumentExtract, "fields", documentFieldsCases{})
+	oneShot(ai.TaskDocumentExtract, "cards", cardPhotoCases{})
 	oneShot(ai.TaskGrowthFit, "growth_fit", growthFitCases{})
 	oneShot(ai.TaskCertJudge, "judge", certJudgeCases{})
 	oneShot(ai.TaskRateExtract, "fx", rateFxCases{})

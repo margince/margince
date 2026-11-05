@@ -1,0 +1,16 @@
+// problem-code:client the gateway sent no Problem, so this writes one
+const gateway = { status: 502, code: "gateway_unavailable" }; // want: gateway_unavailable
+const quoted = "// problem-code:client inside a string vouches for nothing";
+const smuggled = { status: 403, code: "smuggled" }; // want: smuggled
+/* problem-code:client a block comment vouches for nothing */
+const blocked = { status: 403, code: "blocked" }; // want: blocked
+// problem-code:client
+const reasonless = { status: 403, code: "reasonless" }; // want: reasonless
+// problem-code:client the next line builds no Problem
+
+const far = { status: 403, code: "far" }; // want: far
+
+export function deny(code: string) {
+  // problem-code:client a helper vouches only for its own literals
+  return json({ title: "Denied", code }, 403);
+}

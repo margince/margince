@@ -171,24 +171,6 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	if len(avail.Slots) == 0 {
 		t.Fatalf("availability over the seam returned no slots: %+v", avail)
 	}
-
-	// The booking names a record, as the contract requires of both doors: a
-	// meeting attached to nothing lands on no timeline and is refused before
-	// the slot is looked at.
-	attendee := e.SeedContact(t, "Demo Attendee", &e.Rep1)
-	booked, err := adapter.BookMeeting(ctx, agents.BookMeetingArgs{
-		Start: avail.Slots[0].Start, End: avail.Slots[0].Start.Add(time.Hour), Subject: "Demo",
-		Links: []agents.RecordLink{{EntityType: "contact", EntityID: attendee}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var meeting struct {
-		Kind string `json:"kind"`
-	}
-	if err := json.Unmarshal(booked, &meeting); err != nil || meeting.Kind != "meeting" {
-		t.Fatalf("booking over the seam: %v (%s)", err, booked)
-	}
 }
 
 func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter commsAdapter, anchorID ids.UUID) {
@@ -215,8 +197,9 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 	if err != nil {
 		t.Fatalf("fallback draft: %v", err)
 	}
-	if subject != pricingReplySubject || !strings.Contains(body, "confirm the discount") {
-		t.Fatalf("fallback draft = %q / %q", subject, body)
+	// The intent steers a model; with none answering, it is not message text.
+	if subject != pricingReplySubject || !strings.Contains(body, "Pricing question") || strings.Contains(body, "confirm the discount") {
+		t.Fatalf("fallback draft = %q / %q, want a reply about the thread without the steering text", subject, body)
 	}
 }
 

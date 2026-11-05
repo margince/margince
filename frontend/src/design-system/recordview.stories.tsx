@@ -3,7 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Ellipsis } from "lucide-react";
-import { Button } from "./atoms";
+import { expect, screen, userEvent, within } from "storybook/test";
+import { Badge, Button } from "./atoms";
+import { FactList } from "./factlist";
+import { Panel, PanelBody } from "./panel";
 import { RecordBack, RecordView } from "./recordview";
 import type { TimelineEntry } from "./timelineentry";
 
@@ -12,6 +15,7 @@ const emailEntry: TimelineEntry = {
   kind: "email",
   title: "Re: Q3 renewal terms",
   atIso: "2026-07-01T09:12:00Z",
+  atPrecision: "instant",
   provenance: { kind: "human", self: true },
 };
 const meetingEntry: TimelineEntry = {
@@ -19,6 +23,7 @@ const meetingEntry: TimelineEntry = {
   kind: "meeting",
   title: "Discovery call",
   atIso: "2026-06-24T14:00:00Z",
+  atPrecision: "instant",
   provenance: { kind: "agent", agent: "capture" },
 };
 const noteEntry: TimelineEntry = {
@@ -26,9 +31,9 @@ const noteEntry: TimelineEntry = {
   kind: "note",
   title: "Left a voicemail",
   atIso: "2026-06-20T16:30:00Z",
+  atPrecision: "instant",
   provenance: { kind: "human", self: true },
 };
-const baseTimeline: TimelineEntry[] = [emailEntry, meetingEntry, noteEntry];
 
 // Not `Meta<…>`: with a bare StoryObj it lets a story drop the required identity.
 const meta = {
@@ -39,13 +44,57 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+const verbs = (
+  <>
+    <Button onClick={() => {}}>Log activity</Button>
+    <Button onClick={() => {}}>Add task</Button>
+    <Button iconOnly aria-label="More actions" onClick={() => {}}>
+      <Ellipsis aria-hidden="true" />
+    </Button>
+  </>
+);
+
+const details = (
+  <FactList
+    flat
+    facts={[
+      { key: "domain", term: "Domain", value: "brandt.example" },
+      { key: "industry", term: "Industry", value: "Automotive" },
+      { key: "owner", term: "Owner", value: "Lena Fischer" },
+    ]}
+  />
+);
+
+// The record every page draws: the head over its details on the left, the tabs
+// over the feed on the right. The pane in the feed rests on its hairline alone;
+// only the two cards carry a shadow.
 export const Default: Story = {
   args: {
-    name: "Acme GmbH",
-    identity: "o-acme",
-    subtitle: "Enterprise · Munich",
+    name: "Brandt Automotive GmbH",
+    identity: "o-1",
     zone: "Europe/Berlin",
-    timeline: baseTimeline,
+    nameBadge: (
+      <>
+        <span>Automotive</span>
+        <a className="entity-link" href="#/companies/o-1">
+          brandt.example
+        </a>
+      </>
+    ),
+    pulse: (
+      <>
+        <Badge tone="success">Customer</Badge>
+        <Badge>Shared</Badge>
+      </>
+    ),
+    actions: verbs,
+    aside: details,
+    tabs: <span>Overview · History · Contacts</span>,
+    children: (
+      <Panel title="Next">
+        <PanelBody>The open tab's feed.</PanelBody>
+      </Panel>
+    ),
   },
 };
 
@@ -57,7 +106,8 @@ export const WithWayBack: Story = {
   },
 };
 
-export const WithRowActions: Story = {
+// The story under the open tab, with a row action each entry may carry.
+export const WithTimeline: Story = {
   args: {
     name: "Acme GmbH",
     identity: "o-acme",
@@ -77,43 +127,38 @@ export const WithRowActions: Story = {
   },
 };
 
-// Five verbs and a refusal are wider than the record column, so the group folds
-// onto a second rung; framed at 520px, where the fold is the layout.
-export const InlineVerbsWiderThanTheHeader: Story = {
-  decorators: [
-    (Story) => (
-      <div style={{ maxWidth: 520 }}>
-        <Story />
-      </div>
-    ),
-  ],
+// A long German name wraps beside the mark for up to three lines and is cut
+// after that. The verbs share the card's width whatever the words.
+export const LongGermanName: Story = {
   args: {
-    name: "Brandt Automotive GmbH",
-    subtitle: "Automotive · München",
-    zone: "Europe/Berlin",
-    identity: "o-1",
-    actionsInline: true,
+    ...Default.args,
+    name: "Brandt Automobilzulieferer und Sondermaschinenbau Gesellschaft mit beschränkter Haftung",
     actions: (
       <>
-        <Button onClick={() => {}}>E-Mail schreiben</Button>
         <Button onClick={() => {}}>Aktivität erfassen</Button>
         <Button onClick={() => {}}>Aufgabe erstellen</Button>
-        <Button onClick={() => {}}>Deal erstellen</Button>
         <Button iconOnly aria-label="Weitere Aktionen" onClick={() => {}}>
           <Ellipsis aria-hidden="true" />
         </Button>
-        <p className="t-caption">
-          Du kannst diese Firma nicht ändern. Bitte den Inhaber, sie mit dir zu
-          teilen.
-        </p>
       </>
     ),
-    timeline: baseTimeline,
   },
 };
 
-export const NarrowInlineActionsWithExplanation: Story = {
-  ...InlineVerbsWiderThanTheHeader,
+// A record with nothing but its name: the head stands alone, and no empty
+// details section is drawn under it.
+export const Bare: Story = {
+  args: {
+    name: "New company",
+    identity: "o-new",
+    zone: "Europe/Berlin",
+    children: <p>Nothing logged yet.</p>,
+  },
+};
+
+// Under 900px of row the details card folds above the feed and takes the full
+// width; framed at 390px, where the fold is the layout.
+export const Narrow: Story = {
   decorators: [
     (Story) => (
       <div style={{ maxWidth: 390 }}>
@@ -121,4 +166,71 @@ export const NarrowInlineActionsWithExplanation: Story = {
       </div>
     ),
   ],
+  args: { ...Default.args },
+};
+
+// At 390px both cards take the phone inset, and the first tab still stands
+// over the feed's first card.
+export const Phone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: { ...Default.args },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText("The open tab's feed.");
+    const phoneInset = getComputedStyle(document.documentElement)
+      .getPropertyValue("--space-3")
+      .trim();
+    for (const part of [
+      ".record-split-details",
+      ".record-split-tabs",
+      ".record-split-feed",
+    ]) {
+      const box = canvasElement.querySelector(part);
+      if (!(box instanceof HTMLElement)) throw new Error(`no ${part}`);
+      await expect(getComputedStyle(box).paddingLeft, part).toBe(phoneInset);
+      await expect(getComputedStyle(box).paddingRight, part).toBe(phoneInset);
+    }
+  },
+};
+
+// The name is an edit pill like any details value: a press opens the rename
+// dialog, titled by the field.
+export const Renamable: Story = {
+  args: {
+    ...Default.args,
+    rename: {
+      label: "Company name",
+      value: "Brandt Automotive GmbH",
+      canEdit: true,
+      onSave: async () => undefined,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    const heading = within(canvasElement).getByRole("heading", { level: 1 });
+    await user.click(
+      within(heading).getByRole("button", { name: /^Change Company name/ }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Company name" });
+    await expect(within(dialog).getByRole("textbox")).toHaveValue(
+      "Brandt Automotive GmbH",
+    );
+  },
+};
+
+const LONG_NAME =
+  "Brandt Automobilzulieferer, Sondermaschinenbau und Industrieautomation Gesellschaft mit beschränkter Haftung und Compagnie Kommanditgesellschaft für Antriebstechnik, Robotik und Wartung";
+
+// A renamable name past three lines is cut at the third, as a plain one is.
+export const RenamableLongName: Story = {
+  args: {
+    ...Default.args,
+    name: LONG_NAME,
+    rename: {
+      label: "Company name",
+      value: LONG_NAME,
+      canEdit: true,
+      onSave: async () => undefined,
+    },
+  },
 };

@@ -6,10 +6,8 @@ package compose
 // What a refused caller is told they may do about it.
 //
 // The reference a refusal carries is only useful if the action beside it is one
-// this caller can actually take. Routing a decision is human-only and bound to
-// the review's own initiator — so an agent told it may request one tries, is
-// refused, and was sent there by us rather than by its own mistake. That is
-// worse than being told nothing.
+// this caller can actually take. Both moves are human-only, so an agent told it
+// may take one tries, is refused, and was sent there by us.
 
 import (
 	"context"
@@ -18,11 +16,35 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 	t.Parallel()
-	held := consent.Review{IntentID: ids.NewV7()}
+	contact := ids.NewV7()
+	refused := func(reason string) consent.RefusedRecipient {
+		return consent.RefusedRecipient{
+			SubjectKind: "contact", SubjectID: contact.String(),
+			ReasonCode: reason, Category: string(commsauthz.CategoryRequestedFollowup),
+		}
+	}
+	held := consent.Review{IntentID: ids.NewV7(), Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonNoEvidence)}}
+	mixed := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{
+		refused(commsauthz.ReasonNoEvidence), refused(commsauthz.ReasonHardBounce),
+	}}
+	objected := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonObjection)}}
+	holdsTheGrant := func(roleKeys ...string) principal.Principal {
+		return principal.Principal{
+			Type: principal.PrincipalHuman,
+			Permissions: principal.Permissions{
+				RoleKeys: roleKeys,
+				Objects: map[string]principal.ObjectGrant{
+					consent.EntityCommunicationException: {Create: true},
+				},
+			},
+		}
+	}
+	bounced := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonHardBounce)}}
 
 	for _, tc := range []struct {
 		name   string
@@ -31,10 +53,19 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 		want   []string
 	}{
 		{
-			// A rep with no authority to overrule the engine. Asking somebody
-			// who has is the move they can make.
+			// A rep overrules a machine refusal with their own reason.
 			name: "a human who cannot direct a send", actor: principal.Principal{Type: principal.PrincipalHuman},
-			review: held, want: []string{"request_decision"},
+			review: held, want: []string{"overrule"},
+		},
+		{
+			// A bounce is a fact about the address that no reason changes.
+			name: "a human refused for a reason nobody may overrule", actor: principal.Principal{Type: principal.PrincipalHuman},
+			review: bounced,
+		},
+		{
+			// One recipient the rep may not overrule keeps the whole send refused.
+			name: "a human refused for one overrulable and one absolute reason", actor: principal.Principal{Type: principal.PrincipalHuman},
+			review: mixed,
 		},
 		{
 			// A rep who holds the grant is offered the SEND, not the ask.
@@ -52,6 +83,15 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			review: held, want: []string{"direct_send"},
 		},
 		{
+			// No grant reaches a contact's own stop, an admin's included.
+			name: "a rep holding the grant, refused for an objection", actor: holdsTheGrant("rep"),
+			review: objected,
+		},
+		{
+			name: "an admin, refused for an objection", actor: holdsTheGrant("admin"),
+			review: objected,
+		},
+		{
 			// Holding the grant does not conjure a message to send. A refusal
 			// with nothing held offers nothing, whoever is asking.
 			name: "a grant holder with no message to decide about",
@@ -66,8 +106,26 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			review: consent.Review{},
 		},
 		{
-			// An agent cannot route: the door refuses non-humans outright.
-			name: "an agent", actor: principal.Principal{Type: principal.PrincipalAgent}, review: held,
+			// No user behind it, so nobody's send to direct.
+			name: "a passportless agent", actor: principal.Principal{Type: principal.PrincipalAgent}, review: held,
+		},
+		{
+			name: "a user's agent holding the grant",
+			actor: principal.Principal{
+				Type: principal.PrincipalAgent, PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
+				Permissions: principal.Permissions{
+					Objects: map[string]principal.ObjectGrant{
+						consent.EntityCommunicationException: {Create: true},
+					},
+				},
+			},
+			review: held, want: []string{"direct_send"},
+		},
+		{
+			// A rep may overrule this refusal, but no tool lets an agent do it.
+			name:   "a user's agent without the grant",
+			actor:  principal.Principal{Type: principal.PrincipalAgent, PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7()},
+			review: held,
 		},
 		{
 			// A connector runs with its granting human's grants and is still

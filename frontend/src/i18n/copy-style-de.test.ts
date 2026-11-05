@@ -51,11 +51,14 @@ const AGENT_SPEAKS_PREFIX = "ob.conv.";
 // in law the controller speaks as "wir".
 const CONTROLLER_SPEAKS_PREFIX = "privacynotice.";
 
-// A consent statement is the reader's sentence, not the product's. The prefix
-// takes both `prefs.wording.*` and `prefs.wordingGeneric`.
+// A consent statement, and a promise the reader makes by pressing it, are the
+// reader's sentences, not the product's. The prefix takes both
+// `prefs.wording.*` and `prefs.wordingGeneric`.
 const SPOKEN_BY_THE_READER = new Set<string>([
+  "commitment.takeOver",
   "directSend.acknowledge",
   "book.consentWording",
+  "worklist.ready.confirm",
 ]);
 const SPOKEN_BY_THE_READER_PREFIX = "prefs.wording";
 
@@ -200,6 +203,7 @@ const RETIRED_WORDS = [
 // Keys where a retired word keeps a sense the table does not retire.
 const RETIRED_WORD_KEPT = new Map<string, string>([
   ["firstRun.platform.google", "Google Workspace is a product name"],
+  ["oauthApp.google.for", "Google Workspace is a product name"],
   ["oauthApp.tenant", "Microsoft Entra labels the directory tenant Mandant"],
   ["aiProviders.name.geminiVertex", "Vertex AI is Google's product name"],
   [

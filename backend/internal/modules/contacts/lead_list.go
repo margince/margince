@@ -16,9 +16,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -34,6 +36,7 @@ const (
 	leadStatusColumn  = "status"
 	leadScoreColumn   = "score"
 	leadSourceColumn  = "source"
+	leadOriginColumn  = "origin"
 	createdAtColumn   = "created_at"
 	updatedAtColumn   = "updated_at"
 	// lastActivityColumn is the timeline clock contact and company carry
@@ -64,6 +67,7 @@ var leadListFields = map[string]storekit.SortField{
 	lastActivityColumn: {Kind: storekit.KindTimestamp, Expr: orderByLeadLastActivity},
 	leadNextTaskField:  {Kind: storekit.KindTimestamp, Expr: orderByLeadNextTaskDue},
 	leadSourceColumn:   {Kind: fieldcatalog.TypeText, Expr: orderByLeadSourceLabel},
+	leadOriginColumn:   {Kind: fieldcatalog.TypeText, Expr: orderByLeadOriginLabel},
 }
 
 // leadNextTaskField is what the Next task header sorts by: when the next open
@@ -80,8 +84,12 @@ func orderByLeadLastActivity(context.Context, func(any) int) (string, error) {
 // orderByLeadNextTaskDue orders by the deadline the Next task column prints.
 // A lead with no open task shows none and orders by none, which the list's
 // ORDER BY already puts last.
-func orderByLeadNextTaskDue(context.Context, func(any) int) (string, error) {
-	return leadNextTaskDueSQL, nil
+func orderByLeadNextTaskDue(ctx context.Context, arg func(any) int) (string, error) {
+	work, err := leadTaskWorkSQL(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return leadNextTaskDueSQL(work), nil
 }
 
 // orderByLeadSourceLabel orders by the words the Source column prints rather
@@ -89,6 +97,12 @@ func orderByLeadNextTaskDue(context.Context, func(any) int) (string, error) {
 // otherwise arrange the list by an identifier no reader can see.
 func orderByLeadSourceLabel(context.Context, func(any) int) (string, error) {
 	return leadSourceLabelSQL, nil
+}
+
+// orderByLeadOriginLabel orders by the words the Origin column prints, for the
+// reason orderByLeadSourceLabel gives.
+func orderByLeadOriginLabel(context.Context, func(any) int) (string, error) {
+	return leadOriginLabelSQL, nil
 }
 
 // ListLeads is the row-scoped lead list read: quick-find, the status and
@@ -104,6 +118,9 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 			return nil, storekit.Page{}, err
 		}
 	}
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	if in.Sort == nil || *in.Sort == "" {
 		return s.listLeadWorkQueue(ctx, in)
 	}
@@ -116,25 +133,11 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	ctx = withPinnedSLANow(ctx, leadSLAClock().UTC())
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
 		entity:  leadEntity,
+		prepare: withLeadTaskIdentities,
 		columns: leadColumns,
 		fields:  leadListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-			where, err := listFilters{
-				IncludeArchived: in.IncludeArchived,
-				CapturedByKind:  in.CapturedByKind,
-				AiWritten:       in.AiWritten,
-				entity:          leadEntity,
-				OwnerID:         in.OwnerID,
-				OwnerTeamID:     in.OwnerTeamID,
-				Unassigned:      in.Unassigned,
-				Query:           nil,
-				Cursor:          in.Cursor,
-				Membership:      in.Membership,
-			}.clauses(ctx, active, sorted, arg)
-			if err != nil {
-				return nil, err
-			}
-			return append(where, leadNarrowing(ctx, in, policy, arg)...), nil
+			return leadListWhere(ctx, in, active, sorted, policy, arg)
 		},
 		scan: func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]crmcontracts.Lead, []*string, error) {
 			return scanLeadPage(rows, active, sorted, policy)
@@ -146,11 +149,100 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	})
 }
 
+// ListLeadsInput is one read of the lead list: its page, its sort and what it narrows by.
+type ListLeadsInput struct {
+	Cursor *string
+	Limit  *int
+	Status *string
+	// OwnerID, OwnerTeamID and Unassigned are the owner dials every
+	// owner-scoped list carries (DM-VOCAB-OWN-1), bound through
+	// storekit.OwnershipClause as contact and company bind them.
+	OwnerID         *ids.UserID
+	OwnerTeamID     *ids.TeamID
+	Unassigned      *bool
+	Query           *string
+	IncludeArchived bool
+	// CapturedByKind filters on the captured_by prefix (ADR-0075).
+	CapturedByKind *string
+	// AiWritten filters on whether an AI wrote into the record.
+	AiWritten *bool
+	// MinScore is the triage floor. A reader working the warmest leads first
+	// keeps the colder ones off the page rather than scanning past them.
+	MinScore *int
+	// OwedAReply keeps only the leads nobody has answered. The page is bounded,
+	// so a caller cutting answered rows off it would lose the unanswered leads
+	// behind them.
+	OwedAReply *bool
+	// Source narrows to how the row was written (import, crawl, manual,
+	// `connector:<name>`).
+	Source *string
+	// Origin narrows to one origin key, or `unset` for the unclassified.
+	Origin *string
+	// TagIDs narrows to the leads carrying these tags, combined by TagMode.
+	TagIDs  []ids.UUID
+	TagMode storekit.TagMode
+	// FromContactID narrows to the leads worked from one contact.
+	FromContactID *ids.ContactID
+	// SLAState narrows to leads in one first-response state; breached is the
+	// overdue queue.
+	SLAState *crmcontracts.ListLeadsParamsSlaState
+	// Sort is the contract's sort spec, validated against the lead
+	// vocabulary plus the workspace's active cf_ columns.
+	Sort *string
+	// Membership narrows to one list's members (list_id).
+	Membership storekit.ListMemberFilter
+	// MemberOf is the list a seam caller narrowed to; the provider resolves it
+	// into Membership before the read.
+	MemberOf *ids.UUID
+	// CompanyFacts narrows by what the linked company records (leadcompanyfacts.go).
+	CompanyFacts LeadCompanyFactFilters
+	// Partner narrows to the leads a partner referred.
+	Partner LeadPartnerFilter
+}
+
+// leadListWhere builds a lead list read's `WHERE`: the shared chain, then the lead's own
+// filters. The sorted page, the work queue and the filter-reach probe all call it.
+func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column, sorted *storekit.ListSort,
+	policy leadSLAPolicy, arg func(any) int,
+) ([]string, error) {
+	where, err := listFilters{
+		IncludeArchived: in.IncludeArchived,
+		CapturedByKind:  in.CapturedByKind,
+		AiWritten:       in.AiWritten,
+		entity:          leadEntity,
+		OwnerID:         in.OwnerID,
+		OwnerTeamID:     in.OwnerTeamID,
+		Unassigned:      in.Unassigned,
+		Query:           nil,
+		Cursor:          in.Cursor,
+	}.clauses(ctx, active, sorted, arg)
+	if err != nil {
+		return nil, err
+	}
+	narrowed, err := leadNarrowing(ctx, in, policy, arg)
+	return append(where, narrowed...), err
+}
+
 // leadNarrowing is the lead's own filters, after the shared chain. Both reads
 // of the list — the sorted page and the default work queue — narrow by it, so
 // a filter added here reaches both or neither.
-func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy, arg func(any) int) []string {
-	var where []string
+func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy, arg func(any) int) ([]string, error) {
+	where, err := in.CompanyFacts.clauses(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	partner, err := in.Partner.clauses(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	where = append(where, partner...)
+	if in.Membership != nil {
+		member, err := in.Membership(leadEntity+".id", arg)
+		if err != nil {
+			return nil, err
+		}
+		where = append(where, member)
+	}
 	if in.Query != nil && *in.Query != "" {
 		where = append(where, leadQuickFindClause(*in.Query, arg))
 	}
@@ -166,6 +258,9 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	if in.Source != nil {
 		where = append(where, leadSourceClause(*in.Source, arg))
 	}
+	if in.Origin != nil {
+		where = append(where, leadOriginClause(*in.Origin, arg))
+	}
 	if in.SLAState != nil {
 		where = append(where, slaStateClause(ctx, policy, *in.SLAState, arg))
 	}
@@ -175,7 +270,7 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	if in.FromContactID != nil {
 		where = append(where, storekit.SQLf("lead.from_contact_id = $%d", arg(*in.FromContactID)))
 	}
-	return where
+	return where, nil
 }
 
 // attachLeadRows is what a page of leads owes each row beyond its own columns:
@@ -185,7 +280,7 @@ func attachLeadRows(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) e
 	if err := stampLeadsWritable(ctx, tx, leads); err != nil {
 		return err
 	}
-	if err := withholdUnreadableSourceContacts(ctx, tx, leads); err != nil {
+	if err := withholdUnreadableLinks(ctx, tx, leads); err != nil {
 		return err
 	}
 	return storekit.AttachRowTags(ctx, tx, leadEntity, leads,
@@ -200,9 +295,9 @@ const leadQuickFindExpr = `(coalesce(full_name, '') || ' ' || coalesce(company_n
 
 func leadQuickFindClause(query string, arg func(any) int) string {
 	pos := arg(strings.TrimSpace(query))
-	return storekit.SQLf(`(%s OR email = lower($%d)
+	return storekit.SQLf(`(%s
 		OR lower(rtrim(linkedin_url, '/')) = lower(rtrim($%d, '/')))`,
-		storekit.QuickFindClause(pos, leadQuickFindExpr), pos, pos)
+		storekit.QuickFindClauseWith(pos, leadQuickFindExpr, storekit.LeadEmails), pos)
 }
 
 // scanLeadPage drains one list query's rows: each lead plus, under a

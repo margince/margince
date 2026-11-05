@@ -15,7 +15,6 @@ package company360
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -23,40 +22,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The failure this whole surface was named for: an account holding a mail that
-// ends the contract, filed under a stage that says the relationship is live.
-//
-// Both facts were already in the record and nothing put them next to each
-// other. The page states the disagreement and leaves which side is wrong to
-// the reader — but it must state it FIRST, because acting on a stage that is
-// wrong is worse than not acting at all.
-func TestTheRecordAndItsOwnMailAreShownToDisagree(t *testing.T) {
+func TestAnUnprovenContractEndingStaysASignalWithoutAnAccountConflict(t *testing.T) {
 	e := integration.Setup(t)
-	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, company360SignalPerms)
-
-	e.WsExec(t, `UPDATE company SET lifecycle = 'customer' WHERE id = $1`, company.UUID)
-	seedSignal(t, company.UUID, "contract_ended", "warn",
-		"They wrote that the contract ends on 31 July.", "2026-05-20T09:00:00Z")
-	// Advice that would otherwise lead, so leading is a choice this makes and
-	// not the only thing left standing.
-	seedUnansweredOutbound(t, e, company.UUID)
-
-	view, err := svc.Assemble(rep, company)
+	e.WsExec(t, `UPDATE company SET lifecycle='customer' WHERE id=$1`, company.UUID)
+	seedSignal(t, company.UUID, "contract_ended", "warn", "They wrote that one contract ends.", "2026-05-20T09:00:00Z")
+	view, err := company360Service(e).Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, company360SignalPerms), company)
 	if err != nil {
-		t.Fatalf("assemble: %v", err)
+		t.Fatal(err)
 	}
-	found := *view.Suggestions
-	if len(found) == 0 || string(found[0].Kind) != "lifecycle_conflict" {
-		t.Fatalf("the card leads with %v, want lifecycle_conflict — the record contradicts "+
-			"its own correspondence, and no other advice on it can be trusted until that is settled",
-			kindsOf(found))
+	for _, suggestion := range *view.Suggestions {
+		if string(suggestion.Kind) == "lifecycle_conflict" {
+			t.Fatal("unproven scope was presented as an account conflict")
+		}
 	}
-	if !strings.Contains(found[0].Reason, "customer") {
-		t.Errorf("the reason is %q, want it to name the stage the mail contradicts — "+
-			"a conflict a reader cannot see both sides of is not one they can settle",
-			found[0].Reason)
+	if view.StateStrip == nil || view.StateStrip.Signal == nil || view.StateStrip.Signal.Kind != "contract_ended" {
+		t.Fatal("uncertain evidence lost its reviewable signal")
 	}
 }
 

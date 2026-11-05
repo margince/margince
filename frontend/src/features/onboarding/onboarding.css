@@ -1,0 +1,443 @@
+/*
+ * Onboarding funnel styling — ported from the design source of truth
+ * (spec design/mockups/index.html) onto the Ledger-Green tokens. The wizard is
+ * rail-less (design-language §, AC-onboarding-1) with its own sticky top bar and
+ * a centred column. Everything reads through the design tokens, so it themes
+ * light/dark with the rest of the app. Copy never lives here — it comes from the
+ * i18n catalogs (conformance gate: no hard-coded user-facing text).
+ */
+
+.ob-page {
+  min-height: 100vh;
+  background: var(--bgPage);
+  background-image:
+    radial-gradient(circle at 15% -10%, var(--accentLight), transparent 42%),
+    radial-gradient(
+      circle at 100% 0%,
+      color-mix(in srgb, var(--teal) 5%, transparent),
+      transparent 34%
+    );
+}
+
+/* stepper */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 auto;
+}
+
+.ob-panel {
+  animation: obRise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes obRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.kick {
+  color: var(--accentText);
+  margin-bottom: var(--space-3);
+}
+.ttl {
+  font-family: var(--fontFamilyHeading);
+  color: var(--textPrimary);
+  margin-bottom: var(--space-3);
+}
+.ttl .em {
+  color: var(--accentText);
+}
+.ob-sub {
+  max-width: 520px;
+}
+
+.urlnote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  min-height: 16px;
+}
+.urlnote svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+.urlnote.err {
+  color: var(--dangerText);
+}
+.urlnote.ok {
+  color: var(--successText);
+}
+
+.rfprov {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--aiText);
+}
+.rfprov svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* honest read-failure card */
+.readfail {
+  display: flex;
+  gap: var(--space-3);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-rest);
+  padding: var(--space-5);
+  margin-top: var(--space-6);
+  align-items: flex-start;
+}
+
+/* The company form rides the design-system atoms (.form-stack/.field/.input —
+   atoms.css owns their look); the only onboarding-specific rule is where the
+   form starts relative to the notices above it. */
+.ob-companyform {
+  margin-top: var(--space-6);
+}
+/* The trust adornments ride the field label (a .t-label): read-from-site tag
+   right-aligned, everything vertically centered with the label text. */
+.ob-companyform .t-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spoken-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+/* An advisory mark beside a hint: the info family, which is what an
+   informational glyph is for. It was --teal, an identity colour that happens to
+   sit 15deg off the info hue — a look-alike rather than the token. */
+.spoken-hint svg {
+  width: 13px;
+  height: 13px;
+  color: var(--infoText);
+  flex: none;
+  margin-top: 2px; /* ds:ignore optical: sets the glyph on the first text line */
+}
+
+/* step 5 connect */
+
+.imap-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  text-align: left;
+  max-width: 460px;
+  margin: 0 auto;
+}
+.imap-form .full {
+  grid-column: 1 / -1;
+}
+
+/* spinner (shared inline). The info family, not the brand: a turning ring is
+   work still in flight, and drawn in the accent it read as the page's next
+   move rather than as a wait. */
+.ob-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2.5px solid var(--infoBorder);
+  border-top-color: var(--info);
+  border-radius: 50%;
+  corner-shape: round;
+  animation: obSpin 0.7s linear infinite;
+  display: inline-block;
+  vertical-align: -3px;
+}
+@keyframes obSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .imap-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Five-step company-context onboarding. */
+.ob-state-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 180px;
+}
+.confirm-origin {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--bgElevated) 72%, transparent);
+}
+.confirm-origin svg {
+  width: 16px;
+  flex: none;
+  color: var(--success);
+}
+
+/* The dialog's two inks, named because the PLATE decides them and every text
+   inside reads one of the two. On the onboarding hero it is dark glass and the
+   pair is the ink field's, white on a lit backdrop; hosted in the workbench it
+   is a light panel and the pair is the content inks. Declared once per plate
+   below rather than as a colour override per child — the heading, the hint, the
+   answer box, the back link and the footnote all landed on white-on-light the
+   day the light arms were written and only the first two were overridden. */
+.ob-core-dialog {
+  --ob-dialog-ink: var(--textOnInkField);
+  --ob-dialog-ink-quiet: var(--obDialogInkQuiet);
+  padding: var(--space-8) var(--space-6);
+  color: var(--ob-dialog-ink);
+  border: 1px solid color-mix(in srgb, var(--textOnInkField) 10%, transparent);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--obDialogGlass) 68%, transparent);
+  box-shadow: 0 18px 46px
+    color-mix(in srgb, var(--obDialogShadow) 44%, transparent);
+  backdrop-filter: blur(12px);
+}
+.ob-manual-progress {
+  font-family: var(--fontFamilyBody);
+  color: var(--aiText);
+}
+.ob-core-dialog h1 {
+  margin: var(--space-3) 0 0;
+  font-family: var(--fontFamilyHeading);
+}
+.ob-core-dialog > p {
+  margin: var(--space-3) auto 0;
+  color: var(--ob-dialog-ink-quiet);
+}
+
+.ob-core-dialog > .btn {
+  width: 100%;
+  /* ds:ignore the dialog's one verb pays its interval off the field above it */
+  margin-top: var(--space-4);
+}
+
+.ob-manual-progress {
+  display: flex;
+  justify-content: space-between;
+}
+/* The hint carries the interval down to the answer box, because the box is a
+   design-system field and a screen does not re-space one. The box itself — its
+   ground, its type, its ink, its placeholder's tone and its focus ring — is
+   TextInput's and Textarea's; the rule that used to stand here spelled all of
+   them in ink-field tokens, which is what put white text in a white field the moment
+   this board moved onto the workbench's light panel. */
+.ob-manual-question > p {
+  margin-bottom: var(--space-4);
+}
+.ob-manual-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gapActions);
+  margin-top: var(--space-3);
+}
+.ob-manual-required {
+  display: block;
+  margin-top: var(--space-2);
+}
+
+/* Full-bleed during setup: a centred card would frame the room as a dialog
+   the reader could dismiss. */
+.ob-workbench-panel {
+  display: block;
+  width: 100%;
+}
+/* On the light artifact surface the dialog stays a visible card, and its ink
+   pair carries the heading, hint, back link and footnote with it. */
+.ob-conv-artifact .ob-core-dialog {
+  --ob-dialog-ink: var(--textPrimary);
+  --ob-dialog-ink-quiet: var(--textSecondary);
+  border: 1px solid var(--groundEdge);
+  background: var(--ground);
+  box-shadow: var(--shadow-rest);
+  backdrop-filter: none;
+}
+.mw-review-heading {
+  padding: var(--space-2) var(--space-1) var(--space-3);
+}
+.mw-review-heading span {
+  color: var(--aiText);
+  font-family: var(--fontFamilyBody);
+}
+.mw-review-heading h2 {
+  margin: var(--space-1) 0 0;
+  font-family: var(--fontFamilyHeading);
+}
+.mw-review-heading p {
+  margin: var(--space-1) 0 0;
+}
+.ob-company-review {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--borderSubtle);
+}
+.ob-company-review .ob-companyform {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.ob-company-review .form-divider,
+.ob-company-review .legal-choice {
+  grid-column: 1 / -1;
+}
+.mw-confirm-company {
+  position: sticky;
+  bottom: 0;
+  /* A sticky bar with no stacking order of its own is painted in document
+     order, so a later-painted card in the same pane crosses over it as the
+     form scrolls behind — and this bar is how the review is confirmed. */
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--bgElevated) 94%, transparent);
+  backdrop-filter: blur(10px);
+}
+.mw-confirm-company-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.mw-confirm-company-row p {
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .ob-company-review .ob-companyform {
+    grid-template-columns: 1fr;
+  }
+  .mw-confirm-company-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+/* The legal-entity choice sits at the top of the identity group: it is a
+   question, not a field, and answering it fills the three fields under it. */
+/* A fieldset, so the browser groups the plates under the question in its legend
+   — which means shedding the platform's own frame and inset first. */
+.legal-choice {
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  border: 0;
+}
+.legal-choice > .l {
+  padding: 0;
+}
+.legal-choice .l {
+  color: var(--textPrimary);
+}
+.legal-choice .ob-sub {
+  margin-top: var(--space-1);
+}
+.legal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+/* The one card a reader PICKS: a fact to keep, a legal entity to adopt. It is a
+   plate wearing the product's own tick — a `Checkbox` where the facts are a set
+   and a `Radio` where the entities are one answer — and not a surface, which is
+   why it is not `Card`: `Card` is a section of a page.
+
+   One class, because the fact picker and the legal picker are the SAME control:
+   a tick, a name, a detail line, a line of fine print. What they do not share is
+   what those lines mean, and that is what the two modifiers below carry. */
+.choice-card {
+  padding: var(--padCard);
+  color: var(--textPrimary);
+  text-align: left;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+/* The plate's own two columns, over `.checkfield`'s. Both classes are named so
+   this wins whichever order the route split loads the two stylesheets in: the
+   tick keeps its column and the words take the rest of the plate rather than
+   shrinking to their own width, and the tick sits on the FIRST line of a name
+   that runs to three. */
+.choice-card.checkfield {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+}
+.choice-card.selected {
+  border-color: var(--accent);
+  background: var(--accentLight);
+}
+.choice-card b,
+.choice-card span span,
+.choice-card small {
+  display: block;
+}
+.choice-card span span {
+  margin-top: var(--space-1);
+}
+.legal-card small {
+  margin-top: var(--space-1);
+}
+.fact-card small {
+  margin-top: var(--space-2);
+}
+@media (max-width: 720px) {
+  .legal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.confirm-facts {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--borderSubtle);
+}
+.confirm-facts > summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+.fact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+@media (max-width: 720px) {
+  .fact-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-panel,
+  .ob-spinner {
+    animation: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .ob-core-dialog {
+    padding: var(--space-6) var(--space-5);
+  }
+}

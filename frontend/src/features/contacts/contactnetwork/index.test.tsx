@@ -2,15 +2,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { components } from "../../../api/schema";
-import { type Locale, LocaleProvider } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import { type GrantSpec, meFixture } from "../../../testing/mefixture";
-import { ContactNetworkTab } from "./index";
+import { meFixture } from "../../../testing/mefixture";
+import {
+  anchor,
+  CONTACT,
+  type ContactGraph,
+  type IntroRequest,
+  NO_ROUTE,
+  type Route,
+  renderTab,
+  routesPanel,
+  WAYS_IN,
+} from "./network.testkit";
 
 // What the tab says when it has LESS to say than the full case.
 //
@@ -19,105 +26,6 @@ import { ContactNetworkTab } from "./index";
 // reaches this contact" twice in two weights, and drew a card headed "Pick the
 // one you can actually use" above an empty list. Nothing threw, every element
 // existed, and a DOM query would have passed.
-
-type ContactGraph = components["schemas"]["ContactGraph"];
-type IntroRequest = components["schemas"]["IntroRequest"];
-type Moments = Pick<
-  components["schemas"]["Contact360"],
-  "relationship_changes" | "sections_omitted"
->;
-type Route = NonNullable<ContactGraph["routes"]>[number];
-
-const CONTACT = "018f3a1b-0000-7000-8000-000000000010";
-
-// The strings come from the catalogue rather than being typed here, so a
-// rewording is a copy change and not a test failure. What these tests are about
-// is how MANY times the page says a thing and whether a card is drawn at all —
-// neither of which should depend on the words chosen.
-const NO_ROUTE = en["contact.intro.stripNoPath"];
-// The routes panel's own heading. By ROLE, because the strip's first slot is
-// named with the same words — the count and the list are one noun on two
-// surfaces — and a bare text query cannot tell a heading from a card label.
-const WAYS_IN = en["contact.intro.routesTitle"];
-const routesPanel = () => screen.queryByRole("heading", { name: WAYS_IN });
-
-function jsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "content-type": "application/json" },
-  });
-}
-
-/**
- * The seat the tab is read as, and a signal for when it has answered.
- *
- * `/me` answers the grant map every capability hook consults, and the default
- * fixture grants nothing — so a case about a write control has to say which
- * seat is looking. `seatAnswered` is what a case asserting a control is ABSENT
- * waits on: every capability hook reads false while the snapshot is in flight,
- * so an ungranted seat and an unanswered one draw the identical page, and a
- * query run before the answer lands would pass against a page that has not yet
- * consulted the grants at all.
- */
-function stub(
-  graph: ContactGraph,
-  allow: GrantSpec = {},
-  asks: readonly IntroRequest[] = [],
-) {
-  let answered: () => void = () => {};
-  const seatAnswered = new Promise<void>((resolve) => {
-    answered = resolve;
-  });
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input instanceof Request ? input.url : input);
-      if (url.includes("/graph")) {
-        return jsonResponse(graph);
-      }
-      if (url.includes("/intro-requests")) {
-        return jsonResponse({ data: asks });
-      }
-      if (url.includes("/me")) {
-        answered();
-        return jsonResponse(meFixture({ roles: ["rep"], allow }));
-      }
-      return jsonResponse({ data: [] });
-    }),
-  );
-  return { seatAnswered };
-}
-
-function renderTab(
-  graph: ContactGraph,
-  locale: Locale = "en",
-  allow: GrantSpec = {},
-  // The two reads beside the graph: the asks in flight, and the 360's
-  // moments. Absent by default, which is what the older contacts screen
-  // hands the tab.
-  beside: Readonly<{ asks?: readonly IntroRequest[]; view?: Moments }> = {},
-) {
-  const { seatAnswered } = stub(graph, allow, beside.asks);
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  render(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial={locale}>
-        <ContactNetworkTab contactId={CONTACT} view={beside.view} />
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
-  return { seatAnswered };
-}
-
-const anchor: ContactGraph["nodes"][number] = {
-  id: `contact:${CONTACT}`,
-  type: "contact",
-  group: "anchor",
-  label: "Dana Buyer",
-  contact_id: CONTACT,
-};
 
 afterEach(() => {
   cleanup();
@@ -371,12 +279,14 @@ describe("the verdict and its evidence", () => {
         activity_id: "018f3a1b-0000-7000-8000-0000000000e1",
         subject: "Re: Q4 rollout",
         occurred_at: "2026-08-28T09:00:00Z",
+        occurred_precision: "instant",
         kind: "email",
       },
       {
         activity_id: "018f3a1b-0000-7000-8000-0000000000e2",
         subject: "Northgate pilot",
         occurred_at: "2026-08-21T14:30:00Z",
+        occurred_precision: "instant",
         kind: "meeting",
       },
     ],
@@ -522,6 +432,7 @@ describe("the handoff with an ask open", () => {
     name_drop_allowed: false,
     fallback_policy: "none",
     status: "requested",
+    origin: "asked",
     requested_at: "2026-09-03T09:00:00Z",
     due_at: "2026-09-08T09:00:00Z",
     version: 1,
@@ -930,23 +841,73 @@ describe("using a route from the picture", () => {
     ).toBeTruthy();
   });
 
-  it("opens nothing on the reader's own node", async () => {
-    const user = userEvent.setup();
-    const { seatAnswered } = renderTab(drawnGraph(READER, "Demo Admin"));
+  // The lead is the best-ranked route, not a strong one. Its badge says the
+  // route's own band, in the words the map and the edge card say it in.
+  it("labels a weak best route as weak, never as strong", async () => {
+    const weak = drawnGraph(COLLEAGUE, "Sofia Meier");
+    renderTab({
+      ...weak,
+      routes: weak.routes?.map((route) => ({
+        ...route,
+        strength_bucket: "weak" as const,
+      })),
+    });
 
-    await user.click(await nodeOnMap("Demo Admin"));
-    await user.click(
-      await screen.findByRole("button", {
-        name: en["contact.intro.useThisRoute"],
-      }),
+    expect(
+      await screen.findByText(en["co.routeIn.bandBadge.faint"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["co.routeIn.bandBadge.strong"])).toBeNull();
+  });
+
+  // Nobody asks themselves for an introduction. The reader's node is "You",
+  // like every other line on the tab, and its verb is the email they write.
+  it("names the reader's own node You and offers to write, not to ask", async () => {
+    const user = userEvent.setup();
+    const onWrite = vi.fn();
+    const { seatAnswered } = renderTab(
+      drawnGraph(READER, "Demo Admin"),
+      "en",
+      {},
+      { onWrite },
     );
+
+    await user.click(await nodeOnMap(en["contact.intro.heroYou"]));
     await seatAnswered;
     await act(async () => {});
 
     expect(
-      screen.queryByText(
-        en["contact.intro.askTitle"].replace("{name}", anchor.label),
-      ),
+      screen.queryByRole("button", { name: en["contact.intro.useThisRoute"] }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Demo Admin, / })).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: en["compose.writeEmail"] }),
+    );
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The graph can answer before the ask list does. Until then nobody knows
+// whether an ask is open, so the handoff slot must not say none has started.
+describe("the handoff while the ask list is still being read", () => {
+  it("says it is loading, not that nothing has started", async () => {
+    renderTab(
+      {
+        contact_id: CONTACT,
+        nodes: [anchor],
+        edges: [],
+        routes: [],
+        groups_omitted: [],
+      },
+      "en",
+      {},
+      { asksPending: true },
+    );
+
+    const label = await screen.findByText(en["contact.intro.stripHandoff"]);
+    const card = label.closest(".stat-card");
+    expect(card?.textContent).toContain(en["common.loading"]);
+    expect(
+      screen.queryByText(en["contact.intro.handoffNotStarted"]),
     ).toBeNull();
   });
 });

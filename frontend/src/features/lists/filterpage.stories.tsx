@@ -130,7 +130,7 @@ function newContactFilter(options?: Parameters<typeof routes>[0]) {
 }
 
 // The page as it opens: its name, the record type, two ways in, and the line
-// saying what would bring a count. One emerald control.
+// saying what would bring a count. One accent control.
 export const CalmStart: Story = { render: newContactFilter() };
 
 export const OneIncompleteCondition: Story = {
@@ -152,8 +152,8 @@ export const OneCompleteCondition: Story = {
   },
 };
 
-// Complete, so the band under the editor says the filter is not kept yet and
-// offers the one emerald Save, with the exports in More beside it.
+// Complete: the band under the editor says the filter is not kept yet. It
+// offers the one accent Save, with the exports in More beside it.
 export const CompleteWithFooter: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {
@@ -195,26 +195,18 @@ export const ConnectorFlippedToOr: Story = {
     await addCity(user, canvas, "Hamburg");
     await user.click(
       canvas.getByRole("button", {
-        name: "and: match all of these. Press to match any.",
+        name: "and: the conditions on both sides must match. Press for or.",
       }),
     );
   },
 };
 
-/** Two conditions, then More › Add a group. */
+/** Two conditions, then Add a group. */
 async function addGroup(user: User, canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await addCity(user, canvas, "Berlin");
   await addCity(user, canvas, "Hamburg");
-  await user.click(
-    canvas.getByRole("button", { name: "More for these conditions" }),
-  );
-  // The menu's items are portalled to the body, outside the story's root.
-  await user.click(
-    await within(canvasElement.ownerDocument.body).findByRole("button", {
-      name: "Add a group",
-    }),
-  );
+  await user.click(canvas.getByRole("button", { name: "Add a group" }));
 }
 
 export const WithAGroup: Story = {

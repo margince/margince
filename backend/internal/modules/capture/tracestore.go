@@ -237,7 +237,7 @@ func (s *TraceStore) readPage(ctx context.Context, tx pgx.Tx, scope traceScope,
 func traceWhere(scope traceScope, addArg func(any) int) string {
 	funnel := addArg(pipelinetrace.StageStrings(pipelinetrace.FunnelStages()))
 	return fmt.Sprintf(
-		`t.occurred_at > now() - make_interval(hours => %d)
+		`t.occurred_at > now() - make_interval(hours => %d) -- occurred_at raw: a capture_trace row, not an activity
 		   AND t.stage = ANY($%d)
 		   AND %s`, TraceWindowHours, funnel, scope.predicate(addArg))
 }

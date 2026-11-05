@@ -54,7 +54,7 @@ func TestDraftEmailBuildsTheRequestTheContactComposerBuilds(t *testing.T) {
 	at := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
 	engine := func(lane *unansweredLane) *contactdraft.Service {
 		return contactdraft.NewService(view, lane).
-			WithEnvelope(draftfloor.NewResolver().WithClock(func() time.Time { return at }))
+			WithEnvelope(draftfloor.NewResolver().SetClock(func() time.Time { return at }))
 	}
 	const intent = "follow up on Tuesday's demo"
 	seat := ids.NewV7()
@@ -96,7 +96,7 @@ func TestDraftEmailBuildsTheRequestTheContactComposerBuilds(t *testing.T) {
 
 // fenceMarker is the per-call nonce of the untrusted-data fence, the one part
 // of a request minted fresh on every call by design.
-var fenceMarker = regexp.MustCompile(`untrusted-[0-9a-f-]{36}`)
+var fenceMarker = regexp.MustCompile(`untrusted-[a-z2-7]{26}`)
 
 func unfenced(requests []model.Request) string {
 	return fenceMarker.ReplaceAllString(fmt.Sprintf("%+v", requests), "untrusted-FENCE")

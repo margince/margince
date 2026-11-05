@@ -26,7 +26,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
@@ -66,67 +65,31 @@ func (s *Store) FreezeRateAt(ctx context.Context, tx pgx.Tx, currency string, as
 	return s.freezeFx(ctx, tx, base, currency, asOf)
 }
 
-// frozenBefore is a deal's currently frozen pair in the shape the patch records
-// it. The rate is already a decimal string; the date sheds the contract's Date
-// wrapper, which is what Patch.SetDate takes on both sides.
-//
-// The frozen base AMOUNT is not here: amount_minor_base is an internal column
-// and carries no field on the contract, so its pre-image is read from the row
-// by frozenBaseBefore rather than invented from a shape that does not hold it.
-func frozenBefore(deal crmcontracts.Deal) (rate *string, rateDate *time.Time) {
-	return deal.FxRateToBase, storekit.PlainDate(deal.FxRateDate)
+type frozenConversion struct {
+	Rate   *string
+	Date   *time.Time
+	Amount *int64
 }
 
-// clearFrozenConversion strips the converted amount from a deal being REOPENED,
-// the mirror of freezeBaseRate below.
-//
-// Left behind, the figure would be a base amount for a close that no longer
-// exists, and the readers that prefer a frozen figure to a live rate would go
-// on preferring it.
-//
-// It reads the row rather than taking the caller's pre-image, because the deal
-// READ does not select amount_minor_base or fx_rate_to_base — both are internal
-// columns and neither is on the contract — so a caller has no pre-image to give
-// that is not nil. A nil pre-image here would write "there was no converted
-// amount" into the audit diff of every reopen, which is the one row a reversal
-// reads to put the old figure back.
-//
-// A row holding no figure is left alone rather than patched to the null it
-// already is: a patch records every assignment it is given, so an unconditional
-// clear would name the column in the UPDATE and in the audit diff of every
-// reopen a deal ever makes.
-func clearFrozenConversion(ctx context.Context, tx pgx.Tx, p *storekit.Patch,
-	deal crmcontracts.Deal,
-) error {
-	// A deal that was never priced never froze anything, so there is nothing to
-	// read and nothing to clear. Checked before the query rather than after it:
-	// the amount is on the row the caller already holds, and this is the whole
-	// of what makes a frozen figure possible.
-	if deal.AmountMinor == nil {
-		return nil
-	}
-	baseBefore, err := frozenBaseBefore(ctx, tx, deal.Id)
+// Frozen columns are internal; audit pre-images cannot come from the public deal.
+func frozenBefore(ctx context.Context, tx pgx.Tx, id openapi_types.UUID) (frozenConversion, error) {
+	var before frozenConversion
+	args := []any{id}
+	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT fx_rate_to_base::text, fx_rate_date, amount_minor_base FROM deal WHERE id = $%d`, len(args)), args...).Scan(&before.Rate, &before.Date, &before.Amount)
+	return before, err
+}
+
+func clearFrozenConversion(ctx context.Context, tx pgx.Tx, p *storekit.Patch, id openapi_types.UUID) error {
+	before, err := frozenBefore(ctx, tx, id)
 	if err != nil {
 		return err
 	}
-	if baseBefore == nil {
-		return nil
+	p.Set(fxRateColumn, before.Rate, nil)
+	p.SetDate(fxRateDateColumn, before.Date, nil)
+	if before.Amount != nil {
+		p.Set(baseAmountColumn, before.Amount, nil)
 	}
-	p.Set(baseAmountColumn, baseBefore, nil)
 	return nil
-}
-
-// frozenBaseBefore reads the frozen base amount a deal currently holds, for the
-// patch's pre-image. A separate read because the column is internal: it is not
-// on crmcontracts.Deal, and a writer that recorded nil instead would put "there
-// was no converted amount" in the audit diff of every re-price and reopen.
-func frozenBaseBefore(ctx context.Context, tx pgx.Tx, id openapi_types.UUID) (*int64, error) {
-	var base *int64
-	if err := tx.QueryRow(ctx,
-		`SELECT amount_minor_base FROM deal WHERE id = $1`, id).Scan(&base); err != nil {
-		return nil, fmt.Errorf("read frozen base amount: %w", err)
-	}
-	return base, nil
 }
 
 // freezeBaseRate stamps a frozen conversion onto a patch: FreezeRateAt above
@@ -148,20 +111,13 @@ func frozenBaseBefore(ctx context.Context, tx pgx.Tx, id openapi_types.UUID) (*i
 // re-pricing doors freeze as of the ORIGINAL close date, for the reason freezeFx
 // states below.
 //
-// The caller passes what the row held, because two of the three writers reach
-// here for a deal that ALREADY carries a frozen rate — deal_closed_fx requires
-// one on any closed deal with an amount — and re-pricing replaces it. Recording
-// the pre-image as nil would put "there was no rate" in the audit diff of every
-// re-price, which is the one row a reversal reads to restore the old one.
-//
 // The error comes back unwrapped: a caller closing a deal, re-pricing one and
 // accepting an offer each tell an operator more by naming which than a shared
 // sentence could.
 func (s *Store) freezeBaseRate(ctx context.Context, tx pgx.Tx, p *storekit.Patch,
 	dealID openapi_types.UUID, currency string, amountMinor int64, asOf time.Time,
-	rateBefore *string, rateDateBefore *time.Time,
 ) error {
-	baseBefore, err := frozenBaseBefore(ctx, tx, dealID)
+	before, err := frozenBefore(ctx, tx, dealID)
 	if err != nil {
 		return err
 	}
@@ -187,9 +143,9 @@ func (s *Store) freezeBaseRate(ctx context.Context, tx pgx.Tx, p *storekit.Patch
 	if err != nil {
 		return err
 	}
-	p.Set(fxRateColumn, rateBefore, rate)
-	p.SetDate(fxRateDateColumn, rateDateBefore, &rateDate)
-	p.Set(baseAmountColumn, baseBefore, converted)
+	p.Set(fxRateColumn, before.Rate, rate)
+	p.SetDate(fxRateDateColumn, before.Date, &rateDate)
+	p.Set(baseAmountColumn, before.Amount, converted)
 	return nil
 }
 

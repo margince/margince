@@ -27,11 +27,11 @@ func TestValidateGroupRoleMapHoldsItsBoundsAndVocabulary(t *testing.T) {
 	}
 
 	atCeiling := map[string]string{}
-	for i := range maxGroupRoleMapEntries {
+	for i := range MaxGroupRoleMapEntries {
 		atCeiling[fmt.Sprintf("group-%d", i)] = "rep"
 	}
 	if err := validateGroupRoleMap(atCeiling); err != nil {
-		t.Errorf("a map at the %d-entry ceiling was refused: %v", maxGroupRoleMapEntries, err)
+		t.Errorf("a map at the %d-entry ceiling was refused: %v", MaxGroupRoleMapEntries, err)
 	}
 	atCeiling["one-more"] = "rep"
 	if err := validateGroupRoleMap(atCeiling); err == nil {

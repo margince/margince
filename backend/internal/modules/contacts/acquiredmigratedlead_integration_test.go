@@ -5,14 +5,8 @@
 
 package contacts
 
-// A counterparty the old CRM held as a lead is a migrated record, whichever
-// door later turns them into a contact.
-//
-// The HubSpot import files a counterparty with no deal and no conversation as a
-// lead. When a connected mailbox then finds mail with them, capture mints a
-// contact beside the lead. On the first import with a connected mailbox, nine
-// of sixteen Art. 14 cases were exactly these: carried over from HubSpot, and
-// owed nothing (consent.DutyFor, "crm_migration").
+// An imported lead becomes a migrated contact only through conversion. Mail
+// stays on the lead, and the resulting contact is owed nothing.
 
 import (
 	"context"
@@ -21,13 +15,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedLead writes a lead and the create audit row its import would leave,
-// stating the address it was created with — which may differ from the one it
-// holds now, the case an edit after the import produces.
-func (e *dedupeEnv) seedLead(ctx context.Context, t *testing.T, email, createdWith, sourceSystem string) {
+// seedLead writes the lead and import audit row. The original address may
+// differ from the current one after an edit.
+func (e *dedupeEnv) seedLead(ctx context.Context, t *testing.T, email, createdWith, sourceSystem string) ids.LeadID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -45,6 +39,22 @@ func (e *dedupeEnv) seedLead(ctx context.Context, t *testing.T, email, createdWi
 	}); err != nil {
 		t.Fatal(err)
 	}
+	return ids.From[ids.LeadKind](id)
+}
+
+// convertAfterMail captures mail without making a contact, then converts the
+// lead. The conversion is the only contact-producing step.
+func (e *dedupeEnv) convertAfterMail(ctx context.Context, t *testing.T, lead ids.LeadID, mail EnsureCounterpartyInput) ids.ContactID {
+	t.Helper()
+	res, err := e.store.EnsureCounterparty(ctx, mail)
+	if err != nil || res.ContactCreated || res.LeadID != lead {
+		t.Fatalf("ensure = %+v (err %v), want the mail filed on lead %v and no contact", res, err, lead)
+	}
+	contact, _, err := e.store.PromoteLead(ctx, lead, PromoteLeadInput{Trigger: string(TriggerHumanQualify)})
+	if err != nil {
+		t.Fatalf("converting the lead: %v", err)
+	}
+	return ids.From[ids.ContactKind](ids.UUID(contact.Id))
 }
 
 // outboundOnly turns a seeded message round: we sent it, and they only
@@ -67,14 +77,11 @@ func (e *dedupeEnv) outboundOnly(ctx context.Context, t *testing.T, in EnsureCou
 func TestAnAddressAMigratedLeadHoldsIsACRMMigration(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	e.seedLead(ctx, t, "buyer@oldcrm.test", "buyer@oldcrm.test", "mirror:hubspot")
-	in := e.outboundOnly(ctx, t, e.datedEnsureInput(ctx, t, "buyer@oldcrm.test", "oldcrm.test", time.Now().Add(-time.Hour)))
+	lead := e.seedLead(ctx, t, "buyer@oldcrm.test", "buyer@oldcrm.test", "mirror:hubspot")
+	in := e.outboundOnly(ctx, t, e.datedEnsureInput(ctx, t, "buyer@oldcrm.test", "oldcrm.test", clocktest.Now(t).Add(-time.Hour)))
 
-	res, err := e.store.EnsureCounterparty(ctx, in)
-	if err != nil || !res.ContactCreated {
-		t.Fatalf("ensure = %+v (err %v), want a created contact", res, err)
-	}
-	if kind, _ := acquisitionOf(ctx, t, e.store, res.ContactID); kind != AcquiredCRMMigration {
+	contact := e.convertAfterMail(ctx, t, lead, in)
+	if kind, _ := acquisitionOf(ctx, t, e.store, contact); kind != AcquiredCRMMigration {
 		t.Errorf("a counterparty the old CRM held as a lead is recorded as %q, want %q", kind, AcquiredCRMMigration)
 	}
 }
@@ -84,14 +91,11 @@ func TestAnAddressAMigratedLeadHoldsIsACRMMigration(t *testing.T) {
 func TestALeadEnteredHereIsNotAMigration(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	e.seedLead(ctx, t, "walkin@fair.test", "walkin@fair.test", "web_form")
-	in := e.outboundOnly(ctx, t, e.datedEnsureInput(ctx, t, "walkin@fair.test", "fair.test", time.Now().Add(-time.Hour)))
+	lead := e.seedLead(ctx, t, "walkin@fair.test", "walkin@fair.test", "web_form")
+	in := e.outboundOnly(ctx, t, e.datedEnsureInput(ctx, t, "walkin@fair.test", "fair.test", clocktest.Now(t).Add(-time.Hour)))
 
-	res, err := e.store.EnsureCounterparty(ctx, in)
-	if err != nil || !res.ContactCreated {
-		t.Fatalf("ensure = %+v (err %v), want a created contact", res, err)
-	}
-	if kind, _ := acquisitionOf(ctx, t, e.store, res.ContactID); kind != AcquiredUnknownLegacy {
+	contact := e.convertAfterMail(ctx, t, lead, in)
+	if kind, _ := acquisitionOf(ctx, t, e.store, contact); kind != AcquiredUnknownLegacy {
 		t.Errorf("a lead entered here made the contact %q, want %q", kind, AcquiredUnknownLegacy)
 	}
 }
@@ -103,14 +107,25 @@ func TestALeadEnteredHereIsNotAMigration(t *testing.T) {
 func TestAnImportedLeadRetargetedAtAnotherAddressIsNotAMigration(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	e.seedLead(ctx, t, "stranger@elsewhere.test", "original@oldcrm.test", "mirror:hubspot")
-	in := e.outboundOnly(ctx, t, e.datedEnsureInput(ctx, t, "stranger@elsewhere.test", "elsewhere.test", time.Now().Add(-time.Hour)))
+	lead := e.seedLead(ctx, t, "stranger@elsewhere.test", "original@oldcrm.test", "mirror:hubspot")
+	in := e.outboundOnly(ctx, t, e.datedEnsureInput(ctx, t, "stranger@elsewhere.test", "elsewhere.test", clocktest.Now(t).Add(-time.Hour)))
 
-	res, err := e.store.EnsureCounterparty(ctx, in)
-	if err != nil || !res.ContactCreated {
-		t.Fatalf("ensure = %+v (err %v), want a created contact", res, err)
-	}
-	if kind, _ := acquisitionOf(ctx, t, e.store, res.ContactID); kind != AcquiredUnknownLegacy {
+	contact := e.convertAfterMail(ctx, t, lead, in)
+	if kind, _ := acquisitionOf(ctx, t, e.store, contact); kind != AcquiredUnknownLegacy {
 		t.Errorf("a lead retargeted after the import made the contact %q, want %q", kind, AcquiredUnknownLegacy)
+	}
+}
+
+// A lead who wrote to us converts into a contact who contacted us first. The
+// mail is the evidence a capture would have read.
+func TestALeadWhoWroteConvertsIntoAContactWhoWrote(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	lead := e.seedLead(ctx, t, "asked@fair.test", "asked@fair.test", "web_form")
+	in := e.datedEnsureInput(ctx, t, "asked@fair.test", "fair.test", clocktest.Now(t).Add(-time.Hour))
+
+	contact := e.convertAfterMail(ctx, t, lead, in)
+	if kind, _ := acquisitionOf(ctx, t, e.store, contact); kind != AcquiredSubjectInitiated {
+		t.Errorf("a lead who wrote to us made the contact %q, want %q", kind, AcquiredSubjectInitiated)
 	}
 }

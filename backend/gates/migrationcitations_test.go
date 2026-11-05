@@ -52,13 +52,20 @@ package gates
 import (
 	"flag"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/platform/datatask"
 )
 
 var (
@@ -362,6 +369,9 @@ func citationScanExempt(rel string) bool {
 // word and version land on different lines is otherwise invisible. The finding
 // is reported on the line the namespace word sits on.
 func danglingCitationsIn(rel, body string, known map[string]map[string]bool) []citationRef {
+	if strings.HasSuffix(rel, ".go") {
+		body = withoutDataTaskIdentity(body)
+	}
 	lines := strings.Split(body, "\n")
 	var found []citationRef
 	seen := map[string]bool{}
@@ -635,4 +645,98 @@ func citationExcerpt(line string) string {
 		return trimmed
 	}
 	return string([]rune(trimmed)[:width]) + "…"
+}
+
+// Task identities share a namespace with migrations, but name a different catalog.
+// Mask only the typed ID value; requirements and surrounding prose remain citations.
+func withoutDataTaskIdentity(body string) string {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "citation.go", body, 0)
+	if err != nil {
+		return body
+	}
+	owner := reflect.TypeFor[datatask.Task]()
+	alias := ""
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil || path != owner.PkgPath() {
+			continue
+		}
+		alias = filepath.Base(path)
+		if spec.Name != nil {
+			alias = spec.Name.Name
+		}
+	}
+	if alias == "" {
+		return body
+	}
+	masked := []byte(body)
+	ast.Inspect(file, func(node ast.Node) bool {
+		literal, ok := node.(*ast.CompositeLit)
+		if !ok || !isDataTaskLiteral(literal.Type, alias, owner.Name()) {
+			return true
+		}
+		for _, element := range literal.Elts {
+			field, ok := element.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			name, ok := field.Key.(*ast.Ident)
+			if !ok || name.Name != "ID" {
+				continue
+			}
+			value, ok := field.Value.(*ast.BasicLit)
+			if !ok || value.Kind != token.STRING {
+				continue
+			}
+			start, end := fset.Position(value.Pos()).Offset, fset.Position(value.End()).Offset
+			for i := start; i < end; i++ {
+				if masked[i] != '\n' {
+					masked[i] = ' '
+				}
+			}
+		}
+		return true
+	})
+	return string(masked)
+}
+
+func isDataTaskLiteral(expr ast.Expr, alias, name string) bool {
+	if direct, ok := expr.(*ast.Ident); ok {
+		return alias == "." && direct.Name == name
+	}
+	selected, ok := expr.(*ast.SelectorExpr)
+	if !ok || selected.Sel.Name != name {
+		return false
+	}
+	imported, ok := selected.X.(*ast.Ident)
+	return ok && imported.Name == alias
+}
+
+func TestTaskIdentityDoesNotHideMigrationRequirements(t *testing.T) {
+	t.Parallel()
+	owner := reflect.TypeFor[datatask.Task]().PkgPath()
+	for _, tc := range []struct {
+		name, importSpec, expression string
+		want                         []string
+	}{
+		{"task ID", strconv.Quote(owner), `datatask.Task{ID:"core/1792592656_restore"}`, nil},
+		{"renamed import", `jobs ` + strconv.Quote(owner), `jobs.Task{ID:"core/1792592656_restore"}`, nil},
+		{"dot import", `. ` + strconv.Quote(owner), `Task{ID:"core/1792592656_restore"}`, nil},
+		{"requirement", strconv.Quote(owner), `datatask.Task{ID:"core/1792592656_restore",Requires:[]string{"core/8888"}}`, []string{"8888"}},
+		{"comment", strconv.Quote(owner), "datatask.Task{ID:\"core/1792592656_restore\"} // core/8888", []string{"8888"}},
+		{"other owner", `datatask "example.test/other"`, `datatask.Task{ID:"core/8888"}`, []string{"8888"}},
+		{"other field", strconv.Quote(owner), `datatask.Task{Title:"core/8888"}`, []string{"8888"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			source := "package probe\nimport " + tc.importSpec + "\nvar task = " + tc.expression
+			var got []string
+			for _, citation := range danglingCitationsIn("probe.go", source, nil) {
+				got = append(got, citation.version)
+			}
+			if strings.Join(got, ",") != strings.Join(tc.want, ",") {
+				t.Fatalf("citations=%v want %v", got, tc.want)
+			}
+		})
+	}
 }

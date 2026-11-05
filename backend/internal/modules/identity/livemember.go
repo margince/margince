@@ -16,3 +16,8 @@ func LiveMemberSQL(alias string) string {
 func ActivatableMemberSQL(alias string) string {
 	return workforce.ActivatableMemberSQL(alias)
 }
+
+// DepartedMemberSQL is workforce.DepartedMemberSQL: left, not archived.
+func DepartedMemberSQL(alias string) string {
+	return workforce.DepartedMemberSQL(alias)
+}

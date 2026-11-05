@@ -17,7 +17,6 @@
   // the product. Two questions, two answers.
   "extends": "./tsconfig.composed.json",
   "compilerOptions": {
-    "composite": false,
     "tsBuildInfoFile": "node_modules/.tmp/tsconfig.composed-tests.tsbuildinfo",
     // Tests reach for expect/describe and the jsdom globals the app does not.
     "types": ["vite/client", "node"]

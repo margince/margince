@@ -1,11 +1,20 @@
-import type { Translator } from "../../i18n";
+import {
+  LIFECYCLE_LABELS,
+  LIFECYCLE_OPTIONS,
+} from "../../format/companylifecycle";
+import { formatNumber } from "../../format/format";
+import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { WON_REASON_LABELS, WON_REASONS } from "../../screens/winreason";
-import { KIND_LABEL } from "./approvalkindlabel";
+import { WON_REASON_LABELS, WON_REASONS } from "../../lib/winreason";
 
 // Re-exported so the surfaces that read the map by name keep their import, and
 // so this file stays the one place a reader looks for approval-kind vocabulary.
-export { KIND_LABEL };
+export {
+  approvalKindLabel,
+  approvalLabel,
+  humanizeKind,
+  KIND_LABEL,
+} from "../../lib/approvalkindlabel";
 
 // What a reader may CHANGE before accepting, per kind.
 //
@@ -63,31 +72,6 @@ export type EditableField =
       readonly optionLabels?: Readonly<Record<string, MessageKey>>;
     };
 
-const COMPANY_LIFECYCLE_STAGES = [
-  "unknown",
-  "target",
-  "prospect",
-  "opportunity",
-  "customer",
-  "former_customer",
-  "disqualified",
-] as const;
-
-// The same catalog keys the account page's stage badge reads, so the inbox and
-// the record cannot call one stage two things. Keyed off the list above:
-// a stage added there with no entry here fails the type.
-const COMPANY_LIFECYCLE_LABELS: Readonly<
-  Record<(typeof COMPANY_LIFECYCLE_STAGES)[number], MessageKey>
-> = {
-  unknown: "company.lifecycle.unknown",
-  target: "company.lifecycle.target",
-  prospect: "company.lifecycle.prospect",
-  opportunity: "company.lifecycle.opportunity",
-  customer: "company.lifecycle.customer",
-  former_customer: "company.lifecycle.former_customer",
-  disqualified: "company.lifecycle.disqualified",
-};
-
 export const EDITABLE_FIELDS: Readonly<
   Record<string, readonly EditableField[]>
 > = {
@@ -100,8 +84,10 @@ export const EDITABLE_FIELDS: Readonly<
       field: "proposed_lifecycle",
       as: "choice",
       label: "company.lifecycle",
-      options: COMPANY_LIFECYCLE_STAGES,
-      optionLabels: COMPANY_LIFECYCLE_LABELS,
+      // Live is not offered: an approval runs as the system, and only a
+      // signed-in person may set an account live.
+      options: LIFECYCLE_OPTIONS.filter((stage) => stage !== "live"),
+      optionLabels: LIFECYCLE_LABELS,
     },
   ],
   // An automation-composed email waiting for a human to read, correct and
@@ -113,6 +99,13 @@ export const EDITABLE_FIELDS: Readonly<
   // something the approver is agreeing TO rather than something to retype. The
   // server refuses an edited anchor outright (it is an entity reference, and
   // edit scope pins those), so offering it would only invite a refusal.
+  // A LinkedIn match is answered with its two boxes, never by retyping the
+  // export's strings: the server refuses an edit to anything else.
+  linkedin_match: [],
+  // A handover is answered yes or no. The note is the asker's words, and the
+  // rest names who gives and who receives, which the server will not let an
+  // edit change.
+  ownership_transfer: [],
   held_draft: [
     { field: "subject", as: "text", label: "decision.draftSubject" },
     { field: "body", as: "textarea", label: "decision.draftBody" },
@@ -172,20 +165,37 @@ export const EDITABLE_FIELDS: Readonly<
   ],
 };
 
-/** humanize turns an unmapped wire enum into readable words. */
-export function humanizeKind(kind: string): string {
-  return kind.replaceAll("_", " ");
-}
-
-export function approvalKindLabel(kind: string, t: Translator): string {
-  const key = KIND_LABEL[kind];
-  return key ? t(key) : humanizeKind(kind);
-}
-
 // A rate proposal's apply re-reads the sheet, so its lost race is answered by
 // a fresh refresh rather than by staging the same proposal again.
 export function decisionSkewKey(kind: string | null): MessageKey {
   return kind === "fx_rate_proposal"
     ? "decision.fxRateMoved"
     : "decision.versionSkew";
+}
+
+export function approvalAcceptLabel(
+  kind: string | undefined,
+  plural: PluralTranslator,
+  fallback: string,
+  locale: Locale,
+  count = 1,
+  genericAction = false,
+): string {
+  if (kind !== "commitment_task" || genericAction) return fallback;
+  return plural("approval.commitment.createTask", count, {
+    count: formatNumber(count, locale),
+  });
+}
+
+export function approvalExpiryLabel(
+  kind: string | undefined,
+  countdown: string,
+  t: Translator,
+): string {
+  return t(
+    kind === "commitment_task"
+      ? "approval.commitment.proposalExpiresIn"
+      : "decision.expiresIn",
+    { countdown },
+  );
 }

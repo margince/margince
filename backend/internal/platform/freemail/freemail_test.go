@@ -191,3 +191,47 @@ func TestHostnameRefusesABarePublicSuffix(t *testing.T) {
 		}
 	}
 }
+
+func TestCarveOutKeyKeepsASubdomainBaselineEntryAsWritten(t *testing.T) {
+	var entry string
+	for _, d := range Domains() {
+		if Registrable(d) != d {
+			entry = d
+			break
+		}
+	}
+	if entry == "" {
+		t.Fatal("the baseline holds no subdomain entry to carve out")
+	}
+	base := Registrable(entry)
+
+	key, ok := CarveOutKey(entry)
+	if !ok || key != entry {
+		t.Fatalf("CarveOutKey(%q) = %q, %v; want the entry itself", entry, key, ok)
+	}
+	deeper, _ := CarveOutKey("x." + entry)
+	if deeper != "x."+entry {
+		t.Errorf("a host under the entry must be carved out as typed, got %q", deeper)
+	}
+	narrow := New(nil, []string{deeper})
+	if narrow.IsConsumer("x." + entry) {
+		t.Errorf("the carved-out host %q must no longer be consumer mail", "x."+entry)
+	}
+	if !narrow.IsConsumer("y."+entry) || !narrow.IsConsumer(entry) {
+		t.Errorf("carving out %q must leave its sibling and the entry %q consumer mail", "x."+entry, entry)
+	}
+	if New(nil, []string{key}).IsConsumer(entry) {
+		t.Errorf("%q must no longer be consumer mail", entry)
+	}
+	// An unrelated name under the same registrable domain is untouched.
+	sibling := "unrelated-sibling." + base
+	if New(nil, []string{key}).IsConsumer(sibling) != New(nil, nil).IsConsumer(sibling) {
+		t.Errorf("a carve-out of %q must not change an unrelated sibling", entry)
+	}
+	if got, _ := CarveOutKey("mail.gmx.net"); got != "gmx.net" {
+		t.Errorf("a registrable baseline entry carves out at gmx.net, got %q", got)
+	}
+	if got, _ := CarveOutKey("mail.not-listed.example.com"); got != "example.com" {
+		t.Errorf("an unlisted subdomain narrows to its registrable domain, got %q", got)
+	}
+}

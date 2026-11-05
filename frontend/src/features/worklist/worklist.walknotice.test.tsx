@@ -8,7 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { day, renderWorklist, row } from "./worklist.testkit";
+import { day, renderWorklist, row } from "../../testing/worklist.testkit";
 import { WalkNotice } from "./worklist.walknotice";
 
 afterEach(cleanup);
@@ -51,19 +51,25 @@ describe("what has moved since the reader started", () => {
     expect(refreshed).toHaveBeenCalledTimes(1);
   });
 
-  it("explains a count that fell without offering a refresh", () => {
+  it("offers to refresh the snapshot totals after work leaves", async () => {
+    const refreshed = vi.fn();
+    const user = userEvent.setup();
     render(
-      notice({
-        as_of: "2026-09-05T09:00:00Z",
-        // Dealt with since the walk started. Refreshing does not bring these
-        // back, so offering it here would point at the wrong remedy.
-        changed_since_snapshot: 2,
-        new_available: 0,
-      }),
+      notice(
+        {
+          as_of: "2026-09-05T09:00:00Z",
+          changed_since_snapshot: 2,
+          new_available: 0,
+        },
+        refreshed,
+      ),
     );
 
-    expect(screen.queryByRole("button")).toBeNull();
     expect(screen.getByText(/2/)).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.walk.refresh"] }),
+    );
+    expect(refreshed).toHaveBeenCalledTimes(1);
   });
 
   it("reports arrivals and departures separately", () => {
@@ -108,6 +114,8 @@ function notice(
 // notice would sit there after the reader did what it asked.
 describe("refreshing starts a new walk", () => {
   it("asks for a first page with no cursor", async () => {
+    // Without an observer the scroll sentinel offers its button to press.
+    vi.stubGlobal("IntersectionObserver", undefined);
     const asked: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -145,7 +153,7 @@ describe("refreshing starts a new walk", () => {
     // PAGE FIRST, which is the case the concern is about: with only page one
     // loaded there is no cursor to resume and any implementation passes.
     await userEvent.click(
-      await screen.findByRole("button", { name: en["worklist.more"] }),
+      await screen.findByRole("button", { name: en["list.loadMore"] }),
     );
     await waitFor(() => {
       expect(asked.some((url) => url.includes("cursor="))).toBe(true);

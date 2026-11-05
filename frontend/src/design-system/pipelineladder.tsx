@@ -225,7 +225,10 @@ const REASON_KEYS: Partial<Record<string, MessageKey>> = {
   "material_events.no_single_account": "pipeline.reason.no_single_account",
   "material_events.two_bodies_of_work": "pipeline.reason.two_bodies_of_work",
   "material_events.thread_not_all_open": "pipeline.reason.thread_not_all_open",
+  "material_events.thread_not_all_read": "pipeline.reason.thread_not_all_read",
   "material_events.no_named_reader": "pipeline.reason.no_named_reader",
+  "material_events.from_sending_systems":
+    "pipeline.reason.from_sending_systems",
 };
 
 // stageName prefers this build's own catalog and falls back to the server's.
@@ -234,10 +237,10 @@ function stageName(rung: Rung, t: ReturnType<typeof useT>): string {
   return key ? t(key) : (rung.label ?? rung.stage);
 }
 
-// EXPORTED, because a second surface reports a rung: the company-keyed door
-// onto company_triage (screens/companytriage.tsx). Its rungs are the same
-// vocabulary, and a second copy of this resolution there would be a second
-// catalog — the one that goes stale when a reason is added here.
+// Exported, because a second surface reports a rung: the company-keyed door
+// onto company_triage that features/companies/companytriage.tsx draws. Its
+// rungs are the same vocabulary. A second copy of this resolution there would
+// be a second catalog, the one that goes stale when a reason is added here.
 export function reasonText(rung: Rung, t: ReturnType<typeof useT>): string {
   if (!rung.reason) {
     return "";

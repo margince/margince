@@ -26,9 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// threadFixture is one conversation of three mails, two of them Rep1's own
-// and one on another team's capture-private contact, plus a project to file
-// the conversation under.
+// threadFixture is one conversation of three mails we sent to one
+// correspondent. Two are Rep1's own and one is on another team's
+// capture-private contact. A project is there to file the conversation under.
 type threadFixture struct {
 	key     string
 	mine    [2]ids.UUID
@@ -46,17 +46,21 @@ func seedThreadFixture(t *testing.T, e *Env, owner *pgx.Conn) threadFixture {
 
 	myContact := e.SeedContact(t, "My Contact", &e.Rep1)
 	for i := range f.mine {
-		f.mine[i] = SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by, thread_key)
-			VALUES ($1, 'email', 'Re: milestone', 'body', now(), 'manual', 'human:x', $2)`, f.key)
+		f.mine[i] = SeedIDRow(t, owner, ourMailInto, f.key)
 		LinkActivity(t, owner, f.mine[i], "contact", myContact)
 	}
 	theirContact := e.SeedContact(t, "Their Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", theirContact, e.Rep3)
-	f.theirs = SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by, thread_key)
-		VALUES ($1, 'email', 'Re: milestone', 'body', now(), 'manual', 'human:x', $2)`, f.key)
+	f.theirs = SeedIDRow(t, owner, ourMailInto, f.key)
 	LinkActivity(t, owner, f.theirs, "contact", theirContact)
 	return f
 }
+
+// ourMailInto is one of our attested sends to the fixture's correspondent on
+// the thread its argument names.
+const ourMailInto = `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by, thread_key,
+		direction, counterparty_email, counterparty_outbound_attested)
+	VALUES ($1, 'email', 'Re: milestone', 'body', now(), 'manual', 'human:x', $2, 'outbound', 'buyer@acme.test', true)`
 
 func projectLinks(t *testing.T, e *Env, activity, project ids.UUID) int {
 	t.Helper()
@@ -72,7 +76,7 @@ func TestRelinkingAThreadMovesEveryWritableMemberWithItsOwnWriteShape(t *testing
 	f := seedThreadFixture(t, e, OwnerConn(t))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 
-	out, err := e.Activities.RelinkThread(rep, f.key, activities.RelinkActivityInput{EntityType: "project", EntityID: f.project})
+	out, err := e.Activities.RelinkThread(rep, ids.From[ids.ActivityKind](f.mine[0]), activities.RelinkActivityInput{EntityType: "project", EntityID: f.project})
 	if err != nil {
 		t.Fatalf("relinking the thread: %v", err)
 	}
@@ -102,7 +106,7 @@ func TestRelinkingAThreadMovesEveryWritableMemberWithItsOwnWriteShape(t *testing
 
 	// Replaying the move is a no-op per row: nothing new is counted and no
 	// second audit row appears.
-	again, err := e.Activities.RelinkThread(rep, f.key, activities.RelinkActivityInput{EntityType: "project", EntityID: f.project})
+	again, err := e.Activities.RelinkThread(rep, ids.From[ids.ActivityKind](f.mine[0]), activities.RelinkActivityInput{EntityType: "project", EntityID: f.project})
 	if err != nil {
 		t.Fatalf("replaying the thread move: %v", err)
 	}
@@ -147,7 +151,7 @@ func TestRelinkingANamedSetWithAnInvisibleIdMovesNothing(t *testing.T) {
 	}
 }
 
-// A blank thread key and an oversized set are refused before any row is read.
+// A blank anchor and an oversized set are refused before any row is read.
 func TestBatchRelinkRefusesAnEmptySelection(t *testing.T) {
 	e := Setup(t)
 	f := seedThreadFixture(t, e, OwnerConn(t))
@@ -155,8 +159,8 @@ func TestBatchRelinkRefusesAnEmptySelection(t *testing.T) {
 	in := activities.RelinkActivityInput{EntityType: "project", EntityID: f.project}
 
 	var detailed *httperr.DetailedError
-	if _, err := e.Activities.RelinkThread(rep, "", in); !errors.As(err, &detailed) || detailed.Status != http.StatusUnprocessableEntity {
-		t.Errorf("blank thread_key → %v, want a 422 naming the field", err)
+	if _, err := e.Activities.RelinkThread(rep, ids.ActivityID{}, in); !errors.As(err, &detailed) || detailed.Status != http.StatusUnprocessableEntity {
+		t.Errorf("blank activity_id → %v, want a 422 naming the field", err)
 	}
 	if _, err := e.Activities.RelinkActivities(rep, nil, in); !errors.As(err, &detailed) || detailed.Status != http.StatusUnprocessableEntity {
 		t.Errorf("empty activity_ids → %v, want a 422 naming the field", err)

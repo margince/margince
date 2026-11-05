@@ -1,0 +1,16 @@
+/* The chat glyph follows the number on its line; the square overhangs the
+   line box, so a row with a number stays as tall as a row without one. */
+.callaction-chats {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: var(--space-1);
+  vertical-align: top;
+}
+/* Quiet at rest, so the line reads as the number; the pane comes back under
+   the pointer, on focus and while its menu is open. */
+.callaction-chats
+.btn-icon:not(:hover, :focus-visible, [aria-expanded="true"]) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--textSecondary);
+}

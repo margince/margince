@@ -16,6 +16,7 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
+bash scripts/test-install-sbom-python.sh
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT

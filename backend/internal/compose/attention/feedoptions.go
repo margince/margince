@@ -99,6 +99,13 @@ func (s *Service) WithContactEmployers(e ContactEmployers) *Service {
 	return s
 }
 
+// WithMeetingOrganizers binds the reader that says which colleague organized
+// a meeting. Unbound, a meeting row's host is whose calendar it came off.
+func (s *Service) WithMeetingOrganizers(o MeetingOrganizers) *Service {
+	s.organizers = o
+	return s
+}
+
 // WithDealMoves binds the reader that puts a deal's already-decided next step
 // on its queue row. An option for the reason WithDealFacts is one.
 //
@@ -133,6 +140,13 @@ func (s *Service) WithTeammates(t Teammates) *Service {
 	return s
 }
 
+// WithFormerTeammates binds the reader of colleagues who left, whose open work
+// a team view keeps.
+func (s *Service) WithFormerTeammates(f FormerTeammates) *Service {
+	s.former = f
+	return s
+}
+
 // WithOverdueLoad binds the team board's counting reader for tasks — an option
 // for the reason WithWaiting is one.
 //
@@ -143,17 +157,6 @@ func (s *Service) WithTeammates(t Teammates) *Service {
 // is unaffected.
 func (s *Service) WithOverdueLoad(o OverdueLoad) *Service {
 	s.overdueLoad = o
-	return s
-}
-
-// WithPromiseLoad binds the board's counting reader for commitments due.
-//
-// The board REFUSES without it, as it does for the other three counts. Here the
-// zero would be worse than elsewhere: an installation that extracts no claims
-// would report a team that promised nothing, when the truth is that nobody was
-// listening.
-func (s *Service) WithPromiseLoad(p PromiseLoad) *Service {
-	s.promiseLoad = p
 	return s
 }
 

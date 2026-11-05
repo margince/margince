@@ -73,7 +73,7 @@ func TestTheCommonPatternTieGoesToTheChain(t *testing.T) {
 		summaryRep("Cy", 0, FocusLeadsBreached),
 		summaryRep("Di", 0, FocusLeadsBreached),
 	}
-	if got := commonPatternSentence(reps); got != "Most common pattern: leads breached (2 members)." {
+	if got := teamCopyFor("en").commonPatternSentence(reps); got != "Most common pattern: leads breached (2 members)." {
 		t.Errorf("tie broke to %q", got)
 	}
 }
@@ -81,7 +81,7 @@ func TestTheCommonPatternTieGoesToTheChain(t *testing.T) {
 // A horizon without a basis says nothing about coverage.
 func TestAnAbsentBasisWritesNoCoverageSentence(t *testing.T) {
 	refused := []Coverage{CoverageRefused("month", "EUR")}
-	if got := coverageSentence(refused, "month"); got != "" {
+	if got := teamCopyFor("en").coverageSentence(refused, "month"); got != "" {
 		t.Errorf("an unread call produced %q", got)
 	}
 }
@@ -109,5 +109,45 @@ func TestReplanNeedsABasisAndLowCoverage(t *testing.T) {
 				t.Errorf("replan = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+// A manager_call coverage whose call needs review says so beside the figure,
+// in every language the copy holds, and a current call says nothing more.
+func TestTheSummaryNamesACallThatNeedsReview(t *testing.T) {
+	for language, want := range map[string]string{
+		"en": "needs review", "de": "geprüft werden", "vi": "xem lại",
+	} {
+		for _, replan := range []bool{false, true} {
+			review := TeamReview{Language: language, Counts: TeamCounts{RepsCounted: 1}}
+			review.Coverage = []Coverage{{PeriodKind: "month", Basis: "manager_call", CoverageBp: 9000, ReplanRecommended: replan}}
+			for _, unchecked := range []*bool{nil, new(false)} {
+				review.Coverage[0].CallNeedsReview = unchecked
+				if got := summarise(review); strings.Contains(got, want) {
+					t.Errorf("%s: a call not flagged reads %q", language, got)
+				}
+			}
+			review.Coverage[0].CallNeedsReview = new(true)
+			got := summarise(review)
+			if strings.Count(got, want) != 1 || strings.Count(got, "(90%)") != 1 {
+				t.Errorf("%s replan=%v: a call that needs review reads %q, want %q once", language, replan, got, want)
+			}
+		}
+	}
+}
+
+func TestCoverageWireCarriesTheCallReviewOnlyBesideAManagerCall(t *testing.T) {
+	call := coverageToWire(Coverage{PeriodKind: "month", Basis: "manager_call", CallNeedsReview: new(true)})
+	if call.CallNeedsReview == nil || !*call.CallNeedsReview {
+		t.Errorf("a manager_call coverage sends %v, want true", call.CallNeedsReview)
+	}
+	for _, c := range []Coverage{
+		{PeriodKind: "month", Basis: "manager_call"},
+		{PeriodKind: "month", Basis: "historical_median", CallNeedsReview: new(true)},
+		CoverageRefused("month", "EUR"),
+	} {
+		if got := coverageToWire(c); got.CallNeedsReview != nil {
+			t.Errorf("%+v sends call_needs_review %v, want it left out", c, *got.CallNeedsReview)
+		}
 	}
 }

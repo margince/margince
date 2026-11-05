@@ -9,6 +9,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
+// ingestRunning is the status an attempt that has begun leaves on its document.
+const ingestRunning = "running"
+
 // ingestInFlight is a document whose ingest has not settled, over alias d.
 const ingestInFlight = `d.ingest_status IN ('queued', 'running')`
 

@@ -437,6 +437,9 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 	if err := w.engine.PublishAnsweredContactsWorkspace(wsCtx); err != nil {
 		return err
 	}
+	if err := w.engine.LiftVendorMarksWorkspace(wsCtx); err != nil {
+		return err
+	}
 	if err := w.engine.WidenClearedSendersWorkspace(wsCtx); err != nil {
 		return err
 	}

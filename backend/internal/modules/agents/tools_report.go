@@ -77,7 +77,7 @@ func (t runReport) Spec() mcp.ToolSpec {
 		OpenAPIOp: "runReport",
 		InputSchema: schema(`{"type":"object","required":["report"],"properties":{
 			"report":` + reportProperty(t.catalog) + `,
-            "scope":` + string(schemaFor[crmcontracts.ReportScope]()) + `,
+            "scope":` + string(argumentSchemaFor[crmcontracts.ReportScope](windowRule)) + `,
 			"filters":{"type":"object","description":"Equality predicates using this report's published filter names."},
 			"group_by":{"type":"array","items":{"type":"string"},"description":"Published dimension names; omit for default grouping."},
 			"aggregates":{"type":"array","items":{"type":"object","required":["fn"],"properties":{

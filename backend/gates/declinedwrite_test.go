@@ -59,7 +59,9 @@ var declinedWriteIsSilent = gatekit.Waive(map[string]string{
 	"backend/internal/modules/activities/audienceretraction.go:RetractDerivedForActivityTx":      "clearing a capture label that may already be absent, under the activity's lock: the retraction is idempotent by design because it runs again whenever a narrowing arrives late",
 	"backend/internal/modules/activities/retentionstampproject.go:StampCorrespondenceForProject": "stamping a retention class once (retention_class IS NULL): an activity already classed keeps the class it was given, because a second project touching the same message must not reclassify it",
 	"backend/internal/modules/capture/registry_watch.go:RenewWatch":                              "renewing a provider watch against the generation that was read: a connection reconnected since has a watch of its own, and extending the dead generation's would hold a subscription nobody reads",
+	"backend/internal/modules/capture/syncstate.go:parkForbiddenTx":                              "marking a refused member's connection error from connected only: one already in error, archived or awaiting reauth stays where it is, and the class on the sync state says why",
 	"backend/internal/modules/capture/syncstate.go:recordSyncFailure":                            "escalating a connection to reauth_required from connected or error only: one already archived or awaiting reauth is in no state this escalation improves",
+	"backend/internal/modules/consent/instructionconsume.go:resolveReviewTx":                     "closing the review a spent decision answered, only while it is still open: one already closed, by a cancel or an erasure that reached it first, has nothing left to close, and the decision being spent is recorded either way by its own audited write",
 	"backend/internal/modules/consent/lift.go:liftAdmittedTx":                                    "lifting a suppression the function has already read FOR UPDATE under the subject's lock: the locked read established revoked_at IS NULL, so the write cannot find the row otherwise",
 	"backend/internal/modules/contacts/fillretraction.go:clearFilledValue":                       "retracting a filled value only while the column still holds what the fill wrote: a value the user has since edited is theirs, and clearing it would delete a human's correction to undo a machine's guess",
 	"backend/internal/modules/contacts/leadresponseclock.go:startLeadResponseClockTx":            "starting a lead's response clock once (routed_at IS NULL) under the lead's lock: a lead routed twice keeps the first instant, which is the clock the service level is measured against",
@@ -69,9 +71,8 @@ var declinedWriteIsSilent = gatekit.Waive(map[string]string{
 	"backend/internal/modules/capture/channelpoll.go:AdvanceChannelPollOffsetTx":                 "a monotonic advance (poll_offset < $3): a poller holding an older offset declining to move the cursor backwards is the predicate working, and the furthest reader has already set it",
 	"backend/internal/modules/capture/pending.go:Defer":                                          "rescheduling a row whose claim this worker no longer holds: the claim predicate hands the row to whoever holds it now, and a second deferral would move an attempt the new owner is driving",
 	"backend/internal/modules/capture/pendingsweeps.go:AgeOutReviewTx":                           "ageing out a review that is no longer unsure: somebody decided it between the scan and the write, and their decision outranks the window expiring",
-	"backend/internal/modules/capture/syncstate.go:recordSyncSuccess":                            "clearing a connection's error status on a good sync, where the ordinary case is a connection that was never in error, so the common path is the no-op",
 	"backend/internal/modules/capture/threadverdict.go:Defer":                                    "the thread twin of the counterparty deferral, declining for the same reason: the claim moved, so the row is the new holder's to reschedule",
-	"backend/internal/modules/capture/threadverdictmerge.go:ThreadVerdictMergeTx":                "folding one thread key's verdicts into another's under FOR UPDATE: a row whose status changed before the lock is one the merge is right to leave, and the merge is re-run by the next message on either key",
+	"backend/internal/modules/capture/threadverdictmerge.go:reopenMergedVerdict":                 "re-opening the survivor of a verdict pair the same transaction read and locked FOR UPDATE a few statements earlier, so there is no row to lose. A row whose status changed before the lock is one the merge is right to leave, and the merge is re-run by the next message on either key",
 	"backend/internal/modules/contacts/siteread.go:UpdateSiteReadDraft":                          "the draft half of the same progressive read, declining for the same reason: facts arriving after the read stopped belong to a reading nobody is waiting for",
 	"backend/internal/modules/contacts/siteread.go:UpdateSiteReadProgress":                       "progress for a read that is no longer running: a cancelled or finished read must not have phase and page counts written back over its final state",
 	"backend/internal/modules/webhooks/deliverystore.go:markVisibilityRevoked":                   "revoking a delivery already revoked: idempotent by construction, and the first revocation already carries the reason",
@@ -86,9 +87,7 @@ var declinedWriteIsSilent = gatekit.Waive(map[string]string{
 // Each names the issue carrying the behaviour change. That is a separate
 // review: growing an error where a caller expects nil changes what a worker
 // does next.
-var declinedWriteOwesACheck = gatekit.Waive(map[string]string{
-	"backend/internal/modules/ai/voice_build_run.go:SetBuildStage": "a stage advances only while the build is running, so a worker whose build was cancelled keeps spending model calls on stages nothing records (#7210)",
-})
+var declinedWriteOwesACheck = gatekit.Waive(map[string]string{})
 
 // countingHelpers names every function in one package whose body reads a
 // write's outcome. A caller handing its statement to one of them is credited
@@ -276,10 +275,8 @@ func TestAConditionalByIDWriteReportsThatItDeclined(t *testing.T) {
 	// The debt is counted as well as waived, because a waived finding on its
 	// own is invisible.
 	//
-	// Pinning it keeps the gate green while holding the debt where it is. A
-	// sixth write owing a check fails here, and each one #7210 fixes lowers
-	// this number.
-	const writesOwingACheck = 1
+	// Pinned at zero: a write that owes a check and is waived here fails.
+	const writesOwingACheck = 0
 	if got := len(declinedWriteOwesACheck.Subjects()); got != writesOwingACheck {
 		t.Errorf("%d writes owe an outcome check, pinned at %d: a new one is debt this gate refuses, "+
 			"and one fixed lowers the pin", got, writesOwingACheck)

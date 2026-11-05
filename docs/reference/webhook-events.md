@@ -45,9 +45,11 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`activity.captured`](#activitycaptured) | activity | 1 |
 | [`activity.disposition_recorded`](#activitydisposition_recorded) | activity | 1 |
 | [`activity.marked_handled`](#activitymarked_handled) | activity | 1 |
+| [`activity.readiness_recorded`](#activityreadiness_recorded) | activity | 1 |
 | [`activity.updated`](#activityupdated) | activity | 1 |
 | [`approval.decided`](#approvaldecided) | approval | 1 |
 | [`approval.failure_acknowledged`](#approvalfailure_acknowledged) | approval | 1 |
+| [`approval.preference_changed`](#approvalpreference_changed) | user | 1 |
 | [`approval.requested`](#approvalrequested) | approval | 1 |
 | [`attachment.archived`](#attachmentarchived) | attachment | 1 |
 | [`attachment.created`](#attachmentcreated) | attachment | 1 |
@@ -61,6 +63,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`comms.delivery_bounced`](#commsdelivery_bounced) | activity | 1 |
 | [`company.archived`](#companyarchived) | company | 1 |
 | [`company.created`](#companycreated) | company | 1 |
+| [`company.erased`](#companyerased) | company | 1 |
 | [`company.merged`](#companymerged) | company | 1 |
 | [`company.restored`](#companyrestored) | company | 1 |
 | [`company.updated`](#companyupdated) | company | 1 |
@@ -82,6 +85,8 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`conversation_claim.changed`](#conversation_claimchanged) | contact | 1 |
 | [`deal.archived`](#dealarchived) | deal | 1 |
 | [`deal.created`](#dealcreated) | deal | 1 |
+| [`deal.erased`](#dealerased) | deal | 1 |
+| [`deal.merged`](#dealmerged) | deal | 1 |
 | [`deal.owner_changed`](#dealowner_changed) | deal | 1 |
 | [`deal.restored`](#dealrestored) | deal | 1 |
 | [`deal.stage_changed`](#dealstage_changed) | deal | 1 |
@@ -110,6 +115,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`intro_request.completed`](#intro_requestcompleted) | contact | 1 |
 | [`intro_request.created`](#intro_requestcreated) | contact | 1 |
 | [`intro_request.decided`](#intro_requestdecided) | contact | 1 |
+| [`intro_request.recorded`](#intro_requestrecorded) | contact | 1 |
 | [`intro_request.replied`](#intro_requestreplied) | contact | 1 |
 | [`lead.created`](#leadcreated) | lead | 1 |
 | [`lead.demoted`](#leaddemoted) | lead | 1 |
@@ -145,14 +151,17 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`pipeline.updated`](#pipelineupdated) | pipeline | 1 |
 | [`project.archived`](#projectarchived) | project | 1 |
 | [`project.created`](#projectcreated) | project | 1 |
+| [`project.health_assessed`](#projecthealth_assessed) | project | 1 |
 | [`project.phase_changed`](#projectphase_changed) | project | 1 |
 | [`project.updated`](#projectupdated) | project | 1 |
 | [`relationship_nudge.decided`](#relationship_nudgedecided) | contact | 1 |
 | [`retention.applied`](#retentionapplied) | dynamic | 1 |
 | [`retention.restricted`](#retentionrestricted) | activity | 1 |
 | [`role.changed`](#rolechanged) | user | 1 |
+| [`sales_initiative.updated`](#sales_initiativeupdated) | sales_initiative | 1 |
 | [`signal.detected`](#signaldetected) | signal | 1 |
 | [`signal.resolved`](#signalresolved) | signal | 1 |
+| [`signal.updated`](#signalupdated) | signal | 1 |
 | [`stage.archived`](#stagearchived) | stage | 1 |
 | [`stage.created`](#stagecreated) | stage | 1 |
 | [`stage.updated`](#stageupdated) | stage | 1 |
@@ -160,12 +169,15 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`user.activated`](#useractivated) | user | 1 |
 | [`user.deactivated`](#userdeactivated) | user | 1 |
 | [`user.invited`](#userinvited) | user | 1 |
+| [`user.mfa_removed`](#usermfa_removed) | user | 1 |
 | [`user.password_link_issued`](#userpassword_link_issued) | user | 1 |
 | [`user.reactivated`](#userreactivated) | user | 1 |
+| [`user.updated`](#userupdated) | user | 1 |
 | [`user_delivery.changed`](#user_deliverychanged) | user | 1 |
 | [`user_display_name.changed`](#user_display_namechanged) | user | 1 |
 | [`user_greeting_name.changed`](#user_greeting_namechanged) | user | 1 |
 | [`user_locale.changed`](#user_localechanged) | user | 1 |
+| [`user_timezone.changed`](#user_timezonechanged) | user | 1 |
 | [`voice.build_changed`](#voicebuild_changed) | voice_profile | 1 |
 | [`voice.corpus_changed`](#voicecorpus_changed) | voice_profile | 1 |
 | [`voice.draft_outcome_recorded`](#voicedraft_outcome_recorded) | voice_profile | 1 |
@@ -222,6 +234,18 @@ Payload for activity.marked_handled. One reader marked an activity on their Work
 |---|---|---|---|
 | `data.activity_id` | string (uuid) | yes |  |
 
+### `activity.readiness_recorded`
+
+Record: `activity` · version 1
+
+Payload for activity.readiness_recorded. One attendee said they are ready for a meeting, or took that back (activities/meetingreadiness.go). It holds for that attendee alone, at the preparation revision they confirmed, and the attendee is not on the wire. A moved start, a new agenda or a changed guest list makes the revision stale without a new event.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.activity_id` | string (uuid) | yes |  |
+| `data.preparation_revision` | string | yes | The preparation revision the confirmation was given at. |
+| `data.state` | string: `ready`, `withdrawn` | yes | `ready` when the attendee confirmed, `withdrawn` when they undid it. |
+
 ### `activity.updated`
 
 Record: `activity` · version 1
@@ -260,6 +284,16 @@ Payload for approval.failure_acknowledged: the human who approved a decision has
 |---|---|---|---|
 | `data.failed_at` | string (date-time) | yes | When the failure that was acknowledged was recorded. |
 | `data.kind` | string | yes | The approval's kind. |
+
+### `approval.preference_changed`
+
+Record: `user` · version 1
+
+A reader changed a personal approval preference. The private choice is not included.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.kind` | string | yes |  |
 
 ### `approval.requested`
 
@@ -419,6 +453,14 @@ Payload for company.created, a union across five emit sites. They are a direct c
 | `data.site_read_id` | string (uuid) | no | The site-read that produced this company (site-read confirmation only). |
 | `data.source` | string | no | Where this company originated (e.g. human, site_read). |
 | `data.source_url` | string | no | The source page this company was read from (site-read confirmation only). |
+
+### `company.erased`
+
+Record: `company` · version 1
+
+Payload for company.erased: a company was erased for good, not archived. The event's entity is the erased company. Carries no data, so no name or other personal field travels with it.
+
+`data` is an empty object.
 
 ### `company.merged`
 
@@ -621,12 +663,12 @@ Payload for conversation_claim.captured, something promised, asked or decided in
 
 Record: `contact` · version 1
 
-Payload for conversation_claim.changed, a human typed over the machine, or dismissed a claim outright. Published because a correction is SHARED truth, unlike a moment dismissal: a downstream reader holding the old claim needs to know it no longer stands.
+Payload for conversation_claim.changed. A claim was corrected, renewed, taken over, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.claim_id` | string (uuid) | yes |  |
-| `data.status` | string | yes | The claim's status after the correction, open, done or dismissed. A plain string for the same reason as `kind` above. |
+| `data.status` | string | yes | The claim's status after the change: open, done, dismissed or erased. A plain string for the same reason as `kind` above. |
 
 ### `deal.archived`
 
@@ -650,6 +692,25 @@ Payload for deal.created, a deal was opened.
 | `data.import_run_id` | string (uuid) | no | The import run that wrote the event. Present when `imported` is true. |
 | `data.imported` | boolean | no | True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise. |
 | `data.name` | string | yes | The deal's name at creation. |
+
+### `deal.erased`
+
+Record: `deal` · version 1
+
+Payload for deal.erased: a deal was erased for good, not archived. The event's entity is the erased deal. Carries no data, so no name or other personal field travels with it.
+
+`data` is an empty object.
+
+### `deal.merged`
+
+Record: `deal` · version 1
+
+Payload for deal.merged: two deals collapsed into one. Neither deal.updated nor deal.archived can say this, so it is its own verb. The event's entity is the merged-away deal. References only.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.merged_from_id` | string (uuid) | yes | The merged-away (source) deal, retired but still fetchable by id. |
+| `data.merged_into_id` | string (uuid) | yes | The surviving (target) deal. |
 
 ### `deal.owner_changed`
 
@@ -692,6 +753,7 @@ Payload for deal.stage_changed, a deal advanced between stages. Carries the amou
 | `data.fx_rate_to_base` | string | no | The native→base rate frozen at close, carried because REOPENING a deal clears it: a consumer reading the deal back after a reopen could not recover the rate the win was priced at. |
 | `data.import_run_id` | string (uuid) | no | The import run that wrote the event. Present when `imported` is true. |
 | `data.imported` | boolean | no | True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise. |
+| `data.lost_reason_code` | string | no | The key from `/loss-reasons` the closer chose, on a move to a lost stage. Absent when the loss names only a free note. |
 | `data.partner_attribution` | string | no | What that partner did, sourced or influenced, at the moment of the move. Commission accrues on sourced only. |
 | `data.partner_company_id` | string (uuid) | no | The partner the deal named at the moment of the move, when it named one. Frozen here for the same reason the amount is: the commission a win earns is priced on what was true that day, and re-reading the deal later would price it on an attribution somebody edited afterwards. |
 | `data.to_stage_id` | string (uuid) | yes | Stage the deal entered. |
@@ -861,7 +923,7 @@ Payload for email_signature.changed. A member wrote, edited or cleared the sign-
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.has_signature` | boolean | yes | Whether mail from this member now carries a sign-off. False after a member empties the field, which is a chosen "send unsigned". |
+| `data.has_signature` | boolean | yes | Whether the member has saved personal plain text or HTML. This reports stored presence; sanitized HTML without visible text uses the usual fallback. A workspace template or closing may still sign mail when this is false. |
 
 ### `engagement.reply`
 
@@ -876,6 +938,7 @@ Payload for engagement.reply (CAP-FORMULA-1). An inbound message in a thread whe
 | `data.idempotency_key` | string | yes | The capture natural key (source_system:source_id) this reply was detected from. |
 | `data.matched_outbound_activity_id` | string (uuid) | yes | The prior outbound activity this inbound message replies to. |
 | `data.occurred_at` | string (date-time) | yes | When the reply activity occurred. |
+| `data.occurred_precision` | string: `instant`, `day` | no | How to read occurred_at: `day` when only the reply's date is known, its UTC date. |
 
 ### `forecast.assurance_created`
 
@@ -885,6 +948,7 @@ Payload for forecast.assurance_created. A nightly input check finished, and the 
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
+| `data.deal_id` | string (uuid) | no | Set on a pass over this one deal, queued because the deal changed. Its counts describe that deal alone and never the pipeline. Absent on a pass over every deal. |
 | `data.eligible_deals` | integer | yes | How many deals the run considered. A consumer comparing this against the previous run's count sees a pass that covered less of the pipeline. |
 | `data.eligible_signals` | integer | no |  |
 | `data.readiness` | string: `ready`, `ready_with_exceptions`, `needs_review`, `checks_incomplete` | no |  |
@@ -1008,6 +1072,19 @@ Payload for intro_request.decided. The colleague gave one of the four bounded an
 | `data.intro_request_id` | string (uuid) | yes |  |
 | `data.introducer_user_id` | string (uuid) | yes |  |
 
+### `intro_request.recorded`
+
+Record: `contact` · version 1
+
+Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed. That event means an ask was marked done, and its consumers must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.contact_id` | string (uuid) | yes |  |
+| `data.intro_request_id` | string (uuid) | yes |  |
+| `data.introduced_user_id` | string (uuid) | yes |  |
+| `data.introducer_user_id` | string (uuid) | yes |  |
+
 ### `intro_request.replied`
 
 Record: `contact` · version 1
@@ -1083,7 +1160,7 @@ Payload for lead.sla_breached: the first scan on which a lead's first-response d
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.deadline` | string (date-time) | yes | The first-response deadline that passed. |
-| `data.escalation_target` | string (uuid) | no | The user the escalation task is assigned to (absent when nobody owns the lead). |
+| `data.escalation_target` | string (uuid) | no | The seat the scan chose for the escalation: the lead's owner while that owner can be handed work, else the intake seat. Delivery asks again, so the task and notice can go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it can differ from `owner_id`. |
 | `data.owner_id` | string (uuid) | no | The lead's owner at breach time (absent when unrouted). |
 
 ### `lead.updated`
@@ -1112,7 +1189,7 @@ Payload for lead_disqualify_reason.changed. A disqualification reason was added,
 
 Record: `lead_source` · version 1
 
-Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
+Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1139,7 +1216,9 @@ Payload for linkedin_match.decided. A connection was linked to a contact on file
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
+| `data.employer_written` | boolean | no | Whether the decision made the company the import placed the connection at the contact's current employer. True only when the member ticked "Use as employer". False on every automatic confirmation. |
 | `data.profile_url_written` | boolean | yes | Whether the decision put a LinkedIn handle on the contact. False on every rejection, and false on a confirmation whose contact already carried one, a value on a record is somebody's statement and is never overwritten. |
+| `data.title_written` | boolean | no | Whether the decision put the export's position on the contact as its title. True only when the member ticked "Use as title" and the title changed. False on every automatic confirmation. |
 
 ### `linkedin_network.imported`
 
@@ -1406,6 +1485,18 @@ Payload for project.created, a body of work was opened on a company.
 | `data.owner_id` | string (uuid) | no |  |
 | `data.phase` | string | yes | Always `initiative`, a project is born at the head of the ladder. |
 
+### `project.health_assessed`
+
+Record: `project` · version 1
+
+Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user, their agent or the health job. The project row itself is not written, so no project.updated goes with it.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.assessment_id` | string (uuid) | yes | The appended reading. |
+| `data.source` | string | yes | human for a user, agent for their agent, ai for the health job, undo for a user undoing an AI reading. |
+| `data.state` | string | yes | on_track, at_risk or off_track. On an undo row it is the reading the undo restored, or on_track when the project reads as not judged again. |
+
 ### `project.phase_changed`
 
 Record: `project` · version 1
@@ -1438,7 +1529,8 @@ Payload for relationship_nudge.decided. A rep set a lapsed contact aside so thei
 |---|---|---|---|
 | `data.action` | string: `dismissed`, `restored` | yes | What was decided. The undo, `restored`, is carried rather than inferred from a row going quiet. A decision withdrawn is itself a decision. A consumer counting how often reps put relationships down has to see it happen. |
 | `data.contact_id` | string (uuid) | yes |  |
-| `data.dismissed_until` | string (date-time) | no | When the contact comes back to the lane. Present on `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. It is never absent on a dismissal: a dismissal with no end is the shape this feature refuses to have. |
+| `data.dismissed_until` | string (date-time) | no | When the contact comes back to the lane. Present on a dated `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. Absent on a permanent stop, which `permanent` says. |
+| `data.permanent` | boolean | no | True when the reader stopped following the contact with no end date. Only on `dismissed`; the reader resumes it with `restored`. |
 
 ### `retention.applied`
 
@@ -1478,6 +1570,18 @@ Payload for role.changed. A member's role assignments were replaced with the sin
 | `data.to_role` | string | yes | The role key assigned. |
 | `data.user_id` | string (uuid) | yes | The member whose role changed. |
 
+### `sales_initiative.updated`
+
+Record: `sales_initiative` · version 1
+
+Payload for sales_initiative.updated. A sales initiative was defined, changed, launched or had its picked and excluded records changed. The entity is the initiative. `changed_fields` names what moved rather than carrying it; the definition and the members stay on the record.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.changed_fields` | array of string | yes | Which parts moved, such as definition, status, members. |
+| `data.initiative_id` | string (uuid) | yes |  |
+| `data.status` | string: `draft`, `live`, `ended` | yes |  |
+
 ### `signal.detected`
 
 Record: `signal` · version 1
@@ -1509,6 +1613,15 @@ Payload for signal.resolved. The resolver ran over a signal (signals/resolver.go
 | `data.resolved_company_id` | string (uuid) | no | The company the signal resolved to (absent when dropped or ambiguous). |
 | `data.resolved_contact_id` | string (uuid) | no | The consent-gated contact the signal resolved to (absent unless an existing contact under a recorded consent grant matched). |
 | `data.signal_id` | string (uuid) | yes | The signal the resolver ran over. |
+
+### `signal.updated`
+
+Record: `signal` · version 1
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.owner_id` | string (uuid) | yes |  |
+| `data.signal_id` | string (uuid) | yes |  |
 
 ### `stage.archived`
 
@@ -1595,6 +1708,18 @@ Payload for user.invited, an admin provisioned a new active member with a single
 | `data.team_ids` | array of string | no | The teams the member joined on arrival, when the invite named any. |
 | `data.user_id` | string (uuid) | yes | The invited member. |
 
+### `user.mfa_removed`
+
+Record: `user` · version 1
+
+Payload for user.mfa_removed. An admin removed a member's confirmed second factor. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.by` | string (uuid) | yes | The admin who removed it. |
+| `data.sessions_ended` | integer | yes | How many live sessions of the member the removal ended. |
+| `data.user_id` | string (uuid) | yes | The member whose second factor was removed. |
+
 ### `user.password_link_issued`
 
 Record: `user` · version 1
@@ -1618,6 +1743,15 @@ Payload for user.reactivated. A deactivated member was lifted out of deactivatio
 | `data.by` | string (uuid) | yes | The admin who reactivated the member. |
 | `data.status` | UserReactivatedStatus | yes |  |
 | `data.user_id` | string (uuid) | yes | The reactivated member. |
+
+### `user.updated`
+
+Record: `user` · version 1
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.by` | string (uuid) | yes |  |
+| `data.user_id` | string (uuid) | yes |  |
 
 ### `user_delivery.changed`
 
@@ -1658,6 +1792,17 @@ Payload for user_locale.changed, a member chose the language their own interface
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.locale` | string | yes | The language now chosen, one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event. |
+
+### `user_timezone.changed`
+
+Record: `user` · version 1
+
+Payload for user_timezone.changed. A member's own time zone was stored by identity/usertimezone.go's writeTimezoneTx. It is the app's guess from the browser on first sign-in, or the member's own pick. Booking reads the member's working hours on it, and mail sent to them is timed by it.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.chosen` | boolean | yes | True when the member picked the zone themselves. A later browser guess never replaces a chosen zone. |
+| `data.timezone` | string | yes | The IANA name now stored, such as Europe/Berlin. |
 
 ### `voice.build_changed`
 

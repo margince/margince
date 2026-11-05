@@ -23,7 +23,7 @@
 }
 
 .theme-toggle:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 

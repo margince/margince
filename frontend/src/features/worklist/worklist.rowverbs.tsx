@@ -1,21 +1,35 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The verbs one row of the day offers, on one right-aligned line. The row
-// decides how a piece of work reads; this decides what can be done about it.
-// The line holds Done where the row offers it, then the lane's answer, then
-// the row's menu. So the answer and the menu stand at one x down the queue.
+// The verbs one row of the day offers, on one line: Done where the row offers
+// it, then the lane's answer, then the row's menu. So the answer and the menu
+// stand at one x down the queue; in a card the answer leads.
 // The menu holds the rest, most used first: the snooze, a way to the record,
 // the pin, the hand-off, then the hand-backs.
 
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Button, OverflowMenu } from "../../design-system/atoms";
+import { faceClass } from "../../design-system/button";
+import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
 import { useTooltip } from "../../design-system/tooltip";
+import {
+  atRegionVolume,
+  QuietVerbs,
+  useQuietVerbs,
+} from "../../design-system/verbvolume";
 import { useT } from "../../i18n";
+import { useCurrentMove } from "../../lib/currentmove";
+import { opensElsewhere } from "../../lib/linkclick";
 import { useFoldedViewport } from "../../lib/viewport";
-import { moveHref, moveLabel } from "./worklist.copy";
+import {
+  moveHref,
+  moveLabel,
+  moveOpensComposer,
+  subjectHref,
+} from "../../lib/worklistcopy";
 import {
   DoneVerb,
   HandBackLines,
@@ -25,13 +39,13 @@ import {
 import { ReassignForm } from "./worklist.manager";
 import { usePinRow, type WorklistItem } from "./worklist.queries";
 import { replyIsTheMove } from "./worklist.reply";
+import { TakeVerb } from "./worklist.take";
 
 /** Every verb a row carries: Done, the lane's answer, then the row's menu. */
 export function RowActs({
   item,
   title,
   href,
-  density,
   owner,
   allowPin = true,
   primary,
@@ -46,8 +60,6 @@ export function RowActs({
   /** The row's name, which names its menu among every other row's. */
   title: string;
   href: string | undefined;
-  /** `compact` draws the row's title as its link, as `titled` says. */
-  density?: "compact";
   /** Whose queue this row is on, which the hand-off moves work away from. */
   owner: string;
   allowPin?: boolean;
@@ -82,38 +94,64 @@ export function RowActs({
       : undefined;
   // The other ways to the record are withheld wherever the row already links
   // it: two controls opening one page ask for the same choice twice.
-  const linked = density === "compact" || framed || titled;
+  const linked = framed || titled;
   const ways = routed.filter(
     (way) => way !== lead && !(linked && way.destination === href),
   );
   const pins = allowPin && !item.batch;
   // Only a task carries an assignee, and a group row names no single activity.
-  const handsOff = item.source === "task" && !item.batch;
+  // The server withholds Done from a task the reader may not change, and the
+  // hand-off's write would be refused there the same way.
+  const handsOff =
+    item.source === "task" && !item.batch && item.actions.includes("complete");
   // One write for Done and the menu's lines, so the two cannot write twice.
   const write = useRowPutDown(item);
   const putsDown = write.offered.some(
     (disposition) => folded || disposition !== "handled",
   );
-  return (
-    <div className="worklist-row-acts">
+  const answer = (
+    <RowAnswer
+      item={item}
+      lead={lead}
+      primary={primary}
+      onOpenEmail={onOpenEmail}
+    />
+  );
+  const others = (
+    <>
       {context}
       {reviews && onReview && <BatchVerb onReview={onReview} />}
       {equals}
+      <TakeVerb item={item} />
       <DoneVerb write={write} />
-      {!item.batch && <PreparedMove item={item} onOpenEmail={onOpenEmail} />}
-      {lead && (
-        <a className={NAVIGATING_VERB} href={lead.destination}>
-          {VERB_LABEL[lead.action](t)}
-        </a>
+    </>
+  );
+  // A card is read top to bottom and finished on its answer, so the answer
+  // leads there. Down the queue it stands last, at one x on every row.
+  return (
+    <div className="worklist-row-acts">
+      {framed ? (
+        <>
+          {answer}
+          {others}
+        </>
+      ) : (
+        <>
+          {others}
+          {answer}
+        </>
       )}
-      {primary}
       {(ways.length > 0 || pins || handsOff || putsDown) && (
         <OverflowMenu label={t("worklist.rowMenu", { title })}>
           <PutDownLines write={write} />
           {ways.map(({ action, destination }) => (
-            <a key={action} className={NAVIGATING_VERB} href={destination}>
+            <AppLink
+              key={action}
+              className={NAVIGATING_VERB}
+              href={destination}
+            >
               {VERB_LABEL[action](t)}
-            </a>
+            </AppLink>
           ))}
           {pins && <PinLine item={item} />}
           {handsOff && (
@@ -124,14 +162,51 @@ export function RowActs({
           <HandBackLines write={write} />
         </OverflowMenu>
       )}
+      {/* An open form is the panel in hand, so its confirm keeps the fill. */}
       {handingOff && (
-        <ReassignForm
-          item={item}
-          owner={owner}
-          onClose={() => setHandingOff(false)}
-        />
+        <QuietVerbs quiet={false}>
+          <ReassignForm
+            item={item}
+            owner={owner}
+            onClose={() => setHandingOff(false)}
+          />
+        </QuietVerbs>
       )}
     </div>
+  );
+}
+
+/** The row's answer: the prepared move, the verb a page reaches, the lane's. */
+function RowAnswer({
+  item,
+  lead,
+  primary,
+  onOpenEmail,
+}: Readonly<{
+  item: WorklistItem;
+  lead: RoutedVerb | undefined;
+  primary?: ReactNode;
+  onOpenEmail?: (id: string) => void;
+}>) {
+  const t = useT();
+  return (
+    <>
+      {!item.batch && <PreparedMove item={item} onOpenEmail={onOpenEmail} />}
+      {lead && (
+        <AppLink className={NAVIGATING_VERB} href={lead.destination}>
+          {VERB_LABEL[lead.action](t)}
+        </AppLink>
+      )}
+      {item.source === "brief_item" &&
+        !primary &&
+        !moveHref(item) &&
+        subjectHref(item) && (
+          <AppLink className={NAVIGATING_VERB} href={subjectHref(item)}>
+            {t("deal.openDeal")}
+          </AppLink>
+        )}
+      {primary}
+    </>
   );
 }
 
@@ -178,15 +253,24 @@ function routedVerbs(
 
 // The step the product already worked out, offered where the reader stands.
 //
-// In the agent's own colour, with its mark, because a rule wrote this move and
-// pressing it accepts it. company360.tsx draws it the same way. Where
-// the row's answer is this reply, that control already carries the move, so
-// this draws nothing.
+// Indigo only where the press makes the model write. That is the composer,
+// which drafts on arrival, and the meeting brief, assembled on open. Where the
+// row's answer is this reply, that control already carries the move.
 function PreparedMove({
   item,
   onOpenEmail,
 }: Readonly<{ item: WorklistItem; onOpenEmail?: (id: string) => void }>) {
   const t = useT();
+  const quiet = useQuietVerbs();
+  const check = useCurrentMove<{ activityId: string } | { href: string }>(
+    (target) => {
+      if ("activityId" in target) {
+        onOpenEmail?.(target.activityId);
+      } else {
+        globalThis.location.assign(target.href);
+      }
+    },
+  );
   if (replyIsTheMove(item)) {
     return null;
   }
@@ -194,24 +278,49 @@ function PreparedMove({
     item.move?.action === "draft_reply" ? item.move.activity_id : undefined;
   if (replyActivity && onOpenEmail && item.subject?.type !== "contact") {
     return (
-      <Button variant="ai" onClick={() => onOpenEmail(replyActivity)}>
-        <Sparkles aria-hidden="true" />
-        {t("worklist.verb.draft_reply")}
-      </Button>
+      <>
+        <Button
+          variant="ghost"
+          pending={check.isPending}
+          onClick={() =>
+            check.mutate({
+              receipt: item.move?.recommendation,
+              operand: { activityId: replyActivity },
+            })
+          }
+        >
+          {t("worklist.verb.draft_reply")}
+        </Button>
+        <ErrorLine error={check.error} />
+      </>
     );
   }
   const move = moveHref(item);
   if (!move) {
     return null;
   }
+  const modelWrites =
+    moveOpensComposer(item) || item.move?.action === "open_meeting_brief";
   return (
-    <a className={PREPARED_VERB} href={move}>
-      <Sparkles aria-hidden="true" />
-      {/* The label follows the route and the verb. Where the address opens
-          the composer it names the act; where it only reaches the record it
-          says so. It names the verb the server chose. */}
-      {moveLabel(item, t)}
-    </a>
+    <>
+      <AppLink
+        className={modelWrites ? preparedVerb(quiet) : NAVIGATING_VERB}
+        href={move}
+        aria-busy={check.isPending}
+        aria-disabled={check.isPending}
+        onClick={(event) => {
+          const receipt = item.move?.recommendation;
+          if (!receipt || opensElsewhere(event)) return;
+          event.preventDefault();
+          if (check.isPending) return;
+          check.mutate({ receipt, operand: { href: move } });
+        }}
+      >
+        {modelWrites && <Sparkles aria-hidden="true" />}
+        {moveLabel(item, t)}
+      </AppLink>
+      <ErrorLine error={check.error} />
+    </>
   );
 }
 
@@ -240,14 +349,17 @@ function verbDestination(
 // "Draft the reply" — the most-pressed control on a waiting row — read as a
 // caption beside them, and the row had two visual grammars for one question.
 //
-// The atom's own classes rather than a face of this screen's: `Button` renders
-// a `<button>` and takes no `href`, so there is no component to reach for, and
-// the alternative is a second spelling of the ghost button in worklist.css.
-// `screens/client.tsx` reaches the same conclusion the same way.
+// The atom's own classes rather than a face of this screen's. `Button` renders
+// a `<button>` and takes no `href`, so there is no component to reach for.
+// The alternative is a second spelling of the ghost button in worklist.css.
+// `features/settings/client.tsx` reaches the same conclusion the same way.
 const NAVIGATING_VERB = "btn btn-ghost";
-// The move the product worked out, as an anchor in the agent's own chrome:
-// the same `ai` face `Button` draws, for the reason given where it is drawn.
-const PREPARED_VERB = "btn btn-ai";
+// The move the product worked out, as an anchor in the agent's own chrome. It
+// takes the face `Button` draws for `ai` at the region's volume: filled in the
+// card in hand, outlined in a list.
+function preparedVerb(quiet: boolean): string {
+  return `btn ${faceClass(atRegionVolume("ai", quiet))}`;
+}
 
 // Where each verb lives. A total map over the ones this page can route, so a
 // verb the contract adds either gets a destination here or is not drawn —
@@ -309,14 +421,16 @@ const VERB_LABEL: Record<
   // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
   // nowhere and this label is never the one a reader sees.
   retry: (t) => t("worklist.verb.retry"),
-  // An undecided domain's pair, drawn in place by DomainQuestionAnswer. Named
-  // here because the map is total; the words a reader actually presses come
-  // from that control, which reads these same two keys.
+  // Domain review owns the inline controls; these labels keep the contract map total.
+  reopen: (t) => t("worklist.domainReview.retry"),
   keep: (t) => t("worklist.verb.keep"),
+  keep_as_vendor: (t) => t("worklist.verb.keepAsVendor"),
   discard: (t) => t("worklist.verb.discard"),
   // The composer's own word, not a second one: ChannelReplyAction draws the
   // button this labels, and two spellings of one act would read as two acts.
   reply: (t) => t("compose.reply"),
+  take: (t) => t("worklist.take.action"),
+  cancel: (t) => t("worklist.verb.meetingCanceled"),
   // The record history's own word, for the same reason. `undo` is drawn by
   // ReceiptUndo on the handled panel, which acts in place, so VERB_DESTINATION
   // routes it nowhere and this label is never the one a reader sees — it is

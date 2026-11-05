@@ -3,7 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { Button, TextInput } from "./atoms";
 import { ChipValueList } from "./listfiltervalues";
 import { type ListChip, Menu } from "./listsurface";
 
@@ -129,4 +131,47 @@ const owner: ListChip = {
 // option shows before anything is typed, so "Owned by you" is one press away.
 export const Filterable: Story = {
   render: () => <Values chip={owner} picked="owner_id:u-2" />,
+};
+
+/**
+ * A value typed rather than picked. The chip's `editor` draws the step, here a
+ * lower bound, and hands back the value with the words its row will show.
+ */
+const minimum: ListChip = {
+  key: "seats",
+  label: "Seats",
+  allLabel: "Any number of seats",
+  options: [],
+  editor: (value, pick) => <SeatsEditor value={value} pick={pick} />,
+  appliedName: undefined,
+};
+
+function SeatsEditor({
+  value,
+  pick,
+}: Readonly<{ value: string; pick: (value: string, label: string) => void }>) {
+  const [draft, setDraft] = useState(value);
+  return (
+    <div className="lt-frange">
+      <TextInput
+        aria-label="At least"
+        inputMode="numeric"
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+      />
+      <Button variant="primary" onClick={() => pick(draft, `${draft}+`)}>
+        Apply
+      </Button>
+    </div>
+  );
+}
+
+export const Typed: Story = {
+  render: () => <Values chip={minimum} picked="25" />,
+  play: async ({ canvasElement }) => {
+    const box = await within(canvasElement).findByRole("textbox", {
+      name: "At least",
+    });
+    await expect(box).toHaveValue("25");
+  },
 };

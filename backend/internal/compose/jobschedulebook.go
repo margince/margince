@@ -9,7 +9,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -22,6 +21,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
@@ -82,13 +83,16 @@ func scheduleSettings() []string {
 	return slices.Sorted(maps.Keys(keys))
 }
 
-// DefaultSchedules is the book every registered default builds: the schedules
-// of an installation nobody has tuned, and what a wiring read without a
-// database (the census) schedules from.
-func DefaultSchedules() *ScheduleBook {
+// DefaultSchedules is the book read without a database: what a boot source
+// sets, and the registered default for the rest. It is what the worker runs
+// when its first read fails, and what the census schedules from.
+func DefaultSchedules() *ScheduleBook { return schedulesWithoutDatabase(loadedConfig()) }
+
+func schedulesWithoutDatabase(c *config.Config) *ScheduleBook {
+	read := func(s *config.Setting[int]) (int, error) { return bootOrDefault(c, s) }
 	values := map[string]time.Duration{}
 	for _, key := range scheduleSettings() {
-		value, err := scheduleValue(key, settingDefault)
+		value, err := scheduleValue(key, read)
 		if err != nil {
 			panic(err.Error())
 		}
@@ -139,44 +143,63 @@ func readScheduleValues(ctx context.Context, pool *pgxpool.Pool) (map[string]tim
 	return values, nil
 }
 
-// installationSettingReader reads installation settings by key as the worker,
-// on the installation's one workspace. An installation not yet provisioned has
-// no workspace to read under and answers every key with its default, which is
-// what it would read anyway.
-func installationSettingReader(ctx context.Context, pool *pgxpool.Pool) (func(key string) (json.RawMessage, error), error) {
+// installationSettingReader reads installation settings as the worker, on the
+// installation's one workspace. An installation not yet provisioned has no
+// workspace to read under. There a setting no boot source sets reads as its
+// default, which is what it would read anyway.
+func installationSettingReader(ctx context.Context, pool *pgxpool.Pool) (func(*config.Setting[int]) (int, error), error) {
 	ws, err := singletonWorkspace(ctx, pool)
 	if err != nil {
 		return nil, err
 	}
-	if ws.IsZero() {
-		return settingDefault, nil
-	}
-	store, readCtx := NewSettingsStore(pool), bootCtx(ctx, ws, scheduleReadActor)
-	return func(key string) (json.RawMessage, error) { return store.Raw(readCtx, key) }, nil
+	cfg, readCtx := StoredConfig(pool), bootCtx(ctx, ws, scheduleReadActor)
+	return func(s *config.Setting[int]) (int, error) {
+		if ws.IsZero() {
+			return bootOrDefault(cfg, s)
+		}
+		return config.StoredVal(readCtx, cfg, s)
+	}, nil
 }
 
-// settingDefault is a registered setting's default, by key.
-func settingDefault(key string) (json.RawMessage, error) {
-	for _, def := range settingsDefinitions() {
-		if def.Key() == key {
-			return def.DefaultJSON()
+// bootOrDefault is a setting read with no database: the value a boot source
+// sets, or else its registered default.
+func bootOrDefault(c *config.Config, s *config.Setting[int]) (int, error) {
+	if v, ok := config.BootVal(c, s); ok {
+		return v, nil
+	}
+	return settingDefault(s)
+}
+
+// settingDefault is a schedule setting's registered default.
+func settingDefault(s *config.Setting[int]) (int, error) {
+	def, ok := s.Spec().Default.Get()
+	if !ok {
+		return 0, fmt.Errorf("compose: %s declares no default", s.Key())
+	}
+	return def, nil
+}
+
+// scheduleSetting is the setting a cadence names by key.
+func scheduleSetting(key string) (*config.Setting[int], error) {
+	for _, s := range identity.ScheduleSettings() {
+		if s.Key() == key {
+			return s, nil
 		}
 	}
-	return nil, fmt.Errorf("compose: %s is not a registered setting", key)
+	return nil, fmt.Errorf("compose: a cadence reads %s, which is not a schedule setting", key)
 }
 
 // scheduleValue reads a schedule setting's whole seconds. Every schedule
 // setting is an int of seconds, which TestEveryScheduleSettingDefaultsToWholeSeconds
-// and each setting's validator hold, so a value that does not decode is a
-// stored row nobody wrote through the settings surface.
-func scheduleValue(key string, read func(string) (json.RawMessage, error)) (time.Duration, error) {
-	raw, err := read(key)
+// and each setting's validator hold.
+func scheduleValue(key string, read func(*config.Setting[int]) (int, error)) (time.Duration, error) {
+	s, err := scheduleSetting(key)
+	if err != nil {
+		return 0, err
+	}
+	seconds, err := read(s)
 	if err != nil {
 		return 0, fmt.Errorf("compose: reading the schedule %s: %w", key, err)
-	}
-	var seconds int
-	if err := json.Unmarshal(raw, &seconds); err != nil {
-		return 0, fmt.Errorf("compose: the schedule setting %s does not hold whole seconds: %w", key, err)
 	}
 	return time.Duration(seconds) * time.Second, nil
 }

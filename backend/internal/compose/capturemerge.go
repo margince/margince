@@ -17,6 +17,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -65,5 +66,8 @@ func (m mergeStager) StageMerge(ctx context.Context, in capture.MergeProposal) (
 		// read that a concurrent decision can land between.
 		JoinPending: true,
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return ids.Nil, nil
+	}
 	return id.UUID, err
 }

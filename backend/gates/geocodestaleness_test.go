@@ -41,7 +41,7 @@ import (
 // all of core would pass whether or not the trigger watches anything.
 func geocodeStalenessSQL(t *testing.T) string {
 	t.Helper()
-	trigger := lastStatement(t, `CREATE (?:OR REPLACE )?TRIGGER trg_company_geocode_stale\b.*?;`)
+	trigger := lastStatement(t, `CREATE (?:OR REPLACE )?TRIGGER trg_company_geocode_state_stale\b.*?;`)
 	fn := triggerFunction.FindStringSubmatch(trigger)
 	if fn == nil {
 		t.Fatalf("the staleness trigger names no function to execute:\n%s", trigger)
@@ -107,14 +107,13 @@ func TestTheSchemaMarksCoordinatesStaleWhenAnAddressMoves(t *testing.T) {
 				"coordinates queryable and wrong", column)
 		}
 	}
-	if !strings.Contains(src, "geocode_status IS DISTINCT FROM OLD.geocode_status") {
-		t.Error("the trigger no longer yields to a writer that set geocode_status itself — the worker " +
-			"recording a fresh point would have it stamped stale immediately, and no company would " +
-			"ever be locatable")
+	if !strings.Contains(src, "UPDATE company_geocode_state SET status = 'stale'") {
+		t.Errorf("the trigger does not stamp the company's point stale on its side row:\n%s\n\n"+
+			"A moved company would keep answering radius queries from its old address.", src)
 	}
 }
 
-// The query predicate reads geocode_status, never the coordinates alone.
+// The query predicate reads the point's status, never the coordinates alone.
 //
 // This is the other half of the rule: the trigger marks a moved company stale,
 // and only a status of 'ok' may be selected. A query that read lat/lon on its
@@ -124,8 +123,8 @@ func TestOnlyResolvedCoordinatesAreQueryable(t *testing.T) {
 	t.Parallel()
 	// A missing index is lastStatement's own failure: a radius query would then
 	// have nothing to select through.
-	index := lastStatement(t, `CREATE INDEX idx_company_geocoded\b.*?;`)
-	if !strings.Contains(index, "geocode_status = 'ok'") {
+	index := lastStatement(t, `CREATE INDEX (?:CONCURRENTLY )?idx_company_geocode_state_point\b.*?;`)
+	if !strings.Contains(index, "status = 'ok'") {
 		t.Errorf("the index does not restrict to resolved rows:\n%s\n\nA stale or failed row reachable "+
 			"through it answers a distance from an address the company no longer has.", index)
 	}

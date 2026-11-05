@@ -3,15 +3,14 @@
 
 package compose
 
-// The embed-reindex transport (ADR-0068 design §5.6-swap, Task 15): the
-// three /embeddings/reindex* ops discharge the rbacgate_test.go waiver
-// on search.Store's binding-marker READS and its claim — every one of
-// them is reached ONLY through a handler below that gates first
-// (auth.Require(ctx, "embedding_reindex", <action>)), which is the whole
-// premise those store methods were allowed to skip their own object
-// RBAC check. The rest of the marker's lifecycle belongs to the run the
-// claim starts (jobs_embedreindex.go), where there is no human principal
-// to admit and the claim is the authority.
+// The embed-reindex transport (ADR-0068, Task 15). Its four
+// /embeddings/reindex* ops discharge the rbacgate_test.go waiver on
+// search.Store's binding-marker reads and its claim. Each is reached only
+// through a handler below that gates first with
+// auth.Require(ctx, "embedding_reindex", <action>). That is why those store
+// methods may skip their own object RBAC check. The rest of the marker's
+// lifecycle belongs to the run the claim starts (jobs_embedreindex.go). There
+// is no human principal there, and the claim is the authority.
 //
 // Confirm is the CAS+enqueue-in-one-tx shape (mirrors
 // deepreadtransport.go's start): search.Store.ClaimAndEnqueueReembedding
@@ -147,7 +146,7 @@ type embedReindexEstimator interface {
 	EstimateEmbedReindex(ctx context.Context, currentIdentity string) ([]costestimate.Row, costestimate.Row, error)
 }
 
-// embedReindexEngine backs the three handlers over the search module's
+// embedReindexEngine backs the four handlers over the search module's
 // binding-marker store, the resolved embed lane, the priced preview, and
 // the insert-only job enqueuer.
 type embedReindexEngine struct {
@@ -179,6 +178,24 @@ func (e *embedReindexEngine) status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, resp)
+}
+
+// identities answers the two identities the status body reports, without its
+// backlog scan; the app shell's banner compares only these.
+func (e *embedReindexEngine) identities(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if err := auth.Require(ctx, "embedding_reindex", principal.ActionRead); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	report, err := e.statusEvidence(ctx)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmbedReindexIdentities{
+		ConfiguredIdentity: report.ConfiguredIdentity, PopulatedIdentity: report.PopulatedIdentity,
+	})
 }
 
 // preview answers the scope-before-the-spend estimate (ADR-0020): the
@@ -321,31 +338,31 @@ func (e *embedReindexEngine) confirm(w http.ResponseWriter, r *http.Request) {
 // shared by the status handler and the confirm handler's 202 body (the
 // SAME read, so the client sees exactly what it would GET-poll next).
 func (e *embedReindexEngine) statusBody(ctx context.Context) (crmcontracts.EmbedReindexStatus, error) {
-	configured := e.currentIdentity()
-	populated, jobStatus, updatedAt, err := e.store.PopulatedIdentity(ctx)
+	report, err := e.statusEvidence(ctx)
 	if err != nil {
 		return crmcontracts.EmbedReindexStatus{}, err
 	}
-	// The store's own total, NOT the sum of PendingByWorkspace. Since ADR-0091
-	// §8 phase D no embeddable entity carries a tenant, so that rollup holds the
-	// same rows under every workspace it enumerates — summing it reported an
-	// installation with two of them as having twice the backlog. The previous
-	// comment here had the premise exactly right ("a per-workspace breakdown of
-	// it is the total repeated") and drew the opposite conclusion from it.
-	total, err := e.store.EntitiesPending(ctx, configured)
+	total, err := e.store.EntitiesPending(ctx, report.ConfiguredIdentity)
 	if err != nil {
 		return crmcontracts.EmbedReindexStatus{}, err
 	}
-	// Derived from the backlog just counted: ReindexNeeded would scan for it again.
-	needed := search.ReindexRequired(configured, populated, total)
+	report.EntitiesPending = total
+	report.ReindexNeeded = search.ReindexRequired(report.ConfiguredIdentity, report.PopulatedIdentity, total)
+	return report, nil
+}
 
+// statusEvidence reads the durable marker without scanning the indexed corpus.
+// A matching identity alone does not establish that no records remain pending.
+func (e *embedReindexEngine) statusEvidence(ctx context.Context) (crmcontracts.EmbedReindexStatus, error) {
+	configured := e.currentIdentity()
+	populated, status, at, err := e.store.PopulatedIdentity(ctx)
+	if err != nil {
+		return crmcontracts.EmbedReindexStatus{}, err
+	}
 	return crmcontracts.EmbedReindexStatus{
-		ConfiguredIdentity: configured,
-		PopulatedIdentity:  populated,
-		Status:             crmcontracts.EmbedReindexStatusStatus(jobStatus),
-		UpdatedAt:          updatedAt,
-		ReindexNeeded:      needed,
-		EntitiesPending:    total,
+		ConfiguredIdentity: configured, PopulatedIdentity: populated,
+		Status: crmcontracts.EmbedReindexStatusStatus(status), UpdatedAt: at,
+		ReindexNeeded: search.ReindexRequired(configured, populated, 0),
 	}, nil
 }
 
@@ -396,6 +413,14 @@ func (h embedReindexHandlers) EmbedReindexStatus(w http.ResponseWriter, r *http.
 		return
 	}
 	h.engine.status(w, r)
+}
+
+func (h embedReindexHandlers) EmbedReindexIdentities(w http.ResponseWriter, r *http.Request) {
+	if !h.serving() {
+		httperr.NotImplemented(w, r, "EmbedReindexIdentities")
+		return
+	}
+	h.engine.identities(w, r)
 }
 
 func (h embedReindexHandlers) EmbedReindexPreview(w http.ResponseWriter, r *http.Request) {

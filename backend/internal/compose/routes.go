@@ -22,7 +22,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -71,36 +70,23 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// provider seam: agentGate's StageResolver reads exactly what the MCP
 	// registry's tools read.
 	provider := NewProvider(pool)
-	staging := approvalsAdapter{svc: approvals.NewService(InstallationDB(pool))}
+	staging := approvalsAdapter{svc: NewApprovalsService(InstallationDB(pool))}
 	// Wrap order: the generated router applies the slice left-to-right
 	// around the handler, so the LAST entry is outermost — idempotency
 	// must sit outside the agent gate so a staged-approval refusal is
 	// never recorded as "the" response for a key (the approved retry is
 	// the same request under the same key).
-	api := crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
-		BaseURL: httpserver.BaseURL,
-		Middlewares: []crmcontracts.MiddlewareFunc{
-			// Innermost: a caller refused for who they are hears that before
-			// they hear their query was wrong.
-			refuseUnknownQueryEnum,
-			agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), tagSeam(pool), gate),
-			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
-			// Outermost, so the measurement covers the admission gate and the
-			// idempotency replay rather than only the handler underneath them. A 403 from the gate IS this route's
-			// latency as a client experiences it, and a refusal that cost a
-			// database read is exactly the slow answer worth seeing.
-			//
-			// These are OPERATION middleware: the generated wrapper applies
-			// them after chi has matched, which is what makes chiRoutePattern
-			// able to answer at all.
-			srv.httpMetrics.Measure(chiRoutePattern),
-		},
-		// Keep query/path/header parse failures on the problem+json path:
-		// the generated default writes err.Error() as text/plain, an
-		// off-contract shape that also leaks the parser's internal text.
-		ErrorHandlerFunc: paramParseError,
-	})
-	return api
+	return contractRouter(srv,
+		// Innermost, so it sees the handler's own status.
+		forgetHomeOnWrite(srv.homeCache, srv.log),
+		agentGate(registry, staging, provider, provider, importsFor(&srv), tagSeam(pool), leadDisqualifier{store: newContactsStore(InstallationDB(pool))}, sendStore(pool, srv.send), gate),
+		idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
+		// Outermost, so the measurement covers the admission gate and the
+		// idempotency replay: a refusal that cost a database read is a slow
+		// answer worth seeing. The wrapper applies it after chi has matched,
+		// which is what lets chiRoutePattern answer.
+		srv.httpMetrics.Measure(chiRoutePattern),
+	)
 }
 
 // chiRoutePattern reads the route TEMPLATE chi matched -- `/v1/deals/{dealId}`,
@@ -197,8 +183,10 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		Published: events.PublishedTotal,
 		Extra:     srv.writeMetricsSections,
 		JobStats: fleetSections(
+			dataTaskMetricsSection(pool),
 			jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
 			backfillFleetSection(backfillFleetReader(pool)),
+			threadBacklogSection(threadBacklogReader(pool)),
 		),
 	})))
 	// The anonymous public edges sit between the session middleware (which
@@ -211,26 +199,32 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// workspace-scoped call like any other /v1 route, and mounting it on the
 	// operational mux instead would win the longest-pattern match against
 	// "/v1/" and serve without a session. See extensionEdge.
-	publicEdge := publicConfirm(newPublicConfirmLimiters())(
-		publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
-			publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters())(
-				publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
-					extensionEdge(srv, log)(api),
+	publicEdge := publicForms(srv.webFormsHandlers, newPublicFormLimiters())(
+		publicConfirm(newPublicConfirmLimiters())(
+			publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
+				publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters(), srv)(
+					publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
+						extensionEdge(srv, log)(api),
+					),
 				),
 			),
 		),
 	)
+
 	// Which public routes carry a credential in the path — and so must not
 	// have it written to any log — is stated once in
 	// shared/kernel/capabilitypath, not named at each mount. The booking
-	// page's slug is deliberately absent from that list; it is a public
-	// identifier the host hands out, not a credential.
+	// page's slug is on that list because it is the only admission check on a
+	// route that writes.
 	// boundByResponseDeadline sits OUTSIDE the handler chain because a
 	// write deadline has to be set before anything starts writing — including
 	// the access log's own wrapper, which is what holds the ResponseWriter the
 	// controller reaches through.
+	if srv.routesForTest != nil {
+		publicEdge = srv.routesForTest(publicEdge)
+	}
 	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
-		httpserver.AccessLog(log, authH.Middleware(publicEdge)))))
+		httpserver.AccessLog(log, publicRecordPreviews(srv, identitySvc)(authH.Middleware(publicEdge))))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
 	// both discovery documents. They belong together because RFC 9728
@@ -410,7 +404,7 @@ func WithBootstrapSeeds(seeds deployconfig.Seeds) Option {
 // is the only arrangement in which they cannot disagree. Without the option the
 // compiled-in defaults stand — the composition is still fully bounded, it just
 // was never told about a deployment file.
-func WithUploadLimits(limits deployconfig.UploadLimits) Option {
+func WithUploadLimits(limits UploadLimits) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.uploadLimits = limits
 		s.activitiesHandlers = s.activitiesHandlers.WithUploadLimit(limits.Attachment)

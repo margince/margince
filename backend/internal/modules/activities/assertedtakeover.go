@@ -72,6 +72,7 @@ import (
 //     refuse every legitimate take-over, which is the whole feature.
 func TakeOverAssertedActivityTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, subject, body, wasCapturedBy, capturedBy string,
+	senderIsMachine bool,
 ) error {
 	// The OBJECT permission still binds, and is this function's own to ask. A
 	// connector acts with the permissions of the human who granted it, so an
@@ -89,28 +90,30 @@ func TakeOverAssertedActivityTx(
 	// closes the window between that read and this write rather than repeating
 	// it.
 	//
-	// This is ALSO the statutory-hold refusal, which is why no
-	// `restricted_at IS NULL` predicate follows it. The
-	// activity_restricted_is_archived CHECK makes held-but-live a state the
-	// table cannot hold, so every held row is archived and LiveOnly refuses it —
-	// and both writers that place a hold (privacy.PinToFloor and the erasure's
-	// restrict arm) archive in the same statement for that reason. Adding the
-	// predicate would be a fourth refusal behind three, unreachable by
-	// construction, and a reader would take it for the one doing the work.
+	// This is also the statutory-hold refusal, so no `restricted_at IS NULL`
+	// predicate follows it. The activity_restricted_is_archived CHECK makes
+	// held-but-live a state the table cannot hold. Every held row is archived and
+	// LiveOnly refuses it. Both writers that place a hold (privacy.PinToFloor and
+	// the erasure's restrict arm) archive in the same statement for that reason.
+	// The predicate would be an unreachable fourth refusal, and a reader would
+	// take it for the one doing the work.
 	// TestAMessageUnderAStatutoryHoldIsNotTakenOver holds the outcome.
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
 		return err
 	}
 	// COALESCE on subject and body: a connector that reads a message with no
-	// subject supplies an empty one, and letting that blank a subject the
-	// import had would lose the only description the row carries.
+	// subject supplies an empty one. Letting that blank the import's subject
+	// would lose the only description the row carries. The read
+	// message's sender stamp only adds: the import's own From may have proved
+	// it already.
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity
-		   SET subject     = COALESCE(NULLIF($2, ''), subject),
-		       body        = COALESCE(NULLIF($3, ''), body),
-		       captured_by = $4
+		   SET subject           = COALESCE(NULLIF($2, ''), subject),
+		       body              = COALESCE(NULLIF($3, ''), body),
+		       captured_by       = $4,
+		       sender_is_machine = sender_is_machine OR $5
 		 WHERE id = $1`,
-		activityID, subject, body, capturedBy)
+		activityID, subject, body, capturedBy, senderIsMachine)
 	if err != nil {
 		return fmt.Errorf("activities: writing the read message over %s: %w", activityID, err)
 	}

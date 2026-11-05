@@ -14,18 +14,18 @@ share what it prints with the user who decides the repair.
 Against the database of an installation, as a role that can read its tables:
 
 ```
-psql "$DATABASE_URL" -v horizon_days=90 -f scripts/home-attention-inventory.sql
+psql "$DATABASE_URL" -v horizon_days=30 -f scripts/home-attention-inventory.sql
 ```
 
 Against your own dev stack, with the host port of the Postgres of your stack:
 
 ```
-bash scripts/dev-psql.sh 15432 margince -v horizon_days=90 < scripts/home-attention-inventory.sql
+bash scripts/dev-psql.sh 15432 margince -v horizon_days=30 < scripts/home-attention-inventory.sql
 ```
 
-`horizon_days` is the waiting horizon to count against, and it is 90 by default. The
+`horizon_days` is the waiting horizon to count against, and it is 30 by default. The
 product measures its own horizon for each installation, from how long its replies
-take, between 14 and 365 days. It uses 90 only when the history is short
+take, between 14 and 30 days. It uses 30 when the history is short
 (`backend/internal/modules/activities/waitinghorizon.go`). The script cannot
 measure it, so count 2 is close but not exact. It matches the Worklist only when
 `horizon_days` is the same as the measured value.
@@ -73,3 +73,22 @@ measure it, so count 2 is close but not exact. It matches the Worklist only when
 
 Run the script again after a repair. Each count should drop to what the repair
 promised, and no other count should go up.
+
+## Preview exact task repairs
+
+Use `POST /admin/home-repair/preview` with `source: task` to get the bounded
+review page. Its counts use the same source and date rules as current task reads.
+The SQL counts describe history, not current work.
+
+The page lists a source link fix, a generated date to clear, or old work to archive.
+Each row names its change. Human
+edits, pins and reminders stay. Missing source access grants no right to repair.
+Unknown sources stay as they are. No repair marks a task as complete.
+
+Review the page before `POST /admin/home-repair/activate`. The worker checks
+source access, task version and the rule again. A change after review is skipped;
+failed batches roll back with their audit and event. Resume uses the same reviewed
+page. A traced source or date fix stays a machine change for later task reads.
+
+Send `reviewed_actions` in the page's row order when `requires_action_review` is
+true. A client sends names of actions it can show.

@@ -85,11 +85,9 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		if err := dealListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
-		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, dealListEntity)
-		if err != nil {
+		if err := narrowToList(ctx, &in, p.listMembers); err != nil {
 			return nil, "", false, err
 		}
-		in.Membership = membership
 		rows, page, err := p.store.ListDeals(ctx, in)
 		if err != nil {
 			return nil, "", false, err
@@ -124,7 +122,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		mapped, err := dealCreateInput(req)
+		mapped, err := DealCreationInput(req)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
@@ -201,23 +199,28 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 		v, err := p.store.ArchiveDeal(ctx, ids.From[ids.DealKind](in.Ref.ID), in.IfVersion)
 		return ref(datasource.EntityDeal, v.Id), err
 	case datasource.EntityProduct, datasource.EntityOfferTemplate:
-		return p.archiveCatalog(ctx, in.Ref)
+		return p.archiveCatalog(ctx, in)
 	case datasource.EntityOffer:
-		return p.archiveOffer(ctx, in.Ref)
+		return p.archiveOffer(ctx, in)
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
 	}
 }
 
-func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	v, err := p.store.AdvanceDeal(ctx, ids.From[ids.DealKind](in.DealID), AdvanceDealInput{
 		WonWithoutContractReason: in.WonWithoutContractReason,
 		WonWithoutContractDetail: in.WonWithoutContractDetail,
 		ToStageID:                ids.From[ids.StageKind](in.ToStageID),
 		LostReason:               in.LostReason,
+		LostReasonCode:           in.LostReasonCode,
 		IfVersion:                in.IfVersion,
 	})
-	return ref(datasource.EntityDeal, v.Id), err
+	out := datasource.AdvanceDealResult{Ref: ref(datasource.EntityDeal, v.Id)}
+	if v.Probability != nil {
+		out.ProbabilityNote = v.Probability.Note
+	}
+	return out, err
 }
 
 // StageSemantic feeds the advance_deal tier resolver (interfaces.md

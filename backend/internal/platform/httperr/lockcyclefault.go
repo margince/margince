@@ -13,6 +13,10 @@ import (
 // another one at the same moment, and nothing about the request is wrong.
 const writeContentionCode = "write_contention"
 
+// IdempotencyInProgressCode refuses a retry whose first attempt under the same
+// key is still running. It clears when that attempt settles.
+const IdempotencyInProgressCode = "idempotency_key_in_progress"
+
 // lockCycleRetryAfter is the Retry-After, in seconds, a contention refusal
 // carries. The other side of a cycle is a short write that is long finished a
 // second later; the store has already retried inside that window.

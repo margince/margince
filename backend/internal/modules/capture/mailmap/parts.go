@@ -21,6 +21,7 @@ import (
 
 	"github.com/emersion/go-message/mail"
 
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -148,16 +149,6 @@ func (c *collector) settle() {
 	c.calendar = nil
 }
 
-// exhausted reports that the walk has seen more parts than any real message
-// carries and must stop.
-//
-// The per-part bounds decide what is KEPT; this decides what is even looked at.
-// Without it a sender chooses how long we walk: parts cost 25 bytes each on the
-// wire, so a single message within the adapters' own size limits contains
-// millions of them, and merely counting those is work an unauthenticated sender
-// got us to do.
-func (c *collector) exhausted() bool { return c.ordinal >= maxPartsExamined }
-
 // inlineFilename reads the name an inline part gave itself, from either place a
 // client may put it: the Content-Disposition filename parameter, or the older
 // Content-Type name parameter. Empty means the part named nothing and is body
@@ -213,6 +204,8 @@ func (c *collector) take(header *mail.AttachmentHeader, body io.Reader) {
 // never reached are reported rather than silently absent.
 func (c *collector) truncated() { c.drop(DropWalkTruncated) }
 
+func (c *collector) walkTruncated() bool { return c.dropped[DropWalkTruncated] > 0 }
+
 // admit applies every bound to one candidate file and keeps it or says why not.
 func (c *collector) admit(filename, declared string, body io.Reader) {
 	c.ordinal++
@@ -255,4 +248,35 @@ func (c *collector) admit(filename, declared string, body io.Reader) {
 		DeclaredType: extension.DeclaredTypeDisagreement(declared, sniffed),
 		Body:         content,
 	})
+}
+
+// recordParts hands the collected files to the seam. A mailmap.Part is a
+// candidate the collector may still refuse; a connector.Part cleared every
+// bound. This copy is the one way across, and one set of bounds stands behind both.
+func (m Message) recordParts() []connector.Part {
+	if len(m.parts) == 0 {
+		return nil
+	}
+	out := make([]connector.Part, 0, len(m.parts))
+	for _, part := range m.parts {
+		out = append(out, connector.Part{
+			Ordinal:      part.Ordinal,
+			Filename:     part.Filename,
+			ContentType:  part.ContentType,
+			DeclaredType: part.DeclaredType,
+			Body:         part.Body,
+		})
+	}
+	return out
+}
+
+func (m Message) recordDrops() []connector.PartDrop {
+	if len(m.partDrops) == 0 {
+		return nil
+	}
+	out := make([]connector.PartDrop, 0, len(m.partDrops))
+	for _, drop := range m.partDrops {
+		out = append(out, connector.PartDrop{Reason: drop.Reason, Count: drop.Count})
+	}
+	return out
 }

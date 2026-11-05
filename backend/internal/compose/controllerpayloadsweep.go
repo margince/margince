@@ -86,6 +86,14 @@ func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[Co
 	}
 	ctx = sendWorkerScope(ctx)
 
+	overdue, err := w.store.OverdueControllerReceipts(ctx, w.clock())
+	if err != nil {
+		return jobs.FaultContext(ctx, fmt.Errorf("reading controller receipt deadlines: %w", err))
+	}
+	if overdue > 0 {
+		w.log.ErrorContext(ctx, "controller receipts remain undelivered after their deadline", "count", overdue)
+	}
+
 	// Paged past what this run already attempted, so a batch that will never
 	// delete costs one batch rather than the whole backlog: without it the same
 	// oldest rows are re-selected every cadence and every newer payload behind

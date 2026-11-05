@@ -3,19 +3,20 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import {
+  TaskCompleteCheck,
+  TaskQuickActions,
+  useTaskUpdate,
+} from "../../components/taskactions";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import {
-  TaskCompleteCheck,
-  TaskDetailModal,
-  TaskQuickActions,
-  useTaskUpdate,
-} from "./taskactions";
+import { TaskDetailModal } from "./taskdetailmodal";
 
 // Acting on a task from the record it belongs to: the tick, the quick-action
 // row, and the detail modal a next-step row opens into. Mirrors company360.test.tsx's
@@ -81,16 +82,87 @@ const TRANSCRIPT = Array.from({ length: 40 }, (_, turn) =>
     : "Mira: I will send the paperwork once the discount is signed off.",
 ).join("\n");
 
+function sourceOf({
+  emailRequest,
+  meetingSource,
+  contactTask,
+}: Readonly<{
+  emailRequest: boolean;
+  meetingSource: boolean;
+  contactTask?: "call" | "typed";
+}>) {
+  if (emailRequest) return "email-1";
+  if (meetingSource) return "m-1";
+  return contactTask === "call" ? "call-1" : null;
+}
+
+// The account first on the wire; the panel names the deal first.
+function linksOf(filed: boolean, contactTask?: "call" | "typed") {
+  if (filed) {
+    return [
+      { entity_type: "company", entity_id: "o-1" },
+      { entity_type: "deal", entity_id: "d-1" },
+    ];
+  }
+  return contactTask ? [{ entity_type: "contact", entity_id: "c-1" }] : [];
+}
+
 function DetailModal({
   emailRequest = false,
   meetingSource = false,
   filed = false,
+  contactTask,
 }: Readonly<{
   emailRequest?: boolean;
   meetingSource?: boolean;
   filed?: boolean;
+  /** A task owed to one contact, read out of a call or typed by hand. */
+  contactTask?: "call" | "typed";
 }>) {
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/email-1": () =>
+      jsonResponse({
+        id: "email-1",
+        kind: "email",
+        subject: "Renewal paperwork",
+        occurred_at: "2026-07-27T14:00:00Z",
+        content_state: "available",
+      }),
+    "GET /activities/email-1/email-presentation": () =>
+      jsonResponse({
+        id: "email-1",
+        lifecycle: "delivered",
+        version: 1,
+        occurred_at: "2026-07-27T14:00:00Z",
+        summary: {
+          activity_id: "email-1",
+          occurred_at: "2026-07-27T14:00:00Z",
+          version: 1,
+          subject: "Renewal paperwork",
+          display_status: "team",
+          move: "needs_reply",
+          attachment_count: 0,
+        },
+        body: "Please send the agreed renewal paperwork.",
+        from: [],
+        to: [],
+        cc: [],
+        bcc: [],
+        bcc_withheld: false,
+        attachments: [],
+        links: [],
+        thread: { members: [], next_cursor: null },
+        can_reply: false,
+        can_relink: false,
+        access: {
+          content_state: "available",
+          display_status: "team",
+          audience: "workspace",
+          can_change: false,
+          change_mode: "none",
+        },
+      }),
     "GET /activities/m-1": () =>
       jsonResponse({
         id: "m-1",
@@ -107,22 +179,31 @@ function DetailModal({
         body: emailRequest
           ? null
           : "Draft went to legal on Tuesday; needs Dana's sign-off.",
-        source_activity_id: emailRequest
-          ? "email-1"
-          : meetingSource
-            ? "m-1"
-            : null,
+        source_activity_id: sourceOf({
+          emailRequest,
+          meetingSource,
+          contactTask,
+        }),
         due_at: emailRequest ? null : "2026-08-01T09:00:00Z",
         occurred_at: "2026-07-28T09:00:00Z",
         is_done: false,
         assignee_id: "u-1",
-        // The account first on the wire; the panel names the deal first.
-        links: filed
-          ? [
-              { entity_type: "company", entity_id: "o-1" },
-              { entity_type: "deal", entity_id: "d-1" },
-            ]
-          : [],
+        links: linksOf(filed, contactTask),
+      }),
+    "GET /activities/call-1": () =>
+      jsonResponse({
+        id: "call-1",
+        kind: "call",
+        subject: "Voicemail for Dana",
+        occurred_at: "2026-07-27T14:00:00Z",
+        content_state: "available",
+      }),
+    "GET /contacts/c-1": () =>
+      jsonResponse({
+        id: "c-1",
+        full_name: "Dana Brandt",
+        primary_email: "dana@brandt.example",
+        phones: [{ id: "ph-1", phone: "+491517654321", is_primary: true }],
       }),
     "GET /deals/d-1": () =>
       jsonResponse({ id: "d-1", name: "Brandt renewal 2027" }),
@@ -158,6 +239,24 @@ export const DetailOpen: Story = { render: () => <DetailModal /> };
 // Filed under a deal and its account: the deal, the more specific, leads.
 export const FiledUnderDeal: Story = {
   render: () => <DetailModal filed />,
+};
+
+// A task read out of a call: Call, Email and Open contact above its own verbs.
+export const DetailFromCall: Story = {
+  render: () => <DetailModal contactTask="call" />,
+  play: async () => {
+    const body = within(document.body);
+    await body.findByRole("link", { name: en["record.verb.call"] });
+  },
+};
+
+// The same contact on a task typed by hand: no Call, since nothing says it is one.
+export const DetailTypedByHand: Story = {
+  render: () => <DetailModal contactTask="typed" />,
+  play: async () => {
+    const body = within(document.body);
+    await body.findByRole("link", { name: en["task.next.openContact"] });
+  },
 };
 
 export const CapturedEmailRequest: Story = {

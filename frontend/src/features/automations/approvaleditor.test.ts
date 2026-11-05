@@ -113,3 +113,13 @@ describe("what the editor starts with", () => {
     expect(editableSeed(dateField, undefined)).toBe("");
   });
 });
+
+it("keeps recipient-only review from editing the existing task", () => {
+  expect(
+    editableStrings("commitment_task", {
+      existing_task_id: "task",
+      summary: "Send recording",
+      due_date: "2026-10-21",
+    }),
+  ).toEqual([]);
+});

@@ -9,6 +9,7 @@ package dealstatus
 
 import (
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -20,7 +21,7 @@ func factsCitingOneRow(t *testing.T) (facts, string) {
 	t.Helper()
 	row := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -3))
 	return facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline: []crmcontracts.Activity{row},
 	}, row.Id.String()
 }

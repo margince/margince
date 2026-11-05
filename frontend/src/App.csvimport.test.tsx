@@ -12,8 +12,8 @@ import {
   SLOWEST_MEASURED_TEST_MS,
 } from "../vitest.budget";
 import { navigate } from "./lib/router";
-import { formatFixture } from "./screens/import.fixtures";
 import { memoryStorage, renderApp, teardownApp } from "./testing/appharness";
+import { formatFixture } from "./testing/import.fixtures";
 import { meFixture } from "./testing/mefixture";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the
@@ -105,7 +105,7 @@ async function importFetch(input: Request | string | URL, init?: RequestInit) {
       ? { ...run, status }
       : answers(url.searchParams.get("view"))[key];
   return body === undefined
-    ? new Response(JSON.stringify({ code: "unavailable" }), {
+    ? new Response(JSON.stringify({ code: "service_unavailable" }), {
         status: 503,
         headers: { "Content-Type": "application/problem+json" },
       })

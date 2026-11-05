@@ -65,12 +65,15 @@
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  /* The page's brightest ground, not the card's. The panel floats OVER cards
-     that are already --bgInset, and a panel the same value as what it covers
-     loses its own edge and sets its text at the contrast of the layer below
-     rather than its own. */
-  background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
+}
+
+/* Wider than a reading's aside, for rows of a title and a verb. Capped by the
+   viewport so it never runs under the window's edge. */
+.popover-panel.popover-panel-wide {
+  inline-size: min(25rem, calc(100vw - 2 * var(--pageGutter)));
+  max-inline-size: none;
+  padding: var(--space-4);
 }
 
 /* A popover trigger that wears the evidence mark (`.evmark-trigger`,

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -219,7 +220,7 @@ func TestVoicePromptNamesTheValidSampleIDs(t *testing.T) {
 // writing samples over a spending cap.
 func TestSafeVoiceBuildFailureNamesTheCause(t *testing.T) {
 	quota := fmt.Errorf("voice build model call: %w: ai: gemini: RESOURCE_EXHAUSTED: spending cap (http 429)", ErrProviderQuota)
-	message := SafeVoiceBuildFailure(quota)
+	message := SafeVoiceBuildFailure(quota, textlang.English)
 	if !strings.Contains(strings.ToLower(message), "budget") {
 		t.Fatalf("a provider out of budget says so: %q", message)
 	}
@@ -229,7 +230,7 @@ func TestSafeVoiceBuildFailureNamesTheCause(t *testing.T) {
 
 	// A model that DID answer, unreadably, keeps its own separate wording —
 	// otherwise one message covers two causes again.
-	unreadable := SafeVoiceBuildFailure(errors.New("voice build model call: ai: output rejected by the validator"))
+	unreadable := SafeVoiceBuildFailure(errors.New("voice build model call: ai: output rejected by the validator"), textlang.English)
 	if unreadable == message {
 		t.Fatal("a bad model answer and a billing refusal are different failures and read differently")
 	}
@@ -247,7 +248,7 @@ func TestSafeVoiceBuildFailureNamesTheCause(t *testing.T) {
 // request refused as malformed is our fault, not the operator's samples.
 func TestSafeVoiceBuildFailureNamesAProviderOutcome(t *testing.T) {
 	const providerText = "PROVIDER-OWN-WORDS"
-	unreadable := SafeVoiceBuildFailure(errors.New("voice build model call: ai: output rejected by the validator"))
+	unreadable := SafeVoiceBuildFailure(errors.New("voice build model call: ai: output rejected by the validator"), textlang.English)
 	for name, tc := range map[string]struct {
 		cause error
 		want  string
@@ -256,7 +257,7 @@ func TestSafeVoiceBuildFailureNamesAProviderOutcome(t *testing.T) {
 		"rejected": {cause: model.ErrRequestRejected, want: "rejected the build request"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			message := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: ai: anthropic: %s: %w", providerText, tc.cause))
+			message := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: ai: anthropic: %s: %w", providerText, tc.cause), textlang.English)
 			if !strings.Contains(message, tc.want) || message == unreadable {
 				t.Errorf("want a message naming %q, got %q", tc.want, message)
 			}
@@ -322,7 +323,7 @@ func TestEveryProviderAdapterClassifiesItsRefusal(t *testing.T) {
 			if !errors.Is(quota, ErrProviderQuota) || errors.Is(quota, ErrProviderThrottled) {
 				t.Fatalf("an account with nothing left is a quota refusal: %v", quota)
 			}
-			if !strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", quota)), "out of budget") {
+			if !strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", quota), textlang.English), "out of budget") {
 				t.Fatal("the build message names the account, not the model")
 			}
 
@@ -332,7 +333,7 @@ func TestEveryProviderAdapterClassifiesItsRefusal(t *testing.T) {
 			if !errors.Is(throttle, ErrProviderThrottled) || errors.Is(throttle, ErrProviderQuota) {
 				t.Fatalf("a busy model is a throttle, not an empty account: %v", throttle)
 			}
-			if strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", throttle)), "out of budget") {
+			if strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", throttle), textlang.English), "out of budget") {
 				t.Fatal("a throttle must not send the reader to a billing console")
 			}
 
@@ -342,7 +343,7 @@ func TestEveryProviderAdapterClassifiesItsRefusal(t *testing.T) {
 			if errors.Is(garbled, ErrProviderQuota) || errors.Is(garbled, ErrProviderThrottled) {
 				t.Fatalf("an unreadable body names no cause: %v", garbled)
 			}
-			if message := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", garbled)); !strings.Contains(message, "turned the call away") {
+			if message := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", garbled), textlang.English); !strings.Contains(message, "turned the call away") {
 				t.Fatalf("an unclassified refusal still says the model never ran: %q", message)
 			}
 
@@ -412,7 +413,7 @@ func TestGeminiQuotaWordingDoesNotHideARetryableLimit(t *testing.T) {
 	if !errors.Is(perMinute, ErrProviderThrottled) || errors.Is(perMinute, ErrProviderQuota) {
 		t.Fatalf("a limit the vendor offers a retry delay for is a throttle: %v", perMinute)
 	}
-	if strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", perMinute)), "out of budget") {
+	if strings.Contains(SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", perMinute), textlang.English), "out of budget") {
 		t.Fatal("a per-minute limit must not send the reader to a billing console")
 	}
 
@@ -465,7 +466,7 @@ func TestSafeVoiceBuildFailureNamesAnUnconfiguredProvider(t *testing.T) {
 	rejected := fmt.Errorf("%w: voice_build after retry and escalation: voice build returned invalid JSON: invalid character 'k'", ErrOutputRejected)
 	unconfigured := fmt.Errorf("voice build model call: %w: %w", ErrUnconfiguredModel, rejected)
 
-	message := SafeVoiceBuildFailure(unconfigured)
+	message := SafeVoiceBuildFailure(unconfigured, textlang.English)
 	if !strings.Contains(message, "Settings") {
 		t.Fatalf("the message names where to fix it: %q", message)
 	}
@@ -477,7 +478,7 @@ func TestSafeVoiceBuildFailureNamesAnUnconfiguredProvider(t *testing.T) {
 	// answer — otherwise the new branch has swallowed the old cause and every
 	// genuinely unreadable reply now sends its operator to a settings screen
 	// where nothing is wrong.
-	answeredBadly := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", rejected))
+	answeredBadly := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", rejected), textlang.English)
 	if answeredBadly == message {
 		t.Fatal("an unconfigured installation and a model that answered badly are different failures and read differently")
 	}

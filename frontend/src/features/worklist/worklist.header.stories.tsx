@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import type { WorklistView } from "../../lib/worklistviews";
 import { jsonResponse, StoryProviders } from "../../testing/story-utils";
 import { WorklistHeader } from "./worklist.header";
 import type { Worklist, WorklistScope } from "./worklist.queries";
@@ -18,14 +19,12 @@ type WorklistBuckets = components["schemas"]["WorklistBuckets"];
 // as a unit rather than reserving space nobody fills.
 //
 // The owner picker replaces the scope switch instead of standing beside it: a
-// named owner outranks the scope word, and the pair is a 422. The last frame is
+// named owner outranks the scope word, and the pair is a 422. `AColleaguesDay` is
 // that state.
 //
-// The last frame PINS the dark theme rather than leaving both themes to the
-// toolbar's Theme control: a frame nobody flips is a frame the render gate
-// draws in one theme only. The other three take the control, and every frame is
-// worth a look at phone width — under 720px the dials take the row rather than
-// staying capped beside a sentence that has already wrapped.
+// `BothDialsDark` pins the dark theme, because the render gate draws a frame
+// nobody flips in one theme only. The other frames take the Theme control.
+// Check every frame at phone width too: under 720px the dials take the row.
 
 const LENA = "00000000-0000-4000-8000-000000000001";
 
@@ -40,8 +39,8 @@ const roster = {
   page: { next_cursor: null, has_more: false },
 };
 
-// A day with more behind it than the page is showing, which is what puts the
-// completeness caption under the pills. Ten weighed, eight on screen.
+// The day behind every frame. Only the last two frames give it counts, which is
+// what puts the completeness caption under the pills.
 function day(
   scopes: readonly WorklistScope[],
   buckets?: WorklistBuckets,
@@ -78,15 +77,21 @@ function frame(
   scopes: readonly WorklistScope[],
   owner = "",
   buckets?: WorklistBuckets,
+  shape: (page: Worklist) => Worklist = (page) => page,
+  scope: WorklistScope = "mine",
+  view: WorklistView = "today",
 ) {
   globalThis.fetch = (async (): Promise<Response> =>
     jsonResponse(roster)) as typeof fetch;
+  const page = shape(day(scopes, buckets));
   return (
     <StoryProviders>
       <WorklistHeader
-        day={day(scopes, buckets)}
-        loaded={8}
-        scope="mine"
+        day={page}
+        loaded={page.queue}
+        scope={scope}
+        view={view}
+        onView={() => {}}
         filter="all"
         owner={owner}
         onScope={() => {}}
@@ -124,6 +129,19 @@ export const AColleaguesDay: Story = {
   render: () => frame(["mine", "unassigned", "team", "all"], LENA),
 };
 
+/** The Unassigned scope, with the line under the dials that says what it
+ *  lists. */
+export const TheUnassignedScope: Story = {
+  render: () =>
+    frame(
+      ["mine", "unassigned", "team", "all"],
+      "",
+      undefined,
+      undefined,
+      "unassigned",
+    ),
+};
+
 /** Both dials in the dark theme, which is where this strip can go wrong on its
  *  own. Every colour in it is derived — the switch's selected segment, the
  *  field labels, the pills' counts and the completeness caption are all a
@@ -135,10 +153,77 @@ export const BothDialsDark: Story = {
   render: () => frame(["mine", "unassigned", "team", "all"]),
 };
 
-/** A server that sends the partition: the sentence names the two panels by
- *  their headings, Today and To review. A half with nothing in it still prints
- *  its zero, so the line keeps its shape from day to day. */
-export const TheSplit: Story = {
+/** The Decisions view: its own headline and count, and no category buttons,
+ *  because the view holds one category. */
+export const TheDecisionsView: Story = {
   render: () =>
-    frame(["mine"], "", { urgent: 0, due_today: 3, planned: 9, review: 0 }),
+    frame(["mine"], "", undefined, (page) => page, "mine", "decisions"),
+};
+export const TheDecisionsViewDark: Story = {
+  ...TheDecisionsView,
+  globals: { theme: "dark" },
+};
+
+// Eight duplicate pairs on one card beside two of thirty tasks: ten items on
+// three cards, and the caption says both.
+function grouped(page: Worklist): Worklist {
+  return {
+    ...page,
+    queue: [
+      {
+        occurred_precision: "instant",
+        id: "duplicates",
+        source: "batch",
+        category: "decisions",
+        destination: "review",
+        level: 6,
+        consequence: "data_drifts",
+        because: [],
+        actions: [],
+        batch: { key: "duplicates", count: 8 },
+      },
+      ...[1, 2].map((n) => ({
+        id: `task-${n}`,
+        occurred_precision: "instant" as const,
+        source: "task" as const,
+        category: "tasks" as const,
+        level: 4,
+        consequence: "task_slips" as const,
+        title: `Send the revised quote ${n}`,
+        because: [],
+        actions: [],
+      })),
+    ],
+    counts: [
+      { category: "decisions", considered: 8, shown: 8, more_available: false },
+      { category: "tasks", considered: 30, shown: 2, more_available: false },
+    ],
+  };
+}
+
+/** A folded group among partly loaded work: the caption counts items, and
+ *  names the cards separately because one card stands for eight items. */
+export const GroupedItems: Story = {
+  render: () => frame(["mine"], "", undefined, grouped),
+};
+
+/** A cut read to its limit and a source that did not load. The caption drops
+ *  the fraction, names the limited cut with its floor, and counts the gap. */
+export const LimitedAndUnread: Story = {
+  render: () =>
+    frame(["mine"], "", undefined, (page) => ({
+      ...grouped(page),
+      counts: [
+        {
+          category: "decisions",
+          considered: 200,
+          shown: 8,
+          more_available: true,
+        },
+        { category: "tasks", considered: 30, shown: 2, more_available: false },
+      ],
+      sources_unavailable: [
+        { source: "bounce", category: "system", reason: "failed" },
+      ],
+    })),
 };

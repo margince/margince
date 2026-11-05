@@ -28,7 +28,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
@@ -45,8 +44,8 @@ const (
 	// business relationship exists.
 	ClassTransactional Class = "transactional"
 	// ClassMarketing is »Werbung« read broadly: newsletters, campaigns, and
-	// feedback requests. Express consent with double-opt-in proof; the §7(3)
-	// existing-customer exception is not offered.
+	// feedback requests. Express consent with double-opt-in proof, or the
+	// existing-customer route where the pack grants it.
 	ClassMarketing Class = "marketing"
 	// ClassPhoneOutreach is specced and dormant — no call provider is wired.
 	// The purpose exists so the model is complete, not because a path uses it.
@@ -63,6 +62,10 @@ type Verdict struct {
 	// "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain
 	// to the contact in front of them is not usable.
 	Reason string
+	// ReasonCode is Reason as a code, so a screen says it in its reader's
+	// language. ReasonAt is the date an objection was recorded, when known.
+	ReasonCode string
+	ReasonAt   *time.Time
 	// Qualifying names the event that flipped correspondence to allowed, when
 	// one did. Recording WHICH event is what makes the Art 6(1)(f) balancing
 	// accountable rather than merely asserted.
@@ -91,6 +94,9 @@ type Verdict struct {
 	// and writing a record because somebody opened a drawer would put a legal
 	// fact on the record for a message nobody sent.
 	QualifyingDerived bool
+	// ExistingCustomer is the sale and declaration a marketing verdict allowed
+	// on, when it allowed on the existing-customer route.
+	ExistingCustomer *ExistingCustomerGround
 }
 
 const (
@@ -105,7 +111,13 @@ const (
 // QualifyingEvent is the deterministic thing on the record that makes business
 // correspondence lawful.
 type QualifyingEvent struct {
-	Kind             string
+	// ID is set on an exchange recorded by hand, which is the one kind a
+	// caller may later retract.
+	ID   string
+	Kind string
+	// AsksForQuote and Retracted are read on a hand-recorded exchange only.
+	AsksForQuote     bool
+	Retracted        bool
 	OccurredAt       time.Time
 	SourceEntityType string
 	SourceEntityID   string
@@ -124,14 +136,17 @@ type PurposeRow struct {
 // MarketingContext is what a marketing verdict needs beyond the contact and the
 // purpose: the exception this installation's jurisdiction grants.
 //
-// Passed in for the reason `since` is passed in — resolving it needs a settings
-// read, and VerdictForContact is deliberately free of those.
+// Passed in for the reason `since` is passed in: resolving it needs a settings
+// read, and the verdict reads no settings.
 type MarketingContext struct {
 	Exception *messaging.MarketingException
+	// SendingEntity is the legal entity the message goes out for. The
+	// existing-customer route counts only a sale that entity made.
+	SendingEntity ids.UUID
 }
 
-// VerdictForContact is THE decision. Both the guard endpoint and the transmit
-// gate call it, so a preview and a send answer with the same code.
+// VerdictForRecipient is the decision. The guard endpoint and the transmit gate
+// share its body (verdictFor), so a preview and a send answer with one code.
 //
 // The order of the checks is the ruling, and it is not rearrangeable: an
 // objection is evaluated FIRST and overrides every basis below it, including
@@ -147,13 +162,29 @@ type MarketingContext struct {
 // is deliberately free of settings reads: a rep holds no settings-read grant
 // and a gated read inside the verdict would fail a send with a 500 rather than
 // an answer about consent.
-func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
+//
+// VerdictForRecipient is the form that authorizes. It names the address the
+// message goes to, so a request a merge carried over counts only for its own
+// addresses (requestCoversSQL). GuardVerdictForContact answers about the
+// contact as a whole and only feeds the advisory guard read.
+func VerdictForRecipient(ctx context.Context, tx pgx.Tx, contactID, address string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
+	return verdictFor(ctx, tx, contactID, &address, purpose, since, marketing)
+}
+
+// GuardVerdictForContact is the contact-wide answer the guard endpoint shows.
+// It never authorizes a send: every send path asks VerdictForRecipient.
+func GuardVerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
+	return verdictFor(ctx, tx, contactID, nil, purpose, since, marketing)
+}
+
+// verdictFor is the decision. address nil asks about the contact as a whole.
+func verdictFor(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
 	suppressed, at, err := objectionStands(ctx, tx, contactID, purpose.ID)
 	if err != nil {
 		return Verdict{}, err
 	}
 	if suppressed {
-		return Verdict{State: VerdictBlocked, Reason: objectionReason(at), Code: BlockObjection}, nil
+		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonObjection, ReasonAt: knownDate(at), Code: BlockObjection}), nil
 	}
 
 	// The same communication_suppression table the transmit gate reads
@@ -172,33 +203,26 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 	if err != nil {
 		return Verdict{}, err
 	}
-	category := categoryForClass(purpose.Class)
-	// This verdict is FOR one named purpose (the argument above), never for
-	// "marketing in general" — the same purpose a narrow suppression row
-	// compares itself against, so it is always known here, unlike the evidence
-	// arms on the transmit path that ask about no purpose at all.
-	askedPurpose, err := ids.Parse(purpose.ID)
+	stop, binds, err := stopBindingPurpose(stops, purpose)
 	if err != nil {
-		return Verdict{}, fmt.Errorf("consent: the asked purpose is not an id: %w", err)
+		return Verdict{}, err
 	}
-	for _, s := range stops {
-		if suppressionBinds(s.Kind, category, s.PurposeID, &askedPurpose) {
-			return Verdict{State: VerdictBlocked, Reason: suppressionReason(s.Kind), Code: BlockSuppressed, Suppression: s.Kind}, nil
-		}
+	if binds {
+		return said(Verdict{State: VerdictBlocked, ReasonCode: suppressionReasonCode(stop.Kind), Code: BlockSuppressed, Suppression: stop.Kind}), nil
 	}
 
 	switch purpose.Class {
 	case ClassTransactional:
 		// Art 6(1)(b): the contract itself is the basis. Nothing to consult.
-		return Verdict{State: VerdictAllowed, Reason: "account and contract notices need no consent"}, nil
+		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonContractNotice}), nil
 
 	case ClassBusinessCorrespondence:
-		return correspondenceVerdict(ctx, tx, contactID, purpose, since)
+		return correspondenceVerdict(ctx, tx, contactID, address, purpose, since)
 
 	case ClassPhoneOutreach:
 		// Dormant by decision: the purpose exists so the model is complete. A
 		// surface that offered it would offer a path nothing implements.
-		return Verdict{State: VerdictBlocked, Reason: "no call path is configured", Code: BlockNoChannel}, nil
+		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonNoCallPath, Code: BlockNoChannel}), nil
 
 	default:
 		return marketingVerdict(ctx, tx, contactID, purpose, marketing)
@@ -222,7 +246,7 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 // The implied arm below is unchanged and stays second: it is the Art 6(1)(f)
 // reading of a relationship the subject started, and it is what answers for the
 // overwhelming majority of contacts, who never record an answer either way.
-func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since time.Time) (Verdict, error) {
+func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, since time.Time) (Verdict, error) {
 	// requiresDOI is passed as the purpose declares it rather than as a
 	// constant false. Correspondence does not demand the round trip today, and
 	// hard-coding that here would silently ignore an installation that turned
@@ -232,133 +256,67 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, pur
 		return Verdict{}, err
 	}
 	if granted {
-		return Verdict{State: VerdictAllowed, Reason: "they said we may write to them"}, nil
+		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonSaidWeMayWrite}), nil
 	}
 	if state == string(StateGranted) && purpose.RequiresDOI {
 		// Granted but never confirmed, on an installation that demands the
 		// round trip for this purpose. Falling through to the implied arm
 		// would let the timeline supply what the confirmation did not.
-		return Verdict{
-			State:  VerdictBlocked,
-			Reason: "consent was recorded but never confirmed by the double opt-in",
-			Code:   BlockUnconfirmedDOI,
-		}, nil
+		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
-	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since)
+	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since, address)
 	if err != nil {
 		return Verdict{}, err
 	}
 	if source == sourceNone {
-		// No answer on file, no inbound, no inquiry, no deal, no recorded
-		// exchange. There is nothing here to balance, so this is not the easy
-		// Art 6(1)(f) case and the honest answer is that nobody has decided.
-		return Verdict{
-			State: VerdictUnknown,
-			// The reason does not distinguish "never" from "not lately", and
-			// deliberately: both mean the same thing to the rep reading it —
-			// nothing on file supports writing to this contact out of the blue
-			// right now — and a message that said "their last contact has
-			// lapsed" would invite hunting for an expiry to override rather
-			// than recording why this send is lawful.
-			Reason: "they have never written to you and no deal or inquiry connects you",
-		}, nil
+		// Nothing on file to balance, so this is not the easy Art 6(1)(f) case:
+		// nobody has decided. "Never" and "not lately" read alike, because a
+		// lapse message invites hunting for an expiry instead of a lawful basis.
+		return said(Verdict{State: VerdictUnknown, ReasonCode: ReasonNoConnection}), nil
 	}
-	return Verdict{
+	return said(Verdict{
 		State:             VerdictAllowed,
-		Reason:            qualifyingReason(event),
+		ReasonCode:        ReasonQualifyingEvent,
 		Qualifying:        &event,
 		QualifyingDerived: source == sourceDerived,
-	}, nil
+	}), nil
 }
 
-// marketingVerdict is the strict arm, unchanged in strictness by ADR-0098:
-// express consent with the DOI round-trip. The §7(3) existing-customer exception
-// a pack may grant is refused below, with its own reason. There is no legitimate-interest
-// escape for marketing email, B2C or B2B, and the product does not offer the
-// toggle.
+// marketingVerdict is the strict arm, unchanged in strictness by ADR-0098. It
+// needs express consent with the DOI round-trip, or the existing-customer route
+// where the pack grants it (existingcustomerroute.go). There is no
+// legitimate-interest escape for marketing email, B2C or B2B, and the product
+// does not offer the toggle.
 func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
 	state, granted, err := recordedState(ctx, tx, contactID, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
 		return Verdict{}, err
 	}
 	if granted {
-		return Verdict{State: VerdictAllowed, Reason: "they gave consent, with the confirmation on file"}, nil
+		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonConsentConfirmed}), nil
 	}
 	if state == string(StateWithdrawn) {
-		return Verdict{State: VerdictBlocked, Reason: "they withdrew consent for this purpose", Code: BlockWithdrawn}, nil
+		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonConsentWithdrawn, Code: BlockWithdrawn}), nil
 	}
 	if state == string(StateGranted) && purpose.RequiresDOI {
 		// Granted but never confirmed. The BGH evidence standard is the whole
 		// point of double opt-in, so an unconfirmed grant is not proof and does
 		// not send.
-		return Verdict{
-			State:  VerdictBlocked,
-			Reason: "consent was recorded but never confirmed by the double opt-in",
-			Code:   BlockUnconfirmedDOI,
-		}, nil
+		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
-	// The existing-customer exception a jurisdiction may grant (UWG §7(3)) is
-	// not offered: nothing here can answer its similarity condition, since no
-	// send names the goods it advertises. It refuses whatever the pack declares,
-	// and says so rather than reading as a plain absence of consent.
+	// A withdrawal returned above, so a customer who once consented and then
+	// withdrew never reaches the route that needs no consent.
 	if marketing.Exception != nil {
-		return Verdict{State: VerdictUnknown, Reason: "no consent recorded, and the existing-customer exception is not offered"}, nil
+		ground, err := existingCustomerGround(ctx, tx, contactID, purpose.ID, marketing.SendingEntity)
+		if err != nil {
+			return Verdict{}, err
+		}
+		if ground != nil {
+			return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonExistingCustomer, ExistingCustomer: ground}), nil
+		}
+		return said(Verdict{State: VerdictUnknown, ReasonCode: ReasonNoConsentExceptionNotOffered}), nil
 	}
-	return Verdict{State: VerdictUnknown, Reason: "no consent recorded"}, nil
-}
-
-// objectionReason states the refusal, with the date when the proof ledger
-// carries one. A zero time means the state row stands without a proof row
-// behind it, and inventing "1 Jan 0001" for a rep to read out is worse than
-// saying plainly that the objection is recorded.
-func objectionReason(at time.Time) string {
-	if at.IsZero() {
-		return "they objected, and an objection overrides every other basis"
-	}
-	return fmt.Sprintf("they objected on %s, and an objection overrides every other basis",
-		at.Format("2 Jan 2006"))
-}
-
-// suppressionReason states a live communication_suppression the way a rep can
-// repeat it, alongside objectionReason and qualifyingReason.
-func suppressionReason(kind string) string {
-	switch kind {
-	case commsauthz.ReasonObjection:
-		return "they objected to marketing, and an objection overrides every other basis"
-	case commsauthz.ReasonRestricted:
-		return "a statutory restriction is recorded against writing to them"
-	case commsauthz.ReasonSubjectRequest:
-		return "they asked us to stop, and a rep recorded it"
-	case commsauthz.ReasonHardBounce:
-		return "their address does not accept mail"
-	default:
-		return "a suppression is recorded against writing to them"
-	}
-}
-
-func qualifyingReason(event QualifyingEvent) string {
-	when := event.OccurredAt.Format("2 Jan")
-	switch event.Kind {
-	case "inbound_message":
-		return fmt.Sprintf("they wrote to you on %s", when)
-	case "inquiry":
-		return fmt.Sprintf("they made an inquiry on %s", when)
-	case "active_deal":
-		return "an open deal connects you"
-	case KindMeeting:
-		// Tenseless on purpose: this arm admits a meeting in the diary as
-		// readily as one that has happened, and a reason claiming the wrong
-		// side of today reads as a bug to the rep who is looking at the
-		// calendar entry.
-		return fmt.Sprintf("a meeting on %s connects you", when)
-	case KindRequestedBySubject:
-		// Named rather than left to the default arm below, because what this
-		// says is stronger than "an exchange happened": the contact ASKED. A rep
-		// reading why a send is lawful should see whose move it was.
-		return fmt.Sprintf("they asked you to write to them on %s: %s", when, event.Note)
-	default:
-		return fmt.Sprintf("a recorded exchange on %s: %s", when, event.Note)
-	}
+	return said(Verdict{State: VerdictUnknown, ReasonCode: ReasonNoConsent}), nil
 }
 
 // objectionStands asks whether an opt-out, unsubscribe or Art 21 objection is

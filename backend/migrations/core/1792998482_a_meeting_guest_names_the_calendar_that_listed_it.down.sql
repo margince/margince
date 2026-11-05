@@ -1,0 +1,2 @@
+SET LOCAL lock_timeout = '3s';
+ALTER TABLE activity_participant DROP COLUMN IF EXISTS roster_seat;

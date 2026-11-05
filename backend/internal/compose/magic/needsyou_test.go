@@ -11,6 +11,7 @@ package magic
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -378,5 +379,108 @@ func TestAContactProposalNamesWhoWroteWhenItCan(t *testing.T) {
 	}
 	if lines[1].Summary.Key != genericApprovalSentence {
 		t.Errorf("a proposal with no name reads %q, want the generic sentence", lines[1].Summary.Key)
+	}
+}
+
+func TestCommitmentLinesNameThePromiseFromTheSavedSummary(t *testing.T) {
+	for _, summary := range []string{"Send the revised scope", "Confirm the launch date"} {
+		approval := stagedApproval("commitment_task")
+		approval.Summary = &summary
+		if err := json.Unmarshal([]byte(`{"party":"  Alex\u202e\nBeck ","summary":"Untrusted payload summary"}`), &approval.ProposedChange); err != nil {
+			t.Fatal(err)
+		}
+		lines := decisionsWaiting(t, approval)
+		if len(lines) != 1 || lines[0].Summary.Key != "magic.action.approval_commitment_task_named" {
+			t.Fatalf("commitment line = %+v", lines)
+		}
+		values := lines[0].Summary.Values
+		if values == nil || (*values)["summary"] != summary || (*values)["party"] != "Alex Beck" {
+			t.Fatalf("commitment values = %v", values)
+		}
+	}
+}
+
+func TestLegacyCommitmentWithNoPromiserKeepsItsSummary(t *testing.T) {
+	approval := stagedApproval("commitment_task")
+	summary := "Send the revised scope"
+	approval.Summary = &summary
+	if err := json.Unmarshal([]byte(`{"party":"\u202e "}`), &approval.ProposedChange); err != nil {
+		t.Fatal(err)
+	}
+	lines := decisionsWaiting(t, approval)
+	if len(lines) != 1 || lines[0].Summary.Key != "magic.action.approval_commitment_task_summary" {
+		t.Fatalf("legacy commitment line = %+v", lines)
+	}
+}
+
+func TestCommitmentLinesDoNotAssertAnUnverifiedPromiser(t *testing.T) {
+	approval := stagedApproval("commitment_task")
+	approval.Summary = new("Send the revised scope")
+	if err := json.Unmarshal([]byte(`{"party":"Alex Beck","promiser_unresolved":true}`), &approval.ProposedChange); err != nil {
+		t.Fatal(err)
+	}
+	lines := decisionsWaiting(t, approval)
+	if len(lines) != 1 || lines[0].Summary.Key != "magic.action.approval_commitment_task_unverified" {
+		t.Fatalf("unverified commitment line = %+v", lines)
+	}
+}
+
+func TestWaitingDecisionNamesTheProposedChange(t *testing.T) {
+	for _, kind := range []string{"advance_deal", "close_deal", "update_record", "send_email", "new_kind"} {
+		a := stagedApproval(kind)
+		a.Summary = new("Close deal Acme renewal as won")
+		lines := decisionsWaiting(t, a)
+		if len(lines) != 1 || lines[0].Summary.Key != "magic.action.approval_summary" || lines[0].Summary.Values == nil || (*lines[0].Summary.Values)["summary"] != *a.Summary {
+			t.Fatalf("%s decision did not name its proposed change: %+v", kind, lines)
+		}
+	}
+}
+
+func TestBlankDecisionSummaryKeepsTheReviewRoute(t *testing.T) {
+	a := stagedApproval("close_deal")
+	a.Summary = new("  ")
+	lines := decisionsWaiting(t, a)
+	if len(lines) != 1 || lines[0].Summary.Key != genericApprovalSentence {
+		t.Fatalf("blank summary lost its review route: %+v", lines)
+	}
+}
+
+func TestCounterpartyDecisionKeepsItsContactQuestion(t *testing.T) {
+	a := stagedApproval(kindCaptureCounterparty)
+	a.Summary = new("Message from Alex")
+	a.TargetLabel = new("Alex")
+	lines := decisionsWaiting(t, a)
+	if len(lines) != 1 || lines[0].Summary.Key != approvalSentences[kindCaptureCounterparty] {
+		t.Fatalf("contact decision lost its question: %+v", lines)
+	}
+}
+
+func TestNeedsYouCarriesTheOwningDecisionPreviewWithoutRebuildingIt(t *testing.T) {
+	for _, state := range []string{"ready", "stale", "unavailable", "incomplete"} {
+		t.Run(state, func(t *testing.T) {
+			approval := stagedApproval("advance_deal")
+			approval.Summary = new("Advance Harbor renewal to Won")
+			approval.TargetLabel = new("Harbor renewal")
+			approval.Preview = &crmcontracts.ApprovalPreview{
+				Version: 2, State: state, ReviewerReason: "requested_decider",
+				Changes:  []crmcontracts.ApprovalPreviewChange{},
+				Evidence: new([]crmcontracts.ApprovalEvidence{}),
+			}
+			if state == "ready" {
+				approval.Preview.Changes = []crmcontracts.ApprovalPreviewChange{{Field: "status", Before: crmcontracts.ApprovalPreviewValue{Kind: "text", Text: "open"}, After: crmcontracts.ApprovalPreviewValue{Kind: "text", Text: "won"}}}
+				approval.Preview.Details = new([]crmcontracts.ApprovalPreviewDetail{{Field: "amount_minor", Value: crmcontracts.ApprovalPreviewValue{Kind: "money", Text: "12500000", Currency: new("EUR")}}})
+			}
+			lines := decisionsWaiting(t, approval)
+			if len(lines) != 1 || lines[0].ApprovalKind == nil || *lines[0].ApprovalKind != approval.Kind || lines[0].ApprovalPreview != approval.Preview {
+				t.Fatalf("decision context was lost or rebuilt: %+v", lines)
+			}
+			if state == "ready" {
+				if lines[0].Summary.Key != "magic.action.approval_summary" || (*lines[0].Summary.Values)["summary"] != *approval.Summary {
+					t.Fatal("older clients lost the ready proposal summary")
+				}
+			} else if lines[0].Summary.Key == "magic.action.approval_summary" {
+				t.Fatal("unavailable context reused staged prose")
+			}
+		})
 	}
 }

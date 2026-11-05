@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // Each limit admits its whole range and nothing past either end, and the
@@ -16,13 +16,14 @@ import (
 // own range would be a value no admin could ever save back.
 func TestEachWebsiteReadingLimitAdmitsItsRangeAndNothingPastIt(t *testing.T) {
 	for _, tc := range []struct {
-		entry                *settings.Entry[int]
+		entry                *config.Setting[int]
 		lowest, def, highest int
 	}{
 		{AutoEnrichDailyCap, 1, DefaultAutoEnrichDailyCap, MaxAutoEnrichDailyCap},
 		{SiteReadMaxPages, 1, DefaultSiteReadMaxPages, MaxSiteReadMaxPages},
 		{SiteReadMaxMiB, 1, DefaultSiteReadMaxMiB, MaxSiteReadMaxMiB},
 		{SiteReadWallSeconds, MinSiteReadWallSeconds, DefaultSiteReadWallSeconds, MaxSiteReadWallSeconds},
+		{ConfidentialityPassCap, 1, DefaultConfidentialityPassCap, MaxConfidentialityPassCap},
 	} {
 		t.Run(tc.entry.Key(), func(t *testing.T) {
 			for _, ok := range []int{tc.lowest, tc.def, tc.highest} {
@@ -35,12 +36,9 @@ func TestEachWebsiteReadingLimitAdmitsItsRangeAndNothingPastIt(t *testing.T) {
 					t.Errorf("%d admitted, want a refusal", bad)
 				}
 			}
-			stored, err := tc.entry.DefaultJSON()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if string(stored) != strconv.Itoa(tc.def) {
-				t.Errorf("the entry declares default %s, want %d", stored, tc.def)
+			declared, ok := tc.entry.DefaultText()
+			if !ok || declared != strconv.Itoa(tc.def) {
+				t.Errorf("the entry declares default %q (set: %v), want %d", declared, ok, tc.def)
 			}
 		})
 	}

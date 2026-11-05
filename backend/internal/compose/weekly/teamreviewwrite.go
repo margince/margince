@@ -57,7 +57,7 @@ func insertTeamReview(ctx context.Context, tx pgx.Tx, review TeamReview) (ids.UU
 	}
 	after := map[string]any{
 		"local_week_start": review.LocalWeekStart, "reps_counted": review.Counts.RepsCounted,
-		"summary": review.Summary,
+		"summary": review.Summary, "summary_language": review.summaryLanguage(),
 	}
 	if inserted {
 		if _, err := storekit.Audit(ctx, tx, "create", "team_weekly_review", id, nil, after); err != nil {
@@ -182,6 +182,7 @@ func insertTeamCoverage(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, c Cov
 	add("absent", nullableText(c.Absent))
 	add("base_currency", c.BaseCurrency)
 	add("replan_recommended", c.ReplanRecommended)
+	add("call_needs_review", c.CallNeedsReview)
 	if c.Basis != "" {
 		add("reference_landing_minor", c.ReferenceLandingMinor)
 		add("needed_open_minor", c.NeededOpenMinor)
@@ -235,5 +236,15 @@ func teamReviewColumns(review TeamReview) (insertColumns, []any) {
 	add("proposals_rejected", review.Quality.ProposalsRejected)
 	add("auto_change_reversals", review.Quality.AutoChangeReversals)
 	add("summary", nullableText(review.Summary))
+	add("summary_language", review.summaryLanguage())
 	return cols, args
+}
+
+// Empty snapshots may be replaced by older writers, which do not stamp language.
+// Only a measured, immutable snapshot carries the language of its summary.
+func (review TeamReview) summaryLanguage() *string {
+	if review.Counts.RepsCounted == 0 {
+		return nil
+	}
+	return new(string(teamCopyFor(review.Language).Lang()))
 }

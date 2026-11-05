@@ -42,6 +42,9 @@ const (
 	// this domain resolved to. Creating would add yet another, and which of
 	// them the domain belongs to is a human's call rather than the machine's.
 	PendingNearDuplicate = "near_duplicate"
+	// PendingVendorVerdict: the site reads as a mail or hosting vendor. The
+	// site cannot tell the vendor's own staff from its customers, so a colleague does.
+	PendingVendorVerdict = "vendor_verdict"
 )
 
 // DomainUndecided is the admission value an open question carries on the wire.
@@ -72,9 +75,7 @@ func (s *Store) ReopenWithheldDomain(ctx context.Context, domain string) (Blocke
 		return BlockedDomain{}, fmt.Errorf("contacts: %q is not a domain", domain)
 	}
 	// The human is stamped as the domain's owner where it had none. Triage
-	// refuses to mint rows for a domain nobody is accountable for, so a row
-	// re-opened under nobody's name would come straight back to this list
-	// having spent an attempt and answered nothing.
+	// also accepts ownerless questions; a human re-opening one takes ownership.
 	owner := actingHuman(ctx)
 	if owner == nil {
 		return BlockedDomain{}, fmt.Errorf("contacts: re-asking about %s needs a human to answer for it", base)
@@ -106,7 +107,7 @@ func (s *Store) ReopenWithheldDomain(ctx context.Context, domain string) (Blocke
 		// new message. Passing a date here would claim mail arrived that did
 		// not, and GREATEST would then hold that claim against the next real
 		// message's.
-		if err := reopenWithheldDispositionTx(ctx, tx, base, *owner, nil); err != nil {
+		if err := reopenWithheldDispositionTx(ctx, tx, base, *owner, nil, true); err != nil {
 			return err
 		}
 		// The answer is the row as it STOOD, not as it is now. Re-opening
@@ -140,7 +141,7 @@ func readOpenQuestionTx(ctx context.Context, tx pgx.Tx, domain string) (BlockedD
 	err := tx.QueryRow(ctx, `
 		SELECT d.id, d.domain, `+domainStanding+`
 		  FROM `+domainStandingFrom+` WHERE d.domain = $1`, domain).
-		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &company.id, &company.name)
+		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &company.id, &company.name, &d.ReasonCode, &d.SenderKind)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing has ever asked about this domain, so there is no question to
 		// re-open. Not-found rather than a fault: the caller named a domain

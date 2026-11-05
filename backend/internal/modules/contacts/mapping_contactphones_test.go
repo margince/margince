@@ -71,7 +71,7 @@ func TestCreateAndUpdateMapANumberTheSameWay(t *testing.T) {
 
 	var create crmcontracts.CreateContactRequest
 	decodeInto(t, `{"full_name":"Ada Lovelace","source":"manual",`+body[1:], &create)
-	made, err := contactCreateInput(create)
+	made, err := ContactCreationInput(create)
 	if err != nil {
 		t.Fatalf("mapping the create: %v", err)
 	}

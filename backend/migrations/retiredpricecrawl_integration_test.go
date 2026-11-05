@@ -16,10 +16,13 @@ func TestTheRetiredPriceCrawlUpgradeExpiresOnlyItsPendingProposals(t *testing.T)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
 	ctx := context.Background()
-	seed, err := conn.Exec(ctx, `INSERT INTO approval(kind,status,proposed_by,proposed_change,diff_hash,expires_at,decided_at)
- VALUES ('ai_model_rate_proposal','pending','agent:test','{}','h1',now() + interval '1 day',NULL),
-        ('ai_model_rate_proposal','rejected','agent:test','{}','h2',now() + interval '1 day',now()),
-        ('fx_rate_proposal','pending','agent:test','{}','h3',now() + interval '1 day',NULL)`)
+	if _, err := conn.Exec(ctx, `INSERT INTO app_user (email, display_name) VALUES ('decider@seed.test', 'Decider')`); err != nil {
+		t.Fatal(err)
+	}
+	seed, err := conn.Exec(ctx, `INSERT INTO approval(kind,status,proposed_by,proposed_change,diff_hash,expires_at,decided_at,requested_decider_id,requested_decider_source)
+ VALUES ('ai_model_rate_proposal','pending','agent:test','{}','h1',now() + interval '1 day',NULL,(SELECT id FROM app_user WHERE email = 'decider@seed.test'),'on_behalf_of'),
+        ('ai_model_rate_proposal','rejected','agent:test','{}','h2',now() + interval '1 day',now(),(SELECT id FROM app_user WHERE email = 'decider@seed.test'),'on_behalf_of'),
+        ('fx_rate_proposal','pending','agent:test','{}','h3',now() + interval '1 day',NULL,(SELECT id FROM app_user WHERE email = 'decider@seed.test'),'on_behalf_of')`)
 	if err != nil || seed.RowsAffected() != 3 {
 		t.Fatalf("seeding approvals: rows=%d err=%v", seed.RowsAffected(), err)
 	}

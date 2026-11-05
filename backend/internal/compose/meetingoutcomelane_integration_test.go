@@ -42,7 +42,7 @@ func unansweredSubjects(t *testing.T, e *integration.Env, now time.Time) []strin
 	t.Helper()
 	lane := attentionMeetingsAwaitingOutcome{store: activities.NewStore(InstallationDB(e.Pool))}
 	began := now.Truncate(24 * time.Hour)
-	rows, err := lane.Since(e.Admin(), began.AddDate(0, 0, -14), now, 12, attention.TasksVisible, ids.UUID{})
+	rows, err := lane.Since(e.Admin(), attention.MeetingWindow{From: began.AddDate(0, 0, -14), Until: now}, 12, attention.TasksVisible, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the outcome lane: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestTheOutcomeLaneReachesBackAFortnightAndNoFurther(t *testing.T) {
 // exactly the installations whose calendars are connected.
 func TestAnAnsweredMeetingLeavesTheOutcomeLane(t *testing.T) {
 	e := integration.Setup(t)
-	now := todayAt(14 * time.Hour)
+	now := todayAt(14*time.Hour).AddDate(0, 0, -1)
 	at := now.Truncate(24 * time.Hour).Add(9 * time.Hour)
 	bookCustomerMeeting(t, e, "Nobody has said", at, "")
 	bookCustomerMeeting(t, e, "Still booked", at, "booked")

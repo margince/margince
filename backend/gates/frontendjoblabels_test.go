@@ -13,6 +13,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"os"
 	"path"
@@ -136,6 +137,10 @@ func systemActingNames(t *testing.T, parsed gatekit.ParsedFile, consts packageCo
 				names = append(names, name)
 				return true
 			}
+			if prefix, ok := systemActingPrefix(parsed, consts, call.Args[1]); ok {
+				names = append(names, prefix)
+				return true
+			}
 			passed, ok := parameterIndex(fn, call.Args[1])
 			if !ok {
 				t.Errorf("%s: %s binds a system principal this census cannot read; name it with a string constant", parsed.Path, fn.Name.Name)
@@ -224,28 +229,34 @@ func (c packageConsts) of(dir string) map[string]string {
 		return table
 	}
 	table := gatekit.PackageStringConstants(c.t, dir)
+	// Alias folding resolves through this reader, including back to this package.
+	c.byDir[dir] = table
 	pending := constExprs(c.t, dir)
 	for progress := true; progress; {
 		progress = false
-		for name, expr := range pending {
-			if text, ok := gatekit.StringExpr(expr, table, gatekit.FoldStrict); ok {
+		for name, value := range pending {
+			if text, ok := foldConstant(c, value.parsed, value.expr); ok {
 				table[name] = text
 				delete(pending, name)
 				progress = true
 			}
 		}
 	}
-	c.byDir[dir] = table
 	return table
 }
 
-func constExprs(t *testing.T, dir string) map[string]ast.Expr {
+type declaredString struct {
+	parsed gatekit.ParsedFile
+	expr   ast.Expr
+}
+
+func constExprs(t *testing.T, dir string) map[string]declaredString {
 	t.Helper()
 	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}
-	out := map[string]ast.Expr{}
+	out := map[string]declaredString{}
 	for _, source := range sources {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
@@ -261,7 +272,7 @@ func constExprs(t *testing.T, dir string) map[string]ast.Expr {
 			}
 			for _, spec := range general.Specs {
 				if value, ok := spec.(*ast.ValueSpec); ok && len(value.Names) == 1 && len(value.Values) == 1 {
-					out[value.Names[0].Name] = value.Values[0]
+					out[value.Names[0].Name] = declaredString{gatekit.ParsedFile{Path: source, File: file}, value.Values[0]}
 				}
 			}
 		}
@@ -304,4 +315,37 @@ func moduleImportDir(file *ast.File, name string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func systemActingPrefix(parsed gatekit.ParsedFile, consts packageConsts, expr ast.Expr) (string, bool) {
+	joined, ok := expr.(*ast.BinaryExpr)
+	if !ok || joined.Op != token.ADD {
+		return "", false
+	}
+	prefix, ok := consts.read(parsed, joined.X)
+	if !ok || !strings.HasSuffix(prefix, ":") {
+		return "", false
+	}
+	name := strings.TrimSuffix(prefix, ":")
+	return name, systemPrincipalText.MatchString(name)
+}
+
+func TestSystemActorPrefixesRemainNamedWhileTaskIDsStayOpaque(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ expression, want string }{
+		{`"system:datatask:" + taskID`, "system:datatask"},
+		{`"system:" + arbitrary`, ""},
+		{`"agent:datatask:" + taskID`, ""},
+		{`"system:datatask:extra:" + taskID`, ""},
+		{`arbitrary + taskID`, ""},
+	} {
+		expr, err := parser.ParseExpr(tc.expression)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, ok := systemActingPrefix(gatekit.ParsedFile{Path: "internal/platform/datatask/acting.go"}, packageConsts{t: t, byDir: map[string]map[string]string{}}, expr)
+		if ok != (tc.want != "") || ok && got != tc.want {
+			t.Fatalf("prefix %s = %q, %v", tc.expression, got, ok)
+		}
+	}
 }

@@ -1,9 +1,9 @@
 # yaml-language-server: $schema=./margince.schema.json
 # config/margince.dev.yaml — what a DEV stack does differently.
 #
-# Read only when MARGINCE_ENV=dev, on top of config/margince.yaml, later layer
-# winning per key. `make dev` exports that variable for both the api and the
-# worker, so this file is the dev stack's posture and nothing else's.
+# Read as --config-file, over config/margince.yaml, winning per key (and per
+# root for seeds). `make dev` passes it to both the api and the worker, so this
+# file is the dev stack's posture and nothing else's.
 #
 # It is tracked, and config/margince.yaml is not. That is the point: what arms a
 # destructive capability on every engineer's machine belongs in a file review
@@ -13,6 +13,11 @@
 # A base key this file does not name keeps the base's value. To try something
 # without committing it, edit config/margince.yaml instead; it is yours.
 version: 1
+
+# The remote MCP connector, so a local stack serves /mcp and the OAuth
+# authorization server without an edit. The code default is off.
+mcp:
+  connector_enabled: true
 
 operations:
   # Arms POST /v1/admin/reset-data, the api and worker lanes behind it, and the
@@ -45,9 +50,9 @@ seeds:
   # running stack, use Settings -> AI; that is the path a real operator has.
   #
   # A per-engineer override goes in config/margince.yaml, which is yours and is
-  # gitignored — but note the layering: this overlay is applied AFTER the base,
-  # so declaring `seeds.ai_routing` here wins over the same key there. Comment
-  # this block out to let your own file bind instead.
+  # gitignored — but note the layering: this file is read AFTER the base, and
+  # its `seeds:` replace the base's whole. Comment this block out to let your
+  # own file bind instead.
   ai_routing:
     # cloud_frontier, not eu_hosted: the Gemini Developer API states no EU
     # processing region, so nothing here keeps text in the EU.

@@ -42,8 +42,10 @@ func ParseDomain(raw string) (Domain, error) {
 	host = strings.TrimSuffix(host, ".")
 
 	if !validHost(host) {
-		return Domain{}, &ParseError{Field: "domain", Code: "domain_malformed",
-			Message: "not a host name (labels of letters, digits and inner hyphens, with a dot)"}
+		return Domain{}, &ParseError{
+			Field: "domain", Code: "domain_malformed",
+			Message: "not a host name (labels of letters, digits and inner hyphens, with a dot)",
+		}
 	}
 	return Domain{s: host}, nil
 }

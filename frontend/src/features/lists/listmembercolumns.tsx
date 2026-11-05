@@ -10,7 +10,6 @@ import { EntityRef } from "../../components/entityref";
 import { Badge } from "../../design-system/atoms";
 import type { ListColumn } from "../../design-system/listtable";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import {
   customColumnLabel,
@@ -19,7 +18,8 @@ import {
 } from "../../lib/filterdata";
 import type { List } from "../../lib/lists.queries";
 import { decode, fieldsNamed } from "../../lib/segmentpredicate";
-import { useFieldValueText, vocabularyField } from "./listexplain";
+import { useViewerZone } from "../../lib/viewerzone";
+import { linkedText, useFieldValueText, vocabularyField } from "./listexplain";
 import { type MemberRow, memberName } from "./listmembers";
 
 /** How many filter fields are drawn at first; the rest wait in the Display menu. */
@@ -75,6 +75,9 @@ function useFilterColumns(list: List): ListColumn<MemberRow>[] {
         if (held?.hidden) {
           return <span className="t-caption">{t("lists.members.hidden")}</span>;
         }
+        if (held?.linked !== undefined) {
+          return linkedText(held.linked, t, held.linked_truncated);
+        }
         if (held?.value == null) {
           return "—";
         }
@@ -89,20 +92,23 @@ function useFilterColumns(list: List): ListColumn<MemberRow>[] {
 
 /** Who chose a Shortlist member, on which day, and the note they left. */
 function useChosenColumns(): ListColumn<MemberRow>[] {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   return [
     {
       key: "added_by",
       header: t("lists.members.addedBy"),
+      holds: "colleague",
       cell: (row) => row.listing?.added_by_name ?? "—",
     },
     {
       key: "added_at",
       header: t("lists.members.addedOn"),
+      holds: "date",
       cell: (row) =>
         row.listing?.created_at
-          ? formatDate(row.listing.created_at, locale, viewerZone())
+          ? formatDate(row.listing.created_at, locale, readerZone)
           : "—",
     },
     {

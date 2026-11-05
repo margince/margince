@@ -1,0 +1,139 @@
+/* Settings → Pipelines: the catalog above the pipeline it opens. */
+
+.settings-pipelines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+
+/* The standing marks and verbs in a pipeline's head band, and the retire row's
+   control. Wraps, because a badge plus two verbs is wider than a phone. */
+.pipeline-standing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* One pipeline in the catalog: the whole row is the one press that opens it,
+   so it fills the row the list draws around it. Wraps, so on a phone the count
+   takes a line of its own rather than squeezing the name. */
+.pipeline-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  width: 100%;
+  padding: var(--space-1) 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.pipeline-choice:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+/* The name is the only free text in the row, so it is what gives way. */
+.pipeline-choice-name {
+  flex: 1 1 8rem;
+  min-width: 0;
+  font-weight: var(--fontWeightMedium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pipeline-choice:hover .pipeline-choice-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Retired pipelines are opened, never ordered: they hold no place in the
+   catalog, so they sit in plates of their own below it. */
+.pipeline-retired {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.pipeline-retired > li {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  color: var(--textSecondary);
+}
+.pipeline-retired > li:has(> [aria-current="true"]) {
+  border-color: var(--borderStrong);
+  background: var(--bgChip);
+  color: var(--textPrimary);
+}
+
+.stage-hint {
+  margin: 0;
+}
+
+/* A stage name is free text nobody promised would be short. */
+.stage-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  font-weight: var(--fontWeightMedium);
+  overflow-wrap: anywhere;
+}
+.stage-dip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: var(--fontBodySmall);
+  color: var(--warningText);
+}
+.stage-dip svg {
+  inline-size: 12px;
+  block-size: 12px;
+  flex: none;
+}
+.stage-odds {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.stage-odds > [role="meter"] {
+  inline-size: 64px;
+}
+@media (width < 768px) {
+  .stage-odds > [role="meter"] {
+    display: none;
+  }
+}
+/* Block by the global svg reset, so the end edge comes from the margin: the
+   lock stands where the step numbers above it end. */
+.stage-lock {
+  inline-size: 16px;
+  block-size: 16px;
+  margin-inline-start: auto;
+  color: var(--textSecondary);
+}
+
+/* A stage's exit criteria, opened under its row: the list, then the verb that
+   adds one, at the end edge under the rows' own verbs. */
+.stage-criteria {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.stage-criteria-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-3);
+}
+.stage-criteria-foot > p {
+  margin: 0 auto 0 0;
+}

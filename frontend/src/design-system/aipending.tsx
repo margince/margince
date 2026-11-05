@@ -6,24 +6,11 @@ import { PendingBody } from "./atoms";
 import "./aipending.css";
 
 /**
- * AiPending is the wait for something Margince is reading or writing: the
- * indigo tile breathing where the agent's mark will stand, the ragged lines
- * of the answer that has not arrived, and the sentence saying what is being
- * read. It composes PendingBody rather than restating it — the announcement
- * and the pulse each have one home — and adds the one thing a plain
- * placeholder cannot say: that a MACHINE is at work, and on what.
+ * AiPending is the wait while Margince reads or writes. Specks drift where the
+ * answer will go, and `AiReveal` carries it in when it lands.
  *
- * The tile is the claim of authorship (the same tile a finished 360 opens
- * with), so it is the part that moves. The motion is opacity and transform
- * only, and under reduced motion the tile rests and the sheen is gone, while
- * the lines keep the placeholder's own resting shape — the shape is what says
- * "this is coming".
- *
- * `label` is REQUIRED for PendingBody's reason: it is the only line a reader
- * who cannot see the tile gets, and only the caller knows what is being read.
- * It is shown as well as spoken, because this wait is the long kind — a model
- * call is upwards of twenty seconds cold, and a mute grey block that long
- * reads as broken.
+ * `label` is shown as well as spoken. A cold model call can take twenty
+ * seconds, and a mute grey block that long looks broken.
  */
 export function AiPending({
   label,
@@ -42,7 +29,6 @@ export function AiPending({
       <div className="aipending-body">
         <PendingBody label={label} lines={lines} visible />
       </div>
-      <span className="aipending-sheen" aria-hidden="true" />
     </div>
   );
 }

@@ -4,8 +4,8 @@
 package automation
 
 // The automations transport slice (B-E15.4): compose embeds Handlers so
-// the generated stubs are shadowed. Mutations are contract-annotated
-// human-only; the store re-gates on the `automation` RBAC object.
+// the generated stubs are shadowed. The store gates each mutation on the
+// `automation` RBAC object.
 
 import (
 	"encoding/json"
@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -158,7 +159,17 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// An automation always has a name, params and a status, so a null names
+	// nothing it can be set to.
+	if cleared := httperr.ClearedFields(r); len(cleared) > 0 {
+		httperr.Write(w, r, &storekit.NotClearableError{Field: cleared[0]})
+		return
+	}
 	in := UpdateAutomationInput{Name: req.Name, IfVersion: ifVersion}
+	if req.OwnerId != nil {
+		owner := ids.From[ids.UserKind](ids.UUID(*req.OwnerId))
+		in.OwnerID = &owner
+	}
 	if req.Params != nil {
 		in.Params = *req.Params
 	}
@@ -171,7 +182,7 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 			enabled := false
 			in.Enabled = &enabled
 		default:
-			httperr.Write(w, r, httperr.Validation("status", "invalid", "status is enabled or paused"))
+			httperr.Write(w, r, httperr.Validation(keyStatus, "invalid", "status is enabled or paused"))
 			return
 		}
 	}
@@ -380,6 +391,7 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		Name:         a.Name,
 		Status:       status,
 		Params:       params,
+		OwnerId:      wireOwner(a.OwnerID),
 		Version:      &version,
 		CreatedAt:    a.CreatedAt,
 		UpdatedAt:    a.UpdatedAt,
@@ -433,4 +445,11 @@ func (h Handlers) RetryAutomationRun(w http.ResponseWriter, r *http.Request, id 
 		result.Refusal = &refusal
 	}
 	httperr.WriteJSON(w, http.StatusOK, result)
+}
+
+func wireOwner(owner *ids.UserID) *openapi_types.UUID {
+	if owner == nil {
+		return nil
+	}
+	return new(openapi_types.UUID(owner.UUID))
 }

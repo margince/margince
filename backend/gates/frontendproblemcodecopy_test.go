@@ -280,7 +280,7 @@ func other(w http.ResponseWriter, r *http.Request) { he.Unavailable(w, r, "gatew
 	}
 	// `code` is also a package constant here, so folding by name alone would
 	// read the parameter in computed() as a code.
-	consts := map[string]string{"codeDomain": "duplicate_domain", "code": "duplicate_contact_lead"}
+	consts := map[string]string{"codeDomain": "duplicate_domain", "code": "lead_holds_email"}
 	for _, probe := range []struct {
 		builder codeBuilder
 		codes   string

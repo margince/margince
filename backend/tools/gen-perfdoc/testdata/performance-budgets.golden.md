@@ -15,9 +15,10 @@ record is evidence about one machine on one day.
 Re-measure with `make bench-perf`, `make bench-record`,
 `make bench-capture`, `make bench-daily` (each needs `make db-up`) or
 `make bench-mobile`. Each writes its own record and re-renders this page.
-The weekly scheduled job runs `make bench-perf-check` and
-`make bench-mobile-check`, which measure without recording, so nothing
-here changes until somebody measures by hand.
+`make bench-perf-check` and `make bench-mobile-check` measure
+without recording. The weekly scheduled job records the SMB tier of
+`bench-perf` and `bench-mobile` and opens a pull request with the
+records, so a row changes only when a maintainer merges it.
 
 ## The budgets
 
@@ -33,6 +34,8 @@ here changes until somebody measures by hand.
 | `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 3100 ms | over budget (#4912) | 2026-10-07 |
 | `PERF-9` | Analytics screen | < 300 ms |  | no data | 2026-10-07 |
 | `PERF-10` | Search as the screen calls it | < 1 s | 420 ms | within budget | 2026-10-07 |
+| `PERF-11` | System health compact overview | < 750 ms |  | **not measured** |  |
+| `PERF-12` | System health diagnostic reads | < 1 s |  | **not measured** |  |
 | `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 240 ms | over budget (#7068) | 2026-10-07 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 |  | **not measured** |  |
 | `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived |  | **not measured** |  |
@@ -61,6 +64,20 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 ### Known-issue entries that could be removed
 
 - flow contact_360 is at or under 80% of its budget for every seat: remove the row for #7085
+
+## Strict Home acceptance
+
+Home's acceptance targets, judged without the known-issue list. A row fails when it was not measured,
+when any round's p95 reached its target, or when an answer was a server error, a refusal or named a
+source it could not read. A pass at 30 samples is exploratory, not a qualification.
+
+**Failed** on 2 of 3 rows.
+
+| requirement | measurement | seat | p95 | target | samples | verdict |
+|---|---|---|---|---|---|---|
+| R02 | `worklist` | rep | 2899 ms | 750 ms | 30 | **FAILED**: p95 2899 ms, over 750 ms |
+| R05 | `home_brief` | rep | 26.0 ms | 200 ms | 30 | pass |
+| R06 | `admin_rail_embed_reindex_identities` | admin |  | 100 ms | 0 | **FAILED**: no data |
 
 ## Machines
 

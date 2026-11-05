@@ -39,7 +39,7 @@ export async function pickOption(
   optionLabel: string | RegExp,
 ): Promise<void> {
   await user.click(control);
-  const listbox = screen.getByRole("listbox");
+  const listbox = await screen.findByRole("listbox");
   await user.click(within(listbox).getByRole("option", { name: optionLabel }));
 }
 
@@ -61,7 +61,7 @@ export async function toggleOptions(
   optionLabels: readonly (string | RegExp)[],
 ): Promise<void> {
   await user.click(control);
-  const listbox = screen.getByRole("listbox");
+  const listbox = await screen.findByRole("listbox");
   for (const optionLabel of optionLabels) {
     await user.click(
       within(listbox).getByRole("option", { name: optionLabel }),
@@ -103,6 +103,6 @@ export async function pickSuggestion(
   suggestion: string | RegExp,
 ): Promise<void> {
   await user.click(control);
-  const listbox = screen.getByRole("listbox");
+  const listbox = await screen.findByRole("listbox");
   await user.click(within(listbox).getByRole("option", { name: suggestion }));
 }

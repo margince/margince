@@ -1,0 +1,39 @@
+# CASE 62 — Held meetings that became opportunities.
+#
+# A routing case. read_reports fronts three reads (standard metrics, a named
+# report grouped and filtered, and the evidence behind a saved run), and
+# read_analytics fronts a free-form query. The meeting-to-opportunity conversion
+# is a report the product ships and the analytics engine does not carry, so the
+# only route that answers it is run_report with that report. A model that sums
+# meetings and deals by hand, or writes a query of its own, reaches a number the
+# report would not give: it joins the handoff acceptance, and a deal at the same
+# company converts nothing.
+#
+# The prompt names no tool and no report key. The pinned report argument is the
+# whole assertion, and the answer's figure is not graded: the seed holds no
+# accepted handoff, so a correct answer may well say none.
+name: case62_held_meetings_to_opportunities
+criteria: [1]
+writes: false
+
+prompt: |
+  Quarterly review with my manager is coming up. Of the meetings I held, how
+  many turned into an opportunity?
+
+must_call:
+  - run_report
+
+must_call_with:
+  - run_report.report=meeting-conversion
+
+may_call:
+  - run_analytics_query
+  - read_reporting
+  - list_records
+  - search_records
+  - query_workspace
+  - read_workspace
+  - whoami
+
+runs: 3
+pass_at: 2

@@ -88,9 +88,11 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 		AsOf:           review.AsOf,
 		Narrative:      nullableText(review.Narrative),
 		NarratedAt:     review.NarratedAt,
-		Counts:         countsToWire(review.Counts),
-		Pipeline:       pipelineToWire(review.Money),
-		Deals:          deals,
+		// Always sent, so a client can tell a withheld zero from a counted one.
+		MeetingsWithheld: &review.MeetingsWithheld,
+		Counts:           countsToWire(review.Counts),
+		Pipeline:         pipelineToWire(review.Money),
+		Deals:            deals,
 	}
 	if review.Prior != nil {
 		out.Prior = &crmcontracts.WeeklyReviewPrior{
@@ -157,6 +159,7 @@ func scorecardToWire(card Scorecard) *crmcontracts.WeeklyReviewScorecard {
 	if l := card.Lead; l != nil {
 		out.Lead = &crmcontracts.WeeklyScorecardLeadBlock{
 			Advanced: l.Advanced, Disqualified: l.Disqualified, Promoted: l.Promoted,
+			Arrived:          l.Arrived,
 			AnsweredInTarget: l.AnsweredInTarget, Breached: l.Breached,
 			MeetingsBooked: l.Booked, MeetingsHeld: l.Held, MeetingsNoShow: l.NoShow,
 			MeetingsPartialHistory: l.PartialHistory,
@@ -187,8 +190,7 @@ func outlookToWire(horizon Outlook) crmcontracts.WeeklyReviewOutlook {
 		PeriodEnd:     openapi_types.Date{Time: horizon.PeriodEnd},
 		BaseCurrency:  horizon.BaseCurrency,
 		WonMinor:      horizon.WonMinor,
-		CommitMinor:   horizon.CommitMinor,
-		BestCaseMinor: horizon.BestCaseMinor,
+		LikelyMinor:   horizon.LikelyMinor,
 		WeightedMinor: horizon.WeightedMinor,
 		Movement:      movementToWire(horizon.Movement),
 	}

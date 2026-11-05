@@ -71,6 +71,39 @@ export const DetailModal: Story = {
   },
 };
 
+// The dialog cites an account ending's source logged for its date alone: the
+// source date is that date on the record's clock, with no time.
+export const DetailModalDayLifecycleSource: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /approvals/ap-1": () =>
+        jsonResponse({
+          ...detail,
+          preview: {
+            version: 2,
+            state: "ready",
+            reviewer_reason: "record_authority",
+            changes: [],
+            lifecycle_evidence: {
+              scope: "company",
+              occurred_at: "2026-07-31T12:00:00Z",
+              occurred_precision: "day",
+            },
+          },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ApprovalDetailModal approvalId="ap-1" open onClose={() => {}} />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("Send the follow-up to Anna Weber");
+  },
+};
+
 // The editor is a controlled surface: the story owns the draft the same way the
 // row does, so what is typed is what would be submitted.
 function Editor({

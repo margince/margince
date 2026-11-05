@@ -117,7 +117,7 @@ The 5 tables owned by `integrations`, as the migrations build them. [Back to the
 | `state` | `text` | yes | One of `queued`, `submitting`, `in_progress`, `completed`, `no_match`, `skipped` and 3 more. |
 | `subject_kind` | `text` | yes | The kind of record this run enriches, drawn from the canonical EntityType vocabulary. |
 | `submitted_at` | `timestamp with time zone` |  |  |
-| `trigger` | `text` | yes | What asked for this run. |
+| `trigger` | `text` | yes | One of `automatic_create`, `automatic_import`, `automatic_backfill`, `scheduled_refresh`, `manual`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 

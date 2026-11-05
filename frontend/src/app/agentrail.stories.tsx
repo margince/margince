@@ -27,6 +27,10 @@ import { AgentRail } from "./agentrail";
 type Answers = Readonly<{
   aiState: "configured" | "unconfigured" | "development";
   connectorStatus: "connected" | "reauth_required";
+  /** The account's Calendar grant too, with this status; absent is mail only. */
+  calendarStatus?: "connected" | "reauth_required";
+  /** The connections read itself fails, so nobody knows what is reachable. */
+  connectorsReadFails?: boolean;
   licenseState: "valid" | "absent" | "rejected";
   approvals: number;
   /** What `/ai/calls` answers. It feeds the runtime row's served model and
@@ -157,30 +161,45 @@ function story(
           over_limit: false,
           checked_at: "2026-08-01T09:00:00Z",
         }),
-      "GET /approvals": () =>
+      "GET /approvals/pending-count": () =>
         jsonResponse({
-          data: Array.from({ length: answers.approvals }, (_, index) => ({
-            id: `approval-${index}`,
-            status: "pending",
-          })),
+          count: answers.approvals,
+          as_of: "2026-08-01T09:00:00Z",
         }),
       "GET /connectors": () =>
-        jsonResponse({
-          data: [
-            {
-              provider: "gmail",
-              status: answers.connectorStatus,
-              account_label: "ada@acme.test",
-              backfill: answers.importing
-                ? {
-                    state: "running",
-                    estimated_messages: answers.importing.estimated,
-                    counts: { messages_scanned: answers.importing.scanned },
-                  }
-                : { state: "none" },
-            },
-          ],
-        }),
+        answers.connectorsReadFails
+          ? jsonResponse(
+              { code: "internal", title: "internal error", status: 500 },
+              500,
+            )
+          : jsonResponse({
+              data: [
+                ...(answers.calendarStatus
+                  ? [
+                      {
+                        id: "018f3a1b-0000-7000-8000-0000000000c2",
+                        provider: "gcal",
+                        status: answers.calendarStatus,
+                        account_label: "ada@acme.test",
+                        backfill: { state: "none" },
+                      },
+                    ]
+                  : []),
+                {
+                  id: "018f3a1b-0000-7000-8000-0000000000c1",
+                  provider: "gmail",
+                  status: answers.connectorStatus,
+                  account_label: "ada@acme.test",
+                  backfill: answers.importing
+                    ? {
+                        state: "running",
+                        estimated_messages: answers.importing.estimated,
+                        counts: { messages_scanned: answers.importing.scanned },
+                      }
+                    : { state: "none" },
+                },
+              ],
+            }),
       "GET /ai/calls": () =>
         jsonResponse({
           data: answers.calls.map((call, index) =>
@@ -188,42 +207,14 @@ function story(
           ),
           tasks: [],
         }),
-      "GET /ai/usage": () =>
+      "GET /ai/usage/summary": () =>
         jsonResponse({
-          // One priced task and one the server could not price, which is the
-          // shape the month actually arrives in: the total is the priced lines
-          // and the unpriced one adds nothing to it.
-          days:
-            answers.pricedMinor === undefined
-              ? []
-              : [
-                  {
-                    date: "2026-08-01",
-                    tasks: [
-                      {
-                        task: "enrich",
-                        tier: "cheap_cloud",
-                        calls: 2,
-                        tokens_in: 100,
-                        tokens_out: 40,
-                        cost_est_minor: answers.pricedMinor,
-                      },
-                      {
-                        task: "summarize",
-                        tier: "cheap_cloud",
-                        calls: 1,
-                        tokens_in: 30,
-                        tokens_out: 10,
-                      },
-                    ],
-                  },
-                ],
-          budget: {
-            monthly_tokens: 0,
-            spent_tokens: 0,
-            band: "normal",
-            currency: "USD",
-          },
+          // A month the server could not price carries no figure at all.
+          ...(answers.pricedMinor === undefined
+            ? {}
+            : { cost_est_minor: answers.pricedMinor }),
+          currency: "USD",
+          computed_at: "2026-08-01T09:00:00Z",
         }),
       "GET /me/ai-activity": () =>
         jsonResponse({
@@ -395,6 +386,25 @@ export const LicenceRefused: Story = {
  *  paused. Red means not connected, and the line says what is not connected. */
 export const SourceUnreachable: Story = {
   render: story({ ...HEALTHY, connectorStatus: "reauth_required" }),
+};
+
+/** Error: one Google account's Gmail and Calendar grants both lapsed. They
+ *  share the account's address, so the panel names each with its provider and
+ *  keys it by its connection, not by the address they share. */
+export const SameAccountUnreachable: Story = {
+  render: story({
+    ...HEALTHY,
+    connectorStatus: "reauth_required",
+    calendarStatus: "reauth_required",
+  }),
+  play: openThePanel,
+};
+
+/** Idle, but the connections read failed: nobody checked which sources are
+ *  reachable, so the line says so instead of "Nothing needs attention", and
+ *  keeps saying it beside the approvals that are waiting. */
+export const SourcesUnchecked: Story = {
+  render: story({ ...HEALTHY, approvals: 2, connectorsReadFails: true }),
 };
 
 /** Error: no model bound at all — the one posture where nothing else on the

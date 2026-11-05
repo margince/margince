@@ -18,6 +18,7 @@ package ai
 // the line ADR-0061 §2 draws and settingscatalog_test.go enforces.
 
 import (
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
@@ -28,6 +29,9 @@ import (
 // reading a model's price, and a role that may see the second has no business
 // changing the first.
 const routingSettingsObject = "ai_routing"
+
+// settingsAuditVerb is the audit action every ai settings change records.
+const settingsAuditVerb = "update"
 
 // RoutingKey is the settings key the binding is stored under, exported so the
 // composition root can seed it without re-spelling the string.
@@ -40,24 +44,37 @@ const RoutingKey = "ai.routing"
 // absent, exactly as one with no routing file did. A default that named
 // vendors would send an installation's text somewhere nobody chose.
 //
-// It SURVIVES a data reset, for the reason AsInstallationIdentity names: it is
-// a value bootstrap takes from the deployment configuration, like the
-// installation's name and currency. A reset wipes an installation's data, not
-// the decision about which vendor may process it — and wiping it would be
-// quiet, because a dev stack re-seeds the binding from its routing file on the
-// next boot while a production installation, which has no file, would simply
-// come back with its AI lanes gone.
-var Routing = settings.Define[RoutingConfig](
-	RoutingKey,
-	routingSettingsObject,
-	"update",
-	RoutingConfig{},
-	validateStoredRouting,
-).AsInstallationIdentity()
+// It SURVIVES a data reset: bootstrap takes it from the deployment
+// configuration, like the installation's name. A reset wipes data, not the
+// choice of vendor. Wiping it would also be quiet. A dev stack re-seeds the
+// binding on the next boot; an installation with no seed loses its AI lanes.
+//
+// A boot value replaces the whole document. A binding is judged as one, and a
+// tier from one source beside a profile from another is one nobody wrote.
+var Routing = config.DefineStored(config.Spec[RoutingConfig]{
+	Key: "ai.routing",
+	// Not MARGINCE_AI_ROUTING: the retired --ai-routing flag keeps that name,
+	// and an old routing-file path in it must not be read as a binding.
+	Env:      "MARGINCE_AI_ROUTING_BINDING",
+	Type:     config.Struct[RoutingConfig](),
+	Validate: validateStoredRouting,
+	Doc:      "The tier-to-model binding, in the shape seeds.ai_routing takes (JSON in the environment). Unset binds no models.",
+}, config.Store{RBACObject: routingSettingsObject, AuditVerb: settingsAuditVerb, SurvivesDataReset: true})
 
-// Definitions is the ai module's contribution to the settings registry.
+// ConfigSettings are the ai settings an administrator may also change at run
+// time, apart from the provider keys, which Settings lists.
+func ConfigSettings() []config.Any {
+	return append(RoutingSurface(), BudgetSettings, PriceSyncSettings)
+}
+
+// RoutingSurface are the settings whose locks GET /ai/routing reports: the
+// binding, and the task overrides that share its admin screen.
+func RoutingSurface() []config.Any { return []config.Any{Routing, TaskOverridesSetting} }
+
+// Definitions are the ai rows that are not configuration: the record of the
+// last price sync.
 func Definitions() []settings.Definition {
-	return append([]settings.Definition{Routing, TaskOverridesSetting, BudgetSettings, PriceSyncSettings, PriceSyncLastRun}, keyDefinitions()...)
+	return []settings.Definition{PriceSyncLastRun}
 }
 
 // validateStoredRouting holds a stored binding to the same bar the file always

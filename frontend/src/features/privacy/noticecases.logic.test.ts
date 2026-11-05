@@ -52,8 +52,8 @@ describe("which duties are still owed", () => {
     // NOTICE_STATES without somebody deciding whether a case sitting in it is
     // still owed fails here, which is the drift a hand-written second list
     // hides. The backend's own census works the same way.
-    expect(NOTICE_STATES).toHaveLength(9);
-    expect(UNRESOLVED_NOTICE_STATES).toHaveLength(5);
+    expect(NOTICE_STATES).toHaveLength(10);
+    expect(UNRESOLVED_NOTICE_STATES).toHaveLength(6);
   });
 });
 

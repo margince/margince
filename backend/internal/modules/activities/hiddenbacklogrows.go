@@ -124,7 +124,7 @@ func (s *Store) HiddenWaitingRows(
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// One horizon for both halves, as in HiddenWaiting: two cutoffs would
 		// make the difference report a changed clock, not the relaxed rule.
-		measured, err := s.waitingHorizonFor(ctx, tx)
+		measured, err := s.waitingHorizonFor(ctx, tx, asOf)
 		if err != nil {
 			return err
 		}
@@ -151,12 +151,8 @@ func (s *Store) HiddenWaitingRows(
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var row WaitingReply
-			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
-				&row.ContactID, &row.CompanyID, &row.DealID,
-				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
-				&row.MeetingBookedAt); err != nil {
+			row, err := scanWaitingReply(rows)
+			if err != nil {
 				return err
 			}
 			out = append(out, row)

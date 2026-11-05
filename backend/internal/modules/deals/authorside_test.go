@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 var ourDomains = []string{"acme-sales.example", "Acme-Sales.De"}
@@ -67,16 +69,49 @@ func TestAnInboundMailFromTheBuyerIsBuyerSide(t *testing.T) {
 	}
 }
 
-// A sub-domain is not ours unless it is listed. Folding one in would let
-// anybody who can register a look-alike host author seller-side evidence —
-// and seller-side is the SAFE answer, so the risk runs the other way: a
-// buyer's mail from a look-alike domain would be dismissed as our own.
-func TestALookAlikeSubDomainIsNotOurs(t *testing.T) {
-	side := AuthorSideOf(directionInbound, []Participant{
-		{Role: roleFrom, Address: "spoof@mail.acme-sales.example"},
-	}, ourDomains)
-	if side != AuthorBuyer {
-		t.Fatalf("mail.acme-sales.example was treated as ours (%s); only listed domains are", side)
+// Ours is an exact own domain, folded: a unicode spelling is the same domain
+// as its punycode, in any case.
+func TestAnOwnDomainInAnySpellingIsOurs(t *testing.T) {
+	own := []string{"acme-sales.example", "xn--bcher-kva.example"}
+	for _, address := range []string{"rep@ACME-SALES.example", "anna@bücher.example", "anna@BÜCHER.example", "anna@xn--bcher-kva.example"} {
+		if side := AuthorSideOf(directionInbound, []Participant{{Role: roleFrom, Address: address}}, own); side != AuthorSeller {
+			t.Errorf("%s read as %s; it is at an own domain", address, side)
+		}
+	}
+	if side := AuthorSideOf(directionInbound, []Participant{{Role: roleFrom, Address: "anna@bücher-other.example"}}, own); side != AuthorBuyer {
+		t.Errorf("a lookalike sibling read as %s", side)
+	}
+}
+
+// A subdomain of an own domain that nobody listed proves neither side. A
+// subsidiary there never confirms a milestone as the buyer, and a customer on a
+// delegated subdomain is never read as us.
+func TestAnUnlistedOwnSubdomainSettlesNeitherSide(t *testing.T) {
+	cases := []struct {
+		address string
+		own     []string
+	}{
+		{"spoof@mail.acme-sales.example", ourDomains},
+		{"ines@customer.example.com", []string{"example.com"}},
+		{"anna@post.bücher.example", []string{"xn--bcher-kva.example"}},
+	}
+	for _, c := range cases {
+		participant := Participant{Role: roleFrom, Address: c.address}
+		if side := AuthorSideOf(directionInbound, []Participant{participant}, c.own); side != AuthorUnknown {
+			t.Errorf("%s read as %s, want unknown: an unlisted own subdomain proves neither side", c.address, side)
+		}
+		if CountsAsBuyerParticipant(participant, vouched(c.own), nil) {
+			t.Errorf("%s counted as a buyer on the activity", c.address)
+		}
+	}
+	// The listed subdomain itself is ours, and an outside domain is the buyer.
+	listed := []string{"example.com", "customer.example.com"}
+	if side := AuthorSideOf(directionInbound, []Participant{{Role: roleFrom, Address: "rep@customer.example.com"}}, listed); side != AuthorSeller {
+		t.Errorf("a listed own subdomain read as %s", side)
+	}
+	outside := Participant{Role: roleFrom, Address: "ines@customer.test"}
+	if side := AuthorSideOf(directionInbound, []Participant{outside}, listed); side != AuthorBuyer || !CountsAsBuyerParticipant(outside, vouched(listed), nil) {
+		t.Errorf("an outside domain read as %s", side)
 	}
 }
 
@@ -349,9 +384,56 @@ func TestOnlyARealOutsideAddressCountsAsTheBuyerBeingThere(t *testing.T) {
 		"a colleague on our own domain":  {Participant{Role: "attendee", Address: "colleague@acme-sales.example"}, false},
 		"a contact link with no address": {Participant{Role: "attendee", ContactLinked: true}, false},
 		"a row naming nobody":            {Participant{Role: "attendee"}, false},
+		"an address with no domain":      {Participant{Role: "attendee", Address: "guest"}, false},
 	} {
-		if got := CountsAsBuyerParticipant(tc.p, ourDomains); got != tc.want {
+		if got := CountsAsBuyerParticipant(tc.p, vouched(ourDomains), nil); got != tc.want {
 			t.Errorf("%s: counted as buyer = %v, want %v", name, got, tc.want)
+		}
+	}
+}
+
+// vouched is the parties when every own domain is one a human vouched for.
+func vouched(domains []string) owndomain.Parties {
+	own := owndomain.New(domains)
+	return owndomain.Parties{Trusted: own, Possible: own}
+}
+
+// The buyer count follows the rule capture used to keep the meeting, so a
+// meeting capture judged internal proves no buyer attendance.
+func TestTheBuyerCountFollowsCapturesMeetingRule(t *testing.T) {
+	gmail := func(domain string) bool { return domain == "gmail.example" }
+	unconfirmed := owndomain.Parties{Consumer: gmail}
+	candidate := owndomain.Parties{
+		Trusted: owndomain.New(ourDomains), Possible: owndomain.New(append([]string{"labs.example"}, ourDomains...)), Consumer: gmail,
+	}
+	for name, tc := range map[string]struct {
+		parties   owndomain.Parties
+		seat      string
+		attendees []string
+		want      int
+	}{
+		"no confirmed domain, colleagues only":  {unconfirmed, "rep@ourco.example", []string{"colleague@ourco.example"}, 0},
+		"no confirmed domain, a real buyer":     {unconfirmed, "rep@ourco.example", []string{"colleague@ourco.example", "ines@customer.example"}, 1},
+		"a consumer seat domain proves nothing": {unconfirmed, "rep@gmail.example", []string{"friend@gmail.example"}, 1},
+		"a candidate seat domain is ours":       {candidate, "rep@labs.example", []string{"dev@labs.example"}, 0},
+		"a candidate domain the seat is not on": {candidate, "rep@acme-sales.example", []string{"dev@labs.example"}, 1},
+		"a confirmed domain is ours":            {candidate, "rep@labs.example", []string{"colleague@acme-sales.example"}, 0},
+		"an unknown guest proves nothing":       {candidate, "rep@acme-sales.example", []string{"guest", ""}, 0},
+		"a buyer beside an unknown guest":       {candidate, "rep@acme-sales.example", []string{"guest", "ines@customer.example"}, 1},
+	} {
+		participants := []Participant{{Role: roleFrom, UserID: "u1", Address: tc.seat}}
+		for _, a := range tc.attendees {
+			participants = append(participants, Participant{Role: "attendee", Address: a})
+		}
+		seats := SeatDomains(participants)
+		got := 0
+		for _, p := range participants {
+			if CountsAsBuyerParticipant(p, tc.parties, seats) {
+				got++
+			}
+		}
+		if got != tc.want {
+			t.Errorf("%s: %d buyers, want %d", name, got, tc.want)
 		}
 	}
 }

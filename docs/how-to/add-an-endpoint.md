@@ -18,7 +18,8 @@ store writes, which step 3 needs: [explanation/write-backbone.md](../explanation
      issuing a passport). Or `auth-bootstrap` (sign-in and session code).
 
    The generator **fails** on a data-changing operation with neither, so an endpoint with no tier cannot
-   ship.
+   ship. An operation with `x-mcp-tool` must also pass the role sweep:
+   [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md).
 
    Some handlers **call a model and keep the request open** for the answer (a draft, a brief, an ask).
    Mark such an operation `x-waits-on-model: always`. Use `on-miss` when it serves a stored answer and
@@ -69,7 +70,7 @@ store writes, which step 3 needs: [explanation/write-backbone.md](../explanation
 
 5. **Add a migration if the schema changed.**
    See [apply-migrations.md](apply-migrations.md).
-   Add any new table to the "Tables owned" list in the owning module's `doc.go`.
+   Give any new table its owner in `tableOwners` (`backend/gates/tableownerregistry_test.go`).
 
 6. **Check** with `make check`.
    `build` and the `var _ ServerInterface = Server{}` line prove the operation exists in the contract.

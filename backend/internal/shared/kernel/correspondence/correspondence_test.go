@@ -3,7 +3,11 @@
 
 package correspondence
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence/correspondencetest"
+)
 
 // The whole point of the package: callers in three places must arrive at the
 // same key for the same address, however the sender capitalised it. Two writers
@@ -49,5 +53,51 @@ func TestFoldLeavesAnEmptyAddressEmpty(t *testing.T) {
 	// key would lock a subject that does not exist.
 	if got := Fold("   "); got != "" {
 		t.Errorf("Fold(whitespace) = %q, want empty", got)
+	}
+}
+
+func TestAPlusTagIsCutFromTheLocalPart(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct{ local, want string }{
+		{"anna", "anna"},
+		{"anna+crm", "anna"},
+		{"anna+crm+2", "anna"},
+		{"+crm", "+crm"},
+		{"", ""},
+		// A name is derived from the dotted words, so the Gmail dot fold stays out.
+		{"anna.weber", "anna.weber"},
+		{"anna.weber+crm", "anna.weber"},
+	}
+	for _, c := range cases {
+		if got := LocalPartBase(c.local); got != c.want {
+			t.Errorf("LocalPartBase(%q) = %q, want %q", c.local, got, c.want)
+		}
+	}
+}
+
+func TestABaseAddressIsFoldedAndUntagged(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range correspondencetest.BaseAddressCases {
+		got, changed := BaseAddress(c.Address)
+		if got != c.Base || changed != c.Changed {
+			t.Errorf("BaseAddress(%q) = (%q, %v), want (%q, %v)", c.Address, got, changed, c.Base, c.Changed)
+		}
+	}
+}
+
+// Routing and the correspondence lock compare the folded address, so two
+// Gmail spellings of one mailbox stay two keys there.
+func TestFoldKeepsTheDotsAndDomainOfAGmailAddress(t *testing.T) {
+	t.Parallel()
+
+	for address, want := range map[string]string{
+		"A.B@Gmail.com":      "a.b@gmail.com",
+		"a.b@googlemail.com": "a.b@googlemail.com",
+	} {
+		if got := Fold(address); got != want {
+			t.Errorf("Fold(%q) = %q, want %q", address, got, want)
+		}
 	}
 }

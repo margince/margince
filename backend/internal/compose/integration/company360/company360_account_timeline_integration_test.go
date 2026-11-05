@@ -392,13 +392,15 @@ func TestLastTouchSeparatesWhoWroteLastAndWalksTheSameThreeLinks(t *testing.T) {
 	employAt(t, e, employee, company, nil)
 
 	// The newest inbound reaches the account only through its contact, which
-	// is how capture files real mail — a direct-link-only reading would miss it.
+	// is how capture files real mail. The older one is filed on the account
+	// alone, so it moves neither clock: the clocks roll up the contacts'.
 	oldInbound := integration.AccountMailDirectedAt(t, owner, e.WS, "old reply", "inbound", company360Clock.Add(-90*time.Hour))
 	integration.LinkToCompany(t, e, oldInbound, company)
 	newInbound := integration.AccountMailDirectedAt(t, owner, e.WS, "their reply", "inbound", company360Clock.Add(-30*time.Hour))
 	integration.LinkActivity(t, owner, newInbound, "contact", employee)
+	integration.LinkActivitySender(t, owner, newInbound, employee)
 	outbound := integration.AccountMailDirectedAt(t, owner, e.WS, "our nudge", "outbound", company360Clock.Add(-2*time.Hour))
-	integration.LinkToCompany(t, e, outbound, company)
+	integration.LinkActivity(t, owner, outbound, "contact", employee)
 
 	view, err := svc.Assemble(rep, ids.From[ids.CompanyKind](company))
 	if err != nil {
@@ -422,8 +424,10 @@ func TestLastTouchIsNullRatherThanZeroWhenNothingWasCaptured(t *testing.T) {
 
 	company := e.SeedCompany(t, "Silent Co", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	employee := e.SeedContact(t, "Quiet Contact", &e.Rep1)
+	employAt(t, e, employee, company, nil)
 	outbound := integration.AccountMailDirectedAt(t, owner, e.WS, "our first mail", "outbound", company360Clock.Add(-time.Hour))
-	integration.LinkToCompany(t, e, outbound, company)
+	integration.LinkActivity(t, owner, outbound, "contact", employee)
 
 	view, err := svc.Assemble(rep, ids.From[ids.CompanyKind](company))
 	if err != nil {

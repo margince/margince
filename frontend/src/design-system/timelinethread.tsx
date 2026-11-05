@@ -1,9 +1,9 @@
 import { Lock, Send } from "lucide-react";
 import { useState } from "react";
-import { formatDate, formatNumber, formatTimeOfDay } from "../format/format";
+import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import { Avatar, Button } from "./atoms";
-import { EmailWords } from "./emailentry";
+import { attachmentCount, EmailFiles, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
 import { type ContactOn, withWhom } from "./participants";
 import { ProvenanceTag } from "./trust";
@@ -11,17 +11,22 @@ import { type Visibility, VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 import {
-  conversationDirection,
-  directionClass,
+  automaticLabel,
+  CommitmentReviewFlag,
+  entryDay,
+  entryMove,
+  entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
+  sideClass,
+  sideOf,
   TIMELINE_ICON,
   TIMELINE_KIND_LABEL,
   type TimelineEntry,
   type TimelineGroup,
   TimelineWhen,
 } from "./timelineentry";
-import { TimelineText } from "./timelinetext";
+import { TimelineBody } from "./timelinetext";
 
 // How many of a thread's messages stand open before the rest fold behind a
 // count. Three is a conversation a reader takes in at a glance: the ask,
@@ -39,6 +44,16 @@ function otherSideOf(entry: TimelineEntry): string | undefined {
     return undefined;
   }
   return entry.emailSummary?.counterparty?.trim() || entry.counterparts;
+}
+
+// The server's summary of every member that has one, for the files the whole
+// conversation carried. A chat member has none and adds nothing.
+function memberSummaries(
+  entries: readonly TimelineEntry[],
+): NonNullable<TimelineEntry["emailSummary"]>[] {
+  return entries.flatMap((entry) =>
+    entry.emailSummary ? [entry.emailSummary] : [],
+  );
 }
 
 // The same contacts one at a time, for a set and for a face. The adapter's
@@ -83,14 +98,21 @@ function messageLead(
   entry: TimelineEntry,
   t: ReturnType<typeof useT>,
 ): { actor: string; verb?: string } {
+  const automatic = automaticLabel(entry);
+  if (automatic) {
+    return { actor: t(automatic) };
+  }
   const who = otherSideOf(entry);
-  if (entry.direction === "inbound") {
+  // Authorship, not transport: a contact's reply is their word whichever way
+  // the copy travelled, and a colleague's inbound copy is still ours.
+  const side = sideOf(entry);
+  if (side === "theirs") {
     return {
       actor: who ?? t("timeline.thread.them"),
       verb: t("timeline.thread.wrote"),
     };
   }
-  if (entry.direction === "outbound") {
+  if (side === "ours") {
     // An imported row knows who sent it, and neither "we" nor "you" is that
     // colleague. The import ran as one administrator, so every row it wrote
     // reads as that seat's own sending. The author is asked first for the same
@@ -161,11 +183,11 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
   // record so it is that contact's colour everywhere, never the lead line's
   // phrase.
   const [face] = otherSide(entry);
-  if (entry.direction === "inbound" && face) {
+  const side = sideOf(entry);
+  if (side === "theirs" && face) {
     return <Avatar name={face.name} identity={face.key} />;
   }
-  const Icon =
-    entry.direction === "outbound" ? Send : TIMELINE_ICON[entry.kind];
+  const Icon = side === "ours" ? Send : TIMELINE_ICON[entry.kind];
   return (
     <span className="tl-msg-mark">
       <Icon aria-hidden />
@@ -177,7 +199,7 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
 // through EmailWords, the canonical spelling of a message's words. That is
 // also where the withheld rule lives, so this row cannot answer that question
 // differently from the row beside it. A message without a summary (a chat, or
-// a server that has not caught up) draws its body through TimelineText. That
+// a server that has not caught up) draws its body through TimelineBody. That
 // is the one the chronicle uses, with the same fold. A withheld row draws the
 // sentence where its words would be, whatever it is handed.
 function MessageWords({
@@ -190,7 +212,7 @@ function MessageWords({
   if (entry.emailSummary) {
     return <EmailWords summary={entry.emailSummary} />;
   }
-  return entry.body ? <TimelineText text={entry.body} entry={entry} /> : null;
+  return entry.body ? <TimelineBody entry={entry} body={entry.body} /> : null;
 }
 
 /**
@@ -222,7 +244,7 @@ function ThreadMessage({
   const lead = messageLead(entry, t);
   const visibility = messageVisibilityState(entry);
   const onOpen = threadMessageOpener(entry);
-  const day = formatDate(entry.atIso, locale, zone);
+  const day = entryDay(entry, locale, zone);
   const content = (
     <>
       <MessageMark entry={entry} />
@@ -231,6 +253,12 @@ function ThreadMessage({
           <b className="tl-msg-who">{lead.actor}</b>
           {lead.verb && <span>{lead.verb}</span>}
           {visibility && <VisibilityBadge state={visibility} />}
+          {entry.emailSummary && (
+            <EmailFiles summaries={[entry.emailSummary]} />
+          )}
+          <CommitmentReviewFlag
+            count={entry.withheld ? 0 : entry.commitmentReviewCount}
+          />
         </span>
         <MessageWords entry={entry} t={t} />
       </span>
@@ -238,8 +266,9 @@ function ThreadMessage({
           shows: a one-message thread printed its date twice a hand apart, and
           an older member from another day still needs its own. */}
       <span className="tl-msg-when t-num">
-        {day !== cardDay && `${day} `}
-        {formatTimeOfDay(entry.atIso, locale, zone)}
+        {[day !== cardDay && day, entryTimeOfDay(entry, locale, zone)]
+          .filter(Boolean)
+          .join(" ")}
       </span>
     </>
   );
@@ -259,10 +288,9 @@ function ThreadMessage({
 }
 
 /**
- * ThreadRow is a conversation on the chronology, drawn open. One card sits on
- * the body side of the rail. It carries what the thread is (the kind, how many
- * messages, who it was with, whose move it is) over its subject. Under that
- * come the messages themselves, newest first.
+ * ThreadRow is a conversation on the chronology, drawn open, as a row like any
+ * other. Its head says the kind, the count, who it was with and whose move it
+ * is. The subject follows, then the messages, newest first.
  *
  * Open rather than folded behind a summary of its newest message. A thread is
  * the thing a reader came to the history to read: the ask, the answer and
@@ -293,87 +321,104 @@ export function ThreadRow({
   const shown = allOpen
     ? group.entries
     : group.entries.slice(0, THREAD_OPEN_MEMBERS);
+  // The card's total is for files the messages in view do not already say.
+  // When one message carries them all and it is on screen, its own mark is the
+  // total. A second one would count the same files twice.
+  const carriers = group.entries.filter(
+    (entry) => entry.emailSummary && attachmentCount(entry.emailSummary) > 0,
+  );
+  const [carrier] = carriers;
+  const filesAreOnOneShownMessage =
+    carriers.length === 1 && carrier !== undefined && shown.includes(carrier);
   // The subject, from a member whose words the reader may read. A withheld
   // member's title is the kind it was, not the subject it had. A thread
   // every member of which is withheld says so where its subject would go.
   const subject = group.entries.find((entry) => !entry.withheld)?.title;
   return (
-    <li className={directionClass(newest.direction)}>
+    <li className={sideClass(newest)}>
       {/* The same three columns a single row sits on (date, rail, what
           happened), because a conversation is a row of the chronology. Its
           mark is the kind's own icon: a dot would say it was one message. */}
-      <TimelineWhen atIso={newest.atIso} zone={zone} />
+      <TimelineWhen entry={newest} zone={zone} />
       <span className="tl-rail" aria-hidden="true">
         <span className="tl-icon">
           <Icon aria-hidden />
         </span>
       </span>
       <div className="tl-body">
-        <div className="tl-thread">
-          <span className="tl-head">
-            <Eyebrow>{t("timeline.group.kind")}</Eyebrow>
-            <span>{groupCountLabel(group, locale)}</span>
-            {participants && <span>{participants}</span>}
-            {/* Whose move the conversation waits on, read off its newest
-                message. It goes on the card that stands for it, never on the
+        <span className="tl-head">
+          <Eyebrow className="tl-head-part">{t("timeline.group.kind")}</Eyebrow>
+          <span className="tl-head-part">{groupCountLabel(group, locale)}</span>
+          {participants && <span className="tl-head-part">{participants}</span>}
+          {/* Whose move the conversation waits on, read off its newest
+                message. It goes on the row that stands for it, never on the
                 members inside. */}
-            {conversationDirection(newest) && <MoveFlag entry={newest} />}
-            {/* The newest member's verbs stand for the conversation: Reply
-                answers it, and Relink on it offers to move the rest of the
-                thread. */}
-            {newest.actions && (
-              <span className="tl-thread-actions">{newest.actions}</span>
+          {entryMove(newest) && <MoveFlag entry={newest} />}
+          <CommitmentReviewFlag
+            count={group.entries.reduce(
+              (count, entry) =>
+                count +
+                (entry.withheld ? 0 : (entry.commitmentReviewCount ?? 0)),
+              0,
             )}
+          />
+        </span>
+        {subject ? (
+          <span className="tl-title">{subject}</span>
+        ) : (
+          <span className="tl-title tl-withheld">
+            <Lock aria-hidden />
+            {t("timeline.withheld")}
           </span>
-          {subject ? (
-            <span className="tl-title">{subject}</span>
-          ) : (
-            <span className="tl-title tl-withheld">
-              <Lock aria-hidden />
-              {t("timeline.withheld")}
-            </span>
+        )}
+        <ul className="tl-thread-messages">
+          {shown.map((entry) => (
+            <li key={entry.id}>
+              <ThreadMessage
+                entry={entry}
+                zone={zone}
+                cardDay={entryDay(newest, locale, zone)}
+              />
+            </li>
+          ))}
+        </ul>
+        <span className="tl-meta">
+          {folded > 0 && (
+            <Button
+              aria-expanded={allOpen}
+              onClick={() => setAllOpen(!allOpen)}
+            >
+              {allOpen
+                ? t("timeline.group.hideEarlier")
+                : translatePlural(locale, "timeline.group.earlier", folded, {
+                    count: formatNumber(folded, locale),
+                  })}
+            </Button>
           )}
-          <ul className="tl-thread-messages">
-            {shown.map((entry) => (
-              <li key={entry.id}>
-                <ThreadMessage
-                  entry={entry}
-                  zone={zone}
-                  cardDay={formatDate(newest.atIso, locale, zone)}
-                />
-              </li>
-            ))}
-          </ul>
-          <span className="tl-meta">
-            {folded > 0 && (
-              <Button
-                aria-expanded={allOpen}
-                onClick={() => setAllOpen(!allOpen)}
-              >
-                {allOpen
-                  ? t("timeline.group.hideEarlier")
-                  : translatePlural(locale, "timeline.group.earlier", folded, {
-                      count: formatNumber(folded, locale),
-                    })}
-              </Button>
-            )}
-            <ProvenanceTag provenance={newest.provenance} />
-            {/* A thread cut by the page edge can be completed when the page
+          {!filesAreOnOneShownMessage && (
+            <EmailFiles summaries={memberSummaries(group.entries)} />
+          )}
+          <ProvenanceTag provenance={newest.provenance} />
+          {/* A thread cut by the page edge can be completed when the page
                 passed a handler; where it cannot, the notice still stands,
                 because rendering neither would present the cut as the whole
                 of it. */}
-            {group.partial &&
-              (threadKey && onOpenThread ? (
-                <Button onClick={() => onOpenThread(threadKey)}>
-                  {t("timeline.group.openThread")}
-                </Button>
-              ) : (
-                <span className="t-caption">
-                  {t("timeline.group.mayContinue")}
-                </span>
-              ))}
-          </span>
-        </div>
+          {group.partial &&
+            (threadKey && onOpenThread ? (
+              <Button onClick={() => onOpenThread(threadKey)}>
+                {t("timeline.group.openThread")}
+              </Button>
+            ) : (
+              <span className="t-caption">
+                {t("timeline.group.mayContinue")}
+              </span>
+            ))}
+        </span>
+        {/* The newest member's verbs stand for the conversation: Reply
+            answers it, and Relink on it offers to move the rest of the
+            thread. They sit in the row's own verb slot, where every other
+            entry keeps its verbs. */}
+        {newest.actions && <span className="tl-actions">{newest.actions}</span>}
       </div>
     </li>
   );

@@ -15,8 +15,11 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // FromLead folds the lead and its correspondence into the draft's input.
@@ -29,23 +32,25 @@ import (
 func FromLead(
 	lead crmcontracts.Lead,
 	activities []crmcontracts.Activity,
-	intent string,
+	req Request,
 	envelope draftfloor.Envelope,
 ) contactdraft.Input {
 	return contactdraft.Input{
-		Intent:    strings.TrimSpace(intent),
+		Intent:    strings.TrimSpace(req.Intent),
+		RewriteOf: strings.TrimSpace(req.RewriteOf),
 		Envelope:  envelope,
 		Recipient: recipientOf(lead, activities),
-		Recent:    contactdraft.FoldRecent(activities, envelope.At()),
+		Recent:    contactdraft.FoldRecent(activities, envelope.At(), envelope.Zone()),
 	}
 }
 
 // recipientOf is who the draft is addressed to, off the lead's own columns.
 func recipientOf(lead crmcontracts.Lead, activities []crmcontracts.Activity) contactdraft.RecipientIn {
 	full := deref(lead.FullName)
-	first, last := splitName(full)
+	first, last := greetingNames(full)
 	out := contactdraft.RecipientIn{
 		ID:        lead.Id.String(),
+		Kind:      datasource.EntityLead,
 		Name:      full,
 		FirstName: first,
 		LastName:  last,
@@ -68,22 +73,15 @@ func recipientOf(lead crmcontracts.Lead, activities []crmcontracts.Activity) con
 	return out
 }
 
-// splitName is the greeting name and the formal name, off the one column a
-// lead has.
-//
-// A lead carries `full_name` and nothing else — no stored first or last name,
-// which is what contactdraft prefers when a contact has them. So the split IS
-// the answer here rather than a fallback, and a one-word name is a name: it
-// becomes the greeting name with no surname, not an empty greeting.
-func splitName(full string) (first, last string) {
-	fields := strings.Fields(full)
-	if len(fields) == 0 {
-		return "", ""
+// greetingNames is the greeting name and the formal name, off the one column a
+// lead has. A one-word name is the greeting name with no surname. A name whose
+// order the string does not state is greeted by its whole display name,
+// because its first word may be the family name.
+func greetingNames(full string) (first, last string) {
+	if first, last, ok := contacts.SplitStoredName(full); ok {
+		return first, last
 	}
-	if len(fields) == 1 {
-		return fields[0], ""
-	}
-	return fields[0], fields[len(fields)-1]
+	return strings.Join(strings.Fields(full), " "), ""
 }
 
 // lastEachWay is when each side last wrote, zero for a direction that never
@@ -97,20 +95,16 @@ func splitName(full string) (first, last string) {
 //
 // The activities arrive newest first, so the first of each direction is the
 // latest of it. An activity with no direction is not a side speaking.
-func lastEachWay(activities []crmcontracts.Activity) (inbound, outbound time.Time) {
-	for _, activity := range activities {
-		if activity.Direction == nil {
+func lastEachWay(rows []crmcontracts.Activity) (inbound, outbound time.Time) {
+	for _, activity := range rows {
+		ours, known := activities.WroteItOurSide(activity)
+		switch {
+		case !known:
 			continue
-		}
-		switch *activity.Direction {
-		case crmcontracts.ActivityDirectionInbound:
-			if inbound.IsZero() {
-				inbound = activity.OccurredAt.UTC()
-			}
-		case crmcontracts.ActivityDirectionOutbound:
-			if outbound.IsZero() {
-				outbound = activity.OccurredAt.UTC()
-			}
+		case ours && outbound.IsZero():
+			outbound = activity.OccurredAt.UTC()
+		case !ours && inbound.IsZero():
+			inbound = activity.OccurredAt.UTC()
 		}
 		if !inbound.IsZero() && !outbound.IsZero() {
 			return inbound, outbound
@@ -128,9 +122,9 @@ func lastEachWay(activities []crmcontracts.Activity) (inbound, outbound time.Tim
 //
 // Held by: TestTheConversationStateReadsTheSameTwoInstants
 // (backend/internal/compose/leaddraft/fold_test.go)
-func ConversationState(activities []crmcontracts.Activity, now time.Time) convstate.State {
+func ConversationState(activities []crmcontracts.Activity, now time.Time, zone *time.Location) convstate.State {
 	inbound, outbound := lastEachWay(activities)
-	return draftcore.ClassifyWithLogged(now, inbound, outbound, activities)
+	return draftcore.ClassifyWithLogged(now, zone, inbound, outbound, activities)
 }
 
 func deref(s *string) string {

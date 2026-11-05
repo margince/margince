@@ -29,6 +29,7 @@ type InviteInput struct {
 // IssuedInvitation is a participant and the credential just minted for them.
 // The raw credential exists here and in the delivered mail, nowhere else.
 type IssuedInvitation struct {
+	RoomTitle   string
 	Participant crmcontracts.DealRoomParticipant
 	Credential  string
 	ExpiresAt   time.Time
@@ -36,13 +37,13 @@ type IssuedInvitation struct {
 
 // InviteParticipant admits a named contact and mints their credential.
 //
-// Human-only: deciding which outside contact may read a deal's material is not a
-// judgement an agent makes.
+// Deciding which outside contact may read a deal's material is the user's
+// judgement, or their agent's at their word, never automatic work's.
 func (s *Store) InviteParticipant(ctx context.Context, roomID ids.DealRoomID, in InviteInput) (IssuedInvitation, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return IssuedInvitation{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return IssuedInvitation{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -123,7 +124,7 @@ func inviteTx(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, in InviteIn
 	if err != nil {
 		return IssuedInvitation{}, err
 	}
-	return IssuedInvitation{Participant: participant, Credential: raw, ExpiresAt: expiresAt}, nil
+	return IssuedInvitation{Participant: participant, Credential: raw, ExpiresAt: expiresAt, RoomTitle: room.Title}, nil
 }
 
 // ResendInvitation issues a fresh credential and retires the previous one.
@@ -134,7 +135,7 @@ func (s *Store) ResendInvitation(ctx context.Context, roomID ids.DealRoomID, par
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return IssuedInvitation{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return IssuedInvitation{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -181,7 +182,7 @@ func (s *Store) ResendInvitation(ctx context.Context, roomID ids.DealRoomID, par
 		if err != nil {
 			return err
 		}
-		out = IssuedInvitation{Participant: participant, Credential: raw, ExpiresAt: expiresAt}
+		out = IssuedInvitation{Participant: participant, Credential: raw, ExpiresAt: expiresAt, RoomTitle: room.Title}
 		return nil
 	})
 	return out, err
@@ -197,7 +198,7 @@ func (s *Store) RevokeParticipant(ctx context.Context, roomID ids.DealRoomID, pa
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoomParticipant{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoomParticipant{}, err
 	}
 	var out crmcontracts.DealRoomParticipant
@@ -290,7 +291,7 @@ func (s *Store) UpdateParticipant(ctx context.Context, roomID ids.DealRoomID, pa
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoomParticipant{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoomParticipant{}, err
 	}
 	var out crmcontracts.DealRoomParticipant

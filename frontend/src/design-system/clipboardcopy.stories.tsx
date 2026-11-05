@@ -6,7 +6,7 @@ import { expect, screen, userEvent, within } from "storybook/test";
 import { StoryProviders } from "../testing/story-utils";
 import { Button } from "./atoms";
 import { holdClipboard, stubClipboard } from "./clipboard-testing";
-import { CopyableText, useClipboardCopy } from "./clipboardcopy";
+import { CopyAction, CopyableText, useClipboardCopy } from "./clipboardcopy";
 
 // The three states one copy control has, drawn by the hook that owns all three.
 //
@@ -95,4 +95,72 @@ export const Refused: Story = {
       browserClipboard();
     }
   },
+};
+
+/** The glyph form beside the value it copies, as a record's details draw an
+ *  address. Its name turns to the Copied word once the write lands. */
+export const Glyph: Story = {
+  render: () => (
+    <StoryProviders>
+      <span>
+        dana@brandt.example
+        <CopyAction
+          text="dana@brandt.example"
+          labels={{
+            copy: "Copy email address",
+            copied: "Email address copied",
+            remedy: "Select the address and copy it with your keyboard.",
+          }}
+        />
+      </span>
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const clipboard = stubClipboard("accepts");
+    try {
+      await userEvent.click(
+        within(canvasElement).getByRole("button", {
+          name: "Copy email address",
+        }),
+      );
+      await within(canvasElement).findByRole("button", {
+        name: "Email address copied",
+      });
+    } finally {
+      clipboard.restore();
+    }
+  },
+};
+
+function LazyReport() {
+  const copy = useClipboardCopy(
+    {
+      key: "demo-report",
+      read: async () => "Run 4711: provider unavailable; attempt 3 of 3.",
+    },
+    {
+      copy: "Copy report",
+      copied: "Copied",
+      pending: "Reading report",
+      remedy: "Select the report and copy it manually.",
+    },
+  );
+  return (
+    <>
+      <Button pending={copy.pending} onClick={copy.copy}>
+        {copy.label}
+      </Button>
+      {copy.notice}
+      {copy.preparedText && (
+        <CopyableText text={copy.preparedText} label="Technical report" />
+      )}
+    </>
+  );
+}
+export const OnDemandReport: Story = {
+  render: () => (
+    <StoryProviders>
+      <LazyReport />
+    </StoryProviders>
+  ),
 };

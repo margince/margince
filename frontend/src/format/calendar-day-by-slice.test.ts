@@ -24,7 +24,7 @@ import { parseSource } from "../../scripts/lib/source-tree";
 // CUT rather than a length.
 //
 // `format/calendarday.ts` is where the question is answered — in a named zone,
-// from the parts — and `viewerZone()` / `useRecordZone()` say whose calendar the
+// from the parts — and `browserZone()` / `useCompanyZone()` say whose calendar the
 // answer belongs to.
 //
 // WHAT IT CANNOT SEE: an ISO string sliced through a variable
@@ -47,7 +47,7 @@ const srcRoot = join(here, "..");
 // written about a different one — so the count is part of what is ratified, and
 // a third cut in a function ratified for two is a finding again.
 const deliberateUtcDays: Record<string, { sites: number; why: string }> = {
-  "screens/aiusage.tsx#monthAround": {
+  "features/ai/aiusage.tsx#monthAround": {
     sites: 2,
     why: "the two boundaries are read back off dates this function just built with Date.UTC(...) from the month it was given, so the round trip never touches a clock or a zone. Naming the month is the zoned question, and only currentMonth asks it",
   },
@@ -55,11 +55,11 @@ const deliberateUtcDays: Record<string, { sites: number; why: string }> = {
     sites: 1,
     why: "the same round trip as adjacentMonth's: the date is built with Date.UTC(...) from a day this function was GIVEN, and the components read back are the ones just written. It is arithmetic on a named day, not a reading of the clock, and the zoned question is answered by startOfDayInstant on the next line",
   },
-  "features/worklist/taskactions.tsx#next": {
+  "components/taskactions.tsx#next": {
     sites: 1,
     why: "the same round trip as shifted's: the date is built with Date.UTC(...) from a day calendarDay just named in the record's zone, and the parts read back are the ones just written. A snooze steps to the NEXT CALENDAR DAY, and doing it here rather than by adding 86_400_000 is the point — a local day is not always that long, and the old arithmetic skipped Berlin's 29 March. dueInstant answers the zoned question on the next line",
   },
-  "mcp-apps/bridge.ts#day": {
+  "mcp-apps/values.ts#day": {
     sites: 1,
     why: "the answer beside this date says whether a promise is overdue, and the server judged that in UTC. A day rendered in the reader's zone could print tomorrow's date beside the word overdue — one clock, one day",
   },

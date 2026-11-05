@@ -16,6 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -115,6 +116,7 @@ func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 		Relationship: &crmcontracts.AttentionRelationshipFacts{
 			Strength:    relationshipBand(quiet.Strength.Bucket),
 			HasOpenDeal: &funded,
+			OwnerId:     optionalUUID(quiet.OwnerID),
 		},
 		Subject:    subjectOf(subjectContact, quiet.ContactID),
 		OccurredAt: &lastAt,
@@ -156,14 +158,14 @@ func relationshipBand(bucket string) *crmcontracts.AttentionRelationshipFactsStr
 // a facts object with every field empty says less than its absence.
 func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
 	if deal.StageID == nil && deal.OwnerID == nil && deal.AmountMinor == nil &&
-		deal.Currency == nil && deal.NoChampion == nil && deal.CloseDateProvisional == nil && deal.ForecastCategory == nil &&
+		deal.Currency == nil && deal.NoChampion == nil && deal.CloseDateProvisional == nil && deal.WinProbability == nil &&
 		!deal.NoNextStep && !deal.ChampionUnknown {
 		return nil
 	}
 	facts := &crmcontracts.AttentionDealFacts{
 		AmountMinor:          deal.AmountMinor,
 		CloseDateProvisional: deal.CloseDateProvisional,
-		ForecastCategory:     deal.ForecastCategory,
+		WinProbability:       deal.WinProbability,
 		Currency:             deal.Currency,
 		// A finding or nothing, the same rule the worklist projection applies:
 		// `false` is never sent. Both sides of this field spell one rule, so
@@ -185,4 +187,12 @@ func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
 		facts.OwnerId = &owner
 	}
 	return facts
+}
+
+// optionalUUID is the wire's absent-or-set uuid: zero is absent.
+func optionalUUID(id ids.UUID) *openapi_types.UUID {
+	if id.IsZero() {
+		return nil
+	}
+	return idPtr(id)
 }

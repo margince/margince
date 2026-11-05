@@ -13,6 +13,8 @@ package activities
 import (
 	"fmt"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // noKeyset is the first page: every read but the refill asks for one page and
@@ -20,19 +22,15 @@ import (
 // alone.
 const noKeyset = ""
 
-// olderThan renders the keyset continuation for a waiting page, or nothing for
-// the first one.
-//
-// On a.occurred_at alone rather than the (occurred_at, id) pair the row
-// comparisons elsewhere use, and that is deliberate: this is a GROUP BY over
-// links, so `a.id` is in the grouping and `a.occurred_at` is what the ORDER BY
-// reads. A strict `<` can therefore skip rows sharing the boundary instant.
-// That is the safe direction — a skipped row is one the reader does not see on
-// this pass, where a `<=` would return the boundary row again and the refill
-// would make no progress at all.
-func olderThan(before time.Time, arg func(any) int) string {
-	if before.IsZero() {
+// WaitingPosition resumes a deterministic walk through messages sharing a timestamp.
+type WaitingPosition struct {
+	At time.Time
+	ID ids.UUID
+}
+
+func olderThan(before WaitingPosition, arg func(any) int) string {
+	if before.At.IsZero() {
 		return ""
 	}
-	return fmt.Sprintf(" AND a.occurred_at < $%d", arg(before))
+	return fmt.Sprintf(" AND (a.occurred_at, a.id) < ($%d, $%d)", arg(before.At), arg(before.ID))
 }

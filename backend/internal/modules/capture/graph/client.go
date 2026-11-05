@@ -130,14 +130,14 @@ type API interface {
 	// also yield Drafts, Deleted Items and Junk. A draft was never sent, so
 	// putting one on a customer's timeline would be recording a message that
 	// does not exist.
-	DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) (ids []string, deltaLink string, err error)
+	DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) (messages []MessageRef, deltaLink string, err error)
 	// Delta resumes a folder's delta from a stored deltaLink and returns the
 	// message ids added/changed since plus the advanced deltaLink;
 	// ErrDeltaGone if Graph no longer honors the link.
 	// Delta returns the ids added or changed since deltaLink, the ids Graph
 	// TOMBSTONED in the same round, and the link to resume from. A tombstone is
 	// the mailbox owner deleting their own copy; it carries no message.
-	Delta(ctx context.Context, accessToken, deltaLink string) (ids, removed []string, newDeltaLink string, err error)
+	Delta(ctx context.Context, accessToken, deltaLink string) (messages []MessageRef, removed []string, newDeltaLink string, err error)
 	// EnsureSubscription registers or renews the Graph change-notification
 	// subscription pointing at notificationURL, carrying clientState, and
 	// reports the subscription that now covers this mailbox.

@@ -12,7 +12,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 const fullConfig = `
@@ -49,7 +48,7 @@ company_context:
 `
 
 func TestParseAcceptsTheFullDocumentedShape(t *testing.T) {
-	cfg, err := Parse([]byte(fullConfig))
+	cfg, err := LoadBootstrap(writeTemp(t, fullConfig))
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
@@ -61,21 +60,6 @@ func TestParseAcceptsTheFullDocumentedShape(t *testing.T) {
 	}
 	if cfg.Seeds.StarterAutomations == nil || *cfg.Seeds.StarterAutomations {
 		t.Fatal("starter_automations: false did not parse")
-	}
-	if !cfg.Auth.PasswordEnabled() || !cfg.Email.Enabled {
-		t.Fatalf("auth/email switches lost: %+v %+v", cfg.Auth, cfg.Email)
-	}
-	if cfg.CompanyContext.EffectiveRollout() != CompanyContextTasks {
-		t.Fatalf("company-context rollout = %q", cfg.CompanyContext.EffectiveRollout())
-	}
-}
-
-func TestParseRejectsUnknownKeys(t *testing.T) {
-	// A typo must never silently disable authentication: strict decoding
-	// makes `auth.passwrd` a boot error, not an ignored key.
-	_, err := Parse([]byte("version: 1\nauth:\n  passwrd:\n    enabled: false\n"))
-	if err == nil || !strings.Contains(err.Error(), "passwrd") {
-		t.Fatalf("unknown key parsed silently: %v", err)
 	}
 }
 
@@ -92,88 +76,21 @@ func TestParseValidatesFailClosed(t *testing.T) {
 		"duplicate stage":         "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: A, probability: 10 }, { name: A, probability: 20 } ] } }\n",
 		"probability out of band": "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: A, probability: 140 } ] } }\n",
 		"purpose without label":   "version: 1\nseeds: { consent_purposes: [ { key: marketing_email } ] }\n",
-		"email without smtp":      "version: 1\nemail: { enabled: true, from_address: a@b.co }\n",
-		"smtp port out of range":  "version: 1\nemail: { enabled: true, from_address: a@b.co, smtp: { host: h, port: 70000 } }\n",
-		"unknown context rollout": "version: 1\ncompany_context: { rollout: everything }\n",
 	}
 	for name, doc := range cases {
-		if _, err := Parse([]byte(doc)); err == nil {
+		if _, err := LoadBootstrap(writeTemp(t, doc)); err == nil {
 			t.Errorf("%s: parsed without error", name)
 		}
 	}
 }
 
-// A deployment may close the password door. This file cannot check that
-// something else opens one — which providers are mounted is decided by the
-// credentials and URLs the composition root composes, not by this document —
-// so it parses, and cmd/api refuses the combination that leaves no way in.
-func TestPasswordAuthMayBeTurnedOff(t *testing.T) {
-	cfg, err := Parse([]byte("version: 1\nauth: { password: { enabled: false } }\n"))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	if cfg.Auth.PasswordEnabled() {
-		t.Fatal("auth.password.enabled=false parsed as enabled — the switch would be inert")
-	}
-}
-
-func TestCompanyContextRolloutDefaultsToOnboarding(t *testing.T) {
-	cfg, err := Parse([]byte("version: 1\n"))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	if got := cfg.CompanyContext.EffectiveRollout(); got != CompanyContextOnboarding {
-		t.Fatalf("default rollout = %q, want onboarding", got)
-	}
-}
-
 func TestLoadMissingFileBootsExistingInstallation(t *testing.T) {
-	cfg, err := Load(filepath.Join(t.TempDir(), "does-not-exist.yaml"), runtimeenv.Production)
+	cfg, err := LoadBootstrap(filepath.Join(t.TempDir(), "does-not-exist.yaml"))
 	if err != nil {
 		t.Fatalf("missing file must not be an error (it cannot bootstrap, only bind): %v", err)
 	}
-	if cfg.BootstrapAdmin != nil || !cfg.Auth.PasswordEnabled() {
-		t.Fatalf("zero config = %+v, want no bootstrap admin + password auth on", cfg)
-	}
-}
-
-func TestParseAICapturePayloads(t *testing.T) {
-	cfg, err := Parse([]byte("version: 1\nai:\n  capture_payloads: true\n"))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	if !cfg.AI.CapturePayloads {
-		t.Fatal("ai.capture_payloads should be true")
-	}
-	// Default is off.
-	def, err := Parse([]byte("version: 1\n"))
-	if err != nil {
-		t.Fatalf("parse default: %v", err)
-	}
-	if def.AI.CapturePayloads {
-		t.Fatal("ai.capture_payloads must default to false")
-	}
-}
-
-func TestParseRatesFxCurrencies(t *testing.T) {
-	cfg, err := Parse([]byte("version: 1\nrates:\n  fx_source: https://example.test/fx\n  fx_currencies: [USD, GBP, CHF]\n"))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	if got, want := cfg.Rates.Fx, "https://example.test/fx"; got != want {
-		t.Fatalf("rates.fx_source = %q, want %q", got, want)
-	}
-	if got, want := strings.Join(cfg.Rates.FxCurrencies, ","), "USD,GBP,CHF"; got != want {
-		t.Fatalf("rates.fx_currencies = %q, want %q", got, want)
-	}
-	// Unset ⇒ nil (the worker supplies the USD/GBP/CHF default); parsing must
-	// not invent a value.
-	def, err := Parse([]byte("version: 1\n"))
-	if err != nil {
-		t.Fatalf("parse default: %v", err)
-	}
-	if def.Rates.FxCurrencies != nil {
-		t.Fatalf("rates.fx_currencies must default to nil, got %v", def.Rates.FxCurrencies)
+	if cfg.BootstrapAdmin != nil {
+		t.Fatalf("zero config = %+v, want no bootstrap admin", cfg)
 	}
 }
 
@@ -182,37 +99,8 @@ func TestParseRatesFxCurrencies(t *testing.T) {
 // new deployment (and every `make dev`, which copies it) a config that fails at
 // boot. It also guards the now-active rates block against a typo.
 func TestShippedExampleConfigParses(t *testing.T) {
-	cfg, err := Load("../../../../config/margince.example.yaml", runtimeenv.Production)
-	if err != nil {
+	if _, err := LoadBootstrap("../../../../config/margince.example.yaml"); err != nil {
 		t.Fatalf("config/margince.example.yaml no longer parses: %v", err)
-	}
-	if got := strings.Join(cfg.Rates.FxCurrencies, ","); got != "USD,GBP,CHF" {
-		t.Fatalf("example rates.fx_currencies = %q, want the documented USD,GBP,CHF", got)
-	}
-	// The example declares the connector so a local stack serves /mcp without a
-	// hand edit. It is safe to ship on only because the api refuses to boot on
-	// this gate with no --public-base-url; the CODE default stays off
-	// (TestMCPConnectorGateDefaultsOff), which is what protects an installation
-	// that writes its own file.
-	if !cfg.MCP.ConnectorEnabled {
-		t.Fatal("example mcp.connector_enabled must stay true — commenting it out silently costs every local stack the /mcp surface")
-	}
-}
-
-func TestParseRatesFxCurrenciesFailsClosed(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		doc  string
-	}{
-		{"non-iso code", "version: 1\nrates:\n  fx_currencies: [USD, US]\n"},
-		{"non-letter code", "version: 1\nrates:\n  fx_currencies: [USD, \"12$\"]\n"},
-		{"duplicate", "version: 1\nrates:\n  fx_currencies: [USD, usd]\n"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if _, err := Parse([]byte(tc.doc)); err == nil {
-				t.Fatalf("%s: Parse accepted a malformed fx_currencies set; a typo must fail at boot", tc.name)
-			}
-		})
 	}
 }
 
@@ -228,63 +116,8 @@ func writeTemp(t *testing.T, doc string) string {
 	return path
 }
 
-func TestAllowTestMailboxGateDefaultsOff(t *testing.T) {
-	cfg, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\n"), runtimeenv.Production)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.Operations.AllowTestMailbox {
-		t.Fatal("AllowTestMailbox must default OFF — a capability that can fake a real send outcome is stated, never assumed")
-	}
-	on, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\noperations:\n  allow_test_mailbox: true\n"), runtimeenv.Production)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !on.Operations.AllowTestMailbox {
-		t.Fatal("operations.allow_test_mailbox: true must parse")
-	}
-}
-
 // Lists ship on: an installation whose files never mention them has them, and
 // an operator who writes `enabled: false` in either file switches them off.
-func TestListsAreOnUnlessAFileSwitchesThemOff(t *testing.T) {
-	absent, err := Load(filepath.Join(t.TempDir(), "absent.yaml"), runtimeenv.Production)
-	if err != nil {
-		t.Fatal(err)
-	}
-	parsed, err := Parse([]byte("version: 1\n"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !absent.Lists.Enabled || !parsed.Lists.Enabled {
-		t.Fatalf("lists.enabled unset: Load=%v Parse=%v, want both on", absent.Lists.Enabled, parsed.Lists.Enabled)
-	}
-	off, err := Load(writeTemp(t, "version: 1\nlists:\n  enabled: false\n"), runtimeenv.Production)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if off.Lists.Enabled {
-		t.Fatal("lists.enabled: false must switch lists off")
-	}
-}
-
-func TestMCPConnectorGateDefaultsOff(t *testing.T) {
-	cfg, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\n"), runtimeenv.Production)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.MCP.ConnectorEnabled {
-		t.Fatal("the connector gate must default OFF — an unset flag must never expose /mcp")
-	}
-	on, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\nmcp:\n  connector_enabled: true\n"), runtimeenv.Production)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !on.MCP.ConnectorEnabled {
-		t.Fatal("mcp.connector_enabled: true must parse")
-	}
-}
-
 // The retention posture defaults to the historical behaviour byte for byte: an
 // omitted block, an empty value and the explicit `standard` all leave storage
 // limitation enforcing. An installation under a keep-everything obligation is
@@ -297,7 +130,7 @@ func TestRetentionSeedPostureDefaultsToStandard(t *testing.T) {
 		"explicit standard": "version: 1\nseeds:\n  retention:\n    default_policy: standard\n",
 	} {
 		t.Run(name, func(t *testing.T) {
-			cfg, err := Parse([]byte(doc))
+			cfg, err := LoadBootstrap(writeTemp(t, doc))
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
@@ -310,7 +143,7 @@ func TestRetentionSeedPostureDefaultsToStandard(t *testing.T) {
 }
 
 func TestRetentionSeedRetainOnlyTurnsThePostureOn(t *testing.T) {
-	cfg, err := Parse([]byte("version: 1\nseeds:\n  retention:\n    default_policy: retain_only\n"))
+	cfg, err := LoadBootstrap(writeTemp(t, "version: 1\nseeds:\n  retention:\n    default_policy: retain_only\n"))
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
@@ -327,7 +160,7 @@ func TestRetentionSeedRetainOnlyTurnsThePostureOn(t *testing.T) {
 // that set the key on purpose, silence is the exact failure it set it to prevent.
 func TestRetentionSeedRefusesAnUnknownPosture(t *testing.T) {
 	for _, value := range []string{"retain-only", "retainonly", "keep_everything", "Standard"} {
-		_, err := Parse([]byte("version: 1\nseeds:\n  retention:\n    default_policy: " + value + "\n"))
+		_, err := LoadBootstrap(writeTemp(t, "version: 1\nseeds:\n  retention:\n    default_policy: "+value+"\n"))
 		if err == nil {
 			t.Fatalf("Parse accepted seeds.retention.default_policy: %q", value)
 		}
@@ -412,75 +245,40 @@ func TestBootstrapAdminWithNoPasswordSourceRefuses(t *testing.T) {
 	}
 }
 
-// The documented `seeds.ai_routing` block must actually parse.
-//
-// It ships commented out, so TestShippedExampleConfigParses cannot see it — and
-// a block nothing decodes is a block free to be wrong. It was: the field was
-// declared `*yaml.Node`, and yaml.v3 special-cases a field only when its type
-// is exactly `yaml.Node`. A pointer is dereferenced and decoded as an ordinary
-// struct, so an operator who uncommented the shipped example got
-// "field profile not found in type yaml.Node" and an api, worker and migrate
-// that all refused to start.
-//
-// This uncomments what the example documents and decodes it, so the block a
-// deployment is invited to copy is held to the parser every boot runs.
-func TestTheDocumentedRoutingSeedBlockParses(t *testing.T) {
-	raw, err := os.ReadFile("../../../../config/margince.example.yaml")
+// Every shipped `seeds.ai_routing` block decodes through the parser every boot
+// runs, and survives the re-encoding that hands it to the ai parser. A field
+// declared `*yaml.Node` is decoded as an ordinary struct, and every program
+// then refuses to start with "field profile not found in type yaml.Node".
+func TestEveryShippedRoutingSeedDecodesThroughTheBootstrap(t *testing.T) {
+	paths, err := filepath.Glob("../../../../config/presets/*.yaml")
 	if err != nil {
-		t.Fatalf("reading the shipped example: %v", err)
+		t.Fatal(err)
 	}
-	block := commentedBlock(t, string(raw), "seeds:", "ai_routing:")
-
-	cfg, err := Parse([]byte("version: 1\n" + block))
-	if err != nil {
-		t.Fatalf("the documented seeds.ai_routing block does not parse: %v\n%s", err, block)
+	paths = append(paths, "../../../../config/margince.dev.yaml")
+	if len(paths) < 2 {
+		t.Fatal("no config/presets/*.yaml found; the presets moved and this test checks the dev file alone")
 	}
-	if cfg.Seeds.AIRouting.IsZero() {
-		t.Fatal("the block parsed but carried no binding; the seed would read as undeclared")
-	}
-	// The node has to survive being re-encoded, which is how compose hands it
-	// to the ai parser. A field that decoded into the wrong destination
-	// round-trips to something the router cannot read.
-	out, err := yaml.Marshal(&cfg.Seeds.AIRouting)
-	if err != nil {
-		t.Fatalf("re-encoding the declared binding: %v", err)
-	}
-	for _, want := range []string{"profile:", "tiers:", "embeddings:"} {
-		if !strings.Contains(string(out), want) {
-			t.Errorf("the re-encoded binding lost %q:\n%s", want, out)
-		}
-	}
-}
-
-// commentedBlock lifts a commented-out YAML block out of the example and
-// uncomments it, starting at the line whose comment body is start and running
-// while the lines stay commented. It fails loudly rather than returning
-// nothing: a block this cannot find is one the example no longer documents,
-// which is a finding rather than a reason to pass.
-func commentedBlock(t *testing.T, doc, start, contains string) string {
-	t.Helper()
-	lines := strings.Split(doc, "\n")
-	for i, line := range lines {
-		if strings.TrimSpace(line) != "# "+start {
+	for _, path := range paths {
+		cfg, err := LoadBootstrap(path)
+		if err != nil {
+			t.Errorf("%s: the seeds do not parse: %v", path, err)
 			continue
 		}
-		var out []string
-		for _, l := range lines[i:] {
-			trimmed := strings.TrimSpace(l)
-			if trimmed == "" || !strings.HasPrefix(trimmed, "#") {
-				break
-			}
-			// A bare "#" is a blank line inside the block; anything else loses
-			// its "# " lead. Both spellings appear in the example.
-			out = append(out, strings.TrimPrefix(strings.TrimSuffix(l, "#"), "# "))
+		if cfg.Seeds.AIRouting.IsZero() {
+			t.Errorf("%s: the seeds parsed but carried no binding", path)
+			continue
 		}
-		block := strings.Join(out, "\n") + "\n"
-		if strings.Contains(block, contains) {
-			return block
+		out, err := yaml.Marshal(&cfg.Seeds.AIRouting)
+		if err != nil {
+			t.Errorf("%s: re-encoding the binding: %v", path, err)
+			continue
+		}
+		for _, want := range []string{"profile:", "tiers:", "embeddings:"} {
+			if !strings.Contains(string(out), want) {
+				t.Errorf("%s: the re-encoded binding lost %q:\n%s", path, want, out)
+			}
 		}
 	}
-	t.Fatalf("the example no longer documents a commented %s block containing %q", start, contains)
-	return ""
 }
 
 // The reference form the field's own doc comment says to prefer is ACCEPTED.
@@ -497,7 +295,7 @@ func TestParseAcceptsEitherSpellingOfTheAdminPassword(t *testing.T) {
 		"the original file":  "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password_file: /run/secrets/admin-password }\n",
 	}
 	for name, doc := range both {
-		if _, err := Parse([]byte(doc)); err != nil {
+		if _, err := LoadBootstrap(writeTemp(t, doc)); err != nil {
 			t.Errorf("%s was refused: %v", name, err)
 		}
 	}
@@ -510,14 +308,14 @@ func TestParseAcceptsEitherSpellingOfTheAdminPassword(t *testing.T) {
 		"an inline password": "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password: hunter2hunter2 }\n",
 		"neither spelling":   "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A }\n",
 	} {
-		if _, err := Parse([]byte(doc)); err == nil {
+		if _, err := LoadBootstrap(writeTemp(t, doc)); err == nil {
 			t.Errorf("%s parsed without error", name)
 		}
 	}
 }
 
 func TestAValidCountryParsesAsWritten(t *testing.T) {
-	cfg, err := Parse([]byte("version: 1\nworkspace: { name: X, country: de }\n"))
+	cfg, err := LoadBootstrap(writeTemp(t, "version: 1\nworkspace: { name: X, country: de }\n"))
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}

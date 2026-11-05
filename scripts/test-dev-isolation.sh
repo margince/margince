@@ -272,20 +272,30 @@ check "$tmp_root" "$(dev_state_root)" \
 
 # One worktree's stack, recorded the way dev.sh records it.
 mkdir -p "$tmp_root/first"
-printf 'SLUG=first\nFE_PORT=8081\nAPI_PORT=18081\nREDIS_DB=64\n' >"$tmp_root/first/env"
+printf 'SLUG=first\nFE_PORT=8081\nAPI_PORT=18081\nREDIS_DB=%s\n' "$DEV_REDIS_DB_MIN" >"$tmp_root/first/env"
 
 read_registry second
-check "64" "$TAKEN_DBS" "the registry reports the other stack's Redis database"
+check "$DEV_REDIS_DB_MIN" "$TAKEN_DBS" "the registry reports the other stack's Redis database"
 check "8081" "$TAKEN_PORTS" "and its frontend port"
-check "65" "$(pick_free_db)" \
-      "a second stack takes the next free Redis database, never 64 again"
+check "$((DEV_REDIS_DB_MIN + 1))" "$(pick_free_db)" \
+      "a second stack takes the next free Redis database, never the taken one again"
 check "8082" "$(pick_free_port)" \
       "and the next free port"
 
 # The same slug reclaims its own, so a restart keeps its URL and its streams.
 read_registry first
-check "64" "$MINE_DB" "the slug's own recorded Redis database is reclaimed"
+check "$DEV_REDIS_DB_MIN" "$MINE_DB" "the slug's own recorded Redis database is reclaimed"
 check "8081" "$MINE_PORT" "and its own port"
+
+# A database recorded before the block moved is not reclaimed: it may now be the
+# integration lane's, and a suite that believes it owns the database flushes it.
+mkdir -p "$tmp_root/stale"
+printf 'SLUG=stale\nFE_PORT=8089\nAPI_PORT=18089\nREDIS_DB=%s\n' \
+      "$((DEV_REDIS_DB_MIN - 1))" >"$tmp_root/stale/env"
+read_registry stale
+check "" "$MINE_DB" "a recorded Redis database below the block is not reclaimed"
+check "8089" "$MINE_PORT" "while the port it recorded still is"
+rm -rf "$tmp_root/stale"
 
 # The registry only knows about OUR stacks. A foreign listener must still take a
 # port out of play, or bind fails and wait_ready polls somebody else's server.
@@ -308,7 +318,7 @@ rm -rf "$tmp_root"/*
 export STACK_STARTER_PID=$$
 claimed="$(claim_stack "alpha")"
 read -r alpha_db alpha_port <<<"$claimed"
-check "64" "$alpha_db" "the first stack claims the bottom of the Redis block"
+check "$DEV_REDIS_DB_MIN" "$alpha_db" "the first stack claims the bottom of the Redis block"
 check "8081" "$alpha_port" "and the bottom of the port range"
 check "1" "$([[ -f "$tmp_root/alpha/env" ]] && echo 1 || echo 0)" \
       "the reservation is on disk BEFORE anything binds — a claim visible only once the stack is up is not a claim"
@@ -317,7 +327,7 @@ check "1" "$(grep -c "^STARTER_PID=$$\$" "$tmp_root/alpha/env")" \
 
 claimed="$(claim_stack "beta")"
 read -r beta_db beta_port <<<"$claimed"
-check "65" "$beta_db" "a second slug cannot be handed the first slug's Redis database"
+check "$((DEV_REDIS_DB_MIN + 1))" "$beta_db" "a second slug cannot be handed the first slug's Redis database"
 check "8082" "$beta_port" "nor its port"
 
 claimed="$(claim_stack "alpha")"
@@ -341,6 +351,17 @@ check "1" "$(pick_free_db >/dev/null 2>&1; echo $?)" \
       "and it reports failure rather than returning success with an empty answer"
 check "1" "$(claim_stack newcomer >/dev/null 2>&1; echo $?)" \
       "claim_stack propagates that refusal as a non-zero status, which is what stops the boot"
+
+# A started stack whose database left the block. The reclaim refuses the record,
+# so a free database is picked, but the started-stack path returns without
+# writing it: handing one over here would record it nowhere, and the next
+# overlapping start would pick the same number.
+rm -rf "$tmp_root"/*
+mkdir -p "$tmp_root/upgraded"
+printf 'SLUG=upgraded\nFE_PORT=8081\nAPI_PORT=18081\nREDIS_DB=%s\nBACKEND_PID=1\n' \
+      "$((DEV_REDIS_DB_MIN - 1))" >"$tmp_root/upgraded/env"
+check "1" "$(claim_stack upgraded >/dev/null 2>&1; echo $?)" \
+      "a started stack on a database below the block is refused, not moved silently"
 
 unset MARGINCE_DEV_STATE_DIR
 
@@ -398,14 +419,18 @@ mine_dsn="postgres://margince_app:pw@localhost:15432/margince"
 theirs_dsn="postgres://margince_app:pw@localhost:15432/margince_dev_band"
 fake_server "$mine_dsn" "localhost:16379/0";    mine=$REPLY
 fake_server "$theirs_dsn" "localhost:16379/64"; theirs=$REPLY
-# The exec'd argv has to be visible to ps before the matcher reads it. Poll for
-# it rather than sleeping a guessed interval.
-for _ in 1 2 3 4 5 6 7 8 9 10; do
-    [[ -n "$(ps -o command= -p "$mine" 2>/dev/null)" ]] && break
+# The exec'd argv has to be visible to ps before the matcher reads it. Until the
+# exec lands, ps shows the `bash -c` that will make it, so wait for the worker's
+# own argv on both, not for any command at all. Poll rather than sleep a guess.
+worker_argv() { # pid — true once ps shows the renamed worker
+    [[ "$(ps -o command= -p "$1" 2>/dev/null)" == ./bin/worker* ]]
+}
+for _ in $(seq 1 50); do
+    worker_argv "$mine" && worker_argv "$theirs" && break
     sleep 0.1
 done
-check "1" "$([[ -n "$(ps -o command= -p "$mine" 2>/dev/null)" ]] && echo 1 || echo 0)" \
-      "the fake worker is running — without this the four checks below would pass on an empty machine"
+check "1" "$(worker_argv "$mine" && worker_argv "$theirs" && echo 1 || echo 0)" \
+      "the fake workers are running under their own argv — without this the four checks below would pass on an empty machine"
 
 check "$mine" "$(stack_server_pids "$mine_dsn" "localhost:16379/0" | sort -u)" \
       "this stack's worker is found by its database and its logical Redis database, with no pid on file"

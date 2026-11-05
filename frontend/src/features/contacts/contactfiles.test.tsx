@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -164,6 +170,43 @@ describe("the contact's files tab", () => {
     expect(signed.getAttribute("download")).toBe("signed.pdf");
   });
 
+  it("opens a document link in a new tab instead of downloading it", async () => {
+    stub({
+      data: [
+        attachment({
+          id: "l-1",
+          entity_id: "a-1",
+          filename: "Q4 plan",
+          category: "link",
+          url: "https://docs.google.com/presentation/d/abc/edit",
+          bytes_withheld: true,
+        }),
+        attachment({
+          id: "l-2",
+          entity_id: "a-1",
+          filename: "tricky",
+          category: "link",
+          url: "javascript:alert(1)",
+          bytes_withheld: true,
+        }),
+      ],
+      page: { has_more: false },
+    });
+    show(<ContactFilesTab contactId="p-1" />);
+
+    const link = await screen.findByRole("link", { name: "Q4 plan" });
+    expect(link.getAttribute("href")).toBe(
+      "https://docs.google.com/presentation/d/abc/edit",
+    );
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.hasAttribute("download")).toBe(false);
+    expect(screen.getByRole("button", { name: /Links sent/ })).toBeTruthy();
+
+    const tricky = screen.getByRole("link", { name: "tricky" });
+    expect(tricky.getAttribute("href")).toBe("/v1/attachments/l-2");
+  });
+
   it("prefers the title a human gave over the filename that arrived", async () => {
     stub({
       data: [
@@ -216,7 +259,59 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" />);
 
     await screen.findByRole("link", { name: "contract.pdf" });
-    expect(screen.getByText("SOW/Contract")).toBeTruthy();
+    expect(
+      within(screen.getByRole("table")).getByText("SOW/Contract"),
+    ).toBeTruthy();
+  });
+
+  it("cuts the files by category, with counts once every page is read", async () => {
+    stub({
+      data: [
+        attachment({
+          id: "f-1",
+          entity_id: "p-1",
+          filename: "offer.pdf",
+          category: "offer",
+          doc_state: "current",
+        }),
+        attachment({
+          id: "f-2",
+          entity_id: "p-1",
+          filename: "nda.pdf",
+          category: "legal",
+        }),
+      ],
+      page: { has_more: false },
+    });
+    const user = userEvent.setup();
+    show(<ContactFilesTab contactId="p-1" />);
+
+    await screen.findByRole("link", { name: "offer.pdf" });
+    expect(screen.getByText("Current")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: /Proposal\/Offer\s*1/ }),
+    );
+    expect(screen.getByRole("link", { name: "offer.pdf" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "nda.pdf" })).toBeNull();
+  });
+
+  it("prints no count on a cut while pages remain unread", async () => {
+    stub({
+      data: [
+        attachment({
+          id: "f-1",
+          entity_id: "p-1",
+          filename: "offer.pdf",
+          category: "offer",
+        }),
+      ],
+      page: { has_more: true, next_cursor: "cur-2" },
+    });
+    show(<ContactFilesTab contactId="p-1" />);
+
+    await screen.findByRole("link", { name: "offer.pdf" });
+    const offer = screen.getByRole("button", { name: /Proposal\/Offer/ });
+    expect(offer.textContent).not.toMatch(/\d/);
   });
 
   it("names a channel file as a message attachment, not an email one", async () => {
@@ -240,11 +335,12 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" />);
 
     await screen.findByRole("link", { name: "deck.png" });
-    expect(screen.getByText("Message attachment")).toBeTruthy();
+    const table = within(screen.getByRole("table"));
+    expect(table.getByText("Message attachment")).toBeTruthy();
     // The negative is the point. A missing label falls back to the raw key or
     // the neighbouring one, and a photo from a chat reported as mail is the
     // wrong record this category exists to stop.
-    expect(screen.queryByText("Email attachment")).toBeNull();
+    expect(table.queryByText("Email attachment")).toBeNull();
   });
 
   it("says nothing about a category the file was never filed under", async () => {
@@ -255,10 +351,11 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" />);
 
     await screen.findByRole("link", { name: "scan.pdf" });
-    // No category was set: the row omits the badge rather than printing an
-    // "uncategorised" placeholder for a fact the record never asserted.
-    expect(screen.queryByText("SOW/Contract")).toBeNull();
-    expect(screen.queryByText("Other")).toBeNull();
+    // No category was set: the row leaves the cell empty rather than printing
+    // an "uncategorised" placeholder for a fact the record never asserted.
+    const table = within(screen.getByRole("table"));
+    expect(table.queryByText("SOW/Contract")).toBeNull();
+    expect(table.queryByText("Other")).toBeNull();
   });
 
   it("says the contact has no files rather than leaving the tab blank", async () => {
@@ -423,5 +520,58 @@ describe("the contact's files tab", () => {
     const url = new URL(lastRequest.url);
     expect(url.searchParams.get("entity_type")).toBe("contact");
     expect(url.searchParams.get("entity_id")).toBe("p-42");
+  });
+});
+
+describe("a file a mail carried, on the contact's files tab", () => {
+  const MAIL_FILE = attachment({
+    id: "f-mail",
+    entity_type: "activity",
+    entity_id: "m-1",
+    filename: "order.pdf",
+    source: "imap",
+    category: "email_attachment",
+  });
+  const ORIGIN = {
+    activity_id: "m-1",
+    kind: "email",
+    subject: "Signed order",
+    occurred_at: "2026-08-01T08:00:00Z",
+    sender: { address: "bea@buyer.example", display_name: "Bea Buyer" },
+  };
+
+  it("names the mail it came with and opens that mail", async () => {
+    stub({
+      data: [{ ...MAIL_FILE, origin: ORIGIN }],
+      page: { has_more: false },
+    });
+    const onOpenEmail = vi.fn();
+    show(<ContactFilesTab contactId="p-1" onOpenEmail={onOpenEmail} />);
+
+    const origin = await screen.findByRole("button", {
+      name: "From Bea Buyer · Signed order",
+    });
+    await userEvent.setup().click(origin);
+    expect(onOpenEmail).toHaveBeenCalledWith("m-1");
+  });
+
+  it("names nothing about a mail the server sent no origin for", async () => {
+    stub({ data: [MAIL_FILE], page: { has_more: false } });
+    show(<ContactFilesTab contactId="p-1" onOpenEmail={vi.fn()} />);
+
+    await screen.findByRole("link", { name: "order.pdf" });
+    expect(screen.queryByText(/^From /)).toBeNull();
+    expect(screen.queryByText(/Signed order/)).toBeNull();
+  });
+
+  it("leaves an upload's row with its name alone", async () => {
+    stub({
+      data: [attachment({ id: "f-1", entity_id: "p-1", filename: "cv.pdf" })],
+      page: { has_more: false },
+    });
+    show(<ContactFilesTab contactId="p-1" onOpenEmail={vi.fn()} />);
+
+    const name = await screen.findByRole("link", { name: "cv.pdf" });
+    expect(name.closest(".contact-file")?.textContent).toBe("cv.pdf");
   });
 });

@@ -4,7 +4,13 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "../design-system/heading";
@@ -12,33 +18,15 @@ import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { STORAGE_KEYS } from "../lib/storage";
 import { setThemeChoice } from "../lib/theme";
+import { bookingProfile } from "../testing/book.testkit";
 import { meFixture } from "../testing/mefixture";
 import { AccountMenu } from "./account";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
 
-// The bundle's releases are compiled in, and every local build leaves them
-// empty. Getters over a hoisted value let each case set the releases it needs.
-// The comparison rule stays the real one.
-const bundle = vi.hoisted(() => ({ release: "", core: "" }));
-vi.mock("../lib/release", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/release")>();
-  return {
-    ...actual,
-    get SPA_RELEASE() {
-      return bundle.release;
-    },
-    get CORE_RELEASE() {
-      return bundle.core;
-    },
-  };
-});
-
-// The account block: an avatar in the top bar's trail, and the menu it opens is
-// the product's ONE door into settings and its ONE appearance control — the
-// sidebar's foot carried the first and no longer exists, and the second used to
-// be a form two navigations away. Behaviour only: WHERE the panel opens is CSS,
-// but what it holds, and what a keyboard reader can do with it, are promises.
+// The account block: a glyph in the top bar's trail. Its menu is the one door
+// into settings and the one appearance control. Behaviour only: where the panel
+// opens is CSS, but what it holds and what a keyboard reader can do are promises.
 
 // The theme is ONE module-level store shared by every mounted control, so it
 // outlives a case. Every case here starts from the unchosen state — following
@@ -49,8 +37,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  bundle.release = "";
-  bundle.core = "";
   vi.unstubAllGlobals();
   window.localStorage.removeItem(THEME_KEY);
 });
@@ -93,9 +79,9 @@ const renderNamed = (displayName: string) => {
 
 // Expanded, the trigger's accessible name carries the visible name as well as
 // what the control does, so it is matched by suffix rather than by equality.
-// Avatar-only there is no visible text to carry, and the name is exact.
+// Glyph-only there is no visible text to carry, and the name is exact.
 const railTrigger = () => screen.getByRole("button", { name: /Account$/ });
-const avatarTrigger = () => screen.getByRole("button", { name: "Account" });
+const glyphTrigger = () => screen.getByRole("button", { name: "Account" });
 
 const openMenu = async (user: UserEvent, trigger: HTMLElement) => {
   await user.click(trigger);
@@ -103,21 +89,30 @@ const openMenu = async (user: UserEvent, trigger: HTMLElement) => {
 };
 
 const row = (name: string) => screen.getByRole("menuitem", { name });
+const head = () =>
+  screen.getByRole("menuitem", {
+    name: "Test User — test@example.test: account settings",
+  });
 const choice = (name: string) => screen.getByRole("radio", { name });
 
 describe("AccountMenu", () => {
   // The rail's chip and the settings page's chip are the SAME contact, so they
   // wear the same mesh — and keep it when the display name changes, because
   // the mesh is keyed on the address rather than on the name.
-  it("keys the chip's mesh on the address, not the display name", () => {
-    const meshOf = (root: HTMLElement) =>
-      root.querySelector(".avatar-mesh")?.getAttribute("style");
+  it("keys the chip's mesh on the address, not the display name", async () => {
+    const user = userEvent.setup();
+    const meshOf = async (root: HTMLElement) => {
+      await openMenu(user, glyphTrigger());
+      return root
+        .querySelector(".acctmenuwho .avatar-mesh")
+        ?.getAttribute("style");
+    };
     const { container: named } = renderNamed("Test User");
-    const mesh = meshOf(named);
+    const mesh = await meshOf(named);
     expect(mesh).toContain("--avatar-hue-a");
     cleanup();
     const { container: renamed } = renderNamed("Renamed Contact");
-    expect(meshOf(renamed)).toBe(mesh);
+    expect(await meshOf(renamed)).toBe(mesh);
   });
 
   // WCAG 2.5.3: the row prints the contact's name, so a voice user who says the
@@ -146,15 +141,59 @@ describe("AccountMenu", () => {
     render(<AccountMenu />);
     await openMenu(user, railTrigger());
 
-    expect(row("Settings").getAttribute("href")).toBe("#/settings");
+    expect(row("Settings").getAttribute("href")).toBe("/#/settings");
     // Exactly one: a second row a click apart landing on the same level is the
     // shape this menu replaced.
     expect(
       screen
         .getAllByRole("menuitem")
-        .filter((item) => item.getAttribute("href") === "#/settings"),
+        .filter((item) => item.getAttribute("href") === "/#/settings"),
     ).toHaveLength(1);
   });
+
+  // The head opens the seat's own page, not the settings level. Its name says
+  // whose account it is and where it leads, and the menu goes with the click.
+  it("opens the seat's own account page from its head", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<AccountMenu />);
+    await openMenu(user, railTrigger());
+
+    expect(head().getAttribute("href")).toBe("/#/settings/account");
+    expect(head().classList).toContain("acctrow");
+    await user.click(head());
+    expect(container.querySelector(".accountmenu")).toBeNull();
+  });
+
+  // The booking link row carries the guest-facing state: a page switched off,
+  // or one whose calendar cannot take bookings, is paused for every guest.
+  it.each([
+    [{ enabled: false, blocker: "none" }, true],
+    [{ enabled: true, blocker: "calendar_read_only" }, true],
+    [{ enabled: true, blocker: "none" }, false],
+  ] as const)(
+    "marks the booking link paused for %o: %s",
+    async (state, paused) => {
+      const user = userEvent.setup();
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      client.setQueryData(["me"], meFixture());
+      client.setQueryData(["scheduling-profile"], {
+        ...bookingProfile,
+        ...state,
+      });
+      rtlRender(
+        <QueryClientProvider client={client}>
+          <LocaleProvider initial="en">
+            <AccountMenu />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      await openMenu(user, railTrigger());
+      const link = screen.getByRole("menuitem", { name: /My booking link/ });
+      expect(link.textContent?.includes("Paused")).toBe(paused);
+    },
+  );
 
   // The appearance choice IS a destination now: it lives where the reader can
   // see the document repaint under the open panel, rather than on a form two
@@ -197,7 +236,7 @@ describe("AccountMenu", () => {
     render(<AccountMenu />);
     await openMenu(user, railTrigger());
 
-    await user.keyboard("{ArrowDown}");
+    await user.keyboard("{ArrowDown}{ArrowDown}");
     expect(document.activeElement).toBe(row("Theme"));
 
     await user.keyboard("{ArrowRight}");
@@ -268,23 +307,27 @@ describe("AccountMenu", () => {
     render(<AccountMenu />);
     await openMenu(user, railTrigger());
     // The menu takes focus when it opens, or a keyboard reader has to walk into
-    // it with a key nothing told them about.
-    expect(document.activeElement).toBe(row("Settings"));
+    // it with a key nothing told them about. The head is its first row.
+    expect(document.activeElement).toBe(head());
 
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(row("Settings"));
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Theme"));
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("My booking link"));
     await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(row("Help and feedback"));
+    await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Sign out"));
     // Wrapping, so the walk has no dead end.
     await user.keyboard("{ArrowDown}");
-    expect(document.activeElement).toBe(row("Settings"));
+    expect(document.activeElement).toBe(head());
 
     await user.keyboard("{ArrowUp}");
     expect(document.activeElement).toBe(row("Sign out"));
     await user.keyboard("{Home}");
-    expect(document.activeElement).toBe(row("Settings"));
+    expect(document.activeElement).toBe(head());
     await user.keyboard("{End}");
     expect(document.activeElement).toBe(row("Sign out"));
   });
@@ -300,10 +343,10 @@ describe("AccountMenu", () => {
       screen
         .getAllByRole("menuitem")
         .filter((item) => item.getAttribute("tabindex") === "0");
-    expect(stops()).toEqual([row("Settings")]);
+    expect(stops()).toEqual([head()]);
 
     await user.keyboard("{ArrowDown}");
-    expect(stops()).toEqual([row("Theme")]);
+    expect(stops()).toEqual([row("Settings")]);
   });
 
   // A dialog raised over the open menu owns Escape: one press closes the
@@ -382,85 +425,6 @@ describe("AccountMenu", () => {
     expect(alert.textContent).toContain("Your session is already gone.");
   });
 
-  // The release the reader is running, at the foot of the menu, so whoever
-  // reports a problem can say which build it is in. A statement rather than a
-  // row: it goes nowhere, so it is not a menu item and the keyboard skips it.
-  it("names the release this bundle was built from", async () => {
-    bundle.release = "v1.4.0";
-    const user = userEvent.setup();
-    render(<AccountMenu />);
-    await openMenu(user, railTrigger());
-    const version = screen.getByText("Version v1.4.0");
-    expect(version.closest("[role=menuitem]")).toBeNull();
-    expect(screen.getAllByRole("menuitem").at(-1)).toBe(row("Sign out"));
-  });
-
-  // An unstamped build does not know its release, and an empty or "dev" line
-  // would print a version that is not one.
-  it.each(["", "dev"])(
-    "prints no release for an unstamped build (%j)",
-    async (release) => {
-      bundle.release = release;
-      const user = userEvent.setup();
-      const { container } = render(<AccountMenu />);
-      await openMenu(user, railTrigger());
-      expect(screen.queryByText(/^Version/)).toBeNull();
-      expect(container.querySelector(".acctversion")).toBeNull();
-    },
-  );
-
-  // An instance build stamps the core release it pins, and the reader then
-  // sees both: the instance's own release and the core under it.
-  it("names the instance and the core release on an instance build", async () => {
-    bundle.release = "v0.4.1";
-    bundle.core = "v0.0.5";
-    const user = userEvent.setup();
-    render(<AccountMenu />);
-    await openMenu(user, railTrigger());
-    expect(screen.getByText("Instance v0.4.1")).toBeInTheDocument();
-    const core = screen.getByText("Core v0.0.5");
-    expect(core.closest("[role=menuitem]")).toBeNull();
-    expect(screen.queryByText(/^Version/)).toBeNull();
-    expect(screen.getAllByRole("menuitem").at(-1)).toBe(row("Sign out"));
-  });
-
-  // Equal values are still two facts about two repositories.
-  it("keeps both lines when the instance and core releases are equal", async () => {
-    bundle.release = "v0.4.1";
-    bundle.core = "v0.4.1";
-    const user = userEvent.setup();
-    render(<AccountMenu />);
-    await openMenu(user, railTrigger());
-    expect(screen.getByText("Instance v0.4.1")).toBeInTheDocument();
-    expect(screen.getByText("Core v0.4.1")).toBeInTheDocument();
-  });
-
-  it.each(["", "dev"])(
-    "an instance build with an unstamped instance release (%j) names only the core",
-    async (release) => {
-      bundle.release = release;
-      bundle.core = "v0.0.5";
-      const user = userEvent.setup();
-      render(<AccountMenu />);
-      await openMenu(user, railTrigger());
-      expect(screen.getByText("Core v0.0.5")).toBeInTheDocument();
-      expect(screen.queryByText(/^Instance/)).toBeNull();
-      expect(screen.queryByText(/^Version/)).toBeNull();
-    },
-  );
-
-  // "dev" is what a plain docker build stamps, so it is no core release.
-  it('treats a core release of "dev" as a core-only build', async () => {
-    bundle.release = "v1.4.0";
-    bundle.core = "dev";
-    const user = userEvent.setup();
-    render(<AccountMenu />);
-    await openMenu(user, railTrigger());
-    expect(screen.getByText("Version v1.4.0")).toBeInTheDocument();
-    expect(screen.queryByText(/^Core/)).toBeNull();
-    expect(screen.queryByText(/^Instance/)).toBeNull();
-  });
-
   // Closed, the panel is not rendered at all — so there is nothing behind the
   // trigger for Tab to land on, and nothing for a screen reader to read out of
   // a menu that is not open.
@@ -470,13 +434,13 @@ describe("AccountMenu", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
-  // The trigger prints nothing, and an avatar alone tells a screen reader
+  // The trigger prints nothing, and a glyph alone tells a screen reader
   // nothing. The sentence is carried as clipped text and wired as the trigger's
   // description — the `title` is the pointer's copy of it and is never the
   // accessible name.
   it("carries the identity for a screen reader without printing it", () => {
     const { container } = render(<AccountMenu />);
-    const trigger = avatarTrigger();
+    const trigger = glyphTrigger();
     expect(container.querySelector(".acctwho")).toBeNull();
 
     const describedBy = trigger.getAttribute("aria-describedby") ?? "";
@@ -487,26 +451,117 @@ describe("AccountMenu", () => {
     expect(trigger.getAttribute("title")).toBe(spoken?.textContent);
   });
 
-  // The trigger is the avatar and nothing else, so the name it carries is the
-  // only thing that identifies it — and the panel is the only place the reader
-  // can confirm WHOSE account they are about to act on.
-  it("names the top bar's avatar-only trigger, and prints the identity in the panel", async () => {
+  // The trigger is a glyph alone, so its name is all that identifies it. The
+  // panel is where the reader confirms whose account they are about to act on.
+  it("names the top bar's glyph-only trigger, and prints the identity in the panel", async () => {
     const user = userEvent.setup();
     const { container } = render(<AccountMenu />);
-    const trigger = avatarTrigger();
+    const trigger = glyphTrigger();
     expect(container.querySelector(".acctwho")).toBeNull();
     expect(trigger.getAttribute("aria-label")).toBe("Account");
+    expect(trigger.querySelector(".avatar")).toBeNull();
 
     await openMenu(user, trigger);
     const who = container.querySelector(".acctmenuwho");
+    // The chip stands before the two lines, in the panel only.
+    expect(who?.firstElementChild?.classList).toContain("avatar");
     expect(who?.querySelector("b")?.textContent).toBe("Test User");
     expect(who?.querySelector(".acctmail")?.textContent).toBe(
       "test@example.test",
     );
-    // And in the menu's own name, so a reader entering it in menu mode is told
-    // whose account it is without having to leave to find out.
-    expect(screen.getByRole("menu", { name: /Test User/ })).toBe(
+    // The menu is named by what it is, as the trigger is. The head row names
+    // whose account it is, and focus lands on it.
+    expect(screen.getByRole("menu", { name: "Account" })).toBe(
       container.querySelector(".accountmenu"),
     );
+    expect(document.activeElement).toBe(head());
+  });
+});
+
+// A session whose /me names nobody yet: no head row, and focus starts on
+// Settings. The client is returned, so a case can let /me answer later.
+const renderHeadless = () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const me = meFixture();
+  client.setQueryData(["me"], {
+    ...me,
+    user: { ...me.user, display_name: "", email: "" },
+  });
+  // The mount's own refetch never answers, so only the case changes /me.
+  vi.stubGlobal("fetch", () => new Promise(() => undefined));
+  rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <AccountMenu />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return client;
+};
+
+describe("AccountMenu before /me names the seat", () => {
+  it("starts on Settings and walks only the rows it draws", async () => {
+    const user = userEvent.setup();
+    renderHeadless();
+    await openMenu(user, glyphTrigger());
+    expect(screen.queryByRole("menuitem", { name: /account settings/ })).toBe(
+      null,
+    );
+    expect(document.activeElement).toBe(row("Settings"));
+
+    const walked = [];
+    for (let step = 0; step < 5; step++) {
+      await user.keyboard("{ArrowDown}");
+      walked.push(document.activeElement?.textContent);
+    }
+    expect(walked).toEqual([
+      "Theme",
+      "My booking link",
+      "Help and feedback",
+      "Sign out",
+      "Settings",
+    ]);
+    await user.keyboard("{ArrowUp}");
+    expect(document.activeElement).toBe(row("Sign out"));
+    await user.keyboard("{Home}");
+    expect(document.activeElement).toBe(row("Settings"));
+    await user.keyboard("{End}");
+    expect(document.activeElement).toBe(row("Sign out"));
+  });
+
+  it("hands focus to the head when /me answers while focus is on Settings", async () => {
+    const user = userEvent.setup();
+    const client = renderHeadless();
+    await openMenu(user, glyphTrigger());
+    expect(document.activeElement).toBe(row("Settings"));
+
+    act(() => client.setQueryData(["me"], meFixture()));
+    await waitFor(() => expect(document.activeElement).toBe(head()));
+  });
+
+  it("leaves focus on the row the reader walked to when /me answers", async () => {
+    const user = userEvent.setup();
+    const client = renderHeadless();
+    await openMenu(user, glyphTrigger());
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(row("Theme"));
+
+    act(() => client.setQueryData(["me"], meFixture()));
+    await screen.findByRole("menuitem", { name: /account settings/ });
+    expect(document.activeElement).toBe(row("Theme"));
+  });
+
+  it("leaves focus on Settings when /me answers after the reader walked back to it", async () => {
+    const user = userEvent.setup();
+    const client = renderHeadless();
+    await openMenu(user, glyphTrigger());
+    await user.keyboard("{ArrowDown}{ArrowUp}");
+    expect(document.activeElement).toBe(row("Settings"));
+
+    act(() => client.setQueryData(["me"], meFixture()));
+    await screen.findByRole("menuitem", { name: /account settings/ });
+    expect(document.activeElement).toBe(row("Settings"));
   });
 });

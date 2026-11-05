@@ -93,7 +93,8 @@ func TestEveryGenericRelationshipVerbTakesTheAnchorRowGate(t *testing.T) {
 // then requires an object grant — the object half of the anchor gate.
 func asksTheAnchorObjectGrant(fn *ast.FuncDecl) bool {
 	return callsAnyPackageFunc(fn, map[string]bool{anchorObjectResolver: true}) &&
-		callsAny(fn, anchorObjectPackage, map[string]bool{anchorObjectGate: true})
+		(callsAny(fn, anchorObjectPackage, map[string]bool{anchorObjectGate: true}) ||
+			callsAnyPackageFunc(fn, map[string]bool{"requireRelationshipCreate": true}))
 }
 
 // functionsReachingTheAnchorRowGate names the gate plus every module function

@@ -38,7 +38,7 @@ func selectDeciderOn(lane DecisionsConfig, keys config.Lookup, httpc *http.Clien
 		return nil, fmt.Errorf("ai: unknown decision provider %q (have: %s)", lane.Provider, strings.Join(DecisionProviders(), ", "))
 	}
 	client := &decisionClient{http: httpc, url: defaulted(lane.BaseURL, d.defaultEndpoint)}
-	if d.keyEnv != "" {
+	if d.key != nil {
 		client.apiKey = cloudKey(d.name, keys)
 		if client.apiKey == "" && !d.keyOptional {
 			return nil, byokKeyRequired(d.name)

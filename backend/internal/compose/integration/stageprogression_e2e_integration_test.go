@@ -64,11 +64,15 @@ func proposeOnMetCriteria(t *testing.T, e *Env) (ids.DealID, bool) {
 
 	// Through the REAL writer. A hand-inserted row would test a shape the
 	// product never writes.
+	contractID := seedContract(t, e, contracts.CreateContractInput{
+		CompanyID: companyIDOf(e.SeedCompany(t, "Progression company", nil)),
+		Title:     "Signed agreement", ValueBasis: contracts.BasisTotal, Source: "manual",
+	})
 	written, err := e.Deals.RecordDeterministicEvidence(admin, deals.DeterministicClaim{
 		DealID:     deal,
 		Kind:       deals.CriterionDocumentSigned,
 		SourceType: "contract",
-		SourceID:   ids.NewV7(),
+		SourceID:   contractID.UUID,
 		AuthorSide: deals.AuthorBuyer,
 		ObservedAt: stageProgressionClock.Add(-time.Hour),
 	})
@@ -372,6 +376,7 @@ func TestTheCardCitesSomethingAReviewerCanOpen(t *testing.T) {
 		t.Fatalf("the card cites %s, want the contract %s the claim was read from — "+
 			"an evidence-row id under this type resolves to nothing", source, contractID)
 	}
+	assertProgressionContractPreview(t, e, deal, contractID)
 }
 
 // A superseded card does not sit on the ledger forever.

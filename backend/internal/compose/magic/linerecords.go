@@ -52,35 +52,43 @@ func (s *Service) LineRecords(
 		limit = recordsPageDefault
 	}
 	limit = min(limit, maxLimit)
-	pos, err := decodeRecordsCursor(cursor, s.now().UTC())
+	pos, err := decodeRecordsCursor(cursor)
 	if err != nil {
 		return crmcontracts.MagicLineRecords{}, err
 	}
 	offset := pos.offset
 	out := crmcontracts.MagicLineRecords{Data: []crmcontracts.MagicLineRecord{}}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		entries, _, err := doneSince(ctx, tx, from, maxLimit)
-		if err != nil {
-			return err
-		}
-		members, found := lineMembers(asOf(entries, pos.asOf), lineID)
-		if !found {
-			return apperrors.ErrNotFound
-		}
-		end := min(offset+limit, len(members))
-		if offset < end {
-			out.Data, err = s.recordsOf(ctx, tx, members[offset:end])
+	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			entries, _, err := doneSince(ctx, tx, from, maxLimit)
 			if err != nil {
 				return err
 			}
-		}
-		if end < len(members) {
-			next := recordsCursor{offset: end, asOf: pos.asOf}.encode()
-			out.Page = crmcontracts.PageInfo{HasMore: true, NextCursor: &next}
-		}
-		total := len(members)
-		out.Page.Total = &total
-		return nil
+			if pos.asOf.IsZero() {
+				pos.asOf = newestOccurred(entries)
+			}
+			members, found := lineMembers(asOf(entries, pos.asOf), lineID)
+			if !found {
+				return apperrors.ErrNotFound
+			}
+			end := min(offset+limit, len(members))
+			if offset < end {
+				if err := loadDeferredImages(ctx, tx, members[offset:end]); err != nil {
+					return err
+				}
+				out.Data, err = s.recordsOf(ctx, tx, members[offset:end])
+				if err != nil {
+					return err
+				}
+			}
+			if end < len(members) {
+				next := recordsCursor{offset: end, asOf: pos.asOf}.encode()
+				out.Page = crmcontracts.PageInfo{HasMore: true, NextCursor: &next}
+			}
+			total := len(members)
+			out.Page.Total = &total
+			return nil
+		})
 	})
 	if err != nil {
 		return crmcontracts.MagicLineRecords{}, fmt.Errorf("open a done line: %w", err)
@@ -138,6 +146,7 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 		}
 		out = append(out, crmcontracts.MagicLineRecord{
 			AuditId:    openapi_types.UUID(e.ID),
+			ReceiptId:  new(receiptIdentity(e)),
 			OccurredAt: e.OccurredAt,
 			Entity: crmcontracts.MagicEntityRef{
 				Type: e.EntityType, Id: openapi_types.UUID(e.EntityID), Label: e.Label,
@@ -172,6 +181,9 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 func changesOf(e entry) []crmcontracts.MagicFieldChange {
 	if bulkActions[e.Action] {
 		return []crmcontracts.MagicFieldChange{}
+	}
+	if changes := technicalFieldChanges(e); len(changes) > 0 {
+		return changes
 	}
 	return fieldChanges(e.Before, e.After)
 }
@@ -221,11 +233,11 @@ func (c recordsCursor) encode() string {
 	return strconv.Itoa(c.offset) + ":" + strconv.FormatInt(c.asOf.UnixNano(), 10)
 }
 
-// decodeRecordsCursor reads a position a previous page handed out; no cursor
-// is the first page, read as of now.
-func decodeRecordsCursor(cursor *string, now time.Time) (recordsCursor, error) {
+// decodeRecordsCursor reads a position a previous page handed out. No cursor is
+// the first page, whose zero asOf the read fills from what it finds.
+func decodeRecordsCursor(cursor *string) (recordsCursor, error) {
 	if cursor == nil || *cursor == "" {
-		return recordsCursor{asOf: now}, nil
+		return recordsCursor{}, nil
 	}
 	offsetText, asOfText, ok := strings.Cut(*cursor, ":")
 	offset, errOffset := strconv.Atoi(offsetText)
@@ -234,6 +246,19 @@ func decodeRecordsCursor(cursor *string, now time.Time) (recordsCursor, error) {
 		return recordsCursor{}, fmt.Errorf("%w: cursor", apperrors.ErrInvalidArgument)
 	}
 	return recordsCursor{offset: offset, asOf: time.Unix(0, nanos).UTC()}, nil
+}
+
+// newestOccurred is the instant a first page pins its later pages to: the
+// newest entry it read. The entries carry the database's clock, so the app's
+// own clock, a little behind it, would drop the newest of them.
+func newestOccurred(entries []entry) time.Time {
+	var newest time.Time
+	for _, e := range entries {
+		if e.OccurredAt.After(newest) {
+			newest = e.OccurredAt
+		}
+	}
+	return newest
 }
 
 // asOf keeps the entries that had happened by the instant a line was opened.

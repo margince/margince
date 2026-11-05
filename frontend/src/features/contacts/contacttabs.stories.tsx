@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -36,7 +36,13 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { is_done: false, ...CAPTURED, ...row };
+  return {
+    occurred_precision: "instant",
+    offers_email: false,
+    is_done: false,
+    ...CAPTURED,
+    ...row,
+  };
 }
 
 // The tab reads the page's own activities section rather than fetching, so the
@@ -71,16 +77,29 @@ const view: Contact360 = {
 // The tab is drawn at the work column's measure. The dials are the reason: how
 // much of one line the cuts and the narrowing row take is a fact about the
 // column they sit in, not about the viewport.
-function tab(record: Contact360 | undefined) {
+function tab(
+  record: Contact360 | undefined,
+  {
+    width = 760,
+    briefs = false,
+    writer = false,
+  }: { width?: number; briefs?: boolean; writer?: boolean } = {},
+) {
   return () => {
     // Routed with no object grants, which is the ordinary seat this tab is
     // drawn for; unrouted, the session reads as malformed and the tab draws a
     // branch these stories are not named for.
-    installFetchStub({ "GET /me": meRoute({}) });
+    installFetchStub({
+      "GET /me": meRoute(writer ? { activity: ["read", "update"] } : {}),
+    });
     return (
       <StoryProviders>
-        <div style={{ maxWidth: 760 }}>
-          <ContactTimelineTab contactId="p-1" view={record} />
+        <div style={{ maxWidth: width }}>
+          <ContactTimelineTab
+            contactId="p-1"
+            view={record}
+            onBriefMeeting={briefs ? () => undefined : undefined}
+          />
         </div>
       </StoryProviders>
     );
@@ -100,6 +119,167 @@ type Story = StoryObj<typeof ContactTimelineTab>;
  * head with the narrowing row beneath them, and the exchanges under both.
  */
 export const Chronology: Story = { render: tab(view) };
+
+const reachable: Contact360["contact"] = {
+  ...view.contact,
+  phones: [
+    {
+      id: "ph-1",
+      phone: "+49 151 7654321",
+      phone_type: "mobile",
+      is_primary: true,
+      position: 0,
+      ...CAPTURED,
+    },
+  ],
+};
+
+const call = activity({
+  id: "a-3",
+  kind: "call",
+  subject: "Asked whether the retrofit slot can move to October",
+  direction: "inbound",
+  occurred_at: "2026-08-12T15:30:00Z",
+});
+
+/** A logged call on a contact with a phone offers Call on its row. */
+export const WithCall: Story = {
+  render: tab({
+    ...view,
+    contact: reachable,
+    activities: {
+      data: [call, ...(view.activities?.data ?? [])],
+      page: { has_more: false },
+    },
+  }),
+};
+
+const LONG_SUBJECT =
+  "Re: Retrofit schedule for the Hamburg depot, the October slot and the second workshop bay";
+
+const LONG_WORD =
+  "Flottenerneuerungsrahmenvertragsverhandlungsprotokollzusammenfassungsentwurfsüberarbeitungsfrist";
+const LONG_FILENAME =
+  "Rahmenvertrag_Flottenerneuerung_Hamburg_Depot_Werkstatt_2026_final_v3_unterschrieben_gegengezeichnet.pdf";
+
+/**
+ * Long words beside the verbs: an email subject, a call subject with no break
+ * in it and a note named for a file. Each row's verbs stay inside the row.
+ */
+export const LongEmailBesideVerbs: Story = {
+  render: tab({
+    ...view,
+    contact: reachable,
+    activities: {
+      data: [
+        activity({
+          id: "a-4",
+          kind: "email",
+          subject: LONG_SUBJECT,
+          direction: "inbound",
+          occurred_at: "2026-08-12T16:00:00Z",
+          email_summary: {
+            activity_id: "a-4",
+            occurred_at: "2026-08-12T16:00:00Z",
+            occurred_precision: "instant",
+            version: 1,
+            subject: LONG_SUBJECT,
+            preview:
+              "We can take the October slot if the second bay is free by the twentieth, otherwise it moves to November.",
+            counterparty: "Dana Buyer",
+            direction: "inbound",
+            display_status: "team",
+            move: "needs_reply",
+            attachment_count: 0,
+          },
+        }),
+        call,
+        activity({
+          id: "a-6",
+          kind: "call",
+          subject: LONG_WORD,
+          direction: "outbound",
+          occurred_at: "2026-08-12T14:00:00Z",
+        }),
+        activity({
+          id: "a-7",
+          kind: "note",
+          subject: LONG_FILENAME,
+          occurred_at: "2026-08-12T13:00:00Z",
+        }),
+        activity({
+          id: "a-5",
+          kind: "task",
+          subject: "Send the revised retrofit quote",
+          occurred_at: "2026-08-12T09:00:00Z",
+        }),
+        ...(view.activities?.data ?? []),
+      ],
+      page: { has_more: false },
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await page.findByText(LONG_SUBJECT);
+    for (const body of canvasElement.querySelectorAll(".tl-body")) {
+      const edge = body.getBoundingClientRect().right;
+      for (const verb of body.querySelectorAll(":scope > .tl-actions > *")) {
+        await expect(verb.getBoundingClientRect().right).toBeLessThanOrEqual(
+          edge + 0.5,
+        );
+      }
+    }
+  },
+};
+
+/**
+ * A held meeting carries five verbs, one more than any other row: Prepare
+ * brief joins Reply, Files, Relink and Change visibility. Drawn just above the
+ * width where the verbs drop under the entry, the kind line and the headline
+ * stay clear of them.
+ */
+export const FiveVerbsBesideTheHead: Story = {
+  render: tab(
+    {
+      ...view,
+      contact: reachable,
+      activities: {
+        data: [
+          activity({
+            id: "a-8",
+            kind: "meeting",
+            subject: "Depot walkthrough with the workshop lead",
+            body: "Walked the Hamburg depot with Dana and her workshop lead.",
+            offers_email: true,
+            email_target: { entity_type: "contact", entity_id: "p-1" },
+            writable: true,
+            occurred_at: "2026-08-12T08:00:00Z",
+          }),
+        ],
+        page: { has_more: false },
+      },
+    },
+    { width: 680, briefs: true, writer: true },
+  ),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await page.findByRole("button", { name: "Prepare brief" });
+    for (const body of canvasElement.querySelectorAll(".tl-body")) {
+      const head = body.querySelector(":scope > .tl-head");
+      const verbs = body.querySelector(":scope > .tl-actions");
+      if (!head || !verbs) continue;
+      const row = verbs.getBoundingClientRect();
+      // Each part of the kind line sits clear of the verbs. A collapsed head
+      // still has a box, so its contents are measured instead.
+      for (const part of head.children) {
+        const box = part.getBoundingClientRect();
+        await expect(
+          box.right <= row.left + 0.5 || box.top >= row.bottom - 0.5,
+        ).toBe(true);
+      }
+    }
+  },
+};
 
 /**
  * The Conversations cut: the same chronicle, narrowed to the exchanges

@@ -34,19 +34,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
-const (
-	// The customer's Telegram account and the chat the conversation was held in.
-	// A private chat's id IS the account id, which is why one value serves both.
-	channelSendAccountID = "770011"
-	channelSendThreadKey = "telegram:8100:" + channelSendAccountID
-	channelSendBaseURL   = "https://channel.example.test"
-)
+const channelSendBaseURL = "https://channel.example.test"
 
 type channelSendEnv struct {
-	*apptest.AppEnv
-	activityID string
-	contactID  string
-	user       string
+	*apptest.ChannelConversation
 }
 
 // setupChannelSend boots the api composition with the connect registry (so the
@@ -73,75 +64,25 @@ func setupChannelSend(t *testing.T) *channelSendEnv {
 		compose.WithPublicBaseURL(channelSendBaseURL))
 	apptest.BootstrapWorkspaceSession(t, e, "Channel Send E2E", "rep@fable.test", "Admin")
 
-	c := &channelSendEnv{AppEnv: e}
+	c := &channelSendEnv{ChannelConversation: &apptest.ChannelConversation{AppEnv: e}}
 	var contact struct {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Telegram Buyer"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
-	c.contactID = contact.ID
+	c.ContactID = contact.ID
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT id FROM app_user WHERE email = $1`, "rep@fable.test").Scan(&c.user)
+			`SELECT id FROM app_user WHERE email = $1`, "rep@fable.test").Scan(&c.User)
 	}); err != nil {
 		t.Fatalf("resolving the acting human: %v", err)
 	}
-	c.bindIdentity(t)
-	c.seedInboundMessage(t)
-	c.grantConsent(t, "transactional")
-	c.connectBot(t)
+	c.BindIdentity(t)
+	c.SeedInboundMessage(t)
+	c.GrantConsent(t, "transactional")
+	c.ConnectBot(t)
 	return c
-}
-
-// bindIdentity writes the contact_channel_identity row an inbound message binds.
-// Written as the table owner because the subject here is what the SEND path
-// reads out of it, not how ingress puts it there.
-func (c *channelSendEnv) bindIdentity(t *testing.T) {
-	t.Helper()
-	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, username, source, captured_by)
-			VALUES ($1, 'telegram', $2, 'buyer', 'telegram', 'connector:telegram')`,
-			c.contactID, channelSendAccountID)
-		return err
-	}); err != nil {
-		t.Fatalf("binding the channel identity: %v", err)
-	}
-}
-
-// seedInboundMessage writes the conversation being answered: an inbound telegram
-// activity filed under the chat's thread key and linked to the contact, which is
-// the shape capture leaves behind — including the TRANSPORT that carried it. The
-// reply path resolves the provider from that column, so an anchor seeded without
-// it is not a channel conversation and every reply on it is refused.
-func (c *channelSendEnv) seedInboundMessage(t *testing.T) {
-	t.Helper()
-	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
-		ctx := context.Background()
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO activity (kind, channel_provider, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key)
-			VALUES ('message', 'telegram', 'Is this still available?', now(), 'inbound',
-			        'telegram', '8100:770011:5', 'telegram:8100:770011:5', 'connector:telegram', $1)
-			RETURNING id`, channelSendThreadKey).Scan(&c.activityID); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, contact_id)
-			VALUES ($1, 'contact', $2)`, c.activityID, c.contactID); err != nil {
-			return err
-		}
-		// The customer's own authorship, real capture's job everywhere but
-		// here: the send path's evidence check (authorIsTheSubject) reads
-		// this row, by account since a channel counterparty carries no
-		// address, to tell a reply from an unprompted first contact.
-		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, channel_user_id, role)
-			VALUES ($1, $2, 'from')`, c.activityID, channelSendAccountID)
-		return err
-	}); err != nil {
-		t.Fatalf("seeding the inbound conversation: %v", err)
-	}
 }
 
 // stripInboundAuthorship removes the customer's own "from" participant row
@@ -152,58 +93,10 @@ func (c *channelSendEnv) stripInboundAuthorship(t *testing.T) {
 	t.Helper()
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`DELETE FROM activity_participant WHERE activity_id = $1 AND role = 'from'`, c.activityID)
+			`DELETE FROM activity_participant WHERE activity_id = $1 AND role = 'from'`, c.ActivityID)
 		return err
 	}); err != nil {
 		t.Fatalf("stripping the inbound authorship: %v", err)
-	}
-}
-
-// grantConsent records an active grant for one purpose. The gate is per PURPOSE,
-// so this is what a send under that purpose needs and a send under any other
-// still lacks.
-func (c *channelSendEnv) grantConsent(t *testing.T, key string) {
-	t.Helper()
-	var purposes struct {
-		Data []struct {
-			ID  string `json:"id"`
-			Key string `json:"key"`
-		} `json:"data"`
-	}
-	if status := c.Call(t, "GET", "/v1/consent-purposes", nil, nil, &purposes); status != http.StatusOK {
-		t.Fatalf("list purposes → %d", status)
-	}
-	var purposeID string
-	for _, p := range purposes.Data {
-		if p.Key == key {
-			purposeID = p.ID
-		}
-	}
-	if purposeID == "" {
-		t.Fatalf("bootstrap seeded no %q purpose: %+v", key, purposes.Data)
-	}
-	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent", AnyMap{
-		"purpose_id": purposeID, "new_state": "granted", "lawful_basis": "consent",
-		"wording": "Yes, you may contact me about this.",
-	}, nil, nil); status != http.StatusOK {
-		t.Fatalf("record consent → %d", status)
-	}
-}
-
-// connectBot writes the workspace's live bot binding. The credential ref is never
-// resolved on this path — the pre-flight reads liveness and stops short of the
-// vault — so its value is deliberately opaque here.
-func (c *channelSendEnv) connectBot(t *testing.T) {
-	t.Helper()
-	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO channel_connection
-				(provider, channel_id, channel_label, credential_ref, status, connected_by)
-			VALUES ('telegram', '8100', '@fablebot', 'vault:token', 'connected', $1)`,
-			c.user)
-		return err
-	}); err != nil {
-		t.Fatalf("connecting the workspace bot: %v", err)
 	}
 }
 
@@ -235,7 +128,7 @@ func (c *channelSendEnv) sendReplyClaiming(t *testing.T, purpose, body, context 
 	if context != "" {
 		payload["communication_context"] = context
 	}
-	status = c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-message", payload, headers, &answer)
+	status = c.Call(t, "POST", "/v1/activities/"+c.ActivityID+"/send-message", payload, headers, &answer)
 	if errs := answer.Details.Errors; len(errs) > 0 {
 		return status, errs[0].Code, errs[0].Message
 	}
@@ -316,10 +209,6 @@ func TestSendMessageRefusesAWriteOnlyPassport(t *testing.T) {
 	c.assertNoOutboundEffect(t, "a scope-refused send")
 }
 
-// A send-scoped agent caller meets the 🟡 gate: it may propose the send and may
-// not perform it. The refusal has to happen before the message is staged — an
-// agent that could stage one has already sent it as far as the customer is
-// concerned.
 // A send-scoped passport replies WITHOUT an approval token, and the reply goes.
 //
 // It used to be refused with approval_required. What changed is the tier, not
@@ -383,8 +272,8 @@ func TestSendMessageAcceptsAHumanCallerWithoutAToken(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the staged delivery: %v", err)
 	}
-	if recipient != channelSendAccountID {
-		t.Fatalf("staged recipient = %q, want the conversation's account %q", recipient, channelSendAccountID)
+	if recipient != apptest.ChannelAccountID {
+		t.Fatalf("staged recipient = %q, want the conversation's account %q", recipient, apptest.ChannelAccountID)
 	}
 	if provider != "telegram" || body != "Yes — shipping Monday." {
 		t.Fatalf("staged provider/body = %q/%q, want telegram and the rep's text", provider, body)
@@ -487,7 +376,7 @@ func TestSendMessageRefusesAnUnreachableContact(t *testing.T) {
 	c := setupChannelSend(t)
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE contact_channel_identity SET blocked_at = now() WHERE channel_user_id = $1`, channelSendAccountID)
+			`UPDATE contact_channel_identity SET blocked_at = now() WHERE channel_user_id = $1`, apptest.ChannelAccountID)
 		return err
 	}); err != nil {
 		t.Fatalf("blocking the identity: %v", err)
@@ -516,7 +405,7 @@ func TestSentMessageLandsAsAnOutboundActivity(t *testing.T) {
 		Direction string `json:"direction"`
 		Body      string `json:"body"`
 	}
-	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-message", AnyMap{
+	if status := c.Call(t, "POST", "/v1/activities/"+c.ActivityID+"/send-message", AnyMap{
 		"body": "On its way.", "consent_purpose": "transactional",
 	}, nil, &sent); status != http.StatusAccepted {
 		t.Fatalf("human reply → %d", status)
@@ -546,11 +435,11 @@ func TestSentMessageLandsAsAnOutboundActivity(t *testing.T) {
 	// Capture joins an inbound reply against outbound activities on thread_key,
 	// so a reply filed under any other key is a reply this conversation never
 	// had — and the timeline would show it as a message out of nowhere.
-	if threadKey != channelSendThreadKey {
-		t.Fatalf("outbound activity thread_key = %q, want the conversation's %q", threadKey, channelSendThreadKey)
+	if threadKey != apptest.ChannelThreadKey {
+		t.Fatalf("outbound activity thread_key = %q, want the conversation's %q", threadKey, apptest.ChannelThreadKey)
 	}
-	if linkedContact != c.contactID {
-		t.Fatalf("outbound activity links contact %s, want the conversation's %s", linkedContact, c.contactID)
+	if linkedContact != c.ContactID {
+		t.Fatalf("outbound activity links contact %s, want the conversation's %s", linkedContact, c.ContactID)
 	}
 	// The delivery names THIS activity: one transaction, one fact, so a receipt
 	// recorded later lands on the row the rep is looking at.

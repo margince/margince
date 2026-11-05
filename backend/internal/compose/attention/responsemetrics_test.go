@@ -17,7 +17,7 @@ type answering struct {
 	to   *time.Time
 }
 
-func (a *answering) Unanswered(context.Context, time.Time) ([]WaitingCustomer, bool, error) {
+func (a *answering) Unanswered(context.Context, time.Time, WaitingFor) ([]WaitingCustomer, bool, error) {
 	return nil, false, nil
 }
 

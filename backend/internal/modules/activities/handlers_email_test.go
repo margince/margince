@@ -43,7 +43,7 @@ func TestSendInputMergesEveryAddresseeForTheConsentGate(t *testing.T) {
 		t.Fatalf("Cc = %v, want the cc list travelling separately so the delivery can render two lines", in.Cc)
 	}
 	// The To: line is what remains once the Cc addresses come out.
-	if to := toRecipients(in.Recipients, in.Cc, in.Bcc); len(to) != 1 || to[0] != "buyer@example.test" {
+	if to := ToRecipients(in.Recipients, in.Cc, in.Bcc); len(to) != 1 || to[0] != "buyer@example.test" {
 		t.Fatalf("To: = %v, want the merged list minus the cc'd address", to)
 	}
 }

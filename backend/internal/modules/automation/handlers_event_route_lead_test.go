@@ -66,7 +66,7 @@ func (p *fakeCreateRecorder) Update(context.Context, datasource.UpdateInput) (da
 	panic("fakeCreateRecorder: Update not stubbed for this test")
 }
 
-func (p *fakeCreateRecorder) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (p *fakeCreateRecorder) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	panic("fakeCreateRecorder: AdvanceDeal not stubbed for this test")
 }
 
@@ -78,7 +78,7 @@ func (p *fakeCreateRecorder) Merge(context.Context, datasource.MergeInput) (data
 	panic("fakeCreateRecorder: Merge not stubbed for this test")
 }
 
-func (p *fakeCreateRecorder) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
+func (p *fakeCreateRecorder) PromoteLead(context.Context, ids.UUID, string, *string, *int64, datasource.PromotionDealChoice) (datasource.EntityRef, bool, error) {
 	panic("fakeCreateRecorder: PromoteLead not stubbed for this test")
 }
 

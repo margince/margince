@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider, useLocale, useT } from "../i18n";
 import { StoryProviders } from "../testing/story-utils";
 import { activityTimeline } from "./activitytimeline";
@@ -12,6 +13,7 @@ import type { RecordContact } from "./participants";
 import { GroupedTimelineList, TimelineList } from "./timeline";
 import type { TimelineEntry } from "./timelineentry";
 import { groupChronology } from "./timelinegroups";
+import { ThreadRow } from "./timelinethread";
 
 const meta: Meta<typeof TimelineList> = {
   title: "Components/Text and data display/Timeline list",
@@ -42,6 +44,7 @@ function entry(
     kind: "email",
     title: "Re: Fleet renewal",
     atIso,
+    atPrecision: "instant",
     provenance: { kind: "connector", connector: "gmail" },
     ...overrides,
   };
@@ -156,6 +159,49 @@ export const Grouped: Story = {
   ),
 };
 
+// A run of newsletters the account sent the team folds into one row, whatever
+// their subjects and days. The grouping is the real one, from groupChronology.
+function newsletterRun() {
+  return groupChronology(
+    [
+      "October issue",
+      "Webinar next week",
+      "September issue",
+      "Product update",
+    ].map((title, week) =>
+      entry(
+        `n${week}`,
+        `2026-10-${String(28 - 7 * week).padStart(2, "0")}T08:00:00Z`,
+        {
+          title,
+          direction: "inbound",
+          bulkAttested: true,
+          counterparts: "Brandt Automotive news",
+        },
+      ),
+    ),
+  );
+}
+
+export const NewsletterRun: Story = {
+  render: () => <GroupedTimelineList zone={ZONE} groups={newsletterRun()} />,
+};
+
+export const NewsletterRunOpen: Story = {
+  render: () => <GroupedTimelineList zone={ZONE} groups={newsletterRun()} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("4 newsletters")).toBeTruthy();
+    await userEvent.click(canvas.getByRole("button", { name: "Open" }));
+    await expect(canvas.getByText("Product update")).toBeTruthy();
+  },
+};
+
+export const NewsletterRunOpenDark: Story = {
+  ...NewsletterRunOpen,
+  globals: { theme: "dark" },
+};
+
 // `activityTimeline` adapts the contract's activities to the rows above, and a
 // record page mounts the result in this list. What is worth a picture is whose
 // face a message wears: the page's own chip sits above the list, so a sender
@@ -170,11 +216,13 @@ const dana: RecordContact = { id: "p-dana", full_name: "Dana Buyer" };
 // its sender with the server's phrase when one is given.
 function thread(links: Activity["links"], sender: string | null): Activity[] {
   return ["m-2", "m-1"].map((id, at) => ({
+    offers_email: false,
     id,
     kind: "email",
     subject: "Fleet renewal",
     body: "Can you hold the price until Friday?",
     occurred_at: `2026-08-1${2 - at}T12:00:00Z`,
+    occurred_precision: "instant",
     direction: "inbound",
     thread_key: "t-fleet",
     is_done: false,
@@ -187,6 +235,7 @@ function thread(links: Activity["links"], sender: string | null): Activity[] {
       ? {
           activity_id: id,
           occurred_at: `2026-08-1${2 - at}T12:00:00Z`,
+          occurred_precision: "instant" as const,
           version: 1,
           subject: "Fleet renewal",
           preview: "Can you hold the price until Friday?",
@@ -223,7 +272,7 @@ function Chronology({
     <StoryProviders>
       {about && <Avatar name={about.full_name} identity={about.id} size="md" />}
       <GroupedTimelineList
-        zone={viewerZone()}
+        zone={browserZone()}
         groups={groupChronology(entries)}
       />
     </StoryProviders>
@@ -322,4 +371,270 @@ export const NoteThatReadsLikeASignOff: Story = {
       ]}
     />
   ),
+};
+
+// A conversation with files: the card totals what the whole thread carried
+// and each message keeps its own count. The withheld message adds none, though its
+// wire summary still holds a number.
+function summaryOf(
+  id: string,
+  attachments: number,
+  displayStatus: "team" | "withheld" = "team",
+): NonNullable<TimelineEntry["emailSummary"]> {
+  return {
+    activity_id: id,
+    occurred_at: "2026-08-14T15:20:00Z",
+    occurred_precision: "instant",
+    display_status: displayStatus,
+    attachment_count: attachments,
+    move: "none",
+    version: 1,
+  };
+}
+
+export const ThreadWithFiles: Story = {
+  render: () => (
+    <ul className="timeline">
+      <ThreadRow
+        zone={ZONE}
+        group={{
+          id: "files-thread",
+          kind: "thread",
+          partial: false,
+          entries: [
+            entry("files-3", "2026-08-14T15:20:00Z", {
+              direction: "inbound",
+              counterparts: "Dana Buyer",
+              body: "Signed copy attached.",
+              emailSummary: {
+                ...summaryOf("files-3", 1),
+                preview: "Signed copy attached.",
+              },
+            }),
+            entry("files-2", "2026-08-13T10:00:00Z", {
+              direction: "outbound",
+              counterparts: "Dana Buyer",
+              body: "Contract and annex attached.",
+              emailSummary: {
+                ...summaryOf("files-2", 2),
+                preview: "Contract and annex attached.",
+              },
+            }),
+            entry("files-1", "2026-08-12T10:00:00Z", {
+              withheld: true,
+              emailSummary: summaryOf("files-1", 4, "withheld"),
+            }),
+          ],
+        }}
+      />
+    </ul>
+  ),
+};
+
+export const CommitmentsToReview: Story = {
+  render: () => (
+    <ul className="timeline">
+      <ThreadRow
+        zone={browserZone()}
+        group={{
+          id: "review-thread",
+          kind: "thread",
+          partial: false,
+          entries: [
+            entry("review-reply", "2026-08-14T15:20:00Z", {
+              direction: "inbound",
+              body: "Thanks, I look forward to the pricing.",
+            }),
+            entry("review-promise", "2026-08-13T10:00:00Z", {
+              direction: "outbound",
+              body: "I will send the pricing by Friday.",
+              commitmentReviewCount: 1,
+            }),
+            entry("private-promise", "2026-08-12T10:00:00Z", {
+              withheld: true,
+              commitmentReviewCount: 99,
+            }),
+          ],
+        }}
+      />
+    </ul>
+  ),
+};
+
+export const CommitmentsToReviewDark: Story = {
+  ...CommitmentsToReview,
+  globals: { theme: "dark" },
+};
+
+export const TaskStates: Story = {
+  args: {
+    zone: ZONE,
+    entries: [
+      entry("task-open", "2026-08-14T09:00:00Z", {
+        kind: "task",
+        title: "Send the revised quote",
+        isDone: false,
+      }),
+      entry("task-done", "2026-08-13T09:00:00Z", {
+        kind: "task",
+        title: "Confirm the meeting",
+        isDone: true,
+      }),
+    ],
+  },
+};
+export const TaskStatesDark: Story = {
+  ...TaskStates,
+  globals: { theme: "dark" },
+};
+
+// A meeting logged with its date and no time sits under its day with no time
+// below it, beside a call whose time is known.
+export const DateOnlyEntry: Story = {
+  args: {
+    zone: ZONE,
+    entries: [
+      entry("day-call", "2026-08-14T09:05:00Z", {
+        kind: "call",
+        title: "Call about the renewal",
+        provenance: { kind: "human", self: true },
+      }),
+      entry("day-meeting", "2026-08-12T10:00:00Z", {
+        kind: "meeting",
+        title: "Site visit at the depot",
+        atPrecision: "day",
+        provenance: { kind: "human", self: true },
+      }),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const day = (await canvas.findByText("Site visit at the depot")).closest(
+      "li",
+    );
+    const timed = canvas.getByText("Call about the renewal").closest("li");
+    await expect(day?.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+    await expect(timed?.textContent).toMatch(/11:05/);
+  },
+};
+
+// A relay send beside the reader's own mail. Only the first names Margince.
+function sentMail(
+  id: string,
+  subject: string,
+  controllerSend: Activity["controller_send"],
+): Activity {
+  const at = id === "relay" ? "2026-10-20T09:00:00Z" : "2026-10-19T15:00:00Z";
+  return {
+    offers_email: false,
+    id,
+    kind: "email",
+    subject,
+    occurred_at: at,
+    occurred_precision: "instant",
+    direction: "outbound",
+    is_done: false,
+    source: "manual",
+    captured_by: "human:u-1",
+    created_at: at,
+    updated_at: at,
+    controller_send: controllerSend,
+    email_summary: {
+      activity_id: id,
+      occurred_at: at,
+      occurred_precision: "instant",
+      version: 1,
+      subject,
+      counterparty: "Dana Buyer",
+      direction: "outbound",
+      display_status: "team",
+      move: "none",
+      attachment_count: 0,
+      delivery: { state: id === "relay" ? "pending" : "sent" },
+    },
+  };
+}
+
+export const SentByMarginceForYou: Story = {
+  render: () => (
+    <StoryProviders>
+      <GroupedTimelineList
+        zone={ZONE}
+        groups={groupChronology(
+          activityTimeline(
+            [
+              sentMail("relay", "Information about your personal data", {
+                from_address: "privacy@kps.test",
+              }),
+              sentMail("own", "Fleet renewal", undefined),
+            ],
+            "u-1",
+          ),
+        )}
+      />
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText("Sent by Margince for you"),
+    ).toBeVisible();
+    await expect(canvas.getByText("From privacy@kps.test")).toBeVisible();
+  },
+};
+
+const PASSPORT = "agent:0b9f3c2a-6d7e-4c1b-9a8f-1e2d3c4b5a69";
+
+function agentNote(
+  id: string,
+  body: string,
+  createdBy: Activity["created_by"],
+): Activity {
+  return {
+    offers_email: false,
+    id,
+    kind: "note",
+    body,
+    occurred_at: "2026-10-21T10:00:00Z",
+    occurred_precision: "instant",
+    is_done: false,
+    source: "manual",
+    captured_by: PASSPORT,
+    created_at: "2026-10-21T10:00:00Z",
+    updated_at: "2026-10-21T10:00:00Z",
+    created_by: createdBy,
+  };
+}
+
+// A note a colleague logged through their agent names the colleague and the
+// tool; a background agent with nobody behind it keeps the unnamed tag.
+export const NotesAnAgentLogged: Story = {
+  render: () => (
+    <StoryProviders>
+      <GroupedTimelineList
+        zone={ZONE}
+        groups={groupChronology(
+          activityTimeline([
+            agentNote("for-anna", "Asked for the renewal terms.", {
+              actor_type: "agent",
+              actor_id: PASSPORT,
+              on_behalf_of_name: "Anna Weber",
+              agent_client: "Claude",
+            }),
+            agentNote("background", "Matched the signature to the contact.", {
+              actor_type: "agent",
+              actor_id: PASSPORT,
+            }),
+          ]),
+        )}
+      />
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText("Made by Claude for Anna Weber"),
+    ).toBeVisible();
+    await expect(canvas.getByText("Automated by an agent")).toBeVisible();
+  },
 };

@@ -143,12 +143,8 @@ func createRoomTx(ctx context.Context, tx pgx.Tx, in CreateRoomInput, by string)
 // this function's own doc rejects.
 func resolveSteward(ctx context.Context, tx pgx.Tx, in CreateRoomInput) (ids.UserID, bool, error) {
 	if in.StewardUserID != nil {
-		eligible, err := stewardIsEligible(ctx, tx, *in.StewardUserID)
-		if err != nil {
+		if err := requireEligibleSteward(ctx, tx, *in.StewardUserID); err != nil {
 			return ids.UserID{}, false, err
-		}
-		if !eligible {
-			return ids.UserID{}, false, errStewardUnknown
 		}
 		return *in.StewardUserID, true, nil
 	}
@@ -174,19 +170,37 @@ func resolveSteward(ctx context.Context, tx pgx.Tx, in CreateRoomInput) (ids.Use
 	return ownerID, true, nil
 }
 
+// requireEligibleSteward refuses a steward the caller named who cannot be
+// pointed a buyer at. Create and edit both ask it.
+func requireEligibleSteward(ctx context.Context, tx pgx.Tx, user ids.UserID) error {
+	eligible, err := stewardIsEligible(ctx, tx, user)
+	if err != nil {
+		return err
+	}
+	if !eligible {
+		return errStewardUnknown
+	}
+	return nil
+}
+
 // stewardIsEligible reports whether a seat can actually be pointed a buyer at.
 //
 // Both halves, and neither implies the other: `archived_at` retires the record,
 // `status` retires the contact's access. A seat deactivated but not archived is
-// the ordinary shape of somebody who has left, and it is exactly the one the
-// old existence check admitted.
+// the ordinary shape of somebody who has left. A steward is a named human, so an
+// agent seat is refused too. FOR SHARE holds a concurrent deactivation until this
+// write commits.
 func stewardIsEligible(ctx context.Context, tx pgx.Tx, user ids.UserID) (bool, error) {
 	var eligible bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (
-		     SELECT 1 FROM app_user
-		      WHERE id = $1 AND `+workforce.LiveMemberSQL("")+`)`,
-		user).Scan(&eligible); err != nil {
+	err := tx.QueryRow(ctx,
+		`SELECT true FROM app_user
+		  WHERE id = $1 AND is_agent = false AND `+workforce.LiveMemberSQL("")+`
+		  FOR SHARE`,
+		user).Scan(&eligible)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
 		return false, fmt.Errorf("check steward: %w", err)
 	}
 	return eligible, nil
@@ -195,17 +209,13 @@ func stewardIsEligible(ctx context.Context, tx pgx.Tx, user ids.UserID) (bool, e
 // UpdateRoom edits the room's title and welcome message — the words a buyer
 // reads at the top of the page, and reads AS SOON AS they are saved.
 //
-// Human-only, and that is a change: this used to shape a draft nobody outside
-// could read, so an agent writing a better welcome paragraph changed nothing an
-// outside party would see. With the room live from creation, the same write
-// now reaches every invited buyer immediately, which puts it on the side of the
-// line the rest of this module already draws — anything an outside party reads
-// is a contact's to say.
+// The write reaches every invited buyer at once. Anything an outside party
+// reads is the user's to say, or their agent's, never passportless work's.
 func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoomInput) (crmcontracts.DealRoom, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 	var out crmcontracts.DealRoom
@@ -223,6 +233,11 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 		// reads to the rep as though it had been saved for later publication.
 		if !acceptsContent(string(current.State)) {
 			return notEditable(string(current.State))
+		}
+		if next := namedSteward(current, in); next != nil {
+			if err := requireEligibleSteward(ctx, tx, *next); err != nil {
+				return err
+			}
 		}
 		p := buildRoomPatch(current, in)
 		if p.Empty() {
@@ -252,6 +267,20 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 	return out, err
 }
 
+// namedSteward returns the steward an edit sets to somebody other than the
+// standing one, or nil. Repeating the standing steward is not checked, so
+// saving a title is not refused because that steward has left since.
+func namedSteward(current crmcontracts.DealRoom, in UpdateRoomInput) *ids.UserID {
+	if in.StewardUserID == nil || *in.StewardUserID == nil {
+		return nil
+	}
+	next := *in.StewardUserID
+	if current.StewardUserId != nil && current.StewardUserId.String() == next.String() {
+		return nil
+	}
+	return next
+}
+
 func buildRoomPatch(current crmcontracts.DealRoom, in UpdateRoomInput) *storekit.Patch {
 	p := storekit.NewPatch()
 	if in.Title != nil {
@@ -268,10 +297,8 @@ func buildRoomPatch(current crmcontracts.DealRoom, in UpdateRoomInput) *storekit
 
 // SetExpiry moves — or removes — the moment a buyer loses access.
 //
-// Human-only, and separated from UpdateRoom for exactly that reason: editing a
-// room's text is an auto-execute act an agent may perform, while widening the
-// window in which an outside party can read the deal's material is not. Three
-// places said so in prose before anything enforced it.
+// Widening the window in which an outside party reads the deal's material is
+// the user's act, or their agent's for them, never automatic work's.
 //
 // A nil expiry removes the bound. A past instant is accepted and binds at once,
 // which is how access is cut short without ending the room.
@@ -279,11 +306,16 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 	var out crmcontracts.DealRoom
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// Locked before the read: the empty-patch answer and a write without an
+		// If-Match both decide from the row as it stands when this lands.
+		if _, err := storekit.LockRow(ctx, tx, roomObject, id.UUID, storekit.LiveOnly); err != nil {
+			return err
+		}
 		current, err := readRoom(ctx, tx, id)
 		if err != nil {
 			return err
@@ -302,6 +334,13 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 		}
 		p := storekit.NewPatch()
 		p.Set("expires_at", current.ExpiresAt, expiresAt)
+		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, roomObject, id.UUID, ifVersion); err != nil {
+				return err
+			}
+			out = current
+			return nil
+		}
 		if err := p.ApplyGuarded(ctx, tx, roomObject, id.UUID, ifVersion); err != nil {
 			return fmt.Errorf("set deal room expiry: %w", err)
 		}

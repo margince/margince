@@ -12,7 +12,7 @@ import (
 // hidingWork is the who-is-waiting seam reporting a backlog behind the queue.
 type hidingWork HiddenWork
 
-func (h hidingWork) Unanswered(context.Context, time.Time) ([]WaitingCustomer, bool, error) {
+func (h hidingWork) Unanswered(context.Context, time.Time, WaitingFor) ([]WaitingCustomer, bool, error) {
 	return nil, false, nil
 }
 

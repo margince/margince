@@ -28,6 +28,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// seededCorrespondent is who every seeded message is authenticated mail from,
+// so a thread's seeds are one correspondence.
+const seededCorrespondent = "buyer@seeded.test"
+
 // seedThreadMail plants one email on a thread with a body of the given length.
 func seedThreadMail(t *testing.T, e *integration.Env, threadKey string, bodyRunes, minutesAgo int) {
 	t.Helper()
@@ -35,10 +39,11 @@ func seedThreadMail(t *testing.T, e *integration.Env, threadKey string, bodyRune
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, thread_key, occurred_at,
-			                      source_system, source_id, source, captured_by)
+			                      source_system, source_id, source, captured_by,
+			                      counterparty_email, inbound_sender_authenticated)
 			VALUES ($1, 'email', 'a subject', $2, 'inbound', $3,
 			        now() - make_interval(mins => $4),
-			        'gmail', $5, 'gmail:seed', 'connector:gmail')`,
+			        'gmail', $5, 'gmail:seed', 'connector:gmail', '`+seededCorrespondent+`', true)`,
 			id, strings.Repeat("x", bodyRunes), threadKey, minutesAgo, id.String())
 		return err
 	}); err != nil {
@@ -131,12 +136,16 @@ func TestABackfillIsReadRatherThanMarkedRead(t *testing.T) {
 	if len(second.Messages) == 0 {
 		t.Fatal("the second read took nothing, so a backfilled message is never sent to the model")
 	}
-	for _, message := range second.Messages {
-		if !message.At.Before(firstOldest) {
-			t.Errorf("the second read took a message at %s, which the first read had already covered "+
-				"(it started at %s) — the window did not move", message.At, firstOldest)
-		}
+	if second.ReadFromNow == nil || !second.ReadFromNow.Before(firstOldest) {
+		t.Fatal("the history cursor did not move backward")
 	}
+	if len(second.Messages) > extractContextMessages {
+		t.Fatal("history and recent context exceeded the shared bound")
+	}
+	if newest := second.Messages[len(second.Messages)-1].At; !newest.Equal(first.Newest) {
+		t.Fatalf("history omitted the current conversation tail: %v", newest)
+	}
+
 	// And it reached the backfill specifically, not merely something older.
 	if oldest := second.Messages[0].At; !oldest.Before(base) {
 		t.Errorf("the oldest message read was %s, and the backfill sits before %s — the window walked "+
@@ -184,9 +193,10 @@ func seedThreadMailAt(t *testing.T, e *integration.Env, threadKey string, at tim
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, thread_key, occurred_at,
-			                      source_system, source_id, source, captured_by)
+			                      source_system, source_id, source, captured_by,
+			                      counterparty_email, inbound_sender_authenticated)
 			VALUES ($1, 'email', 'a subject', 'a body', 'inbound', $2, $3,
-			        'gmail', $4, 'gmail:seed', 'connector:gmail')`,
+			        'gmail', $4, 'gmail:seed', 'connector:gmail', '`+seededCorrespondent+`', true)`,
 			id, threadKey, at, id.String())
 		return err
 	}); err != nil {

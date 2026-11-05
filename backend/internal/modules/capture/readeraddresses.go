@@ -14,10 +14,10 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -69,19 +69,20 @@ func (s *OwnDomainStore) ReaderAddressesTx(
 	}
 	defer rows.Close()
 	folded := map[string]bool{}
-	if login != "" {
-		folded[strings.ToLower(login)] = true
+	// Every spelling a header may carry, since the queue compares stored addresses.
+	keep := func(address string) {
+		for _, spelling := range mailidentity.AddressSpellings(address) {
+			folded[spelling] = true
+		}
 	}
+	keep(login)
 	for rows.Next() {
 		var label, source string
 		if err := rows.Scan(&label, &source); err != nil {
 			return nil, err
 		}
-		if discoveredMachineAddress(source, label) {
-			continue
-		}
-		if address := strings.ToLower(strings.TrimSpace(bareAddress(label))); address != "" {
-			folded[address] = true
+		if address := ownReaderAddress(label, source); address != "" {
+			keep(address)
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -112,3 +113,5 @@ func selfOnly(ctx context.Context, user ids.UUID) error {
 	return fmt.Errorf("capture: a seat's own addresses are theirs alone: %w",
 		apperrors.ErrPermissionDenied)
 }
+
+func ownReaderAddress(label, source string) string { return mailidentity.ReaderAddress(label, source) }

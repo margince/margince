@@ -36,6 +36,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err := validateVerbSet(verbs); err != nil {
 		return err
 	}
+	if err := preflightEntryObjects(exts, verbs); err != nil {
+		return err
+	}
 	// Do every fallible step before applying anything, so the whole
 	// reconciliation stays validate-then-apply: adapting the handler-bearing
 	// tools to the core seam can (in principle — preflightTools already
@@ -46,6 +49,10 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 		return err
 	}
 	rbacObjects, err := extensionRbacObjects(verbs)
+	if err != nil {
+		return err
+	}
+	rbacDefaults, err := extensionRbacDefaults(verbs)
 	if err != nil {
 		return err
 	}
@@ -84,6 +91,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	// leaves the packs applied and the boot aborting, and an aborting boot
 	// serves nothing either way.
 	if err := RegisterRbacObjects(rbacObjects); err != nil {
+		return err
+	}
+	if err := registerRbacDefaults(rbacDefaults); err != nil {
 		return err
 	}
 	// The composed job kinds join the declaration table before any runner is
@@ -209,6 +219,7 @@ func validateExtensionSet(exts []extension.Extension) error {
 	// composed SET, accumulated across the loop for claimedProviders' reason.
 	inboundMounts := make(map[string]extension.Name)
 	financeProviders := make(map[string]extension.Name)
+	oauthApps := make(map[string]extension.Name)
 	for _, e := range exts {
 		if err := e.Name.Validate(); err != nil {
 			return fmt.Errorf("compose: %w", err)
@@ -235,25 +246,7 @@ func validateExtensionSet(exts []extension.Extension) error {
 		if err := preflightSubjectRights(e, subjectRightsCodes); err != nil {
 			return err
 		}
-		if err := preflightDocuments(e); err != nil {
-			return err
-		}
-		if err := preflightTools(e); err != nil {
-			return err
-		}
-		if err := preflightSecrets(e); err != nil {
-			return err
-		}
-		if err := preflightJobs(e); err != nil {
-			return err
-		}
-		if err := preflightFailureClasses(e); err != nil {
-			return err
-		}
-		if err := preflightSubscriptions(e); err != nil {
-			return err
-		}
-		if err := preflightIngress(e); err != nil {
+		if err := preflightDeclarations(e); err != nil {
 			return err
 		}
 		if err := preflightChannels(e, claimedProviders); err != nil {
@@ -266,6 +259,15 @@ func validateExtensionSet(exts []extension.Extension) error {
 			return err
 		}
 		if err := reserveInboundMounts(e, inboundMounts); err != nil {
+			return err
+		}
+		if err := preflightSurfaces(e); err != nil {
+			return err
+		}
+		if err := preflightSettings(e); err != nil {
+			return err
+		}
+		if err := preflightOAuthApps(e, oauthApps); err != nil {
 			return err
 		}
 	}

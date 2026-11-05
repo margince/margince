@@ -51,7 +51,10 @@ const SIGNATURE_DELIMITER = /^--\s*$/;
 const ATTRIBUTION = [
   /^On\s.{1,200}\swrote:\s*$/,
   /^Am\s.{1,200}\sschrieb\s?.{0,120}:\s*$/,
-  /^-{2,}\s*(Original Message|Ursprüngliche Nachricht|Forwarded message|Weitergeleitete Nachricht)/i,
+  /^Vào\s.{1,200}\sđã viết:\s*$/,
+  /^-{2,}\s*(Original Message|Ursprüngliche Nachricht|Forwarded message|Weitergeleitete Nachricht|Thư được chuyển tiếp|Tin nhắn được chuyển tiếp)/i,
+  /^Begin forwarded message:\s*$/i,
+  /^(Thư được chuyển tiếp|Tin nhắn được chuyển tiếp):\s*$/i,
   /^Anfang der weitergeleiteten (E-Mail|Nachricht)/i,
   /^_{5,}\s*$/,
 ];
@@ -59,8 +62,8 @@ const ATTRIBUTION = [
 // The Outlook top-reply block: a From:/Von: line whose neighbours carry the
 // sent-date field. Recognised as a pair because "Von:" alone is ordinary prose
 // in German mail.
-const REPLY_HEADER_FROM = /^(Von|From):\s/;
-const REPLY_HEADER_SENT = /^(Gesendet|Sent|Datum|Date):\s/;
+const REPLY_HEADER_FROM = /^\*{0,2}(Von|From):\*{0,2}\s/;
+const REPLY_HEADER_SENT = /^\*{0,2}(Gesendet|Sent|Datum|Date):\*{0,2}\s/;
 
 // Sign-offs, matched only in the trailing region. The multi-word forms may open
 // a line, since a name usually follows on the same one.

@@ -76,6 +76,19 @@ export const HeldDark: Story = {
   render: page(heldRoutes),
 };
 
+// A link from a mail sent in Vietnamese: the page answers in Vietnamese.
+export const HeldInMailLanguage: Story = {
+  render: page({
+    [DETAILS_ROUTE]: () => jsonResponse({ ...held, language: "vi" }),
+  }),
+};
+
+export const HeldInMailLanguagePhone: Story = {
+  ...HeldInMailLanguage,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 // A token the server will not resolve. The page says the link cannot be used
 // and nothing about WHY — unknown, expired and spent must read alike.
 export const LinkRefused: Story = {

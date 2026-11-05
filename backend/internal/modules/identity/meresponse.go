@@ -17,8 +17,23 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// TeamWeekOf answers which teams' frozen weeks the caller may open, on the
+// predicate the week is served on. /me and /worklist both carry it, so a screen
+// that needs only this answer never assembles the day to read it.
+func TeamWeekOf(ctx context.Context) crmcontracts.TeamWeekReach {
+	switch auth.TeamWeekReachOf(ctx) {
+	case auth.ReachesEveryTeam:
+		return crmcontracts.TeamWeekReachEveryTeam
+	case auth.ReachesTeamsLed:
+		return crmcontracts.TeamWeekReachTeamsLed
+	default:
+		return crmcontracts.TeamWeekReachNone
+	}
+}
 
 // meResponse renders /me for one principal. It is a method rather than a
 // function because every posture it reports beyond the identity itself — the
@@ -27,6 +42,7 @@ import (
 // alongside would be a row of anonymous booleans at each call site.
 func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeResponse {
 	adminPasswordLink := h.canIssuePasswordLink(ctx, id)
+	confirmRequests := h.canRequestConfirmation(ctx, id)
 	reportingAvailable := true
 	roles := id.Roles
 	if roles == nil {
@@ -51,14 +67,17 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			// The twelve hard-coded "Europe/Berlin" literals on the frontend
 			// are what a caller does when no correct answer is served.
 			// margince/margince#26.
-			Timezone: optionalString(id.Timezone),
+			Timezone:       optionalString(id.Timezone),
+			TimezoneChosen: timezoneChosenFlag(id.Timezone, id.TimezoneChosen),
 		},
-		Roles:              roles,
-		Teams:              teams,
-		WorkspaceName:      id.WorkspaceName,
-		NonProduction:      h.nonProduction,
-		DataResetAvailable: &h.dataResetAvailable,
-		AdminPasswordLink:  adminPasswordLink,
+		Roles:                   roles,
+		Teams:                   teams,
+		TeamWeek:                new(TeamWeekOf(actorCtx(ctx, id))),
+		WorkspaceName:           id.WorkspaceName,
+		NonProduction:           h.nonProduction,
+		DataResetAvailable:      &h.dataResetAvailable,
+		AdminPasswordLink:       adminPasswordLink,
+		ConfirmRequestsSendable: &confirmRequests,
 		Authorization: &crmcontracts.Authorization{
 			SeatType: contractSeatType(id.SeatType),
 			Objects:  contractObjectGrants(id.Permissions.Objects),

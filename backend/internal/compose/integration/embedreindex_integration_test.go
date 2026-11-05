@@ -5,22 +5,15 @@
 
 package integration
 
-// The embed-reindex transport end to end (Task 15, ADR-0068 design
-// §5.6-swap): the three /embeddings/reindex* HTTP ops over a real
-// migrated Postgres, the claim+enqueue-in-one-tx confirm, and the REAL
-// River workers (compose.NewJobRunner, exactly as cmd/worker wires it —
-// no hand-called store pass standing in for the worker role).
-// Completion/cancellation is observed on River's own subscription
-// channels (SubscribeCompleted/SubscribeCancelled, subscribed before
-// Start), never a sleep or a poll — the same idiom
-// no_activity_reminder_workqueue_integration_test.go established for
-// this package's other real-worker suites (applyRiverSchema/
-// AwaitKindCompleted are that file's helpers, reused here unchanged).
+// The embed-reindex transport end to end (Task 15, ADR-0068). It drives the
+// four /embeddings/reindex* ops over a real migrated Postgres. The confirm
+// claims and enqueues in one transaction. The real River workers run, wired
+// by compose.NewJobRunner as cmd/worker wires them.
 //
-// The 409-vs-202 split rides the marker's own claim, proven here through
-// the real handler, not asserted against the store directly —
-// search.Store's own CAS/rollup behaviour is already covered by
-// binding_integration_test.go.
+// Completion and cancellation are read from River's own subscription
+// channels, subscribed before Start, never from a sleep or a poll.
+// The 409-vs-202 split is proven through the real handler; search.Store's own
+// claim and rollup are covered by binding_integration_test.go.
 
 import (
 	"context"
@@ -28,7 +21,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -37,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // embedReindexStatusWire mirrors crmcontracts.EmbedReindexStatus field by
@@ -70,33 +61,6 @@ type embedReindexProblem struct {
 	Detail string `json:"detail"`
 }
 
-// embedReindexRouter builds a DB-less local router (compose.NewLocalModelPath)
-// over the deterministic offline fake, bound to a named embeddings model —
-// naming it (rather than leaving ai.FakeRoutingConfig's Embeddings.Model
-// empty) matters because EmbedIdentity() reports the unhelpful unbound
-// "", 0 identity otherwise (embedding_integration_test.go's own fakeEmbedder
-// doc explains this). Two different modelName values yield two genuinely
-// distinct identities, the raw material the identity-drift scenarios need.
-func embedReindexRouter(t *testing.T, modelName string) *ai.Router {
-	t.Helper()
-	modelPath, err := compose.NewLocalModelPath(boundEmbedRouting(modelName), ai.WithoutResultCache())
-	if err != nil {
-		t.Fatalf("NewLocalModelPath: %v", err)
-	}
-	return modelPath.Router()
-}
-
-// boundEmbedRouting is the --ai-fake routing with modelName bound on the embed
-// lane.
-func boundEmbedRouting(modelName string) ai.RoutingConfig {
-	cfg := ai.FakeRoutingConfig()
-	cfg.Embeddings = ai.EmbeddingsConfig{
-		Provider: ai.ProviderFake, Model: modelName,
-		Dimensions: fakeEmbedDims,
-	}
-	return cfg
-}
-
 // setupEmbedReindex boots the HTTP harness with the embed-reindex ops
 // wired over router and its own insert-only River client (the api-side
 // half of the api-enqueues/worker-works split — deepReadOption's own
@@ -106,7 +70,7 @@ func boundEmbedRouting(modelName string) ai.RoutingConfig {
 // leaves the bootstrap admin's session in the client jar.
 func setupEmbedReindex(t *testing.T, router *ai.Router) *apptest.AppEnv {
 	t.Helper()
-	inserter := insertOnlyRunner(t)
+	inserter := apptest.InsertOnlyRunner(t)
 	e := apptest.SetupAppWithOptions(t, compose.WithEmbedReindex(router, inserter))
 	// The confirm handler enqueues into river_job on ITS OWN transaction
 	// (search.Store.ClaimAndEnqueueReembedding), so the schema must exist
@@ -116,34 +80,8 @@ func setupEmbedReindex(t *testing.T, router *ai.Router) *apptest.AppEnv {
 	ApplyRiverSchema(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Embed Reindex E2E", "embed-reindex@fable.test", "Admin")
 
-	identity, _ := router.EmbedIdentity()
-	if err := search.NewStore(e.DB()).SeedBinding(context.Background(), identity); err != nil {
-		t.Fatalf("SeedBinding: %v", err)
-	}
+	apptest.SeedRouterBinding(t, e, router)
 	return e
-}
-
-// insertOnlyRunner is the api role's River client: it enqueues and works
-// nothing, on a pool of its own reaching the same Postgres.
-func insertOnlyRunner(t *testing.T) *jobs.Runner {
-	t.Helper()
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if appDSN == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	// Not the pool apptest.SetupAppWithOptions opens: jobs.NewInserter needs only
-	// some pool reaching the same Postgres.
-	wirePool, err := testdb.OwnPool(context.Background(), appDSN)
-	if err != nil {
-		t.Fatalf("opening the insert-only wiring pool: %v", err)
-	}
-	t.Cleanup(wirePool.Close)
-	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	inserter, err := jobs.NewInserter(wirePool, quiet)
-	if err != nil {
-		t.Fatalf("jobs.NewInserter: %v", err)
-	}
-	return inserter
 }
 
 // seedStaleEmbeddingRow plants one contact carrying an embedding row under
@@ -279,7 +217,7 @@ func embedReindexDecode[T any](t *testing.T, e *apptest.AppEnv, method, path str
 // version for a single-workspace installation — which is exactly how the
 // summing version survived in the transport after the store stopped doing it.
 func TestStatusEntitiesPendingDoesNotGrowWithTheWorkspaceCount(t *testing.T) {
-	router := embedReindexRouter(t, "reindex-count-v1")
+	router := apptest.EmbedReindexRouter(t, "reindex-count-v1")
 	e := setupEmbedReindex(t, router)
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
@@ -305,7 +243,7 @@ func TestStatusEntitiesPendingDoesNotGrowWithTheWorkspaceCount(t *testing.T) {
 }
 
 func TestEmbedReindexStatusAndPreviewReflectPendingEntities(t *testing.T) {
-	router := embedReindexRouter(t, "reindex-status-v1")
+	router := apptest.EmbedReindexRouter(t, "reindex-status-v1")
 	e := setupEmbedReindex(t, router)
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
@@ -350,13 +288,37 @@ func TestEmbedReindexStatusAndPreviewReflectPendingEntities(t *testing.T) {
 	}
 }
 
+// The banner's identities read answers the status read's two identities under
+// the status read's own gate, so the shell can drop the backlog scan.
+func TestEmbedReindexIdentitiesMatchTheStatusUnderItsGate(t *testing.T) {
+	router := apptest.EmbedReindexRouter(t, "reindex-identities-v1")
+	e := setupEmbedReindex(t, router)
+	seedStaleEmbeddingRow(t, e, apptest.InstallationWorkspaceID(context.Background(), t, e.Owner))
+
+	_, st, _ := embedStatus(t, e)
+	status, got, _ := embedReindexDecode[embedReindexStatusWire](t, e, "GET", "/v1/embeddings/reindex/identities", nil)
+	if status != http.StatusOK {
+		t.Fatalf("admin identities -> %d, want 200", status)
+	}
+	if got.ConfiguredIdentity != st.ConfiguredIdentity || got.PopulatedIdentity != st.PopulatedIdentity {
+		t.Fatalf("identities = %q/%q, status = %q/%q; the banner must compare what the status read reports",
+			got.ConfiguredIdentity, got.PopulatedIdentity, st.ConfiguredIdentity, st.PopulatedIdentity)
+	}
+
+	demoteToRep(t, e)
+	status, _, problem := embedReindexDecode[embedReindexStatusWire](t, e, "GET", "/v1/embeddings/reindex/identities", nil)
+	if status != http.StatusForbidden || problem.Code != "permission_denied" {
+		t.Fatalf("rep identities -> %d %+v, want 403 permission_denied like the status read", status, problem)
+	}
+}
+
 // TestEmbedReindexConfirmRequiresAdminOrOps proves the object RBAC gate:
 // a rep (NO grant at all on embedding_reindex per migration 0115) is
 // refused status/preview AND confirm alike — discharging the
 // rbacgate_test.go waiver's own promise that this transport is what
 // gates search.Store's binding-marker methods.
 func TestEmbedReindexConfirmRequiresAdminOrOps(t *testing.T) {
-	router := embedReindexRouter(t, "reindex-rbac-v1")
+	router := apptest.EmbedReindexRouter(t, "reindex-rbac-v1")
 	e := setupEmbedReindex(t, router)
 
 	if status, _, _ := embedStatus(t, e); status != http.StatusOK {
@@ -386,7 +348,7 @@ func TestEmbedReindexConfirmRequiresAdminOrOps(t *testing.T) {
 // the real workers then fans the fleet out, re-embeds it, and the status
 // read returns to idle/not-needed with the marker claimable again.
 func TestEmbedReindexConfirmLifecycle(t *testing.T) {
-	router := embedReindexRouter(t, "reindex-lifecycle-v1")
+	router := apptest.EmbedReindexRouter(t, "reindex-lifecycle-v1")
 	e := setupEmbedReindex(t, router)
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
@@ -447,7 +409,7 @@ func TestEmbedReindexConfirmLifecycle(t *testing.T) {
 // pending set. Finalizing the dispatcher row by hand is that moment made
 // deterministic: the run is still on, and the confirm must still refuse.
 func TestEmbedReindexRepeatConfirmIsRefusedAfterItsDispatcherFinishes(t *testing.T) {
-	router := embedReindexRouter(t, "reindex-singleflight-v1")
+	router := apptest.EmbedReindexRouter(t, "reindex-singleflight-v1")
 	e := setupEmbedReindex(t, router)
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
@@ -477,7 +439,7 @@ func TestEmbedReindexRepeatConfirmIsRefusedAfterItsDispatcherFinishes(t *testing
 // for it (a second, driftless confirm right after still gets a fresh 202,
 // proving the drifted attempt left no live claim behind).
 func TestEmbedReindexConfirmRefusesIdentityDrift(t *testing.T) {
-	router := embedReindexRouter(t, "reindex-drift-v1")
+	router := apptest.EmbedReindexRouter(t, "reindex-drift-v1")
 	e := setupEmbedReindex(t, router)
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
@@ -511,7 +473,7 @@ func TestEmbedReindexConfirmRefusesIdentityDrift(t *testing.T) {
 // config that is exactly what the fleet now needs. Nothing was re-embedded, and
 // nothing claims otherwise — populated_identity is unmoved.
 func TestEmbedReindexIdentityMismatchedJobCancels(t *testing.T) {
-	enqueueRouter := embedReindexRouter(t, "reindex-cancel-enqueue-v1")
+	enqueueRouter := apptest.EmbedReindexRouter(t, "reindex-cancel-enqueue-v1")
 	e := setupEmbedReindex(t, enqueueRouter)
 	before, _ := enqueueRouter.EmbedIdentity()
 
@@ -525,7 +487,7 @@ func TestEmbedReindexIdentityMismatchedJobCancels(t *testing.T) {
 
 	// The worker role's OWN embed lane reports a DIFFERENT identity than
 	// the run was claimed under — the drift the entry guard must catch.
-	driftedRouter := embedReindexRouter(t, "reindex-cancel-drifted-v1")
+	driftedRouter := apptest.EmbedReindexRouter(t, "reindex-cancel-drifted-v1")
 	runner := newEmbedReindexRunner(t, e, driftedRouter)
 	sub, cancelSub := runner.SubscribeCancelled()
 	defer cancelSub()
@@ -566,7 +528,7 @@ func TestEmbedReindexIdentityMismatchedJobCancels(t *testing.T) {
 // still completes a real re-embed pass — the force path is not merely
 // accepted, it actually runs.
 func TestEmbedReindexForceReindexWhenNotNeeded(t *testing.T) {
-	router := embedReindexRouter(t, "reindex-force-v1")
+	router := apptest.EmbedReindexRouter(t, "reindex-force-v1")
 	e := setupEmbedReindex(t, router)
 
 	// setupEmbedReindex seeds the binding marker at router's OWN identity

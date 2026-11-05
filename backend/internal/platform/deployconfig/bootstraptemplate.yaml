@@ -1,0 +1,17 @@
+version: 1
+
+# Read once, when the api first boots on an empty database: replace the demo values before that.
+# Settings -> Company profile changes them later. Add country (such as de or vn) to choose the
+# jurisdiction pack now instead of under Settings -> Jurisdiction.
+workspace:
+  name: Demo Workspace
+  base_currency: EUR
+  base_language: en # en, de or vi: the language AI writes the shared record in
+  timezone: Europe/Berlin
+
+# The first administrator. The password, at least 12 characters, arrives only by reference:
+# password_file, or password: ${file:/path} or ${env:NAME}. `make dev` writes the file below.
+bootstrap_admin:
+  email: admin@demo.test
+  display_name: Demo Admin
+  password_file: config/margince-admin-password

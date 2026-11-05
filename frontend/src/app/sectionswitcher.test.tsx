@@ -7,9 +7,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  SETTINGS_SCREEN,
+  useSettingsSection,
+} from "../features/settings/settingsnav";
 import { LocaleProvider, translate } from "../i18n";
 import type { Route } from "../lib/router";
-import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import { meFixture } from "../testing/mefixture";
 import { sectionHead } from "./pagemeta";
 import { SectionSwitcher } from "./sectionswitcher";

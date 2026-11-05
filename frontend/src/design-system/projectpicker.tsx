@@ -27,6 +27,14 @@ export type PickableProject = Pick<
 // What the server reports about a read it narrowed to one project.
 export type ProjectScope = components["schemas"]["ProjectScope"];
 
+// How a project reads in a list or a sentence. The key comes first, because a
+// subject line carries it and a rep searches their inbox for it.
+export function projectLabel(
+  project: Readonly<{ key?: string | null; name: string }>,
+): string {
+  return project.key ? `${project.key} · ${project.name}` : project.name;
+}
+
 // The projects a surface can be scoped to: the unarchived ones the page
 // carries, minus the closed — a closed project is history, and a new message
 // or a fresh reading is not about history.
@@ -111,21 +119,31 @@ export function ProjectPicker({
   projectId,
   onChange,
   scope,
+  compact = false,
 }: Readonly<{
   projects: readonly PickableProject[];
   projectId: string;
   onChange: (next: string) => void;
   scope?: ProjectScope;
+  /**
+   * Drawn inside a row whose value names it. The label
+   * is for a screen reader alone. The scope line is left to the surface, whose
+   * subject tag already says which project the message files under. The row
+   * keeps the picker with no projects to offer, disabled on "No project".
+   */
+  compact?: boolean;
 }>) {
   const t = useT();
-  if (projects.length === 0) {
+  // A compact row keeps its place and says there is nothing to choose.
+  // Anywhere else, a picker with no projects is a dead control.
+  if (projects.length === 0 && !compact) {
     return null;
   }
   const chosen = projects.find((project) => project.project_id === projectId);
   const counted = scope?.project_id === projectId ? scope : undefined;
   return (
     <>
-      <Field label={t("compose.project")}>
+      <Field label={t("compose.project")} labelHidden={compact}>
         {(control) => (
           <Select
             {...control}
@@ -133,18 +151,17 @@ export function ProjectPicker({
               { value: "", label: t("compose.projectNone") },
               ...projects.map((project) => ({
                 value: project.project_id,
-                label: project.key
-                  ? `${project.key} · ${project.name}`
-                  : project.name,
+                label: projectLabel(project),
               })),
             ]}
             value={projectId}
             onChange={onChange}
+            disabled={projects.length === 0}
           />
         )}
       </Field>
-      {counted && <ScopeLine scope={counted} />}
-      {!counted && chosen && (
+      {!compact && counted && <ScopeLine scope={counted} />}
+      {!compact && !counted && chosen && (
         <p className="t-caption">
           {t("compose.scopedTo", { key: chosen.key ?? chosen.name })}
         </p>

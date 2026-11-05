@@ -126,8 +126,10 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 	if outcome != nil {
 		status, ok := runStatusByOutcome[*outcome]
 		if !ok {
-			return AutomationRunPage{}, &ParamError{Field: "outcome",
-				Reason: "must be one of fired, failed, blocked, skipped, queued_for_approval"}
+			return AutomationRunPage{}, &ParamError{
+				Field:  "outcome",
+				Reason: "must be one of fired, failed, blocked, skipped, queued_for_approval",
+			}
 		}
 		statusFilter = &status
 	}

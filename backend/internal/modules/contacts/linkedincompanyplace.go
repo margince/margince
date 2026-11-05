@@ -55,10 +55,16 @@ func matchGhostCompanies(ctx context.Context, tx pgx.Tx) error {
 		// fallback is accepted only when it resolves to exactly one account —
 		// companyKeys already drops every ambiguous key — so a looser lookup can
 		// widen what is FOUND without ever widening what is GUESSED.
+		employerForm := companyLegalForm(cleanLinkedInCompany(company))
 		for _, key := range companyMatchKeys(company) {
 			company, known := companies[key]
 			if !known {
 				continue
+			}
+			// A different legal form stops the search as a privacy refusal does:
+			// a looser key would only reach the same account by a weaker claim.
+			if company.namesAnotherEntity(employerForm) {
+				break
 			}
 			// A key that resolves ONLY to an account this member may not be
 			// told about stops the search rather than falling through to a
@@ -95,6 +101,17 @@ type companyCandidate struct {
 	id      ids.UUID
 	private bool
 	owner   ids.UUID
+	// legalForm is the account's own legal form (companyLegalForm), "" when
+	// its name carries none.
+	legalForm string
+}
+
+// namesAnotherEntity reports whether an employer written with one legal form
+// names an account written with another. "Acme GmbH" and "Acme Inc" can be two
+// companies in two countries. A form missing on either side is no evidence
+// either way, since a member writes "Acme" for "Acme GmbH".
+func (c companyCandidate) namesAnotherEntity(employerForm string) bool {
+	return employerForm != "" && c.legalForm != "" && employerForm != c.legalForm
 }
 
 // reachableBy answers whether a member may have their connection placed at this
@@ -148,6 +165,7 @@ func companyKeys(ctx context.Context, tx pgx.Tx) (map[string]companyCandidate, e
 		if key == "" {
 			continue
 		}
+		c.legalForm = companyLegalForm(name)
 		if _, seen := out[key]; seen {
 			ambiguous[key] = true
 			continue

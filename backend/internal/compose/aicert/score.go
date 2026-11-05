@@ -12,6 +12,23 @@ const (
 	VerdictNotSupported      = "not_supported"
 )
 
+// VerdictRank orders the three verdicts, strongest first, so a reader asking
+// for the worst of several can compare them.
+//
+// Here rather than in a test, because the order is a property of the verdicts.
+// Anything this does not know ranks with not_supported: an absent record is
+// not evidence that a model copes.
+func VerdictRank(verdict string) int {
+	switch verdict {
+	case VerdictCertified:
+		return 2
+	case VerdictSupportedDegraded:
+		return 1
+	default:
+		return 0
+	}
+}
+
 // RunResult is one candidate completion already scored and measured by the
 // caller (the runner drives the model and the judge; this package never
 // calls either). Degraded mirrors the router's own degrade signal (a

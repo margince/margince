@@ -70,14 +70,14 @@ func projectReportingMetric(def crmcontracts.ReportingMetricDefinition, frame cr
 	out.Coverage.PricedCount = &priced
 	if !exact {
 		out.Coverage.Status = reportingUnavailable
-		reason := "The total exceeds the exact display range"
+		reason := reporting.ExplanationCopy(frame).Say(reportingWords.Range)
 		out.Coverage.Reason = &reason
 		return out
 	}
 	out.Value = sum
 	if priced < count {
 		out.Coverage.Status = reportingPartial
-		reason := "Some contributions have no available value"
+		reason := reporting.ExplanationCopy(frame).Say(reportingWords.Unpriced)
 		out.Coverage.Reason = &reason
 	}
 	if count == 0 && coverage.Status == "ok" {
@@ -89,14 +89,24 @@ func projectReportingMetric(def crmcontracts.ReportingMetricDefinition, frame cr
 		if len(landing) == 1 {
 			out.Value = landing[0].Row.Value
 		}
+		low, high := metricFacts(facts, def.Id, forecastRangeLowContext), metricFacts(facts, def.Id, forecastRangeHighContext)
+		if len(low) == 1 && len(high) == 1 {
+			out.RangeLowMinor, out.RangeHighMinor = low[0].Money, high[0].Money
+		}
 		out.Coverage.Status = coverage.Status
 	case reportingClosedWinRate:
 		projectClosedRate(&out, cohort)
-	case reportingStageAge:
+	case reportingStageAge, reportingLeadFirstResponse:
 		out.Value = metricPercentile(cohort, .5)
 		if out.Value == nil {
 			out.Coverage.Status = reportingInsufficientSample
 		}
+	case reportingLeadsPromoted:
+		projectShare(&out, cohort, func(fact reporting.Fact) bool { return fact.Row.Value != nil && *fact.Row.Value == 1 })
+	case reportingPartnerActivity:
+		projectShare(&out, cohort, func(fact reporting.Fact) bool { return fact.GroupKey == partnerActiveGroup })
+	case reportingStageConversion, reportingLeadCohortOutcomes:
+		projectCohortRate(&out, cohort)
 	}
 	if def.SupportsTarget {
 		out.TargetActual, _, _ = metricSum(metricFacts(facts, def.Id, reportingTarget))
@@ -121,6 +131,19 @@ func projectClosedRate(out *crmcontracts.ReportingMetric, facts []reporting.Fact
 	out.Denominator = &count
 	ratio := won / count * 100
 	out.Value = &ratio
+}
+
+// projectShare reports a count with the population it was counted from. The
+// value is how many facts qualify, and the denominator is every fact read.
+func projectShare(out *crmcontracts.ReportingMetric, facts []reporting.Fact, qualifies func(reporting.Fact) bool) {
+	qualifying := 0.0
+	for _, fact := range facts {
+		if qualifies(fact) {
+			qualifying++
+		}
+	}
+	count := float64(len(facts))
+	out.Value, out.Numerator, out.Denominator = &qualifying, &qualifying, &count
 }
 
 func metricPercentile(facts []reporting.Fact, fraction float64) *float64 {
@@ -154,7 +177,7 @@ func projectReportingCharts(out *reporting.Evaluation) error {
 				continue
 			}
 			chart := crmcontracts.ReportingChart{Kind: block, Metric: metric.Id, Unit: metric.Unit, Coverage: metric.Coverage, ContextId: metric.Evidence.ContextId, Points: []crmcontracts.ReportingPoint{}}
-			if metric.Coverage.Status == reportingUnavailable || metric.Coverage.Status == "unsupported" || metric.Coverage.Status == "not_configured" {
+			if metric.Coverage.Status == reportingUnavailable || metric.Coverage.Status == reportingFailed || metric.Coverage.Status == "unsupported" || metric.Coverage.Status == "not_configured" {
 				out.Result.Charts = append(out.Result.Charts, chart)
 				continue
 			}
@@ -179,7 +202,7 @@ func populateReportingChart(out *reporting.Evaluation, chart crmcontracts.Report
 		if metric.Id == reportingBookingsWon && metric.Version == "2" {
 			for index := range chart.Points {
 				if chart.Points[index].Key == ids.Nil.String() {
-					chart.Points[index].Label = "Unassigned"
+					chart.Points[index].Label = reporting.ExplanationCopy(out.Result.Context).Say(reportingLabelWords.Unassigned)
 				}
 			}
 		}
@@ -188,14 +211,20 @@ func populateReportingChart(out *reporting.Evaluation, chart crmcontracts.Report
 	case reportingTargetProgress:
 		chart.ContextId = reportingTarget
 		chart.Interval = out.Result.Context.TargetInterval
-		chart.Points = []crmcontracts.ReportingPoint{{Key: string(metric.Id), Label: string(metric.Id), Value: metric.TargetActual, Status: metric.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: metric.Id, ContextId: reportingTarget}}}
+		chart.Points = []crmcontracts.ReportingPoint{{Key: string(metric.Id), Label: reportingMetricName(out.Result.Context, metric.Id), Value: metric.TargetActual, Status: metric.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: metric.Id, ContextId: reportingTarget}}}
 	case reportingSdrOutcomes:
 		chart = reportingWeekly(out, chart)
 	case "forecast_support":
 		chart = reportingForecastChart(out, chart)
+	case reportingBreakdown:
+		chart = reportingBreakdownChart(out, chart, metric)
+	case reportingStageCohort:
+		chart = reportingStageCohortChart(out, chart)
+	case reportingLeadCohort:
+		chart = reportingLeadCohortChart(out, chart)
 	case reportingPipelineMovement:
 		chart.Coverage = crmcontracts.ReportingCoverage{Status: reportingUnavailable}
-		reason := "Collecting movement history"
+		reason := reporting.ExplanationCopy(out.Result.Context).Say(reportingWords.Collecting)
 		chart.Coverage.Reason = &reason
 	}
 	return chart

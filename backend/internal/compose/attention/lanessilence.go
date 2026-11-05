@@ -16,6 +16,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -29,7 +30,7 @@ type AtRisk interface {
 	// so ten rows can be the survivors of a bounded fifty. Counting rows against
 	// the bound would read a truncated scan as a complete one — under-reporting,
 	// the one direction a work figure must never fail in.
-	Quiet(ctx context.Context) ([]RiskyDeal, bool, error)
+	Quiet(ctx context.Context, owners *storekit.OwnerSet) ([]RiskyDeal, bool, error)
 }
 
 // RiskyDeal is one deal the pipeline should worry about, and the ground it is
@@ -38,7 +39,7 @@ type AtRisk interface {
 // collapsing them would say "at risk" and leave the rep to guess which.
 type RiskyDeal struct {
 	CloseDateProvisional *bool
-	ForecastCategory     *string
+	WinProbability       *int
 	DealID               ids.UUID
 	Name                 string
 	// The card's facts, carried so the client draws value, stage and
@@ -70,30 +71,30 @@ type RiskyDeal struct {
 	NoNextStep bool
 }
 
-// Decay is the reader's own relationships that have gone silent. It derives the
-// silence through the same §4 change engine the contact's own page reads, so
-// there is one quiet rule in the product rather than a second threshold here.
+// Decay is the relationships that have gone silent, routed to each contact's
+// owner. It derives the silence through the relationship-change engine the
+// contact's own page reads, so there is one quiet rule in the product. The
+// scope picks whose contacts: the reader's own, a named owner's, or those
+// with no live owner.
 type Decay interface {
-	Lapsed(ctx context.Context) ([]QuietRelationship, error)
+	// The bool is true when the scan stopped at its budget, so more eligible
+	// contacts may exist even when no row came back.
+	Lapsed(ctx context.Context, scope TaskScope, owner ids.UUID) ([]QuietRelationship, bool, error)
 }
 
 // QuietRelationship is one contact this reader has stopped talking to.
 type QuietRelationship struct {
 	ContactID ids.UUID
 	Name      string
+	// OwnerID is the contact's live owner, who the suggestion is for. Zero
+	// means nobody: the row is never anybody's personal work.
+	OwnerID ids.UUID
 	// From the derivation rather than the projection's own last_at, so the card
 	// and the contact's page agree.
 	QuietDays int
 	// When they last spoke, so the card can date the silence, not only measure it.
 	LastAt time.Time
-	// What the relationship was WORTH before it went quiet, scored through the
-	// same relstrength.Compute the contact's page reads. The band comes back off
-	// that call rather than being derived here, so there is no second way to turn
-	// a score into the word a rep reads. Without it every lapsed contact reads
-	// alike, and a strong relationship going quiet is the row that most deserves
-	// telling apart from a cc who has drifted.
-	Strength relstrength.Score
-	// Whether money this reader can see still rests on this contact: a silence
-	// with a deal behind it is not the same work as one without.
+	// Recorded context stays available to optional-information consumers, not ranking.
+	Strength    relstrength.Score
 	HasOpenDeal bool
 }

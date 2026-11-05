@@ -510,6 +510,35 @@ func TestAMeetingsNextStepMustBeRaisedInsideTheWeek(t *testing.T) {
 	}
 }
 
+// A day meeting began with its date, though it is stored at that date's noon.
+// So a task raised from it that morning is its next step.
+func TestADayMeetingsNextStepMayBeRaisedTheMorningOfItsDate(t *testing.T) {
+	e := setupWeekly(t)
+	owner := integration.OwnerConn(t)
+	year, month, day := weekClock.AddDate(0, 0, -3).UTC().Date()
+	noon := time.Date(year, month, day, 12, 0, 0, 0, time.UTC)
+
+	meeting := integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, occurred_at, occurred_precision, meeting_status,
+		                      host_user_id, source, captured_by)
+		VALUES ($1, 'meeting', 'The day meeting', $2, 'day', 'held', $3, 'manual', 'human:x')`,
+		noon, e.Rep1)
+	integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, occurred_at, created_at, source_activity_id,
+		                      assignee_id, source, captured_by)
+		VALUES ($1, 'task', 'Send the proposal', $2, $2, $3, $4, 'manual', 'human:x')`,
+		noon.Add(-3*time.Hour), meeting, e.Rep1)
+
+	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if review.Counts.MeetingsHeld != 1 || review.Counts.MeetingsWithNextStep != 1 {
+		t.Errorf("held %d with a next step %d, want 1 and 1: the task came on the meeting's date",
+			review.Counts.MeetingsHeld, review.Counts.MeetingsWithNextStep)
+	}
+}
+
 // linkToContact files one activity under a contact, which is how a meeting and
 // the task that follows it are related — there is no meeting_id on a task.
 func linkToContact(t *testing.T, owner *pgx.Conn, activity, contact ids.UUID) {

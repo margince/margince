@@ -89,6 +89,10 @@ function recordTypesInHistory(source: ts.SourceFile): string[] {
     .map((literal) => literal.text);
 }
 
+// Body fields that tell the update what else to do and are never a column it
+// writes, so no history row can name them.
+const INSTRUCTIONS = new Set(["convert_lead_ids"]);
+
 function updateBodyName(recordType: string): string {
   return `Update${recordType[0].toUpperCase()}${recordType.slice(1)}Request`;
 }
@@ -109,7 +113,8 @@ function fieldsARecordUpdateWrites(): Map<string, string[]> {
         fields = membersOf(node.type)
           .map((member) => member.name)
           .filter(ts.isIdentifier)
-          .map((name) => name.text);
+          .map((name) => name.text)
+          .filter((name) => !INSTRUCTIONS.has(name));
       }
       ts.forEachChild(node, walk);
     };
@@ -161,6 +166,15 @@ describe("history field labels", () => {
       orphans,
       `labels for unwritten fields: ${orphans.join(", ")}`,
     ).toEqual([]);
+  });
+
+  it("names the columns a deal's probability is stored under", () => {
+    expect(historyFieldLabel("win_probability_override", (k) => en[k])).toBe(
+      en["history.field.win_probability_override"],
+    );
+    expect(historyFieldLabel("win_probability_set_by", (k) => en[k])).toBe(
+      en["history.field.win_probability_set_by"],
+    );
   });
 
   it("names a key the catalogs actually carry", () => {

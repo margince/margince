@@ -1,0 +1,268 @@
+/* Share view and Shared links, held together as one group of verbs so the
+   header's space-between does not push them apart. */
+.analytics-share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+/* Reports and Setup at the tab row's far end: two verbs of one weight, a
+   control's gap apart. */
+.analytics-tab-verbs {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+/* A section's body as ONE stack. The shell spaces the panels that stand
+   directly in `.wrap`, but a section also stacks a period control, a readings
+   row and a toolbar between its panels, and those met the panels with nothing
+   between them. One interval for every block in the section, at the page's own
+   rhythm. A section that composes its own blocks (the forecast) stacks them the
+   same way, so it is spaced alike wherever it is drawn. */
+.analytics-body,
+.analytics-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+.analytics-body {
+  margin-top: var(--space-4);
+}
+/* Holds the Overview's way back to the control a reader left through, and
+   adds no box: its children keep the body's column and gap. */
+.analytics-overview {
+  display: contents;
+}
+
+/* The aside over a readings strip says how to read it, so it sits on the
+   strip's top edge at a label's distance, not flush against the panes. */
+.analytics-strip-aside {
+  margin-bottom: var(--space-3);
+}
+
+/* A money cell that also carries the priced-of-total footnote: stacked rather
+   than inline, or the two texts run together with no space between them
+   (`.t-caption`/`.t-num` are typography-only, and a table cell does not
+   stack its children on its own). */
+.analytics-money-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+/* What to check beside what was checked. Side by side where the page is wide
+   enough for both to keep their lines, one under the other below that. */
+.analytics-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  align-items: start;
+  gap: var(--gapCards);
+}
+@media (max-width: 1100px) {
+  .analytics-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A figure and the bar that draws it, sharing one cell: the bar takes the free
+   width, the figure keeps its own at the cell's end. */
+.analytics-barfigure {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.analytics-barfigure-bar {
+  flex: 1;
+  min-width: var(--space-16);
+}
+
+.analytics-scope-control {
+  min-width: 12rem;
+  max-width: 20rem;
+  flex: 1;
+}
+
+/* One thing that needs the reader: what it is on the left, the door to where
+   it is answered on the right, and the door drops under the words on a phone. */
+/* A row's title shares its line with the door; the lines under it take the
+   row's whole width, so they wrap less. */
+.analytics-attention-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-3);
+}
+.analytics-attention-text {
+  display: contents;
+}
+.analytics-attention-text > :not(:first-child) {
+  grid-column: 1 / -1;
+}
+.analytics-attention-row > :last-child {
+  grid-row: 1;
+  grid-column: 2;
+}
+.analytics-attention-title {
+  font-weight: var(--fontWeightMedium);
+}
+
+/* A summary beside the table it summarises: the table takes the wider
+   column, since its figures need the room. */
+.analytics-pair-table {
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+}
+@media (max-width: 1100px) {
+  .analytics-pair-table {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* One of a pair standing alone takes the row; a pair with neither drops out of
+   the stack rather than leaving a gap. */
+.analytics-pair > :only-child {
+  grid-column: 1 / -1;
+}
+.analytics-pair:empty {
+  display: none;
+}
+
+/* Sales won leads the opening page: the figure in display type, and the
+   running total that reached it in the room beside it. */
+.analytics-hero-body {
+  display: grid;
+  grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+.analytics-hero-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.analytics-hero-value {
+  font: var(--fontDisplayFigure);
+}
+/* Under the figure: the target it is read against, and the period before. */
+.analytics-hero-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-self: stretch;
+}
+/* Short facts, one per line: the gap spaces them, not the prose rhythm. */
+.analytics-hero-aside > p {
+  margin: 0;
+}
+/* A grid track never shrinks below its content, so the chart is let shrink. */
+.analytics-hero-chart {
+  min-width: 0;
+}
+.analytics-hero-body > :only-child {
+  grid-column: 1 / -1;
+}
+@media (max-width: 900px) {
+  .analytics-hero-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Reports and Setup are doors off the tab row, so they read as controls with
+   an edge rather than as words in the row. */
+.analytics-tab-verbs .btn-ghost {
+  --ghostEdge: var(--borderControl);
+  box-shadow: var(--shadow-rest);
+}
+/* While its page is open, Reports holds the strong edge. */
+.analytics-tab-verbs .btn-ghost[aria-current="page"] {
+  --ghostEdge: var(--borderStrong);
+}
+
+/* The active filters, always in view beside the control that changes them. */
+.analytics-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+/* All open pipeline, the secondary reading over the stock charts. */
+.analytics-open-line {
+  margin: 0;
+}
+
+/* Personal outcomes and the work awaiting the reader share the first row. */
+.analytics-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  align-items: stretch;
+  gap: var(--gapCards);
+}
+/* One column of the lead row: its cards stacked at the gap between cards. */
+.analytics-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .analytics-lead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The assessment's sentences: one reading per row, its kind first. */
+.assessment-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--gapActions);
+}
+
+.assessment-lines > li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+  align-items: baseline;
+}
+
+.analytics-outlook-prose {
+  max-width: 75ch;
+}
+
+.analytics-outlook-prose > p + p {
+  margin-block-start: var(--paragraphSpacing);
+}
+
+.analytics-lead > .panel,
+.analytics-pair > .panel {
+  align-self: start;
+}
+
+/* A projected shortfall is the one hero line that warns. */
+.analytics-hero-short {
+  color: var(--warningText);
+}
+.analytics-sales-hero .trajectory-chart {
+  padding: 0 var(--padPanel) var(--space-3);
+}
+/* The outlook's first sentence is its verdict, set a step above the prose. */
+.analytics-outlook-lead {
+  font: var(--fontHeadingSmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}
+.analytics-outlook .panel-body > .actions {
+  margin-block-start: var(--space-3);
+}
+.analytics-outlook .panel-foot {
+  justify-content: space-between;
+}
+/* As a chip the scope fits its name rather than holding a column's width. */
+.filter-bar[data-labels="inside"] .analytics-scope-control {
+  flex: none;
+  min-width: 0;
+}

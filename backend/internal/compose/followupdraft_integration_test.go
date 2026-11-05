@@ -18,8 +18,11 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -441,11 +444,10 @@ func TestADraftIsNotComposedForAnOwnerWhoMayNotReadContacts(t *testing.T) {
 	}
 }
 
-// A deal nobody owns has no authority to compose under. owner_id is nullable
-// and ON DELETE SET NULL clears it when a member is removed, so this is an
-// ordinary state rather than an edge case — and it must degrade to the task
-// proposal rather than falling back to the sweep's own unbounded principal.
-func TestAnUnownedDealGetsTheTaskProposalRatherThanADraft(t *testing.T) {
+// A deal nobody owns has nobody to follow it up. owner_id is nullable, and ON
+// DELETE SET NULL clears it when a member is removed, so this state is ordinary.
+// It stages nothing: no draft under the sweep's own principal, and no task.
+func TestAnUnownedDealGetsNoFollowUp(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Orphaned", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Kickoff")
@@ -460,7 +462,43 @@ func TestAnUnownedDealGetsTheTaskProposalRatherThanADraft(t *testing.T) {
 		t.Errorf("staged %d drafts on an unowned deal, want 0 — there is no "+
 			"authority under which a reply may be composed", n)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Errorf("task proposals = %d, want 1", got)
+	if got := e.pendingFollowUps(t, deal); got != 0 {
+		t.Errorf("task proposals = %d on a deal nobody owns, want 0", got)
+	}
+}
+
+func TestTheNightlyDraftAnswersTheLatestEligibleDealMessage(t *testing.T) {
+	e := setupReconcile(t)
+	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	e.reconciler.SetClock(func() time.Time { return now })
+	deal := e.SeedDeal(t, "Latest message", e.pipeline, e.open, &e.Rep1)
+	address := "buyer@latest.test"
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Buyer", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	direction, thread := "inbound", "latest-deal-thread@customer.test"
+	var latest ids.UUID
+	for index, subject := range []string{"Brochure request", "Invoice question"} {
+		at := now.Add(time.Duration(index-2) * time.Hour)
+		body := "Please confirm the details of " + subject + "."
+		activity, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "email", Direction: &direction, ThreadKey: thread, Subject: &subject, Body: &body, OccurredAt: &at, Source: "manual", CounterpartyEmail: address, EmailFrom: address, EmailTo: []string{"rep1@authz.test"},
+			Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}, {EntityType: "contact", EntityID: ids.UUID(contact.Id)}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := e.Activities.SetAudience(e.Admin(), ids.From[ids.ActivityKind](ids.UUID(activity.Id)), activities.SetAudienceInput{Audience: "workspace"}); err != nil {
+			t.Fatal(err)
+		}
+		latest = ids.UUID(activity.Id)
+	}
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	_, draft := e.heldDraftFor(t, deal)
+	if draft.AnchorActivityID != latest {
+		t.Fatalf("nightly draft anchor = %s, want latest %s", draft.AnchorActivityID, latest)
 	}
 }

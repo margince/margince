@@ -48,6 +48,7 @@ import (
 // defect one lane further out.
 func TestEveryEnabledExtensionIsTracked(t *testing.T) {
 	t.Parallel()
+	operator := operatorUnits(t)
 	for _, root := range []string{"../extensions", "../fixtures/extensions"} {
 		entries, err := os.ReadDir(root)
 		if os.IsNotExist(err) {
@@ -84,7 +85,7 @@ func TestEveryEnabledExtensionIsTracked(t *testing.T) {
 			// "a fixture git does not have" defect is still caught — at its
 			// source, where it belongs. A genuinely new first-party unit has no
 			// fixture of the same name and still fails here.
-			if root == "../extensions" && isTrackedFixture(t, e.Name(), onDisk) {
+			if root == "../extensions" && (isTrackedFixture(t, e.Name(), onDisk) || operator[e.Name()]) {
 				continue
 			}
 			if rule, ignored := gitIgnoreRule(t, repoPath); ignored {
@@ -94,6 +95,38 @@ func TestEveryEnabledExtensionIsTracked(t *testing.T) {
 			}
 		}
 	}
+}
+
+// operatorUnitsFile lists, one name per line, the units an operator composes
+// into extensions/ for one installation. Such a unit is not this repository's,
+// so it stays ignored, and so does the list: no clone exempts anything.
+const operatorUnitsFile = "operator-units"
+
+// operatorUnits reads the operator's list, or nothing when there is none.
+func operatorUnits(t *testing.T) map[string]bool {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("..", "extensions", operatorUnitsFile)) // #nosec G304 -- a fixed path in this tree
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Both questions: check-ignore --no-index answers from the patterns alone,
+	// so a list added with `git add -f` still reads as ignored.
+	_, ignored := gitIgnoreRule(t, "extensions/"+operatorUnitsFile)
+	tracked := exec.Command("git", "-C", "..", "ls-files", "--error-unmatch", "extensions/"+operatorUnitsFile).Run() == nil
+	if !ignored || tracked {
+		t.Errorf("extensions/%s is tracked or not git-ignored: it names one installation's units, and a "+
+			"committed list would exempt them in every clone", operatorUnitsFile)
+	}
+	out := map[string]bool{}
+	for line := range strings.SplitSeq(string(raw), "\n") {
+		if name := strings.TrimSpace(line); name != "" {
+			out[name] = true
+		}
+	}
+	return out
 }
 
 // isTrackedFixture reports whether extensions/<name> is CI's copy of the

@@ -46,14 +46,14 @@ func TestTheFingerprintIgnoresTheTitleAndTheDate(t *testing.T) {
 		Direction: string(crmcontracts.ActivityDirectionOutbound),
 	}
 
-	first := staleThread(companyID, now, msg)
+	first := englishSuggestions.staleThread(companyID, now, time.UTC, msg)
 	if first == nil || first.Title == nil || first.DueAt == nil {
 		t.Fatalf("the no-reply rule produced no title or date: %+v", first)
 	}
 	// A day later the SENTENCE changes (31 days, not 30) and the date is the
 	// same evidence's. The fingerprint must not move: nothing about the account
 	// changed, so a dismissal must still hold.
-	later := staleThread(companyID, now.Add(24*time.Hour), msg)
+	later := englishSuggestions.staleThread(companyID, now.Add(24*time.Hour), time.UTC, msg)
 	if later == nil {
 		t.Fatal("the rule stopped firing on a thread that is quieter than before")
 	}
@@ -71,7 +71,7 @@ func TestTheFingerprintIgnoresTheTitleAndTheDate(t *testing.T) {
 func TestATitleSaysWhatTheRuleKnows(t *testing.T) {
 	now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 	companyID := ids.CompanyID{UUID: ids.NewV7()}
-	out := staleThread(companyID, now, lastMessage{
+	out := englishSuggestions.staleThread(companyID, now, time.UTC, lastMessage{
 		ID:        ids.NewV7(),
 		At:        now.Add(-24 * 24 * time.Hour),
 		Direction: string(crmcontracts.ActivityDirectionOutbound),
@@ -86,6 +86,25 @@ func TestATitleSaysWhatTheRuleKnows(t *testing.T) {
 	// deadline the system chose for a rep.
 	if out.DueAt == nil || !out.DueAt.Equal(now.Add(-24*24*time.Hour)) {
 		t.Fatalf("due_at = %v, want the message's own instant", out.DueAt)
+	}
+}
+
+// The evidence's date carries its precision: a call known by its date alone
+// gives a due date that is a date, not that date's noon.
+func TestAQuietThreadsDateSaysHowPreciselyItIsKnown(t *testing.T) {
+	now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
+	companyID := ids.CompanyID{UUID: ids.NewV7()}
+	for precision, dateOnly := range map[crmcontracts.OccurredPrecision]bool{
+		crmcontracts.OccurredPrecisionOccurredPrecisionDay:     true,
+		crmcontracts.OccurredPrecisionOccurredPrecisionInstant: false,
+	} {
+		out := englishSuggestions.staleThread(companyID, now, time.UTC, lastMessage{
+			ID: ids.NewV7(), At: now.AddDate(0, 0, -24), DateOnly: dateOnly,
+			Direction: string(crmcontracts.ActivityDirectionOutbound),
+		})
+		if out == nil || out.DuePrecision == nil || *out.DuePrecision != precision {
+			t.Errorf("a %s thread reads due precision %v, want %s", precision, out, precision)
+		}
 	}
 }
 

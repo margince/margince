@@ -1,27 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package customfields is the governed add-field engine (custom-fields.md):
-// the single chokepoint in the system allowed to run a runtime ALTER TABLE.
-// It validates a field definition against the closed type/object sets,
-// derives its namespaced physical column identifier, generates the DDL only
-// from the validated spec (never raw user text), and detects a structural
-// request so a caller can refuse it. This file is the pure engine core —
-// no DB handle, no HTTP — so the DDL strings it returns can be exercised
-// without a database in the unit-test lane; the Service (service.go)
-// wires the schema-pool transaction that runs them (ALTER TABLE +
-// custom_field catalog INSERT + one audit_log row, atomically).
 package customfields
 
 import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -56,18 +48,17 @@ var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePick
 //     cf_* value travels in
 //
 // Fail either and the field is creatable and never served: the ALTER runs, the
-// column exists, and every read drops the value. The two exclusions are named
+// column exists, and every read drops the value. The one exclusion is named
 // rather than left to be inferred from an absence:
 //
-//   - activity — no store wiring, no wire carriage, so a custom field on an
-//     activity can be created and never read back. That has been true since it
-//     shipped, hidden only by the SPA's picker; naming it here is what closes it.
-//   - relationship — same two gaps. Custom fields on edges is deliberately its
-//     own future change, because it opens a question no gate here can answer: a
-//     `relationship` row is EXCLUDED from piiTables today, judged against a
+//   - relationship — no store wiring, no wire carriage. Custom fields on edges is
+//     its own future change, because it opens a question no gate here can answer:
+//     a `relationship` row is EXCLUDED from piiTables today, judged against a
 //     closed set of business facts, and an open-ended cf_* column on a contact's
 //     employment edge would change that premise while Art. 17 erasure and
 //     Art. 15 SAR both stay blind to it.
+//
+// An activity field applies to every kind unless its ActivityKinds narrow it.
 //
 // The catalog CHECK stays WIDER than this list (migrations/core/0171), which is
 // safe because this engine is the only writer of that table, and is the same
@@ -83,6 +74,7 @@ var FieldObjects = []string{
 	string(datasource.EntityDeal),
 	string(datasource.EntityLead),
 	string(datasource.EntityProject),
+	string(datasource.EntityActivity),
 	// Contract comes from the field-catalog TARGET vocabulary rather than from
 	// datasource.EntityType, and the difference is the whole reason that
 	// vocabulary exists. EntityType is what a record PROVIDER can be asked
@@ -118,6 +110,11 @@ type FieldSpec struct {
 	Currency *string
 	Options  []string
 	Source   string
+	// ShowInCreate nil means the catalog default (true), so a spec written
+	// before the setting existed keeps creating fields the create dialogs offer.
+	ShowInCreate *bool
+	// ActivityKinds narrows an activity field to some kinds; empty means every kind.
+	ActivityKinds []string
 }
 
 // FieldError is one field-level validation failure, matching the contract's
@@ -140,6 +137,11 @@ const (
 	fieldOptions  = "options"
 	fieldSource   = "source"
 	fieldStatus   = "status"
+	fieldShow     = "show_in_create"
+	fieldReport   = "reportable"
+	fieldSlug     = "slug"
+	fieldColumn   = "column_name"
+	fieldKinds    = "activity_kinds"
 	codeRequired  = "required"
 
 	// codeInvalidCharacters flags a picklist option carrying a NUL byte or
@@ -155,6 +157,11 @@ const (
 	codeUnsupportedObject = "unsupported_object"
 	codeUnsupportedType   = "unsupported_type"
 	codeUnsupportedStatus = "unsupported_status"
+
+	// The activity-kinds refusals: kinds on a field of another object, and a
+	// kind outside the activity kind list.
+	codeKindsNotActivity        = "only_on_activity_fields"
+	codeUnsupportedActivityKind = "unsupported_activity_kind"
 )
 
 // validOptionText reports whether a picklist option is safe to carry into
@@ -202,7 +209,33 @@ func Validate(spec FieldSpec) []FieldError {
 	if strings.TrimSpace(spec.Source) == "" {
 		errs = append(errs, FieldError{Field: fieldSource, Code: codeRequired})
 	}
-	return errs
+	return append(errs, checkActivityKinds(spec.Object, spec.ActivityKinds)...)
+}
+
+// checkActivityKinds refuses kinds on a field of another object and a kind the
+// activity kind list does not hold. Create and the settings update both ask it.
+func checkActivityKinds(object string, kinds []string) []FieldError {
+	if len(kinds) == 0 {
+		return nil
+	}
+	if object != string(fieldcatalog.TargetActivity) {
+		return []FieldError{{Field: fieldKinds, Code: codeKindsNotActivity}}
+	}
+	for _, kind := range kinds {
+		if !crmcontracts.ActivityKind(kind).Valid() {
+			return []FieldError{{Field: fieldKinds, Code: codeUnsupportedActivityKind}}
+		}
+	}
+	return nil
+}
+
+// storedKinds is the stored form of a kind list: sorted and without repeats,
+// and nil, which binds as SQL NULL, for every kind.
+func storedKinds(kinds []string) []string {
+	if len(kinds) == 0 {
+		return nil
+	}
+	return slices.Compact(slices.Sorted(slices.Values(kinds)))
 }
 
 var nonAlnum = regexp.MustCompile(`[^a-z0-9]+`)

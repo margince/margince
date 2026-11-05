@@ -7,6 +7,8 @@ package integration
 
 import (
 	"context"
+	"errors"
+	"maps"
 	"testing"
 	"time"
 
@@ -15,8 +17,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -200,7 +204,7 @@ func TestEmploymentImportHumanCorrectionSurvivesReplayAndRevert(t *testing.T) {
 
 func TestEmploymentImportMergeKeepsRolesAndMovesSupport(t *testing.T) {
 	e := Setup(t)
-	store := contacts.NewStore(e.DB())
+	store := e.Contacts
 	source := seedMergeSubject(t, e, "Merge source")
 	target := seedMergeSubject(t, e, "Merge target")
 	claims := []provider.Claim{{Key: provider.ClaimCurrentEmployment, Value: []byte(`{"company_name":"Merged Employer","company_domain":"merged-employer.example","job_title":"Lead"}`)}}
@@ -217,7 +221,46 @@ func TestEmploymentImportMergeKeepsRolesAndMovesSupport(t *testing.T) {
 	if *first.Items[0].RelationshipId == *second.Items[0].RelationshipId {
 		t.Fatal("different contacts shared an edge before merge")
 	}
+	preview, err := store.PreviewMergeSurvivorship(providerAdmin(e), "contact", source, target, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(preview.EmploymentSupport) != 1 {
+		t.Fatalf("support transfers = %+v; want one", preview.EmploymentSupport)
+	}
+	support := preview.EmploymentSupport[0]
+	if support.Source.Id != *first.Items[0].RelationshipId || support.Target.Id != *second.Items[0].RelationshipId || support.Resolutions != 1 || support.AppliedFields == 0 || support.CollapsedFields != 0 {
+		t.Fatalf("incorrect support transfer: %+v", support)
+	}
+	actor, ok := principal.Actor(providerAdmin(e))
+	if !ok {
+		t.Fatal("missing actor")
+	}
+	actor.Permissions.Objects = maps.Clone(actor.Permissions.Objects)
+	actor.Permissions.Objects["company"] = principal.ObjectGrant{}
+	denied, err := store.PreviewMergeSurvivorship(principal.WithActor(providerAdmin(e), actor), "contact", source, target, nil, nil)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) || len(denied.EmploymentSupport) != 0 || len(denied.Fields) != 0 {
+		t.Fatalf("missing company read returned preview=%+v error=%v", denied, err)
+	}
 	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target), nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var oldResolutions, newResolutions, oldFields, newFields int64
+		err := tx.QueryRow(e.Admin(), `SELECT
+   (SELECT count(*) FROM provider_employment_resolution WHERE relationship_id=@source),
+   (SELECT count(*) FROM provider_employment_resolution WHERE relationship_id=@target),
+   (SELECT count(*) FROM provider_applied_field WHERE target_table='relationship' AND target_row_id=@source),
+   (SELECT count(*) FROM provider_applied_field WHERE target_table='relationship' AND target_row_id=@target)`,
+			pgx.StrictNamedArgs{"source": support.Source.Id, "target": support.Target.Id}).Scan(&oldResolutions, &newResolutions, &oldFields, &newFields)
+		if err != nil {
+			return err
+		}
+		if oldResolutions != 0 || oldFields != 0 || newResolutions != 2*support.Resolutions || newFields != 2*support.AppliedFields {
+			t.Fatalf("support after merge: source=%d/%d target=%d/%d", oldResolutions, oldFields, newResolutions, newFields)
+		}
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 	replay, err := store.ApplyEmploymentImport(e.Admin(), ids.From[ids.ContactKind](target), crmcontracts.EmploymentImportRequest{})

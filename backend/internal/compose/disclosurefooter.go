@@ -18,6 +18,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -38,9 +40,9 @@ type disclosureAdapter struct {
 // putting an objection route under what may be an invoice reads as an
 // invitation to stop receiving invoices.
 func (a disclosureAdapter) DisclosuresFor(
-	ctx context.Context, category string,
+	ctx context.Context, category string, recipients []string,
 ) ([]activities.DisclosureLine, error) {
-	owed, err := a.store.Disclosures(ctx, commsauthz.Category(category))
+	owed, err := a.store.Disclosures(ctx, commsauthz.Category(category), recipients)
 	if err != nil {
 		return nil, err
 	}
@@ -49,4 +51,8 @@ func (a disclosureAdapter) DisclosuresFor(
 		out = append(out, activities.DisclosureLine{Kind: line.Kind, Text: line.Text})
 	}
 	return out, nil
+}
+
+func newDisclosureAdapter(db *database.DB) disclosureAdapter {
+	return disclosureAdapter{store: consent.NewStore(db).WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}
 }

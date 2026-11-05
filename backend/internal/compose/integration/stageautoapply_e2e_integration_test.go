@@ -66,7 +66,7 @@ func giveTheOwnerARealRole(t *testing.T, e *Env) {
 		VALUES ($1, 'Stage Autopilot Rep', $2::jsonb)`,
 		roleKey,
 		`{"objects":{"deal":{"read":true,"update":true},`+
-			`"pipeline":{"read":true},`+
+			`"pipeline":{"read":true},"contract":{"read":true},`+
 			`"installation_settings":{"read":true}},"row_scope":"all"}`)
 	e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id)
 		SELECT r.id, $1 FROM role r WHERE r.key = $2`,

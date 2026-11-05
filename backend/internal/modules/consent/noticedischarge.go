@@ -168,7 +168,7 @@ func dischargeNoticeCases(
 // on a raw constraint violation.
 func dischargeableNoticeStates() []string {
 	return slices.DeleteFunc(unresolvedNoticeStates(), func(state string) bool {
-		return state == string(NoticeBlocked)
+		return state == string(NoticeBlocked) || state == string(NoticeSourceReview)
 	})
 }
 

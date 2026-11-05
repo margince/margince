@@ -173,8 +173,8 @@ func TestSyncWithNoCursorAnchorsAndCapturesTheWindow(t *testing.T) {
 	if api.initCalls != 1 || api.deltaCalls != 0 {
 		t.Errorf("calls = (init %d, delta %d), want the initial anchor only", api.initCalls, api.deltaCalls)
 	}
-	if len(sink.recs) != 1 || sink.recs[0].NaturalKey.SourceID != "evt-1" {
-		t.Fatalf("captured %d record(s) %+v, want only the meeting with an outside party", len(sink.recs), sink.recs)
+	if len(sink.recs) != 2 || sink.recs[0].OwnerDomainOnly != "" || sink.recs[1].OwnerDomainOnly != "myco.com" {
+		t.Fatalf("got %d record(s), want both handed to the writer and only the standup stating the owner's domain", len(sink.recs))
 	}
 	if got := mustCursor(t, cur); got.DeltaLink != "https://graph/delta?$1" || got.Email != owner {
 		t.Errorf("cursor = %+v, want the advanced link bound to the account", got)

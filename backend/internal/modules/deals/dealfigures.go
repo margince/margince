@@ -100,9 +100,12 @@ var dealFigureWithholds = map[string]func(*DealFigures){
 // DealFigures is one deal's commercial face: what it is worth, when it was
 // meant to land, and who answers for it.
 type DealFigures struct {
+	Closed               bool
 	CloseDateProvisional *bool
-	ForecastCategory     *string
-	StageID              ids.UUID
+	// WinProbability is the deal's effective probability (WinProbabilitySQL):
+	// its own where set, else StageWinProbability.
+	WinProbability *int
+	StageID        ids.UUID
 	// StageWinProbability is the probability recorded on the deal's stage, read
 	// in the one query this already performs rather than through a second call.
 	//
@@ -147,16 +150,17 @@ func scanFigures(rows pgx.Rows, out map[ids.UUID]DealFigures, now time.Time, loc
 			code        *string
 			closes      *time.Time
 			provisional *bool
-			category    *string
+			probability *int
 			winProb     *int
 			semantic    *string
 		)
-		if err := rows.Scan(&id, &stage, &owner, &amount, &code, &closes, &provisional, &category, &winProb, &semantic); err != nil {
+		if err := rows.Scan(&id, &stage, &owner, &amount, &code, &closes, &provisional, &probability, &winProb, &semantic); err != nil {
 			return err
 		}
 		figures := DealFigures{
 			AmountMinor: amount, ExpectedCloseDate: closes, CloseDateProvisional: provisional,
-			ForecastCategory: category, StageWinProbability: winProb,
+			WinProbability: probability, StageWinProbability: winProb,
+			Closed: semantic != nil && *semantic != string(SemanticOpen),
 		}
 		// A won or lost deal's date is when it closed, so only an open one is late.
 		if closes != nil && (semantic == nil || *semantic == string(SemanticOpen)) {
@@ -221,7 +225,7 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 			return err
 		}
 		query := storekit.SQLf(
-			`SELECT d.id, d.stage_id, d.owner_id, d.amount_minor, d.currency, d.expected_close_date, d.close_date_provisional, d.forecast_category, s.win_probability, s.semantic
+			`SELECT d.id, d.stage_id, d.owner_id, d.amount_minor, d.currency, d.expected_close_date, d.close_date_provisional, `+WinProbabilitySQL("d")+`, s.win_probability, s.semantic
 			   FROM deal d
 			   LEFT JOIN stage s ON s.id = d.stage_id
 			  WHERE d.id = ANY($%d) AND d.archived_at IS NULL`, idsPos,

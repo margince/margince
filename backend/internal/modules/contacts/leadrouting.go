@@ -17,6 +17,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -66,7 +68,20 @@ type RoutingConfig struct {
 // supports. The mirror is TestRoutableLeadFieldVocabularyIsSingleSourced,
 // in compose — the only place both modules are visible.
 // Held by: TestEveryRoutableLeadFieldResolvesToItsOwnFact (backend/internal/modules/contacts/leadroutingvocab_test.go)
-var RoutableLeadFields = []string{leadSourceColumn, leadCompanyColumn, candidateCompanyKey}
+var RoutableLeadFields = []string{leadOriginColumn, leadCompanyColumn, candidateCompanyKey}
+
+// staleRuleFields are the fields of rules that name something routing no
+// longer reads. Such a rule never applies: reading it as an empty fact would let
+// a rule that wants an empty value match every lead.
+func (c RoutingConfig) staleRuleFields() []string {
+	var stale []string
+	for _, rule := range c.Rules {
+		if !slices.Contains(RoutableLeadFields, rule.Field) && !slices.Contains(stale, rule.Field) {
+			stale = append(stale, rule.Field)
+		}
+	}
+	return stale
+}
 
 // ParseRoutingConfig decodes automation params into a RoutingConfig.
 // Params were validated against the catalog schema at write time; this
@@ -97,15 +112,15 @@ type RoutingDecision struct {
 
 // leadRoutingFacts is the lead-local slice a rule may look at.
 type leadRoutingFacts struct {
-	Source              string
+	Origin              string
 	CompanyName         string
 	CandidateCompanyKey string
 }
 
 func (f leadRoutingFacts) field(name string) string {
 	switch name {
-	case "source":
-		return f.Source
+	case leadOriginColumn:
+		return f.Origin
 	case leadCompanyColumn:
 		return f.CompanyName
 	case candidateCompanyKey:
@@ -126,7 +141,7 @@ func chooseOwner(cfg RoutingConfig, lead leadRoutingFacts, openLoad map[ids.User
 		return cfg.CapPerOwner <= 0 || openLoad[id] < cfg.CapPerOwner
 	}
 	for i, rule := range cfg.Rules {
-		if !strings.EqualFold(rule.Equals, lead.field(rule.Field)) {
+		if !slices.Contains(RoutableLeadFields, rule.Field) || !strings.EqualFold(rule.Equals, lead.field(rule.Field)) {
 			continue
 		}
 		// The cap outranks the rule (AC-S5: caps are never exceeded): a
@@ -186,9 +201,9 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 		var status string
 		var facts leadRoutingFacts
 		if err := tx.QueryRow(ctx, `
-			SELECT owner_id, status, source, coalesce(company_name, ''), coalesce(candidate_company_key, '')
+			SELECT owner_id, status, coalesce(origin, ''), coalesce(company_name, ''), coalesce(candidate_company_key, '')
 			  FROM lead WHERE id = $1`,
-			leadID).Scan(&currentOwner, &status, &facts.Source, &facts.CompanyName, &facts.CandidateCompanyKey); err != nil {
+			leadID).Scan(&currentOwner, &status, &facts.Origin, &facts.CompanyName, &facts.CandidateCompanyKey); err != nil {
 			return err
 		}
 		if currentOwner != nil {
@@ -223,7 +238,7 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 		p := storekit.NewPatch()
 		p.Set("owner_id", nil, chosen)
 		// Routing starts the §18 first-response clock.
-		p.Set("routed_at", nil, time.Now().UTC())
+		stampArrival(p, chosen, time.Now().UTC())
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
@@ -390,6 +405,9 @@ func (w leadRouting) Apply(ctx context.Context, ev workflow.Event, eff workflow.
 	cfg, err := ParseRoutingConfig(ev.Params)
 	if err != nil {
 		return workflow.RunResult{}, err
+	}
+	if stale := cfg.staleRuleFields(); len(stale) > 0 {
+		slog.WarnContext(ctx, "lead routing skipped rules on fields it no longer reads", "fields", stale)
 	}
 	decision, err := w.store.RouteLead(ctx, ids.From[ids.LeadKind](ev.Entity.ID), cfg)
 	if err != nil {

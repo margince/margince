@@ -260,8 +260,15 @@ func TestSendMessageStagesAgainstTheResolvedRecipient(t *testing.T) {
 	stager := &recordingChannelStager{}
 	gate := &recordingConsentGate{}
 
-	sent, err := e.channelStore(reaches(map[ids.UUID]string{contact: testChannelAccount})).SendMessage(
-		e.as(principal.RowScopeAll), anchor, channelInput(), gate, stager)
+	store := e.channelStore(reaches(map[ids.UUID]string{contact: testChannelAccount}))
+	preview, err := store.PreviewChannelReply(e.as(principal.RowScopeAll), anchor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stager.staged) != 0 {
+		t.Fatal("preview staged a channel reply")
+	}
+	sent, err := store.SendMessage(e.as(principal.RowScopeAll), anchor, channelInput(), gate, stager)
 	if err != nil {
 		t.Fatalf("SendMessage: %v", err)
 	}
@@ -271,6 +278,9 @@ func TestSendMessageStagesAgainstTheResolvedRecipient(t *testing.T) {
 	}
 	if got := stager.staged[0].Recipient.ChannelUserID; got != testChannelAccount {
 		t.Fatalf("staged against account %q, want the conversation's %q", got, testChannelAccount)
+	}
+	if preview.Provider != stager.staged[0].Provider || preview.Recipient != stager.staged[0].Recipient || len(preview.Links) != 1 || preview.Links[0].EntityID != contact {
+		t.Fatalf("preview differs from actual recipient/filing: %+v / %+v", preview, stager.staged[0])
 	}
 	// The authorization request the staging seam carries names the same one
 	// subject, and carries no mail address beside it: Recipient names exactly

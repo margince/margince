@@ -90,7 +90,8 @@ func (s *Service) readExcerpts(
 	if scope == "" {
 		scope = scopeAll
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(excerptQuery, scope, arg(parsed), excerptChars), args...)
+	query := fmt.Sprintf(excerptQuery, scope, arg(parsed), excerptChars)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the conversation excerpts: %w", err)
 	}
@@ -155,7 +156,7 @@ func excerptTargets(moments []ArcMoment) []string {
 func threadsNewestFirst(threads []thread) []thread {
 	ordered := slices.Clone(threads)
 	sort.SliceStable(ordered, func(i, j int) bool {
-		return ordered[i].Last.After(ordered[j].Last)
+		return ordered[i].Last.At.After(ordered[j].Last.At)
 	})
 	return ordered
 }

@@ -6,14 +6,14 @@ import type { ListQuery, SavedViewTab } from "../../components/listquery";
 import { NamePrompt } from "../../design-system/nameprompt";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import type { ViewResource } from "../../lib/filtersaddress";
 import { problemMessageOf } from "../../lib/problem";
-import type { ViewResource } from "./filtersaddress";
-import { ManageViewsButton } from "./savedviews.manage";
 import {
   type SavedView,
   useSavedViews,
   useSaveView,
-} from "./savedviews.queries";
+} from "../../lib/savedviews.queries";
+import { ManageViewsButton } from "./savedviews.manage";
 
 // A saved view is the reader's own list state, by name: the search, the sort,
 // the filters, the archived toggle and the page size they were looking at.

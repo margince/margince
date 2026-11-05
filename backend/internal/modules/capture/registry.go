@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
-	"net/mail"
 	"slices"
 	"sort"
 	"strings"
@@ -20,6 +19,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -84,20 +85,11 @@ func NewRegistry(db *database.DB, sink *Sink, authority authz.Resolver, vault ke
 	}
 }
 
-// WithClock replaces the source of the instants this registry STAMPS — the
-// sync-state timestamps, not the schedule.
-//
-// The schedule is deliberately out of reach: next_sync_at is a delay the
-// database applies to its own clock, so nothing here can move it, which is the
-// property syncclock_test.go holds.
-//
-// It exists for the failure-streak case. failing_since is set once and left
-// alone across every failure after it, and the only way to see that is to fail
-// several times at instants an hour apart — which real time cannot do without
-// a sleep, and a test whose verdict depends on elapsed wall time is the
-// flakiness the suite refuses. A nil clock is ignored rather than installed:
-// a registry with no clock would panic on its first write.
-func (r *Registry) WithClock(now func() time.Time) *Registry {
+// SetClock replaces the clock for the sync-state timestamps this registry
+// stamps. next_sync_at stays on the database clock (syncclock_test.go).
+// A failure-streak test fails at instants an hour apart without a sleep.
+// A nil clock is ignored: a registry with none would panic on its first write.
+func (r *Registry) SetClock(now func() time.Time) *Registry {
 	if now != nil {
 		r.now = now
 	}
@@ -196,11 +188,8 @@ func (r *Registry) ChannelCarriage() map[string]connector.Carriage {
 // the connector the sink, and advances the stored cursor only when the
 // sync succeeded end to end.
 //
-// The generation read here fences the commit. A sync spends real time at the
-// provider, and its human can disconnect or reconnect in that window; the
-// watermark and the health verdict this cycle produced belong to a connection
-// that no longer exists, so neither is written. That is not a failure — nothing
-// went wrong — and it is not a success either.
+// Completion must still match the connection generation, sync revision and starting cursor.
+// A newer pull or changed grant supersedes this snapshot.
 func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 	var (
 		name          string
@@ -209,6 +198,7 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 		authBytes     []byte
 		cursor        []byte
 		generation    int
+		revision      int64
 	)
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		// 'error' is syncable by design (ADR-0063): the daily probe of a
@@ -216,9 +206,9 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 		// is what flips the row back to connected. Only 'disconnected' and
 		// 'reauth_required' park a connection.
 		return tx.QueryRow(ctx, `
-			SELECT provider, user_id, credential_ref, auth, sync_cursor, generation FROM capture_connection
+			SELECT provider, user_id, credential_ref, auth, sync_cursor, generation, sync_revision FROM capture_connection
 			WHERE id = $1 AND status IN ('connected','error')`, connectionID).
-			Scan(&name, &grantedBy, &credentialRef, &authBytes, &cursor, &generation)
+			Scan(&name, &grantedBy, &credentialRef, &authBytes, &cursor, &generation, &revision)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("capture: connection %s: %w", connectionID, apperrors.ErrNotFound)
@@ -226,6 +216,7 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 	if err != nil {
 		return err
 	}
+	snapshot := syncSnapshot{id: connectionID, generation: generation, revision: revision, prior: connector.Cursor(cursor)}
 	c, err := r.connector(name)
 	if err != nil {
 		return err
@@ -237,9 +228,11 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 	if err != nil {
 		return err
 	}
-	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
+	// Before the credential and the provider: a member who may no longer
+	// capture costs the provider nothing and parks under its own class.
+	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
 	if err != nil {
-		if recErr := r.recordSyncFailure(runCtx, connectionID, err); recErr != nil {
+		if recErr := r.recordSyncFailure(runCtx, snapshot, credentialRef, err); recErr != nil {
 			return errors.Join(err, recErr)
 		}
 		return err
@@ -258,7 +251,7 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 		// line. A bare return would stop the mailbox with its health still
 		// reading healthy — silently, which is the one way a capture failure
 		// must never look.
-		if recErr := r.recordSyncFailure(runCtx, connectionID, err); recErr != nil {
+		if recErr := r.recordSyncFailure(runCtx, snapshot, credentialRef, err); recErr != nil {
 			return errors.Join(err, recErr)
 		}
 		return err
@@ -268,55 +261,50 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 	// every connection the fleet pulls at once, and a sink held on it would
 	// carry one mailbox's replacement credential into another mailbox's
 	// re-seal. A provider whose credential is stable is returned unchanged.
-	syncer := connector.RotatingSyncer(c, rotationSink{
+	rotation := &rotationSink{
 		registry: r, connectionID: connectionID, generation: generation,
 		readRef: credentialRef, log: slog.Default(),
-	})
-	next, syncErr := syncer.Sync(runCtx, auth, connector.Cursor(cursor), r.sink)
+	}
+	syncer := connector.RotatingSyncer(c, rotation)
+	// Where a first pull starts, held so a retry reads the same point. A
+	// connector with no bounded first pull answers the zero time and takes
+	// the plain Sync below.
+	from, err := r.syncStart(ctx, connectionID, generation, c.Descriptor(), connector.Cursor(cursor), r.now())
+	if err != nil {
+		return err
+	}
+	runCtx, tally := withDeliveryTally(runCtx)
+	next, syncErr := syncFrom(runCtx, syncer, auth, connector.Cursor(cursor), from, r.sink)
 	if syncErr != nil {
 		// A transient failure never kills the connection (ADR-0063): the
 		// state machine classifies, backs off, degrades to a daily probe at
 		// worst — and auth parks the row for its human.
-		if recErr := r.recordSyncFailure(runCtx, connectionID, syncErr); recErr != nil {
+		if recErr := r.recordSyncFailure(runCtx, snapshot, rotation.readRef, syncErr); recErr != nil {
 			return errors.Join(syncErr, recErr)
 		}
 		return syncErr
 	}
-	superseded, err := r.commitSyncCursor(ctx, connectionID, generation, next)
+	superseded, err := r.commitSyncCursor(ctx, snapshot, next, tally.receivedAt())
 	if err != nil {
 		return err
 	}
 	if superseded {
-		// Everything this cycle learned belongs to the connection as it was, so
-		// none of it lands — including the health verdict. Recording a success
-		// here would tell a human their just-disconnected mailbox is syncing
-		// fine, which is the same lie the fence exists to stop.
-		slog.InfoContext(ctx, "capture: sync superseded by a lifecycle change — its cursor and health were not recorded",
+		// An older snapshot cannot replace the newer cursor or health verdict.
+		slog.InfoContext(ctx, "capture: sync superseded — its cursor and health were not recorded",
 			"connection_id", connectionID, "provider", name)
 		return nil
 	}
-	return r.recordSyncSuccess(ctx, connectionID)
+	return nil
 }
 
-// commitSyncCursor advances a connection's watermark to what the sync just
-// returned. The own-domain seed happens BEFORE the pull, not here — a set
-// learned from a completed sync does not cover that sync.
-//
-// generation is the fence: it is the value SyncOnce read before the pull, and a
-// lifecycle change since then has moved it. superseded=true says the write
-// matched nothing for that reason — the caller records neither the watermark nor
-// a health verdict, because the cycle belongs to a connection that is gone.
-func (r *Registry) commitSyncCursor(ctx context.Context, connectionID ids.UUID, generation int, next connector.Cursor) (superseded bool, err error) {
+// The cursor and successful health verdict commit under the same snapshot fence.
+func (r *Registry) commitSyncCursor(ctx context.Context, snapshot syncSnapshot, next connector.Cursor, receivedAt *time.Time) (superseded bool, err error) {
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
-		// sync_cursor is jsonb; the connector's watermark is already JSON. A
-		// connector that yields no cursor writes NULL, never an empty jsonb.
-		var cur []byte
-		if len(next) > 0 {
-			cur = []byte(next)
-		}
-		tag, err := tx.Exec(ctx, `
-			UPDATE capture_connection SET sync_cursor = $2
-			WHERE id = $1 AND generation = $3`, connectionID, cur, generation)
+		args := snapshot.args()
+		cur := cursorJSON(next)
+		args["next"] = cur
+		tag, err := tx.Exec(ctx, `UPDATE capture_connection SET sync_cursor=@next, sync_revision=sync_revision+1
+			WHERE `+syncSnapshotMatch, args)
 		if err != nil {
 			return err
 		}
@@ -324,7 +312,15 @@ func (r *Registry) commitSyncCursor(ctx context.Context, connectionID ids.UUID, 
 			superseded = true
 			return nil
 		}
-		return nil
+		// In the same transaction as the watermark. A cursor stored with the
+		// anchor still held leaves a stale lower bound, which a later
+		// re-anchor would read as a point somebody chose.
+		if len(cur) > 0 {
+			if err := releaseSyncAnchor(ctx, tx, snapshot.id, snapshot.generation); err != nil {
+				return err
+			}
+		}
+		return r.recordSyncSuccessTx(ctx, tx, snapshot.id, receivedAt)
 	})
 	return superseded, err
 }
@@ -371,7 +367,7 @@ func (r *Registry) seedOwnDomainFromAccount(ctx context.Context, c connector.Con
 
 // seedDomainOfAddressTx records one mailbox's domain as a candidate own-domain.
 func seedDomainOfAddressTx(ctx context.Context, tx pgx.Tx, address string) error {
-	domain := domainOfAddress(bareAddress(address))
+	domain := owndomain.OfAddress(bareAddress(address))
 	if domain == "" {
 		return nil
 	}
@@ -391,9 +387,9 @@ func seedDomainOfAddressTx(ctx context.Context, tx pgx.Tx, address string) error
 	if err := lockOwnDomain(ctx, tx, domain); err != nil {
 		return err
 	}
-	// Recorded unverified, always. Whether the domain is OURS is not a fact
-	// about this mailbox and is not frozen here — it is derived at read time
-	// from what the own company currently claims (trustedOwnDomainsTx). Writing
+	// Recorded unverified, always. Whether the domain is OURS is derived at
+	// read time from what the own company currently claims
+	// (TrustedOwnDomainsTx). Writing
 	// the answer down would mean a domain that stopped being ours went on
 	// suppressing mail forever.
 	if _, err := tx.Exec(ctx, `
@@ -433,30 +429,10 @@ func (r *Registry) resolveCredential(ctx context.Context, credentialRef *string,
 // a runtime property), full seat (capture is a write path by nature —
 // the human's ability to grant it is what the scope check consumed).
 func (r *Registry) connectorContext(ctx context.Context, name string, grantedBy ids.UserID) (context.Context, error) {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("capture: sync outside workspace context")
-	}
-	// The authz resolver and the principal seam are untyped (ids.UUID);
-	// widen the typed granting-human id at each of those edges.
-	rbac, err := r.authority.EffectiveRBAC(ctx, wsID, grantedBy.UUID)
-	if err != nil {
-		return nil, fmt.Errorf("capture: granting human no longer resolves — the grant dies with them: %w", err)
-	}
-	seat, err := r.authority.SeatType(ctx, wsID, grantedBy.UUID)
+	runCtx, err := connectorActing(ctx, r.authority, name, grantedBy)
 	if err != nil {
 		return nil, err
 	}
-	p := principal.Principal{
-		Type:        principal.PrincipalConnector,
-		ID:          connectorPrincipalID(name),
-		UserID:      grantedBy.UUID,
-		OnBehalfOf:  grantedBy.UUID,
-		TeamIDs:     rbac.TeamIDs,
-		SeatType:    seat,
-		Permissions: rbac.Permissions,
-	}
-	runCtx := principal.WithActor(ctx, p)
 	return principal.WithCorrelationID(runCtx, ids.NewV7()), nil
 }
 
@@ -476,10 +452,9 @@ func (r *Registry) connector(name string) (connector.Connector, error) {
 // yields "acme.com>", which matches no domain anyone registered, so the gate
 // would quietly never fire. An unparseable label is returned as it came: it is
 // then judged as an address, which is what it was before this.
-func bareAddress(label string) string {
-	parsed, err := mail.ParseAddress(strings.TrimSpace(label))
-	if err != nil {
-		return label
-	}
-	return parsed.Address
+func bareAddress(label string) string { return mailidentity.BareAddress(label) }
+
+// AdmitActivityParties keeps receipt follow-up on this registry configured sink.
+func (r *Registry) AdmitActivityParties(ctx context.Context, activity ids.ActivityID) error {
+	return r.sink.AdmitActivityParties(ctx, activity)
 }

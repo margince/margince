@@ -79,12 +79,12 @@ func TestAnOptionalMemberMayBeAbsentOrNull(t *testing.T) {
 // optional, and a uuid is a string a caller can actually send back.
 func TestTheDerivedSchemaReadsTheWireTagsAndNotTheGoNames(t *testing.T) {
 	var schema jsonSchema
-	if err := json.Unmarshal(schemaFor[UpdateWithStagedApprovalResult](), &schema); err != nil {
+	if err := json.Unmarshal(schemaFor[UpdateResult](), &schema); err != nil {
 		t.Fatalf("decoding the derived schema: %v", err)
 	}
 	// wireRecord is embedded, so its members belong at THIS level — that is what
 	// the result actually puts on the wire.
-	for _, want := range []string{"record_type", "id", "fields", "staged_approval"} {
+	for _, want := range []string{"record_type", "id", "fields", "changes"} {
 		if _, named := schema.Properties[want]; !named {
 			t.Errorf("the derived schema does not name %q, which the result carries", want)
 		}

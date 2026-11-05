@@ -203,7 +203,7 @@ func ReadDealOutcomeReviews(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (
 	// its caller to have bounded it is a reader that becomes unbounded the
 	// first time somebody calls it from somewhere else, and nothing would fail
 	// at that moment to say so.
-	if err := auth.EnsureVisible(ctx, tx, "deal", dealID.UUID); err != nil {
+	if err := auth.EnsureVisibleExisting(ctx, tx, "deal", dealID.UUID); err != nil {
 		return nil, err
 	}
 

@@ -4,10 +4,12 @@
 package deals
 
 import (
+	"encoding/json"
 	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // The catalog's request rules, read once by both doors: the REST handlers and
@@ -40,7 +42,18 @@ func productCreateInput(req crmcontracts.CreateProductRequest, priceStated bool)
 
 		BillingModel:          billingModel,
 		BillingIntervalMonths: billingMonths,
+		ComponentKind:         componentKindOf(req.ComponentKind),
+		TaxCategory:           componentKindOf(req.TaxCategory),
 	}, nil
+}
+
+// componentKindOf is the stored spelling of a component kind a request named.
+func componentKindOf[K ~string](kind *K) *string {
+	if kind == nil {
+		return nil
+	}
+	value := string(*kind)
+	return &value
 }
 
 // productUpdateInput maps a patch. cleared names the fields the body sent as
@@ -74,6 +87,8 @@ func productUpdateInput(req crmcontracts.UpdateProductRequest, cleared []string,
 		Active:         req.Active,
 		Clear:          clears,
 		IfVersion:      ifVersion,
+		ComponentKind:  componentKindOf(req.ComponentKind),
+		TaxCategory:    componentKindOf(req.TaxCategory),
 
 		// A patch addresses the classification when it names either half.
 		Classified:            req.BillingModel != nil || req.BillingIntervalMonths != nil,
@@ -82,7 +97,8 @@ func productUpdateInput(req crmcontracts.UpdateProductRequest, cleared []string,
 	}, nil
 }
 
-func offerTemplateCreateInput(req crmcontracts.CreateOfferTemplateRequest) (CreateOfferTemplateInput, error) {
+// OfferTemplateCreationInput keeps layout presence checks shared by creation and review.
+func OfferTemplateCreationInput(req crmcontracts.CreateOfferTemplateRequest) (CreateOfferTemplateInput, error) {
 	name, err := httperr.RequireNonBlank(offerTemplateNameField, req.Name)
 	if err != nil {
 		return CreateOfferTemplateInput{}, err
@@ -113,4 +129,16 @@ func offerTemplateUpdateInput(req crmcontracts.UpdateOfferTemplateRequest, ifVer
 	return UpdateOfferTemplateInput{
 		Name: name, Locale: req.Locale, IsDefault: req.IsDefault, Layout: req.Layout, IfVersion: ifVersion,
 	}, nil
+}
+
+// ProductCreationFromJSON preserves price presence so omission cannot become a free product.
+func ProductCreationFromJSON(raw json.RawMessage, sourceOverride *string) (CreateProductInput, error) {
+	var req crmcontracts.CreateProductRequest
+	if err := datasource.StrictDecode(raw, &req); err != nil {
+		return CreateProductInput{}, err
+	}
+	if sourceOverride != nil {
+		req.Source = *sourceOverride
+	}
+	return productCreateInput(req, statesAValue(raw, "unit_price_minor"))
 }

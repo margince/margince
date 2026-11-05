@@ -4,17 +4,14 @@
 package weekly
 
 // The movement bridge: how a week got from its opening landing to its closing
-// one, in the six moves a contact tells the story in.
+// one, in the moves a contact tells the story in.
 //
-// SIX, not the eight the waterfall draws. The opening and closing landings are
-// the bridge's two ANCHORS — they are read off the frozen snapshots either side
-// of the week, not folded from any bucket — so they carry no bar here. A reader
-// counting the drawn columns sees eight; this file names only what MOVED.
+// The opening and closing landings are the bridge's two ANCHORS. They are read
+// off the frozen snapshots either side of the week, not folded from any
+// bucket, so they carry no bar here. This file names only what MOVED.
 //
-// The forecast engine reports twelve buckets, which is the right grain for
-// diagnosing a quarter and too fine for a weekly retrospective — nobody opens a
-// Monday review to learn that 3% of the change was an FX revaluation. So the
-// twelve fold into these six.
+// The forecast engine reports finer buckets: the grain for diagnosing a
+// quarter, and too fine for a weekly look back. So they fold into these bars.
 //
 // Folding is where money goes missing. A bar list that quietly drops a bucket
 // still sums to something and still draws, so the mapping is total by
@@ -38,6 +35,13 @@ const (
 	// BarSlipped is the mirror — pushed out of the period, downgraded, or
 	// repriced down. Named for what a rep would say happened.
 	BarSlipped = "slipped"
+	// BarExcluded and BarReinstated are a deal that left or rejoined the
+	// qualified number on its viability review alone. BarNotChecked is one that
+	// left because its review status became unknown. A review is neither a slip
+	// nor progress, so each has its own bar.
+	BarExcluded   = "excluded"
+	BarReinstated = "reinstated"
+	BarNotChecked = "not_checked"
 	// BarWon and BarLost are the two decided outcomes.
 	BarWon  = "won"
 	BarLost = "lost"
@@ -56,7 +60,7 @@ const (
 // and a caller summing this list must arrive at the closing anchor from the
 // opening one rather than finding both inside it.
 var barOrder = []string{
-	BarCreated, BarAdvanced, BarSlipped, BarWon, BarLost, BarOther,
+	BarCreated, BarAdvanced, BarSlipped, BarExcluded, BarReinstated, BarNotChecked, BarWon, BarLost, BarOther,
 }
 
 // BridgeBars is the set of bars, in drawing order.
@@ -85,6 +89,9 @@ var bucketBar = map[string]string{
 	forecasting.BucketAmount:      BarAdvanced,
 	forecasting.BucketCategory:    BarAdvanced,
 	forecasting.BucketStageWeight: BarAdvanced,
+	forecasting.BucketExcluded:    BarExcluded,
+	forecasting.BucketReinstated:  BarReinstated,
+	forecasting.BucketNotChecked:  BarNotChecked,
 	forecasting.BucketWon:         BarWon,
 	forecasting.BucketLost:        BarLost,
 	// An archived or reopened deal is neither won nor lost and nobody sold it.
@@ -92,6 +99,8 @@ var bucketBar = map[string]string{
 	forecasting.BucketFx:         BarOther,
 	forecasting.BucketDefinition: BarOther,
 	forecasting.BucketModel:      BarOther,
+	// A chance moved by recorded outcomes is the forecast learning, not a sale.
+	forecasting.BucketRecordChanged: BarOther,
 }
 
 // bucketsWhoseSignPicksTheBar are the three whose direction is not fixed.

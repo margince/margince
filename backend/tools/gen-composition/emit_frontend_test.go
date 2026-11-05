@@ -164,6 +164,28 @@ func TestFrontendRegistryCarriesTheDeclaredSecretScope(t *testing.T) {
 	}
 }
 
+// The SPA places a unit's entries from the registry alone. Each declared field
+// reaches it, and a unit with none still carries an empty list.
+func TestFrontendRegistryCarriesTheDeclaredEntries(t *testing.T) {
+	got := string(frontendGen([]derivedManifest{
+		{
+			Unit: extensionUnit{Name: "visits"},
+			Manifest: unitManifest{Entries: []declaredEntry{{
+				Slot: "record_header.deal", Label: "extVisits.open", Icon: "map-pin", Target: "report", Object: "ext_visits_report",
+			}}},
+		},
+		{Unit: extensionUnit{Name: "yogi"}},
+	}, nil, nil))
+	for _, want := range []string{
+		"    entries: [\n      {\n        slot: \"record_header.deal\",\n        label: \"extVisits.open\",\n        icon: \"map-pin\",\n        target: \"report\",\n        object: \"ext_visits_report\",\n      },\n    ],\n",
+		"    name: \"yogi\",\n    secretScope: \"\",\n    title: \"\",\n    verbs: [\n    ],\n    entries: [\n    ],\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("missing %q in:\n%s", want, got)
+		}
+	}
+}
+
 // The emitted file is TypeScript, so every string in it is attacker-adjacent
 // input: a unit author writes the title and the operation id. tsString goes
 // through encoding/json precisely so a quote, a backslash or a newline cannot

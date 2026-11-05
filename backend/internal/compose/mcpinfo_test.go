@@ -292,10 +292,17 @@ func mcpResult(t *testing.T, method string, views *apps.Provider) json.RawMessag
 func mcpCall(t *testing.T, method, extraParams, name string, views *apps.Provider) json.RawMessage {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
-	ctx = principal.WithActor(ctx, principal.Principal{
+	caller := principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:published-surface", OnBehalfOf: ids.NewV7(),
-		Scopes: principal.NewScopeSet(mcpInfoScopes()...),
-	})
+		Scopes: principal.NewScopeSet(mcpInfoScopes()...), SeatType: principal.SeatFull,
+	}
+	// The catalogue is narrowed by grants, so it is read holding every one. A
+	// schema document under grants reads the workspace's own vocabulary, which
+	// this test has no database for, so those are read holding none.
+	if !strings.HasPrefix(name, "margince://schema/") {
+		caller.Permissions = everyMeasuredGrant(t)
+	}
+	ctx = principal.WithActor(ctx, caller)
 	handler := agents.NewHTTPHandler(NewRegistry(nil, SendPath{}),
 		func(*http.Request) (context.Context, error) { return ctx, nil },
 		nil, "margince-crm", "published", slog.New(slog.NewTextHandler(io.Discard, nil)),
@@ -304,7 +311,7 @@ func mcpCall(t *testing.T, method, extraParams, name string, views *apps.Provide
 		// records is the narrowed catalogue a caller is really served.
 		agents.WithResourceProvider(composeResources(
 			mcpResourceProviders(agents.NewCapabilitiesResource(NewRegistry(nil, SendPath{})),
-				search.NewQuerySchemaResource(queryVocabulary(nil)), views)...)),
+				search.NewQuerySchemaResource(queryVocabulary(nil)), nil, views)...)),
 		// A tool names its view only where the deployment HOLDS that document,
 		// which is the same promise the protocol makes: a `_meta.ui.resourceUri`
 		// pointing at a document the server will not serve is a dangling

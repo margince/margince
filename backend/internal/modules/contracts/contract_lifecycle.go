@@ -344,7 +344,7 @@ func (s *Store) Renew(ctx context.Context, id ids.ContractID, successor CreateCo
 		}
 		successor.CompanyID = ids.CompanyID{UUID: anchor}
 
-		created, err := createContractTx(ctx, tx, successor, by, today, active)
+		created, err := createContractTx(ctx, tx, successor, by, today, active, false)
 		if err != nil {
 			return err
 		}

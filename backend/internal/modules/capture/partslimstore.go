@@ -112,6 +112,53 @@ type PartSlimResult struct {
 	Unproved int
 }
 
+// partSlimOutcome is what the sweep did to one original, recorded beside the
+// stamp that says it looked.
+//
+// Six of the seven mean the payload was left whole. A row examined and found
+// unslimmable would otherwise read as a slimmed one does. The oversized
+// original question has to be answered from this column.
+type partSlimOutcome string
+
+const (
+	// outcomeSlimmed is the only one that removed bytes.
+	outcomeSlimmed partSlimOutcome = "slimmed"
+	// outcomeNoProvedParts: the object store vouched for none of the parts, or
+	// the message has no part rows at all.
+	outcomeNoProvedParts partSlimOutcome = "no_proved_parts"
+	// outcomeUnreadableSpelling: the column does not hold the spelling the
+	// sink writes, so the original could not be read out of it.
+	outcomeUnreadableSpelling partSlimOutcome = "unreadable_spelling"
+	// outcomeUnrewritableOriginal: the parts are described in a way this
+	// cannot rewrite. The fault is in the message or its part rows.
+	outcomeUnrewritableOriginal partSlimOutcome = "unrewritable_original"
+	// outcomeNothingCameOut: nothing was found to remove, or the stanza left
+	// behind cost more than the octets it replaced.
+	outcomeNothingCameOut partSlimOutcome = "nothing_came_out"
+	// outcomeUnencodableResult: the stripped original could not be written
+	// back in the spelling the column holds.
+	outcomeUnencodableResult partSlimOutcome = "unencodable_result"
+	// outcomeNoBytesSaved: the rewrite was no smaller once encoded.
+	outcomeNoBytesSaved partSlimOutcome = "no_bytes_saved"
+)
+
+// partSlimOutcomes lists the outcomes for the gate below, so a reason the
+// sweep writes cannot reach production with a constraint that refuses it.
+//
+// Held by: TestTheOutcomeCheckAdmitsEveryOutcomeTheSweepWrites
+// (backend/internal/modules/capture/partslimstamp_integration_test.go)
+func partSlimOutcomes() []partSlimOutcome {
+	return []partSlimOutcome{
+		outcomeSlimmed,
+		outcomeNoProvedParts,
+		outcomeUnreadableSpelling,
+		outcomeUnrewritableOriginal,
+		outcomeNothingCameOut,
+		outcomeUnencodableResult,
+		outcomeNoBytesSaved,
+	}
+}
+
 // errPartSlimRaced marks a row another writer changed under the sweep. Not a
 // fault: the row is left unstamped and re-read next cadence.
 var errPartSlimRaced = errors.New("capture: the original changed under the slim")
@@ -150,6 +197,11 @@ func (s *PartSlimStore) SlimBatch(ctx context.Context, limit int) (PartSlimResul
 type candidateRow struct {
 	id    ids.UUID
 	parts []CandidatePart
+	// receivedAt is what the row said when it was read, and the fence the
+	// stamp is written behind. A redelivery through InsertRawCaptureTx
+	// replaces the payload and sets this to now(). A cycle that proved the
+	// previous bytes must not speak for the new ones.
+	receivedAt time.Time
 }
 
 // candidates reads the next unconsidered rows with their attachment rows.
@@ -162,7 +214,7 @@ func (s *PartSlimStore) candidates(ctx context.Context, limit int) ([]candidateR
 	var out []candidateRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT rc.id,
+			SELECT rc.id, rc.received_at,
 			       coalesce(jsonb_agg(jsonb_build_object(
 			           'ordinal', split_part(at.external_part_id, ':', 2)::int,
 			           'key',     at.storage_key,
@@ -186,7 +238,7 @@ func (s *PartSlimStore) candidates(ctx context.Context, limit int) ([]candidateR
 		defer rows.Close()
 		for rows.Next() {
 			var row candidateRow
-			if err := rows.Scan(&row.id, &row.parts); err != nil {
+			if err := rows.Scan(&row.id, &row.receivedAt, &row.parts); err != nil {
 				return fmt.Errorf("capture: reading an original to slim: %w", err)
 			}
 			out = append(out, row)
@@ -206,7 +258,7 @@ func (s *PartSlimStore) slimRow(ctx context.Context, row candidateRow, out *Part
 	proved, unproved := s.proveParts(ctx, row.parts)
 	out.Unproved += unproved
 	if len(proved) == 0 {
-		return s.stamp(ctx, row.id)
+		return s.stamp(ctx, row, outcomeNoProvedParts)
 	}
 	payload, err := s.payloadOf(ctx, row.id)
 	if err != nil {
@@ -222,35 +274,11 @@ func (s *PartSlimStore) slimRow(ctx context.Context, row candidateRow, out *Part
 	// string, with its CRLFs escaped. Stripping that would look for a base64
 	// run wrapped in real newlines inside text that has none, find nothing, and
 	// report a clean no-op forever.
-	original, err := DecodeStoredOriginal(payload)
-	if err != nil {
-		return s.stamp(ctx, row.id)
+	attempt := attemptSlim(payload, proved)
+	if attempt.outcome != outcomeSlimmed {
+		return s.stamp(ctx, row, attempt.outcome)
 	}
-	stripped, count, err := partslim.StripStoredParts(original, proved)
-	if err != nil {
-		// An original this cannot rewrite is stamped rather than retried: the
-		// fault is in the message or the rows describing it, and neither
-		// changes on its own. Left unstamped it would be re-read, re-fetched
-		// and re-refused every cadence for as long as the row exists.
-		return s.stamp(ctx, row.id)
-	}
-	if count == 0 || len(stripped) >= len(original) {
-		// Nothing came out, or the stanza cost more than the octets it replaced
-		// — which happens on a part small enough, and is why this is measured
-		// rather than assumed.
-		return s.stamp(ctx, row.id)
-	}
-	// Written back in the same spelling the sink would have used, so the next
-	// reader decodes what the column actually holds.
-	rewritten, err := EncodeStoredOriginal(stripped)
-	if err != nil {
-		return s.stamp(ctx, row.id)
-	}
-	saved := int64(len(payload) - len(rewritten))
-	if saved <= 0 {
-		return s.stamp(ctx, row.id)
-	}
-	err = s.write(ctx, row.id, payload, rewritten)
+	err = s.write(ctx, row.id, payload, attempt.rewritten)
 	if errors.Is(err, errPartSlimRaced) {
 		return nil
 	}
@@ -258,8 +286,52 @@ func (s *PartSlimStore) slimRow(ctx context.Context, row candidateRow, out *Part
 		return err
 	}
 	out.Slimmed++
-	out.Freed += saved
+	out.Freed += attempt.saved
 	return nil
+}
+
+// slimAttempt is what rewriting one original produced: the bytes to write and
+// what they save, or the reason nothing came out of it.
+type slimAttempt struct {
+	rewritten []byte
+	saved     int64
+	outcome   partSlimOutcome
+}
+
+// attemptSlim rewrites one original without its provable parts.
+//
+// No database and no object store: the decision of whether anything can come
+// out of an original, and why not, is arithmetic over bytes. Held apart from
+// the row it belongs to so each answer can be read on its own.
+func attemptSlim(payload []byte, proved []partslim.StoredPart) slimAttempt {
+	original, err := DecodeStoredOriginal(payload)
+	if err != nil {
+		// The column does not hold the spelling the sink writes. Stripping
+		// would look for a base64 run wrapped in real newlines inside text
+		// that has none, find nothing, and report a clean no-op forever.
+		return slimAttempt{outcome: outcomeUnreadableSpelling}
+	}
+	stripped, count, err := partslim.StripStoredParts(original, proved)
+	if err != nil {
+		// An original this cannot rewrite is stamped rather than retried. The
+		// fault is in the message or the rows describing it, and neither
+		// changes on its own.
+		return slimAttempt{outcome: outcomeUnrewritableOriginal}
+	}
+	if count == 0 || len(stripped) >= len(original) {
+		// Nothing came out, or the stanza cost more than the octets it
+		// replaced, which happens on a part small enough.
+		return slimAttempt{outcome: outcomeNothingCameOut}
+	}
+	rewritten, err := EncodeStoredOriginal(stripped)
+	if err != nil {
+		return slimAttempt{outcome: outcomeUnencodableResult}
+	}
+	saved := int64(len(payload) - len(rewritten))
+	if saved <= 0 {
+		return slimAttempt{outcome: outcomeNoBytesSaved}
+	}
+	return slimAttempt{rewritten: rewritten, saved: saved, outcome: outcomeSlimmed}
 }
 
 // payloadOf reads one row's stored original.
@@ -288,9 +360,10 @@ func (s *PartSlimStore) write(ctx context.Context, id ids.UUID, was, now []byte)
 		// this write landing the STALE stripped bytes over the fresh ones.
 		tag, err := tx.Exec(ctx, `
 			UPDATE raw_capture
-			   SET payload = $2::jsonb, parts_slimmed_at = now()
+			   SET payload = $2::jsonb, parts_slimmed_at = now(),
+			       parts_slim_outcome = $4
 			 WHERE id = $1 AND parts_slimmed_at IS NULL AND payload = $3::jsonb`,
-			id, now, was)
+			id, now, was, string(outcomeSlimmed))
 		if err != nil {
 			return fmt.Errorf("capture: slimming an original: %w", err)
 		}
@@ -301,12 +374,28 @@ func (s *PartSlimStore) write(ctx context.Context, id ids.UUID, was, now []byte)
 	})
 }
 
-// stamp records that the sweep considered a row without changing its payload.
-func (s *PartSlimStore) stamp(ctx context.Context, id ids.UUID) error {
+// stamp records that the sweep considered a row, and why nothing came out.
+//
+// Behind the same two fences the slimming write uses: the reason describes the
+// bytes this cycle read. Each writer that replaces a payload moves one fence,
+// so a stale reason is declined and the row is read again next cadence.
+func (s *PartSlimStore) stamp(
+	ctx context.Context, row candidateRow, outcome partSlimOutcome,
+) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx,
-			`UPDATE raw_capture SET parts_slimmed_at = now() WHERE id = $1`, id); err != nil {
+		tag, err := tx.Exec(ctx,
+			`UPDATE raw_capture
+			    SET parts_slimmed_at = now(), parts_slim_outcome = $2
+			  WHERE id = $1 AND parts_slimmed_at IS NULL AND received_at = $3`,
+			row.id, string(outcome), row.receivedAt)
+		if err != nil {
 			return fmt.Errorf("capture: stamping a considered original: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			// Answered rather than assumed, and not a fault. The row moved on
+			// under the sweep and is still unstamped, so the next cadence
+			// reads it as it stands.
+			return nil
 		}
 		return nil
 	})

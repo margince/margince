@@ -23,8 +23,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // epoch anchors the timestamp sentinels. Each column gets epoch plus its own
@@ -202,8 +205,13 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 	// same hazard: a swap reads as a valid-looking wrong value.
 	assertString(t, "a.direction", stringOf(got.Direction))
 	assertString(t, "a.meeting_status", stringOf(got.MeetingStatus))
+	assertString(t, "a.call_outcome", stringOf(got.CallOutcome))
 	assertString(t, "a.capture_label", stringOf(got.CaptureLabel))
 	assertString(t, "a.audience", stringOf(got.Audience))
+	// Served for mail only, and the sentinel row's kind is not mail.
+	if got.BodyCompleteness != nil {
+		t.Errorf("a.body_completeness served on a %q row", got.Kind)
+	}
 	if string(got.Kind) != "a.kind" {
 		t.Errorf("a.kind landed as %q", got.Kind)
 	}
@@ -215,7 +223,7 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 		got    *time.Time
 	}{
 		{"a.occurred_at", &got.OccurredAt},
-		{"a.due_at", got.DueAt},
+		{storekit.TaskDueSQL("a"), got.DueAt},
 		{"a.remind_at", got.RemindAt},
 		{"a.done_at", got.DoneAt},
 		{"a.created_at", &got.CreatedAt},
@@ -252,6 +260,10 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 	// therefore the easiest to transpose undetected.
 	assertBool(t, "a.is_done", got.IsDone, boolFor(index["a.is_done"]) != flip)
 	assertBool(t, "a.bulk_mail_attested", got.BulkMailAttested, boolFor(index["a.bulk_mail_attested"]) != flip)
+	// Answered on a task alone, and the sentinel row is no task.
+	if got.DueHasTime != nil {
+		t.Errorf("a.due_has_time served on a %q row", got.Kind)
+	}
 }
 
 // boolFor answers what the row wrote for the boolean at this column, by
@@ -275,7 +287,7 @@ func boolFor(at int) bool {
 // before one exists.
 func isBoolColumn(sql string) bool {
 	switch sql {
-	case "a.is_done", "a.bulk_mail_attested", "":
+	case "a.is_done", "a.bulk_mail_attested", "a.due_has_time", "":
 		return true
 	}
 	return false
@@ -328,15 +340,13 @@ func stringOf[T ~string](v *T) *string {
 // arity error somewhere else, at a call site that has nothing to do with the
 // omission.
 func TestTheSelectListAndTheScanAgreeOnLength(t *testing.T) {
-	// A contentArm with no comma in it, so the count below is the projection's
-	// commas and not the predicate's.
-	columns := activityColumns("true")
+	columns := activityColumns("coalesce(a.audience = 'workspace', false)")
 	dests := activityScanTargets(&activityScan{})
 	if len(dests) != len(activityProjection) {
 		t.Fatalf("the scan asks for %d destinations and the projection declares %d columns",
 			len(dests), len(activityProjection))
 	}
-	rendered := strings.Split(columns, ", ")
+	rendered := gatekit.SplitSQLList(columns)
 	if len(rendered) != len(activityProjection) {
 		t.Errorf("the select list renders %d columns and the projection declares %d — pgx scans "+
 			"the row the LIST asked for, so a column declared and not rendered is a scan that "+
@@ -444,6 +454,9 @@ func TestAWithheldRowCarriesNoAudienceReason(t *testing.T) {
 	if got.Body != nil {
 		t.Errorf("a withheld row carried a body")
 	}
+	if got.BodyCompleteness != nil {
+		t.Errorf("a withheld row said how much of its body could be read")
+	}
 	if got.ThreadKey != nil {
 		t.Errorf("a withheld row carried a thread key — it identifies the message at the provider")
 	}
@@ -487,5 +500,92 @@ func TestImportedFromFollowsTheContentAudience(t *testing.T) {
 				t.Fatalf("imported_from = %v, present want %v", got.ImportedFrom, tc.wantName)
 			}
 		})
+	}
+}
+
+// body_completeness is said of a mail's body, so it is served only with one.
+func TestBodyCompletenessIsServedOnlyWithAMailBody(t *testing.T) {
+	body := "From: a@x.test"
+	for _, tc := range []struct {
+		name      string
+		kind      string
+		available bool
+		body      *string
+		want      bool
+	}{
+		{"readable mail", "email", true, &body, true},
+		{"withheld mail", "email", false, &body, false},
+		{"erased mail", "email", true, nil, false},
+		{"a task", "task", true, &body, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			scan := activityScan{contentAvailable: tc.available, kind: tc.kind, bodyCompleteness: "partial"}
+			scan.a.Body = tc.body
+			got := scan.record()
+			if served := got.BodyCompleteness != nil; served != tc.want {
+				t.Fatalf("body_completeness served = %v, want %v", served, tc.want)
+			}
+			if tc.want && *got.BodyCompleteness != crmcontracts.BodyCompletenessPartial {
+				t.Errorf("body_completeness = %q, want the column's value", *got.BodyCompleteness)
+			}
+		})
+	}
+}
+
+// What a message is (an invitation, a sending system's notice) is content: a
+// reader who may not open the message is not told it. The product's own mail
+// is the origin, not content, and stays marked.
+func TestAutomaticKindFollowsTheContentAudience(t *testing.T) {
+	t.Parallel()
+	invite := "REQUEST"
+	for _, tc := range []struct {
+		name      string
+		scan      activityScan
+		available bool
+		want      crmcontracts.ActivityAutomaticKind
+	}{
+		{"an invitation the reader may open", activityScan{kind: "email", origin: "human", calendarMethod: &invite}, true, crmcontracts.ActivityAutomaticKindCalendar},
+		{"an invitation the reader may not open", activityScan{kind: "email", origin: "human", calendarMethod: &invite}, false, ""},
+		{"a notice the reader may open", activityScan{kind: "email", origin: "human", senderIsMachine: true}, true, crmcontracts.ActivityAutomaticKindSendingSystem},
+		{"a notice the reader may not open", activityScan{kind: "email", origin: "human", senderIsMachine: true}, false, ""},
+		{"a newsletter the reader may open", activityScan{kind: "email", origin: "human", bulkMailAttested: true}, true, crmcontracts.ActivityAutomaticKindBulk},
+		{"a newsletter the reader may not open", activityScan{kind: "email", origin: "human", bulkMailAttested: true}, false, ""},
+		{"the product's own mail, withheld", activityScan{kind: "email", origin: OriginSystemNotice}, false, crmcontracts.ActivityAutomaticKindProduct},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.scan.contentAvailable = tc.available
+			got := tc.scan.record().AutomaticKind
+			if tc.want == "" {
+				if got != nil {
+					t.Fatalf("automatic_kind = %s on a row the reader may not open", *got)
+				}
+				return
+			}
+			if got == nil || *got != tc.want {
+				t.Fatalf("automatic_kind = %v, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+// automaticKindToWire converts without a check, so a kind the contract does
+// not list would reach a client as a value it cannot name.
+func TestEveryAutomaticKindIsAContractValue(t *testing.T) {
+	t.Parallel()
+	for _, kind := range relstrength.AutomaticKinds() {
+		if !crmcontracts.ActivityAutomaticKind(kind).Valid() {
+			t.Errorf("relstrength names %q, which automatic_kind in crm.yaml does not list", kind)
+		}
+	}
+}
+
+// A task says whether its due date has a time; the column's value reaches it.
+func TestATaskSaysWhetherItsDueDateHasATime(t *testing.T) {
+	for _, want := range []bool{true, false} {
+		scan := activityScan{contentAvailable: true, kind: "task", dueHasTime: want}
+		got := scan.record()
+		if got.DueHasTime == nil || *got.DueHasTime != want {
+			t.Errorf("a task scanned with due_has_time %t reads %v", want, got.DueHasTime)
+		}
 	}
 }

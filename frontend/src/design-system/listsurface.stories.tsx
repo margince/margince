@@ -1,9 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Plus } from "lucide-react";
+import { Phone, Plus } from "lucide-react";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import {
+  expectAppliedFiltersFit,
+  expectAppliedFiltersOneLine,
+  LONG_FILTER_CHIPS,
+  LONG_FILTER_VALUES,
+  WIDE,
+} from "../testing/appliedfilterchecks";
 import { Button } from "./atoms";
+import { IconAction } from "./iconaction";
+import { Menu, useCloseOnEscape } from "./listmenu";
 import { CountLine, ListSurface, type ListView } from "./listsurface";
 
 // The surface's header when its sentence is longer than the row: German runs
@@ -123,3 +132,78 @@ export const GermanCountPhone: Story = {
   render: () => <GermanSurface />,
   play: async ({ canvasElement }) => nothingPushedOut(canvasElement),
 };
+
+function SortMenuBesideAVerb() {
+  const [open, setOpen] = useState<string | null>("sort");
+  useCloseOnEscape(open, () => setOpen(null));
+  return (
+    <div style={{ display: "flex", gap: "var(--space-3)" }}>
+      <span className="lt-menu-wrap">
+        <Button
+          aria-expanded={open !== null}
+          onClick={() => setOpen(open === null ? "sort" : null)}
+        >
+          Sort
+        </Button>
+        <Menu open={open !== null} head="Sort by">
+          <Button variant="ghost">Name</Button>
+          <Button variant="ghost">Last updated</Button>
+        </Menu>
+      </span>
+      <IconAction label="Call" icon={<Phone aria-hidden="true" />} />
+    </div>
+  );
+}
+
+export const MenuUnderATip: Story = {
+  name: "Menu under a tip",
+  render: () => <SortMenuBesideAVerb />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const menu = canvas.getByRole("group", { name: "Sort by" });
+    const call = canvas.getByRole("button", { name: "Call" });
+    await userEvent.hover(call);
+    const body = within(document.body);
+    await waitFor(() => expect(body.getByRole("tooltip")).toBeVisible());
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(body.queryByRole("tooltip")).toBeNull());
+    await expect(menu).toHaveClass("open");
+
+    await userEvent.keyboard("{Escape}");
+    await expect(menu).not.toHaveClass("open");
+  },
+};
+
+// An applied filter longer than a phone's line: its value wraps at its spaces,
+// whole, and the "⋮" that removes the filter stays inside the toolbar.
+export const LongAppliedFilterPhone: Story = {
+  name: "Long applied filter, phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <LongFilters />,
+  play: async ({ canvasElement }) => expectAppliedFiltersFit(canvasElement),
+};
+
+// The same filters on a desktop line: each stays one line at the control height.
+export const LongAppliedFilterWide: Story = {
+  name: "Long applied filter, wide",
+  parameters: WIDE,
+  globals: { viewport: { value: "wide" } },
+  tags: ["uat-wide"],
+  render: () => <LongFilters />,
+  play: async ({ canvasElement }) => expectAppliedFiltersOneLine(canvasElement),
+};
+
+function LongFilters() {
+  return (
+    <ListSurface
+      title="Leads"
+      chips={LONG_FILTER_CHIPS}
+      chosen={LONG_FILTER_VALUES}
+      onChipChange={() => undefined}
+    >
+      <p>Zeilen</p>
+    </ListSurface>
+  );
+}

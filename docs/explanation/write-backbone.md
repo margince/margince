@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/platform/database/storekit backend/internal/platform/database/database.go backend/internal/shared/kernel/events backend/internal/platform/events/relay.go backend/internal/platform/events/subscriber.go backend/internal/platform/events/dedupe.go backend/internal/platform/httpserver/chassis.go backend/internal/compose/runnerservice.go -->
 # The write backbone: storekit, `audit_log` & the outbox
 
 Every audited write in this backend commits **three rows in one transaction**. They are the domain row, an
@@ -82,6 +83,11 @@ values*: the field history read (`GET /v1/field-history`) builds each field's ch
 them. Data about the action itself goes in `evidence`, such as a retention policy id, or the
 inbound email that started a `promote`. If `before`/`after` held that data, field history would
 show field changes that never happened on the record.
+
+The effect of an approved, server-proposed change runs under `storekit.WithReleasingApproval`. So
+each audit row it writes on another record carries `released_by_approval_id` in `evidence`; the
+approval's own rows are the decision and carry no link. That link is how a receipt finds the values
+its approval moved.
 
 **Safe updates.** A by-id UPDATE of a row with a version never uses an `UPDATE` alone; it goes
 through `storekit.Patch`:
@@ -245,12 +251,14 @@ time reports it.
 | `cg:context-graph` | keep the pgvector search embeddings up to date as records change | **live** (worker; only when an embedder model is set up) |
 | `cg:graph-edge` | build the interaction edges as activities and contacts move | **live** (worker) |
 | `cg:audience-rescope` | narrow the signals that point to a message whose set of readers changed | **live** (worker) |
+| `cg:voice-copy-recheck` | empty a voice sample once its sent mail is archived, restricted, narrowed or marked confidential | **live** (worker) |
 | `cg:linkedin-match` | join a LinkedIn ghost to its contact or company when that record shows up | **live** (worker) |
 | `cg:cohort-promote` | link a contact's earlier captured mail when the contact shows up or gets an address | **live** |
 | `cg:commissions` | add a partner's commission when a deal reaches `won`, and take it back if the deal opens again | **live** (worker) |
 | `cg:stage-evidence` | write the evidence a proposed stage move rests on, from captured mail, contracts and Deal Rooms | **live** |
 | `cg:stage-progression-outcome` | count the outcome of each proposed stage move, including time-outs | **live** |
 | `cg:deal-room-timeline` | write what happened in a Deal Room into the deal's history | **live** (worker) |
+| `cg:assurance-freshness` | mark the input check's findings out of date when a deal, its activities, a stage, a buying signal, its company or a forecast call changes, and queue a check of each changed deal alone | **live** (worker) |
 | `cg:ai-activity` | write every action that AI does into `ai_task_run`, the table the AI rail will read once its read moves there | **live** (worker) |
 | `cg:ai-budget-resume` | start again AI work that a budget limit put off, once the budget allows | **live** |
 | `cg:contact-auto-enrich` | fill a contact from what the site of their company already shows | **live** (worker) |
@@ -260,7 +268,7 @@ time reports it.
 | `cg:company-auto-enrich` | queue a company's fill pass as soon as it shows up, not on the next daily pass | **live** (worker) |
 | `cg:intro-advance` | end a request to meet a contact once the contact answers it | **live** |
 | `cg:notice-case-open` | open, and later end, the case for what the installation owes a contact it learned of without asking them | **live** |
-| `cg:approval-notify` | on `approval.requested`, put the card in the queue of every seat that could decide it | **live** (worker) |
+| `cg:approval-notify` | on `approval.requested`, put the card in the queue of the one member it names | **live** (worker) |
 | `cg:approval-notice-retract` | on a decided or timed-out card, take back the lines it put in other seats' queues | **live** |
 | `cg:overnight-agent` | on `approval.decided`, start again the waiting Surface-B run with the human's answer | **live** (worker; only when a model is set up) |
 | `cg:workflows` | start the workflow engine on matching events | **live** (worker) |

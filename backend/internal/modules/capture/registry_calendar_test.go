@@ -12,7 +12,7 @@ import (
 )
 
 func TestCalendarWriteGrantMatchesFrontend(t *testing.T) {
-	source, err := os.ReadFile("../../../../frontend/src/screens/connector-status.ts")
+	source, err := os.ReadFile("../../../../frontend/src/lib/connector-status.ts")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,16 +34,16 @@ func TestCalendarWriteGrantMatchesFrontend(t *testing.T) {
 		if len(scopes) == 0 || !slices.Equal(scopes, grants[provider]) {
 			t.Errorf("%s: backend scopes %v, frontend scopes %v", provider, scopes, grants[provider])
 		}
-		if calendarWriteGranted(provider, nil) {
+		if CalendarWriteGranted(provider, nil) {
 			t.Errorf("%s accepts no scope", provider)
 		}
 		for _, scope := range scopes {
-			if !calendarWriteGranted(provider, []string{scope}) {
+			if !CalendarWriteGranted(provider, []string{scope}) {
 				t.Errorf("%s refuses declared scope %s", provider, scope)
 			}
 		}
 	}
-	if calendarWriteGranted("unknown", []string{"Calendars.ReadWrite"}) {
+	if CalendarWriteGranted("unknown", []string{"Calendars.ReadWrite"}) {
 		t.Error("unknown provider accepted")
 	}
 }

@@ -29,6 +29,10 @@ func (k *withheldOnlyKeeper) Record(context.Context, pgx.Tx, ids.ActivityID, Fil
 	return errors.New("not reached")
 }
 
+func (k *withheldOnlyKeeper) RecordLinks(context.Context, pgx.Tx, ids.ActivityID, FileSource, []MailLink) (int, error) {
+	return 0, nil
+}
+
 func (k *withheldOnlyKeeper) RecordWithheld(_ context.Context, _ pgx.Tx, _ ids.ActivityID, _ FileSource, files []CapturedFile) error {
 	k.named = files
 	return k.fail

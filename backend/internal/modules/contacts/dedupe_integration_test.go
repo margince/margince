@@ -109,6 +109,9 @@ func (e *dedupeEnv) as() context.Context {
 				"company":      {Create: true, Read: true, Update: true},
 				"lead":         {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
+				// A rep reads mail. The domain-question decider asks only a seat
+				// that may read the mail that raised the question.
+				"activity": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -126,7 +129,7 @@ func (e *dedupeEnv) as() context.Context {
 // a contact every seat can read. A fixture handing it a fabricated id is
 // therefore describing a refusal, not the apply — so the fixtures seed the
 // message the production caller always has.
-func (e *dedupeEnv) openSignatureSource(ctx context.Context, t *testing.T) ids.UUID {
+func (e *dedupeEnv) openSignatureSource(ctx context.Context, t *testing.T, contactID ids.ContactID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -138,13 +141,14 @@ func (e *dedupeEnv) openSignatureSource(ctx context.Context, t *testing.T) ids.U
 	}); err != nil {
 		t.Fatalf("seed the signature source: %v", err)
 	}
+	e.writtenBy(ctx, t, contactID, id)
 	return id
 }
 
 // agedSignatureSource is the same message dated a year back — a re-delivery, or
 // mail a connector backfilled long after it was sent. What it states is older
 // than what the record holds, so the pass must leave the record alone.
-func (e *dedupeEnv) agedSignatureSource(ctx context.Context, t *testing.T) ids.UUID {
+func (e *dedupeEnv) agedSignatureSource(ctx context.Context, t *testing.T, contactID ids.ContactID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -157,7 +161,25 @@ func (e *dedupeEnv) agedSignatureSource(ctx context.Context, t *testing.T) ids.U
 	}); err != nil {
 		t.Fatalf("seed the aged signature source: %v", err)
 	}
+	e.writtenBy(ctx, t, contactID, id)
 	return id
+}
+
+// writtenBy files the mail under the contact and names them its sender, as
+// capture does, so the apply's source check finds the contact wrote it.
+func (e *dedupeEnv) writtenBy(ctx context.Context, t *testing.T, contactID ids.ContactID, activityID ids.UUID) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+			activityID, contactID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'from')`,
+			activityID, contactID)
+		return err
+	}); err != nil {
+		t.Fatalf("filing the signature source under its sender: %v", err)
+	}
 }
 
 func (e *dedupeEnv) seedEmployedContact(ctx context.Context, t *testing.T, name, email, companyName, domain string) (ids.ContactID, ids.CompanyID) {
@@ -178,16 +200,10 @@ func (e *dedupeEnv) seedEmployedContact(ctx context.Context, t *testing.T, name,
 	}
 	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
 	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
-	// Stated, not left to the store's own rule: this seed is about the contact
-	// HAVING a current employer, so it says so rather than relying on a
-	// derivation another test could change.
-	primary := true
-	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
-		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
-		IsCurrentPrimary: &primary, Source: "manual",
-	}); err != nil {
-		t.Fatalf("seed employment: %v", err)
+	if err := e.store.ResolveContactEmployer(ctx, contactID, EmployerChoice{CompanyID: &companyID, Source: "manual"}); err != nil {
+		t.Fatal(err)
 	}
+	assertEmployedAt(ctx, t, e, contactID, companyID)
 	return contactID, companyID
 }
 
@@ -336,6 +352,32 @@ func TestDedupeCompanyExactTierFindsAClaimedDomain(t *testing.T) {
 	}
 }
 
+// Capture's employer inference arrives with whatever the mail header spelled,
+// and a company is filed under whatever its site was read as. The two spellings
+// of one internationalized domain are one domain, so the exact tier must route
+// to the company already holding the other one.
+func TestDedupeCompanyExactTierFindsTheOtherSpellingOfADomain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Bücher GmbH", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "xn--bcher-kva.example", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
+		DisplayName: "Some Other Spelling", Domains: []string{"bücher.example"},
+	})
+	if m.Decision != DecisionExactCollision {
+		t.Fatalf("decision = %s, want exact_collision on the unicode spelling", m.Decision)
+	}
+	if ids.UUID(company.Id) != m.CompanyID.UUID {
+		t.Fatalf("matched %s, want the company holding the punycode spelling %s", m.CompanyID, company.Id)
+	}
+}
+
 func TestDedupeCompanyFuzzyTierMeetsAcrossLegalSuffixes(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -388,6 +430,9 @@ func (e *dedupeEnv) asOther() context.Context {
 				"company":      {Create: true, Read: true, Update: true},
 				"lead":         {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
+				// A rep reads mail. The domain-question decider asks only a seat
+				// that may read the mail that raised the question.
+				"activity": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

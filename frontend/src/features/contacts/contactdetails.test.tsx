@@ -1,18 +1,26 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { RecordDetails } from "../../design-system/recorddetails";
 import { en } from "../../i18n/en";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
+import { view } from "../../testing/contactpage.testkit";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ContactDetails } from "./contactdetails";
-import { view } from "./contactpage.testkit";
+import { ContactDetails, useContactAboutSections } from "./contactdetails";
 
 afterEach(cleanup);
 const contact = { ...view.contact, version: 3, title: "Director" };
@@ -37,7 +45,9 @@ it("saves only the corrected scalar", async () => {
     sent.push(body);
     return jsonResponse({ ...contact, version: 4 });
   });
-  await user.click(await screen.findByRole("button", { name: "Change Title" }));
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Title/ }),
+  );
   await user.clear(screen.getByRole("textbox", { name: "Title" }));
   await user.type(screen.getByRole("textbox", { name: "Title" }), "CEO{Enter}");
   await waitFor(() => expect(sent).toEqual([{ title: "CEO" }]));
@@ -122,8 +132,11 @@ it("keeps a refused correction and offers the existing record on a duplicate", a
   await user.type(input, "taken@example.test");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await screen.findByRole("button", { name: "View existing record" });
-  expect(screen.getByDisplayValue("taken@example.test")).toBeTruthy();
-  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(
+    within(screen.getByRole("dialog", { name: "Email" })).getByDisplayValue(
+      "taken@example.test",
+    ),
+  ).toBeTruthy();
 });
 it("shows friendly conflict copy and retains the draft", async () => {
   const user = userEvent.setup();
@@ -139,7 +152,9 @@ it("shows friendly conflict copy and retains the draft", async () => {
       409,
     ),
   );
-  await user.click(await screen.findByRole("button", { name: "Change Title" }));
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Title/ }),
+  );
   const input = screen.getByRole("textbox", { name: "Title" });
   await user.clear(input);
   await user.type(input, "CEO{Enter}");
@@ -166,8 +181,7 @@ it("does not offer to clear the owner of a private contact", async () => {
     visibility: "owner",
     owner_id: "u1",
   });
-  await user.click(await screen.findByRole("button", { name: "Change Owner" }));
-  await user.click(screen.getByRole("combobox"));
+  await user.click((await openChoiceDialog(user, "Owner")).chooser);
   expect(screen.queryByRole("option", { name: "Not set" })).toBeNull();
 });
 
@@ -182,7 +196,7 @@ it("adds the first phone from Details without changing email", async () => {
     { ...contact, phones: [] },
   );
   await user.click(
-    await screen.findByRole("button", { name: "Edit phone numbers" }),
+    await screen.findByRole("button", { name: /^Edit phone numbers/ }),
   );
   await user.click(screen.getByRole("button", { name: "Add phone" }));
   await user.type(
@@ -204,4 +218,138 @@ it("adds the first phone from Details without changing email", async () => {
       },
     ]),
   );
+});
+
+describe("the address in the About group", () => {
+  function About({ page }: Readonly<{ page: typeof view }>) {
+    return <RecordDetails sections={useContactAboutSections(page)} />;
+  }
+  const address = (
+    id: string,
+    email: string,
+    position: number,
+  ): components["schemas"]["ContactEmail"] => ({
+    id,
+    email,
+    email_type: "work",
+    is_primary: position === 1,
+    position,
+    source: "manual",
+    captured_by: "human:u-1",
+  });
+  const front = address("pe-1", "dana@brandt.example", 0);
+  const second = address("pe-2", "dana.private@brandt.example", 1);
+
+  function show(primaryEmail: string | null) {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }, { seat: "full" }),
+    });
+    render(
+      <StoryProviders>
+        <About
+          page={{
+            ...view,
+            contact: {
+              ...view.contact,
+              emails: [front, second],
+              primary_email: primaryEmail,
+            },
+          }}
+        />
+      </StoryProviders>,
+    );
+  }
+
+  it("is the server's address, not the first row", async () => {
+    show("dana.private@brandt.example");
+    expect(
+      await screen.findByText("dana.private@brandt.example"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("dana@brandt.example")).toBeNull();
+  });
+
+  it("is empty when the server names none", async () => {
+    const user = userEvent.setup();
+    show(null);
+    await user.click(
+      await screen.findByRole("button", { name: /^Show \d+ empty field/ }),
+    );
+    expect(screen.getByText(en["create.email"])).toBeInTheDocument();
+    expect(screen.queryByText(/@brandt\.example/)).toBeNull();
+  });
+});
+
+describe("a postal address whose country does not fit", () => {
+  function About({ page }: Readonly<{ page: typeof view }>) {
+    return <RecordDetails sections={useContactAboutSections(page)} />;
+  }
+  const berlin = { postal_code: "10115", city: "Berlin", country: "AT" };
+
+  function show(contact: (typeof view)["contact"]) {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }, { seat: "full" }),
+    });
+    render(
+      <StoryProviders>
+        <About page={{ ...view, contact }} />
+      </StoryProviders>,
+    );
+  }
+
+  it("flags the address with the country the postal code and city name", async () => {
+    show({
+      ...view.contact,
+      address: berlin,
+      address_country_mismatch: { resolved_country: "DE" },
+    });
+    expect(
+      await screen.findByText("Postal code and city are in Germany"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Berlin, AT")).toBeInTheDocument();
+  });
+
+  it("shows no flag when the server reports no mismatch", async () => {
+    show({ ...view.contact, address: berlin });
+    expect(await screen.findByText("Berlin, AT")).toBeInTheDocument();
+    expect(screen.queryByText(/Postal code and city are in/)).toBeNull();
+  });
+});
+it("converts the lead that holds an edited address by saving again", async () => {
+  const user = userEvent.setup();
+  const sent: Record<string, unknown>[] = [];
+  mount((body) => {
+    const sentBody = body as Record<string, unknown>;
+    sent.push(sentBody);
+    if (!sentBody.convert_lead_ids) {
+      return jsonResponse(
+        {
+          type: "about:blank",
+          title: "Conflict",
+          status: 409,
+          code: "lead_holds_email",
+          details: {
+            existing_id: "lead-9",
+            lead_ids: ["lead-9"],
+            convertible: true,
+            field: "emails",
+          },
+        },
+        409,
+      );
+    }
+    return jsonResponse({ ...contact, version: 4 });
+  });
+  await user.click(await screen.findByRole("button", { name: "Edit emails" }));
+  const input = screen.getByDisplayValue("dana@brandt.example");
+  await user.clear(input);
+  await user.type(input, "dana@lead.example");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Convert the lead" }),
+  );
+  await waitFor(() => expect(sent).toHaveLength(2));
+  expect(sent[1]).toMatchObject({
+    convert_lead_ids: ["lead-9"],
+    emails: [expect.objectContaining({ email: "dana@lead.example" })],
+  });
 });

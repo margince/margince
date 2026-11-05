@@ -8,8 +8,8 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../../i18n";
+import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
 import { hostText } from "./worklist.meetingparties";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
 
 const CUSTOMER = "01a05500-0000-7000-8000-0000000000c1";
 const ACME = "01a05500-0000-7000-8000-0000000000c2";
@@ -28,7 +28,7 @@ function aMeetingOwedAnAnswer(over = {}) {
     category: "meetings",
     title: "Weekly sync",
     destination: "today",
-    actions: ["decide"],
+    actions: ["decide", "cancel"],
     subject: { type: "activity", id: "01a05500-0000-7000-8000-0000000000b1" },
     contact: {
       id: CUSTOMER,

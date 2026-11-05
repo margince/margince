@@ -46,10 +46,13 @@ const targets = new Set(
 );
 
 /** Pages naming a noun past the start of their name, owned by another screen. */
-const ELSEWHERE = new Set(["screens/reporting.filters.tsx"]);
+const ELSEWHERE = new Set([
+  "features/ai/aicalls-filters.tsx",
+  "features/analytics/reporting.filters.tsx",
+]);
 
 const lightModules = ["filtersaddress.ts", "savedviews.queries.ts"].map(
-  (name) => join(here, name),
+  (name) => join(srcRoot, "lib", name),
 );
 
 /** The import path from `entry` to a filter UI module, or null. */

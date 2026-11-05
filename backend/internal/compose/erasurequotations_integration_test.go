@@ -35,6 +35,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -99,12 +100,16 @@ func stageProposalQuoting(t *testing.T, e *integration.Env, activityID ids.UUID,
 func stageQuotingProposal(t *testing.T, e *integration.Env, activityID ids.UUID, snippet, summary string) ids.ApprovalID {
 	t.Helper()
 	id, err := approvals.NewService(e.DB()).Stage(e.Admin(), approvals.StageInput{
-		Kind:           CommitmentTaskKind,
-		ProposedChange: json.RawMessage(`{"activity_id":"` + activityID.String() + `","summary":"` + summary + `"}`),
-		DiffHash:       "quote-" + ids.NewV7().String(),
-		TargetType:     transcriptTargetType,
-		TargetID:       activityID,
-		Summary:        summary,
+		Kind: CommitmentTaskKind,
+		ProposedChange: json.RawMessage(`{"activity_id":"` + activityID.String() + `","summary":"` + summary +
+			`","seat_id":"` + e.AdminUser.String() + `","promiser_seat_id":"` + e.AdminUser.String() + `"}`),
+		DiffHash:   "quote-" + ids.NewV7().String(),
+		TargetType: transcriptTargetType,
+		TargetID:   activityID,
+		Summary:    summary,
+		SummaryParts: &crmcontracts.ApprovalSummaryParts{
+			Sentence: summary, Fields: []crmcontracts.ApprovalSummaryField{{Field: "activity_id", Value: activityID.String()}},
+		},
 		Evidence: []approvals.Evidence{{
 			Snippet:     snippet,
 			SourceType:  transcriptTargetType,
@@ -148,6 +153,9 @@ func TestErasureEmptiesTheQuotationAProposalWasReadFrom(t *testing.T) {
 
 	if n := countQuoting(t, e, quotedTranscriptLine); n != 0 {
 		t.Error("a staged proposal still quotes the erased transcript verbatim — the timeline row is a tombstone while a card in the inbox reads out what was said in the meeting")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND summary_parts IS NOT NULL`, approvalID); n != 0 {
+		t.Error("the emptied card still carries its summary's parts, which the inbox shows as the proposed values")
 	}
 	// The card is inert, proven by asking it to be approved rather than by
 	// reading its status column: a blanked proposal a colleague can still
@@ -224,9 +232,10 @@ func TestErasureLeavesTheQuotationOfAMeetingItMayNotDestroy(t *testing.T) {
 	}
 }
 
-// The other engine. A transcript ages out on its own schedule (365 days,
-// DM-SEED), with no subject and no request behind it — and the sweep visits one
-// exactly once, because its selector requires a body and the action removes it.
+// The other engine. Under an authored activity/transcript policy (365 days in
+// the fixture), a transcript ages out with no subject and no request behind it.
+// The sweep visits one once, because its selector requires a body and the
+// action removes it.
 // A quotation left behind here is never revisited by anything.
 func TestRetentionErasingATranscriptEmptiesTheProposalQuotingIt(t *testing.T) {
 	e := integration.Setup(t)

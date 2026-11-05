@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ensureOpenBirthStage guards create: deals are born open — AdvanceDeal
@@ -23,9 +24,12 @@ import (
 // closed_at/lost_reason/FX invariants. Creating straight onto a terminal
 // stage would put an string(DealOpen) deal on a won column — silent forecast
 // corruption, no CHECK trips.
-func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID) error {
+func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID, fromRequest bool) error {
 	stage, err := resolveLiveStage(ctx, tx, stageID, pipelineID, "stage_id")
 	if err != nil {
+		if fromRequest {
+			err = auth.NameMissingReference("stage_id", err)
+		}
 		return err
 	}
 	if StageSemantic(stage.semantic).Terminal() {
@@ -111,10 +115,10 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		p.Set(dealNameColumn, current.Name, name)
 	}
 	// The forecast fields are assigned only where the request actually moves
-	// them. Every other column may be re-set freely — the audit diff records a
-	// no-op edit and nothing reads it as an event — but these three are what
-	// deal_forecast_history is keyed on, and a row saying the forecast moved on a
-	// day it did not is a move a reconstruction has to explain.
+	// them. Every other column may be re-set freely, since nothing reads a
+	// no-op edit as an event. These three are what a forecast is read from. An
+	// audit entry saying one moved on a day it did not is a move a
+	// reconstruction has to explain.
 	if moved(current.AmountMinor, in.AmountMinor) {
 		p.Set(amountField, current.AmountMinor, *in.AmountMinor)
 	}
@@ -179,8 +183,12 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 			p.Set("close_date_provisional", true, false)
 		}
 	}
-	if in.ForecastCategory != nil {
-		p.Set("forecast_category", current.ForecastCategory, *in.ForecastCategory)
+	if in.WinProbability != nil {
+		if string(current.Status) != string(DealOpen) {
+			return nil, &ProbabilityFixedWhenClosedError{}
+		}
+		stored, storedBy := storedWinProbability(current)
+		setWinProbability(p, stored, storedBy, in.WinProbability, SourceHuman)
 	}
 	if in.WaitUntil != nil {
 		p.SetDate("wait_until", storekit.PlainDate(current.WaitUntil), in.WaitUntil)
@@ -238,7 +246,7 @@ func applyPartnerAttributionPatch(ctx context.Context, tx pgx.Tx,
 		p.Set("partner_attribution", current.PartnerAttribution, *in.PartnerAttribution)
 		return nil
 	}
-	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.PartnerCompanyID.UUID); err != nil {
+	if err := auth.EnsureReferenceTarget(ctx, tx, "partner_company_id", "company", in.PartnerCompanyID.UUID); err != nil {
 		return err
 	}
 	// Visible is not enough: it must actually BE a partner, or the deal reads
@@ -315,6 +323,16 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	if err := moneyPairError(resultingAmount, resultingArr, resultingCurrency); err != nil {
 		return err
 	}
+	if _, currencySet := after[currencyField]; currencySet && resultingCurrency != nil {
+		if err := values.RequireAssignableCurrency(*resultingCurrency); err != nil {
+			return err
+		}
+	}
+	if _, amountSet := after[amountField]; amountSet {
+		if err := amountSetError(resultingAmount); err != nil {
+			return err
+		}
+	}
 
 	// Keyed on what the PATCH carries for the MONEY, not on what the request
 	// supplied and not on the forecast fields at large: a request that re-sent
@@ -347,9 +365,8 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	}
 	if string(current.Status) != string(DealOpen) && resultingAmount != nil && (amountMoved || currencyMoved) {
 		// deal_closed_at guarantees ClosedAt on a non-open row.
-		rateBefore, rateDateBefore := frozenBefore(current)
 		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*resultingCurrency),
-			*resultingAmount, *current.ClosedAt, rateBefore, rateDateBefore); err != nil {
+			*resultingAmount, *current.ClosedAt); err != nil {
 			return fmt.Errorf("re-freeze fx for closed deal: %w", err)
 		}
 	}

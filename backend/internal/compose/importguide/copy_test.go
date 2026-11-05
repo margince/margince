@@ -15,7 +15,7 @@ import (
 func TestEveryShippedLanguageWritesTheImportGuide(t *testing.T) {
 	phrases := map[string]langcopy.Phrase{}
 	for key, c := range Columns {
-		phrases[key+".description"], phrases[key+".example"] = c.Description, c.Example
+		phrases[key+".description"], phrases[key+".example"], phrases[key+".label"] = c.Description, c.Example, c.Label
 	}
 	for kind, c := range Custom {
 		phrases["custom."+kind+".description"], phrases["custom."+kind+".example"] = c.Description, c.Example

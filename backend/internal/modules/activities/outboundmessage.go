@@ -13,6 +13,7 @@ package activities
 // both projections in one place is what keeps that difference deliberate.
 
 import (
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -48,8 +49,11 @@ type outboundMessage struct {
 	// files is what this message carries, already snapshotted.
 	files           []OutboundFile
 	listUnsubscribe string
-	to              []string
-	links           []ActivityLinkInput
+	// advertising says the body carries the advertising duties: the
+	// marketing-only disclosures and the unsubscribe surface.
+	advertising bool
+	to          []string
+	links       []ActivityLinkInput
 	// provider is the mailbox this send goes out through, resolved once per
 	// send. It names the DELIVERY only: the timeline row's natural key is the
 	// transport-independent mail identity (connector.EmailSourceSystem), so the
@@ -84,7 +88,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		// nobody can read: it is a record that looks complete.
 		recorded += "\n\n[" + htmlAlternativeNote + "]"
 	}
-	return LogActivityInput{
+	return SentRecord(LogActivityInput{
 		Kind:         "email",
 		Subject:      &m.in.Subject,
 		Body:         &recorded,
@@ -102,7 +106,26 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		// correspondence-positive).
 		CounterpartyEmail:            primaryCounterparty(m.to, m.in.Recipients),
 		CounterpartyOutboundAttested: true,
+	})
+}
+
+// SentRecord is the timeline row a send stores. Its subject and body are masked
+// by the rules capture uses for every copy it reads. The row is served to every
+// seat that may read the mail. The provider's echo then joins a row that already
+// reads as a captured copy. Every send builds its row here, and the delivery
+// keeps the text as typed.
+func SentRecord(in LogActivityInput) LogActivityInput {
+	in.Subject = maskedText(in.Subject)
+	in.Body = maskedText(in.Body)
+	return in
+}
+
+func maskedText(text *string) *string {
+	if text == nil {
+		return nil
 	}
+	masked := credentialmask.MaskText(*text)
+	return &masked
 }
 
 // delivery is the same message as the delivery machinery receives it.
@@ -167,6 +190,9 @@ func (m outboundMessage) authorization(origin SendOrigin) commsauthz.Request {
 		// message, and the fingerprint stamped from this request is what the
 		// transmit phase later compares the wire against.
 		HTMLBody: m.htmlBody,
+		// Staging refuses this body if a recipient resolves to marketing and
+		// the body was composed without the advertising duties.
+		OmitsAdvertisingDuties: !m.advertising,
 	}
 }
 

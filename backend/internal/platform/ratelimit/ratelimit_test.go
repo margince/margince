@@ -33,6 +33,24 @@ func TestAllowCountsPerKeyWithinTheWindow(t *testing.T) {
 	}
 }
 
+func TestARefusedCallerIsToldTheLimitAndTheWholeWindowToWait(t *testing.T) {
+	for _, tc := range []struct {
+		window time.Duration
+		want   int
+	}{
+		{time.Minute, 60},
+		{1500 * time.Millisecond, 2},
+	} {
+		l := NewWithClock("test/retry-after", FailClosed, 7, tc.window, newFakeClock().Now)
+		if got := l.Limit(); got != 7 {
+			t.Errorf("Limit() = %d, want 7", got)
+		}
+		if got := l.RetryAfterSeconds(); got != tc.want {
+			t.Errorf("RetryAfterSeconds() over %v = %d, want %d", tc.window, got, tc.want)
+		}
+	}
+}
+
 func TestWindowExpiryResetsTheCount(t *testing.T) {
 	clock := newFakeClock()
 	l := NewWithClock("test/expiry", FailClosed, 1, time.Minute, clock.Now)

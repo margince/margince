@@ -72,12 +72,14 @@ func isLoopbackHost(host string) bool {
 	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }
 
-// redirectToClient answers the CLIENT at its own redirect_uri. Both answers a
-// consent decision can produce come through here — the code on approval, RFC
-// 6749 §4.1.2.1's access_denied on refusal — so neither can forget to echo
-// state, without which a client cannot correlate the answer with the request it
-// made.
-func redirectToClient(w http.ResponseWriter, r *http.Request, req authorizeRequest, answer url.Values) {
+// redirectToClient answers the CLIENT at its own redirect_uri. The code on
+// approval and access_denied on refusal both come through here, so neither can
+// forget to echo state. Each names this server as issuer (RFC 9207), for a
+// client that talks to two authorization servers.
+func (h Handlers) redirectToClient(w http.ResponseWriter, r *http.Request, req authorizeRequest, answer url.Values) {
+	if issuer := h.issuer(); issuer != "" {
+		answer.Set(oauthParamIssuer, issuer)
+	}
 	location, err := clientResponseURI(req, answer)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -101,7 +103,7 @@ func redirectToClient(w http.ResponseWriter, r *http.Request, req authorizeReque
 // scheme, host and path only, so for a loopback client the presented URI's
 // query is never validated and a preset response parameter is reachable by
 // whoever composes the authorize request.
-var responseParams = []string{"code", oauthParamError, "error_description", "error_uri", oauthParamState}
+var responseParams = []string{"code", oauthParamError, "error_description", "error_uri", oauthParamState, oauthParamIssuer}
 
 // clientResponseURI is the absolute Location one authorization response is
 // delivered at: the client's redirect_uri carrying our answer, its own query

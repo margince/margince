@@ -6,9 +6,8 @@
 package compose
 
 // A meeting past the party cap binds the attendees who are seats of this
-// workspace and refuses every other name on it — through live capture and
-// through the attendee repair alike, so the two cannot split one invitation
-// differently.
+// workspace, through live capture and the attendee repair alike. Live capture
+// also names the outside guests by address alone.
 
 import (
 	"fmt"
@@ -101,13 +100,19 @@ func TestACrowdedMeetingBindsItsSeatsAndNoStrangerOnEitherPath(t *testing.T) {
 			t.Errorf("%s meeting binds seats %v, want %v — a colleague on a crowded meeting "+
 				"must still be able to read it", name, seats, want)
 		}
-		if rows := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND user_id = $2`,
+		if rows := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND user_id = $2
+			AND role IN ('organizer', 'attendee')`,
 			id, e.AdminUser); rows > 1 {
-			t.Errorf("%s meeting holds %d rows for its owner, want at most 1 — one colleague in the room is one row", name, rows)
+			t.Errorf("%s meeting holds %d attendance rows for its owner, want at most 1 — one colleague in the room is one row", name, rows)
 		}
-		if strangers != 0 {
-			t.Errorf("%s meeting records %d strangers past the cap, want 0 — a distribution "+
-				"list's names are evidence of a list, not of a relationship", name, strangers)
+		// Live capture names the outside guests by address alone; the repair binds seats only.
+		want := map[string]int{"repaired": 0, "live": connector.MaxParticipants}[name]
+		if strangers != want {
+			t.Errorf("%s meeting records %d strangers past the cap, want %d", name, strangers, want)
+		}
+		if resolved := e.WsCount(t, `SELECT count(*) FROM activity_participant
+			WHERE activity_id = $1 AND user_id IS NULL AND (contact_id IS NOT NULL OR NOT past_party_cap)`, id); resolved != 0 {
+			t.Errorf("%s meeting holds %d stranger rows that are not address-only past the cap", name, resolved)
 		}
 	}
 	if outcome, _ := repairOutcome(t, e, repaired); outcome != repairCappedSeats {

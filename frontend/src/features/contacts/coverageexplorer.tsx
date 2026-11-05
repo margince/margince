@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from "react";
 import { usePublishSelection } from "../../app/attention";
+import { EntityRef } from "../../components/entityref";
 import {
   Badge,
   Button,
@@ -12,15 +13,15 @@ import {
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { forReader } from "../../format/collate";
+import { forReader, holdsEveryWord, searchWords } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { incompleteGraph } from "../records/record360";
 import {
+  BAND_BADGE,
   type StrengthBucket,
   useCompanyGraph,
-} from "../../screens/companygraph";
-import { incompleteGraph } from "../../screens/record360";
+} from "./companygraph";
 
 // Comparing a chosen few colleagues against the account's contacts.
 //
@@ -51,13 +52,6 @@ type Contact = Readonly<{ contact_id: string; full_name: string }>;
 // How many colleagues can stand in the grid at once. Beyond this the columns
 // stop being scannable, which is the failure the whole surface exists to avoid.
 const COLUMN_CAP = 8;
-
-const BAND_LABELS: Record<StrengthBucket, MessageKey> = {
-  strong: "co.routeIn.bandBadge.strong",
-  moderate: "co.routeIn.bandBadge.some",
-  weak: "co.routeIn.bandBadge.faint",
-  none: "co.routeIn.bandBadge.unknown",
-};
 
 export function CoverageExplorer({
   companyId,
@@ -152,10 +146,9 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
   // paged, and a coverage comparison built from a page reports the team as
   // covering nobody the moment a reader narrows the list — a false claim, not
   // a smaller one.
+  const words = searchWords(contactFilter);
   const rows = accountContacts(graph).filter((contact) =>
-    contact.full_name
-      .toLowerCase()
-      .includes(contactFilter.trim().toLowerCase()),
+    holdsEveryWord(words, [contact.full_name]),
   );
 
   return (
@@ -226,7 +219,16 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
           <tbody>
             {rows.map((contact) => (
               <tr key={contact.contact_id}>
-                <th scope="row">{contact.full_name}</th>
+                <th scope="row">
+                  {/* A new tab: following the name in place would close the
+                      coverage the reader is comparing. */}
+                  <EntityRef
+                    kind="contact"
+                    id={contact.contact_id}
+                    name={contact.full_name}
+                    newTab
+                  />
+                </th>
                 {shown.map((id) => {
                   const colleague = colleagues.find((c) => c.id === id);
                   const band = colleague?.bands.get(contact.contact_id);
@@ -248,7 +250,7 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
                         rather than leaving a blank a reader has to interpret. */}
                       {band ? (
                         <Badge tone={band === "strong" ? "success" : undefined}>
-                          {t(BAND_LABELS[band])}
+                          {t(BAND_BADGE[band])}
                         </Badge>
                       ) : (
                         <span>{t("acctCoverage.untried")}</span>

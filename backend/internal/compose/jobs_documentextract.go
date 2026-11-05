@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
 // documentExtractActor is the agent every write of a reading is attributed to.
@@ -95,6 +96,7 @@ type documentExtractWorker struct {
 	// activities is the run record's movements, named as the seam the engine
 	// already takes rather than the concrete store: the worker's whole
 	// relationship with the module is claim, open, finish.
+	language   baselanguage.Resolver
 	activities documentReadStore
 	extractor  *DocumentExtractor
 	log        *slog.Logger
@@ -137,7 +139,7 @@ func (w *documentExtractWorker) declineUnread(ctx context.Context, args Document
 	return w.activities.FinishExtractionRead(ctx, args.ExtractionReadID,
 		activities.ExtractionReadOutcome{
 			Status:    activities.ExtractionReadFailed,
-			Detail:    "this installation has no AI model configured for reading documents",
+			Detail:    documentWords.NoModel.In(documentCopyFor(string(w.language.Resolve(ctx))).Lang()),
 			ClaimedAt: claimStart(claim),
 		})
 }
@@ -156,6 +158,7 @@ func newDocumentExtractWorker(
 	pool *pgxpool.Pool, brain documentCompleter, blob blobstore.Store, log *slog.Logger,
 ) *documentExtractWorker {
 	worker := &documentExtractWorker{
+		language:   installationLanguage(pool),
 		activities: activities.NewStore(InstallationDB(pool)).WithBlobstore(blob),
 		log:        log,
 	}

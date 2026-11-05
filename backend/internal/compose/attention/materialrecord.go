@@ -33,7 +33,7 @@ func (s *Service) MaterialAtRisk(ctx context.Context) ([]ids.UUID, error) {
 	if s.atRisk == nil {
 		return nil, nil
 	}
-	risky, _, err := s.atRisk.Quiet(ctx)
+	risky, _, err := s.atRisk.Quiet(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

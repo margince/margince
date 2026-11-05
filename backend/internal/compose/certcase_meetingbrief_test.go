@@ -57,6 +57,7 @@ func briefCaseFor() (*meetingBriefCase, string) {
 			Company:    "Asia Flight Services",
 			StartsAt:   now.Add(24 * time.Hour),
 			Now:        now,
+			Zone:       time.UTC,
 		},
 		mustCite:  meeting,
 		mustName:  briefToken,

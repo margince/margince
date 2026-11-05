@@ -140,7 +140,7 @@ func CompanyCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (Com
 // only a finding when there is nothing left to hide behind — otherwise the
 // honest answer is that we do not know.
 func threadingVerdict(visible int, incomplete bool) ThreadingVerdict {
-	if visible >= reportThreadingFloor {
+	if visible >= ReportThreadingFloor {
 		return ThreadingMultiple
 	}
 	if incomplete {

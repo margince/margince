@@ -37,7 +37,6 @@ aggregate
 agree
 agreement
 ahead
-aims
 air
 alert
 alike
@@ -259,7 +258,6 @@ clock
 close
 closure
 cloud
-cluster
 coach
 code
 cold
@@ -289,7 +287,6 @@ compose
 composite
 composition
 compress
-concept
 condition
 conditional
 confidence
@@ -302,7 +299,6 @@ connect
 connection
 connector
 consent
-console
 constant
 constraint
 consume
@@ -321,7 +317,6 @@ corpus
 correct
 correlation
 correspondence
-cors
 cosine
 cost
 could
@@ -357,7 +352,6 @@ deadlocking
 deal
 decide
 decision
-deck
 declaration
 declare
 decode
@@ -516,7 +510,6 @@ extra
 extract
 extractor
 extractor's
-extractors
 facing
 fact
 fail
@@ -736,7 +729,6 @@ jitter
 job
 join
 journey
-jpeg
 judge
 jurisdiction
 just
@@ -746,7 +738,6 @@ kept
 key
 keyset
 kib
-kill
 kind
 know
 known
@@ -944,7 +935,6 @@ offset
 often
 old
 older
-oldest
 on
 onboarding
 once
@@ -1039,7 +1029,6 @@ plan
 platform
 plugin
 plus
-png
 pod
 point
 policy
@@ -1074,7 +1063,6 @@ produce
 product
 production
 profile
-program
 progress
 project
 projection
@@ -1104,7 +1092,6 @@ put
 quality
 quantization
 quantized
-quarantine
 query
 question
 queue
@@ -1324,7 +1311,6 @@ signal
 signature
 silence
 silent
-silicon
 since
 single
 sink
@@ -1335,16 +1321,13 @@ sixty
 size
 skip
 sleep
-slice
 slim
 slot
 slow
 small
-smart
 snapshot
 snooze
 so
-socket
 soft
 software
 some
@@ -1415,9 +1398,7 @@ suggestion
 suggests
 suite
 summary
-sunday
 superuser
-supervisor
 supply
 support
 suppression
@@ -1660,5 +1641,4 @@ you
 your
 zero
 zheng
-zip
 zone

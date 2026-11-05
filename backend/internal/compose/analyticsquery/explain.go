@@ -55,6 +55,30 @@ type ExplainPlan struct {
 // the answer says which so a reader knows they are seeing part.
 const ExplainRowLimit = 200
 
+// CheckCell refuses a cell its question cannot have. That is a group with a
+// value missing or extra for the question's grouping, or a group on an
+// every-cell explanation. The floor matches the cell against the answer's rows
+// by group, so it asks this first.
+func (in Explain) CheckCell() error {
+	if in.AllCells && len(in.Group) > 0 {
+		return &RefusalError{
+			Kind:    RefusalInvalid,
+			Message: "an explanation of every cell names no single cell",
+			Suggest: "name one cell, or ask for every cell with no group",
+		}
+	}
+	if !in.AllCells && len(in.Group) != len(in.Query.GroupBy) {
+		return &RefusalError{
+			Kind: RefusalInvalid,
+			Message: fmt.Sprintf(
+				"the cell names %d group value(s) and the question grouped by %d",
+				len(in.Group), len(in.Query.GroupBy)),
+			Suggest: "pass the cell's own group keys, in the order the answer listed them",
+		}
+	}
+	return nil
+}
+
 // CompileExplain renders the drill-through for one cell.
 //
 // The same scope source as the answer, because the two must read one row set.
@@ -71,21 +95,8 @@ func CompileExplain(in Explain, schema Schema, scope ScopeClauses) (ExplainPlan,
 	if err := in.Query.Validate(schema); err != nil {
 		return ExplainPlan{}, err
 	}
-	if in.AllCells && len(in.Group) > 0 {
-		return ExplainPlan{}, &RefusalError{
-			Kind:    RefusalInvalid,
-			Message: "an explanation of every cell names no single cell",
-			Suggest: "name one cell, or ask for every cell with no group",
-		}
-	}
-	if !in.AllCells && len(in.Group) != len(in.Query.GroupBy) {
-		return ExplainPlan{}, &RefusalError{
-			Kind: RefusalInvalid,
-			Message: fmt.Sprintf(
-				"the cell names %d group value(s) and the question grouped by %d",
-				len(in.Group), len(in.Query.GroupBy)),
-			Suggest: "pass the cell's own group keys, in the order the answer listed them",
-		}
+	if err := in.CheckCell(); err != nil {
+		return ExplainPlan{}, err
 	}
 	entity := schema.Entities[in.Query.Entity]
 
@@ -143,4 +154,78 @@ func CompileExplain(in Explain, schema Schema, scope ScopeClauses) (ExplainPlan,
 		strings.Join(selects, ", "), entity.From,
 		whereSQL(where), bind(ExplainRowLimit))
 	return ExplainPlan{SQL: sql, Args: args, Columns: columns}, nil
+}
+
+// SourceFilter narrows a source listing. Only restricts it to those record
+// ids, so a kept answer's records can be judged again under a later reader.
+// Groups restricts it to the records of those groups, one key per GroupBy
+// field each. Nil leaves every group in. An empty list lists nothing.
+type SourceFilter struct {
+	Only   []string
+	Groups *[][]any
+}
+
+// CompileSources renders every record behind an answer, each with the group
+// keys that place it in a row. It reads the answer's own row set, as an
+// explanation does. The caller passes one past its bound as limit, to tell a
+// full list from a cut one. The order by id makes a cut list the same twice.
+func CompileSources(q Query, schema Schema, scope ScopeClauses, filter SourceFilter, limit int) (ExplainPlan, error) {
+	if scope == nil {
+		return ExplainPlan{}, &RefusalError{
+			Kind:    RefusalInvalid,
+			Message: "a source listing was compiled with no scope source",
+			Suggest: "this is a wiring fault rather than a question anybody asked",
+		}
+	}
+	if err := q.Validate(schema); err != nil {
+		return ExplainPlan{}, err
+	}
+	entity := schema.Entities[q.Entity]
+
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	bind := func(v any) string { return fmt.Sprintf("$%d", arg(v)) }
+
+	where, err := whereClauses(entity, q.Filters, bind)
+	if err != nil {
+		return ExplainPlan{}, err
+	}
+	scoped, err := scope(arg)
+	if err != nil {
+		return ExplainPlan{}, err
+	}
+	where = append(where, scoped...)
+	if filter.Only != nil {
+		where = append(where, "t.id = ANY("+bind(filter.Only)+"::uuid[])")
+	}
+	if filter.Groups != nil {
+		where = append(where, groupsClause(entity, q.GroupBy, *filter.Groups, bind))
+	}
+
+	selects := []string{"t.id"}
+	columns := []string{"id"}
+	for _, name := range q.GroupBy {
+		selects = append(selects, entity.Fields[name].Expr)
+		columns = append(columns, name)
+	}
+	sql := fmt.Sprintf("SELECT %s FROM %s%s ORDER BY t.id LIMIT %s",
+		strings.Join(selects, ", "), entity.From, whereSQL(where), bind(limit))
+	return ExplainPlan{SQL: sql, Args: args, Columns: columns}, nil
+}
+
+// groupsClause matches a record to any of the groups. IS NOT DISTINCT FROM,
+// because a group whose key is unset must match its records, which = never does.
+func groupsClause(entity Entity, groupBy []string, groups [][]any, bind func(any) string) string {
+	if len(groups) == 0 {
+		return "FALSE"
+	}
+	rows := make([]string, len(groups))
+	for i, keys := range groups {
+		parts := make([]string, len(groupBy))
+		for j, name := range groupBy {
+			parts[j] = entity.Fields[name].Expr + " IS NOT DISTINCT FROM " + bind(keys[j])
+		}
+		rows[i] = "(" + strings.Join(parts, " AND ") + ")"
+	}
+	return "(" + strings.Join(rows, " OR ") + ")"
 }

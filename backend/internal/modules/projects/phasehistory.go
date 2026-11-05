@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -27,12 +26,12 @@ type PhaseTransition struct {
 	FromPhase *string
 	ToPhase   string
 	Reason    *string
-	// ChangedBy is the principal id the writer stamped (storekit.CapturedBy);
-	// ChangedByName is that seat's display name when the id names an app
-	// user, nil for a principal the user table does not hold.
-	ChangedBy     string
-	ChangedByName *string
-	OccurredAt    time.Time
+	// AuditLogID is the audit row the writer wrote in the same transaction; it
+	// holds who moved the project. Nil when the link is unknown, for a row older
+	// than the column that no backfill could match. A reader shows that as
+	// unknown, never as the system.
+	AuditLogID *ids.UUID
+	OccurredAt time.Time
 }
 
 // PhaseDuration is the time a project has spent in one phase so far, summed
@@ -57,23 +56,17 @@ func (s *Store) ListProjectPhaseHistoryTx(ctx context.Context, tx pgx.Tx, id ids
 	if err := auth.EnsureVisible(ctx, tx, projectObject, id.UUID); err != nil {
 		return nil, err
 	}
-	// changed_by is a principal id, which names a human only under the human
-	// namespace — the one spelling of that prefix is principal's, bound here
-	// rather than retyped.
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	rows, err := tx.Query(ctx, storekit.SQLf(`
-		SELECT h.id, h.from_phase, h.to_phase, h.reason, h.changed_by, u.display_name, h.occurred_at
+	rows, err := tx.Query(ctx, `
+		SELECT h.id, h.from_phase, h.to_phase, h.reason, h.audit_log_id, h.occurred_at
 		FROM project_phase_history h
-		LEFT JOIN app_user u ON $%d || u.id::text = h.changed_by
-		WHERE h.project_id = $%d
-		ORDER BY h.occurred_at ASC, h.id ASC`, arg(principal.HumanIDPrefix), arg(id)), args...)
+		WHERE h.project_id = $1
+		ORDER BY h.occurred_at ASC, h.id ASC`, id)
 	if err != nil {
 		return nil, err
 	}
 	history, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (PhaseTransition, error) {
 		var t PhaseTransition
-		err := row.Scan(&t.ID, &t.FromPhase, &t.ToPhase, &t.Reason, &t.ChangedBy, &t.ChangedByName, &t.OccurredAt)
+		err := row.Scan(&t.ID, &t.FromPhase, &t.ToPhase, &t.Reason, &t.AuditLogID, &t.OccurredAt)
 		return t, err
 	})
 	if err != nil {

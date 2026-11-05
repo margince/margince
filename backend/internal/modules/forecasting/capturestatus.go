@@ -14,8 +14,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // CaptureKey separates pipeline captures from whole-scope captures.
@@ -60,7 +62,7 @@ func readCaptureStatus(ctx context.Context, tx pgx.Tx, key string, lock bool) (i
 }
 
 // RecordCaptureStatus records attempts independently of successful snapshot creation.
-func (s *Store) RecordCaptureStatus(ctx context.Context, scope Scope, pipeline *ids.UUID, at time.Time, success bool) error {
+func (s *Store) RecordCaptureStatus(ctx context.Context, scope Scope, pipeline *ids.UUID, at time.Time, success bool, language textlang.Lang) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
@@ -92,7 +94,7 @@ func (s *Store) RecordCaptureStatus(ctx context.Context, scope Scope, pipeline *
 				return err
 			}
 		} else {
-			reason := "Capture failed. Check the configured team and pipeline, then retry the forecast capture job."
+			reason := captureWords.Failed.In(language)
 			after.Failure = &reason
 		}
 		//craft:ignore naked-any pgx arguments bind the typed capture metadata.
@@ -101,7 +103,7 @@ func (s *Store) RecordCaptureStatus(ctx context.Context, scope Scope, pipeline *
 		if _, err := tx.Exec(ctx, "INSERT INTO forecast_capture_status(id,context_key,last_attempt_at,last_success_at,failure,next_capture_at) VALUES ("+strings.Join(p, ",")+") ON CONFLICT(context_key) DO UPDATE SET last_attempt_at=EXCLUDED.last_attempt_at,last_success_at=EXCLUDED.last_success_at,failure=EXCLUDED.failure,next_capture_at=EXCLUDED.next_capture_at", args...); err != nil {
 			return err
 		}
-		audit, err := storekit.Audit(ctx, tx, action, "forecast_capture_status", id, before, after)
+		audit, err := storekit.Audit(ctx, tx, action, auditentity.ForecastCaptureStatus, id, before, after)
 		if err != nil {
 			return err
 		}

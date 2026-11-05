@@ -18,8 +18,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -70,10 +70,11 @@ func (e *SharedPostureNotAllowedError) FieldFault() (field, code, message string
 
 // SetMailPosture records what this seat's mailbox asks of its mail.
 //
-// Human-only and own-mailbox-only: the statement matches on the acting user's
-// id, so there is no id a caller could pass to reach a colleague's connection.
-// An agent never answers this — what a seat's colleagues may read of that
-// seat's correspondence is not a question an agent acts on behalf of anybody.
+// A user or their agent, on the user's own mailbox only. The statement matches on
+// the acting user's id, so no id a caller passes reaches a colleague's connection.
+// Automatic work has no user behind it and is refused.
+// What colleagues may read of this seat's mail is the user's call, so the agent's
+// tool asks them first.
 //
 // `shared` additionally needs the workspace to allow it. That gate is here
 // rather than in the handler because the posture is also settable at grant, and
@@ -82,8 +83,8 @@ func (r *Registry) SetMailPosture(
 	ctx context.Context, name, posture string, applyToHistory bool,
 ) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return ConnectionView{}, fmt.Errorf("capture: only a human sets a mailbox's posture: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent sets a mailbox's posture: %w", apperrors.ErrPermissionDenied)
 	}
 	if !validPosture(posture) {
 		return ConnectionView{}, &InvalidPostureError{Posture: posture}
@@ -183,7 +184,7 @@ func refuseSharedWithoutOptInTx(ctx context.Context, tx pgx.Tx, posture string) 
 	if posture != PostureShared {
 		return nil
 	}
-	allowed, err := settings.ApplyTx(ctx, tx, SharedPostureAllowed)
+	allowed, err := config.StoredApplyTx(ctx, tx, config.Bound(), SharedPostureAllowed)
 	if err != nil {
 		return fmt.Errorf("capture: reading the shared-posture opt-in: %w", err)
 	}

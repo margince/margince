@@ -120,7 +120,36 @@ test.describe("Network tab — page shape", () => {
 
   test("offers the ask on the lead route", async ({ page }) => {
     const lead = page.locator(".panel-accent").first();
-    await expect(lead.locator("button")).toHaveCount(1);
+    const ask = lead.locator(".pn-verdict-actions button");
+    const ownRoute = lead.getByText(
+      "Es gibt niemanden, den du fragen kannst. Schreibe diesem Kontakt direkt.",
+      { exact: true },
+    );
+    const ownsRecommendedRoute = await page.evaluate(async (contactId) => {
+      const [meResponse, graphResponse] = await Promise.all([
+        fetch("/v1/me"),
+        fetch(`/v1/contacts/${contactId}/graph`),
+      ]);
+      if (!meResponse.ok || !graphResponse.ok)
+        throw new Error("the route and signed-in user must be readable");
+      const me = await meResponse.json();
+      const graph = await graphResponse.json();
+      const recipient = graph.routes?.[0]?.via_user_id;
+      if (!recipient || !me.user?.id)
+        throw new Error("the live fixture needs a named recommended route");
+      return recipient === me.user.id;
+    }, CONTACT_ID);
+    if (ownsRecommendedRoute) {
+      await expect(ownRoute).toBeVisible();
+      await expect(ask).toHaveCount(0);
+      await expect(lead.locator(".pn-hero-who strong").first()).toHaveText(
+        "Du",
+      );
+    } else {
+      await expect(ownRoute).toHaveCount(0);
+      await expect(ask).toHaveCount(1);
+      await expect(ask).toBeEnabled();
+    }
   });
 });
 
@@ -146,34 +175,45 @@ test.describe("Network tab — visual weight", () => {
     expect(lead).not.toBeNull();
     expect(map).not.toBeNull();
     if (!strip || !lead || !map) {
-      return;
+      throw new Error("the answer, readings and map need visible boxes");
     }
-    expect(strip.y).toBeLessThan(lead.y);
+    expect(lead.y).toBeLessThan(strip.y);
+    expect(strip.y).toBeLessThan(map.y);
     expect(lead.y).toBeLessThan(map.y);
   });
 
-  /**
-   * Two columns are actually two columns.
-   *
-   * A grid whose second track collapses still renders both children and passes
-   * every DOM query, while painting one under the other — which is exactly what
-   * "the layout is broken" looks like from a browser.
-   */
-  test("the side column sits beside the main one at desk width", async ({
+  // The context rail changes available space without changing the viewport.
+  test("the network columns fit the available record width", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.setViewportSize({ width: 1920, height: 900 });
+    await page
+      .getByRole("button", {
+        name: "Details und Berechtigungen ausblenden",
+        exact: true,
+      })
+      .click();
     await expect(page.locator(".pn-work-grid")).toBeVisible();
+    const available = await page.locator(".pn-stack").evaluate((element) => ({
+      width: element.getBoundingClientRect().width,
+      fold:
+        56 *
+        Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
+    }));
     const main = await page.locator(".pn-main-column").boundingBox();
     const side = await page.locator(".pn-side-column").boundingBox();
     expect(main).not.toBeNull();
     expect(side).not.toBeNull();
     if (!main || !side) {
-      return;
+      throw new Error("both network columns need visible boxes");
     }
-    // Side starts after main ends horizontally, and they share a row.
-    expect(side.x).toBeGreaterThan(main.x + main.width - 1);
-    expect(Math.abs(side.y - main.y)).toBeLessThan(40);
+    if (available.width > available.fold) {
+      expect(side.x).toBeGreaterThan(main.x + main.width - 1);
+      expect(Math.abs(side.y - main.y)).toBeLessThan(40);
+    } else {
+      expect(side.y).toBeGreaterThanOrEqual(main.y + main.height);
+      expect(Math.abs(side.x - main.x)).toBeLessThan(1);
+    }
   });
 
   /** Below the fold breakpoint the two columns stack rather than crush. */
@@ -183,7 +223,7 @@ test.describe("Network tab — visual weight", () => {
     const main = await page.locator(".pn-main-column").boundingBox();
     const side = await page.locator(".pn-side-column").boundingBox();
     if (!main || !side) {
-      return;
+      throw new Error("both network columns need visible boxes");
     }
     expect(side.y).toBeGreaterThan(main.y);
   });

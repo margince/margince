@@ -74,15 +74,19 @@ func (r rankedShape) page(hits []Hit) Page {
 // rankedCursor is the (score, type, id) keyset position. Encoding keeps
 // full float64 precision (strconv 'g' -1) — a rounded score would skip
 // or repeat rows on the boundary.
+const rankedCursorVersion = 2
+
 type rankedCursor struct {
-	Score float64
-	Type  string
-	ID    ids.UUID
+	Version int
+	Score   float64
+	Type    string
+	ID      ids.UUID
 }
 
 // encodeCursor renders the ranked position. Score, type and id cannot fail to
 // marshal; an empty token would be refused on the way back in.
 func encodeCursor(c rankedCursor) string {
+	c.Version = rankedCursorVersion
 	token, err := storekit.EncodeOpaque(c)
 	if err != nil {
 		return ""
@@ -98,7 +102,7 @@ func decodeCursor(s string) (rankedCursor, error) {
 	// The envelope proves the token is ours; this proves it names a row. `{}`
 	// unmarshals cleanly and leaves a zero id, which would page from a position
 	// nothing occupies rather than refuse.
-	if c.ID.IsZero() {
+	if c.ID.IsZero() || c.Version != rankedCursorVersion {
 		return rankedCursor{}, &storekit.MalformedCursorError{}
 	}
 	return c, nil

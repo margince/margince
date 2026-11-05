@@ -1,0 +1,22 @@
+name: outbound_report_keeps_customer_as_promiser
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  - direction: outbound
+    subject: Payment follow-up
+    sent: '2026-09-07'
+    participants:
+      - {key: mira, kind: seat, role: from, name: Mira Chen, address: mira@example.test}
+      - {key: ines, kind: contact, role: to, name: Ines Huber, address: ines@example.test}
+    body: 'Hi Ines, you agreed to send the payment by Friday. Thank you, Mira.'
+expect:
+  outcome: accepted
+  answer:
+    - {kind: commitment_made, message: 1, promiser: ines}
+  rubric: >
+    The quoted promise belongs to Ines, the addressed customer. The outbound sender
+    reports that promise and must not become the promiser. Return the verified
+    contact reference for Ines and quote the clause that states the agreement.
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

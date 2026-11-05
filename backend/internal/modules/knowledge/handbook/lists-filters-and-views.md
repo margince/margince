@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/components/listquery.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go -->
 # Lists, filters and views
 
 The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals** and **Projects** in the sidebar. How to create and edit a single record is in [Contacts, companies, leads, deals and projects](records.md) and [Leads, deals and projects](leads-deals-and-projects.md).
@@ -11,13 +12,13 @@ What each list offers:
 
 | List | Search | Filters | Tabs | Table and board | Bulk actions |
 |---|---|---|---|---|---|
-| **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Source, Owner, Team, Tags | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
+| **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type, Partner kinds, Relationship stage and Stage meaning (if you may see partners) | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
 | **Deals** | no search box | Owner, Team, Stage, Company, Tags, Stalled only, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
 
-**Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Source** and **Partner** on Deals show only when there is something to pick.
+**Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. **Source** and **Partner** on Deals show only when there is something to pick.
 
 ## Searching and filtering a list
 
@@ -57,6 +58,10 @@ To see only the records you own in Margince, open **Contacts**, **Companies** or
 2. **Leads** opens on **Mine** for a user who sees only their own leads. It opens on **All** for one who can see the team's or everyone's.
 Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
 
+### How do I see the contacts shared with me?
+Open **Contacts** in the sidebar and press the **Shared with me** tab. It lists the contacts a colleague owns and shared with you or with a team you are in. A contact you own is never on it. A contact you keep access to after a merge is on it too. When there are none, the list says "No contacts shared with you."
+Also called: contacts others shared, shared contacts, contacts I can see but do not own.
+
 ### How do I filter by a colleague's name?
 To filter a list by one colleague in Margince, press **Filter** → **Owner** and pick the colleague. Every list with an owner has this filter: **Contacts**, **Companies**, **Leads**, **Deals** and **Projects**.
 1. Type part of a name in the box at the top of the **Owner** values to make the list shorter.
@@ -76,6 +81,8 @@ To filter deals by company or stage in Margince, open **Deals**, press **Filter*
 1. For **Company**, type part of the company's name and pick it.
 2. For **Stage**, pick a stage of the pipeline shown. The **Pipeline** picker next to **Table** / **Board** decides which stages you can pick. Changing the pipeline clears the stage filter.
 3. **Stalled only** shows open deals with no activity for more than 60 days.
+4. **Value** takes a lowest and a highest amount, or one of them, in your company's main currency. An open deal in another currency counts at today's rate. A won or lost deal counts at the rate of the day it closed. A deal with no value, or with no rate for its currency, is left out.
+5. **Currency** shows deals priced in one currency. **Country** shows deals whose company has its address there; a deal with no company is left out.
 A company's own **Deals and projects** tab also lists its deals.
 Also called: deals for a customer, deals for an account, deals in a stage.
 
@@ -89,17 +96,25 @@ To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals
 One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. Use the **Tags** panel on any record that has it.
 Also called: filter by label, show tagged records, segment by tag.
 
+### Why are some contacts tagged `machine-address`?
+Margince does not make a contact from an address that belongs to a sending system, such as `noreply@`, `receipts@` or `@bcc.hubspot.com`. A background task cleans up contacts made before that. A contact whose every address is technical is archived, even if someone edited it, and Undo brings it back. A contact that also has a real address stays and loses only the technical one. A contact on legal hold, or with a phone number or chat identity, is tagged `machine-address` for you to review.
+Also called: contacts made from notification mail, automatic senders.
+
 ### How do I filter by date?
-The list screens in Margince have no date filter. To put a list in date order, sort it. **Contacts**, **Companies** and **Leads** sort by **Created** and **Last activity**; **Deals** by **Expected close** and **Last signal**; **Projects** by **Last activity**.
+**Deals** has a **Close date** filter; see the next question. The other list screens have no date filter. To put a list in date order, sort it. **Contacts**, **Companies** and **Leads** sort by **Created** and **Last activity**; **Deals** by **Expected close** and **Last signal**; **Projects** by **Last activity**.
+
+Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, whoever made the task.
+
 On **Filters and views**, there are the date choices **is after**, **is on or after**, **is before** and **is on or before**. They show only for date custom fields your company has added. Created and expected close dates are not filter fields there.
 
 Also called: created this month, filter by created date, date range.
 
 ### How do I find deals closing this month?
-Margince has no filter on a deal's expected close date. To see the deals that close soonest, open **Deals**, switch to **Table**, and sort by **Expected close**. The earliest date comes first, and an open deal cannot have a date in the past.
-1. Make it shorter with **Filter** → **Forecast** or **Stage**.
-2. To see what this month or quarter will bring in, open **Analytics** → **Forecast** and pick the **Period**.
-Choose **Month**, **Quarter** or **Week**. It counts open deals whose expected close is in that time, but does not list them.
+To find deals closing in a time in Margince, open **Deals** and press **Filter** → **Close date**.
+1. Pick **This fiscal quarter**, or type a **From** and a **Through** date and press **Apply**. One of the two dates is enough.
+2. An open deal counts by its expected close, and a won or lost deal by the day it closed.
+3. A view saved on **This fiscal quarter** moves on to the next quarter by itself.
+To see the deals that close soonest, switch to **Table** and sort by **Expected close**. To see what a month or quarter will bring in, open **Analytics** → **Forecast** and pick the **Period**.
 Also called: closing this quarter, filter by close date, deals due to close, expected close date.
 
 ## Sorting a list and choosing columns
@@ -116,7 +131,7 @@ Also called: order by, biggest deals first, sort by amount, sort A to Z, newest 
 The columns you can sort on each Margince list are:
 - **Contacts**: Name, Email, Company, Owner, Last activity, Created.
 - **Companies**: Company, Description, Website, Contacts, Open deals, Lifecycle, Owner, Last activity, Created.
-- **Leads**: Name, Score, Status, Next step, Last activity, Source, Owner, Created.
+- **Leads**: Name, Score, Status, Next step, Last activity, Origin, Owner, Created.
 - **Deals**: Name, Company, via partner, Stage, Value, Expected close, Last signal, Status, Owner.
 - **Projects**: Project name, Company, Phase, Owner, Last activity.
 **Owner** sorts by the owner's name, with unassigned records last. You cannot sort by **Tags**, **Relationship type** or **Last email**. You can still pick a hidden column under **Sort**.
@@ -126,16 +141,17 @@ Also called: sort options, order by column.
 To switch between table and board in Margince, open **Deals** or **Leads** and press **Table** or **Board** in the toolbar.
 - **Deals** opens on **Board**: one column for each stage of the pipeline shown, and you drag a card to move the deal. See [The pipeline](the-pipeline.md).
 - **Leads** opens on **Table**. Its **Board** has a column for each status, and you drag a card between New, Contacted and Engaged.
-Filters and search still work on the board. Ticking many rows, **Display** and **Save view** are on the table only.
+Filters and search still work on the board. When every match of a search is in a column off screen, the board names those columns and moves to the first one. Ticking many rows, **Display** and **Save view** are on the table only.
 Also called: kanban, pipeline view, list view, card view.
 
 ### How do I hide columns or make the table more compact?
 To choose columns or row size in a Margince list, press **Display** in the toolbar.
-1. Under **Shown columns**, untick a column to hide it. The name column always stays.
+1. Under **Shown columns**, untick a column to hide it. The name column always stays. On **Filters and views**, every field of the record type is here. Only the first six start ticked.
 2. Under **Density**, tick **Compact** for smaller rows.
 3. Drag the side of a column heading to make it wider or narrower.
-Your browser keeps how wide each column is for next time. Hidden columns and density are not saved in a view.
-Also called: add column, remove column, change table layout.
+4. To move a column, drag the handle beside its name under **Shown columns**. With the keyboard, press ↑ or ↓ on the handle.
+Your browser keeps how wide each column is and the order of the columns for next time. Hidden columns and density are not saved in a view.
+Also called: add column, remove column, reorder columns, change table layout.
 
 ### How do I show more rows per page?
 To show more rows on a Margince list, open **Rows per page** at the bottom of the list. Pick **25 per page**, **50 per page** or **100 per page**.
@@ -197,9 +213,9 @@ To build a detailed filter in Margince, open **Filters and views** in the sideba
 1. The new filter opens with two ways to start. Under **Build it condition by condition**, press **Add condition**.
 2. Pick a field under **Select field**. Then pick how to compare (**is**, **is not**, **is any of**, **contains**…) and the value.
 3. Press **Add condition** for more. The **and** between conditions means all of them must match.
-4. Press **and** to switch it to **or**: then any one of them may match.
-5. From two conditions on, **⋯** under them → **Add a group** puts a group inside the filter. Groups go at most 4 levels down.
-6. Once a condition is full, the count ("12 contacts match") and **Matching records** show. They update as you go.
+4. Press an **and** to switch that one word to **or**. Each word between two conditions switches by itself. **and** comes before **or**. So "A and B or C" matches A and B together, or C alone. Conditions joined by **and** sit in a box headed **All of these**.
+5. **Add a group**, next to **Add condition**, puts a group inside the filter. At the top of a group, press **All of these** or **Any of these** to choose how its conditions match. Groups go at most 4 levels down.
+6. Once a condition is full, the count ("12 contacts match") and **Matching records** show. They update as you go. Click a row to open the record, or press **Next** for more matches.
 To change the record type, press **Contacts**, **Companies**, **Deals** or **Leads** at the top. With conditions in place it asks first, because a switch clears them.
 Also called: advanced search, segment, query builder.
 
@@ -219,8 +235,8 @@ Also called: natural-language filter, AI filter, describe a segment.
 ### What can I filter on in Filters and views?
 The fields on **Filters and views** in Margince are:
 - **Contacts**: **Owner**, **Owner team**, **Tag** and custom fields.
-- **Companies** add **Industry**, **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**).
-- **Deals** add **Pipeline**, **Stage**, **Company**, **Partner**, **Project**, **Status**, **Forecast category**, **Company industry**, **Company size** and **Company lifecycle**.
+- **Companies** add **Industry** (picked from the list of industries), **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**). The **Customers** view shows only the customer stage, so filter on **Lifecycle** to find **Onboarding** or **Live** companies.
+- **Deals** add **Pipeline**, **Stage**, **Company**, **Partner**, **Project**, **Status**, **Win probability**, **Company industry**, **Company size** and **Company lifecycle**.
 Custom fields have a **Custom field** mark. Your own company is never in a company filter.
 Also called: filter fields, which attributes can I filter.
 
@@ -345,7 +361,7 @@ To change which records a Margince Live List holds, open the list and press **Ed
 1. Change, add or delete conditions; the match count updates as you go. **Discard changes** puts the list's filter back.
 2. Press **Save to** and the list's name. The box names any automations that use the list. They act on the new filter from the next check. Press **Save filter**; the list's page opens.
 3. From then on records join and leave by the new filter, and **What changed** records the edit.
-If someone changed the list after you opened it, Margince says so and saves nothing. Open the list again and make the edit again. To keep a copy instead, choose **Save as new view** under **⋯** at the bottom. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **Edit filter**; a Shortlist has no filter.
+If someone changed the list after you opened it, Margince says so and saves nothing. Open the list again and make the edit again. To keep a copy instead, press **Save as new view** at the bottom. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **Edit filter**; a Shortlist has no filter.
 Also called: edit a list's criteria, change a segment, update a smart list.
 
 ### How do I rename, archive or restore a list?
@@ -376,9 +392,9 @@ Also called: lists missing, Live Lists not available.
 ## Exporting a list
 
 ### How do I export a list to CSV or Excel?
-To export records from Margince, build a filter on **Filters and views**. Choose **Export CSV** or **Export JSON** under **⋯** at the bottom of the filter. A Live List or Shortlist exports with **Export CSV** beside its name. The **Contacts**, **Companies**, **Deals** and **Leads** screens have no export button.
+To export records from Margince, build a filter on **Filters and views**. Press **Export CSV** or **Export JSON** beside the count of **Matching records**. A Live List or Shortlist exports with **Export CSV** beside its name. The **Contacts**, **Companies**, **Deals** and **Leads** screens have no export button.
 1. Open **Filters and views**, press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
-2. Press **Add condition** and fill at least one condition. **⋯** (**More for this filter**) then shows next to **Save**.
-3. Choose **Export CSV** (opens in Excel) or **Export JSON**. An opened saved view offers both under **⋯** next to its name.
+2. Press **Add condition** and fill at least one condition. **Matching records** then shows, with **Export CSV** and **Export JSON** beside its count.
+3. Press **Export CSV** (opens in Excel) or **Export JSON**. An opened saved view shows them in the same place.
 Only records you can see are exported, and each export goes into the audit log. See [What is kept, what is destroyed](retention-exports-and-deletion.md). To export a Live List or a Shortlist, open it and press **Export CSV** beside its name.
 Also called: download a list, export to spreadsheet, extract contacts.

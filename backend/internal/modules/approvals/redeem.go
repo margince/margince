@@ -93,42 +93,50 @@ func (s *Service) RedeemAndApplyPinned(
 // for an approval that carried none — a create, or a target type with no
 // version column.
 func (s *Service) RedeemInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, tool, diffHash string) (version int64, pinned bool, err error) {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return 0, false, errors.New("crmapprovals: no actor bound to context")
-	}
-	a, err := get(ctx, tx, id)
+	a, err := s.redeemRow(ctx, tx, id, tool, diffHash)
 	if err != nil {
-		// An unknown approval id reads as an invalid token, not a 404:
-		// the caller is asserting authority, not browsing.
-		return 0, false, fmt.Errorf("no such approval: %w", apperrors.ErrApprovalTokenInvalid)
-	}
-	if err := validateRedemption(a, redeemerFor(ctx, a, p), tool, diffHash, s.now()); err != nil {
-		return 0, false, err
-	}
-
-	if err := validateRedemptionTarget(ctx, tx, a); err != nil {
-		return 0, false, err
-	}
-
-	tag, err := tx.Exec(ctx,
-		`UPDATE approval SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL`, id)
-	if err != nil {
-		return 0, false, err
-	}
-	if tag.RowsAffected() != 1 {
-		return 0, false, &alreadyRedeemedError{}
-	}
-	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, id.UUID,
-		map[string]any{approvalKeyRedeemed: false},
-		map[string]any{approvalKeyRedeemed: true},
-		map[string]any{approvalKeyKind: a.Kind}); err != nil {
 		return 0, false, err
 	}
 	if a.TargetVersion == nil {
 		return 0, false, nil
 	}
 	return *a.TargetVersion, true, nil
+}
+
+func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, tool, diffHash string) (row, error) {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return row{}, errors.New("crmapprovals: no actor bound to context")
+	}
+	a, err := get(ctx, tx, id)
+	if err != nil {
+		// An unknown approval id reads as an invalid token, not a 404:
+		// the caller is asserting authority, not browsing.
+		return row{}, fmt.Errorf("no such approval: %w", apperrors.ErrApprovalTokenInvalid)
+	}
+	if err := validateRedemption(a, redeemerFor(ctx, a, p), tool, diffHash, s.now()); err != nil {
+		return row{}, err
+	}
+
+	if err := s.validateRedemptionTarget(ctx, tx, a); err != nil {
+		return row{}, err
+	}
+
+	tag, err := tx.Exec(ctx,
+		`UPDATE approval SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL`, id)
+	if err != nil {
+		return row{}, err
+	}
+	if tag.RowsAffected() != 1 {
+		return row{}, &alreadyRedeemedError{}
+	}
+	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, id.UUID,
+		map[string]any{approvalKeyRedeemed: false},
+		map[string]any{approvalKeyRedeemed: true},
+		map[string]any{approvalKeyKind: a.Kind}); err != nil {
+		return row{}, err
+	}
+	return a, nil
 }
 
 // alreadyRedeemedError is a redemption refused because another call spent the
@@ -184,7 +192,7 @@ func validateRedemption(a row, p principal.Principal, tool, diffHash string, now
 	}
 }
 
-func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
+func (s *Service) validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
 	if err := checkPin(ctx, tx, a.TargetType, a.TargetID, a.TargetVersion, "record"); err != nil {
 		return err
 	}
@@ -192,7 +200,10 @@ func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
 	// words and the human judged both, so both have to still be what they were
 	// — the retired side has always been checked here, and the survivor being
 	// exempt is what let a rename slip between the card and the merge.
-	return checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "second record")
+	if err := checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "second record"); err != nil {
+		return err
+	}
+	return s.checkContextPin(ctx, tx, a)
 }
 
 // checkPin re-reads one pinned row and refuses if it has moved since the
@@ -233,9 +244,11 @@ func checkPin(
 // short-circuits silently — the human approves a row that anyone may then
 // change before the authorized call lands.
 var versionTables = map[string]bool{
+	"stage":      true,
 	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, objectActivity: true,
 	targetOffer: true, targetProduct: true, tableList: true, targetTag: true, targetRelationship: true,
 	tableProject: true, targetSavedView: true, targetOfferTemplate: true, targetWebhookSubscription: true,
+	targetImportRun: true,
 }
 
 // contextTargetKinds are the staging kinds whose target_entity names what the
@@ -273,6 +286,10 @@ var contextTargetKinds = map[string]string{
 		"disposition; it never writes the activity. Pinning bound the answer to a row " +
 		"that relinking, a participant correction or a subject fix bumps — every one of " +
 		"which is ordinary inbox work on the very message the question is about.",
+	approvalsubject.KindContactShare: "A share request is filed under the CONTACT it asks for, " +
+		"because that is the record its owner decides about. The effect writes a record " +
+		"grant and never the contact's own fields. Pinning bound the answer to a row that " +
+		"every edit and every captured message bumps while the request waits in the inbox.",
 	kindCommitmentTask: "A promise read out of a conversation is filed under the ACTIVITY " +
 		"it was said in — the message or the meeting — because those words are the evidence " +
 		"a human judges it on. The effect CREATES a task activity and never writes the " +
@@ -304,13 +321,20 @@ var contextTargetKinds = map[string]string{
 // removes. TestEveryUnpinnedKindIsExplained holds each entry to its rationale,
 // and TestNoKindIsBothContextOnlyAndUnpinned holds the two maps apart.
 var unpinnedKinds = map[string]string{
+	approvalsubject.KindOwnershipTransfer: "A transfer is about WHO owns the record, never its fields, " +
+		"and a record waits in the inbox for days while its owner keeps working it, so " +
+		"every edit and every captured message would cancel the request. The accept re-reads " +
+		"the owner under the record's row lock and refuses when the owner it names has moved.",
 	kindLinkedInMatch: "The proposal's claim is \"this imported connection is this contact\", and no " +
 		"field edit on the contact can make that claim false — the founder decision is " +
 		"explicitly that editing a contact must not cancel a LinkedIn match waiting to be " +
-		"decided. The write it authorizes is an additive, idempotent contact_social insert " +
-		"rather than a patch of any field a human could have seen, so there is no content " +
-		"state for a pin to protect. Pinning also broke the second of two matches onto one " +
-		"contact, because applying the first bumps that contact's version.",
+		"decided. The profile link it writes is an additive, idempotent contact_social insert. " +
+		"The title and employer a human may tick are patches, and each is guarded on its own: " +
+		"the card carries the title and the current primary employment it was staged against, " +
+		"and the apply refuses a ticked box under the contact lock when that field has moved " +
+		"(contacts.checkLinkedInMatchFields). A whole-contact pin would add nothing to that and " +
+		"would cancel the match for an unrelated edit. Pinning also broke the second of two " +
+		"matches onto one contact, because applying the first bumps that contact's version.",
 }
 
 // TargetIsContextOnly reports whether this kind's target names context rather
@@ -349,10 +373,19 @@ func copyRationales(declared map[string]string) map[string]string {
 // entity type can carry a target_version pin that Redeem is able to
 // re-verify (ADR-0036 §2).
 func TargetVersionCheckable(entityType string) bool {
-	return versionTables[entityType]
+	return entityType == objectUserAdmin || versionTables[entityType]
 }
 
 func targetVersion(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (int64, error) {
+	// The account editor uses the roster’s exact microsecond revision.
+	if table == objectUserAdmin {
+		var revision int64
+		err := tx.QueryRow(ctx, `SELECT (extract(epoch FROM updated_at) * 1000000)::bigint FROM app_user WHERE id = @id AND archived_at IS NULL AND removed_at IS NULL`, pgx.StrictNamedArgs{"id": id}).Scan(&revision)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, apperrors.ErrNotFound
+		}
+		return revision, err
+	}
 	if !versionTables[table] {
 		return 0, fmt.Errorf("crmapprovals: %q is not a versioned target", table)
 	}

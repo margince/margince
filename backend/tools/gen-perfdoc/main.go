@@ -55,6 +55,8 @@ var published = []publishedBudget{
 	{"PERF-8", "Worklist and Home, as the screen calls them", "< 1 s", []string{dailyTarget}},
 	{"PERF-9", "Analytics screen", "< 300 ms", []string{dailyTarget}},
 	{"PERF-10", "Search as the screen calls it", "< 1 s", []string{dailyTarget}},
+	{"PERF-11", "System health compact overview", "< 750 ms", []string{healthTarget}},
+	{"PERF-12", "System health diagnostic reads", "< 1 s", []string{healthTarget}},
 	{"LOAD-1", "A cheap request while the team starts at once", "< 150 ms", []string{dailyTarget}},
 	{"CAP-PARAM-1", "Capture to timeline", "60 s p95", []string{"bench-capture"}},
 	{"MOBILE-AC-2", "Record open, perceived, Fast-3G", "< 300 ms perceived", []string{"bench-mobile"}},
@@ -62,6 +64,7 @@ var published = []publishedBudget{
 
 // dailyTarget is the bench whose rows carry a seat and a stored verdict.
 const dailyTarget = "bench-daily"
+const healthTarget = "bench-system-health"
 
 type machine struct {
 	OS        string `json:"os"`
@@ -93,6 +96,7 @@ type measurement struct {
 	Status5xx     int     `json:"status_5xx,omitempty"`
 	Allowed5xx    bool    `json:"allowed_5xx,omitempty"`
 	Status422     int     `json:"status_422,omitempty"`
+	Allowed422    bool    `json:"allowed_422,omitempty"`
 	PoolWaitMs    float64 `json:"pool_wait_ms,omitempty"`
 	PoolWaitMaxMs float64 `json:"pool_wait_max_ms,omitempty"`
 	Acquires      int64   `json:"acquires,omitempty"`
@@ -111,6 +115,23 @@ type corpus struct {
 	Activities int     `json:"activities"`
 	Reps       int     `json:"reps"`
 	Managers   int     `json:"managers"`
+	// The Home sources the corpus fills beyond the records themselves.
+	AICalls          int `json:"ai_calls,omitempty"`
+	PendingApprovals int `json:"pending_approvals,omitempty"`
+	AppliedApprovals int `json:"applied_approvals,omitempty"`
+	ExpiredApprovals int `json:"expired_approvals,omitempty"`
+}
+
+// strictVerdict mirrors StrictVerdict in perfrecord.go: one strict Home cohort.
+type strictVerdict struct {
+	Requirement string  `json:"requirement"`
+	Name        string  `json:"name"`
+	Seat        string  `json:"seat"`
+	P95Ms       float64 `json:"p95_ms"`
+	BudgetMs    float64 `json:"budget_ms"`
+	Samples     int     `json:"samples"`
+	Pass        bool    `json:"pass"`
+	Failure     string  `json:"failure,omitempty"`
 }
 
 type record struct {
@@ -120,7 +141,8 @@ type record struct {
 	Budgets    []measurement `json:"budgets"`
 	Corpus     *corpus       `json:"corpus,omitempty"`
 	// Advisories mirrors PerfRecord's: known-issue entries the run found clear.
-	Advisories []string `json:"advisories,omitempty"`
+	Advisories []string        `json:"advisories,omitempty"`
+	StrictHome []strictVerdict `json:"strict_home,omitempty"`
 }
 
 const (

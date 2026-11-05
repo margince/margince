@@ -25,11 +25,12 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
 // closeDateBatch bounds how many deals one workspace pass corrects — a
@@ -38,15 +39,15 @@ const closeDateBatch = 200
 
 // CloseDateCorrector drives the sweep; the worker ticks it nightly.
 type CloseDateCorrector struct {
+	language baselanguage.Resolver
+	said     quietCopy
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db       *database.DB
 	policy   CorrectionPolicy
 	reviewer QuietReviewReader
 	log      *slog.Logger
-	// now is the corrector's clock. WithClock overrides it, and a test that
-	// asks what TOMORROW's pass does has no other way to get there: the
-	// proposed date is computed from "today", so two passes in one process
-	// otherwise always run on the same day.
+	// now is the corrector's clock, and SetClock overrides it. The proposed
+	// date is computed from "today", so only this lets a test run TOMORROW's pass.
 	now func() time.Time
 	// installation answers which zone this sweep computes its dates in. A
 	// close date is a DATE, so the zone decides which day a deal is late on.
@@ -65,21 +66,11 @@ func NewCloseDateCorrector(db *database.DB, policy CorrectionPolicy, reviewer Qu
 	}
 }
 
-// WithClock overrides the "today" this sweep computes its dates against
-// (tests only). Returns the corrector for chaining, like every other clock
-// seam in this module.
-//
-// Without it no test can state what the sweep does on a SECOND night, because
-// every pass in one process reads the same wall clock — and "the same question
-// tomorrow" is the whole of what the rejection memory promises.
-//
-// It moves the ASSESSMENT's today and not the candidate query's, which reads the
-// database clock. The two only have to agree to within the pre-filter's slack:
-// that query is a deliberate superset — anything dated within the stalled window
-// (60 days ahead), missing, or still provisional — so a clock ahead of the
-// database's by less than that window changes which deals are FLAGGED and never
-// which are looked at. A test crossing a day or two is well inside it.
-func (c *CloseDateCorrector) WithClock(clock func() time.Time) *CloseDateCorrector {
+// SetClock overrides the "today" the sweep's assessment uses and returns the
+// corrector. The candidate query keeps the database clock. Its window reaches
+// 60 days ahead, so a test clock a day or two ahead changes which deals are
+// flagged, never which are looked at.
+func (c *CloseDateCorrector) SetClock(clock func() time.Time) *CloseDateCorrector {
 	c.now = clock
 	return c
 }
@@ -89,7 +80,9 @@ func (c *CloseDateCorrector) WithClock(clock func() time.Time) *CloseDateCorrect
 // its own job row, so a failed pass is a failed row rather than a log line
 // inside a run River recorded as completed.
 func (c *CloseDateCorrector) SweepWorkspace(ctx context.Context) error {
-	return c.sweepWorkspace(ctx)
+	runner := *c
+	runner.said = quietCopyFor(string(c.language.Resolve(ctx)))
+	return runner.sweepWorkspace(ctx)
 }
 
 // closeDateCandidate is one open deal the SQL pre-filter surfaced; the
@@ -100,15 +93,24 @@ type closeDateCandidate struct {
 	createdAt      time.Time
 	lastActivityAt *time.Time
 	waitUntil      *time.Time
+	meetingAhead   bool
 	expectedClose  *time.Time
 	provisional    bool
-	forecastCat    *string
 	pipelineID     ids.PipelineID
 	// ownerID is whose deal it is, for the policy that says whether the sweep
 	// may correct it unasked. Nil where nobody owns it.
-	ownerID        *ids.UUID
-	winProbability int
-	remainingOpen  int
+	ownerID *ids.UUID
+	// override and overrideBy are the deal's own probability columns;
+	// stageProbability is its stage's.
+	override         *int
+	overrideBy       *string
+	stageProbability int
+	remainingOpen    int
+}
+
+// winProbability is the candidate's effective probability and its source.
+func (c closeDateCandidate) winProbability() (int, Source) {
+	return EffectiveWinProbability(c.override, c.overrideBy, c.stageProbability)
 }
 
 // sweepWorkspace walks one pass's FROZEN membership, page by page, from
@@ -164,7 +166,11 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 		return err
 	}
 
-	velocities := map[ids.PipelineID]float64{}
+	likelyThreshold, err := c.policy.LikelyThreshold(ctx)
+	if err != nil {
+		return err
+	}
+	velocities := map[ids.PipelineID]closeDatePace{}
 	for {
 		var page []closeDateCandidate
 		var members []closeDateMember
@@ -183,7 +189,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 			live[cand.id] = cand
 		}
 		for _, m := range members {
-			outcome, settleErr := c.settleMember(ctx, live, m, velocities, now, loc, run.ID)
+			outcome, settleErr := c.settleMember(ctx, live, m, velocities, likelyThreshold, now, loc, run.ID)
 			if settleErr != nil {
 				// One deal's failure is that deal's outcome, not the end of the
 				// pass. Recording it and walking on is what keeps a single bad
@@ -213,7 +219,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 // the denominator.
 func (c *CloseDateCorrector) settleMember(
 	ctx context.Context, live map[ids.DealID]closeDateCandidate, m closeDateMember,
-	velocities map[ids.PipelineID]float64, now time.Time, loc *time.Location, runID ids.UUID,
+	velocities map[ids.PipelineID]closeDatePace, likelyThreshold int, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
 	if m.gone {
 		return closeDateMemberSkipped, nil
@@ -230,56 +236,56 @@ func (c *CloseDateCorrector) settleMember(
 		}
 		velocities[cand.pipelineID] = velocity
 	}
-	category := effectiveForecastCategory(cand.forecastCat, cand.winProbability)
+	probability, _ := cand.winProbability()
 	hygiene := CloseDateAssessment(CloseDateInput{
 		Status:              string(DealOpen),
 		ExpectedClose:       cand.expectedClose,
 		CreatedAt:           cand.createdAt,
 		LastActivityAt:      cand.lastActivityAt,
 		WaitUntil:           cand.waitUntil,
-		StageWinProbability: cand.winProbability,
+		MeetingAhead:        cand.meetingAhead,
+		StageWinProbability: cand.stageProbability,
 		RemainingOpenStages: cand.remainingOpen,
-		InForecastCommit:    category == forecastCommit || category == forecastBestCase,
-		StageVelocityDays:   velocity,
+		Likely:              probability >= likelyThreshold,
+		StageVelocityDays:   velocity.days,
 	}, now, loc)
 	// The outcome is whatever correct actually DID — see closeDateOutcome. A
 	// tier that decided to act and then wrote nothing (the switch off, or the
 	// deal already holding what it proposed) settles as checked, so the run's
 	// counters never claim a correction that did not reach a deal.
-	outcome, err := c.correct(ctx, cand, hygiene, category, now, loc, runID)
+	outcome, err := c.correct(ctx, cand, hygiene, velocity, now, loc, runID)
 	if err != nil {
 		return "", fmt.Errorf("close-date correction on %s: %w", cand.id, err)
 	}
 	return outcome, nil
 }
 
+type closeDatePace struct {
+	days     float64
+	wonDeals int
+}
+
 // stageVelocityDays is §11's experience-informed pace: the workspace
 // median duration of completed stage stints across won deals of the
 // pipeline. Below the CLOSE_DATE_MIN_HISTORY floor the observation is
-// noise, so zero is returned and the fold falls back to the default.
-func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID ids.PipelineID) (float64, error) {
+// insufficient evidence, so the fold leaves the date unchanged.
+
+func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID ids.PipelineID) (closeDatePace, error) {
 	var wonDeals int
 	var medianSeconds *float64
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			WITH stints AS (
-				SELECT d.id AS deal_id,
-				       extract(epoch FROM lead(h.changed_at) OVER (PARTITION BY h.deal_id ORDER BY h.changed_at, h.id) - h.changed_at) AS secs
-				FROM deal_stage_history h
-				JOIN deal d ON d.id = h.deal_id
-				WHERE d.pipeline_id = $1 AND d.status = 'won' AND d.archived_at IS NULL
-			)
-			SELECT count(DISTINCT deal_id),
-			       percentile_cont(0.5) WITHIN GROUP (ORDER BY secs)
-			FROM stints WHERE secs IS NOT NULL`, pipelineID).Scan(&wonDeals, &medianSeconds)
+			WITH stints AS (`+wonStintsSQL+`)
+			SELECT count(DISTINCT deal_id), percentile_cont(0.5) WITHIN GROUP (ORDER BY secs)
+			FROM stints`, pipelineID).Scan(&wonDeals, &medianSeconds)
 	})
 	if err != nil {
-		return 0, err
+		return closeDatePace{}, err
 	}
 	if wonDeals < CloseDateMinHistory || medianSeconds == nil || *medianSeconds <= 0 {
-		return 0, nil
+		return closeDatePace{}, nil
 	}
-	return *medianSeconds / 86400, nil
+	return closeDatePace{days: *medianSeconds / 86400, wonDeals: wonDeals}, nil
 }
 
 // apply runs one tier's write shape: re-verify the deal is still open
@@ -324,7 +330,7 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		// the one after it. A halted write is not a failure — the pass carries
 		// on assessing, and the version is still read so a 🟡 staging binds to
 		// the row a human would see.
-		on, err := settings.ApplyTx(ctx, tx, MaintenanceWritesEnabled)
+		on, err := config.StoredApplyTx(ctx, tx, config.Bound(), MaintenanceWritesEnabled)
 		if err != nil {
 			return fmt.Errorf("read whether deal maintenance may write: %w", err)
 		}
@@ -424,4 +430,11 @@ func sameOwner(before, now *ids.UUID) bool {
 		return before == nil && now == nil
 	}
 	return *before == *now
+}
+
+// WithBaseLanguage resolves the language before recording a shared correction.
+func (c *CloseDateCorrector) WithBaseLanguage(language baselanguage.Resolver) *CloseDateCorrector {
+	configured := *c
+	configured.language = language
+	return &configured
 }

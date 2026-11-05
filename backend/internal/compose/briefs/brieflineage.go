@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // dealLineage is why one candidate is back: the day the rep dismissed it, and
@@ -115,14 +116,14 @@ func briefLineage(
 		  JOIN activity a ON a.id = l.activity_id
 		 WHERE m.state = 'dismissed'
 		   AND a.archived_at IS NULL
-		   AND a.occurred_at > m.state_at
+		   AND a.occurred_at > m.state_at -- occurred_at raw: since the dismissal, a window's lower edge
 		   -- Not after the run's own instant. A future-dated activity has not
 		   -- happened yet, and the candidate query bounds itself the same way,
 		   -- so the two agree about which deals are returning — disagreement
 		   -- would put a deal back with no line explaining it.
-		   AND a.occurred_at <= $%d
 		   AND %s
-		 GROUP BY m.deal_id, m.state_at`, orderPos, userPos, dealScope, nowPos, readable),
+		   AND %s
+		 GROUP BY m.deal_id, m.state_at`, orderPos, userPos, dealScope, occurredday.HappenedSQL("a", fmt.Sprintf("$%d", nowPos)), readable),
 		args...)
 	if err != nil {
 		return nil, err

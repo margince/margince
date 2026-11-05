@@ -28,6 +28,19 @@ actions:
         operationId: crmHelloPing
         summary: Acknowledge a ping.
         tags: [Extensions]
+        # The object the deal panel gates on, so the panel's object is one an
+        # operation of the unit gates on too.
+        x-rbac-object: ext_crm_hello_ping
+        x-rbac-action: read
+        # The reference for a unit's starting posture: every system role reads
+        # deals, so every one reads the panel without an admin's tick.
+        x-rbac-defaults:
+          admin: [read]
+          management: [read]
+          manager: [read]
+          rep: [read]
+          read_only: [read]
+          ops: [read]
         x-mcp-tool:
           verb: hello_ping
           version: 1.0.0

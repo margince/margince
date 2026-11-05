@@ -17,7 +17,7 @@ import (
 
 func TestAllowanceReadingsPreserveTheirIndependentPermissions(t *testing.T) {
 	e := integration.Setup(t)
-	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
+	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 	for _, routing := range []bool{false, true} {
 		perms := principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{
 			"ai_budget": {Read: true}, "ai_diagnostics": {Read: true}, "ai_routing": {Read: routing},

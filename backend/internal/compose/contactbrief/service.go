@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/claims"
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -51,7 +52,7 @@ type (
 // composite read is injected rather than imported so this package composes one
 // seam instead of re-deriving a dozen gated reads.
 type Assembler interface {
-	Assemble(ctx context.Context, contactID ids.ContactID) (crmcontracts.Contact360, error)
+	AssembleScoped(ctx context.Context, contactID ids.ContactID, opts contact360.AssembleOptions) (crmcontracts.Contact360, error)
 }
 
 // Service writes and caches the brief.
@@ -113,9 +114,7 @@ type stored struct {
 // Get serves the brief, regenerating when the cache no longer matches.
 // force skips the cache entirely — the explicit refresh.
 func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) (crmcontracts.ContactBrief, error) {
-	// A brief is a reading aid for a contact; an agent reading records through
-	// a passport has the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ContactBrief{}, err
 	}
 	userID, err := actingUser(ctx)
@@ -125,7 +124,7 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 	// The gates that matter run HERE, in the caller's own composite read: a
 	// brief can only be written from what this caller may see, and a contact
 	// they cannot read refuses before any cache is consulted.
-	view, err := s.view.Assemble(ctx, contactID)
+	view, err := s.view.AssembleScoped(ctx, contactID, contact360.AssembleOptions{WrittenByHumanOnly: true})
 	if err != nil {
 		return crmcontracts.ContactBrief{}, err
 	}
@@ -146,7 +145,8 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 
 	// The contact is NAMED to the rail here, where the assembled input holds
 	// the name the product shows for them everywhere else.
-	sentences, by, err := Write(ai.WithSubject(ctx, contactID.Ref(), in.Name), s.lane, contactID.String(), in, lang)
+	lane, withheld := ai.ReadLane(ctx, s.lane)
+	sentences, by, err := Write(ai.WithSubject(ctx, contactID.Ref(), in.Name), lane, contactID.String(), in, lang)
 	if err != nil {
 		return crmcontracts.ContactBrief{}, err
 	}
@@ -156,6 +156,9 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 		GeneratedAt: s.now().UTC(),
 		GeneratedBy: by,
 		Sentences:   sentences,
+	}
+	if withheld {
+		return s.enrich(ctx, written.wire(contactID))
 	}
 	if err := s.save(ctx, userID, contactID, written); err != nil {
 		return crmcontracts.ContactBrief{}, err

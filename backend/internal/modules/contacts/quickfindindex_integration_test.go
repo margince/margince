@@ -19,15 +19,16 @@ func TestEachQuickFindReadsItsTrigramIndex(t *testing.T) {
 		table   string
 		filters listFilters
 		index   string
+		idIndex string
 	}{
-		{"contact", contactCommonFilters(ListContactsInput{}), "idx_contact_name_trgm"},
-		{"company", companyCommonFilters(ListCompaniesInput{}), "idx_company_name_trgm"},
+		{"contact", contactCommonFilters(ListContactsInput{}), "idx_contact_name_trgm", "idx_contact_email_trgm"},
+		{"company", companyCommonFilters(ListCompaniesInput{}), "idx_company_name_trgm", "idx_company_domain_trgm"},
 	} {
 		t.Run(list.table, func(t *testing.T) {
-			quickfindtest.AssertIndexed(t, list.table, list.filters.nameColumn, list.index, list.filters.identifier)
+			quickfindtest.AssertIndexed(t, list.table, list.filters.nameColumn, list.index, list.filters.identifier, list.idIndex)
 		})
 	}
 	t.Run("lead", func(t *testing.T) {
-		quickfindtest.AssertIndexed(t, "lead", leadQuickFindExpr, "idx_lead_name_trgm", storekit.Identifier{})
+		quickfindtest.AssertIndexed(t, "lead", leadQuickFindExpr, "idx_lead_name_trgm", storekit.LeadEmails, "idx_lead_email_trgm")
 	})
 }

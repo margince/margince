@@ -501,8 +501,8 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encoding the coverage report: %v", err)
 	}
-	syncMCPToolCoverage(t, filepath.Join(mcpDocsDir, "mcp-tool-coverage.json"), append(payload, '\n'))
-	syncMCPToolCoverage(t, filepath.Join(mcpDocsDir, "mcp-tool-coverage.md"), renderMCPToolCoveragePage(report))
+	syncMCPToolCoverage(t, filepath.Join(mcpDocsDir, "mcp-tool-coverage.json"), append(payload, '\n'), mcpToolCoverageCommand)
+	syncMCPToolCoverage(t, filepath.Join(mcpDocsDir, "mcp-tool-coverage.md"), renderMCPToolCoveragePage(report), mcpToolCoverageCommand)
 }
 
 // assertRequiredToolsAreServed fails on a required name this surface does not
@@ -976,7 +976,7 @@ func sortedCopy(in []string) []string {
 	return out
 }
 
-func syncMCPToolCoverage(t *testing.T, path string, want []byte) {
+func syncMCPToolCoverage(t *testing.T, path string, want []byte, command string) {
 	t.Helper()
 	if *updateMCPToolCoverage {
 		if err := os.WriteFile(path, want, 0o644); err != nil {
@@ -986,12 +986,12 @@ func syncMCPToolCoverage(t *testing.T, path string, want []byte) {
 	}
 	got, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("reading the committed artifact %s: %v\nRegenerate with: %s", path, err, mcpToolCoverageCommand)
+		t.Fatalf("reading the committed artifact %s: %v\nRegenerate with: %s", path, err, command)
 	}
 	if bytes.Equal(got, want) {
 		return
 	}
 	t.Errorf("%s is stale — it no longer matches the served surface and the use-case lane.\n"+
 		"Regenerate with: %s\nand commit the result with the change that moved it.\n%s",
-		path, mcpToolCoverageCommand, firstMCPInfoDifference(string(got), string(want)))
+		path, command, firstMCPInfoDifference(string(got), string(want)))
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -29,6 +30,15 @@ import (
 // hand-off through the holding fence — and re-taking it here would be the
 // ordering the eraser deadlocks against.
 func insertSocialHandle(ctx context.Context, tx pgx.Tx, contactID ids.UUID, platform, handle string) (ids.UUID, bool, error) {
+	if platform == SocialLinkedIn {
+		holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{LinkedInURLs: []string{handle}})
+		if err != nil {
+			return ids.UUID{}, false, err
+		}
+		if len(holders.Leads) > 0 {
+			return ids.UUID{}, false, nil
+		}
+	}
 	var rowID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO contact_social (contact_id, platform, handle)
@@ -40,6 +50,11 @@ func insertSocialHandle(ctx context.Context, tx pgx.Tx, contactID ids.UUID, plat
 	}
 	if err != nil {
 		return ids.UUID{}, false, fmt.Errorf("contacts: writing a contact's %s handle: %w", platform, err)
+	}
+	if platform == SocialLinkedIn {
+		if err := fileLinkedInTwinsAtWrite(ctx, tx, ids.From[ids.ContactKind](contactID), handle); err != nil {
+			return ids.UUID{}, false, err
+		}
 	}
 	return rowID, true, nil
 }
@@ -93,6 +108,9 @@ func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.U
 	if err := lockContactForAttach(ctx, tx, subject); err != nil {
 		return ids.UUID{}, false, err
 	}
+	if seat, err := contactIsSeatTx(ctx, tx, contactID); err != nil || seat {
+		return ids.UUID{}, false, err
+	}
 	var edgeID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by)
@@ -112,6 +130,9 @@ func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.U
 		return ids.UUID{}, false, fmt.Errorf("contacts: linking a contact to a bought employer: %w", err)
 	}
 	if err := auditCapturedEmployment(ctx, tx, edgeID, subject, companyID, relationshipOriginProvider); err != nil {
+		return ids.UUID{}, false, err
+	}
+	if err := fileEmployerTwins(ctx, tx, subject, connectorCapturedBy(providerName)); err != nil {
 		return ids.UUID{}, false, err
 	}
 	return edgeID, true, nil

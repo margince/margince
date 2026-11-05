@@ -13,10 +13,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -44,16 +46,16 @@ const (
 // not yet due reaches this card exactly as a task does. Reading only tasks
 // here was how a contact owing nothing but an extracted commitment showed
 // "nothing needed" while the commitments card beneath said otherwise.
-func openPromiseMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
+func (said momentCopy) openPromiseMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
 	next, ok := owedwork.Soonest(owedPromises(page), now)
 	if !ok {
 		return crmcontracts.ContactMoment{}, false
 	}
 	switch promise := next.Ref.(type) {
 	case crmcontracts.Activity:
-		return openPromiseFrom(ctx, now, promise), true
+		return said.openPromiseFrom(ctx, now, promise), true
 	case crmcontracts.ConversationClaim:
-		return openClaimCard(now, promise), true
+		return said.openClaimCard(now, promise), true
 	default:
 		// owedPromises puts only those two types in a Ref; a third would be a
 		// promise this card cannot render rather than one to show blank.
@@ -64,22 +66,25 @@ func openPromiseMoment(ctx context.Context, now time.Time, page *crmcontracts.Co
 // openPromiseFrom is the card both promise rungs show: same headline, same
 // reason, same verb. Only the rung's name and its place on the ladder differ,
 // and neither is a fact about the promise.
-func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activity) crmcontracts.ContactMoment {
+func (said momentCopy) openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activity) crmcontracts.ContactMoment {
 	// A task filed without a subject is still owed; the card names it as the
 	// task list does rather than printing an empty promise.
-	subject := "an open task"
+	subject := said.Say(momentWords.OpenTask)
+	prefill := ""
 	if task.Subject != nil && *task.Subject != "" {
 		subject = *task.Subject
+		prefill = *task.Subject
 	}
 	// The evidence is dated by when the promise was filed, not when it falls
 	// due: a task due next month is not "updated today", and the due date is
 	// the reason's to state.
 	observed := task.OccurredAt
 	evidence := []crmcontracts.ContactMomentEvidence{{
-		Type:       crmcontracts.ContactMomentEvidenceTypeTask,
-		Id:         new(task.Id),
-		Label:      subject,
-		ObservedAt: &observed,
+		Type:              crmcontracts.ContactMomentEvidenceTypeTask,
+		Id:                new(task.Id),
+		Label:             subject,
+		ObservedAt:        &observed,
+		ObservedPrecision: new(task.OccurredPrecision),
 	}}
 	// The fingerprint carries WHOSE promise this is, not only which task it
 	// is. A dismissal is keyed on the fingerprint so that the moment comes
@@ -93,8 +98,8 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence) + heldMarker(ctx, task) + dueMarker(task.DueAt),
-		Headline:            openPromiseHeadline(ctx, task, subject),
-		WhyNow:              openPromiseWhyNow(now, task),
+		Headline:            said.openPromiseHeadline(ctx, task, subject),
+		WhyNow:              said.openPromiseWhyNow(now, task),
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
 		FreshnessAt:         &observed,
@@ -104,11 +109,11 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 		// button does rather than presuming the promise is a thing to send.
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: "Write to them",
+			Label: said.Say(momentWords.Write),
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: new(map[string]string{prefillIntent: deliverCommitmentIntent, prefillSubject: subject}),
+				Prefill: new(map[string]string{prefillIntent: deliverCommitmentIntent, prefillSubject: prefill}),
 			},
 		},
 	}
@@ -123,20 +128,21 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 // the record owes it either way — but it is not the reader's to deliver, and
 // a card that says otherwise sends them to do somebody else's job. Unassigned
 // work is the workspace's, and the reader is the workspace.
-func openPromiseHeadline(ctx context.Context, task crmcontracts.Activity, subject string) string {
+func (said momentCopy) openPromiseHeadline(ctx context.Context, task crmcontracts.Activity, subject string) string {
 	if heldByAnother(ctx, task) {
-		return fmt.Sprintf("Your team owes them: %s", subject)
+		return fmt.Sprintf(said.Say(momentWords.TeamOwes), subject)
 	}
-	return fmt.Sprintf("You owe them: %s", subject)
+	return fmt.Sprintf(said.Say(momentWords.YouOwe), subject)
 }
 
 // heldMarker distinguishes the two cards one task can produce, so a
 // dismissal of one does not silence the other.
 func heldMarker(ctx context.Context, task crmcontracts.Activity) string {
-	if heldByAnother(ctx, task) {
-		return ":theirs"
+	var assignee *ids.UUID
+	if task.AssigneeId != nil {
+		assignee = new(ids.UUID(*task.AssigneeId))
 	}
-	return ":ours"
+	return momentaction.HeldMarker(ctx, assignee)
 }
 
 // dueMarker carries the task's due date into the fingerprint. The evidence is
@@ -152,15 +158,13 @@ func dueMarker(due *time.Time) string {
 // heldByAnother reports whether a named colleague, and not the reader, holds
 // this task.
 //
-// An agent claims nobody's work as its own. A passport carries its granting
-// human's UserID, so comparing ids would answer about that human and the
-// phrasing would call their task "ours". auth.RequireHuman is what tells the
-// two apart, which a check for a non-zero id does not.
+// An agent on its user's passport reads as that user, so its dismissal key is
+// theirs. Passportless work holds nothing, whatever id it carries.
 func heldByAnother(ctx context.Context, task crmcontracts.Activity) bool {
 	if task.AssigneeId == nil {
 		return false
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return true
 	}
 	viewer, ok := principal.Actor(ctx)
@@ -172,21 +176,12 @@ func heldByAnother(ctx context.Context, task crmcontracts.Activity) bool {
 
 // openPromiseWhyNow says what the date on the promise is, in the reader's
 // terms: a deadline still ahead, one already behind, or none at all.
-func openPromiseWhyNow(now time.Time, task crmcontracts.Activity) string {
+func (said momentCopy) openPromiseWhyNow(now time.Time, task crmcontracts.Activity) string {
 	if task.DueAt == nil {
-		return fmt.Sprintf("Task from %s with no due date. Stays open until you do it or close it.", task.OccurredAt.Format("2 Jan"))
+		logged := occurredday.DateIn(occurredday.Moment{At: task.OccurredAt, DateOnly: occurredday.IsDay(task.OccurredPrecision)}, said.zone)
+		return fmt.Sprintf(said.Say(momentWords.TaskUndated), logged.Format(time.DateOnly))
 	}
-	if words, late := owedwork.LateWords(task.DueAt, now); late {
-		return words
-	}
-	// Whole days of REMAINING TIME, not calendar boundaries crossed — see
-	// elapsed.FullDaysUntil for why a deadline counts differently from a pair
-	// of dates. A task logged from the record page is due at the end of
-	// today, so this is the common case rather than a corner.
-	if days := elapsed.FullDaysUntil(now, *task.DueAt); days > 0 {
-		return fmt.Sprintf("Due in %d days.", days)
-	}
-	return "Due today."
+	return owedwork.DeadlineWords(*task.DueAt, now, string(said.Lang()))
 }
 
 // overduePromiseMoment: we are past the date on something we said we would
@@ -199,16 +194,16 @@ func openPromiseWhyNow(now time.Time, task crmcontracts.Activity) string {
 // The choice of WHICH late promise to name is kernel/owedwork's, so this card
 // and every other surface answering "what do we owe them?" name the same one.
 // That package states why the latest slip wins and why a tie goes to the claim.
-func overduePromiseMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
+func (said momentCopy) overduePromiseMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
 	slipped, ok := owedwork.MostRecentlySlipped(owedPromises(page), now)
 	if !ok {
 		return crmcontracts.ContactMoment{}, false
 	}
 	switch promise := slipped.Ref.(type) {
 	case crmcontracts.Activity:
-		return overdueTaskCard(ctx, now, promise), true
+		return said.overdueTaskCard(ctx, now, promise), true
 	case crmcontracts.ConversationClaim:
-		return overdueClaimCard(now, promise), true
+		return said.overdueClaimCard(now, promise), true
 	default:
 		// owedPromises puts only those two types in a Ref; a third would be a
 		// promise this card cannot render rather than one to show blank.
@@ -254,7 +249,7 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 	if page.Claims != nil {
 		for _, claim := range *page.Claims {
 			if claim.Kind != crmcontracts.ConversationClaimKindCommitmentOurs ||
-				claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.TaskActivityId != nil {
+				claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.NeedsReview || claim.TaskActivityId != nil {
 				continue
 			}
 			items = append(items, owedwork.Item{
@@ -274,8 +269,8 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 // reader had already put away — and the key is also what keeps a dismissal of
 // the late card from silencing the not-yet-due one, which shares the task but
 // says something different about it.
-func overdueTaskCard(ctx context.Context, now time.Time, task crmcontracts.Activity) crmcontracts.ContactMoment {
-	moment := openPromiseFrom(ctx, now, task)
+func (said momentCopy) overdueTaskCard(ctx context.Context, now time.Time, task crmcontracts.Activity) crmcontracts.ContactMoment {
+	moment := said.openPromiseFrom(ctx, now, task)
 	moment.ClaimKey = overdueTaskKey
 	moment.Rule = crmcontracts.ContactMomentRuleOverduePromise
 	return moment
@@ -283,13 +278,16 @@ func overdueTaskCard(ctx context.Context, now time.Time, task crmcontracts.Activ
 
 // overdueClaimCard is the card for a promise read out of a conversation. It
 // carries the quote it was read from, which a task has nothing to match.
-func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontracts.ContactMoment {
+func (said momentCopy) overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontracts.ContactMoment {
 	// Deliberately not owedwork.LateWords: a claim names the date the
 	// SPEAKER promised, so its sentence keeps that framing, and its count is
 	// elapsed calendar days rather than whole days behind.
-	whyNow := "Promised for a date earlier today."
-	if overdue := elapsed.Days(*claim.DueAt, now); overdue > 0 {
-		whyNow = fmt.Sprintf("Promised for a date %d days ago.", overdue)
+	whyNow := said.Say(momentWords.PromisedToday)
+	if overdue := elapsed.Days(*claim.DueAt, now, said.zone); overdue > 0 {
+		whyNow = fmt.Sprintf(said.Say(momentWords.PromisedAgo), overdue)
+		if overdue == 1 {
+			whyNow = said.Say(momentWords.PromisedYesterday)
+		}
 	}
 	evidence := []crmcontracts.ContactMomentEvidence{{
 		Type:       crmcontracts.ContactMomentEvidenceTypeActivity,
@@ -303,14 +301,14 @@ func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmco
 		Rule:                crmcontracts.ContactMomentRuleOverduePromise,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf("You owe them: %s", claim.Body),
+		Headline:            fmt.Sprintf(said.Say(momentWords.TeamOwes), claim.Body),
 		WhyNow:              whyNow,
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
 		FreshnessAt:         claim.DueAt,
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: "Send it",
+			Label: said.Say(momentWords.Send),
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
@@ -334,18 +332,8 @@ func claimFiledAt(claim crmcontracts.ConversationClaim) time.Time {
 	return *claim.OccurredAt
 }
 
-// openClaimCard is the card for a promise read out of a conversation whose
-// date has NOT passed, or which carries none.
-//
-// The sibling of overdueClaimCard, and it exists for the same reason
-// openPromiseFrom does: the promise is the same either way, so the two cards
-// differ only in what they say about the date. Both quote the sentence the
-// promise was made in, which is the one thing a claim has and a task does not.
-//
-// No holder marker, unlike the task card. A claim carries no assignee — it
-// records what was said, not who was given it — so it is always the
-// workspace's promise and the reader is the workspace.
-func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontracts.ContactMoment {
+// A claim has no assignee, so its original quote describes a team promise.
+func (said momentCopy) openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontracts.ContactMoment {
 	evidence := []crmcontracts.ContactMomentEvidence{{
 		Type:       crmcontracts.ContactMomentEvidenceTypeActivity,
 		Id:         &claim.SourceActivityId,
@@ -353,19 +341,22 @@ func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontr
 		Snippet:    &claim.SourceQuote,
 		ObservedAt: claim.OccurredAt,
 	}}
+	if claim.OccurredAt != nil {
+		evidence[0].ObservedPrecision = new(claim.OccurredPrecision)
+	}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            claimMomentKey(openClaimRung, claim),
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf("You owe them: %s", claim.Body),
-		WhyNow:              openClaimWhyNow(now, claim),
+		Headline:            fmt.Sprintf(said.Say(momentWords.TeamOwes), claim.Body),
+		WhyNow:              said.openClaimWhyNow(now, claim),
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
 		FreshnessAt:         claim.OccurredAt,
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: "Write to them",
+			Label: said.Say(momentWords.Write),
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
@@ -378,14 +369,11 @@ func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontr
 // openClaimWhyNow says what the date on a promised commitment is. The task
 // rung's sentence, for the source that has no task: a deadline still ahead,
 // or none at all.
-func openClaimWhyNow(now time.Time, claim crmcontracts.ConversationClaim) string {
+func (said momentCopy) openClaimWhyNow(now time.Time, claim crmcontracts.ConversationClaim) string {
 	if claim.DueAt == nil {
-		return "Promised in a conversation, no due date. Stays open until you do it or close it."
+		return said.Say(momentWords.ClaimUndated)
 	}
-	if days := elapsed.FullDaysUntil(now, *claim.DueAt); days > 0 {
-		return fmt.Sprintf("Due in %d days.", days)
-	}
-	return "Due today."
+	return owedwork.UpcomingWords(*claim.DueAt, now, string(said.Lang()))
 }
 
 // claimMomentKey names WHICH promise a card is about, not merely that it is a

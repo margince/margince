@@ -43,9 +43,15 @@ func setupConsent(t *testing.T) *consentEnv {
 	// The relay is wired because a controller delivery resolves its transport
 	// before any gate runs; the LINK is read from the vault, where minting
 	// sealed it (confirmlinkmail_integration_test.go).
-	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(discardingMailer{}))
+	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(apptest.DiscardingMailer{}))
 	apptest.BootstrapWorkspaceSession(t, e, "Consent E2E", "dpo@fable.test", "Admin")
+	return seedConsentSubject(t, e)
+}
 
+// seedConsentSubject gives a signed-in workspace one contact with an inbound mail
+// to answer.
+func seedConsentSubject(t *testing.T, e *apptest.AppEnv) *consentEnv {
+	t.Helper()
 	var contact struct {
 		ID string `json:"id"`
 	}
@@ -86,14 +92,13 @@ func setupConsent(t *testing.T) *consentEnv {
 	return &consentEnv{AppEnv: e, contactID: contact.ID, activityID: activity.ID, purposes: purposes}
 }
 
-// stakeADeal gives the fixture's subject real transactional evidence: an
-// open deal with them staked on it, relinked onto c.activityID (a reply
-// inherits its links from the anchor). Opt in for the same reason
-// preflightEnv.stakeADeal is: resolveCategory's live-deal arm runs before
-// any purpose is asked about, so baking this into setupConsent would
-// silently change the basis every OTHER test in this file — most of which
-// are specifically about a purpose with no evidence behind it — is denied
-// on.
+// stakeADeal gives the fixture's subject real transactional evidence. It
+// opens a deal with them staked on it and files their own captured enquiry on
+// it. The enquiry is relinked onto c.activityID, since a reply inherits its
+// links from the anchor. A test opts in, as with preflightEnv.stakeADeal.
+// resolveCategory's live-deal arm runs before any purpose is asked about. Most
+// other tests here are about a purpose with no evidence behind it, and this
+// evidence would change their basis.
 func (c *consentEnv) stakeADeal(t *testing.T) {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, c.AppEnv)
@@ -103,6 +108,7 @@ func (c *consentEnv) stakeADeal(t *testing.T) {
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("relink the anchor onto the deal → %d", status)
 	}
+	apptest.AskedAboutTheDeal(t, c.AppEnv, c.contactID, "subject@consent.test", c.dealID)
 }
 
 func (c *consentEnv) send(t *testing.T, purpose string) (int, string) {
@@ -620,16 +626,14 @@ func TestThePreviewAgreesWithTheSendItPreviews(t *testing.T) {
 func TestThePreviewRefusesARecordTheCallerCannotRead(t *testing.T) {
 	c := setupConsent(t)
 
-	var problem struct {
-		Code string `json:"code"`
-	}
+	var problem problemBody
 	status := c.Call(t, "POST", "/v1/emails:preview", AnyMap{
 		"to":    []string{"subject@consent.test"},
 		"links": []AnyMap{{"entity_type": "deal", "entity_id": "00000000-0000-4000-8000-000000000001"}},
 	}, nil, &problem)
-	if status != http.StatusNotFound {
-		t.Errorf("preview naming an unreadable deal → %d %q, want 404 — a record the caller cannot open must answer with the row-scope verdict, not with somebody's consent state",
-			status, problem.Code)
+	if status != http.StatusUnprocessableEntity || !namesFieldWithCode(problem, "links", "reference_not_found") {
+		t.Errorf("preview naming an unreadable deal → %d %+v, want 422 reference_not_found on links — a record the caller cannot open must answer with the row-scope verdict, not with somebody's consent state",
+			status, problem.Details.Errors)
 	}
 }
 

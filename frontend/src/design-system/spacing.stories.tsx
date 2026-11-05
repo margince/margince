@@ -316,6 +316,9 @@ const SIZING: readonly Measure[] = [
   { token: "--drawerReadingWidth", usage: "A drawer made for reading." },
   { token: "--drawerWindowWidth", usage: "A drawer grown to the window." },
   { token: "--dialogFullWidth", usage: "A full-width dialog." },
+  { token: "--dockWidth", usage: "A docked window beside the page." },
+  { token: "--dockHeight", usage: "A docked window's height." },
+  { token: "--dockGrownWidth", usage: "A docked window, grown." },
   {
     token: "--phoneAgentRise",
     usage: "How far the agent's cell rises above the phone bar's top edge.",

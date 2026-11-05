@@ -54,7 +54,7 @@ func TestTheQuestionAnswererReAsksThroughItsOwnParse(t *testing.T) {
 		Second: `{"sentences":[{"text":"They sell managed hosting.","evidence":[` +
 			`{"entity_type":"company","entity_id":"` + askCompanyID + `"}]}]}`,
 	}
-	answered, err := answerWithModel(t.Context(), lane, declaredQuestions(t)[0], askCompanyID,
+	answered, err := answerWithModel(t.Context(), lane, askMeetingPrep, askCompanyID,
 		askInput(), string(textlang.English))
 	if err != nil {
 		t.Fatalf("answering: %v", err)

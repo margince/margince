@@ -41,6 +41,10 @@ import (
 // this answers the ones that do not, and the constraint goes to the operator's
 // log through InfraCause instead.
 func constraintFault(err error) (Fault, bool) {
+	if constraint, ok := storekit.CheckViolation(err); ok && constraint == "member_work_reference_retired" {
+		return Fault{Status: http.StatusConflict, Code: "conflict", Detail: "Choose a current member before assigning or reopening this work.", InfraCause: err}, true
+	}
+
 	if fault, ok := retentionHoldFault(err); ok {
 		return fault, true
 	}

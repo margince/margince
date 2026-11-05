@@ -2,10 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Card, Checkbox, EmptyState } from "../../design-system/atoms";
+import {
+  Button,
+  Card,
+  Checkbox,
+  EmptyState,
+  SegmentedControl,
+} from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
@@ -98,12 +104,18 @@ type Scope = ConsentRequest["scopes"][number];
 function ConsentErrorCard({
   titleKey,
   bodyKey,
-}: Readonly<{ titleKey: MessageKey; bodyKey: MessageKey }>) {
+  children,
+}: Readonly<{
+  titleKey: MessageKey;
+  bodyKey: MessageKey;
+  children?: ReactNode;
+}>) {
   const t = useT();
   return (
     <Card>
       <Heading size="xlarge">{t(titleKey)}</Heading>
       <p>{t(bodyKey)}</p>
+      {children}
       <Button variant="ghost" onClick={() => navigate({ screen: "home" })}>
         {t("consent.backToApp")}
       </Button>
@@ -122,6 +134,40 @@ function toggled(current: ReadonlySet<Scope>, scope: Scope): Set<Scope> {
     next.add(scope);
   }
   return next;
+}
+
+// The two common grants, offered as one choice above the boxes. "Read and
+// draft" lets an assistant look and prepare without changing or sending
+// anything; "Full assistant" is every scope offered. Any other set is custom.
+const PRESETS = ["readDraft", "full", "custom"] as const;
+type Preset = (typeof PRESETS)[number];
+const READ_AND_DRAFT: readonly Scope[] = ["read", "draft"];
+
+function presetOf(
+  granted: ReadonlySet<Scope>,
+  offered: readonly Scope[],
+): Preset {
+  const readDraft = offered.filter((scope) => READ_AND_DRAFT.includes(scope));
+  const exactly = (set: readonly Scope[]) =>
+    set.length === granted.size && set.every((scope) => granted.has(scope));
+  if (exactly(offered)) return "full";
+  if (exactly(readDraft)) return "readDraft";
+  return "custom";
+}
+
+function presetScopes(
+  preset: Preset,
+  offered: readonly Scope[],
+  current: ReadonlySet<Scope>,
+): ReadonlySet<Scope> {
+  switch (preset) {
+    case "full":
+      return new Set(offered);
+    case "readDraft":
+      return new Set(offered.filter((scope) => READ_AND_DRAFT.includes(scope)));
+    case "custom":
+      return current;
+  }
 }
 
 // The ordinary path: every scope the client could ask for, ticked by default.
@@ -150,6 +196,19 @@ function ConsentSelector({
       <Heading size="xlarge">{t("consent.title")}</Heading>
       <p>{t("consent.asks", { client: data.client_name })}</p>
       <RedirectDisclosure redirectURI={params.get("redirect_uri") ?? ""} />
+      <SegmentedControl
+        options={PRESETS}
+        value={presetOf(granted, data.scopes)}
+        onChange={(preset) =>
+          setGranted((current) => presetScopes(preset, data.scopes, current))
+        }
+        labels={{
+          readDraft: t("consent.preset.readDraft"),
+          full: t("consent.preset.full"),
+          custom: t("consent.preset.custom"),
+        }}
+        label={t("consent.preset.label")}
+      />
       <div className="oauthconsent-scopes">
         {data.scopes.map((scope) => (
           <Checkbox
@@ -205,7 +264,7 @@ export function OAuthConsent() {
     // scope list, and that is exactly the render holding a nonce. The states
     // below without one — the re-entry detour and the terminal refusals —
     // return before this query is ever read.
-    enabled: Boolean(consent),
+    enabled: Boolean(consent) || errorCode === "method_off",
     queryFn: async () => {
       return unwrap(
         await api.GET("/oauth/consent-request", {
@@ -264,6 +323,24 @@ export function OAuthConsent() {
       </div>
     );
   }
+  // A way of connecting the admin turned off: only the admin can change that.
+  // The client is still live, so its name can be read; the screen renders
+  // without it while the read is out or when it fails.
+  if (errorCode === "method_off") {
+    return (
+      <div className="wrap narrow">
+        <ConsentErrorCard
+          titleKey="consent.methodOffTitle"
+          bodyKey="consent.methodOffBody"
+        >
+          <MethodOffFacts
+            clientName={query.data?.client_name}
+            redirectURI={params.get("redirect_uri") ?? ""}
+          />
+        </ConsentErrorCard>
+      </div>
+    );
+  }
   // stale_consent says outright that the request is spent — and ANY arrival
   // without a nonce is the same fact, whatever marker it carries: the POST
   // requires cookie and body to agree, so a selector rendered here could only
@@ -286,6 +363,24 @@ export function OAuthConsent() {
           <ConsentSelector data={data} params={params} consent={consent} />
         )}
       </QueryGate>
+    </div>
+  );
+}
+
+// Which tool was refused and where it would have returned, so the human can
+// tell their admin which one to let in.
+function MethodOffFacts({
+  clientName,
+  redirectURI,
+}: Readonly<{ clientName: string | undefined; redirectURI: string }>) {
+  const t = useT();
+  const host = URL.canParse(redirectURI) ? new URL(redirectURI).host : "";
+  return (
+    <div className="oauthconsent-facts t-caption">
+      {clientName ? (
+        <span>{t("consent.methodOffTool", { client: clientName })}</span>
+      ) : null}
+      {host ? <span>{t("consent.methodOffReturn", { host })}</span> : null}
     </div>
   );
 }

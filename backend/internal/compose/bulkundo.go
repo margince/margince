@@ -173,9 +173,15 @@ func undoOne(
 		if archiver, err = archiverOf(target); err == nil {
 			report, err = archiver.restore(ctx, tx, ids.UUID(item.Id), item.Version, change.pendingLinks)
 		}
+		// A restore leaves the owner as it was, so the live row names it for both sides.
+		var back bulkRow
+		if err == nil {
+			back, err = target.lock(ctx, tx, ids.UUID(item.Id))
+		}
 		sample = crmcontracts.BulkSampleRow{
 			Id: item.Id, Label: report.Label,
-			Before: crmcontracts.BulkRecordState{Archived: true},
+			Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(back.ownerID), Archived: true},
+			After:  crmcontracts.BulkRecordState{OwnerId: wireOwner(back.ownerID)},
 		}
 		leftBehind = report.LeftBehind
 		restored = report

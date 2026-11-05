@@ -8,6 +8,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // validateParts is the dry run proper. The writers read every row once for
@@ -42,6 +44,22 @@ func validateParts(
 			return err
 		}
 		report = withGrantProblems(ctx, report, mapping.PartList(), writers.grantProblems)
+		if report.ReviewPlan != nil && report.ReviewPlan.Complete {
+			actor, ok := principal.Actor(ctx)
+			if !ok {
+				return apperrors.ErrPermissionDenied
+			}
+			report.ReviewPlan.ActorID = actor.ID
+			settleReviewLinks(report.ReviewPlan)
+			report.ReviewPlan.Associations, err = source.Associations(ctx)
+			if err != nil {
+				return err
+			}
+			if len(report.ReviewPlan.Associations) > migration.ReviewRowLimit {
+				report.ReviewPlan.Complete = false
+				report.ReviewPlan.Rows, report.ReviewPlan.Associations = nil, nil
+			}
+		}
 		return nil
 	})
 	return report, err

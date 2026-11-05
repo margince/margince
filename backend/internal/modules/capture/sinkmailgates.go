@@ -40,14 +40,14 @@ const (
 // an empty set is saying it could not read the parties, which is a different
 // statement from "there were none", and the direction to fail in is toward
 // keeping the message.
-func (s *Sink) internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
+func internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
 	if _, ok := rec.Fields.(ActivityFields); !ok {
 		return false, nil
 	}
-	if len(rec.Addresses) == 0 {
+	if len(rec.Addresses) == 0 || rec.PartiesIncomplete {
 		return false, nil
 	}
-	own, err := trustedOwnDomainsTx(ctx, tx)
+	own, err := TrustedOwnDomainsTx(ctx, tx)
 	if err != nil {
 		return false, err
 	}
@@ -79,7 +79,23 @@ func (s *Sink) internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 		// addresses that are not on them.
 		return !self.Empty(), nil
 	}
-	return own.AllInternal(external), nil
+	if own.AllInternal(external) {
+		return true, nil
+	}
+	return calendarOwnerDomainProvesInternalTx(ctx, tx, own, rec.OwnerDomainOnly)
+}
+
+// calendarOwnerDomainProvesInternalTx answers whether a meeting whose parties
+// are all on the owner's domain is internal, by owndomain.Parties.SeatDomainIsOurs.
+func calendarOwnerDomainProvesInternalTx(ctx context.Context, tx pgx.Tx, own InternalDomains, ownerDomain string) (bool, error) {
+	if ownerDomain == "" {
+		return false, nil
+	}
+	parties, err := meetingPartiesTx(ctx, tx, own)
+	if err != nil {
+		return false, err
+	}
+	return parties.SeatDomainIsOurs(ownerDomain), nil
 }
 
 // internalDomainTx reports whether domain is one of the workspace's own mail

@@ -23,7 +23,7 @@ func reportingGroups(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 	}
 	if !owners && frame.PipelineId == nil {
 		chart.Coverage.Status = "not_configured"
-		reason := "Choose one pipeline to compare stages"
+		reason := reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ChoosePipeline)
 		chart.Coverage.Reason = &reason
 		return chart
 	}
@@ -31,10 +31,13 @@ func reportingGroups(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 	labels := map[string]string{}
 	for _, fact := range metricFacts(out.Facts, chart.Metric, chart.ContextId) {
 		key, label := fact.StageID, fact.StageLabel
+		if owners && fact.OwnerWithheld {
+			continue
+		}
 		if owners {
 			key, label = fact.OwnerID.String(), fact.OwnerLabel
 			if fact.OwnerID.IsZero() {
-				label = "Owner not recorded"
+				label = reporting.ExplanationCopy(frame).Say(reportingLabelWords.OwnerMissing)
 			}
 		}
 		groups[key] = append(groups[key], fact)
@@ -103,12 +106,19 @@ func reportingTrend(out *reporting.Evaluation, chart crmcontracts.ReportingChart
 func sumFactsBefore(facts []reporting.Fact, end time.Time) *float64 {
 	selected := []reporting.Fact{}
 	for _, fact := range facts {
-		if fact.Row.OccurredAt != nil && fact.Row.OccurredAt.Before(end) {
+		if at := fact.At(); at != nil && at.Before(end) {
 			selected = append(selected, fact)
 		}
 	}
 	sum, _, _ := metricSum(selected)
 	return sum
+}
+
+// An event reader covers an empty week; a share needs a denominator.
+var weeklyEmptyIsZero = map[crmcontracts.ReportingMetricID]string{
+	reportingMeetingsHeld:          "the reader reads every held meeting in the interval, so a week with none held is zero",
+	reportingAcceptedOpportunities: "the reader reads every acceptance in the interval, so a week with none accepted is zero",
+	reportingLeadsQualified:        "the reader reads first qualifications in the interval, so a week with none qualified is zero",
 }
 
 func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChart) crmcontracts.ReportingChart {
@@ -128,18 +138,24 @@ func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 		}
 		selected := []reporting.Fact{}
 		for _, fact := range facts {
-			if fact.Row.OccurredAt != nil && !fact.Row.OccurredAt.Before(start) && fact.Row.OccurredAt.Before(end) {
+			if at := fact.At(); at != nil && !at.Before(start) && at.Before(end) {
 				selected = append(selected, fact)
 			}
 		}
 		value, _, _ := metricSum(selected)
+		if len(selected) == 0 && weeklyEmptyIsZero[chart.Metric] == "" {
+			value = nil
+		}
 		key := start.Format(time.DateOnly)
 		label := start.Format("2 Jan") + "–" + end.Add(-time.Nanosecond).Format("2 Jan")
 		if days < 7 || end.Sub(start) < 6*24*time.Hour {
 			label += " (partial)"
 		}
 		group := "week:" + key
-		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: key, Label: label, At: &start, Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: reportingInterval, GroupKey: &group}})
+		// A copy: start moves on to the next week below, and the point keeps
+		// the start of its own week.
+		weekStart := start
+		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: key, Label: label, At: &weekStart, Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: reportingInterval, GroupKey: &group}})
 		start = end
 	}
 	return chart
@@ -161,4 +177,45 @@ func reportingGroupValue(facts []reporting.Fact, kind crmcontracts.ReportingBloc
 		}
 	}
 	return value, upper, count, status
+}
+
+// reportingBreakdownChart splits one metric's reading into the groups its facts
+// name, largest first, each with its own evidence.
+func reportingBreakdownChart(out *reporting.Evaluation, chart crmcontracts.ReportingChart, metric crmcontracts.ReportingMetric) crmcontracts.ReportingChart {
+	frame := out.Result.Context
+	chart.ContextId = metric.Evidence.ContextId
+	if chart.ContextId == reportingState {
+		chart.StateAt = &frame.StateAt
+	} else {
+		chart.Interval = &frame.Interval
+	}
+	groups := map[string][]reporting.Fact{}
+	labels := map[string]string{}
+	for _, fact := range metricFacts(out.Facts, chart.Metric, chart.ContextId) {
+		groups[fact.GroupKey] = append(groups[fact.GroupKey], fact)
+		labels[fact.GroupKey] = fact.GroupLabel
+	}
+	for key, facts := range groups {
+		value, count, exact := metricSum(facts)
+		status := crmcontracts.ReportingStatus("ok")
+		if !exact {
+			status = reportingUnavailable
+		}
+		group := key
+		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: key, Label: labels[key], Value: value, Observations: &count, Status: status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId, GroupKey: &group}})
+	}
+	slices.SortFunc(chart.Points, func(a, b crmcontracts.ReportingPoint) int {
+		if order := cmp.Compare(pointValue(b), pointValue(a)); order != 0 {
+			return order
+		}
+		return cmp.Compare(a.Key, b.Key)
+	})
+	return chart
+}
+
+func pointValue(point crmcontracts.ReportingPoint) float64 {
+	if point.Value == nil {
+		return 0
+	}
+	return *point.Value
 }

@@ -37,6 +37,19 @@ import (
 // none has broken rather than been satisfied.
 const requiredApprovalFieldFloor = 5
 
+func TestApprovalCarriesTheStagedTargetVersion(t *testing.T) {
+	now := time.Date(2026, time.January, 2, 12, 0, 0, 0, time.UTC)
+	source := fullyPopulatedRow(t, now)
+	got := wire(source, now)
+	if got.TargetVersion == nil || int64(*got.TargetVersion) != *source.TargetVersion {
+		t.Fatalf("target version = %v, want %d", got.TargetVersion, *source.TargetVersion)
+	}
+	source.TargetVersion = nil
+	if got := wire(source, now); got.TargetVersion != nil {
+		t.Fatalf("unpinned approval has target version %d", *got.TargetVersion)
+	}
+}
+
 func TestEveryRequiredApprovalFieldIsAnswered(t *testing.T) {
 	// A fixed instant, through the fixture and the mapper alike: nothing here
 	// asks what time it is, and a test that reads the wall clock can only

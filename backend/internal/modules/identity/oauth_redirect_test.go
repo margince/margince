@@ -4,7 +4,10 @@
 package identity
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -143,5 +146,37 @@ func TestValidRedirectURIAdmitsADecodableQuery(t *testing.T) {
 	const withQuery = "https://client.example/cb?tenant=acme"
 	if !validRedirectURI(withQuery) {
 		t.Fatalf("validRedirectURI(%q) = false, want true", withQuery)
+	}
+}
+
+// RFC 9207: every authorization response names the issuer discovery
+// advertises. A loopback redirect_uri cannot preset an iss of its own.
+func TestAuthorizationResponsesCarryTheIssuer(t *testing.T) {
+	h := Handlers{mcpResource: "https://crm.example.com/mcp"}
+	req := authorizeRequest{RedirectURI: "http://127.0.0.1:4567/cb?iss=https://evil.example", State: "s1"}
+	for name, answer := range map[string]url.Values{
+		"success": {"code": {"c1"}},
+		"refusal": {oauthParamError: {"access_denied"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			h.redirectToClient(w, httptest.NewRequest(http.MethodPost, authorizePath, nil), req, answer)
+			location, err := url.Parse(w.Header().Get("Location"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := location.Query()[oauthParamIssuer]; len(got) != 1 || got[0] != h.issuer() {
+				t.Errorf("iss = %v, want exactly [%s]", got, h.issuer())
+			}
+		})
+	}
+}
+
+func TestNoIssuerIsSentWhenNoResourceIsConfigured(t *testing.T) {
+	w := httptest.NewRecorder()
+	Handlers{}.redirectToClient(w, httptest.NewRequest(http.MethodPost, authorizePath, nil),
+		authorizeRequest{RedirectURI: "https://client.example/cb"}, url.Values{"code": {"c1"}})
+	if strings.Contains(w.Header().Get("Location"), oauthParamIssuer+"=") {
+		t.Errorf("Location %q carries iss with no issuer configured", w.Header().Get("Location"))
 	}
 }

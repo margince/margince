@@ -30,6 +30,10 @@
 
 .factlist-term {
   margin: 0;
+  min-width: 0;
+  /* A custom field's label can be one long word; it must wrap inside its
+   * column instead of running under the value. */
+  overflow-wrap: anywhere;
 }
 
 .factlist-value {
@@ -61,4 +65,73 @@
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);
   }
+}
+
+/* The details card's list: a fixed 96px term column, so values start at one
+ * edge in every language, and no rules, because the card's groups already
+ * part the rows. Term and value share a first baseline, so a value that runs
+ * to two lines keeps its term on the first. The term's own inset sets the
+ * 32px row, which a control-height value then fills without growing it. */
+.factlist-flat .factlist-row {
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: first baseline;
+  padding: 0;
+  border-top: none;
+}
+/* A term one word longer than its column, as German compounds are, breaks
+   at a syllable inside it rather than running into its value. `hyphens`
+   reads the document's `lang`, which the i18n provider sets. */
+.factlist-flat .factlist-term {
+  padding-block: calc((var(--space-8) - 1lh) / 2);
+  color: var(--textSecondary);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+.factlist-flat .factlist-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--textPrimary);
+}
+.factlist-flat .factlist-row:not(.factlist-row-block) .factlist-value {
+  overflow-wrap: anywhere;
+}
+/* An inline glyph or an edit pill's fill overhangs the value; keep it unclipped. */
+.factlist-flat
+.factlist-value:has(
+  .icon-action-inline,
+  .overflow-menu-inline,
+  .editable-value
+) {
+  overflow: visible;
+}
+/* A link, or a handle's leading link, starts where a plain value does. */
+.factlist-flat .factlist-value > :is(.btn.btn-link, .cell-link, .link-button),
+.factlist-flat
+  .factlist-value
+  .editable-value-face
+  > :is(.btn.btn-link, .cell-link, .link-button),
+.factlist-flat .factlist-value > .fieldgrid-handle > .link-button:first-child,
+.factlist-flat
+  .factlist-value
+  .editable-value-face
+  > .fieldgrid-handle
+  > .link-button:first-child {
+  padding-inline: 0;
+}
+/* A handle spans the column, so a link that runs long shortens inside it
+ * and never pushes its glyphs past the card's edge. */
+.factlist-flat .factlist-value > .fieldgrid-handle {
+  display: flex;
+}
+.factlist-flat .factlist-row-block {
+  grid-template-columns: minmax(0, 1fr);
+  padding-block: var(--space-1);
+}
+.factlist-flat .factlist-row-block .factlist-term {
+  padding-block: 0;
+}
+.factlist-flat .factlist-row-block .factlist-value {
+  overflow: visible;
 }

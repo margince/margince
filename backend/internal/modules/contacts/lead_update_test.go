@@ -10,6 +10,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // leadWithOverride is a lead whose score 90 is a human override; the
@@ -218,4 +219,26 @@ func TestANullPhoneClearsTheLeadsNumber(t *testing.T) {
 	if was, ok := p.Before()[leadPhoneColumn].(*string); !ok || *was != "+84901234567" {
 		t.Errorf("the audit image lost the number it cleared: %v", p.Before())
 	}
+}
+
+func TestALeadUpdateCannotRewriteHowTheLeadArrived(t *testing.T) {
+	current := crmcontracts.Lead{Source: "connector:gmail:abc"}
+	for _, sent := range []string{"manual", "", "csv_import"} {
+		_, _, err := buildLeadPatch(current, UpdateLeadInput{Source: new(sent)})
+		if !isSourceFieldError(err) {
+			t.Fatalf("source %q: want a source field error, got %v", sent, err)
+		}
+	}
+	p, _, err := buildLeadPatch(current, UpdateLeadInput{Source: new(" connector:gmail:abc ")})
+	if err != nil {
+		t.Fatalf("echoing the stored source must pass: %v", err)
+	}
+	if _, set := p.After()["source"]; set {
+		t.Fatal("an echoed source must not write the column")
+	}
+}
+
+func isSourceFieldError(err error) bool {
+	var pe *values.ParseError
+	return errors.As(err, &pe) && pe.Field == "source"
 }

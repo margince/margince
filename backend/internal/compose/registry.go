@@ -92,17 +92,20 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	opts = append(opts, withContractTierFloor(),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
 		agents.WithBaseLanguage(installationLanguage(pool)),
-		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))))
+		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))),
+		agents.WithChangeWords(agentChangeWords(db)),
+		agents.WithContactCaseMerger(contactCaseMergerSeam(db)))
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
-	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db),
+	agents.RegisterCoreTools(registry, provider, provider, provider, newConsumerMailSeam(db),
 		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
 	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})
 	agents.RegisterReadViewTool(registry, readViews(agentPolicies), readViewThrough(viewDoorOf(features.served)))
+	agents.RegisterRouteVerbs(registry, declaredRouteVerbs(agentPolicies), routeThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
-	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
+	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: newContactsStore(db)})
 	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(features.lists)})
 	agents.RegisterEnrichTool(registry, provider, enricher)
 	agents.RegisterPipelineTool(registry, pipelineLister(pool))
@@ -113,12 +116,13 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterReportVocabularyTool(registry,
 		agents.NewReportVocabularyResource(reportToolCatalog()))
 	agents.RegisterReportingTool(registry, reportingReader(pool))
+	agents.RegisterReportDraftTool(registry, reportDrafter(pool))
 	agents.RegisterAnalyticsReportTool(registry,
 		analyticsReportComposer(pool, analyticsquery.DefaultFloor))
 	// The UI and tools share calculation engines and current-reader disclosure rules.
 	agents.RegisterAnalyticsQueryTool(registry,
 		analyticsQueryToolRunner(InstallationDB(pool)))
-	agents.RegisterAnalyticsVocabularyTool(registry, analyticsVocabularyReader{})
+	agents.RegisterAnalyticsVocabularyTool(registry, analyticsVocabularyReader{db: db})
 	agents.RegisterRecordFieldsTool(registry, agents.RecordFieldsResource{})
 	agents.RegisterReportBlocksTool(registry,
 		agents.NewReportBlocksResource(reportBlockGrammar()))
@@ -134,9 +138,12 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterBriefTool(registry, briefReader(pool))
 	agents.RegisterAnnotateBriefTool(registry, briefAnnotator(pool))
 	searchRetriever, retriever := registryRetrievers(pool, embedder)
-	agents.RegisterIntentTools(registry, retriever, meetingBrief, provider)
+	// One engine ranks search_records and resolves an intent tool's record_name.
+	recordSearch := recordSearchSeam(pool)
+	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch, provider, meetingReadiness{store: activities.NewStore(db)})
 	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{})
 	agents.RegisterContextSearchTool(registry, provider, retriever)
+	agents.RegisterRecordSearchTool(registry, provider, recordSearch)
 	agents.RegisterReportEvidenceTool(registry, provider, reportEvidenceSeam{
 		db: InstallationDB(pool), floor: analyticsquery.DefaultFloor,
 		ranker: searchRetriever, classifier: searchRetriever,
@@ -144,6 +151,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterResolveTool(registry, provider, entityResolver(pool))
 	agents.RegisterWhoamiTool(registry, actingIdentity(pool))
 	agents.RegisterColleaguesTool(registry, colleagueLister(pool))
+	agents.RegisterMemberTools(registry, newMemberManager(db))
 	agents.RegisterTagTools(registry, tagSeamFor(db))
 	agents.RegisterDuplicateTools(registry, duplicateQueueSeam(db))
 	agents.RegisterListTools(registry, newListSeam(pool, features.lists))
@@ -153,9 +161,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
 	agents.RegisterProject360Tool(registry, project360Reader(pool))
-	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, contacts.NewStore(InstallationDB(pool))), coverageReader(pool, contacts.NewStore(InstallationDB(pool))),
+	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, newContactsStore(InstallationDB(pool))), coverageReader(pool, newContactsStore(InstallationDB(pool))),
 		introPathLister(pool),
-		atRiskLister(pool, contacts.NewStore(InstallationDB(pool))))
+		atRiskLister(pool, newContactsStore(InstallationDB(pool))))
 	comms := newCommsAdapter(pool, drafter, send)
 	comms.firstDrafts = features.firstDrafts
 	agents.RegisterCommsTools(registry, comms, provider)

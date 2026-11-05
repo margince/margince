@@ -8,7 +8,7 @@ package identity
 import (
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // DeadWorkBannerHours is the age bound on the count that gets the red treatment.
@@ -33,18 +33,19 @@ import (
 // The upper bound is River's own retention. A window longer than the rows live
 // is a window that silently means "everything", which is the state this exists
 // to leave.
-var DeadWorkBannerHours = settings.Define[int](
-	"installation.dead_work_banner_hours",
-	installationSettingsObject,
-	"update",
-	24,
-	func(hours int) error {
+var DeadWorkBannerHours = config.DefineStored(config.Spec[int]{
+	Key:     "installation.dead_work_banner_hours",
+	Env:     "MARGINCE_INSTALLATION_DEAD_WORK_BANNER_HOURS",
+	Type:    config.Int,
+	Default: config.Some(24),
+	Validate: func(hours int) error {
 		if hours < 1 || hours > riverRetentionHours {
 			return fmt.Errorf("the dead-work banner looks back 1..%d hours, not %d", riverRetentionHours, hours)
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+	Doc: "Hours the job-health banner looks back before it calls dead work a problem.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // riverRetentionHours is how long River's job cleaner keeps a discarded or
 // cancelled row at its defaults — seven days. It bounds the setting above

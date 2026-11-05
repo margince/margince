@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../design-system/applink";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import { useLicensePosture } from "../lib/license-posture";
 import { routeHash } from "../lib/router";
-import { settingsHref } from "../screens/settingsrouting";
+import { settingsHref } from "../lib/settingsrouting";
 
 // A refused licence is a standing installation condition, not something the
 // agent is doing, so it stands in the shell's chrome rather than on the rail's
@@ -26,9 +27,9 @@ export function LicenseBanner() {
         kind="standing"
         title={t("shell.license.refused")}
         actions={
-          <a href={routeHash(settingsHref("seats"))}>
+          <AppLink href={routeHash(settingsHref("seats"))}>
             {t("licensebanner.link", { tab: t("settings.tab.seats") })}
-          </a>
+          </AppLink>
         }
       >
         {t("licensebanner.body")}

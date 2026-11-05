@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // BlockedDomain is one domain's standing admission decision, as the admin list
@@ -27,12 +26,14 @@ import (
 type BlockedDomain struct {
 	// ID is the disposition row, which the audit trail names. Not on the wire:
 	// the domain is what an operator identifies a decision by.
-	ID        ids.UUID
-	Domain    string
-	Admission string
-	Reason    string
-	Source    string
-	DecidedAt time.Time
+	ID         ids.UUID
+	Domain     string
+	Admission  string
+	Reason     string
+	ReasonCode string
+	SenderKind string
+	Source     string
+	DecidedAt  time.Time
 	// CompanyID and CompanyName are set together by withVisibleCompanyTx, and
 	// only for a company the caller may read.
 	CompanyID   *ids.CompanyID
@@ -109,7 +110,7 @@ const domainStanding = `
 	CASE WHEN d.pending_reason IS NOT NULL THEN d.pending_reason
 	     ELSE COALESCE(d.admission_source, '') END,
 	COALESCE(d.admission_at, d.updated_at),
-	d.company_id, c.display_name`
+	d.company_id, c.display_name, ` + domainReasonCodeColumns
 
 // domainPendingReason turns a withholding reason into the sentence a reader
 // gets told, for each reason the machine has for leaving a question open.
@@ -130,62 +131,39 @@ const domainPendingReason = `
 	  WHEN '` + PendingStaleEvidence + `'
 	    THEN 'The newest mail from this domain is too old to trust today''s site as evidence about it.'
 	  WHEN '` + PendingNearDuplicate + `'
-	    THEN 'More than one company already carries the name this domain resolved to, so which one it belongs to is for a colleague to decide.'
+	    THEN 'An existing company carries this name. Confirm whether this domain belongs to it.'
+	  WHEN '` + PendingForwardedIdentity + `'
+	    THEN 'This domain forwards to a different site. Confirm its identity before linking a company.'
+	  WHEN '` + PendingVendorVerdict + `'
+	    THEN 'The site reads as a mail or hosting vendor. Create the company anyway?'
+	  WHEN '` + PendingReservedDomain + `'
+	    THEN 'Reserved domain: automatic company identification is paused.'
 	  ELSE '' END`
 
 // domainStandingWhere selects the rows this list is the right surface for: every
-// decision, and the open questions nobody is in a position to answer.
+// decision, and every open question.
 //
 // A bare `status = 'pending'` would sweep in every domain merely awaiting its
-// turn in the crawl queue, which nobody needs to see — the sweep will get to it.
-// What belongs here is the row whose retry cursor was CLEARED, which is what
-// every withholding reason does: nothing will ask again on its own.
+// turn in the crawl queue, which nobody needs to see. What belongs here is the
+// row whose retry cursor was cleared, which every withholding reason does.
 //
-// An open question owned by a LIVE colleague is deliberately absent. It reaches
-// them in their own queue (domainquestionlist.go), with the two verbs that
-// answer it — so carrying it here as well would put one question on two surfaces
-// and let an operator answer for somebody whose mail they cannot read. That is
-// the line this clause draws: between "somebody can still answer it" and "nobody
-// can", never between readers.
-//
-// A question nobody can answer has to land here, because nothing else will show
-// it. Two states reach that, and the second is why this asks about the owner's
-// account rather than only about the column:
-//
-//   - owner_id IS NULL. The column is nullable, and the foreign key clears it
-//     when the owner's app_user row is deleted (ON DELETE SET NULL).
-//   - The owner is no longer live. Deactivation keeps the row — it writes
-//     status='deactivated' and revokes every session — so owner_id still points
-//     at somebody, and that somebody can no longer sign in to answer. The
-//     per-owner read matches `owner_id = $1` for the CALLING human alone, so
-//     without this arm the question is served to nobody: not to the departed
-//     owner, who cannot authenticate, and not to any colleague.
-//
-// Either way the retry cursor is already cleared, so no sweep will re-ask and
-// the row would be a company held out of the CRM with no surface admitting it
-// exists.
-//
-// Note this admits an undecided row that also carries an admission: re-withholding
-// an admitted domain leaves both columns set, and such a row belongs on a list of
-// decisions whoever owns it.
-var domainStandingWhere = `d.admission IS NOT NULL
-	OR (d.pending_reason IS NOT NULL AND NOT EXISTS (
-	      SELECT 1 FROM app_user u
-	       WHERE u.id = d.owner_id
-	         AND ` + workforce.LiveMemberSQL("u") + `))`
+// An open question is listed whether or not a seat owns it. Its personal card
+// goes only to its decider (openQuestionForReaderSQL), the sole direct
+// recipient of current mail. When there is none, nobody is asked, and this
+// list is where the fact stays. A vendor question was always listed this way.
+var domainStandingWhere = `d.admission IS NOT NULL OR d.pending_reason IS NOT NULL`
 
-// ListDomainAdmissions returns every domain that carries a decision, plus the
-// open questions nobody owns, most recently moved first.
+// ListDomainAdmissions returns every domain that carries a decision, plus every
+// open question, most recently moved first.
 //
 // Read-gated rather than write-gated: every role may SEE why a company is
 // missing, while only admin/ops may change it. An operator who cannot find out
 // that a domain was refused — or that nothing ever decided about it — has no way
 // to know the CRM is not simply empty.
 //
-// It is NOT the whole backlog of open questions, and domainStandingWhere says
-// why: a question a live colleague owns belongs to that colleague's queue, which
-// is the only surface offering the two verbs that answer it. What lands here is
-// the residue — the questions with nobody left to ask.
+// Every open question is listed, owned or not. Its personal card goes only to
+// its decider (openQuestionForReaderSQL); when there is none, nobody is asked
+// and this list is where the fact stays.
 func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedDomain, int, error) {
 	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
 		return nil, 0, err
@@ -219,7 +197,7 @@ func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedD
 			var d BlockedDomain
 			var company standingCompany
 			if err := rows.Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt,
-				&company.id, &company.name); err != nil {
+				&company.id, &company.name, &d.ReasonCode, &d.SenderKind); err != nil {
 				rows.Close()
 				return fmt.Errorf("contacts: reading a domain admission: %w", err)
 			}

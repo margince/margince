@@ -7,9 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -83,24 +86,66 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 	_, seat := capturePrincipal(ctx)
 	switch {
 	case direction == connector.DirectionInbound:
-		// Unambiguously: an address two seats proved, a shared mailbox, is
-		// nobody's to claim, or whichever seat synced first would take it.
-		proved, err := ProvedUnambiguouslyTx(ctx, tx, seat, stored)
-		if err != nil || proved {
-			return proved, err
-		}
-		return ownAddressHeldAloneTx(ctx, tx, seat, stored)
+		return addressIsSeatsAloneTx(ctx, tx, seat, stored)
 	case direction == connector.DirectionOutbound && foldAddress(stored) == foldAddress(recipient):
 		var sentBySeat bool
+		// The participant row has to stand for the seat being on the message.
+		// A row naming only a seat, on mail whose connector stamp names no
+		// mailbox, records a guessed owner.
+		//
+		// Standing to rewrite another mailbox's row is not a guess's to give.
 		err := tx.QueryRow(ctx, `
-			SELECT EXISTS (SELECT 1 FROM activity_participant
-			  WHERE activity_id = $1 AND role = 'from' AND user_id = $2)`, id, seat).Scan(&sentBySeat)
+			SELECT EXISTS (
+			  SELECT 1 FROM activity_participant p
+			    JOIN activity a ON a.id = p.activity_id
+			   WHERE p.activity_id = $1 AND p.role = 'from' AND p.user_id = $2
+			     AND `+auth.ParticipantStandsSQL("p", "a")+`)`, id, seat).Scan(&sentBySeat)
 		if err != nil {
 			return false, fmt.Errorf("capture: reading who sent %s: %w", id, err)
 		}
 		return sentBySeat, nil
 	}
 	return false, nil
+}
+
+// MailboxIsOwnAloneTx reports whether the mailbox a connector stored a message
+// from belongs to the acting seat alone. capturedBy is the activity's stamp,
+// whose second part names the provider; the seat connects at most one mailbox
+// per provider. A mailbox whose address another seat also holds is shared and
+// nobody's own. The same rule decides when a received reading is turned round.
+func MailboxIsOwnAloneTx(ctx context.Context, tx pgx.Tx, capturedBy string) (bool, error) {
+	_, seat := capturePrincipal(ctx)
+	kind, rest, _ := strings.Cut(capturedBy, ":")
+	provider, _, _ := strings.Cut(rest, ":")
+	if kind != "connector" || provider == "" || seat == ids.Nil {
+		return false, nil
+	}
+	var label string
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce(account_label, '') FROM capture_connection
+		 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL`, seat, provider).Scan(&label)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("capture: reading the mailbox a message came from: %w", err)
+	}
+	address := bareAddress(label)
+	if address == "" {
+		return false, nil
+	}
+	return addressIsSeatsAloneTx(ctx, tx, seat, address)
+}
+
+// addressIsSeatsAloneTx is AddressIsOwnAloneTx for a named seat. Unambiguously:
+// an address two seats proved is nobody's to claim, or whichever seat synced
+// first would take it.
+func addressIsSeatsAloneTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error) {
+	proved, err := ProvedUnambiguouslyTx(ctx, tx, seat, address)
+	if err != nil || proved {
+		return proved, err
+	}
+	return ownAddressHeldAloneTx(ctx, tx, seat, address)
 }
 
 // ownAddressHeldAloneTx reports that address is one of the acting seat's own
@@ -113,7 +158,7 @@ func ownAddressHeldAloneTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, addres
 	if err != nil || !self.CoversAddressExactly(address) {
 		return false, err
 	}
-	if err := lockOwnAddressTx(ctx, tx, address); err != nil {
+	if err := storekit.LockSeatAddressClaims(ctx, tx, address); err != nil {
 		return false, err
 	}
 	held, err := addressHeldByAnotherSeatTx(ctx, tx, seat, address)
@@ -150,14 +195,4 @@ func addressHeldByAnotherSeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, a
 		}
 	}
 	return false, rows.Err()
-}
-
-// lockOwnAddressTx serializes everything that decides or changes which seats
-// hold one address, keyed on its folded form.
-func lockOwnAddressTx(ctx context.Context, tx pgx.Tx, address string) error {
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('margince:own-address:' || $1)::bigint)`,
-		foldAddress(bareAddress(address))); err != nil {
-		return fmt.Errorf("capture: locking who holds %s: %w", address, err)
-	}
-	return nil
 }

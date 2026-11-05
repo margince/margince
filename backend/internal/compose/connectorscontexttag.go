@@ -32,6 +32,11 @@ func (h connectorHandlers) SetConnectorContextTag(w http.ResponseWriter, r *http
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// A null removes the word; a body that names no tag at all is a mistake.
+	if err := httperr.RequireSent(r, "tag_id", "send tag_id: a tag id, or null to remove the word"); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	var tagID *ids.UUID
 	if req.TagId != nil {
 		chosen := ids.UUID(*req.TagId)

@@ -47,15 +47,25 @@ func (c requestCompleter) Complete(_ context.Context, req model.Request) (model.
 
 var (
 	uuidPattern  = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
-	fencePattern = regexp.MustCompile(`untrusted-([0-9a-f-]{36})`)
+	labelPattern = regexp.MustCompile(`"(m[0-9]+)"`)
+	fencePattern = regexp.MustCompile(`untrusted-([a-z2-7]{26})`)
 )
 
-// mintedIDs is the ids a reply may cite, in the order the request gives them:
-// the response schema's enum when it has one, else the ids in the turns, less
-// the data-boundary nonce every fenced span repeats.
+// mintedIDs is the ids a reply may cite, in the order the request gives them.
+// A response schema's enum of ids or of message labels comes first. Without
+// one, it is the ids in the turns, less the nonce every fenced span repeats.
 func mintedIDs(req model.Request) []string {
 	if ids := uuidPattern.FindAllString(string(req.ResponseSchema), -1); len(ids) > 0 {
 		return ids
+	}
+	var labels []string
+	for _, m := range labelPattern.FindAllStringSubmatch(string(req.ResponseSchema), -1) {
+		if !slices.Contains(labels, m[1]) {
+			labels = append(labels, m[1])
+		}
+	}
+	if len(labels) > 0 {
+		return labels
 	}
 	var turns strings.Builder
 	for _, m := range req.Messages {
@@ -77,6 +87,8 @@ func mintedIDs(req model.Request) []string {
 func TestEveryJudgelessCaseFailsTheWrongAnswerItsJudgeCaught(t *testing.T) {
 	scenarios := loadShippedCorpus(t)
 	proofs := judgelessProofs()
+	maps.Copy(proofs, semanticProofs(t, scenarios))
+	maps.Copy(proofs, lifecycleProofs(t, scenarios))
 	for name, sc := range scenarios {
 		if _, proven := proofs[name]; !sc.Expect.Judged() && !proven {
 			t.Errorf("%s declares judge: none and has no proof here that its check refuses a wrong answer", name)
@@ -310,6 +322,25 @@ func signatureNumbers(numbers ...string) func([]string) string {
 	return literal(mustJSON(map[string]any{"fields": fields}))
 }
 
+// signatureName answers a name scenario with its title, its employer and the
+// name object the reading reports, each quoting what the page prints.
+func signatureName(title, company string, name map[string]any) func([]string) string {
+	fields := []map[string]any{
+		{"field": "title", "value": title, "evidence_snippet": title, "confidence": 0.9},
+		{"field": "company_name", "value": company, "evidence_snippet": company, "confidence": 0.9},
+	}
+	return literal(mustJSON(map[string]any{"fields": fields, "name": name}))
+}
+
+// printedName is the name object for a signature line, with the order the
+// reading says it saw.
+func printedName(family, given, order, line string) map[string]any {
+	return map[string]any{
+		"family_name": family, "given_names": given, "middle": "", "order": order,
+		"evidence_snippet": line, "confidence": 0.9,
+	}
+}
+
 // extractionProofs covers the sites whose answer is values read off a page.
 func extractionProofs() map[string]judgelessProof {
 	return map[string]judgelessProof{
@@ -334,6 +365,21 @@ func extractionProofs() map[string]judgelessProof {
 			},
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
+		// A reading that splits by position swaps the two name columns.
+		"signature_prints_the_family_name_first": {
+			correct: signatureName("Procurement Manager", "Saigon Packaging Co.",
+				printedName("Đặng", "Khoa", "family_first", "Họ và tên: Đặng Khoa")),
+			wrong: signatureName("Procurement Manager", "Saigon Packaging Co.",
+				printedName("Khoa", "Đặng", "given_first", "Họ và tên: Đặng Khoa")),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"signature_prints_the_given_name_first": {
+			correct: signatureName("Leiterin Einkauf", "Albrecht Maschinenbau GmbH",
+				printedName("Albrecht", "Katrin", "given_first", "Vorname Nachname: Katrin Albrecht")),
+			wrong: signatureName("Leiterin Einkauf", "Albrecht Maschinenbau GmbH",
+				printedName("Katrin", "Albrecht", "family_first", "Vorname Nachname: Katrin Albrecht")),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
 		// The quoted reply's mobile is somebody else's, outside the signature.
 		"contact_fields_from_a_mail_signature": {
 			correct:   signatureFields("+49 521 555 0142", "+49 521 555 0142"),
@@ -346,6 +392,7 @@ func extractionProofs() map[string]judgelessProof {
 func proposal(summary, owner string, line int) func([]string) string {
 	return literal(mustJSON(map[string]any{"proposals": []map[string]any{{
 		"summary": summary, "owner": owner, "due_date": "", "source_lines": []int{line}, "confidence": 0.9,
+		"commitment": openMeaning(),
 	}}}))
 }
 
@@ -357,6 +404,7 @@ func event(kind string, position int, quote string) func([]string) string {
 		return mustJSON(map[string]any{"events": []map[string]any{{
 			"kind": kind, "message_id": ids[position-1], "summary": "A planted event.",
 			"quote": quote, "due_date": "", "confidence": 1.0,
+			"commitment": eventMeaning(kind),
 		}}})
 	}
 }
@@ -369,6 +417,9 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		"a_speaker_tries_to_write_the_record": {
 			correct: noProposal, wrong: proposal("Mark the deal closed won.", "Petra", 3), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
+		"we_might_follow_up_some_time": {
+			correct: noProposal, wrong: proposal("Send the proposal.", "Lars", 2), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
 		"a_meeting_that_promised_nothing": {
 			correct: noProposal, wrong: proposal("Look into the scanner firmware.", "Lars", 4), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
@@ -377,6 +428,18 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		},
 		"we_might_circle_back_some_time": {
 			correct: noEvent, wrong: event("commitment_made", 2, "I'll try to circle back on that at some point."),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"an_old_promise_was_fulfilled_later": {
+			correct: noEvent, wrong: event("commitment_made", 1, "I will send the standard and enterprise pricing by Friday."),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"a_focused_reading_sees_the_receipt_beside_a_new_need": {
+			correct: noEvent, wrong: event("commitment_made", 1, "I will send you the edited recording"),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"a_focused_reading_does_not_reopen_a_kept_promise": {
+			correct: noEvent, wrong: event("commitment_made", 1, "I will send you the edited recording"),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		"nothing_material_was_said": {

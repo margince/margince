@@ -9,6 +9,7 @@ import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { mayOwnRecords } from "./assigneepicker";
 import {
   BulkChangeDialog,
   type BulkChangeRequest,
@@ -18,7 +19,12 @@ import {
 import { ShortlistVerb } from "./bulkshortlist";
 import { TagVerbs } from "./bulktag";
 import { TaskVerb } from "./bulktask";
-import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
+import {
+  RosterFailedLine,
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "./entityref";
 
 // The record lists' types: a Worklist item has its own bar
 // (worklist.bulkdone.tsx) and takes none of these verbs.
@@ -105,7 +111,7 @@ export function BulkVerbs({
         onChange={setOwnerId}
         // The caveat sits last in the row (below), so the picker names it.
         aria-describedby={rosterPartial ? partialNoteId : undefined}
-        options={(roster.data ?? []).map((entry) => ({
+        options={(roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
           value: entry.id,
           label: "display_name" in entry ? entry.display_name : entry.id,
         }))}
@@ -147,6 +153,7 @@ export function BulkVerbs({
           sentence between the picker and its button is where the row would
           break, splitting the control from its verb. */}
       <RosterPartialNote partial={rosterPartial} id={partialNoteId} />
+      <RosterFailedLine kind="user" roster={roster} />
       <BulkChangeDialog
         request={request}
         onClose={() => setRequest(null)}

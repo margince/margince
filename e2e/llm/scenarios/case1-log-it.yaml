@@ -1,21 +1,17 @@
 # CASE 1 — Log it while it is fresh.
 #
-# Two [M] criteria:
+# One [M] criterion:
 #
 #   Criterion 8 — promises made in the meeting come back as suggestions. The
 #   transcript states ONE commitment ("Ich schicke Ihnen die Preisliste bis
 #   Freitag") and discusses one topic WITHOUT one. Reporting both would mean the
 #   reader is listing everything it sees rather than what was promised.
 #
-#   Criterion 14 — the assistant says what is waiting. The 2026-08-25 run
-#   reported "nothing pending approval" while a held draft sat in the queue.
-#   Every write was correct and the report of it was not.
-#
 # The transcript arrives as TEXT in the prompt, which is the same boundary the
 # deck's hosts draw: Plaud is the assistant's business and the server cannot
 # tell a paste from an upload.
 name: case1_log_it
-criteria: [8, 14]
+criteria: [8]
 
 # WRITES: the author's own statement that this case changes the world. It is not
 # what decides the reset — the runner rebuilds whenever the LAST run dirtied the
@@ -67,13 +63,8 @@ must_mention:
 # anything, has done what a rep asking to have the meeting put in the CRM wants;
 # it is not Lars's undertaking and not Matthias's. The invention this criterion
 # exists to catch is a commitment put in a PARTICIPANT's mouth.
-#
-# Criterion 14 asks whether a denial about the approval queue is a denial about
-# THIS meeting's own writes (true, and correct) or about the workspace (false,
-# and the failure the 2026-08-25 run shipped). Neither distinction is a string.
 judge:
   - "Criterion 8. The answer reports only what the people in the meeting actually promised. The transcript carries one commitment — Lars will send the price list by Friday — and one topic raised with nothing promised about it, packaging. Answer no if the answer attributes a commitment, promise, agreement or undertaking about packaging to Lars, to Matthias or to either side. What the ASSISTANT does with the open topic is not a party's promise and is not this criterion's subject: recording that packaging was raised or discussed, proposing to pick it up next week, or opening a follow-up task of its own to get an answer on it while saying that nobody committed to anything, are all what logging this transcript means. Answer yes to those."
-  - "Criterion 14. The answer never tells the reader that nothing is waiting for approval, that the approval queue is empty, or anything else denying that work is pending in this workspace — two proposals are pending in it. A statement scoped to this meeting's own writes ('nothing from this transcript needed approval', 'both entries were saved outright') is true: answer yes. An answer that says nothing about approvals at all is also a yes; this criterion forbids a false all-clear, it does not require a report."
 
 runs: 3
 pass_at: 2

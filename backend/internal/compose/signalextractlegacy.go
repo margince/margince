@@ -93,6 +93,7 @@ func (x *SignalExtractor) convertLegacyCommitments(ctx context.Context) (int, er
 // convertLegacyCommitment reads one signal's message through the rule and
 // settles the signal.
 func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy legacyCommitment) error {
+	asOf := x.now()
 	var thread settledThread
 	if err := database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
 		var err error
@@ -107,14 +108,19 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 		readCtx, cancelRead := readDeadline(ctx)
 		events, err = x.ask(readCtx, thread)
 		cancelRead()
-		// A refused reading settles the signal like an empty one: the old card
-		// held nothing a reader could act on, and asking again every hour for a
-		// message the model will not read would cost more than it could find.
-		if err != nil && !errors.Is(err, errRefusedReading) {
+		if err != nil {
 			return err
 		}
 	}
+	for _, event := range events {
+		if msg := validateEventEvidence(event, thread); msg != "" {
+			return fmt.Errorf("%w: %s", errRefusedReading, msg)
+		}
+	}
 	return database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
+		if err := lockPromiseSources(ctx, tx, []ids.UUID{legacy.cited}); err != nil {
+			return err
+		}
 		// Settled FIRST: a human who dismissed the signal while the model was
 		// reading has answered it, and what the reading found is not filed.
 		moved, err := signals.AcknowledgeTx(ctx, tx, legacy.signal, signals.ResolutionSourceCommitmentRule)
@@ -126,7 +132,10 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 				event.Confidence < extractConfidenceFloor {
 				continue
 			}
-			if _, err := x.dispatchCommitment(ctx, tx, thread, event, legacy.cited); err != nil {
+			if _, err := x.dispatchCommitment(ctx, tx, thread, event, legacy.cited, asOf); err != nil {
+				if errors.Is(err, errRefusedReading) {
+					continue
+				}
 				return err
 			}
 		}
@@ -175,9 +184,11 @@ func legacyCommitmentsOwed(ctx context.Context, tx pgx.Tx) ([]legacyCommitment, 
 var threadReaderQuery = conversationCTE(" AND a.thread_key = $1") + `
 		SELECT c.one_company::uuid, CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END
 		  FROM conversation c
-		 WHERE ` + threadReachesOneAccount + `
+		 WHERE ` + threadHasAHumanSender + `
+		   AND ` + threadReachesOneAccount + `
 		   AND ` + threadIsOneBodyOfWork + `
 		   AND ` + threadIsFullyOpen + `
+		   AND ` + threadIsFullyRead + `
 		   AND ` + threadHasANamedReader
 
 // legacyThread is the cited message and the five before it on its thread. A
@@ -207,8 +218,8 @@ func legacyThread(ctx context.Context, tx pgx.Tx, legacy legacyCommitment) (sett
 	if err != nil {
 		return settledThread{}, err
 	}
-	thread.Messages = messages
-	return thread, nil
+	thread.Messages, err = withCurrentThreadContext(ctx, tx, *key, messages)
+	return thread, err
 }
 
 // threadReaderNow is the account a conversation reaches and the one member it

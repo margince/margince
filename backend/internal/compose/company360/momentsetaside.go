@@ -26,16 +26,15 @@ import (
 
 // withoutSetAsidePromises drops the promises whose card this reader put away.
 //
-// Only a human's own set-asides apply, as on the contact page. A passport
-// carries its granting human's id, and an agent reading the account must see
-// every promise, including the ones a human put away.
+// The set-asides of a user or their agent apply, as on the contact page.
+// Passportless work has none and sees every promise.
 func (s *Service) withoutSetAsidePromises(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, items []owedwork.Item,
 ) ([]owedwork.Item, error) {
 	if len(items) == 0 {
 		return items, nil
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return items, nil
 		}
@@ -78,11 +77,21 @@ func (s *Service) raisesMoment(
 			return true, nil
 		}
 	}
+	// Not yet on a "Done?" question puts that question away, keyed on its mail.
+	asked, err := doneQuestions(ctx, tx, now, momentCopyFor("en"), items)
+	if err != nil {
+		return false, err
+	}
+	for _, question := range asked {
+		if question.EvidenceFingerprint == fingerprint {
+			return true, nil
+		}
+	}
 	return false, nil
 }
 
 // promiseFingerprint is the evidence fingerprint the card for this promise
 // carries, read off the drawn card rather than derived a second time.
 func promiseFingerprint(now time.Time, item owedwork.Item) string {
-	return promiseCard(now, item, false).EvidenceFingerprint
+	return momentCopyFor("en").promiseCard(now, item, false).EvidenceFingerprint
 }

@@ -100,14 +100,14 @@ describe("the chip fill's call sites", () => {
       belowToken.some((element) => element.has("token-remove")),
       "TokenInput renders .token-remove inside .token; the reader did not see it",
     ).toBe(true);
-    // And not through a shared name: `.t-caption` renders inside the relay chip
-    // and inside half the screens, so a reader that chained containment over
-    // class names would put every caption inside every chip.
+    // And not through a shared name: `.pe-rail-label` renders inside the contact
+    // rail's rows and inside half the screens. A reader that chained
+    // containment over class names would put every label inside every chip.
     const colleagueProof = (element: Set<string>) =>
-      element.has("pe-colleague-proof");
+      element.has("pe-rail-label");
     expect(
       [...inside.values()].some((below) => below.some(colleagueProof)),
-      "the contact screens render .pe-colleague-proof t-caption inside a host; the reader did not see it",
+      "the contact rail renders .pe-rail-label inside a .pe-rail-row; the reader did not see it",
     ).toBe(true);
     const belowRelay = inside.get("pn-relay-owner") ?? [];
     expect(

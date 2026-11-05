@@ -80,14 +80,18 @@ func (h Handlers) CreateCustomField(w http.ResponseWriter, r *http.Request, _ cr
 		return
 	}
 	spec := FieldSpec{
-		Object:   string(req.Object),
-		Label:    req.Label,
-		Type:     string(req.Type),
-		Currency: req.Currency,
-		Source:   source,
+		Object:       string(req.Object),
+		Label:        req.Label,
+		Type:         string(req.Type),
+		Currency:     req.Currency,
+		Source:       source,
+		ShowInCreate: req.ShowInCreate,
 	}
 	if req.Options != nil {
 		spec.Options = *req.Options
+	}
+	if req.ActivityKinds != nil {
+		spec.ActivityKinds = kindStrings(*req.ActivityKinds)
 	}
 	field, err := h.svc.Create(r.Context(), spec)
 	if err != nil {
@@ -98,9 +102,8 @@ func (h Handlers) CreateCustomField(w http.ResponseWriter, r *http.Request, _ cr
 	httperr.WriteJSON(w, http.StatusCreated, field)
 }
 
-// RenameCustomField updates the catalog label only (CUSTOM-FIELDS-WIRE-3):
-// merge-PATCH, so an absent label is the same "nothing to rename" refusal
-// as an explicit empty string — column_name/object/type never move.
+// RenameCustomField is the contract's name for the settings PATCH, which sets
+// show_in_create as well as the label.
 func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RenameCustomFieldParams) {
 	ifVersion, ok := httperr.IfMatchVersion(w, r)
 	if !ok {
@@ -110,16 +113,27 @@ func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id c
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	var label string
-	if req.Label != nil {
-		label = *req.Label
+	patch := FieldPatch{Label: req.Label, ShowInCreate: req.ShowInCreate, Reportable: req.Reportable}
+	if req.ActivityKinds != nil {
+		kinds := kindStrings(*req.ActivityKinds)
+		patch.ActivityKinds = &kinds
 	}
-	field, err := h.svc.Rename(r.Context(), ids.UUID(id), label, ifVersion)
+	field, err := h.svc.Update(r.Context(), ids.UUID(id), patch, ifVersion)
 	if err != nil {
 		writeCustomFieldErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, field)
+}
+
+// kindStrings is a wire kind list as the engine reads it. The engine checks
+// each kind, so a kind the request type did not hold is refused there.
+func kindStrings[K ~string](kinds []K) []string {
+	out := make([]string, len(kinds))
+	for i, kind := range kinds {
+		out[i] = string(kind)
+	}
+	return out
 }
 
 // RetireCustomField soft-retires the field (CUSTOM-FIELDS-WIRE-4):

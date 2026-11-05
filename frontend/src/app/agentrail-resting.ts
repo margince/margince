@@ -147,6 +147,8 @@ export function railWords(
 export type RestingFacts = Readonly<{
   /** Decisions staged for this human; undefined until the read answers. */
   waiting: number | undefined;
+  /** The connections read failed, so the all-clear would be a guess. */
+  sourcesUnknown: boolean;
   /**
    * The line saying this deployment invents every answer it gives, or null when
    * it does not. The SENTENCE rather than a flag beside it: two fields would be
@@ -179,6 +181,9 @@ export function restingReadings(
     // because a day settles several runs and the newest being the only one
     // ever said is both less than the agent did and, by the afternoon, older
     // than the reader.
+    sources: facts.sourcesUnknown
+      ? [plain(words.t("agent.line.sourcesUnknown"))]
+      : undefined,
     finished: facts.settled,
     waiting:
       facts.waiting !== undefined && facts.waiting > 0
@@ -192,6 +197,8 @@ export function restingReadings(
         : [plain(facts.developmentLine)],
   };
   const lines = IDLE_ORDER.flatMap((kind) => said[kind] ?? []);
+  // Never an all-clear while the source check failed: that reading is in
+  // `lines` above, so the fallback is reached only when every read answered.
   return lines.length === 0 ? [plain(words.t("agent.line.allClear"))] : lines;
 }
 

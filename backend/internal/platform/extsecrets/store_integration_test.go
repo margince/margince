@@ -342,6 +342,33 @@ func TestSecretsRefuseUnusableInput(t *testing.T) {
 	}
 }
 
+// TestTheCoreHeldPartOfANamespaceIsWalledOffFromTheUnit: a grant the core keeps
+// for a unit is out of the unit's reach both ways, by read and by overwrite.
+func TestTheCoreHeldPartOfANamespaceIsWalledOffFromTheUnit(t *testing.T) {
+	e := setup(t)
+	ctx := e.ctxFor(e.ws)
+	core := extsecrets.CoreHeld("notes", e.pool, e.vault)
+	unit := extsecrets.For("notes", e.pool, e.vault)
+
+	if err := core.Put(ctx, "oauth/books", []byte("grant")); err != nil {
+		t.Fatalf("core put: %v", err)
+	}
+	reserved := extsecrets.CoreHeldKeyPrefix + "oauth/books"
+	if _, err := unit.Get(ctx, reserved); !errors.Is(err, extsecrets.ErrReservedKey) {
+		t.Fatalf("unit read of a core-held key: err=%v, want ErrReservedKey", err)
+	}
+	if err := unit.Put(ctx, reserved, []byte("forged")); !errors.Is(err, extsecrets.ErrReservedKey) {
+		t.Fatalf("unit overwrite of a core-held key: err=%v, want ErrReservedKey", err)
+	}
+	if _, err := unit.Get(ctx, "oauth/books"); !errors.Is(err, extension.ErrSecretNotFound) {
+		t.Fatalf("the unit's own key of the same name: err=%v, want ErrSecretNotFound", err)
+	}
+	got, err := core.Get(ctx, "oauth/books")
+	if err != nil || string(got) != "grant" {
+		t.Fatalf("core get = %q, %v; want the grant it stored", got, err)
+	}
+}
+
 // TestSecretsLeaveAnAuditTrail: a secret changing hands is an operator-
 // visible event even though no domain row moved, so each operation appends
 // to the non-entity ledger.

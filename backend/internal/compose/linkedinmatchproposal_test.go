@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -29,30 +30,33 @@ func TestTheProposalCarriesTheExportsSpellingAndNotTheFoldedForms(t *testing.T) 
 	// The folded strings the matcher compared on — lowercased, unaccented,
 	// legal-suffix stripped — cannot be judged by anybody and must not travel:
 	// nobody can decide "andreas muller · simio".
+	company, edge := ids.NewV7(), ids.NewV7()
 	m := contacts.PendingLinkedInMatch{
 		ConnectionID: ids.NewV7(), OwnerUserID: ids.NewV7(), ContactID: ids.NewV7(),
 		ConnectionName: "André Schultewolter", ConnectionCompany: "SIMIO GmbH & Co. KG",
 		ContactName: "Andre Schultewolter",
+		Fields: contacts.LinkedInMatchFields{
+			Position: "Head of Sales", ContactTitle: "Sales", EmployerCompanyID: &company, EmployerRelationshipID: &edge,
+		},
 	}
-	payload, err := json.Marshal(linkedInMatchProposal{
-		ConnectionID: m.ConnectionID, OwnerUserID: m.OwnerUserID, ContactID: m.ContactID,
-		ConnectionName: m.ConnectionName, ConnectionCompany: m.ConnectionCompany,
-		ContactName: m.ContactName,
-	})
+	payload, _, err := diffhash.Object(linkedInMatchPayload(m))
 	if err != nil {
-		t.Fatalf("marshalling the proposal: %v", err)
+		t.Fatalf("canonicalizing the proposal: %v", err)
 	}
 	var fields map[string]any
 	if err := json.Unmarshal(payload, &fields); err != nil {
 		t.Fatalf("unreadable proposal: %v", err)
 	}
-	// owner_user_id is on the wire and is NOT a ghost's detail: it names the
-	// member whose network produced the pair, which is what the apply binds on
-	// so a payload cannot land on somebody else's connection. Nothing about the
-	// third party travels with it.
+	// owner_user_id is on the wire and is not a ghost's detail. It names the
+	// member whose network produced the pair, and the apply binds on it so a
+	// payload cannot land on somebody else's connection. The position is
+	// the export's own string, like the company beside it. The two ids are
+	// records the stager could read, and the card names no company itself.
 	want := []string{
 		"connection_id", "owner_user_id", "contact_id",
 		"connection_name", "connection_company", "contact_name",
+		"connection_position", "contact_title", "employer_company_id", "employer_relationship_id",
+		"use_as_title", "use_as_employer",
 	}
 	for _, key := range want {
 		if _, ok := fields[key]; !ok {
@@ -66,6 +70,56 @@ func TestTheProposalCarriesTheExportsSpellingAndNotTheFoldedForms(t *testing.T) 
 	if strings.Contains(string(payload), "andré schultewolter") ||
 		strings.Contains(string(payload), "simio gmbh") {
 		t.Errorf("the proposal carries a folded form: %s", payload)
+	}
+}
+
+func TestANewPositionInTheExportGivesTheCardANewHash(t *testing.T) {
+	// JoinPending supersedes a pending card only when its diff moved. A
+	// position left out of the hash would keep a card offering the old one.
+	m := contacts.PendingLinkedInMatch{
+		ConnectionID: ids.NewV7(), OwnerUserID: ids.NewV7(), ContactID: ids.NewV7(),
+		ConnectionName: "Jane Doe", ContactName: "Jane Doe",
+		Fields: contacts.LinkedInMatchFields{Position: "Account Executive", UseAsTitle: true},
+	}
+	_, before, err := diffhash.Object(linkedInMatchPayload(m))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Fields.Position = "Head of Sales"
+	_, after, err := diffhash.Object(linkedInMatchPayload(m))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before == after {
+		t.Error("a new position left the card's hash unchanged, so the pending card keeps offering the old one")
+	}
+}
+
+func TestTheStagedBoxesReadBackAsTheChoiceTheApplyMakes(t *testing.T) {
+	company := ids.NewV7()
+	m := contacts.PendingLinkedInMatch{
+		ConnectionID: ids.NewV7(), OwnerUserID: ids.NewV7(), ContactID: ids.NewV7(),
+		Fields: contacts.LinkedInMatchFields{Position: "CTO", EmployerCompanyID: &company, UseAsTitle: true},
+	}
+	payload, _, err := diffhash.Object(linkedInMatchPayload(m))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var p linkedInMatchProposal
+	if err := json.Unmarshal(payload, &p); err != nil {
+		t.Fatal(err)
+	}
+	got := p.fields()
+	if got.Position != "CTO" || got.ContactTitle != "" || !got.UseAsTitle || got.UseAsEmployer ||
+		got.EmployerCompanyID == nil || *got.EmployerCompanyID != company || got.EmployerRelationshipID != nil {
+		t.Errorf("the staged card reads back as %+v, want the position, the company and only the title box", got)
+	}
+	var legacy linkedInMatchProposal
+	if err := json.Unmarshal([]byte(`{"connection_id":"`+m.ConnectionID.String()+`"}`), &legacy); err != nil {
+		t.Fatal(err)
+	}
+	if f := legacy.fields(); f.UseAsTitle || f.UseAsEmployer {
+		t.Errorf("a card staged before the boxes existed reads as %+v, want neither box ticked", f)
 	}
 }
 

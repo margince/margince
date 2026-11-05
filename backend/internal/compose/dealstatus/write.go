@@ -20,6 +20,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -35,10 +36,11 @@ type sentence = crmcontracts.CompanyBriefSentence
 // section of this card nobody could check.
 func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontracts.DealStatusCard {
 	out := crmcontracts.DealStatusCard{
-		DealId:      f.deal.Id,
-		GeneratedAt: f.now,
-		GeneratedBy: crmcontracts.WrittenByDeterministic,
-		Story:       crmcontracts.DealStatusCardSection{Sentences: storyLines(f)},
+		DealId:       f.deal.Id,
+		MailCoverage: f.mailCoverage,
+		GeneratedAt:  f.now,
+		GeneratedBy:  crmcontracts.WrittenByDeterministic,
+		Story:        crmcontracts.DealStatusCardSection{Sentences: storyLines(f)},
 	}
 	if blocker := blockerLines(f); len(blocker) > 0 {
 		out.Blocker = &crmcontracts.DealStatusCardSection{Sentences: blocker}
@@ -46,57 +48,85 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 	if mv.Action != ActionNone {
 		out.Next = &mv
 	}
+	out.Verdict = floorVerdict(f)
 	// Set on the floor, so the model path inherits it: foldWritten starts from
 	// this card, and reply_to is a fact about the records rather than anything
 	// the lane may revise.
 	if inbound, ok := unansweredInbound(f); ok {
 		id := inbound.Id
 		out.ReplyTo = &id
+		out.RequestBasis = requestBasis(f, inbound, basisCurrentRequest)
 	}
 	return out
+}
+
+// floorVerdict makes the call on an open deal from its health reading, so a
+// card no model wrote still says how the deal stands. It uses two of the
+// model's words only. The floor cannot name a blocker, and silence alone is
+// not evidence that the buyer has gone cold.
+func floorVerdict(f facts) *crmcontracts.DealStatusCardVerdict {
+	if f.health == nil || f.deal.Status != crmcontracts.DealStatusOpen {
+		return nil
+	}
+	reasons := deals.HealthReasons(*f.health, f.now, f.loc, f.lang)
+	standing, reason := "live", reasons[0]
+	if f.health.AtRisk || f.health.Evidence.Stalled || f.health.Evidence.LastActivityAt == nil {
+		standing, reason = "drifting", weakestReason(reasons)
+	}
+	return &crmcontracts.DealStatusCardVerdict{
+		Standing: standing,
+		Because:  crmcontracts.DealStatusCardSection{Sentences: []sentence{plain(reason.Reason)}},
+	}
+}
+
+// weakestReason is the factor pulling the score down most; on a tie the one
+// that weighs more, which HealthReasons lists first.
+func weakestReason(reasons []deals.HealthReason) deals.HealthReason {
+	weakest := reasons[0]
+	for _, r := range reasons[1:] {
+		if r.Value < weakest.Value {
+			weakest = r
+		}
+	}
+	return weakest
 }
 
 // storyLines say what has happened: the deal's own fields, then the last
 // contact, then what is still owed.
 func storyLines(f facts) []sentence {
-	lines := []sentence{plain(fmt.Sprintf("%s is %s.", f.deal.Name, f.deal.Status))}
+	said := statusCopyFor(f.lang)
+	lines := []sentence{plain(fmt.Sprintf(said.Say(statusWords.Story), f.deal.Name, said.dealStatus(string(f.deal.Status))))}
 	if last, ok := lastContact(f); ok {
-		lines = append(lines, cited(
-			fmt.Sprintf("The last contact was %s: %s.", since(f.now, last.OccurredAt), subjectOf(last)),
+		lines = append(lines, said.cited(
+			fmt.Sprintf(said.Say(statusWords.LastContact), said.since(f.now, activitywhen.MomentOf(last), f.loc), said.subjectOf(last)),
 			last))
 	} else {
-		lines = append(lines, plain(noContactYet+"."))
+		lines = append(lines, plain(said.Say(statusWords.NoContact)))
 	}
 	if n := len(f.openTasks); n > 0 {
-		lines = append(lines, plain(openTasksLine(n, f.moreTasks)))
+		lines = append(lines, plain(said.openTasksLine(n, f.moreTasks)))
 	}
 	return lines
 }
 
-func openTasksLine(n int, more bool) string {
+func (said statusCopy) openTasksLine(n int, more bool) string {
 	if more {
-		return fmt.Sprintf("At least %d tasks are still open on this deal.", n)
+		return fmt.Sprintf(said.Say(statusWords.OpenTasksAtLeast), n)
 	}
 	if n == 1 {
-		return "One task is still open on this deal."
+		return said.Say(statusWords.OpenTaskOne)
 	}
-	return fmt.Sprintf("%d tasks are still open on this deal.", n)
+	return fmt.Sprintf(said.Say(statusWords.OpenTasks), n)
 }
 
-// blockerLines name what is holding the deal up, and say nothing when nothing
-// is.
-//
-// The floor reads the health factors rather than guessing, and it uses the
-// formula's OWN sentences — deals.HealthReasons — because a deterministic card
-// restates records rather than interpreting them, and those sentences were
-// written beside the numbers they explain. The model lane is handed the bare
-// measurements instead, for the reason FactorIn gives.
+// blockerLines keeps numeric health explanations on the deterministic card.
+// Model prose uses the source records whose access can be checked on later reads.
 func blockerLines(f facts) []sentence {
 	if f.health == nil || !f.health.AtRisk {
 		return nil
 	}
 	var lines []sentence
-	for _, r := range deals.HealthReasons(*f.health, f.now) {
+	for _, r := range deals.HealthReasons(*f.health, f.now, f.loc, f.lang) {
 		if r.Value >= atRiskFactor {
 			continue
 		}
@@ -121,15 +151,15 @@ func plain(text string) sentence {
 }
 
 // cited is a sentence resting on one activity the reader can open.
-func cited(text string, a crmcontracts.Activity) sentence {
-	return sentence{Text: text, Evidence: []crmcontracts.CompanyBriefEvidence{activityEvidence(a)}}
+func (said statusCopy) cited(text string, a crmcontracts.Activity) sentence {
+	return sentence{Text: text, Evidence: []crmcontracts.CompanyBriefEvidence{said.activityEvidence(a)}}
 }
 
 // activityEvidence points at one activity, named by its subject where the
 // reader may read it. A withheld row is cited by kind: the citation says
 // contact happened without repeating words the reader may not see.
-func activityEvidence(a crmcontracts.Activity) crmcontracts.CompanyBriefEvidence {
-	name := subjectOf(a)
+func (said statusCopy) activityEvidence(a crmcontracts.Activity) crmcontracts.CompanyBriefEvidence {
+	name := said.subjectOf(a)
 	return crmcontracts.CompanyBriefEvidence{
 		EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeActivity,
 		EntityId:   a.Id,
@@ -191,7 +221,7 @@ func writtenMove(mv crmcontracts.DealStatusCardMove, w WrittenStatus, f facts) *
 		return nil
 	}
 	written := mv
-	if w.MoveReason.Text == "" {
+	if w.MoveReason.Text == "" || (mv.Basis != nil && mv.Basis.Kind == basisRequestReview) || citesReviewRequest(w.MoveReason.Evidence, requestStates(f)) {
 		return &written
 	}
 	// The sentence AND what it rests on. Every other sentence on this card is
@@ -220,7 +250,7 @@ func moveEvidence(reason WrittenLine, f facts) []crmcontracts.DealNextBestAction
 	out := make([]crmcontracts.DealNextBestActionEvidence, 0, len(reason.Evidence))
 	for _, id := range reason.Evidence {
 		if a, ok := citedRecord(f, id); ok {
-			out = append(out, evidenceOf(a, subjectOf(a)))
+			out = append(out, evidenceOf(a, statusCopyFor(f.lang).subjectOf(a)))
 		}
 	}
 	return out
@@ -241,7 +271,7 @@ func wire(lines []WrittenLine, f facts) []sentence {
 		evidence := make([]crmcontracts.CompanyBriefEvidence, 0, len(line.Evidence))
 		for _, id := range line.Evidence {
 			if a, ok := citedRecord(f, id); ok {
-				evidence = append(evidence, activityEvidence(a))
+				evidence = append(evidence, statusCopyFor(f.lang).activityEvidence(a))
 			}
 		}
 		if len(evidence) == 0 {
@@ -255,7 +285,7 @@ func wire(lines []WrittenLine, f facts) []sentence {
 // citedRecord finds the record one citation names. An open task is an activity
 // row like any other, so it cites as one and the reader opens it the same way.
 func citedRecord(f facts, id string) (crmcontracts.Activity, bool) {
-	for _, a := range f.requests {
+	for _, a := range factActivities(f) {
 		if a.Id.String() == id {
 			return a, true
 		}
@@ -278,9 +308,10 @@ func citedRecord(f facts, id string) (crmcontracts.Activity, bool) {
 func taskAsActivity(t activities.OpenTask) crmcontracts.Activity {
 	subject := t.Subject
 	out := crmcontracts.Activity{
-		Id:      openapi_types.UUID(t.ID),
-		Kind:    crmcontracts.ActivityKindTask,
-		Subject: &subject,
+		Id:                openapi_types.UUID(t.ID),
+		Kind:              crmcontracts.ActivityKindTask,
+		Subject:           &subject,
+		OccurredPrecision: crmcontracts.OccurredPrecisionOccurredPrecisionInstant,
 	}
 	if t.DueAt != nil {
 		out.OccurredAt = *t.DueAt

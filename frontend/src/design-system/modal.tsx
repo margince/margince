@@ -2,9 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Maximize2, Minimize2, X } from "lucide-react";
-import { type ReactNode, useRef } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useT } from "../i18n";
+import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
+import { useBackdropDismiss } from "./backdrop";
+import { ConfirmModal } from "./confirmmodal";
 import { useDialogFocus } from "./dialogfocus";
 import { IconAction } from "./iconaction";
 import { usePresence } from "./presence";
@@ -59,6 +68,7 @@ export function Modal({
   open,
   onClose,
   labelledBy,
+  describedBy,
   intent,
   span = "intent",
   onSpanChange,
@@ -66,11 +76,14 @@ export function Modal({
   initialFocusTo,
   closeReason,
   closeDisabled,
+  unsaved = false,
   children,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   labelledBy: string;
+  /** A line under the title that says what the dialog is about. */
+  describedBy?: string;
   // Resolve at close time when a mutation replaces the opener (for example,
   // Deactivate becoming Reactivate). A callback can find the newly mounted control.
   returnFocusTo?: () => HTMLElement | null;
@@ -88,8 +101,13 @@ export function Modal({
    * of a surface covering their page.
    */
   closeReason?: string;
-  /** Holds the corner X while a write the dialog started is still out. */
+  /** Holds the X, Escape and the backdrop while a write the dialog started is out. */
   closeDisabled?: boolean;
+  /**
+   * The caller holds an unsaved draft of this dialog's form. A form inside the
+   * dialog claims one with `useUnsavedGuard` instead.
+   */
+  unsaved?: boolean;
   children: ReactNode;
 }> &
   Expansion) {
@@ -101,22 +119,40 @@ export function Modal({
   // the stylesheet selects the exit with; `mounted` outlives `open` by exactly
   // as long as that exit takes, and by nothing at all where nothing animates.
   const { mounted, state } = usePresence({ open, element: overlay });
+  const drafts = useUnsavedRegistry(useContext(UnsavedContext));
+  const [asking, setAsking] = useState(false);
+  // A caller that closes the dialog itself leaves no question behind for the next open.
+  if (!open && asking) {
+    setAsking(false);
+  }
+  // The X, Escape and the backdrop all close through here, so each one asks
+  // before it throws away a draft. A save closes through the caller instead.
+  const dirty = unsaved || drafts.dirty;
+  const requestClose = useCallback(() => {
+    if (closeDisabled) return;
+    if (dirty) {
+      setAsking(true);
+    } else {
+      onClose();
+    }
+  }, [closeDisabled, dirty, onClose]);
   // The palette shares keyboard behavior without sharing modal chrome. Keyed on
   // `open`, not on `mounted`: focus goes back to the opener the moment the
   // reader dismisses the dialog, rather than waiting out an animation they have
   // already finished with.
   useDialogFocus({
     open,
-    onClose,
+    onClose: requestClose,
     container: dialog,
     returnFocusTo,
     initialFocusTo,
   });
+  const leaving = state === "closing";
+  const backdrop = useBackdropDismiss(requestClose, leaving);
 
   if (!mounted) {
     return null;
   }
-  const leaving = state === "closing";
   const box = modalClass(intent, span);
   const wide = span === "window";
   // Portalled to the document body rather than rendered in place: a dialog
@@ -151,27 +187,23 @@ export function Modal({
       // `aria-hidden` subtree must hold nothing focusable.
       aria-hidden={leaving || undefined}
       ref={overlay}
-      onClick={(event) => {
-        if (leaving) {
-          return;
-        }
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
+      {...backdrop}
     >
       <div
         // NOSONAR: styled modal overlay driven by React state, not a native <dialog>; conversion would change focus/backdrop behavior
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
+        aria-describedby={describedBy}
         className={box}
         ref={dialog}
         // Focusable so a dialog whose body is pure text still receives focus
         // when it opens, rather than leaving it on the page behind.
         tabIndex={-1}
       >
-        {children}
+        <UnsavedContext.Provider value={drafts}>
+          {children}
+        </UnsavedContext.Provider>
         {/* LAST in the DOM, and the position is the whole point: the first Tab
             into a dialog lands on its content, and the way out is the final
             stop rather than the one a reader has to pass to reach the form.
@@ -202,10 +234,20 @@ export function Modal({
             icon={<X aria-hidden="true" />}
             reason={closeReason}
             disabled={closeDisabled}
-            onClick={onClose}
+            onClick={requestClose}
           />
         </div>
       </div>
+      {/* Portalled to the body on its own; it sits here only for React. */}
+      <DiscardDraftQuestion
+        open={open && asking}
+        body={t("unsaved.dialogBody")}
+        onKeep={() => setAsking(false)}
+        onDiscard={() => {
+          setAsking(false);
+          onClose();
+        }}
+      />
     </div>,
     document.body,
   );
@@ -226,4 +268,33 @@ function modalClass(intent: ModalIntent, span: DrawerSpan) {
       : "modal modal-drawer modal-drawer-wide";
   }
   if (intent === "full") return "modal modal-full";
+}
+
+/** The question a dirty close asks, for a dialog and for a form open inside one. */
+export function DiscardDraftQuestion({
+  open,
+  body,
+  onKeep,
+  onDiscard,
+}: Readonly<{
+  open: boolean;
+  // What closing loses, in the caller's words; the title alone asks it.
+  body?: string;
+  onKeep: () => void;
+  onDiscard: () => void;
+}>) {
+  const t = useT();
+  return (
+    <ConfirmModal
+      open={open}
+      title={t("unsaved.title")}
+      confirmLabel={t("unsaved.discard")}
+      confirmVariant="danger"
+      // Closing the question keeps the draft, as `UnsavedGuard`'s does.
+      onClose={onKeep}
+      onConfirm={onDiscard}
+    >
+      {body && <p>{body}</p>}
+    </ConfirmModal>
+  );
 }

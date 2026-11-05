@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -37,14 +38,23 @@ import (
 // principal, so both counts resolve through their live grants and row scope
 // without either seam needing to know it is serving a digest.
 func newDigestReviewSource(pool *pgxpool.Pool, svc *approvals.Service) capture.DigestReviewSource {
-	duplicates := attentionDuplicates{store: contacts.NewStore(InstallationDB(pool))}
+	store := contacts.NewStore(InstallationDB(pool))
+	duplicates := attentionDuplicates{store: store}
+	cases := attentionContactCases{store: store}
 	pending := attentionApprovals{svc: svc}
 	return func(ctx context.Context) (capture.DigestReviewCounts, error) {
-		open, err := countOrNoneVisible(duplicates.CountOpen(ctx))
+		// Company and lead pairs, and contact cases, over the same visible
+		// set the wider queue pages.
+		pairs, err := countOrNoneVisible(duplicates.CountOpen(ctx))
 		if err != nil {
 			return capture.DigestReviewCounts{}, err
 		}
-		waiting, err := countOrNoneVisible(pending.CountPending(ctx))
+		grouped, err := countOrNoneVisible(cases.CountCases(ctx, attention.CaseQuery{Scope: attention.CaseScopeAll}))
+		if err != nil {
+			return capture.DigestReviewCounts{}, err
+		}
+		open := pairs + grouped
+		waiting, err := countOrNoneVisible(pending.CountPending(ctx, attention.ApprovalQuery{RequestedForReader: true}))
 		if err != nil {
 			return capture.DigestReviewCounts{}, err
 		}

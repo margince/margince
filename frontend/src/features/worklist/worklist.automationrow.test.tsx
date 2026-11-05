@@ -8,8 +8,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
 
 // A failed rule says where to go and look at it.
 //
@@ -70,7 +70,7 @@ describe("a failed automation reaches the page that owns it", () => {
     await screen.findByText(/Notify sales on a new lead/);
     // The ADDRESS, not merely that a link exists: a row pointing at the wrong
     // screen renders exactly like one pointing at the right screen.
-    expect(linksIn(container)).toContain("#/settings/models");
+    expect(linksIn(container)).toContain("/#/settings/models");
   });
 
   it("gives the same address to the AI work a rule set off", async () => {
@@ -89,7 +89,7 @@ describe("a failed automation reaches the page that owns it", () => {
     const { container } = renderWorklist();
 
     await screen.findByText(/A drafting run did not finish/);
-    expect(linksIn(container)).toContain("#/settings/models");
+    expect(linksIn(container)).toContain("/#/settings/models");
   });
 
   // The queue can send a reader somewhere; it cannot fix a rule. A button here

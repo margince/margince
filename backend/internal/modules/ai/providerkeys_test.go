@@ -8,100 +8,87 @@ package ai
 // decides whether an installation keeps serving or goes dark.
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"log/slog"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func sealed(t *testing.T, vault keyvault.Vault, ws ids.WorkspaceID, secret string) string {
+// keyRow is the row a program registers for a provider's key.
+func keyRow(t *testing.T, s *config.Setting[string]) settings.Definition {
 	t.Helper()
-	ref, err := vault.Put(context.Background(), ws, []byte(secret))
-	if err != nil {
-		t.Fatalf("sealing: %v", err)
+	for _, def := range configtest.MustLoadEnv(t, Settings()).StoredDefinitions() {
+		if def.Key() == s.Key() {
+			return def
+		}
 	}
-	return string(ref)
+	t.Fatalf("no provider key is keyed %s", s.Key())
+	return nil
 }
 
-func TestASealedKeyIsResolvedFromTheVaultRatherThanTheEnvironment(t *testing.T) {
-	ctx := context.Background()
-	vault := keyvault.NewMemory()
-	ws := ids.From[ids.WorkspaceKind](ids.NewV7())
-	refs := map[string]string{providerGemini: sealed(t, vault, ws, "from-the-vault")}
-	// The environment still carries the OLD value, which is the ordinary state
-	// of an installation that has not yet dropped the variable. The vault must
-	// win, or sealing changes nothing.
-	env := config.Static(map[string]string{"GEMINI_API_KEY": "from-the-environment"})
+// A key the environment carries is read through its setting, with no database
+// and no vault: a boot value is read where it is.
+func TestAKeyTheEnvironmentSetsResolvesThroughItsSetting(t *testing.T) {
+	cfg := configtest.MustLoadEnv(t, Settings(), "ANTHROPIC_API_KEY=not-sealed-yet")
+	ctx := principal.SystemActing(context.Background(), "test")
 
-	got := SealedKeys(ctx, vault, ws, refs, env)("GEMINI_API_KEY")
-
-	if got != "from-the-vault" {
-		t.Errorf("resolved %q, want the sealed value — the environment outranked the vault", got)
-	}
-}
-
-// The migration path: a key the environment carries and the vault has not
-// sealed yet still answers, so an installation keeps working across the move
-// without anyone doing anything.
-func TestAnUnsealedKeyStillResolvesFromTheEnvironment(t *testing.T) {
-	ctx := context.Background()
-	env := config.Static(map[string]string{"ANTHROPIC_API_KEY": "not-sealed-yet"})
-
-	got := SealedKeys(ctx, keyvault.NewMemory(), ids.From[ids.WorkspaceKind](ids.NewV7()), nil, env)("ANTHROPIC_API_KEY")
+	got := KeyLookup(ctx, cfg, slog.New(slog.DiscardHandler))("ANTHROPIC_API_KEY")
 
 	if got != "not-sealed-yet" {
-		t.Errorf("resolved %q; an unsealed key must still answer from the environment", got)
+		t.Errorf("resolved %q; a key the environment sets must answer", got)
 	}
 }
 
-// A ref the vault cannot resolve — deleted, or sealed under another workspace —
-// falls back rather than failing. An installation whose AI went dark because a
-// vault read failed, with no sentence naming the vault, is a worse outcome than
-// one still serving on the variable it always had.
-func TestAnUnresolvableRefFallsBackToTheEnvironment(t *testing.T) {
-	ctx := context.Background()
-	vault := keyvault.NewMemory()
-	ws := ids.From[ids.WorkspaceKind](ids.NewV7())
-	// A ref sealed under a DIFFERENT workspace. The vault refuses it, which is
-	// the isolation guarantee working, not a fault to propagate.
-	elsewhere := sealed(t, vault, ids.From[ids.WorkspaceKind](ids.NewV7()), "another workspace's key")
-	env := config.Static(map[string]string{"OPENAI_API_KEY": "still-here"})
-
-	got := SealedKeys(ctx, vault, ws, map[string]string{providerOpenAI: elsewhere}, env)("OPENAI_API_KEY")
-
-	if got == "another workspace's key" {
-		t.Fatal("a ref sealed under another workspace resolved; workspace isolation is broken")
-	}
-	if got != "still-here" {
-		t.Errorf("resolved %q, want the environment's value", got)
+// The lookup answers provider keys only. Another variable is not read from the
+// process environment behind the registry's back.
+func TestANonCredentialVariableIsNotThisLookupsToAnswer(t *testing.T) {
+	t.Setenv("MARGINCE_LOG_LEVEL", "debug")
+	got := KeyLookup(context.Background(), nil, slog.New(slog.DiscardHandler))("MARGINCE_LOG_LEVEL")
+	if got != "" {
+		t.Errorf("resolved %q, want nothing for a variable that is no provider key", got)
 	}
 }
 
-// A variable that is not a BYOK key is none of this lookup's business — it is
-// still a config.Lookup, and the rest of the process reads other variables
-// through the same shape.
-func TestANonCredentialVariableIsPassedStraightThrough(t *testing.T) {
-	env := config.Static(map[string]string{"MARGINCE_LOG_LEVEL": "debug"})
-	got := SealedKeys(context.Background(), keyvault.NewMemory(), ids.From[ids.WorkspaceKind](ids.NewV7()), nil, env)("MARGINCE_LOG_LEVEL")
-	if got != "debug" {
-		t.Errorf("resolved %q, want debug", got)
+// A key whose row cannot be read, here for want of a database, answers empty.
+// The log names the setting and never a key.
+func TestAKeyWithNoDatabaseToReadAnswersEmptyAndLogsNoSecret(t *testing.T) {
+	cfg := configtest.MustLoadEnv(t, Settings(), "OPENAI_API_KEY=sk-never-logged")
+	var logged bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&logged, nil))
+
+	got := KeyLookup(principal.SystemActing(context.Background(), "test"), cfg, log)("GEMINI_API_KEY")
+
+	if got != "" {
+		t.Errorf("resolved %q from an unreadable key, want empty", got)
+	}
+	if !strings.Contains(logged.String(), "no database") || !strings.Contains(logged.String(), GeminiKey.Key()) ||
+		strings.Contains(logged.String(), "sk-never-logged") {
+		t.Errorf("the log %q must name the setting and no key", logged.String())
 	}
 }
 
-// A ref for a provider that takes no key is refused on the way in. A credential
-// sealed against a name nothing routes is one nobody can use and nobody will
-// remember is there.
-func TestARefForAProviderThatTakesNoKeyIsRefused(t *testing.T) {
-	if err := ProviderKeys.ValidateJSON([]byte(`{"ollama":"kv:something"}`)); err == nil {
-		t.Error("a ref was accepted for a local provider that takes no api key")
+// A provider that takes no key is refused on the way in, and a row naming no
+// sealed blob is refused at the settings layer. A credential stored against a
+// name nothing routes is one nobody can use and nobody will remember is there.
+func TestAKeyForAProviderThatTakesNoKeyIsRefused(t *testing.T) {
+	admin := keySeatCtx(principal.ObjectGrant{Read: true, Update: true})
+	err := (&ProviderKeyStore{}).Set(admin, providerOllama, ProviderCredential{APIKey: "kv:something"})
+	if _, ok := errors.AsType[settings.InvalidValue](err); !ok {
+		t.Errorf("a key was accepted for a local provider that takes no api key: %v", err)
 	}
-	if err := ProviderKeys.ValidateJSON([]byte(`{"gemini":""}`)); err == nil {
+	if err := keyRow(t, GeminiKey).ValidateJSON([]byte(`""`)); err == nil {
 		t.Error("an empty credential reference was accepted")
 	}
-	if err := ProviderKeys.ValidateJSON([]byte(`{"gemini":"kv:something"}`)); err != nil {
+	if err := keyRow(t, GeminiKey).ValidateJSON([]byte(`"kv:something"`)); err != nil {
 		t.Errorf("a real ref was refused: %v", err)
 	}
 }
@@ -111,9 +98,22 @@ func TestARefForAProviderThatTakesNoKeyIsRefused(t *testing.T) {
 // reach the vendors it chose. Losing them would leave refs pointing at blobs
 // nothing can name.
 func TestSealedCredentialsSurviveADataReset(t *testing.T) {
-	if !ProviderKeys.SurvivesDataReset() {
-		t.Error("a data reset would delete the credential refs, stranding every sealed key in the vault")
+	for _, s := range Settings() {
+		if !keyRow(t, keySettings[providerOf(t, s)]).SurvivesDataReset() {
+			t.Errorf("a data reset would delete %s, stranding its sealed key in the vault", s.Key())
+		}
 	}
+}
+
+func providerOf(t *testing.T, s config.Any) string {
+	t.Helper()
+	for provider, setting := range keySettings {
+		if setting.Key() == s.Key() {
+			return provider
+		}
+	}
+	t.Fatalf("%s is no provider's key", s.Key())
+	return ""
 }
 
 // The sealer's provider list is DERIVED from cloudKeyEnv, and this is what
@@ -146,11 +146,11 @@ func TestEveryProviderWithAKeyIsOneTheSealerCoversAndNamesAVariable(t *testing.T
 	}
 }
 
-// A lookup built with no environment behind it answers empty rather than
+// A lookup built with no configuration behind it answers empty rather than
 // panicking. It is the shape a role that resolved no config hands over, and a
 // nil dereference here would take the boot with it.
 func TestALookupWithNoEnvironmentAnswersEmpty(t *testing.T) {
-	got := SealedKeys(context.Background(), keyvault.NewMemory(), ids.From[ids.WorkspaceKind](ids.NewV7()), nil, nil)("GEMINI_API_KEY")
+	got := KeyLookup(principal.SystemActing(context.Background(), "test"), nil, slog.New(slog.DiscardHandler))("GEMINI_API_KEY")
 	if got != "" {
 		t.Errorf("resolved %q with no environment and no vault entry, want empty", got)
 	}
@@ -229,4 +229,14 @@ func TestCloudProvidersBoundNamesEveryCloudVendorAndOnlyThose(t *testing.T) {
 			t.Errorf("three tiers on %q report %v, want one entry", cloud[0], got)
 		}
 	})
+}
+
+// A key a boot source sets refuses its removal before the vault is asked, as a
+// save does. A role with no vault still answers the lock.
+func TestRemovingABootSetKeyIsLockedBeforeTheVaultIsAsked(t *testing.T) {
+	store := NewProviderKeyStore(configtest.MustLoadEnv(t, Settings(), "GEMINI_API_KEY=sk-boot"))
+	admin := keySeatCtx(principal.ObjectGrant{Read: true, Update: true})
+	if err := store.Remove(admin, providerGemini); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("removing a boot-set key with no vault = %v, want a conflict", err)
+	}
 }

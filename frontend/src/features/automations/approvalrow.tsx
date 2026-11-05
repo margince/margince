@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useState } from "react";
 import { api } from "../../api/client";
+import { SendPermission } from "../../components/sendpermission";
 import { Button, Card } from "../../design-system/atoms";
 import {
   DecisionCard,
@@ -17,9 +18,14 @@ import { provenanceOf } from "../../design-system/provenanceof";
 import { useToast } from "../../design-system/toast";
 import { AutonomyDot } from "../../design-system/trust";
 import { formatCountdown, useNow } from "../../format/now";
-import { viewerZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { editedCommercialPreview } from "../../lib/approvalpreview";
+import { summaryWords } from "../../lib/approvalpreviewfields";
+import {
+  type Approval,
+  invalidateApprovalViews,
+} from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { recordRoute } from "../../lib/entity";
 import {
@@ -30,8 +36,8 @@ import {
 } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
-import { SendPermission } from "../../screens/sendpermission";
-import { useSendPermission } from "../../screens/usesendpermission";
+import { useSendPermission } from "../../lib/usesendpermission";
+import { useViewerZone } from "../../lib/viewerzone";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   ApprovalDetailModal,
@@ -40,9 +46,22 @@ import {
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
-import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
-import type { Approval } from "./approvals.queries";
+import { ApprovalEvidence } from "./approvalevidence";
+import {
+  approvalAcceptLabel,
+  approvalExpiryLabel,
+  approvalLabel,
+  decisionSkewKey,
+} from "./approvalkind";
+import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
+import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
+import {
+  heldRejectionBar,
+  refusalToast,
+  useHeldRejection,
+} from "./heldrejection";
+import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
 // One staged proposal as a decidable row, and the screen-level sink that
@@ -118,17 +137,20 @@ function rowLabels(t: Translator): DecisionCardLabels {
     draftBody: t("decision.draftBody"),
     noContent: t("common.empty"),
     loading: t("decision.detailLoading"),
+    summaryWords: summaryWords(t),
   };
 }
 
 // The status chip's words. Spelled per surface like every other label bag here:
 // what a countdown or a verdict is CALLED belongs to the screen showing it.
-function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
+function statusLabels(
+  t: Translator,
+  locale: Locale,
+  kind: string,
+): DecisionStatusLabels {
   return {
     expiresIn: (msRemaining) =>
-      t("decision.expiresIn", {
-        countdown: formatCountdown(msRemaining, t, locale),
-      }),
+      approvalExpiryLabel(kind, formatCountdown(msRemaining, t, locale), t),
     approved: t("decision.status.approved"),
     rejected: t("decision.status.rejected"),
     expired: t("decision.status.expired"),
@@ -153,6 +175,7 @@ export function ApprovalRow({
   extraInvalidateKeys?: readonly QueryKey[];
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const viewerId = useViewerId();
   const queryClient = useQueryClient();
@@ -185,6 +208,8 @@ export function ApprovalRow({
     links: staged?.links,
     context: staged?.context,
     marketingPurpose: staged?.marketingPurpose,
+    consentPurpose: staged?.consentPurpose,
+    evidence: staged?.evidence,
     enabled: !decided && staged !== undefined,
   });
 
@@ -234,6 +259,8 @@ export function ApprovalRow({
       return unwrap(
         await api.POST(path, {
           params: { path: { id: approval.id } },
+          // A held rejection released on pagehide has to outlive the page.
+          keepalive: input.verdict === "reject",
           ...(input.verdict === "approve" && input.editedPayload
             ? { body: { edited_payload: input.editedPayload } }
             : {}),
@@ -241,13 +268,7 @@ export function ApprovalRow({
       );
     },
     onSuccess: (_data, input) => {
-      queryClient.invalidateQueries({ queryKey: ["approvals"] });
-      // THIS approval, by id, and not only the lists it appears in. Anything
-      // reading one decision on its own — the transcript card counting what
-      // became of what it staged — otherwise keeps the answer it fetched
-      // before the decision, and says a suggestion is waiting for a review
-      // that has already happened.
-      queryClient.invalidateQueries({ queryKey: ["approval", approval.id] });
+      void invalidateApprovalViews(queryClient);
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -255,23 +276,38 @@ export function ApprovalRow({
     },
     onError: (error) => {
       const problem = error instanceof ProblemError ? error.problem : null;
-      if (problem && isAlreadyDecided(problem)) {
-        onAlreadyDecided?.();
-        queryClient.invalidateQueries({ queryKey: ["approvals", "pending"] });
-        // Somebody else decided it while this row was open, so the single
-        // read is stale for the same reason and in the same way.
-        queryClient.invalidateQueries({ queryKey: ["approval", approval.id] });
+      const alreadyDecided = problem && isAlreadyDecided(problem);
+      if (alreadyDecided) onAlreadyDecided?.();
+      if (alreadyDecided || approval.kind === "commitment_task") {
+        void invalidateApprovalViews(queryClient);
       }
     },
   });
 
+  // A deadline that lapses inside the window still sends: the server judges
+  // expiry. A refusal shows on the card, or as a toast once the card is gone.
+  const held = useHeldRejection({
+    send: () => decide.mutateAsync({ verdict: "reject" }),
+    decided: !!decided,
+    onRefusedAfterLeaving: refusalToast(toast, t),
+  });
+
   const change = approval.proposed_change ?? {};
+  const linkedIn = useLinkedInChoice(approval);
+  const approvalNames = useApprovalNames([approval]);
+  const readerZone = useViewerZone();
   const strings = editableStrings(approval.kind, change);
   const display = resolveDisplay(
     approval.kind,
     change,
     t,
-    stagedDayFormatter(locale, viewerZone()),
+    stagedDayFormatter(locale, readerZone),
+    approvalNames,
+    approval.requested_decider_id,
+    approval.assignee_inactive,
+    editedCommercialPreview(approval.preview, draft, editing),
+    locale,
+    readerZone,
   );
 
   const problem =
@@ -298,6 +334,8 @@ export function ApprovalRow({
   };
 
   const approveEdited = () => {
+    if (!approvalAcceptable(approval)) return;
+    held.announce();
     decide.mutate({
       verdict: "approve",
       editedPayload: { ...change, ...draft },
@@ -306,8 +344,7 @@ export function ApprovalRow({
   };
 
   const reRead = () => {
-    queryClient.invalidateQueries({ queryKey: ["approvals", "pending"] });
-    queryClient.invalidateQueries({ queryKey: ["approval", approval.id] });
+    void invalidateApprovalViews(queryClient);
     decide.reset();
   };
 
@@ -317,15 +354,29 @@ export function ApprovalRow({
       layout="row"
       className="approval-row"
       display={display}
+      detail={
+        <>
+          <ApprovalTarget approval={approval} />
+          <ApprovalDecider approval={approval} />
+          <ApprovalEvidence approval={approval} />
+        </>
+      }
       now={now}
       labels={{
         ...rowLabels(t),
-        accept: t(
-          approval.kind === "send_email" ||
-            approval.kind === "held_draft" ||
-            approval.kind === "scheduled_send_held"
-            ? "brief.approval.email"
-            : "brief.approval.approve",
+        accept: approvalAcceptLabel(
+          approval.kind,
+          plural,
+          t(
+            ["send_email", "held_draft", "scheduled_send_held"].includes(
+              approval.kind,
+            )
+              ? "brief.approval.email"
+              : "brief.approval.approve",
+          ),
+          locale,
+          1,
+          typeof approval.proposed_change?.existing_task_id === "string",
         ),
       }}
       decided={decided}
@@ -337,14 +388,12 @@ export function ApprovalRow({
             <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
           )}
           {/* kind is meta, not the headline — the human reads the summary first */}
-          <span className="t-caption">
-            {approvalKindLabel(approval.kind, t)}
-          </span>
+          <span className="t-caption">{approvalLabel(approval, t)}</span>
           <DecisionStatusChip
             approval={approval}
             decided={!!decided}
             now={now}
-            labels={statusLabels(t, locale)}
+            labels={statusLabels(t, locale, approval.kind)}
           />
         </>
       }
@@ -361,6 +410,15 @@ export function ApprovalRow({
       editor={
         editing ? (
           <StagedEditor
+            disabled={!approvalAcceptable(approval)}
+            acceptLabel={approvalAcceptLabel(
+              approval.kind,
+              plural,
+              t("decision.approveEdited"),
+              locale,
+              1,
+              typeof approval.proposed_change?.existing_task_id === "string",
+            )}
             fields={strings}
             draft={draft}
             onChange={(field, value) =>
@@ -372,22 +430,37 @@ export function ApprovalRow({
           />
         ) : undefined
       }
-      onAccept={() => decide.mutate({ verdict: "approve" })}
+      onAccept={
+        approvalAcceptable(approval)
+          ? () => {
+              held.announce();
+              decide.mutate({
+                verdict: "approve",
+                editedPayload: linkedIn?.edited,
+              });
+            }
+          : undefined
+      }
       // Offered only where the kind has something a reader may change. Disabled
       // with Reject while a verdict is out, and for a sharper reason than
       // symmetry: it opens an editor whose own Cancel is disabled while the
       // write is in flight, so a press here during it left the reader inside a
       // form they could not leave until the request came back.
       onEdit={strings.length > 0 ? startEdit : undefined}
-      // One press, no reason form: a rejection discards a proposal and changes
-      // no record, so it carries the same weight as Accept and asks nothing
-      // extra. The contract's reason field stays for callers that have one.
-      onReject={() => decide.mutate({ verdict: "reject" })}
+      // No reason form: a rejection discards a proposal and changes no record.
+      // The undo window is the only step between the press and the send.
+      onReject={held.hold}
+      heldRejection={heldRejectionBar(t, held)}
       notice={
         <>
           {/* Read-only: the approver may release or refuse the message, and an
               override of the engine belongs to whoever is writing to the
               contact, recorded against their own name. */}
+          <LinkedInMatchChoice
+            offer={linkedIn}
+            decided={decided}
+            disabled={decide.isPending}
+          />
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}

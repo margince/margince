@@ -1,0 +1,190 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
+import { api } from "../../api/client";
+import type { components } from "../../api/schema";
+import { Badge, Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
+import { QueryStates } from "../../design-system/querystates";
+import { useT } from "../../i18n";
+import { unwrap } from "../../lib/problem";
+import { roomBriefKey } from "./dealroombrief.key";
+import {
+  AddDocument,
+  DOCUMENT_GROUPS,
+  useRemoveDocument,
+  useRoomDocuments,
+} from "./dealroomdocuments";
+import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
+
+// The seller's side of the document board: the documents with their share
+// state, the threads under each, and the verbs the seller has — add, remove,
+// reply, open, resolve.
+
+type DealRoom = components["schemas"]["DealRoom"];
+type DealRoomDocument = components["schemas"]["DealRoomDocument"];
+
+function RemoveButton({
+  room,
+  doc,
+  refusal,
+}: Readonly<{ room: DealRoom; doc: DealRoomDocument; refusal?: string }>) {
+  const t = useT();
+  const remove = useRemoveDocument(room.id);
+  return (
+    <>
+      <Button
+        iconOnly
+        aria-label={t("room.docs.remove", { title: doc.title })}
+        reason={refusal}
+        pending={remove.isPending}
+        onClick={() =>
+          remove.mutate({ documentId: doc.id, version: doc.version })
+        }
+      >
+        <Trash2 aria-hidden />
+      </Button>
+      <ErrorLine error={remove.error} />
+    </>
+  );
+}
+
+/** The room's threads, the one read the board and the tab's head share. */
+export function useRoomThreads(roomId: string) {
+  return useQuery({
+    queryKey: ["deal-room-threads", roomId],
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/deal-rooms/{id}/threads", {
+          params: { path: { id: roomId } },
+        }),
+      );
+    },
+  });
+}
+
+export function DealRoomConversation({
+  room,
+  refusal,
+  layout,
+}: Readonly<{
+  room: DealRoom;
+  refusal: string | undefined;
+  layout?: "stacked" | "deck";
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const threads = useRoomThreads(room.id);
+  const docs = useRoomDocuments(room.id);
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["deal-room-threads", room.id],
+      }),
+      queryClient.invalidateQueries({ queryKey: roomBriefKey(room.id) }),
+    ]);
+  const open = useMutation({
+    mutationKey: ["deal-room-thread-open"],
+    mutationFn: async (input: {
+      documentId: string | null;
+      body: string;
+      requiredChange: boolean;
+    }) => {
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/threads", {
+          params: { path: { id: room.id } },
+          body: {
+            document_id: input.documentId,
+            body: input.body,
+            required_change: input.requiredChange,
+            source: "manual",
+          },
+        }),
+        t,
+      );
+    },
+    onSuccess: refresh,
+  });
+  const reply = useMutation({
+    mutationKey: ["deal-room-thread-reply"],
+    mutationFn: async (input: { threadId: string; body: string }) => {
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/threads/{threadId}/comments", {
+          params: { path: { id: room.id, threadId: input.threadId } },
+          body: { body: input.body, source: "manual" },
+        }),
+        t,
+      );
+    },
+    onSuccess: refresh,
+  });
+  const resolve = useMutation({
+    mutationKey: ["deal-room-thread-resolve"],
+    mutationFn: async (threadId: string) => {
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/threads/{threadId}/resolve", {
+          params: { path: { id: room.id, threadId } },
+        }),
+        t,
+      );
+    },
+    onSuccess: refresh,
+  });
+  const mayWrite = refusal === undefined;
+  const documents: BoardDocument[] = (docs.data?.data ?? []).map((doc) => ({
+    id: doc.id,
+    groupKey: doc.group_key,
+    title: doc.title,
+    filename: doc.filename,
+    meta: doc.filename && doc.filename !== doc.title ? doc.filename : "",
+    byteSize: doc.byte_size,
+    lapsed: !doc.reaches_buyer,
+    shareMark: doc.reaches_buyer ? undefined : (
+      <>
+        <Badge tone="warning">{t("room.docs.lapsed")}</Badge>
+        <p className="t-caption">{t("room.docs.lapsedNote")}</p>
+      </>
+    ),
+    actions: <RemoveButton room={room} doc={doc} refusal={refusal} />,
+  }));
+  return (
+    <QueryStates
+      query={docs}
+      pendingLines={3}
+      pendingLabel={t("room.docs.title")}
+    >
+      <QueryStates
+        query={threads}
+        pendingLines={3}
+        pendingLabel={t("room.docs.title")}
+      >
+        {threads.data && docs.data ? (
+          <DocumentBoard
+            layout={layout}
+            title={t(
+              layout === "deck" ? "roomtab.documents" : "room.docs.title",
+            )}
+            groups={DOCUMENT_GROUPS.map((g) => ({
+              key: g.key,
+              label: t(g.labelKey),
+            }))}
+            documents={documents}
+            threads={threads.data.data}
+            empty={t("room.docs.empty")}
+            footer={<AddDocument room={room} refusal={refusal} />}
+            verbs={{
+              mayRequireChange: false,
+              refusal,
+              open: mayWrite ? (input) => open.mutateAsync(input) : undefined,
+              reply: mayWrite
+                ? (threadId, body) => reply.mutateAsync({ threadId, body })
+                : undefined,
+              resolve: mayWrite
+                ? (threadId) => resolve.mutateAsync(threadId)
+                : undefined,
+            }}
+          />
+        ) : null}
+      </QueryStates>
+    </QueryStates>
+  );
+}

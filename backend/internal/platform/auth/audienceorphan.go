@@ -74,22 +74,41 @@ import (
 // This checks whether membership is orphaned. Source revocation independently
 // withholds derived reminders; it does not erase their surviving membership.
 func ActivityHasAReaderTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
-	var reachable bool
-	if err := tx.QueryRow(ctx, `
+	return activityHasReaderExceptTx(ctx, tx, id, []ids.UUID{})
+}
+
+// ActivityAudienceLimitedToTx refuses audiences that can disclose content to a
+// seat outside allowed.
+func ActivityAudienceLimitedToTx(ctx context.Context, tx pgx.Tx, id ids.UUID, allowed ...ids.UUID) (bool, error) {
+	others, err := activityHasReaderExceptTx(ctx, tx, id, append([]ids.UUID{}, allowed...))
+	return !others, err
+}
+
+func activityHasReaderExceptTx(ctx context.Context, tx pgx.Tx, id ids.UUID, except []ids.UUID) (bool, error) {
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	row, excluded := arg(id), arg(except)
+	query := fmt.Sprintf(`
 		SELECT a.audience = 'workspace'
-		    OR EXISTS (SELECT 1 FROM app_user u WHERE a.captured_by LIKE '%:' || u.id)
-		    OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id)
+		    OR EXISTS (SELECT 1 FROM app_user u WHERE a.captured_by LIKE '%%:' || u.id
+                    AND u.id NOT IN (%[3]s))
+		    OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id
+                    AND ci.user_id NOT IN (%[3]s))
 		    OR EXISTS (SELECT 1 FROM activity_participant ap
-		                WHERE ap.activity_id = a.id AND ap.user_id IS NOT NULL)
+		                WHERE ap.activity_id = a.id AND ap.user_id IS NOT NULL AND %[2]s
+                    AND ap.user_id NOT IN (%[3]s))
 		    OR (a.audience = 'selected' AND EXISTS (
 		          SELECT 1 FROM activity_audience_member am
 		           WHERE am.activity_id = a.id
-		             AND (am.subject_type = 'user'
+		             AND ((am.subject_type = 'user' AND am.subject_id NOT IN (%[3]s))
 		               OR (am.subject_type = 'team' AND EXISTS (
 		                     SELECT 1 FROM team_membership tm
 		                       JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
-		                      WHERE tm.team_id = am.subject_id)))))
-		  FROM activity a WHERE a.id = $1`, id).Scan(&reachable); err != nil {
+		                      WHERE tm.team_id = am.subject_id
+                            AND tm.user_id NOT IN (%[3]s))))))
+		  FROM activity a WHERE a.id = $%[1]d`, row, ParticipantStandsSQL("ap", "a"), memberIdentitySetSQL(excluded))
+	var reachable bool
+	if err := tx.QueryRow(ctx, query, args...).Scan(&reachable); err != nil {
 		return false, fmt.Errorf("auth: reading whether an activity still has a reader: %w", err)
 	}
 	return reachable, nil

@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // A mapping may name a column the file does not carry — a model that guessed at
@@ -31,13 +32,13 @@ func TestCSVImportRefusesAMappingNamingAColumnTheFileLacks(t *testing.T) {
 	e := setupImportApp(t)
 
 	const file = "Company,Employees\nNordwind Logistik,240\n"
-	profile, _ := uploadCSV(t, e, "company", file)
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
 
 	before := importRunCount(t, e)
 	var refusal struct {
 		Detail string `json:"detail"`
 	}
-	status := testCall(t, e, "/v1/imports", AnyMap{
+	status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "company", "source_ref": profile.SourceRef,
 		"mapping": map[string]string{"Company": "display_name", "Firma": "legal_name"},
 	}, &refusal)
@@ -57,7 +58,7 @@ func TestCSVImportRefusesAMappingNamingAColumnTheFileLacks(t *testing.T) {
 
 	// The same file, mapped onto the columns it actually carries, still stages
 	// and still previews — the refusal is about the name, not the file.
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef,
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name"})
 	if status != http.StatusAccepted {
 		t.Fatalf("the honest mapping of the same file → %d, want 202", status)

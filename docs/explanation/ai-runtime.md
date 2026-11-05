@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/api/ai-tasks.yaml backend/internal/modules/ai/router.go backend/internal/modules/ai/decideroute.go backend/internal/modules/ai/budget.go backend/internal/modules/ai/routeplan.go backend/internal/modules/ai/usage.go backend/internal/modules/ai/providerregistry.go backend/internal/compose/jobs_aibudget.go -->
 # The AI runtime: tasks, tiers, routing, and the one gate
 
 How every AI call in Margince is *named*, *routed*, *metered*, *traced*, and *certified*. This is the
@@ -68,8 +69,7 @@ tasks:
 
 - **A tier** is a *class of model*, not a model. `local_small` and `local_large` run on the same box,
   so no data leaves. `cheap_cloud` is fast and cheap and hosted. `premium` is strong hosted reasoning.
-  `frontier` is the strongest a deployment will pay for; no task ladder names it, so it costs nothing
-  until one does.
+  `frontier` is the strongest a deployment will pay for; `signal_extract` uses it.
 - A task's ladder is its **order to fall back**. The Router starts at the first tier, and walks to the
   next on a provider error or a failed schema check. So a short failure moves down a step, and does not
   drop the call.
@@ -133,6 +133,16 @@ embeddings:    {provider: gemini}
 - **A tier may be left with no binding.** A deployment may run only some jobs. A ladder with no bound tier is
   not a start error, but it is reported. Boot warns per task, for example:
   `task cold_start: no bound tier on ladder [cheap_cloud premium]; calls will be refused`.
+- **Rungs that reach one API give no failover.** A ladder can bind two or more rungs that use the same
+  provider, model and endpoint. A refusal at that API then comes back on every rung. Boot and every saved
+  routing document warn once per API and name its tasks. The router's own retry guard uses the same test, and
+  upstream pins and the thinking level are not part of it.
+- **Sovereign ladders.** The sovereign profile sends every cloud rung to a local tier
+  (`profileLadder` in `routeplan.go`). That is `local_large` when it has a binding, and `local_small`
+  when it has none. When `local_large` has no binding,
+  a ladder of `local_small` and cloud rungs becomes one `local_small` rung and draws no warning. When it has
+  one, `[local_small, cheap_cloud]` becomes `[local_small, local_large]`, two rungs. That pair gets the same
+  check as any other, so it warns only when both rungs reach one API.
 - `/readyz` names the AI state (`configured` | `fake` | `unconfigured`). So an operator reads the gap
   off the boot log, not off a refused call at `3am`.
 - **The models that can serve a task** are the ladder plus its closure under `degrade_to`, and readers
@@ -315,7 +325,7 @@ They also show up as `/metrics` counters per task.
 
 The whole lane sits behind the `company_context.rollout` switch in `margince.yaml`, which can turn it
 off. Its steps are ordered `off < read < tasks < onboarding` (default `onboarding` = all the way on;
-`platform/deployconfig`).
+`compose/companycontextrollout.go`).
 
 The form with no database, `ai.NewLocalRouter`, serves the same seam for each offline `fixture` and the
 certification lane. `--ai-fake` binds the offline fake *through the Router*. So dev and test run the
@@ -381,6 +391,10 @@ a model call.
 - **One formula, three users.** The price math over the four parts is written once, as `PriceCall`.
   `/ai/usage` reports **actuals** through `RateStore.CostReport`. That is SQL that mirrors the same math,
   row for row, to price a whole window in one query.
+- `/ai/usage/summary` gives the month's total for the agent rail. `Meter.MonthSpend` reads the same
+  priced lines as the report (`Meter.pricedDays`) and adds up the cost each line shows
+  (`lineCostMinor`). It does not price the whole month at once, because that can round to a different
+  figure than the lines a reader sees.
 - The backfill preview and the certification record both call `PriceCall` directly, for an **estimate
   before the run** and a cost stamp per run. With one formula, the numbers cannot drift.
 - **The estimate before the run (`compose/costestimate`).** The same estimate told as one story from
@@ -450,7 +464,7 @@ The full steps: [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md
 | Task contract (tasks, tiers, ladders, budget rule, status, sites, context, cost unit) | `backend/api/ai-tasks.yaml` → `tasks_gen.go` (through `tools/gen-aitasks`, `make gen`) |
 | Site census (which sites this build ships, and the case that certifies each) | `internal/compose/aitaskregistry.go` (`NewTaskCensus`) · `internal/compose/aitasks` |
 | The runtime binding (tier → provider and model, profile) | the `ai.routing` setting, seeded from `seeds.ai_routing`, changed under Settings → AI. Shape declared under `$defs.aiRouting` in `config/margince.schema.json` |
-| BYOK keys | the key vault, set under Settings → AI → AI models → Providers. The usual environment values (`GEMINI_API_KEY`, `GEMINI_VERTEX_SA_JSON`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `TYPESAFE_API_KEY`, `JEV_COMPATIBLE_API_KEY`) are read once, to store a key in the vault on first boot |
+| BYOK keys | one stored secret setting per provider (`ai.provider_keys_<provider>`), sealed in the key vault and set under Settings → AI → AI models → Providers. The usual environment values (`GEMINI_API_KEY`, `GEMINI_VERTEX_SA_JSON`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `TYPESAFE_API_KEY`, `JEV_COMPATIBLE_API_KEY`) win over the vault and lock the key; they are never sealed |
 | The gate | `internal/modules/ai`: `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
 | Decision lane | `decisions:` in the routing setting · `Router.Decide` (`decideroute.go`) · certified rows in `decisioncert_gen.go` |
 | Providers | `anthropic`, `openai`, `gemini`, `gemini_vertex` (built in; `gemini_vertex` is the `gemini` wire on Vertex AI, bound by `location`) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible` (`providerregistry.go`) |
@@ -461,8 +475,8 @@ The full steps: [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md
 | Monthly budget setting | `ai.budget`: `BudgetConfig` (`internal/modules/ai/budgetsettings.go`); RBAC object `ai_budget` |
 | Budget deferral | `BudgetDeferralError` / `ErrBudgetDeferred` (`internal/modules/ai/budget.go`) |
 | Deferred carriers & resume | `site_read` / `company_scan` / `voice_build`, each with a `BudgetDeferred*` predicate; resumed by the fleet job `ai_budget_resume` (`internal/compose/jobs_aibudget.go`) through `ResumeScheduledTx` (`internal/platform/jobs/resume.go`) |
-| Company context | `companycontextprompt.go` (compose) · switch `company_context.rollout` (`margince.yaml`, `platform/deployconfig`, migration `0105`) |
-| Boot and `ops` surface | `/readyz` AI state; a boot warning per task for a ladder with no bound tier |
+| Company context | `companycontextprompt.go` (compose) · switch `company_context.rollout` (`margince.yaml`, `compose/companycontextrollout.go`, migration `0105`) |
+| Boot and `ops` surface | `/readyz` AI state; a boot warning per task for a ladder with no bound tier, and one per API for a ladder whose rungs reach one API |
 | The certification lane | `internal/compose/aicert`: `make e2e-ai`, `make e2e-ai-report` |
 
 **See also:**

@@ -33,7 +33,7 @@ func TestLeadRoutingConfigValidatesAndDecodesFromOneFixture(t *testing.T) {
 		"owners":        []any{poolA.String(), poolB.String()},
 		"cap_per_owner": float64(5),
 		"rules": []any{
-			map[string]any{"field": "source", "equals": "webinar", "owner_id": ruleOwner.String()},
+			map[string]any{"field": "origin", "equals": "webinar", "owner_id": ruleOwner.String()},
 		},
 	}
 	if err := entry.Validate(fixture); err != nil {
@@ -54,7 +54,7 @@ func TestLeadRoutingConfigValidatesAndDecodesFromOneFixture(t *testing.T) {
 	if cfg.CapPerOwner != 5 {
 		t.Fatalf("cap decoded as %d, want 5", cfg.CapPerOwner)
 	}
-	if len(cfg.Rules) != 1 || cfg.Rules[0].Field != "source" || cfg.Rules[0].Equals != "webinar" || cfg.Rules[0].OwnerID != ruleOwner {
+	if len(cfg.Rules) != 1 || cfg.Rules[0].Field != "origin" || cfg.Rules[0].Equals != "webinar" || cfg.Rules[0].OwnerID != ruleOwner {
 		t.Fatalf("rule lost in decode: %+v", cfg.Rules)
 	}
 

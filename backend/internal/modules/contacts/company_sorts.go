@@ -15,7 +15,6 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
@@ -50,7 +49,7 @@ func orderByContactCount(ctx context.Context, arg func(any) int) (string, error)
 	if err != nil {
 		return "", err
 	}
-	return "(SELECT count(*)" + from + ")", nil
+	return "(SELECT count(DISTINCT p.id)" + from + ")", nil
 }
 
 // orderByOpenDealCount orders by the account's open pipeline, read from the

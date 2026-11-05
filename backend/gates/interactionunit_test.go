@@ -211,7 +211,8 @@ func relstrengthConsts(t *testing.T, pkg goPackage, group string) map[string]str
 	for _, file := range pkg.files {
 		if !gatekit.References(file.ast, relstrengthImport, "InteractionUnitSQL") &&
 			!gatekit.References(file.ast, relstrengthImport, "InteractionKindSQLGroup") &&
-			!gatekit.References(file.ast, relstrengthImport, "InteractionCountsSQL") {
+			!gatekit.References(file.ast, relstrengthImport, "InteractionCountsSQL") &&
+			!gatekit.References(file.ast, relstrengthImport, "InteractionCountsAtSQL") {
 			continue
 		}
 		ast.Inspect(file.ast, func(node ast.Node) bool {
@@ -232,7 +233,8 @@ func relstrengthConsts(t *testing.T, pkg goPackage, group string) map[string]str
 				consts[spec.Names[0].Name] = unitSentinel
 			// InteractionCountsSQL filters on the same kind group, plus the
 			// meeting status test, so it qualifies a statement the same way.
-			case "InteractionKindSQLGroup", "InteractionCountsSQL":
+			// InteractionCountsAtSQL is that filter bounded at an instant.
+			case "InteractionKindSQLGroup", "InteractionCountsSQL", "InteractionCountsAtSQL":
 				consts[spec.Names[0].Name] = group
 			}
 			return true

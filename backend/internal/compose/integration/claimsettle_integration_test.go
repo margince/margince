@@ -20,33 +20,42 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestASettledPromiseLeavesTheLaneItWasOn(t *testing.T) {
+func TestSettlingAClaimReachesTheContactRead(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
 	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
 	kept := seedPromise(t, e, contact, "Angebot nachreichen", &due)
-	seedPromise(t, e, contact, "Bleibt offen", &due)
+	open := seedPromise(t, e, contact, "Bleibt offen", &due)
 
 	store := contacts.NewStore(e.DB())
 	if err := store.SettleConversationClaim(e.Admin(), kept, "done"); err != nil {
 		t.Fatalf("settling the promise: %v", err)
 	}
 
-	// Read through the SAME lane the row came from, so this proves the write
-	// reaches the reader rather than that one column changed.
-	rows, err := store.OpenCommitmentsDue(e.Admin(),
-		ids.From[ids.UserKind](e.Rep1), laneClock.Add(24*time.Hour), 20)
-	if err != nil {
-		t.Fatalf("reading the lane: %v", err)
+	var rows []crmcontracts.ConversationClaim
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var err error
+		rows, err = store.ClaimsForContact(e.Admin(), tx, ids.From[ids.ContactKind](contact), nil, 20)
+		return err
+	}); err != nil {
+		t.Fatalf("reading the contact's claims: %v", err)
 	}
-	if got := bodiesOf(rows); len(got) != 1 || got[0] != "Bleibt offen" {
-		t.Fatalf("the lane = %v, want only the promise nobody settled", got)
+	statuses := make(map[ids.UUID]crmcontracts.ConversationClaimStatus)
+	for _, row := range rows {
+		statuses[ids.UUID(row.Id)] = row.Status
+	}
+	if statuses[kept] != crmcontracts.ConversationClaimStatusDone || statuses[open] != crmcontracts.ConversationClaimStatusOpen {
+		t.Fatalf("claim statuses after settlement: %v", statuses)
 	}
 }
 

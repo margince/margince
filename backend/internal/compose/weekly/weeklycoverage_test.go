@@ -30,7 +30,7 @@ func TestAFigureIsJudgedByWhenItsSourceBegan(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := figureCoverage(tc.since, start, end, "deal")
+			got := teamCopyFor("en").figureCoverage(tc.since, start, end, "deal")
 			if got.Status != tc.want {
 				t.Fatalf("status = %s, want %s", got.Status, tc.want)
 			}
@@ -50,11 +50,11 @@ func TestATeamStatesCommitmentsOnlyWhenEveryMemberWeekDid(t *testing.T) {
 	end := start.AddDate(0, 0, 7)
 	earlier, later := start.AddDate(0, 0, -14), start.AddDate(0, 0, 2)
 	stated := func(since *time.Time) *crmcontracts.WeeklyFigureCoverage {
-		return figureCoverage(since, start, end, planNoun)
+		return teamCopyFor("en").figureCoverage(since, start, end, planNoun)
 	}
 
 	var none memberPlans
-	if got := none.coverage(start, end); got != nil {
+	if got := none.coverage(start, end, teamCopyFor("en")); got != nil {
 		t.Errorf("a team with no counted member week states %+v", got)
 	}
 
@@ -62,7 +62,7 @@ func TestATeamStatesCommitmentsOnlyWhenEveryMemberWeekDid(t *testing.T) {
 	all.add(stated(&later))
 	all.add(stated(nil))
 	all.add(stated(&earlier))
-	got := all.coverage(start, end)
+	got := all.coverage(start, end, teamCopyFor("en"))
 	if got == nil || got.Status != crmcontracts.WeeklyFigureCoverageStatusRecorded || got.RecordedSince != &earlier {
 		t.Errorf("every member week stated: got %+v, want recorded from the earliest member plan", got)
 	}
@@ -70,7 +70,7 @@ func TestATeamStatesCommitmentsOnlyWhenEveryMemberWeekDid(t *testing.T) {
 	var silent memberPlans
 	silent.add(stated(&earlier))
 	silent.add(nil)
-	if got := silent.coverage(start, end); got != nil {
+	if got := silent.coverage(start, end, teamCopyFor("en")); got != nil {
 		t.Errorf("one member week settled no plan, yet the team states %+v", got)
 	}
 }

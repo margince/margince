@@ -38,7 +38,7 @@ const dsnPartCap = 64 * 1024
 // what to do with a report; this only reads one.
 func ParseBounce(raw []byte) (connector.BounceReport, bool) {
 	reader, err := mail.CreateReader(bytes.NewReader(raw))
-	if err != nil {
+	if !usablePart(err) {
 		return connector.BounceReport{}, false
 	}
 	if !isDeliveryReport(reader.Header) {
@@ -49,7 +49,7 @@ func ParseBounce(raw []byte) (connector.BounceReport, bool) {
 	var originalID string
 	for {
 		part, err := reader.NextPart()
-		if err != nil {
+		if !usablePart(err) {
 			// EOF or a structural fault: either way the walk is over and
 			// whatever was read is what there is.
 			break

@@ -10,7 +10,6 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -81,8 +80,6 @@ func readAnchorCompany(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) 
 	if err := facts.Err(); err != nil {
 		return Company{}, fmt.Errorf("read company facts: %w", err)
 	}
-	out.MinimumComplete = strings.TrimSpace(out.DisplayName) != "" &&
-		strings.TrimSpace(out.Fields[fieldOfferSummary]) != "" &&
-		strings.TrimSpace(out.Fields[fieldICP]) != ""
+	out.MinimumComplete = offeringMinimumComplete(out.DisplayName, out.Fields[fieldOfferSummary], out.Fields[fieldICP])
 	return out, nil
 }

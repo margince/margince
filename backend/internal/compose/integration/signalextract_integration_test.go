@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -41,13 +42,41 @@ var extractClock = time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 // scriptedBrain answers with whatever the scenario decided the model says,
 // and records what it was asked. The engine's own behaviour is what these
 // tests measure; the model is a boundary, so it is the one thing mocked.
+//
+// replies are answered in order before reply, which stays the default.
+// A focused second reading with nothing queued gets an empty answer. So a test
+// about the first reading is not refused by the reply it scripted for it.
 type scriptedBrain struct {
-	reply string
-	calls int
+	reply   string
+	replies []string
+	// respond, when set, answers every request itself.
+	respond func(req model.Request) string
+	// onCall runs at the start of each call with its 1-based number, for a test
+	// that changes the world while the model is reading.
+	onCall   func(call int)
+	calls    int
+	requests []model.Request
 }
 
-func (b *scriptedBrain) Complete(_ context.Context, _ model.Request) (model.Response, error) {
+const focusedReadingMarker = "Report only commitment_made events stated in these messages"
+
+func (b *scriptedBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	b.calls++
+	b.requests = append(b.requests, req)
+	if b.onCall != nil {
+		b.onCall(b.calls)
+	}
+	if b.respond != nil {
+		return model.Response{Text: b.respond(req)}, nil
+	}
+	if len(b.replies) > 0 {
+		next := b.replies[0]
+		b.replies = b.replies[1:]
+		return model.Response{Text: next}, nil
+	}
+	if strings.Contains(req.Messages[0].Content, focusedReadingMarker) {
+		return model.Response{Text: `{"events": []}`}, nil
+	}
 	return model.Response{Text: b.reply}, nil
 }
 
@@ -71,9 +100,13 @@ func seedMessage(t *testing.T, e *Env, contact ids.UUID, key, subject, body, dir
 func seedUnlinkedMessage(t *testing.T, e *Env, key, subject, body, direction string, at time.Time) ids.UUID {
 	t.Helper()
 	stamp := at.UTC().Format(time.RFC3339Nano)
-	return SeedIDRow(t, OwnerConn(t), `INSERT INTO activity (id, kind, direction, subject, body, thread_key, occurred_at, created_at, source, captured_by)
+	// One correspondent per thread, with the proof capture records: their mail
+	// is authenticated, ours carries the provider's sent attestation.
+	return SeedIDRow(t, OwnerConn(t), `INSERT INTO activity (id, kind, direction, subject, body, thread_key, occurred_at, created_at, source, captured_by,
+		                      counterparty_email, inbound_sender_authenticated, counterparty_outbound_attested)
 		VALUES ($1, 'email', '`+direction+`', '`+subject+`', '`+body+`', '`+key+`',
-		        '`+stamp+`', '`+stamp+`', 'gmail', 'connector:gmail')`)
+		        '`+stamp+`', '`+stamp+`', 'gmail', 'connector:gmail',
+		        'buyer@seeded.test', '`+direction+`' = 'inbound', '`+direction+`' = 'outbound')`)
 }
 
 // employeeOf is a contact who works at the account, which is the only way
@@ -140,6 +173,14 @@ func TestAThreadThatEndsAContractRaisesASignalCitingIt(t *testing.T) {
 		"We have decided not to renew; the contract ends on 31 July.",
 		"inbound", extractClock.Add(-48*time.Hour))
 
+	judge := principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:owed_verdict", Permissions: principal.Permissions{RowScope: principal.RowScopeAll}})
+	if applied, err := e.LabelCapture(judge, notice, "noise"); err != nil || !applied {
+		t.Fatalf("capture label: %t %v", applied, err)
+	}
+	if applied, err := e.Activities.SetOwedVerdict(judge, notice, activities.OwedVerdictInformsUs, "test-rules", extractClock); err != nil || !applied {
+		t.Fatalf("request verdict: %t %v", applied, err)
+	}
+
 	brain := &scriptedBrain{reply: reply(t, "contract_ended", notice,
 		"They wrote that the contract ends on 31 July.", 0.95)}
 	if raised := extractPass(t, e, brain); raised != 1 {
@@ -192,8 +233,8 @@ func TestASettledThreadIsReadOnceUntilSomethingArrives(t *testing.T) {
 	if raised := extractPass(t, e, brain); raised != 0 {
 		t.Errorf("re-reading a grown conversation raised %d duplicate signals", raised)
 	}
-	if brain.calls != 2 {
-		t.Errorf("the model was called %d times, want a second read once the conversation grew", brain.calls)
+	if brain.calls != 3 {
+		t.Errorf("the model was called %d times, want a read once the conversation grew plus a focused reading of the new message", brain.calls)
 	}
 }
 

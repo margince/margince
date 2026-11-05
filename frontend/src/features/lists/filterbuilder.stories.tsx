@@ -162,6 +162,26 @@ export const Connector: Story = {
   ),
 };
 
+export const MixedConnectors: Story = {
+  // "and" then "or" in one row. "and" binds tighter, so its two conditions sit
+  // in one "All of these" box. The "or" joins that box to the third.
+  render: story(
+    newGroup("or", [
+      newGroup("and", [
+        newLeaf("full_name", "contains", "ann"),
+        newLeaf("cf_loyalty_tier", "eq", "gold"),
+      ]),
+      newLeaf("created_at", "gt", "2026-01-01"),
+    ]),
+  ),
+};
+
+// Dark: the box's well and edge are tokens dark re-derives.
+export const MixedConnectorsDark: Story = {
+  ...MixedConnectors,
+  globals: { theme: "dark" },
+};
+
 export const NestedGroupDepth3: Story = {
   // Boxes inside boxes, each with its own join and its own More.
   render: story(

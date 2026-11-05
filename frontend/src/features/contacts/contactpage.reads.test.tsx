@@ -7,9 +7,10 @@ import {
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { createQueryClient } from "../../app/queryclient";
-import { RecordShell } from "../../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { view as liveView } from "../../testing/contactpage.testkit";
+import { RecordShell } from "../../testing/recordshell.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -21,7 +22,6 @@ import {
   refusedRead,
 } from "./contactarchived.fixtures";
 import { ContactPageV2 } from "./contactpage";
-import { view as liveView } from "./contactpage.testkit";
 
 // The page's two reads, the row and the 360, against each other: which one
 // decides that the page opens, opens archived, or cannot open.
@@ -73,7 +73,10 @@ describe("the contact page's row read", () => {
     it(`cannot open the page when the row answers ${status}, whatever the 360 says`, async () => {
       const routes = liveRoutes();
       routes["GET /contacts/p-1"] = () =>
-        jsonResponse({ status, code: "refused" }, status);
+        jsonResponse(
+          { status, code: status === 404 ? "not_found" : "internal" },
+          status,
+        );
       // No retries: the case is the settled refusal, not the wait before it.
       const client = createQueryClient();
       client.setDefaultOptions({

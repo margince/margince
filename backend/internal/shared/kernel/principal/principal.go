@@ -11,6 +11,7 @@ package principal
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -109,6 +110,10 @@ type Principal struct {
 	OnBehalfOf   ids.UUID // the human authority behind an agent/connector action; zero otherwise
 	Scopes       ScopeSet // effective = Passport scopes ∩ granting human's RBAC ("agent ≤ human")
 
+	// Locale is the display language a human chose, empty when they never did.
+	// It rides the principal so wording written for the caller needs no query.
+	Locale string
+
 	// SeatType is the licensing ceiling of the human behind the call — for
 	// an agent it is the granting human's seat, since "agent ≤ human"
 	// (A62/ADR-0047). Empty for the system principal (unbounded by seat).
@@ -118,6 +123,21 @@ type Principal struct {
 	// roles (B-EP03.1). Zero value = no grants: an actor whose loader
 	// forgot to resolve permissions can read and write nothing.
 	Permissions Permissions
+}
+
+// ActsAsItsUser reports whether p is an agent working on a colleague's passport.
+// Such an agent may do without a human's approval whatever that colleague could
+// do unaided in the product. Their live grants bound it at the store, as they
+// bound the colleague. A passportless agent is automatic work with nobody behind
+// it, and keeps the confirm-first tier.
+func (p Principal) ActsAsItsUser() bool {
+	return p.Type == PrincipalAgent && !p.PassportID.IsZero() && !p.OnBehalfOf.IsZero()
+}
+
+// HumanOrItsAgent reports whether p is a human, or an agent acting for one on
+// their passport. Either may do what that human does in the product.
+func (p Principal) HumanOrItsAgent() bool {
+	return p.Type == PrincipalHuman || p.ActsAsItsUser()
 }
 
 // Action is one CRUD verb of the object-level RBAC matrix
@@ -239,6 +259,28 @@ func (p Permissions) Allows(object string, a Action) bool {
 func (p Permissions) Rule(object string, a Action) string {
 	return fmt.Sprintf("role[%s] %s.%s row_scope=%s",
 		strings.Join(p.RoleKeys, ","), object, a, p.RowScope)
+}
+
+// Within is the reach two policies share: a verb only where both allow it, the
+// narrower row scope, and every field mask either one carries. A preview of how
+// a role reads a page runs under the caller's policy Within the role's. It then
+// never shows the caller anything their own policy withholds.
+func (p Permissions) Within(other Permissions) Permissions {
+	out := Permissions{RoleKeys: other.RoleKeys, RowScope: p.RowScope, Objects: map[string]ObjectGrant{}}
+	if p.RowScope.Wider(other.RowScope) {
+		out.RowScope = other.RowScope
+	}
+	for object, mine := range p.Objects {
+		theirs := other.Objects[object]
+		out.Objects[object] = ObjectGrant{
+			Create: mine.Create && theirs.Create,
+			Read:   mine.Read && theirs.Read,
+			Update: mine.Update && theirs.Update,
+			Delete: mine.Delete && theirs.Delete,
+		}
+	}
+	out.FieldMasks = append(slices.Clone(p.FieldMasks), other.FieldMasks...)
+	return out
 }
 
 type contextKey int

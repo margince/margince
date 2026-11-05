@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/shared/kernel/promptfence/promptfence.go backend/internal/compose/companycontextprompt.go backend/internal/compose/confidentialityverdictask.go backend/internal/compose/batchfidelity.go backend/internal/compose/captureclassify.go backend/internal/compose/captureverdict.go -->
 # How we write prompts: the password, the cost, and one item at a time
 
 Most prompts this product sends have the same three parts. One carries no

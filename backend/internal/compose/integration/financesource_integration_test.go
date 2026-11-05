@@ -17,10 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/finance"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -28,8 +27,13 @@ import (
 
 const testBooks = "test_books"
 
-// testBooksSource lists two customers and answers one invoice for each.
-type testBooksSource struct{ checkErr error }
+// testBooksSource lists two customers and answers one invoice for each, in EUR
+// unless currency names another.
+type testBooksSource struct {
+	checkErr error
+	currency string
+	netMinor int64
+}
 
 func (testBooksSource) Name() string                  { return testBooks }
 func (s testBooksSource) Check(context.Context) error { return s.checkErr }
@@ -40,12 +44,18 @@ func (testBooksSource) Customers(context.Context) ([]finance.SourceCustomer, err
 	}, nil
 }
 
-func (testBooksSource) InvoicesFor(_ context.Context, customer string) (finance.SourceLedger, error) {
-	issued := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
-	due := issued.AddDate(0, 0, 30)
+// testBooksIssuedOn is the day every testBooks invoice is issued.
+var testBooksIssuedOn = time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+
+func (s testBooksSource) InvoicesFor(_ context.Context, customer string) (finance.SourceLedger, error) {
+	due := testBooksIssuedOn.AddDate(0, 0, 30)
+	currency, net := "EUR", int64(10000)
+	if s.currency != "" {
+		currency, net = s.currency, s.netMinor
+	}
 	return finance.SourceLedger{Invoices: []finance.SourceInvoice{{
-		ExternalID: customer + "-INV-1", Number: customer + "-1", IssuedOn: issued, DueOn: &due,
-		Currency: "EUR", NetMinor: 10000, GrossMinor: 10000,
+		ExternalID: customer + "-INV-1", Number: customer + "-1", IssuedOn: testBooksIssuedOn, DueOn: &due,
+		Currency: currency, NetMinor: net, GrossMinor: net,
 	}}}, nil
 }
 
@@ -69,9 +79,8 @@ func financeAdmin(e *Env) context.Context {
 }
 
 func financeStoreFor(e *Env, source testBooksSource) *finance.Store {
-	return finance.NewStore(compose.InstallationDB(e.Pool), func(context.Context, pgx.Tx) (string, error) {
-		return "EUR", nil
-	}).WithSources(testBooksSources{source: source})
+	return finance.NewStore(compose.InstallationDB(e.Pool), compose.FinanceRates()).
+		WithSources(testBooksSources{source: source})
 }
 
 // connectAndSync connects testBooks and runs the first pass, which brings in
@@ -111,8 +120,12 @@ func TestConnectingAnAccountingSourceAsksItFirstAndAdmitsOne(t *testing.T) {
 	}
 
 	store := financeStoreFor(e, testBooksSource{})
-	if _, err := store.Connect(admin, "not_installed"); !errors.Is(err, apperrors.ErrInvalidArgument) {
-		t.Errorf("connect to an uninstalled source = %v, want ErrInvalidArgument", err)
+	// A source this build does not compose is a fault of the provider field.
+	_, err := store.Connect(admin, "not_installed")
+	var refused *httperr.DetailedError
+	if !errors.As(err, &refused) || refused.Code != "validation_error" ||
+		len(refused.Fields) != 1 || refused.Fields[0].Field != "provider" {
+		t.Errorf("connect to an uninstalled source = %v, want a validation error on provider", err)
 	}
 	first, err := store.Connect(admin, testBooks)
 	if err != nil {

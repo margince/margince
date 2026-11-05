@@ -15,7 +15,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // An open task more than a month overdue leaves the Worklist, its count and
@@ -32,7 +35,7 @@ func TestATaskMoreThanAMonthOverdueLeavesTheWorklistUnlessPinned(t *testing.T) {
 	logOn := func(subject string, overdueDays int) string {
 		due := now.AddDate(0, 0, -overdueDays)
 		row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-			Kind: "task", Subject: &subject, DueAt: &due, Source: "manual",
+			Kind: "task", Subject: &subject, DueAt: &due, Source: "manual", AssigneeID: new(ids.From[ids.UserKind](e.AdminUser)),
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 		})
 		if err != nil {
@@ -128,4 +131,48 @@ func taskIDsOn(items []crmcontracts.AttentionItem) []string {
 func sorted(values ...string) []string {
 	slices.Sort(values)
 	return values
+}
+
+func TestAHumanReopenedOldTaskStaysOnTheWorklist(t *testing.T) {
+	for _, imported := range []bool{false, true} {
+		t.Run(map[bool]string{false: "human reopen", true: "import reopen"}[imported], func(t *testing.T) {
+			e := integration.Setup(t)
+			now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
+			due := now.AddDate(0, 0, -60)
+			title := "Send the revised pricing"
+			row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "task", Subject: &title, DueAt: &due, Source: "manual", AssigneeID: new(ids.From[ids.UserKind](e.AdminUser))})
+			if err != nil {
+				t.Fatal(err)
+			}
+			id := ids.From[ids.ActivityKind](ids.UUID(row.Id))
+			reopenContext := e.Admin()
+			if imported {
+				runContext := e.As(e.AdminUser, nil, principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"import_run": {Create: true}}})
+				run, err := migration.NewRunStore(e.DB()).Create(runContext, migration.CreateRunInput{Connector: "csv", SourceRef: "tasks.csv", Source: "manual"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				reopenContext = storekit.WithBatch(storekit.WithImportRun(reopenContext, run.ID), run.ID)
+			}
+			for _, done := range []bool{true, false} {
+				if _, err := e.Activities.UpdateActivity(reopenContext, id, activities.UpdateActivityInput{IsDone: &done}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
+			page, err := feed.Worklist(e.Admin(), "mine", "all", ids.Nil, 100, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, item := range page.Queue {
+				if item.Source == crmcontracts.WorklistItemSourceTask && item.Id == id.String() {
+					found = true
+				}
+			}
+			if found == imported {
+				t.Fatalf("visible=%v, imported=%v: only a direct human reopen adopts old work", found, imported)
+			}
+		})
+	}
 }

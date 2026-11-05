@@ -17,6 +17,19 @@ import (
 
 var requestInstant = time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
 
+// readingAt is s reading at instant. A badge judges a request at its reading's
+// clock, and a request past the waiting horizon reads none, so a test that
+// seeds at requestInstant reads its badge at that time too.
+func readingAt(s *Store, instant time.Time) *Store {
+	return s.WithClock(func() time.Time { return instant })
+}
+
+// readingAtRequest is s reading a day after requestInstant: after every event
+// a test writes around the request, and well inside the waiting horizon.
+func readingAtRequest(s *Store) *Store {
+	return readingAt(s, requestInstant.AddDate(0, 0, 1))
+}
+
 // requestCounterparty is who the seeded request is with. One address, shared by
 // the request and the replies to it: the settlement reads match a thread on the
 // correspondent, so a reply written to somebody else is not an answer to this.
@@ -59,7 +72,7 @@ func seedEmailRequestFiledUnder(t *testing.T, e *loadEnv, subject, label, verdic
 	// The importing mailbox is the connector boundary; source and task use their real writers.
 	e.exec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, id, e.rep)
 	e.exec(t, `INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'to', $2)`, id, "rep-"+e.rep.String()+"@load.test")
-	if _, err := store.SetCaptureLabel(asClassifier(e), id, label); err != nil {
+	if _, err := labelCurrent(asClassifier(e), store, id, label); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.SetOwedVerdict(asClassifier(e), id, verdict, "prompts-test", dbNow(t, e)); err != nil {
@@ -68,7 +81,9 @@ func seedEmailRequestFiledUnder(t *testing.T, e *loadEnv, subject, label, verdic
 	return id
 }
 
-func TestEmailRequestCreatesOneUndatedPersonalTaskWithSourceEvidence(t *testing.T) {
+// A request in mail the workspace may read keeps that reach, so a manager
+// reads the task a teammate holds for it.
+func TestEmailRequestCreatesOneUndatedTaskThatReachesWhoMayReadItsMail(t *testing.T) {
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
 	thanks := seedEmailRequest(t, e, "Thanks for the report", "noise", OwedVerdictInformsUs)
@@ -94,15 +109,8 @@ func TestEmailRequestCreatesOneUndatedPersonalTaskWithSourceEvidence(t *testing.
 	if got.DueAt != nil || got.AssigneeId == nil || ids.UUID(*got.AssigneeId) != e.rep || got.SourceActivityId == nil || ids.UUID(*got.SourceActivityId) != source {
 		t.Fatalf("request lost responsibility or evidence, or invented a date: %+v", got)
 	}
-	if got.Audience == nil || *got.Audience != crmcontracts.ActivityAudienceSelected {
-		t.Fatal("request task is not personal")
-	}
-	var audience string
-	if err := e.owner.QueryRow(e.as(), `SELECT after->>'audience' FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1 AND action = 'create'`, task).Scan(&audience); err != nil {
-		t.Fatal(err)
-	}
-	if audience != "selected" {
-		t.Fatal("creation audit failed to record the personal audience")
+	if got.Audience == nil || *got.Audience != crmcontracts.ActivityAudienceWorkspace {
+		t.Fatalf("request task from workspace mail reaches %v, want workspace", got.Audience)
 	}
 	done := true
 	assignee, ok := principal.Actor(e.as())
@@ -118,7 +126,7 @@ func TestEmailRequestCreatesOneUndatedPersonalTaskWithSourceEvidence(t *testing.
 	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(2*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	moves, err := store.EmailSummariesByID(e.as(), []ids.UUID{source})
+	moves, err := readingAtRequest(store).EmailSummariesByID(e.as(), []ids.UUID{source})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +141,58 @@ func TestEmailRequestCreatesOneUndatedPersonalTaskWithSourceEvidence(t *testing.
 	if count != 1 {
 		t.Fatalf("completed, informational or conflicting verdicts created extra tasks: %d", count)
 	}
-	// A colleague may discover the linked task, but cannot read the source-derived title.
+	// A colleague who may read the mail reads its reminder too.
+	actor, ok := principal.Actor(e.as())
+	if !ok {
+		t.Fatal("missing reader")
+	}
+	actor.UserID, actor.ID = e.other, "human:"+e.other.String()
+	other, err := store.GetActivity(principal.WithActor(e.as(), actor), ids.From[ids.ActivityKind](task), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if other.Subject == nil {
+		t.Fatal("colleague who may read the mail cannot read its request task")
+	}
+	// Removing access to the evidence also withholds the derived reminder.
+
+	e.exec(t, `UPDATE activity SET archived_at = $2 WHERE id = $1`, source, requestInstant)
+	got, err = store.GetActivity(e.as(), ids.From[ids.ActivityKind](task), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Subject != nil {
+		t.Fatal("archived evidence remained readable through its task")
+	}
+}
+
+// A request in mail narrowed to its participants stays its assignee's alone:
+// the reminder must not open what the mail keeps closed. The automatic pass
+// files only workspace mail, so the rep takes this one by hand.
+func TestEmailRequestFromNarrowedMailIsPersonal(t *testing.T) {
+	e := setupLoad(t)
+	source := seedEmailRequest(t, e, "Confidential pricing", "commitment", OwedVerdictAsksUs)
+	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, source)
+	store := storeKnowing(e)
+	taken, _, err := store.LogActivity(e.asSeat(e.rep), LogActivityInput{Kind: "task", Source: "manual", RequestActivityID: &source})
+	if err != nil {
+		t.Fatal(err)
+	}
+	task := ids.UUID(taken.Id)
+	got, err := store.GetActivity(e.as(), ids.From[ids.ActivityKind](task), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Audience == nil || *got.Audience != crmcontracts.ActivityAudienceSelected {
+		t.Fatalf("request task from participants-only mail reaches %v, want selected", got.Audience)
+	}
+	var audience string
+	if err := e.owner.QueryRow(e.as(), `SELECT after->>'audience' FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1 AND action = 'create'`, task).Scan(&audience); err != nil {
+		t.Fatal(err)
+	}
+	if audience != "selected" {
+		t.Fatal("creation audit failed to record the personal audience")
+	}
 	actor, ok := principal.Actor(e.as())
 	if !ok {
 		t.Fatal("missing reader")
@@ -144,16 +203,7 @@ func TestEmailRequestCreatesOneUndatedPersonalTaskWithSourceEvidence(t *testing.
 		t.Fatal(err)
 	}
 	if other.Subject != nil {
-		t.Fatal("colleague read a personal request")
-	}
-	// Removing access to the evidence also withholds the derived reminder.
-	e.exec(t, `UPDATE activity SET archived_at = $2 WHERE id = $1`, source, requestInstant)
-	got, err = store.GetActivity(e.as(), ids.From[ids.ActivityKind](task), storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Subject != nil {
-		t.Fatal("archived evidence remained readable through its task")
+		t.Fatal("colleague read a request from mail narrowed to its participants")
 	}
 }
 
@@ -171,7 +221,7 @@ func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
 	if _, _, err := store.LogActivity(asClassifier(e), LogActivityInput{Kind: "email", Source: "test", ThreadKey: *original.ThreadKey, Direction: &direction, OccurredAt: &at}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := store.EmailSummariesByID(e.as(), []ids.UUID{first, answered, info})
+	got, err := readingAtRequest(store).EmailSummariesByID(e.as(), []ids.UUID{first, answered, info})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +233,7 @@ func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
 	}
 	// Both positive and negative obligations agree on the list and the detail.
 	for _, id := range []ids.UUID{first, answered, info} {
-		detail, err := store.GetEmailPresentation(e.as(), ids.From[ids.ActivityKind](id), nil)
+		detail, err := readingAtRequest(store).GetEmailPresentation(e.as(), ids.From[ids.ActivityKind](id), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -210,7 +260,7 @@ func TestArchivingAnUnfinishedEmailTaskRestoresTheRequestWithoutRecapture(t *tes
 	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(2*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	moves, err := store.EmailSummariesByID(e.as(), []ids.UUID{source})
+	moves, err := readingAtRequest(store).EmailSummariesByID(e.as(), []ids.UUID{source})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,6 +305,17 @@ func TestReassignedEmailReminderRequiresReadableSource(t *testing.T) {
 	if got.Subject == nil || *got.Subject != "Send the report" {
 		t.Fatal("new assignee cannot read the reminder")
 	}
+	for _, instant := range []time.Time{requestInstant.Add(time.Hour), pastTheHorizon} {
+		rows, err := store.WaitingRepliesForOwnerBefore(e.as(), instant, WaitingPosition{}, e.rep)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, row := range rows {
+			if row.ActivityID == source {
+				t.Fatal("reassignment revived the original recipient's waiting obligation")
+			}
+		}
+	}
 	e.exec(t, `UPDATE activity SET archived_at = $2 WHERE id = $1`, source, requestInstant)
 	got, err = store.GetActivity(recipient, ids.From[ids.ActivityKind](task), storekit.LiveOnly)
 	if err != nil {
@@ -262,5 +323,43 @@ func TestReassignedEmailReminderRequiresReadableSource(t *testing.T) {
 	}
 	if got.Subject != nil {
 		t.Fatal("reassignment granted access to revoked source evidence")
+	}
+}
+
+// A colleague copied on the mail finds its reminder through the mail. That
+// holds even when the reminder is filed only under a contact they cannot reach.
+// So the reminder stands in for the mail on their waiting queue.
+func TestACopiedColleagueFindsTheWorkspaceReminderInPlaceOfTheMail(t *testing.T) {
+	e := setupLoad(t)
+	source := seedEmailRequest(t, e, "Product sheet", "commitment", OwedVerdictAsksUs)
+	store := storeKnowing(e)
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	e.exec(t, `INSERT INTO activity_participant (activity_id, role, address, user_id) VALUES ($1, 'cc', $2, $3)`,
+		source, seatAddress(e.other), e.other)
+	actor, ok := principal.Actor(e.as())
+	if !ok {
+		t.Fatal("missing reader")
+	}
+	actor.UserID, actor.ID = e.other, "human:"+e.other.String()
+	actor.Permissions.RowScope = principal.RowScopeOwn
+	actor.Permissions.RoleKeys = nil
+	colleague := principal.WithActor(e.as(), actor)
+	var task ids.UUID
+	if err := e.owner.QueryRow(e.as(), `SELECT id FROM activity WHERE source_system = 'email_request' AND source_activity_id = $1`, source).Scan(&task); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetActivity(colleague, ids.From[ids.ActivityKind](task), storekit.LiveOnly); err != nil {
+		t.Fatalf("the copied colleague cannot find the reminder: %v", err)
+	}
+	rows, err := store.WaitingReplies(colleague, requestInstant.Add(2*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if row.ActivityID == source {
+			t.Fatal("the mail is still waiting for the colleague while its reminder stands in for it")
+		}
 	}
 }

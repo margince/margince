@@ -1,0 +1,9 @@
+import { json } from "./respond";
+
+export function refusedWith(code: string) {
+  return json({ title: "Refused", code }, 409);
+}
+
+function unexported(code: string) {
+  return json({ title: "Refused", code }, 409);
+}

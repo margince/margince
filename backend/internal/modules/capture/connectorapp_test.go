@@ -226,3 +226,67 @@ func TestEveryAppBackedConnectorResolvesToItsAppSetting(t *testing.T) {
 		}
 	}
 }
+
+// A unit's app is served only while a composed unit declares it, and a core
+// vendor's name never resolves to a unit's app.
+func TestAUnitAppResolvesOnlyWhileAUnitDeclaresIt(t *testing.T) {
+	declared := func(p string) (UnitApp, bool) {
+		if p == "books" || p == "google" {
+			return UnitApp{Unit: "ledger", Title: "Books ledger"}, true
+		}
+		return UnitApp{}, false
+	}
+	store := (&ConnectorAppStore{}).WithUnitApps(declared)
+	k, err := store.kindFor("books")
+	if err != nil || k.unitKey != "ledger/books" || k.name != "Books ledger" {
+		t.Fatalf("kindFor(books) = %+v, %v; want the unit's app under its title", k, err)
+	}
+	if k.settingKey() != UnitAppsKey {
+		t.Fatalf("a unit app locks %q, want %q", k.settingKey(), UnitAppsKey)
+	}
+	if k, _ := store.kindFor("google"); k.entry != GoogleAppSetting {
+		t.Fatal("a unit claiming google resolved to the unit's app instead of Google's")
+	}
+	if _, err := store.kindFor("ledgerly"); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("kindFor(ledgerly) = %v, want a not-found refusal", err)
+	}
+	if _, err := (&ConnectorAppStore{}).kindFor("books"); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a store with no units resolved books: %v", err)
+	}
+}
+
+// The unit apps' settings validator and the store refuse the same values, as
+// the core vendors' two spellings do.
+func TestTheTwoSpellingsOfTheUnitAppRuleRefuseTheSameValues(t *testing.T) {
+	k := unitKind("books", UnitApp{Unit: "ledger", Title: "Books ledger"})
+	for _, id := range []string{"AB12cd34", "", "Books ledger app", "tab\there", strings.Repeat("x", maxAppFieldBytes+1)} {
+		for _, tenant := range []string{"", "11111111-2222-3333-4444-555555555555"} {
+			validatorRefused := validateUnitApps(map[string]ConnectorApp{
+				"ledger/books": {ClientID: id, ClientSecretRef: "vault-ref", Tenant: tenant},
+			}) != nil
+			storeRefused := checkAppInput(k, id, "a-client-secret", tenant) != nil
+			if validatorRefused != storeRefused {
+				t.Errorf("(id=%q tenant=%q) — the settings validator refuses=%v, the store refuses=%v",
+					id, tenant, validatorRefused, storeRefused)
+			}
+		}
+	}
+	if err := validateUnitApps(map[string]ConnectorApp{"ledger/books": {ClientID: "AB12cd34", ClientSecretRef: "ref"}}); err != nil {
+		t.Fatalf("a well-formed unit app was refused: %v", err)
+	}
+	for _, key := range []string{"books", "/books", "ledger/"} {
+		if validateUnitApps(map[string]ConnectorApp{key: {ClientID: "AB12cd34", ClientSecretRef: "ref"}}) == nil {
+			t.Errorf("a unit app stored under %q, which names no unit and provider, was accepted", key)
+		}
+	}
+}
+
+// A stored app belongs to the unit that declared it. A later unit declaring
+// the same provider reads its own empty slot, never the other unit's secret.
+func TestAUnitAppIsStoredUnderItsDeclaringUnit(t *testing.T) {
+	first := unitKind("books", UnitApp{Unit: "ledger", Title: "Books ledger"})
+	second := unitKind("books", UnitApp{Unit: "other-ledger", Title: "Books ledger"})
+	if first.unitKey == second.unitKey {
+		t.Fatalf("two units declaring books share the stored key %q", first.unitKey)
+	}
+}

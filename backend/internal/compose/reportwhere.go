@@ -36,8 +36,8 @@ func buildReportWhere(
 	// dropped here rather than paid for with a `TRUE` in every such spec — a
 	// spec should not have to spell a no-op to say it has no restriction.
 	var where []string
-	if spec.baseWhere != "" {
-		where = append(where, spec.baseWhere)
+	if population := spec.populationWhere(); population != "" {
+		where = append(where, population)
 	}
 	// Deterministic filter order — the plan echo and the SQL must not
 	// depend on map iteration.
@@ -75,6 +75,9 @@ func buildReportWhere(
 			where = append(where, expr+" IS NULL")
 			continue
 		}
+		if err := filterDomain(spec, expr).Admits(key, req.Filters[key]); err != nil {
+			return nil, "", err
+		}
 		value, err := reportFilterValue(key, req.Filters[key])
 		if err != nil {
 			return nil, "", err
@@ -103,8 +106,8 @@ func buildReportWhere(
 			where = append(where, population)
 		}
 	}
-	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec,
-		requested.Kind == "" && breaksDownByOwner(spec, req.GroupBy) && !pinsOwner(spec, filterKeys), arg)
+	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, requested,
+		narrowsOwnerBreakdown(requested, ownerBreakdown{breaksDownByOwner(spec, req.GroupBy), pinsOwner(spec, filterKeys)}), arg)
 	if err != nil {
 		return nil, "", err
 	}
@@ -200,9 +203,10 @@ func specNarrowings(
 			out = append(out, population)
 		}
 	}
-	// A named scope already sits inside the caller's lens, so only an
-	// unscoped breakdown by owner is narrowed further.
-	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, breakdown && !namedScope, arg)
+	// An owner scope already sits inside the caller's lens; any other
+	// request is narrowed further when it splits the answer per owner.
+	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, requested,
+		narrowsOwnerBreakdown(requested, ownerBreakdown{byOwner: breakdown}), arg)
 	if err != nil {
 		return nil, "", err
 	}

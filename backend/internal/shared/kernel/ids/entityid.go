@@ -248,3 +248,13 @@ func (DealRoomDocumentKind) kind() string { return "deal_room_document" }
 // DealRoomDocumentID names one deal_room_document row — one attachment a room
 // puts in front of its buyer.
 type DealRoomDocumentID = ID[DealRoomDocumentKind]
+
+// LegalEntityKind is the legal-entity tag. Declared out-of-line for the reason
+// given above OfferTemplateKind.
+type LegalEntityKind struct{}
+
+func (LegalEntityKind) kind() string { return "legal_entity" }
+
+// LegalEntityID names one legal_entity row: a company the installation trades
+// as, and the one its users work for.
+type LegalEntityID = ID[LegalEntityKind]

@@ -1,0 +1,417 @@
+// @vitest-environment happy-dom
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import "@testing-library/jest-dom/vitest";
+
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { en } from "../i18n/en";
+import type { RecordTag } from "../lib/tags.queries";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+} from "../testing/story-utils";
+import { AddTagPicker } from "./tagpicker";
+
+const COMPANY = "01a06151-0000-7000-8000-000000000001";
+
+const ON_RECORD: RecordTag = {
+  tag_id: "t-2",
+  name: "Renewal",
+  archived: false,
+  assigned_at: "2026-06-01T09:00:00Z",
+};
+
+function mount({
+  truncated = false,
+  apply = () => new Response(null, { status: 204 }),
+  routes = {},
+}: Readonly<{
+  truncated?: boolean;
+  apply?: () => Response | Promise<Response>;
+  routes?: RouteMap;
+}> = {}) {
+  const applied: unknown[] = [];
+  installFetchStub({
+    // A seat that reads the vocabulary and may coin nothing, unless the case
+    // says otherwise.
+    "GET /me": meRoute({ tag: ["read"] }, { roles: ["rep"] }),
+    "GET /tags": () =>
+      jsonResponse({
+        data: [
+          { id: "t-1", workspace_id: "w", name: "Key Account" },
+          { id: "t-2", workspace_id: "w", name: "Renewal" },
+        ],
+        page: { has_more: truncated, next_cursor: null },
+      }),
+    "POST /tags/t-1/apply": (body) => {
+      applied.push(body);
+      return apply();
+    },
+    ...routes,
+  });
+  render(
+    <StoryProviders>
+      <AddTagPicker
+        entityType="company"
+        entityID={COMPANY}
+        current={[ON_RECORD]}
+      />
+    </StoryProviders>,
+  );
+  return applied;
+}
+
+async function openPicker(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: en["tags.add"] }));
+  return within(await screen.findByRole("dialog"));
+}
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe("the add-tag picker", () => {
+  it("applies the picked word to the record and closes", async () => {
+    const user = userEvent.setup();
+    const applied = mount();
+    const panel = await openPicker(user);
+
+    await user.click(await panel.findByRole("option", { name: "Key Account" }));
+
+    expect(applied).toEqual([{ entity_type: "company", entity_id: COMPANY }]);
+    expect(await screen.findByRole("button", { name: en["tags.add"] })).toBe(
+      document.activeElement,
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("offers a word the record carries once, as already added", async () => {
+    const user = userEvent.setup();
+    mount();
+    const panel = await openPicker(user);
+
+    const renewal = await panel.findByRole("option", { name: /Renewal/ });
+    expect(renewal).toHaveAttribute("aria-disabled", "true");
+    expect(renewal).toHaveTextContent(en["tags.alreadyAdded"]);
+  });
+
+  it("says who can coin a word the search does not find", async () => {
+    const user = userEvent.setup();
+    mount();
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+
+    await user.type(panel.getByRole("combobox"), "Partner");
+
+    expect(panel.getByText(en["tags.noMatch"])).toBeInTheDocument();
+    expect(panel.queryByRole("option")).toBeNull();
+  });
+
+  it("keeps the list open over a refused apply, saying why", async () => {
+    const user = userEvent.setup();
+    mount({
+      apply: () =>
+        jsonResponse(
+          { title: "Forbidden", detail: "This record is locked." },
+          403,
+        ),
+    });
+    const panel = await openPicker(user);
+
+    await user.click(await panel.findByRole("option", { name: "Key Account" }));
+
+    expect(await panel.findByRole("alert")).toHaveTextContent(
+      "This record is locked.",
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("takes one apply from a double press on a word", async () => {
+    const user = userEvent.setup();
+    const applied = mount();
+    const panel = await openPicker(user);
+
+    const option = await panel.findByRole("option", { name: "Key Account" });
+    // Two presses in one task: the second lands before any render says the
+    // first is pending.
+    fireEvent.click(option);
+    fireEvent.click(option);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(applied).toHaveLength(1);
+  });
+
+  it("stays open through Escape while the apply is out, so a late refusal is read", async () => {
+    const user = userEvent.setup();
+    let answer: (response: Response) => void = () => {};
+    mount({
+      apply: () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const panel = await openPicker(user);
+    await user.click(await panel.findByRole("option", { name: "Key Account" }));
+
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    answer(
+      jsonResponse(
+        { title: "Forbidden", detail: "This record is locked." },
+        403,
+      ),
+    );
+    expect(await panel.findByRole("alert")).toHaveTextContent(
+      "This record is locked.",
+    );
+  });
+
+  it("closes on Escape and hands focus back to the trigger", async () => {
+    const user = userEvent.setup();
+    mount();
+    await openPicker(user);
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: en["tags.add"] })).toBe(
+      document.activeElement,
+    );
+  });
+
+  // The catalog is capped and carries no cursor, so a workspace past the cap
+  // gets a CUT list, and a missing word reads as one the workspace lacks.
+  it("says the list is cut when the catalog was truncated, and only then", async () => {
+    const user = userEvent.setup();
+    mount({ truncated: true });
+    const panel = await openPicker(user);
+    expect(
+      await panel.findByText(en["tags.catalogTruncated"]),
+    ).toBeInTheDocument();
+    cleanup();
+
+    mount();
+    const whole = await openPicker(user);
+    await whole.findByRole("option", { name: "Key Account" });
+    expect(whole.queryByText(en["tags.catalogTruncated"])).toBeNull();
+  });
+
+  // The vocabulary is governed. A seat that may coin a word is offered to,
+  // right where it found the word missing, and the word lands on the record.
+  // The list was read before a colleague coined the same word, so it still
+  // offers Create. The server refuses the duplicate, and the picker puts the
+  // existing word on the record instead of showing the refusal.
+  it("applies the existing tag when a stale list offered to create it", async () => {
+    const user = userEvent.setup();
+    const appliedExisting: unknown[] = [];
+    let reads = 0;
+    mount({
+      routes: {
+        "GET /me": meRoute({ tag: ["read", "create"] }, { roles: ["admin"] }),
+        "GET /tags": () => {
+          reads++;
+          const coined =
+            reads > 1
+              ? [{ id: "t-old", workspace_id: "w", name: "spring campaign" }]
+              : [];
+          return jsonResponse({
+            data: [
+              { id: "t-1", workspace_id: "w", name: "Key Account" },
+              ...coined,
+            ],
+            page: { has_more: false, next_cursor: null },
+          });
+        },
+        "POST /tags": () =>
+          jsonResponse(
+            { title: "Conflict", detail: "A tag with that name exists." },
+            409,
+          ),
+        "POST /tags/t-old/apply": (body) => {
+          appliedExisting.push(body);
+          return new Response(null, { status: 204 });
+        },
+      },
+    });
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+
+    await user.type(panel.getByRole("combobox"), "Spring campaign");
+    await user.click(
+      panel.getByRole("button", {
+        name: en["tags.createNamed"].replace("{name}", "Spring campaign"),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(appliedExisting).toEqual([
+        { entity_type: "company", entity_id: COMPANY },
+      ]),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  // Creating and applying are two writes. When the second is refused, the
+  // reader is told the tag now exists, and can pick it to try again.
+  it("says the tag was created when putting it on the record is refused", async () => {
+    const user = userEvent.setup();
+    mount({
+      routes: {
+        "GET /me": meRoute({ tag: ["read", "create"] }, { roles: ["admin"] }),
+        "POST /tags": () =>
+          jsonResponse(
+            { id: "t-new", workspace_id: "w", name: "Spring campaign" },
+            201,
+          ),
+        "POST /tags/t-new/apply": () =>
+          jsonResponse(
+            { title: "Forbidden", detail: "This record is locked." },
+            403,
+          ),
+      },
+    });
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+
+    await user.type(panel.getByRole("combobox"), "Spring campaign");
+    await user.click(
+      panel.getByRole("button", {
+        name: en["tags.createNamed"].replace("{name}", "Spring campaign"),
+      }),
+    );
+
+    const alert = await panel.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      en["tags.createdNotApplied"]
+        .replace("{name}", "Spring campaign")
+        .replace("{reason}", "This record is locked."),
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("creates and applies a missing word in one step for a seat that may create tags", async () => {
+    const user = userEvent.setup();
+    const created: unknown[] = [];
+    const appliedNew: unknown[] = [];
+    mount({
+      routes: {
+        "GET /me": meRoute({ tag: ["read", "create"] }, { roles: ["admin"] }),
+        "POST /tags": (body) => {
+          created.push(body);
+          return jsonResponse(
+            { id: "t-new", workspace_id: "w", name: "Spring campaign" },
+            201,
+          );
+        },
+        "POST /tags/t-new/apply": (body) => {
+          appliedNew.push(body);
+          return new Response(null, { status: 204 });
+        },
+      },
+    });
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+    expect(
+      await panel.findByRole("link", { name: en["tags.manage"] }),
+    ).toHaveAttribute("href", "/#/settings/tags");
+
+    await user.type(panel.getByRole("combobox"), "Spring campaign");
+    await user.click(
+      panel.getByRole("button", {
+        name: en["tags.createNamed"].replace("{name}", "Spring campaign"),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(appliedNew).toEqual([
+        { entity_type: "company", entity_id: COMPANY },
+      ]),
+    );
+    expect(created).toEqual([{ name: "Spring campaign" }]);
+    expect(
+      panel.queryByRole("button", { name: en["tags.shortlistInstead"] }),
+    ).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  // Every other seat is told who adds a word, and is offered a Shortlist for
+  // a group only they need, named with the word they typed.
+  it("offers a seat that may not create tags a Shortlist named with the word", async () => {
+    const user = userEvent.setup();
+    mount({
+      routes: {
+        "GET /me": () =>
+          jsonResponse(
+            meFixture({
+              roles: ["rep"],
+              allow: { tag: ["read"], list: ["read", "create", "update"] },
+              settingsAvailability: { lists: true },
+            }),
+          ),
+        "GET /lists": () =>
+          jsonResponse({
+            data: [],
+            page: { has_more: false, next_cursor: null },
+          }),
+      },
+    });
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+    expect(await panel.findByText(en["tags.whoAdds"])).toBeInTheDocument();
+    expect(panel.queryByRole("link", { name: en["tags.manage"] })).toBeNull();
+
+    await user.type(panel.getByRole("combobox"), "Spring campaign");
+    expect(panel.getByText(en["tags.noMatch"])).toBeInTheDocument();
+    expect(panel.queryByRole("button", { name: /^Create tag/ })).toBeNull();
+    await user.click(
+      panel.getByRole("button", { name: en["tags.shortlistInstead"] }),
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: en["lists.addToShortlist"],
+    });
+    expect(
+      within(dialog).getByRole("textbox", { name: en["lists.name"] }),
+    ).toHaveValue("Spring campaign");
+  });
+
+  it("offers no Shortlist to a seat that may not make one", async () => {
+    const user = userEvent.setup();
+    mount({
+      routes: {
+        // Lists are on, so only the missing grant keeps the Shortlist away.
+        "GET /me": () =>
+          jsonResponse(
+            meFixture({
+              roles: ["rep"],
+              allow: { tag: ["read"], list: ["read"] },
+              settingsAvailability: { lists: true },
+            }),
+          ),
+      },
+    });
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+    await user.type(panel.getByRole("combobox"), "Spring campaign");
+
+    expect(panel.getByText(en["tags.noMatch"])).toBeInTheDocument();
+    expect(panel.queryByRole("button")).toBeNull();
+  });
+});

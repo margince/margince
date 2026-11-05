@@ -3,28 +3,8 @@
 
 package compose
 
-// The extension tier's job SEAM: how a unit's scheduled pass becomes two live
-// River kinds without api/jobs.yaml ever naming it.
-//
-// It cannot go through declaredJobArgs. That union's members are bare
-// identifiers in package compose, compiled from the base contract — an
-// extension module cannot be named there, and the generated file is committed
-// and drift-gated, so a composed installation could not regenerate it without
-// failing the gate on every build that enabled a unit. What CAN be composed is
-// data: the unit's fragment declares the two kinds, gen-composition reads them
-// out of the merged contract and re-emits them as extension.JobDeclaration
-// literals, and this file turns each one into a registered dispatcher and a
-// registered workspace child over ONE pair of args types.
-//
-// One pair, many kinds, because River resolves a kind from the args VALUE on
-// insert (args.Kind()) and from the registered args value on registration
-// (river.AddWorkerArgs). So `Kind()` reading a field is not a trick — it is the
-// only shape that lets a composed set of unknown size reach River at all —
-// and every other governed property still comes from the declaration, which is
-// what jobs.RegisterComposed puts where SpecFor can answer for it.
-//
-// extjobsrun.go is the other half: the args types, the two workers, and the
-// authority the child re-derives before it runs anything.
+// Extensions declare their kinds at composition time, beyond the committed registration markers.
+// These carriers preserve the boot catalog check for those composed declarations.
 
 import (
 	"errors"

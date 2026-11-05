@@ -101,9 +101,11 @@ type Entry[T any] struct {
 	machineryApplied bool
 }
 
-// Define declares a setting. `key` is `<module>.<name>`; the prefix is not
-// decoration, a fitness gate asserts it names the module that declares the
-// entry. `validate` may be nil when every value of T is admissible.
+// Define declares a setting's row; a gate holds the `<module>.` key prefix to
+// the declaring module. It is internal to the configuration machinery, and
+// exported only because config.DefineStored, its caller, is another package.
+// A module calls it directly only for a key the census gate names as an
+// exception (gates/settingsdefineexceptions_test.go).
 func Define[T any](key, object, verb string, def T, validate func(T) error) *Entry[T] {
 	return &Entry[T]{key: key, object: object, verb: verb, def: def, validate: validate}
 }

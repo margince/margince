@@ -147,7 +147,7 @@ func TestRetentionAnonymizeDropsTheChannelIdentityWithoutSuppressingIt(t *testin
 	integration.SeedRetentionPolicies(t, e)
 	contact := e.SeedContact(t, "Otto Overage", nil)
 	seedChannelIdentity(t, e, contact, "30303", "otto")
-	// Past the seeded contact/no_consent_no_deal window (730 days), with no
+	// Past the fixture's contact/no_consent_no_deal window (730 days), with no
 	// granted consent and no deal stake — the selector's own conditions.
 	e.WsExec(t, `UPDATE contact SET created_at = now() - interval '800 days' WHERE id = $1`, contact)
 

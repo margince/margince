@@ -23,11 +23,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -42,6 +43,36 @@ import (
 type closeDatePolicy struct {
 	svc   *approvals.Service
 	owner dealOwnerAuthority
+}
+
+// LowersWinProbability is false while the qualified forecast is enforced,
+// read fresh before each downgrade so a switch made mid-pass holds at once.
+func (p closeDatePolicy) LowersWinProbability(ctx context.Context) (bool, error) {
+	var enforced bool
+	err := database.WithWorkspaceTx(ctx, p.owner.db.Pool(), func(tx pgx.Tx) error {
+		var err error
+		enforced, err = config.StoredApplyTx(ctx, tx, config.Bound(), assurance.QualifiedForecastEnforced)
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("compose: reading whether the qualified forecast is enforced: %w", err)
+	}
+	return !enforced, nil
+}
+
+// LikelyThreshold is the installation's Likely threshold, which every
+// forecast reader applies whatever the reader's grants.
+func (p closeDatePolicy) LikelyThreshold(ctx context.Context) (int, error) {
+	var threshold int
+	err := database.WithWorkspaceTx(ctx, p.owner.db.Pool(), func(tx pgx.Tx) error {
+		var err error
+		threshold, err = identity.ForecastLikelyThresholdTx(ctx, tx)
+		return err
+	})
+	if err != nil {
+		return 0, fmt.Errorf("compose: reading the Likely threshold: %w", err)
+	}
+	return threshold, nil
 }
 
 // CorrectsWithoutAsking reports whether this owner has left close-date hygiene
@@ -163,9 +194,9 @@ func NewCloseDateCorrector(pool *pgxpool.Pool, log *slog.Logger) *deals.CloseDat
 	db := InstallationDB(pool)
 	owner := dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)}
 	return deals.NewCloseDateCorrector(db,
-		closeDatePolicy{svc: approvals.NewService(db), owner: owner},
+		closeDatePolicy{svc: NewApprovalsService(db), owner: owner},
 		quietReviewReader{db: db, owner: owner},
-		log, installseam.Deals())
+		log, DealsInstallation()).WithBaseLanguage(installationLanguage(pool))
 }
 
 // closeDateConfirmEffect executes an approved close-date confirmation:

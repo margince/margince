@@ -19,6 +19,24 @@ export const timelineBaseKey = (
   entityId: string,
 ): QueryKey => ["activities", entityType, entityId];
 
+/**
+ * Whether a key is a record's timeline read, under any filters or page.
+ *
+ * Every row a timeline serves carries whether the reader may change it, and
+ * that answer includes record grants, which expire and are revoked elsewhere.
+ * A cached page therefore keeps enabling an edit the server now refuses, or
+ * keeps one disabled after a grant arrives.
+ */
+export function isTimelineRead(key: QueryKey): boolean {
+  return (
+    Array.isArray(key) &&
+    key.length >= 3 &&
+    key[0] === "activities" &&
+    typeof key[1] === "string" &&
+    typeof key[2] === "string"
+  );
+}
+
 export function entityTimelineKeys(
   entityType: EntityKind,
   entityId: string,
@@ -288,7 +306,7 @@ export function isRecordRead(key: QueryKey): boolean {
 // so this is a re-export rather than a second spelling. Two copies of a cache
 // key do not fail loudly: they fail as a drawer that quietly stops refreshing
 // after somebody changes who may read the message.
-export { emailDetailKey as emailPresentationKey } from "../design-system/emaildetail";
+export { emailDetailKey as emailPresentationKey } from "../design-system/emailmessage";
 
 /** The cache prefix every deal's watch card reads under. */
 export const DEAL_COMMITMENTS_KEY = ["deal-commitments"] as const;
@@ -299,4 +317,21 @@ export const CLAIM_SETTLED_KEYS: readonly QueryKey[] = [
   ["contact"],
   ["contact360"],
   DEAL_COMMITMENTS_KEY,
+];
+
+export const activityFollowUpsKey = (sourceId: string) =>
+  ["activities", "followups", sourceId] as const;
+
+/** One activity's own file list. */
+export const activityFilesKey = (activityId: string) =>
+  ["attachments", "activity", activityId] as const;
+
+/** What a file landing on an activity leaves stale. A deal's Files and a
+ *  company's library list linked activities' files too. Which records is not
+ *  known here, so those reads refresh by prefix. */
+export const activityFileStaleKeys = (activityId: string): QueryKey[] => [
+  activityFilesKey(activityId),
+  ["deal-documents"],
+  ["deal-attachments"],
+  ["companyDocuments"],
 ];

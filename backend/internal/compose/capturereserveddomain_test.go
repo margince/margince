@@ -8,13 +8,13 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
 // A booted role whose file says nothing skips reserved-domain proposals. The
 // zero CaptureConfig does not, which is what hand-built test configs rely on.
 func TestABootedRoleSkipsReservedDomainProposalsByDefault(t *testing.T) {
-	cfg := CaptureConfigFromDeploy(deployconfig.Capture{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	cfg := CaptureConfigFromDeploy(configtest.MustLoad(t, "version: 1\n", captureSettings()...), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if !cfg.SkipReservedDomainProposals {
 		t.Error("CaptureConfigFromDeploy on a silent capture block left SkipReservedDomainProposals off, want on")
 	}

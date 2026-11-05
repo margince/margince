@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Pencil, RotateCcwClock, Trash2 } from "lucide-react";
-import { type ReactNode, useId } from "react";
-import { ActionRow } from "./actionrow";
-import { Button, OverflowMenu } from "./atoms";
+import { type ReactNode, useId, useRef } from "react";
+import {
+  SummaryFields,
+  summaryPartsWithout,
+  summarySentence,
+} from "./approvalsummary";
 import { DecisionContent, DecisionEvidence } from "./decisioncard.content";
-import type { DecisionDisplay } from "./decisioncard.payload";
-import { IconAction } from "./iconaction";
+import { type DecisionDisplay, decisionEvidence } from "./decisioncard.payload";
+import {
+  DecisionAnswers,
+  type DecisionHeldRejection,
+  takesFocus,
+} from "./decisioncard.verbs";
 import { Popover } from "./popover";
 import type { SectionState } from "./surfacestate";
 import { SurfaceState } from "./surfacestate";
@@ -52,6 +58,7 @@ import {
   decisionUrgency,
 } from "./decisionstatus";
 
+export type { DecisionHeldRejection } from "./decisioncard.verbs";
 export type { DecisionCardLabels, DecisionCompactWords } from "./decisionhead";
 export {
   type DecisionApproval,
@@ -103,6 +110,11 @@ export type DecisionCardProps = Readonly<{
   onEdit?: () => void;
   onReject?: () => void;
   onSkip?: () => void;
+  /**
+   * Drawn in place of the verbs while set. The caller owns the window and the
+   * send; the card moves focus to its words and, once it leaves, back to Reject.
+   */
+  heldRejection?: DecisionHeldRejection;
   /**
    * The chips the CALLER owns on the meta line — the autonomy dot, the kind, the
    * originating tool, the countdown or status badge. They are the caller's
@@ -162,6 +174,12 @@ function urgencyOf(
   return decisionUrgency(expiresAtMs - now);
 }
 
+// A decided card draws no verbs, so the card itself takes focus back from
+// a held rejection's bar.
+function heldFocusTarget(decided: boolean): -1 | undefined {
+  return decided ? -1 : undefined;
+}
+
 export function DecisionCard({
   approval,
   layout = "deck",
@@ -176,6 +194,7 @@ export function DecisionCard({
   onEdit,
   onReject,
   onSkip,
+  heldRejection,
   meta,
   aside,
   detail,
@@ -188,12 +207,22 @@ export function DecisionCard({
   display = [],
 }: DecisionCardProps) {
   const headingId = useId();
+  const focusNextRef = useRef<"label" | "reject" | null>(null);
   const payload = readPayload(approval, layout, display);
   const lapsed = !decided && decisionLapsed(approval, now);
   // The SAME question the headline asks, so the article's accessible name and
   // the line a sighted reader sees cannot come apart: a card named only by its
   // target_label rendered a headline and pointed aria-labelledby at nothing.
-  const named = cardName(approval, payload.draft) ?? approval.summary ?? null;
+  const named = cardName(approval, payload.draft) ?? summarySentence(approval);
+  // The summary lists only the fields the card's body does not already draw.
+  const listed = summaryPartsWithout(
+    approval.summary_parts,
+    new Set([
+      ...display.map((entry) => entry.field),
+      ...payload.diffs.map((diff) => diff.field),
+      ...payload.rest.map((row) => row.key),
+    ]),
+  );
   // The dense form belongs to the row. A deck card that folded its proposal
   // away would be the one thing a tall plate exists not to do.
   const dense = layout === "row" ? compact : undefined;
@@ -216,8 +245,10 @@ export function DecisionCard({
       </div>
       <div className="dcard-evidence">
         <DecisionEvidence
-          evidence={approval.evidence}
-          collapsed={layout === "row"}
+          evidence={decisionEvidence(approval)}
+          collapsed={
+            layout === "row" && approval.preview?.evidence === undefined
+          }
         />
       </div>
       {detail}
@@ -230,9 +261,21 @@ export function DecisionCard({
   );
   // A lapsed proposal says so where its verbs used to be. Offering Accept on it
   // would be a control whose only possible answer is a refusal.
-  const ranOut = lapsed && <p className="dcard-lapsed">{labels.expired}</p>;
-  const verbs = !decided && !lapsed && !editor && (
-    <DecisionVerbs
+  const ranOut = lapsed && (
+    <p
+      className="dcard-lapsed"
+      tabIndex={-1}
+      ref={takesFocus(focusNextRef, "reject")}
+    >
+      {labels.expired}
+    </p>
+  );
+  const verbs = (
+    <DecisionAnswers
+      decided={decided}
+      focusNextRef={focusNextRef}
+      held={heldRejection}
+      answering={!lapsed && !editor}
       labels={labels}
       compact={dense}
       pending={pending}
@@ -253,6 +296,7 @@ export function DecisionCard({
       provenance={provenance}
       confidence={confidence}
       compact={dense !== undefined}
+      listed={listed}
     />
   );
 
@@ -273,6 +317,8 @@ export function DecisionCard({
       data-testid={testId}
       data-density={dense ? "compact" : undefined}
       aria-labelledby={named ? headingId : undefined}
+      tabIndex={heldFocusTarget(decided)}
+      ref={takesFocus(focusNextRef, "reject")}
     >
       {dense ? (
         <>
@@ -292,9 +338,10 @@ export function DecisionCard({
             <Popover label={dense.detail} className="dcard-detail">
               {/* The sentence that says WHY, which the line gave up to stay
                   one line. It leads here for the same reason it led the card. */}
-              {named && approval.summary && (
-                <p className="approval-why">{approval.summary}</p>
+              {named && summarySentence(approval) && (
+                <p className="approval-why">{summarySentence(approval)}</p>
               )}
+              <SummaryFields parts={listed} words={labels.summaryWords} />
               {proposal}
             </Popover>
             {verbs}
@@ -311,110 +358,6 @@ export function DecisionCard({
       {notice}
       {children}
     </article>
-  );
-}
-
-// The verbs.
-//
-// ONE of the four is a call to action, and the row says so: Accept keeps its
-// word and its fill on the trailing edge, the three that decline sit on the
-// leading one as glyphs. Four labelled buttons in a flow made the reader read
-// all four every time a card arrived, and a queue is answered card after card —
-// the whole cost of that row is paid once per decision. The three are exactly
-// the case `IconAction` is for: a trash can, a clock turned back and a pencil
-// are verbs a reader already knows, and each still carries its translated name
-// to a screen reader and to a pointer through the one `label`.
-//
-// Accept is also the control that STARTS the write, so it is the one that goes
-// busy: it keeps the reader's focus and says a verdict is on its way. The other
-// three stay `disabled` while it is out, and the difference is the whole point
-// of having two props — they did not start anything, they are simply not
-// available yet. Drawing Reject busy would claim a rejection nobody sent.
-function DecisionVerbs({
-  labels,
-  compact,
-  pending,
-  onAccept,
-  onEdit,
-  onReject,
-  onSkip,
-}: Readonly<{
-  labels: DecisionCardLabels;
-  /** The dense row's two extra words; absent draws the three glyphs. */
-  compact?: DecisionCompactWords;
-  pending?: boolean;
-  onAccept?: () => void;
-  onEdit?: () => void;
-  onReject?: () => void;
-  onSkip?: () => void;
-}>) {
-  if (!onAccept && !onEdit && !onReject && !onSkip) {
-    return null;
-  }
-  const primary = onAccept ? (
-    <Button variant="primary" pending={pending} onClick={onAccept}>
-      {labels.accept}
-    </Button>
-  ) : undefined;
-  // THE DENSE ROW SPELLS TWO VERBS AND FOLDS THE REST. Accept is what the row
-  // is for and Later is how a reader passes on it, so both keep their words; a
-  // rejection and an edit are rarer AND heavier, and a menu gives each a whole
-  // line to say so — which is exactly the trade `IconAction` refuses to make
-  // for a verb whose consequence must be read before it is pressed.
-  if (compact) {
-    return (
-      <ActionRow className="dcard-verbs" primary={primary}>
-        {onSkip && labels.skip && (
-          <Button disabled={pending} onClick={onSkip}>
-            {labels.skip}
-          </Button>
-        )}
-        {/* Never drawn EMPTY: a caret over no verbs is a control that opens
-            nothing. */}
-        {(onReject || onEdit) && (
-          <OverflowMenu label={compact.more}>
-            {onReject && (
-              <Button disabled={pending} onClick={onReject}>
-                {labels.reject}
-              </Button>
-            )}
-            {onEdit && (
-              <Button disabled={pending} onClick={onEdit}>
-                {labels.edit}
-              </Button>
-            )}
-          </OverflowMenu>
-        )}
-      </ActionRow>
-    );
-  }
-  return (
-    <ActionRow className="dcard-verbs" primary={primary}>
-      {onReject && (
-        <IconAction
-          label={labels.reject}
-          icon={<Trash2 aria-hidden />}
-          disabled={pending}
-          onClick={onReject}
-        />
-      )}
-      {onSkip && labels.skip && (
-        <IconAction
-          label={labels.skip}
-          icon={<RotateCcwClock aria-hidden />}
-          disabled={pending}
-          onClick={onSkip}
-        />
-      )}
-      {onEdit && (
-        <IconAction
-          label={labels.edit}
-          icon={<Pencil aria-hidden />}
-          disabled={pending}
-          onClick={onEdit}
-        />
-      )}
-    </ActionRow>
   );
 }
 

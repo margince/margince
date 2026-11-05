@@ -50,6 +50,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"deal.status":                      {"internal/modules/deals", "DealStatus"},
 	"ai_model_rate.source":             {"internal/modules/ai", "RateSource"},
 	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},
+	"partner_stage.meaning":            {"internal/contracts", "PartnerStageMeaning"},
 	"contact_consent.state":            {"internal/modules/consent", "ConsentState"},
 	"consent_purpose.class":            {"internal/modules/consent", "Class"},
 	"offer_line_item.proposal_state":   {"internal/modules/deals", "ProposalState"},
@@ -65,6 +66,12 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// so a value the contract admits and the CHECK refuses would be a save that
 	// fails with a constraint error instead of a validation answer.
 	"mail_draft.anchor_type": {"internal/contracts", "MailDraftAnchorType"},
+	// The reason a draft keeps. A reason the contract admits and the CHECK
+	// refuses would lose an autosave to a constraint error.
+	"mail_draft.communication_context": {"internal/contracts", "CommunicationContext"},
+	// How to read an activity's time. A precision the contract admits and the
+	// CHECK refuses would be a 500 on a valid create.
+	"activity.occurred_precision": {"internal/contracts", "OccurredPrecision"},
 
 	"activity_link.entity_type": {"internal/shared/ports/datasource", "RecordType"},
 	"list.entity_type":          {"internal/shared/ports/datasource", "RecordType"},

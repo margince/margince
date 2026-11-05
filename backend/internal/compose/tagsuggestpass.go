@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // tagSuggestItemCap bounds the items one pass reads per workspace; the next
@@ -190,7 +191,8 @@ func (s *TagSuggester) readBacklog(ctx context.Context, now time.Time) (tagSugge
 			       ` + tagSuggestContentDigestSQL("a") + `, ` + tagSuggestReadersSQL("a") + `
 			  FROM activity a
 			 WHERE ` + tagScoutCitable("a") + `
-			   AND a.occurred_at > ` + arg(now.Add(-tagScoutWindow)) + ` AND a.occurred_at <= ` + arg(now) + `
+			   AND ` + arg(now.Add(-tagScoutWindow)) + ` < a.occurred_at -- occurred_at raw: the scout window's lower edge
+			   AND ` + occurredday.BegunSQL("a", arg(now)) + `
 			   AND EXISTS (SELECT 1 FROM activity_link l
 			                WHERE l.activity_id = a.id AND l.entity_type IN ('contact', 'company'))
 			   AND ` + collections.TagInterestUnreadClause("a.id", arg(backlog.vocabulary), tagSuggestContentDigestSQL("a")) + `
@@ -234,7 +236,8 @@ func (s *TagSuggester) raiseFromAnswers(ctx context.Context, now time.Time, voca
 			    CROSS JOIN LATERAL (` + collections.TagInterestAnswerSQL("a.id", arg(vocabulary), tagSuggestContentDigestSQL("a")) + `) p
 			    JOIN activity_link l ON l.activity_id = a.id AND l.entity_type IN ('contact', 'company')
 			   WHERE ` + tagScoutCitable("a") + `
-			     AND a.occurred_at > ` + arg(now.Add(-tagScoutWindow)) + ` AND a.occurred_at <= ` + arg(now) + `
+			     AND ` + arg(now.Add(-tagScoutWindow)) + ` < a.occurred_at -- occurred_at raw: the scout window's lower edge
+			   AND ` + occurredday.BegunSQL("a", arg(now)) + `
 			), ` + tagScoutRankedSQL()
 		var err error
 		considered, raised, err = raiseTagSuggestions(ctx, tx, tagScoutSuggestionCap, query, args...)

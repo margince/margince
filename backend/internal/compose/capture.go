@@ -11,11 +11,11 @@ package compose
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
@@ -23,10 +23,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -89,21 +91,19 @@ type CaptureConfig struct {
 	// arrive. Settable only in that file — a member must not be able to change
 	// retention of their colleagues' subjects in either direction.
 	//
-	// A plain bool here on purpose: the three-state question is the operator's
-	// and is answered at the boundary, by deployconfig's TracesPayloads.
-	//
 	// Every zero value below this line — the site_lead accept path's
 	// `CaptureConfig{}`, the registry enumerations — means no deployment config
 	// at all, and those keep the off behaviour they have today rather than
 	// inheriting a default meant for a booted role.
-	//
-	// Held by: TestOnlyTheResolverReadsTheTracePayloadsField (backend/internal/platform/deployconfig/capture_test.go)
 	TracePayloads bool
 	// MaxBackfillMonths caps how far back a mailbox import may reach, already
 	// resolved against its default by CaptureConfigFromDeploy. Zero is no cap,
 	// which is both the shipped behaviour and what the zero-value
 	// constructions below mean.
 	MaxBackfillMonths int
+	// Now is the clock the deal question judges a mail's currentness by. Nil
+	// is the wall clock.
+	Now func() time.Time
 	// SkipReservedDomainProposals is capture.skip_reserved_domain_proposals,
 	// already resolved: the review sweep raises no contact proposal for a
 	// sender on an RFC 2606 reserved name. ON for a booted role; the zero value
@@ -124,13 +124,11 @@ type CaptureConfig struct {
 	// drop a separately-assigned keeper, which is a failure with no error and
 	// no missing file to notice.
 	Blob blobstore.Store
-	// AllowTestMailbox is operations.allow_test_mailbox — a deployment-file
-	// kill switch (deployconfig.Operations), not a capture.* tuning knob, so
-	// it is NOT set by CaptureConfigFromDeploy below (which is scoped to
-	// deployconfig.Capture only). Each boot path (cmd/api/main.go,
-	// cmd/worker/main.go) sets it explicitly, right after calling
-	// CaptureConfigFromDeploy. The zero value is false: NewCaptureRegistry
-	// registers the test_mailbox connector only when this is true.
+	// AllowTestMailbox is operations.allow_test_mailbox, a kill switch rather
+	// than a capture.* tuning knob, so CaptureConfigFromDeploy leaves it and
+	// each boot path (cmd/api/main.go, cmd/worker/main.go) sets it. The zero
+	// value is false: NewCaptureRegistry registers the test_mailbox connector
+	// only when this is true.
 	AllowTestMailbox bool
 }
 
@@ -142,46 +140,22 @@ func (c CaptureConfig) logger() *slog.Logger {
 	return slog.Default()
 }
 
-// WithCaptureConfig records the deployment's capture suppression-list config on
-// the Server so EVERY registry construction — the Gmail one, the vault-rebuilt
-// IMAP/fallback one (WithKeyvault), and the graph-only one (WithGraphCapture) —
-// applies the transactional/free-mail additions, not only the Gmail path. Apply
-// it before WithKeyvault/WithGraphCapture in the option list; omitting it keeps
-// the pinned baselines.
-func WithCaptureConfig(cfg CaptureConfig) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.captureConfig = cfg }
-}
-
 // WarnStaleRates says once, at boot, which `rates:` settings the file still
 // carries and nothing acts on. Both roles call it: the api serves the request
 // the operator believed the key governed, and the worker used to run the job.
-func WarnStaleRates(r deployconfig.RatesConfig, log *slog.Logger) {
-	for _, warning := range r.Warnings() {
-		log.Warn("rates configuration: " + warning)
+func WarnStaleRates(c *config.Config, log *slog.Logger) {
+	if len(config.Val(c, RatesModelPricing)) > 0 {
+		log.Warn("rates configuration: rates.model_pricing is ignored: model prices are refreshed from the provider's own " +
+			"catalogue with Refresh model prices under Settings. Remove it from margince.yaml.")
 	}
 }
 
-// CaptureConfigFromDeploy maps the deployment's `capture:` block onto the
-// compose suppression config the Sink gates read (CAP-PARAM-6, ADR-0072).
-//
-// Every role that boots with a config file goes through here, which is why the
-// stale-key warnings are reported here: a setting that is still accepted but no
-// longer acts must say so once, at boot, or an operator goes on believing the
-// file governs something it does not.
-func CaptureConfigFromDeploy(c deployconfig.Capture, log *slog.Logger) CaptureConfig {
-	for _, warning := range c.Warnings() {
-		log.Warn("capture configuration: " + warning)
-	}
-	return CaptureConfig{
-		TransactionalExtra: c.TransactionalExtra,
-		TransactionalNever: c.TransactionalNever,
-		TracePayloads:      c.TracesPayloads(),
-		MaxBackfillMonths:  c.BackfillCeiling(),
-		Logger:             log,
-
-		SkipReservedDomainProposals: c.SkipsReservedDomainProposals(),
-	}
-}
+// RatesModelPricing is accepted so files that carry it still load; model
+// prices come from the provider's catalogue.
+var RatesModelPricing = config.Define(config.Spec[map[string]string]{
+	Key: "rates.model_pricing", Env: "MARGINCE_RATES_MODEL_PRICING", Type: config.Map(config.String), Roles: bothRoles,
+	Doc: "Ignored, with a warning at boot; kept so existing files load.",
+})
 
 // NewCaptureRegistry builds the connector registry; process roles register
 // their compiled-in connectors on it and drive SyncOnce. The vault seals and
@@ -212,7 +186,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	// no digest, so a source reading a database it does not have would fail on
 	// a path that never counts anything.
 	if pool != nil {
-		r = r.WithDigestReview(newDigestReviewSource(pool, approvals.NewService(db)))
+		r = r.WithDigestReview(newDigestReviewSource(pool, NewApprovalsService(db)))
 	}
 	// The standing IMAP connector needs no deployment config — credentials
 	// are per-connection, vault-sealed — so every capture-capable role
@@ -262,9 +236,9 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 // which captures through the Sink directly without needing a registry.
 func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	ensurer := contactsEnsurer{
-		store:  newCounterpartyStore(pool),
+		store:  newCounterpartyStoreAt(pool, cfg.clock()),
 		pool:   pool,
-		triage: newDomainTriageTrigger(pool, cfg.logger()),
+		triage: newDomainTriageTrigger(pool, cfg.logger(), cfg.SkipReservedDomainProposals),
 		log:    cfg.logger(),
 	}
 	// Acting on a message the owner deleted at the provider destroys attachment
@@ -283,13 +257,20 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		purgeRemoved = purger.PurgeRemoved
 	}
 	return capture.NewSink(InstallationDB(pool)).
+		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).
+		WithPartyReceiptSettlement(comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))).SettlePartyAdmission).
 		WithMessagePurger(purgeRemoved).
 		// The files a captured message carried, written by the module that owns
 		// the attachment table. Built here, from the store, so every role that
 		// composes a sink gets the same one — the worker runs mail capture and
 		// never sees the api's options.
 		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
-		WithStager(mergeStager{svc: approvals.NewService(InstallationDB(pool))}).
+		WithStager(mergeStager{svc: NewApprovalsService(InstallationDB(pool))}).
+		WithContactArrivals(contactArrivalTeller{
+			store: newContactsStore(InstallationDB(pool)).
+				WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), cfg.logger())),
+			log: cfg.logger(),
+		}).
 		WithBaseLanguage(installationLanguage(pool)).
 		// The ADR-0063 auto-create pipeline: every captured mail ensures
 		// its counterparty exists, through the contacts module's ONE dedupe
@@ -315,6 +296,13 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 			Keys:  ProjectsStore(pool),
 			Stamp: activities.StampCorrespondenceForProject,
 		}).
+		// The deal rule reads its candidates from the module that owns `deal`,
+		// and asks its one question through the store that owns tasks.
+		WithDealAttribution(capture.DealAttribution{
+			Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
+			Ask:        whichDealAsker{tasks: activities.NewStore(InstallationDB(pool)), now: cfg.clock()}.Ask,
+			Filer:      ActivityDealFiler{},
+		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives
 		// is the answer to "may a colleague read this", and a message that is
@@ -326,6 +314,9 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// name it completes is read off the participant rows this same
 		// transaction has just written.
 		WithParticipantNamer(contacts.FillParticipantNamesTx).
+		// The opening score and its history point, from the module that owns
+		// `lead`, so a captured lead scores as a hand-created one does.
+		WithLeadScorer(contacts.ScoreCapturedLead).
 		// Closing a meeting the calendar says is off — called off by its
 		// organizer, or declined by the seat whose calendar it is. From the
 		// module that owns `activity` and its status history, for the reason
@@ -343,6 +334,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 			activities.CancelMeetingByIDTx,
 		).
 		WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx)).
+		WithMeetingFolder(foldCapturedMeeting(activities.NewStore(InstallationDB(pool)))).
 		WithCalendarInvitations(resolveCapturedInvitation).
 		// Writing a connector's own reading of a message over a row an importer
 		// ASSERTED. From the module that owns `activity`, for the reason every
@@ -390,4 +382,12 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.
 		WithTracePayloads(cfg.TracePayloads)
+}
+
+// clock is the configured clock, or the wall clock.
+func (c CaptureConfig) clock() func() time.Time {
+	if c.Now != nil {
+		return c.Now
+	}
+	return time.Now
 }

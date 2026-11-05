@@ -58,10 +58,10 @@ const contractDocument = "api/crm.yaml"
 // it to say where the contract admits its values.
 var picklistInContract = map[string]struct{ schema, property string }{
 	"company.lifecycle":         {"Company", "lifecycle"},
+	"company.industry":          {"Company", "industry"},
 	"company.size_band":         {"Company", "size_band"},
 	"company.relationship_type": {"Company", "relationship_types"},
 	"deal.status":               {"Deal", "status"},
-	"deal.forecast_category":    {"Deal", "forecast_category"},
 	"lead.status":               {"Lead", "status"},
 	"project.phase":             {"Project", "phase"},
 	// A deal filters on its customer's account through a link leaf, so two of the
@@ -70,6 +70,9 @@ var picklistInContract = map[string]struct{ schema, property string }{
 	// different set from the field it reads is exactly the drift this catches.
 	"deal.company_lifecycle": {"Company", "lifecycle"},
 	"deal.company_size_band": {"Company", "size_band"},
+	"deal.company_industry":  {"Company", "industry"},
+	"lead.company_industry":  {"Company", "industry"},
+	"lead.industry":          {"Company", "industry"},
 	// The technical leaves read `company_fact.value_key`, which is a bare
 	// string on the fact schema and cannot carry three different enums. Each
 	// names the dedicated schema that publishes ITS set instead — which is what
@@ -211,7 +214,7 @@ func enumStrings(t *testing.T, node map[string]any, subject string) []string {
 	return values
 }
 
-func descendContract(t *testing.T, doc map[string]any, path ...string) map[string]any {
+func descendContract(t testing.TB, doc map[string]any, path ...string) map[string]any {
 	t.Helper()
 	node := doc
 	for _, key := range path {

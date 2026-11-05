@@ -10,20 +10,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../../i18n/en";
 import {
-  jsonResponse,
-  permissionDenied,
-  StoryProviders,
-  stubWithSession,
-} from "../../testing/story-utils";
-import { LegalReviewsRoute } from "./legalreviews";
-import {
   legalOn,
   queueItem,
   REVIEW_ID,
   review,
   VIEWER_ID,
-} from "./legalreviews.fixtures";
-import { LegalReviewSettingsCard } from "./legalreviewsettings";
+} from "../../testing/legalreviews.fixtures";
+import {
+  jsonResponse,
+  permissionDenied,
+  StoryProviders,
+  stubWithSession,
+} from "../../testing/story-utils";
+import { LegalReviewSettingsCard } from "../settings/legalreviewsettings";
+import { LegalReviewsRoute } from "./legalreviews";
 
 afterEach(() => {
   cleanup();

@@ -19,11 +19,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// releaseQuestion clears an open question's owner, which is what puts it on
-// the operator's list rather than on a colleague's queue.
+// releaseQuestion clears an open question's owner. The question stays on the
+// operator's list, where every open question is.
 func (e *dedupeEnv) releaseQuestion(ctx context.Context, t *testing.T, domain string) {
 	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `DELETE FROM company_domain_question_reader WHERE domain = $1`, domain); err != nil {
+			return err
+		}
 		_, err := tx.Exec(ctx, `UPDATE company_domain_disposition SET owner_id = NULL WHERE domain = $1`, domain)
 		return err
 	}); err != nil {
@@ -67,9 +70,17 @@ func TestEveryListedReasonTravelsAsACode(t *testing.T) {
 	e.inTx(ctx, t, "claiming the domain for a company", func(tx pgx.Tx) error {
 		return admitClaimedDomainTx(ctx, tx, "claimed.example")
 	})
-	if _, err := e.store.SetDomainAdmission(ctx, "kept.example", DomainAdmitted, KeptDomainReason); err != nil {
+	if _, err := e.store.KeepDomainAsCompany(ctx, "kept.example"); err != nil {
 		t.Fatalf("keeping an open question as a company: %v", err)
 	}
+	e.inTx(ctx, t, "changing display text without changing the decision", func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE company_domain_disposition SET admission_reason=@reason
+ WHERE domain = ANY(@domains)`, pgx.NamedArgs{
+			"reason":  "Unveränderte Entscheidung, andere Formulierung.",
+			"domains": []string{"bulk.example", "claimed.example", "kept.example"},
+		})
+		return err
+	})
 	// No writer stamps heuristic today, and the schema still admits it.
 	e.inTx(ctx, t, "recording a heuristic refusal", func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
@@ -95,9 +106,10 @@ func TestEveryListedReasonTravelsAsACode(t *testing.T) {
 	e.releaseQuestion(ctx, t, "stale.example")
 
 	e.openTriage(ctx, t, "hello@twin.example", "", "twin.example")
+	twin := e.createNamedCompany(ctx, t, "Twin GmbH")
 	e.inTx(ctx, t, "withholding for a name twin", func(tx pgx.Tx) error {
 		return withholdForNearDuplicate(ctx, tx, ResolveDomainTriageInput{Domain: "twin.example"},
-			CompanyCandidateScore{CandidateValue: "Twin", IncumbentValue: "Twin GmbH"})
+			CompanyCandidateScore{CompanyID: twin, CandidateValue: "Twin", IncumbentValue: "Twin GmbH"})
 	})
 	e.releaseQuestion(ctx, t, "twin.example")
 
@@ -160,15 +172,16 @@ func TestAListedCompanyNameIsWithheldWithItsID(t *testing.T) {
 	}
 }
 
-// The open question a name twin leaves reaches its owner with the same sentence
-// the operator's list gives it once nobody owns it.
+// The open question a name twin leaves reaches its decider with the same
+// sentence the operator's list gives it.
 func TestANameTwinQuestionTellsItsOwnerWhy(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriage(ctx, t, "hello@twin.example", "", "twin.example")
+	twin := e.createNamedCompany(ctx, t, "Twin GmbH")
 	e.inTx(ctx, t, "withholding for a name twin", func(tx pgx.Tx) error {
 		return withholdForNearDuplicate(ctx, tx, ResolveDomainTriageInput{Domain: "twin.example"},
-			CompanyCandidateScore{CandidateValue: "Twin", IncumbentValue: "Twin GmbH"})
+			CompanyCandidateScore{CompanyID: twin, CandidateValue: "Twin", IncumbentValue: "Twin GmbH"})
 	})
 
 	backlog, err := e.store.OpenDomainQuestionsForOwner(ctx)

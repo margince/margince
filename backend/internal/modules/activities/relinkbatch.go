@@ -63,6 +63,12 @@ type RelinkActivityInput struct {
 	// activities and one version cannot speak for them, so the batch doors
 	// refuse a pin rather than applying it to whichever row happens to match.
 	IfVersion *int64
+	// unfiledOnly makes the write conditional on the activity having no link
+	// of this type, checked under the row lock. Automatic filing uses it; an
+	// ordinary relink adds beside what is there.
+	unfiledOnly bool
+	// evidence is the reason an automatic writer records in the audit row.
+	evidence map[string]any
 }
 
 // RelinkActivity is the single-relink door: admits the request, then commits
@@ -75,9 +81,15 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 	}
 	var out crmcontracts.Activity
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		_, held, err := relinkAdmittedRow(ctx, tx, id, in, column)
+		wrote, held, err := relinkAdmittedRow(ctx, tx, id, in, column)
 		if err != nil {
 			return err
+		}
+		// A colleague filing a questioned mail on a deal answers the question.
+		if wrote && in.EntityType == linkEntityDeal {
+			if err := s.answerWhichDealTx(ctx, tx, id, in.EntityID); err != nil {
+				return err
+			}
 		}
 		// held, not a bare storekit.LiveOnly: a no-op relink (the target was
 		// already linked) never reaches relinkActivityRow's own write, so a
@@ -85,13 +97,16 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 		// LiveOnly read here would answer not-found for a replay that, on a
 		// live row, correctly answers with the row unchanged.
 		var err2 error
-		out, err2 = readActivityForWrite(ctx, tx, id, held)
+		out, err2 = readActivityForWrite(ctx, tx, id, held, s.now())
 		return err2
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Activity{}, apperrors.ErrNotFound
 	}
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
 // RelinkActivityInTx is the single relink on the CALLER's transaction: the
@@ -173,6 +188,11 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	if err := relinkMeetsItsPin(ctx, tx, id, in.IfVersion, held); err != nil {
 		return false, held, err
 	}
+	if in.unfiledOnly {
+		if filed, err := hasLinkOfType(ctx, tx, id, in.EntityType); err != nil || filed {
+			return false, held, err
+		}
+	}
 	var displaced []ids.UUID
 	if in.ReplaceExistingOfType {
 		var err error
@@ -197,14 +217,14 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	if tag.RowsAffected() == 0 {
 		return false, held, nil
 	}
-	return true, held, finalizeRelinkedActivity(ctx, tx, id, in)
+	return true, held, finalizeRelinkedActivity(ctx, tx, id, in, displaced)
 }
 
 // finalizeRelinkedActivity is the bookkeeping relinkActivityRow's own write
 // earns once the link itself is written: the version bump a staged approval
 // re-checks, the project correspondence stamp, and the audit row + outbox
 // event — split out so the guard chain above it reads as one shape.
-func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) error {
+func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, removed []ids.UUID) error {
 	// Touch the activity ROW itself, not just its link table: a staged
 	// approval pins activity.version (versionTables includes objectActivity),
 	// and that pin is the only defense between an approved "send this body on
@@ -224,15 +244,25 @@ func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 			return err
 		}
 	}
-	auditID, err := storekit.Audit(ctx, tx, "activity_relink", "activity", id.UUID, nil, map[string]any{
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID, relinkBefore(in.EntityType, removed), map[string]any{
 		"entity_type": in.EntityType, "entity_id": in.EntityID, "replaced": in.ReplaceExistingOfType,
-	})
+	}, in.evidence)
 	if err != nil {
 		return err
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
 		ChangedFields: relinkedChangedFields(in.EntityType, in.EntityID),
 	})
+}
+
+// relinkBefore is the audit row's restore image: the links of the destination's
+// type that a replacing relink removed. It is nil when nothing was removed, so
+// an additive relink keeps the empty before it always had.
+func relinkBefore(entityType string, removed []ids.UUID) map[string]any {
+	if len(removed) == 0 {
+		return nil
+	}
+	return map[string]any{"entity_type": entityType, "entity_ids": removed}
 }
 
 // relinkedChangedFields is RelinkActivity's activity.updated builder: the
@@ -277,7 +307,7 @@ func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVers
 	if ifVersion == nil || held {
 		return nil
 	}
-	current, err := readActivityForWrite(ctx, tx, id, held)
+	current, err := readActivity(ctx, tx, id, storekit.LiveOnly)
 	if err != nil {
 		return err
 	}
@@ -320,14 +350,14 @@ func (e *BatchPinError) MessageFault() (code, message string) {
 		" — drop the If-Match and relink them one at a time to pin a version"
 }
 
-// RelinkThread applies one relink to every non-archived activity carrying
-// threadKey that the caller may write. A row the caller cannot see or cannot
-// write is LEFT, not refused: the caller never named it, so there is nothing
-// to hide and nothing to answer 403 about — the count says how many moved.
-func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkActivityInput) (RelinkBatchResult, error) {
-	if threadKey == "" {
-		return RelinkBatchResult{}, httperr.Validation("thread_key", codeRequired,
-			"thread_key names the conversation to move; it cannot be blank")
+// RelinkThread applies one relink to every non-archived activity of anchor's
+// correspondence (SameCorrespondenceSQL) that the caller may write. A row the
+// caller cannot see or cannot write is LEFT, not refused. The caller never named
+// it, so there is nothing to hide and no 403 to answer. The count says how many moved.
+func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in RelinkActivityInput) (RelinkBatchResult, error) {
+	if anchor.IsZero() {
+		return RelinkBatchResult{}, httperr.Validation("activity_id", codeRequired,
+			"activity_id names a message of the conversation to move; it cannot be blank")
 	}
 	if err := refuseBatchPin(in); err != nil {
 		return RelinkBatchResult{}, err
@@ -343,7 +373,14 @@ func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkAct
 		if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
 			return err
 		}
-		members, err := liveThreadMembers(ctx, tx, threadKey)
+		if _, err := readActivity(ctx, tx, anchor, storekit.LiveOnly); err != nil {
+			return err
+		}
+		domain, err := s.correspondenceDomainTx(ctx, tx, anchor.UUID)
+		if err != nil {
+			return err
+		}
+		members, err := liveConversationMembers(ctx, tx, anchor, domain)
 		if err != nil {
 			return err
 		}
@@ -356,6 +393,9 @@ func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkAct
 				return err
 			case written:
 				out.Relinked++
+				if err := s.answerOnDealFiling(ctx, tx, id, in); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -363,16 +403,16 @@ func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkAct
 	return out, err
 }
 
-// liveThreadMembers enumerates the thread's live rows in id order, so two
-// concurrent moves of one conversation lock rows in the same sequence. The
-// per-row write check is what decides which of them move; the enumeration
-// itself answers nothing to the caller.
-func liveThreadMembers(ctx context.Context, tx pgx.Tx, threadKey string) ([]ids.ActivityID, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT id FROM activity WHERE thread_key = $1 AND archived_at IS NULL AND restricted_at IS NULL ORDER BY id`,
-		threadKey)
+// liveConversationMembers enumerates the anchor and the live rows of its
+// correspondence in id order. Two concurrent moves of one conversation then lock
+// rows in the same sequence. The per-row write check decides which of them move.
+func liveConversationMembers(ctx context.Context, tx pgx.Tx, anchor ids.ActivityID, domain string) ([]ids.ActivityID, error) {
+	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a, activity anchor
+		 WHERE anchor.id = $1 AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		   AND (a.id = anchor.id OR `+SameCorrespondenceSQL("a", "anchor", "$2::text", "")+`)
+		 ORDER BY a.id`, anchor, domain)
 	if err != nil {
-		return nil, fmt.Errorf("enumerate thread: %w", err)
+		return nil, fmt.Errorf("enumerate conversation: %w", err)
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (ids.ActivityID, error) {
 		var id ids.ActivityID
@@ -387,9 +427,8 @@ func liveThreadMembers(ctx context.Context, tx pgx.Tx, threadKey string) ([]ids.
 // rolls the whole set back, because a caller who named twelve rows and had
 // seven of them move has no way to tell which seven.
 func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in RelinkActivityInput) (RelinkBatchResult, error) {
-	if len(activityIDs) == 0 || len(activityIDs) > maxBulkRelink {
-		return RelinkBatchResult{}, httperr.Validation("activity_ids", "out_of_range",
-			fmt.Sprintf("activity_ids names between 1 and %d activities; this request names %d", maxBulkRelink, len(activityIDs)))
+	if err := validateRelinkCount(len(activityIDs)); err != nil {
+		return RelinkBatchResult{}, err
 	}
 	if err := refuseBatchPin(in); err != nil {
 		return RelinkBatchResult{}, err
@@ -418,9 +457,30 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 			}
 			if written {
 				out.Relinked++
+				if err := s.answerOnDealFiling(ctx, tx, ids.From[ids.ActivityKind](raw), in); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
 	})
 	return out, err
+}
+
+// answerOnDealFiling lets each row a batch door files on a deal answer its
+// conversation's question, as the single door's row does. The first of a
+// conversation's rows settles its question, and the rest find none open.
+func (s *Store) answerOnDealFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) error {
+	if in.EntityType != linkEntityDeal {
+		return nil
+	}
+	return s.answerWhichDealTx(ctx, tx, id, in.EntityID)
+}
+
+func validateRelinkCount(count int) error {
+	if count == 0 || count > maxBulkRelink {
+		return httperr.Validation("activity_ids", "out_of_range",
+			fmt.Sprintf("activity_ids names between 1 and %d activities; this request names %d", maxBulkRelink, count))
+	}
+	return nil
 }

@@ -5,6 +5,7 @@
 // so nobody briefs legal by hand. A document is listed only when this reader
 // can open it, and opens through the file's own gate.
 
+import { LegalReviewStatusBadge } from "../../components/legalreviewstatus";
 import { EmptyState } from "../../design-system/atoms";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { FileChip } from "../../design-system/filechip";
@@ -18,7 +19,6 @@ import {
   formatNumber,
   ordinalNumber,
 } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
   type PluralTranslator,
@@ -28,8 +28,8 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { LegalReview } from "./legalreviews.queries";
-import { LegalReviewStatusBadge } from "./legalreviewstatus";
+import type { LegalReview } from "../../lib/legalreviews.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Packet = LegalReview["packet"];
 type PacketDocument = Packet["documents"][number];
@@ -89,14 +89,15 @@ export function LegalReviewPack({ review }: Readonly<{ review: LegalReview }>) {
 }
 
 function EarlierWhen({ at }: Readonly<{ at: string }>) {
+  const readerZone = useViewerZone();
   const { locale } = useLocale();
-  return <span>{formatDateTime(at, locale, viewerZone())}</span>;
+  return <span>{formatDateTime(at, locale, readerZone)}</span>;
 }
 
 function PackFacts({ packet }: Readonly<{ packet: Packet }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const deal = packet.deal;
   return (
     <Panel title={t("legalReview.packTitle")}>
@@ -166,7 +167,7 @@ function PackOffer({ packet }: Readonly<{ packet: Packet }>) {
 function OfferFields({ offer }: Readonly<{ offer: PacketOffer }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <FieldGrid>
       <FieldRow label={t("legalReview.offerNumber")}>
@@ -295,7 +296,7 @@ function PackDocuments({ packet }: Readonly<{ packet: Packet }>) {
 function PackHistory({ packet }: Readonly<{ packet: Packet }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <Panel title={t("legalReview.packHistory")}>
       {packet.history.map((stage) => (

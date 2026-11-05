@@ -55,7 +55,7 @@ func (e *CounterpartyVerdictEngine) apply(
 		// would silently start hiding real mail, so there is none.
 		switch kind {
 		case capture.KindContact:
-			triageDomain, err = e.createContactForVerdict(ctx, tx, row)
+			triageDomain, err = e.createContactForVerdict(ctx, tx, row, "")
 			return err
 		case capture.KindRoleMailbox, capture.KindCompanySender:
 			// Real correspondence with no human to name. The message stays
@@ -68,7 +68,10 @@ func (e *CounterpartyVerdictEngine) apply(
 			// founder's lawyer is somebody they correspond with — and stays
 			// owner-scoped, because publishing it to the workspace announces
 			// that the founder has a lawyer and what about.
-			triageDomain, err = e.createOwnerScopedCounterparty(ctx, tx, row, contacts.NarrowedAdvisor)
+			triageDomain, err = e.createOwnerScopedCounterparty(ctx, tx, row, contacts.NarrowedAdvisor, "")
+			return err
+		case capture.KindVendorPitch:
+			triageDomain, err = e.createVendorPitchContact(ctx, tx, row)
 			return err
 		case capture.KindPersonal:
 			// No record, and none kept: a family member is not a counterparty
@@ -88,7 +91,10 @@ func (e *CounterpartyVerdictEngine) apply(
 			// hideNoise is deliberately NOT called. Its scope excludes every
 			// address the workspace has written to, which is every address this
 			// kind is ever about, so it would be a no-op that read like a hide.
-			return e.retractSendersContacts(ctx, tx, row, retractOwnersOnly)
+			if err := e.retractSendersContacts(ctx, tx, row, retractOwnersOnly); err != nil {
+				return err
+			}
+			return retractPersonalSenderLeadLinksTx(ctx, tx, row.Email, row.OwnerID)
 		}
 		return fmt.Errorf("verdict: no effect defined for sender kind %q", kind)
 	})

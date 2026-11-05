@@ -53,12 +53,17 @@ const healthScope = `(
 
 // KindHealth is one kind's live state under the caller's scope.
 type KindHealth struct {
-	Kind      string
-	Queue     string
-	FleetWide bool
-	Waiting   int64
-	Running   int64
-	Retrying  int64
+	Kind          string
+	Queue         string
+	FleetWide     bool
+	Waiting       int64
+	Running       int64
+	Retrying      int64
+	Discarded     int64
+	Cancelled     int64
+	Runnable      int64
+	FutureRetries int64
+	NextAttemptAt *time.Time
 	// Dead is discarded plus cancelled: work that will not happen without
 	// intervention. The two are reported together here because the question
 	// the field answers is "will this run" and the answer is no either way;
@@ -162,6 +167,11 @@ func WorkspaceHealth(
 	return Health{Kinds: kinds, Failures: failures}, nil
 }
 
+// WorkspaceKindHealth omits the failure sample and the windowed DeadRecent count.
+func WorkspaceKindHealth(ctx context.Context, pool *pgxpool.Pool, workspaceID string, dispatcherKinds []string) ([]KindHealth, error) {
+	return healthByKind(ctx, pool, workspaceID, dispatcherKinds, 0)
+}
+
 // healthByKind groups the caller's live rows by kind and queue.
 //
 // It groups by whether the workspace key is null as well, so a kind that
@@ -192,6 +202,11 @@ func healthByKind(
 		       -- Held by: TestATerminalRowMustCarryTheMomentItDied
 		       count(*) FILTER (WHERE state::text IN ` + terminalBadStates + `
 		                          AND finalized_at >= now() - $3::interval)::bigint,
+		       count(*) FILTER (WHERE state::text IN ` + runnableStates + ` AND scheduled_at <= now())::bigint,
+		       count(*) FILTER (WHERE state::text = 'retryable' AND scheduled_at > now())::bigint,
+		       count(*) FILTER (WHERE state::text = 'discarded')::bigint,
+		       count(*) FILTER (WHERE state::text = 'cancelled')::bigint,
+		       min(scheduled_at) FILTER (WHERE state::text = 'retryable' AND scheduled_at > now()),
 		       max(EXTRACT(EPOCH FROM (now() - scheduled_at)))
 		           FILTER (WHERE state::text IN ` + runnableStates + `
 		                     AND scheduled_at <= now())::double precision
@@ -211,8 +226,12 @@ func healthByKind(
 		var k KindHealth
 		if err := rows.Scan(&k.Kind, &k.Queue, &k.FleetWide,
 			&k.Waiting, &k.Running, &k.Retrying, &k.Dead, &k.DeadRecent,
-			&k.OldestWaitingAgeSeconds); err != nil {
+			&k.Runnable, &k.FutureRetries, &k.Discarded, &k.Cancelled, &k.NextAttemptAt, &k.OldestWaitingAgeSeconds); err != nil {
 			return nil, fmt.Errorf("jobs: scanning job health by kind: %w", err)
+		}
+		if k.NextAttemptAt != nil {
+			at := k.NextAttemptAt.UTC()
+			k.NextAttemptAt = &at
 		}
 		out = append(out, k)
 	}

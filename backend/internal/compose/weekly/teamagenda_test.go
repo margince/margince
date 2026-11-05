@@ -22,7 +22,7 @@ func TestTheAgendaOrderIsTheOrderTheRulesAreTried(t *testing.T) {
 	t.Parallel()
 	fired := make([]string, 0, len(focusRules))
 	for _, rule := range focusRules {
-		kind, _ := focusFor(rule.counts, rule.help, rule.deals)
+		kind, _ := teamCopyFor("en").focusFor(rule.counts, rule.help, rule.deals)
 		fired = append(fired, kind)
 	}
 	written := slices.DeleteFunc(slices.Clone(focusPriority), func(kind string) bool {

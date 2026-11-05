@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -10,7 +11,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { AgentAllowancesCard } from "./agentallowances";
-import { defaultAgentAllowances } from "./agentallowances.fixtures";
 
 // What one passport may do per window. The stories cover rest, the edit form, a
 // reader and a window change waiting for its reset.

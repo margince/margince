@@ -5,13 +5,7 @@
 
 package compose
 
-// The weekly mail's one guarantee: at most one SMTP attempt per rep per week.
-//
-// It drives the production worker's own mailWeekly rather than the claim
-// underneath it. A test that called ClaimMailAttempt directly would prove the
-// UPDATE is conditional and prove nothing about the lane — the lane is where a
-// second send would actually come from, because it is the thing that runs
-// every six hours.
+// Production workers exercise the database claims under repeated delivery attempts.
 
 import (
 	"context"
@@ -26,6 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -42,6 +38,7 @@ type countingMailer struct {
 	// notification leg's claim is about what the body says — the notice's line,
 	// the link, and that neither carries a line the notice forged.
 	bodies []string
+	markup []string
 	fail   error
 	// onSend runs inside the send, so a test can observe the world at the
 	// moment the relay is first dialled.
@@ -61,6 +58,13 @@ func (m *countingMailer) Send(_ context.Context, to, subject, body string) error
 	return m.fail
 }
 
+func (m *countingMailer) SendAlternative(ctx context.Context, to, subject, text, markup, messageID string) error {
+	m.mu.Lock()
+	m.markup = append(m.markup, markup)
+	m.mu.Unlock()
+	return m.Send(ctx, to, subject, text)
+}
+
 func (m *countingMailer) count() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -69,7 +73,7 @@ func (m *countingMailer) count() int {
 
 // weeklyMailClock is a Monday past the review hour, so the reps in the fixture
 // are due the week that just closed.
-var weeklyMailClock = time.Date(2026, 7, 6, 6, 30, 0, 0, time.UTC)
+var weeklyMailClock = time.Date(2026, 7, 6, 9, 30, 0, 0, time.UTC)
 
 // mailEnv is a workspace worker wired exactly as jobs_weekly.go wires it,
 // with the relay swapped for one that counts.
@@ -99,25 +103,24 @@ func setupWeeklyMail(t *testing.T) *mailEnv {
 	}
 }
 
-// seedReview writes one rep's review the way the deterministic pass leaves it.
 func (e *mailEnv) seedReview(t *testing.T, week time.Time) ids.UUID {
 	t.Helper()
-	return integration.SeedIDRow(t, integration.OwnerConn(t), `
-		INSERT INTO weekly_review (id, user_id, local_week_start, as_of)
-		VALUES ($1, $2, $3, now())`, e.Rep1, week)
+	logHeldMeeting(t, e.Env, e.Rep1, week.Add(48*time.Hour))
+	review, _, err := e.worker.engine.AssembleFor(e.repCtx, week.AddDate(0, 0, 7).Add(9*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !weekly.MailUseful(review) {
+		t.Fatal("recorded customer meeting did not qualify for delivery")
+	}
+	return review.ID
 }
 
-// THE GUARANTEE. The dispatcher ticks every six hours and the mail lane runs on
-// every one of them, so the week's message is offered to the relay many times
-// over. Exactly one of those may reach it.
-//
-// A weekly retrospective delivered twice is a contact told their own week twice
-// on the one morning the mail exists to make calm.
 func TestTheWeeklyMailIsAttemptedOnce(t *testing.T) {
 	e := setupWeeklyMail(t)
 	week := time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)
 	reviewID := e.seedReview(t, week)
-	now := time.Date(2026, 7, 6, 6, 30, 0, 0, time.UTC)
+	now := time.Date(2026, 7, 6, 9, 30, 0, 0, time.UTC)
 
 	// Four ticks, the shape a week of the real schedule has.
 	for range 4 {
@@ -127,7 +130,7 @@ func TestTheWeeklyMailIsAttemptedOnce(t *testing.T) {
 	if got := e.relay.count(); got != 1 {
 		t.Fatalf("the relay was handed the week %d times; the mail is at-most-once", got)
 	}
-	if !strings.Contains(e.relay.subjects[0], "2026-06-29") {
+	if !strings.Contains(e.relay.subjects[0], mailcopy.For("en").Date(week)) {
 		t.Errorf("the subject does not name the week: %q", e.relay.subjects[0])
 	}
 }
@@ -144,7 +147,7 @@ func TestARefusedMailSpendsTheAttemptAndRecordsWhy(t *testing.T) {
 	e.relay.fail = errors.New("relay refused the recipient")
 	week := time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)
 	reviewID := e.seedReview(t, week)
-	now := time.Date(2026, 7, 6, 6, 30, 0, 0, time.UTC)
+	now := time.Date(2026, 7, 6, 9, 30, 0, 0, time.UTC)
 
 	e.worker.mailWeekly(e.repCtx, reviewID, now)
 	e.worker.mailWeekly(e.repCtx, reviewID, now)
@@ -176,13 +179,13 @@ func TestOneRepCannotBurnAnothersAttempt(t *testing.T) {
 	reviewID := e.seedReview(t, week)
 
 	other := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
-	e.worker.mailWeekly(other, reviewID, time.Date(2026, 7, 6, 6, 30, 0, 0, time.UTC))
+	e.worker.mailWeekly(other, reviewID, time.Date(2026, 7, 6, 9, 30, 0, 0, time.UTC))
 
 	if got := e.relay.count(); got != 0 {
 		t.Fatalf("another rep's week was mailed to them: %d sends to %v", got, e.relay.sends)
 	}
 	// And the real owner's attempt is still theirs to spend.
-	e.worker.mailWeekly(e.repCtx, reviewID, time.Date(2026, 7, 6, 7, 0, 0, 0, time.UTC))
+	e.worker.mailWeekly(e.repCtx, reviewID, weeklyMailClock)
 	if got := e.relay.count(); got != 1 {
 		t.Errorf("the owner's attempt was consumed by somebody else: %d sends", got)
 	}
@@ -194,7 +197,7 @@ func TestNoRelayLeavesTheAttemptUnspent(t *testing.T) {
 	e := setupWeeklyMail(t)
 	week := time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)
 	reviewID := e.seedReview(t, week)
-	now := time.Date(2026, 7, 6, 6, 30, 0, 0, time.UTC)
+	now := time.Date(2026, 7, 6, 9, 30, 0, 0, time.UTC)
 
 	offline := *e.worker
 	offline.mail = WeeklyMailConfig{}
@@ -221,9 +224,8 @@ func TestNoRelayLeavesTheAttemptUnspent(t *testing.T) {
 //
 // Deactivating an account sets status and leaves archived_at NULL, so a
 // recipient read on archived_at alone would go on mailing a departed colleague
-// every Monday. The attempt is still spent and the reason recorded — an honest
-// record of a mail that was not sent, rather than one sent to somebody who left.
-func TestADeactivatedSeatIsNotMailedTheirWeek(t *testing.T) {
+// every Monday. An inactive seat cannot spend its mail attempt.
+func TestADeactivatedSeatLeavesItsWeekUnclaimed(t *testing.T) {
 	e := setupWeeklyMail(t)
 	week := time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)
 	reviewID := e.seedReview(t, week)
@@ -234,18 +236,17 @@ func TestADeactivatedSeatIsNotMailedTheirWeek(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	e.worker.mailWeekly(e.repCtx, reviewID, time.Date(2026, 7, 6, 6, 30, 0, 0, time.UTC))
+	e.worker.mailWeekly(e.repCtx, reviewID, time.Date(2026, 7, 6, 9, 30, 0, 0, time.UTC))
 
 	if got := e.relay.count(); got != 0 {
 		t.Fatalf("a deactivated seat was mailed their week: %v", e.relay.sends)
 	}
-	var cause *string
-	if err := owner.QueryRow(context.Background(),
-		`SELECT mail_error FROM weekly_review WHERE id = $1`, reviewID).Scan(&cause); err != nil {
+	var attempted *time.Time
+	if err := owner.QueryRow(context.Background(), `SELECT mail_attempted_at FROM weekly_review WHERE id=$1`, reviewID).Scan(&attempted); err != nil {
 		t.Fatal(err)
 	}
-	if cause == nil || !strings.Contains(*cause, "no email") {
-		t.Errorf("the row does not say why no mail went out: %v", cause)
+	if attempted != nil {
+		t.Fatal("an inactive seat spent a mail attempt")
 	}
 }
 
@@ -266,6 +267,8 @@ func TestEveryRepIsMeasuredBeforeTheFirstRelayIsDialled(t *testing.T) {
 	for _, rep := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
 		e.GrantRole(t, rep, "rep")
 	}
+
+	logHeldMeeting(t, e.Env, e.Rep1, weeklyMailClock.AddDate(0, 0, -3))
 
 	var atFirstDial int
 	var dials int
@@ -313,4 +316,47 @@ func countWeeklyReviews(t *testing.T) int {
 		t.Fatalf("counting weekly reviews: %v", err)
 	}
 	return n
+}
+
+func TestAWeeklyPreferenceReadFailureDefersWithoutSpendingTheAttempt(t *testing.T) {
+	e := setupWeeklyMail(t)
+	reviewID := e.seedReview(t, time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC))
+	broken, err := testdb.OwnPoolFromConfig(t.Context(), e.Pool.Config())
+	if err != nil {
+		t.Fatal(err)
+	}
+	broken.Close()
+	e.worker.users = identity.NewService(broken)
+	e.worker.mailWeekly(e.repCtx, reviewID, weeklyMailClock)
+	if e.relay.count() != 0 {
+		t.Fatal("an unreadable preference permitted delivery")
+	}
+	var attempted *time.Time
+	if err := integration.OwnerConn(t).QueryRow(e.repCtx, `SELECT mail_attempted_at FROM weekly_review WHERE id=$1`, reviewID).Scan(&attempted); err != nil {
+		t.Fatal(err)
+	}
+	if attempted != nil {
+		t.Fatal("preference outage consumed the attempt")
+	}
+}
+
+func TestWeeklyOptOutKeepsAnUnspentAttemptForAnExplicitOptIn(t *testing.T) {
+	e := setupWeeklyMail(t)
+	reviewID := e.seedReview(t, time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC))
+	none, email := "none", "email"
+	if _, err := e.worker.users.SaveMyDelivery(e.repCtx, identity.Delivery{Weekly: &none}); err != nil {
+		t.Fatal(err)
+	}
+	e.worker.mailWeekly(e.repCtx, reviewID, weeklyMailClock)
+	pending, err := e.worker.engine.MailPending(e.repCtx, reviewID)
+	if err != nil || !pending || e.relay.count() != 0 {
+		t.Fatalf("opt-out consumed or sent the review: %v %v %d", pending, err, e.relay.count())
+	}
+	if _, err := e.worker.users.SaveMyDelivery(e.repCtx, identity.Delivery{Weekly: &email}); err != nil {
+		t.Fatal(err)
+	}
+	e.worker.mailWeekly(e.repCtx, reviewID, weeklyMailClock)
+	if e.relay.count() != 1 {
+		t.Fatal("explicit opt-in could not use the unspent weekly attempt")
+	}
 }

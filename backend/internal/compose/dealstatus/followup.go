@@ -8,15 +8,13 @@ package dealstatus
 // row gives, read through the same activities query.
 
 import (
-	"context"
-	"errors"
+	"fmt"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // followUpOwed is the newest meeting on the deal that awaits a follow-up and
@@ -34,6 +32,7 @@ func followUpOwed(f facts) (activities.AwaitingReply, bool) {
 // followUpMove opens the composer to everyone the meeting was with. The
 // recipients ride as contact links, so the queue re-checks each one on read.
 func followUpMove(f facts, met activities.AwaitingReply) crmcontracts.DealStatusCardMove {
+	said := statusCopyFor(f.lang)
 	meetingID := openapi_types.UUID(met.ActivityID)
 	links := make([]map[string]any, 0, len(met.Recipients))
 	for _, contact := range met.Recipients {
@@ -41,49 +40,15 @@ func followUpMove(f facts, met activities.AwaitingReply) crmcontracts.DealStatus
 	}
 	subject := met.Subject
 	if subject == "" {
-		subject = untitledMeeting
+		subject = said.Say(statusWords.Meeting)
 	}
-	held := met.SentAt
-	return move(ActionDraftEmail,
-		"You met "+since(f.now, met.SentAt)+" and nothing has been sent since. Draft the follow-up.",
-		map[string]any{argActivityID: meetingID, argLinks: links},
-		crmcontracts.DealNextBestActionEvidence{ActivityId: &meetingID, OccurredAt: &held, Text: "Met: " + subject})
-}
-
-// followUpMeeting is the meeting a stored follow-up move names: a draft that
-// names a meeting and the contacts it goes to.
-func followUpMeeting(move crmcontracts.DealStatusCardMove) (ids.UUID, bool) {
-	if move.Action != ActionDraftEmail || len(NamedContacts(move)) == 0 {
-		return ids.UUID{}, false
+	held := untimed(&meetingID, fmt.Sprintf(said.Say(statusWords.Met), subject))
+	held.OccurredAt = &met.SentAt
+	sent := occurredday.Moment{At: met.SentAt, DateOnly: occurredday.IsDay(met.Precision)}
+	if sent.DateOnly {
+		held.OccurredPrecision = crmcontracts.OccurredPrecisionOccurredPrecisionDay
 	}
-	return NamedActivity(move)
-}
-
-// dropSettledFollowUps removes each cached follow-up whose meeting is no
-// longer owed, asked of the same query that offered it. Without the read a
-// follow-up cannot be confirmed, so it is dropped rather than served.
-func (s *Service) dropSettledFollowUps(ctx context.Context, moves map[ids.UUID]crmcontracts.DealStatusCardMove) error {
-	var meetings []ids.UUID
-	for _, move := range moves {
-		if meeting, ok := followUpMeeting(move); ok {
-			meetings = append(meetings, meeting)
-		}
-	}
-	if len(meetings) == 0 {
-		return nil
-	}
-	owed := map[ids.UUID]bool{}
-	if s.activities != nil && s.now != nil {
-		read, err := s.activities.MeetingsStillAwaitingFollowUp(ctx, s.now(), meetings)
-		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
-			return err
-		}
-		owed = read
-	}
-	for deal, move := range moves {
-		if meeting, ok := followUpMeeting(move); ok && !owed[meeting] {
-			delete(moves, deal)
-		}
-	}
-	return nil
+	return ruleMove(ruleMeetingFollowUp,
+		fmt.Sprintf(said.Say(statusWords.FollowUp), said.since(f.now, sent, f.loc)),
+		map[string]any{argActivityID: meetingID, argLinks: links}, held)
 }

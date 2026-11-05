@@ -30,6 +30,7 @@
 }
 
 .filterpill:hover {
+  border-color: var(--accent);
   background: var(--bgHover);
   color: var(--textPrimary);
 }
@@ -69,7 +70,7 @@
 }
 
 .filterpills-list > .filterpill:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* The pressed row keeps the chip ground the pill's own pressed rule paints;

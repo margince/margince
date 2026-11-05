@@ -381,7 +381,9 @@ type fleetWideArgsType string
 // fan out to. Ratified, not discovered: a kind arrives here by a reviewed edit,
 // and gatekit reports one that outlives its subject.
 var fleetWideDoesItsOwnPass = gatekit.Waive(map[fleetWideArgsType]string{
-	"EmbedReindexArgs": "phase D un-scoped the embedding corpus (ADR-0091 §8), so the per-workspace children all rebuilt the SAME rows and all but the first found every one already fresh; one pass rebuilds it",
+	"DataTaskRunArgs":       "one installation-wide correction ledger; the executor serializes batches with a database advisory lock and binds the installation through the canonical resolver",
+	"DataTaskReconcileArgs": "one installation-wide correction ledger; seed and enqueue are conflict-safe and never fan out the same corpus",
+	"EmbedReindexArgs":      "phase D un-scoped the embedding corpus (ADR-0091 §8), so the per-workspace children all rebuilt the SAME rows and all but the first found every one already fresh; one pass rebuilds it",
 })
 
 // checkFleetWideDispatchers runs the gate over one directory.

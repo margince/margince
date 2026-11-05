@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { rowMenuName } from "../../testing/worklist.testkit";
 import {
   PutDownByThumb,
   SNOOZE_DAYS,
@@ -24,7 +25,6 @@ import {
 } from "./worklist.dispositions";
 import type { WorklistDisposition, WorklistItem } from "./worklist.queries";
 import { RowActs } from "./worklist.rowverbs";
-import { rowMenuName } from "./worklist.testkit";
 
 // How a row is put down when there is no width for the verbs.
 //
@@ -44,6 +44,7 @@ const MENU = rowMenuName(TITLE);
 
 function row(dispositions: readonly WorklistDisposition[]): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a05500-0000-7000-8000-0000000000a1",
     source: "customer_waiting",
     category: "customer_waiting",

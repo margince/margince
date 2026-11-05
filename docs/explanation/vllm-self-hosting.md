@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/ai/openaicompat.go backend/internal/modules/ai/openaicompaterror.go backend/internal/modules/ai/providerregistry.go config/presets/qwen3_local_vllm.yaml -->
 # Self-hosting models with vLLM: what we measured
 
 **A dated measurement, from 2026-09-24.** It records what vLLM did on the same

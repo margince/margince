@@ -240,9 +240,6 @@ func TestEveryLocallyNamedTierIsClassifiedLocal(t *testing.T) {
 	}
 }
 
-// profileLadder is exercised directly here because no task ladder names frontier
-// yet: the sovereign guarantee has to hold for the rung BEFORE something routes
-// to it, not after.
 func TestApplyProfileRemapsFrontierUnderSovereign(t *testing.T) {
 	got := profileLadder(ProfileSovereign, true, []Tier{TierFrontier, TierPremium})
 	if len(got) != 1 || got[0] != TierLocalLarge {

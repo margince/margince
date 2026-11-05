@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/aicert/score.go backend/internal/compose/aicert/thresholds.go backend/internal/compose/aicert/judge.go backend/internal/compose/aicert/adaptive.go backend/internal/compose/aicert/readiness.go backend/internal/compose/aicert/recordbuild.go backend/internal/compose/aicert/promptversion.go -->
 # How AI certification works
 
 The [certification page](../reference/ai-certification.md) grades every AI feature under every preset.

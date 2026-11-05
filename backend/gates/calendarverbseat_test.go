@@ -45,6 +45,7 @@ import (
 var verbGuardConstructor = map[string]string{
 	"WithMeetingCloser": "CancelCapturedMeetingFor",
 	"WithMeetingMover":  "MoveCapturedMeetingFor",
+	"WithMeetingFolder": "foldCapturedMeeting",
 }
 
 func TestComposeWiresNoUnguardedCalendarVerb(t *testing.T) {

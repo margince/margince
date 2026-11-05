@@ -83,7 +83,6 @@ var licensedTrees = []licensedTree{
 	{root: ".", mustHaveFiles: true},
 	{root: "../extensions"},
 	{root: "../fixtures", mustHaveFiles: true},
-	{root: "../desktop", mustHaveFiles: true},
 }
 
 func TestEveryHandWrittenGoFileCarriesTheLicenseHeader(t *testing.T) {

@@ -81,3 +81,31 @@ func TestQuickFindEscapesTheTypedText(t *testing.T) {
 		}
 	}
 }
+
+func TestAnIdentifierHasAnExactArmAndAnEscapedContainsArm(t *testing.T) {
+	id := ContactEmails
+	exact := id.ExactSQL(3, "id")
+	if strings.Contains(exact, "LIKE") {
+		t.Errorf("the exact arm must be an equality: %s", exact)
+	}
+	contains := id.ContainsSQL(3, "id")
+	if !strings.Contains(contains, EscapeLikeSQL("f_fold_apostrophes(lower(btrim($3)))")) {
+		t.Errorf("the contains arm does not escape the typed text: %s", contains)
+	}
+	if !strings.Contains(contains, "archived_at IS NULL") {
+		t.Errorf("the contains arm reads archived rows: %s", contains)
+	}
+	match := id.MatchSQL(3, "id")
+	if !strings.Contains(match, exact) || !strings.Contains(match, contains) {
+		t.Errorf("MatchSQL must be both arms: %s", match)
+	}
+}
+
+func TestDomainTermTakesThePartAfterTheAt(t *testing.T) {
+	t.Parallel()
+	for in, want := range map[string]string{"a@example.com": "example.com", "weber@exam": "exam", "example": "example", "a@": "a@"} {
+		if got := DomainTerm(in); got != want {
+			t.Errorf("DomainTerm(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

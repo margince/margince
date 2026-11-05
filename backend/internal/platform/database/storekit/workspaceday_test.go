@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // The calendar day an instant falls on is the installation's, not UTC's: a seat
@@ -112,5 +113,22 @@ func TestStartOfNextDayIsExactWhereMidnightDoesNotExist(t *testing.T) {
 	// It is the FIRST such instant: a minute earlier is still the 7th.
 	if before := start.Add(-time.Minute).In(havana); before.Day() != 7 {
 		t.Fatalf("a minute before start fell on day %d, want the 7th", before.Day())
+	}
+}
+
+// WorkspaceDay and elapsed.CalendarDay are one rule: a day count and a stored
+// day must never disagree about which day an instant is on.
+func TestWorkspaceDayIsTheElapsedCalendarDay(t *testing.T) {
+	for _, name := range []string{"Asia/Bangkok", "America/New_York", "Australia/Lord_Howe", "UTC"} {
+		loc, err := time.LoadLocation(name)
+		if err != nil {
+			t.Fatalf("load %s: %v", name, err)
+		}
+		for hour := range 48 {
+			instant := time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC).Add(time.Duration(hour) * time.Hour)
+			if got, want := storekit.WorkspaceDay(instant, loc), elapsed.CalendarDay(instant, loc); !got.Equal(want) {
+				t.Fatalf("%s at %v: WorkspaceDay %v, CalendarDay %v", name, instant, got, want)
+			}
+		}
 	}
 }

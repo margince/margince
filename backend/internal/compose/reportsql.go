@@ -18,11 +18,15 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // sqlUnnarrowed is the clause an unbounded reader's scope renders to where a
@@ -93,6 +97,8 @@ type fetchedRows struct {
 	frame    reportFrame
 	// narrowed is reportOutcome.PopulationNarrowed.
 	narrowed string
+	// holdsDeals is reportOutcome.ScopeHoldsDeals.
+	holdsDeals *bool
 	// total is how many groups matched, which is more than len(rows) when the
 	// row limit cut the answer. The drill-through beside this one keeps the
 	// same figure for the same reason (derivationfetch.go).
@@ -101,12 +107,12 @@ type fetchedRows struct {
 
 func (e *reportEngine) fetchRows(ctx context.Context, report string, spec reportSpec, req reportRequest, groupBy, selects, columns []string) (fetchedRows, error) {
 	var out fetchedRows
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := withReportSnapshot(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		if out.frame, err = readReportFrame(ctx, tx); err != nil {
 			return err
 		}
-		if err := requireNamedRecords(ctx, tx, spec, req.Filters); err != nil {
+		if err := requireNamedQuestion(ctx, tx, spec, requestedReportScope(req.Scope), groupBy, req.Filters); err != nil {
 			return err
 		}
 		var args []any
@@ -114,6 +120,9 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		var where []string
 		where, out.narrowed, err = buildReportWhere(ctx, tx, spec, req, requestedReportScope(req.Scope), arg)
 		if err != nil {
+			return err
+		}
+		if out.holdsDeals, err = reportScopeHoldsDeals(ctx, tx, spec, requestedReportScope(req.Scope)); err != nil {
 			return err
 		}
 		// Field masks exclude their rows from the whole statement — the
@@ -132,11 +141,17 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 			out.excluded = &n
 			where = append(where, maskClauses...)
 		}
+		if err := requireNoLoneColleagueIn(ctx, tx, out.frame, contributorsSQL(spec, where, dimensionExprs(spec, groupBy)), args); err != nil {
+			return err
+		}
+		if err := requireSpecPopulationFloor(ctx, tx, spec, requestedReportScope(req.Scope)); err != nil {
+			return err
+		}
 		// Bound separately from `args`, which stays the unbound slice the count
 		// below binds its own statement from. Binding appends a value per token
 		// the statement names, so a second bind over an already-bound slice
 		// numbers its placeholders past the values it just added.
-		sql, boundArgs, err := bindReportTokens(ctx, out.frame, reportSQL(spec, selects, where, groupBy), args)
+		sql, boundArgs, err := bindReportTokens(ctx, tx, out.frame, reportSQL(spec, selects, where, groupBy), args)
 		if err != nil {
 			return err
 		}
@@ -155,6 +170,37 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		return fetchedRows{}, err
 	}
 	return out, nil
+}
+
+// reportScopeHoldsDeals asks the population question for a deal report with the
+// population buildReportWhere applied. Nil for a report that is not about deals.
+func reportScopeHoldsDeals(ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope) (*bool, error) {
+	if spec.entity != datasource.EntityDeal {
+		return nil, nil //nolint:nilnil // nil says the report is not about deals, which has no population to hold any
+	}
+	holds, err := scopeHoldsDeals(ctx, tx, reportPopulationScope(spec, requested), unownedIsPartOfDefault)
+	if err != nil {
+		return nil, err
+	}
+	return &holds, nil
+}
+
+// withReportSnapshot runs one report read in one `REPEATABLE READ` snapshot, so
+// the small-group floor and the figures it guards read the same instant.
+func withReportSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
+	return database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, pool, fn)
+	})
+}
+
+// reportPopulationScope is the population a report's answer covers. A spec
+// that measures every readable row and was given no scope covers the whole
+// company.
+func reportPopulationScope(spec reportSpec, requested RequestedScope) RequestedScope {
+	if spec.population == measureEveryReadableRow && requested.Kind == "" {
+		return RequestedScope{Kind: ScopeKindWorkspace}
+	}
+	return requested
 }
 
 // reportSQL renders the aggregate query: the validated SELECT list over the
@@ -244,6 +290,10 @@ var identShape = regexp.MustCompile(`^[a-z][a-z0-9_]{0,62}$`)
 const (
 	// reportZoneToken stands in for the installation timezone's bind position.
 	reportZoneToken = "<<installation-timezone>>"
+	// reportChanceToken stands in for the chance a deal aliased t in stage s is
+	// weighted by. It is the forecast's chance in use, or the typed one while
+	// self-correction is off (forecastchancetable.go).
+	reportChanceToken = "<<forecast-chance:t,s>>"
 	// reportBaseCurrencyToken stands in for the installation base currency's
 	// bind position.
 	reportBaseCurrencyToken = "<<installation-base-currency>>"
@@ -294,7 +344,7 @@ const (
 // a concurrent settings write land between them, and the answer then reports
 // a total cut in one zone under the name of another.
 func bindReportTokens(
-	ctx context.Context, frame reportFrame, sql string, args []any,
+	ctx context.Context, tx pgx.Tx, frame reportFrame, sql string, args []any,
 ) (string, []any, error) {
 	args = slices.Clone(args)
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -327,6 +377,12 @@ func bindReportTokens(
 		sql = strings.ReplaceAll(sql, token, clause)
 		return nil
 	}
+	if err := bindScope(reportChanceToken, func() (string, error) {
+		table, err := readForecastChanceTable(ctx, tx, frame.AsOf)
+		return table.sqlExpr("t", "s", arg), err
+	}); err != nil {
+		return "", nil, err
+	}
 	if err := bindScope(reportDealScopeToken, func() (string, error) { return auth.ScopeClauseFor(ctx, tableDeal, "d", arg) }); err != nil {
 		return "", nil, err
 	}
@@ -336,7 +392,20 @@ func bindReportTokens(
 	}); err != nil {
 		return "", nil, err
 	}
-	if err := bindScope(reportActivityScopeToken, func() (string, error) { return auth.ActivityContentClause(ctx, "a", arg) }); err != nil {
+	if err := bindScope(reportActivityScopeToken, func() (string, error) {
+		scope, err := auth.ActivityContentClause(ctx, "a", arg)
+		if err != nil {
+			return "", err
+		}
+		if scope == "" {
+			scope = sqlUnnarrowed
+		}
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return "", err
+		}
+		return "(" + scope + ") AND " + activities.CurrentTaskClause("a", frame.AsOf, identities, arg), nil
+	}); err != nil {
 		return "", nil, err
 	}
 	return sql, args, nil
@@ -380,7 +449,7 @@ func countReportGroups(
 		inner += " WHERE " + strings.Join(where, " AND ")
 	}
 	inner += " GROUP BY " + strings.Join(positions, ", ")
-	sql, bound, err := bindReportTokens(ctx, frame, "SELECT count(*) FROM ("+inner+") g", args)
+	sql, bound, err := bindReportTokens(ctx, tx, frame, "SELECT count(*) FROM ("+inner+") g", args)
 	if err != nil {
 		return 0, err
 	}

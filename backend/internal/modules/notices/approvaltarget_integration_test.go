@@ -32,6 +32,23 @@ func TestTheCentreOpensTheDecisionAnApprovalNoticeAsksFor(t *testing.T) {
 		t.Fatalf("seeding the record notice: %v", err)
 	}
 
+	unread, err := e.store.UnreadFor(e.asUser(e.recipient), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	matched := false
+	for _, item := range unread {
+		if item.ID == asking {
+			matched = item.ApprovalID != nil && item.ApprovalID.UUID == approval
+		}
+		if item.ID == telling && item.ApprovalID != nil {
+			t.Fatal("ordinary update acquired a decision identity")
+		}
+	}
+	if !matched {
+		t.Fatal("unread approval notice lost its exact decision identity")
+	}
+
 	page, err := e.store.ListFor(e.asUser(e.recipient), 10, "")
 	if err != nil {
 		t.Fatalf("ListFor: %v", err)

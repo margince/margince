@@ -106,18 +106,15 @@ func (s *Store) forWorkspace(ws ids.WorkspaceID) *Store {
 	return &Store{db: s.db.ForWorkspace(ws)}
 }
 
-// Hit is one ranked result. Score is scoreExpression over the entity's
-// search_tsv: it orders hits of one type well and hits of different types
-// poorly, since a message body repeating a name outranks the record that
-// bears it — which is what a grouped search (Input.PerType) answers. A contact
-// the employer arm finds scores -1/(1+its employer's rank), below zero, so it
-// follows every hit matched by its own text.
+// Hit carries an authorized lexical result. Identifier tiers precede text
+// ranking; employer-only hits remain negative.
 type Hit struct {
-	Type    string
-	ID      ids.UUID
-	Title   string
-	Snippet string
-	Score   float64
+	Type            string
+	ID              ids.UUID
+	Title           string
+	Snippet         string
+	Score           float64
+	IdentifierMatch *crmcontracts.SearchResultIdentifierMatch
 	// CarriedBy is set on a `tag` hit alone: how many records the caller may
 	// see carry this word. Nil elsewhere, and nil when no counter is bound.
 	CarriedBy *int
@@ -142,6 +139,9 @@ type Page struct {
 	// TypesWithMore is non-nil on a grouped page alone: the types that matched
 	// more hits than PerType let it carry, in searchBranches order.
 	TypesWithMore []string
+	// NearMatches is set only when NearMatches was asked for and a plain first
+	// page found nothing: names spelt close to the query, never hits.
+	NearMatches []NearMatch
 }
 
 type Input struct {
@@ -157,10 +157,19 @@ type Input struct {
 	// each type — instead of one ranked list. Nil is the ranked list.
 	PerType *int
 	// WithEmployees adds the employer arm (employerArmSQL): contacts found
-	// through a company the query matches. Only the HTTP surface asks for it, so
-	// the agent and plan lanes that reuse Search keep matching by own text alone.
+	// through a company the query matches. GET /v1/search and search_records ask
+	// for it; the retrieval and plan lanes keep matching by own text alone.
 	WithEmployees bool
+	// AddressCompanies admits visible recipient-domain associations for interactive discovery.
+	AddressCompanies bool
+	// NearMatches asks an empty first page to offer close names. Anchor
+	// resolution and retrieval leave it unset: they must never resolve to a guess.
+	NearMatches bool
 }
+
+// maxQueryWords bounds the words one query may hold. The employer arm binds a
+// parameter and a clause per word, so this caps the statement a request builds.
+const maxQueryWords = 32
 
 // Search runs the cross-object query (contract /search): one ranked list, or
 // with PerType one page grouped by type. Every branch carries archived_at IS
@@ -173,6 +182,11 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	query := normalizeQuery(in.Query)
 	if strings.TrimSpace(query) == "" {
 		return Page{}, &BadQueryError{Field: "q", Reason: "q is required"}
+	}
+	if words := len(strings.Fields(query)); words > maxQueryWords {
+		return Page{}, &BadQueryError{Field: "q", Reason: fmt.Sprintf(
+			"q holds %d words and a search takes at most %d; keep the words that name what you are looking for",
+			words, maxQueryWords)}
 	}
 	types := in.Types
 	if len(types) == 0 {
@@ -207,7 +221,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 
 		headPos, tailPos, hasFragment := bindTypedQuery(query, arg)
 		identifierPos := bindIdentifier(query, arg)
-		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, identifierPos, arg)
+		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, identifierPos, addressAssociation(in.AddressCompanies), arg)
 		if err != nil {
 			return err
 		}
@@ -233,16 +247,15 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return err
 		}
 		page = shape.page(hits)
-		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
+		if wantsNearMatches(in, query, page) {
+			if page.NearMatches, err = nearMatches(ctx, tx, types, query); err != nil {
+				return err
+			}
+		}
+		if err := noteCaptureWithheld(ctx, tx, types); err != nil {
 			return err
 		}
-		if err := s.attachEmailSummaries(ctx, tx, page.Hits); err != nil {
-			return err
-		}
-		if err := s.markPartners(ctx, tx, page.Hits); err != nil {
-			return err
-		}
-		return s.attachCompanyLogos(ctx, tx, page.Hits)
+		return s.decorate(ctx, tx, page.Hits)
 	})
 	if err != nil {
 		return Page{}, err
@@ -295,12 +308,14 @@ func withinClause(within []ids.UUID, arg func(any) int) string {
 	return fmt.Sprintf("id = ANY($%d)", arg(within))
 }
 
+type addressAssociation bool
+
 // admittedBranchSQL builds one ranked SELECT per requested-and-admitted
 // entity type. A hit is a read twice over: object RBAC first (a role
 // without contact.read gets no contact hits — search must not out-see the
 // entity lists), then the row scope.
 func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool,
-	identifierPos func() int, arg func(any) int,
+	identifierPos identifierBinder, addressCompanies addressAssociation, arg func(any) int,
 ) ([]string, error) {
 	var branches []string
 	for _, branch := range searchBranches {
@@ -330,52 +345,34 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 		if scope != "" {
 			where += " AND " + scope
 		}
+		score := branch.ownScore("t", scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment), identifierPos)
+		if branch.entity == entityCompany && addressCompanies {
+			associated := sqlFalse
+			if identifierPos.addressPrefix {
+				match, err := companyAddressMatch(ctx, "t", identifierPos.position(false), arg)
+				if err != nil {
+					return nil, err
+				}
+				associated = match
+			}
+			candidates := fmt.Sprintf("t.id=ANY(ARRAY(SELECT lexical.id FROM company lexical WHERE lexical.search_tsv @@ %s UNION SELECT identified.id FROM company identified WHERE %s UNION SELECT t.id FROM company t WHERE %s))",
+				tsquery, branch.identifier.MatchSQL(identifierPos.position(true), "identified.id"), associated)
+			where = candidates + " AND t.archived_at IS NULL AND " + conjunction(branch.narrowing("t"), scope)
+			score = fmt.Sprintf("(%s + %d * (%s)::int)", score, companyAssociationScore, associated)
+		}
 		source := fmt.Sprintf("%s t WHERE %s", branch.table, where)
 		if branch.rankSample > 0 {
 			source = fmt.Sprintf("(SELECT t.* FROM %s LIMIT $%d) t", source, arg(branch.rankSample))
 		}
 		branches = append(branches, fmt.Sprintf(
 			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
-			        %s::float8 AS score, %s
+			        %s::float8 AS score, %s, %s AS identifier_match
 			 FROM %s`,
 			branch.entity, branch.title, snippet,
-			branch.ownScore("t", scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment), identifierPos),
-			noEmployer, source))
+			score,
+			noEmployer, branch.identifierEvidence("t", identifierPos), source))
 	}
 	return branches, nil
-}
-
-// hitColumns is what every union element projects and both shapes select, in
-// the order scanHits reads it.
-const hitColumns = "rtype, id, title, snippet, score, employer_id, employer_name"
-
-// noEmployer is the employer pair of an element that finds records by their own
-// text. Typed, because an untyped NULL in the first element of a union resolves
-// as text and the arm's uuid then fails the whole statement.
-const noEmployer = "NULL::uuid AS employer_id, NULL::text AS employer_name"
-
-// scanHits materializes the rows of either shape's statement.
-func scanHits(rows pgx.Rows) ([]Hit, error) {
-	var hits []Hit
-	for rows.Next() {
-		var h Hit
-		var title, snippet, employerName *string
-		var employerID *ids.UUID
-		if err := rows.Scan(&h.Type, &h.ID, &title, &snippet, &h.Score, &employerID, &employerName); err != nil {
-			return nil, err
-		}
-		if employerID != nil && employerName != nil {
-			h.WorksAt = &Employer{CompanyID: *employerID, CompanyName: *employerName}
-		}
-		if title != nil {
-			h.Title = *title
-		}
-		if snippet != nil {
-			h.Snippet = strings.TrimSpace(*snippet)
-		}
-		hits = append(hits, h)
-	}
-	return hits, rows.Err()
 }
 
 // BadQueryError maps to a 422 at the transport. Field names WHICH query input
@@ -451,7 +448,7 @@ func (e *QueryTooBroadError) Unwrap() error { return e.Err }
 // FieldFault names `q`, because `q` is what the reader can change.
 func (e *QueryTooBroadError) FieldFault() (field, code, message string) {
 	return "q", "query_too_broad", "this search matched too much of the workspace to rank in time — " +
-		"add another word, or narrow it with types"
+		"add another word, or narrow it by record type"
 }
 
 func knownEntity(t string) bool {

@@ -9,8 +9,9 @@ import { Badge } from "../../design-system/atoms";
 import { Popover } from "../../design-system/popover";
 import { useTruncationTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
-import { isUnprepared } from "./worklist.copy";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import type { WorklistItem } from "./worklist.queries";
+import { RowName } from "./worklist.rowname";
 import { VerdictLine } from "./worklist.verdict";
 import "./worklist.row.compact.css";
 
@@ -21,26 +22,27 @@ import "./worklist.row.compact.css";
  * ONE object, handed to whichever column the surface asked for, so the two
  * densities cannot come to say different things about one piece of work.
  *
- * Strings rather than the item, deliberately: `when` is written against the
- * reader's clock and the record's zone, `facts` against the reader's currency,
- * and the reasons are phrased by `worklist.copy.ts`. A column that took the
+ * Strings rather than the item. `when` is written against the
+ * reader's clock and the record's zone, `facts` against the reader's currency.
+ * The reasons are phrased by `lib/worklistcopy.ts`. A column that took the
  * item and re-derived any of them would be a second author of the row's words.
  */
 export type RowReadings = Readonly<{
   item: WorklistItem;
   /** The row's name, and where pressing it goes — no `href`, not a link. */
   title: string;
+  /** A framed brief names its record first and keeps the source sentence below. */
+  heading?: boolean;
+  supportingTitle?: string;
   href?: string;
+  /** Opens what the row is about in place, for a subject with no page. */
+  open?: () => void;
+  sourceUnavailable?: boolean;
   /** The clock this row is racing, and what it is worth. */
   when: string | null;
   facts: string | null;
-  /** Why it is here: what the line says outright, and what the fold holds. */
+  /** Concrete reasons, visible at every density. */
   said: readonly string[];
-  folded: readonly string[];
-  /** Why it beat the row below it. A full sentence, so never on the line. */
-  above: string | null;
-  /** What doing nothing costs. */
-  consequence: string | null;
   /** The supporting sentence, from every source that sends prose. */
   detail?: string | null;
   /** A grouped row's named members. */
@@ -77,7 +79,7 @@ export function CompactRowLine({
    */
   named: boolean;
 }>) {
-  const { item, title, href, said, folded, zone } = readings;
+  const { item, title, href, said, zone } = readings;
   const t = useT();
   // ONE STRING, so there is ONE truncation and one tip over it. Drawn as
   // separate fragments the line would clip whichever happened to be last and
@@ -86,19 +88,11 @@ export function CompactRowLine({
     readings.when,
     item.move?.action === "draft_reply" ? t("brief.reply.owed") : null,
     readings.facts,
-    ...said,
   ]
     .filter((part): part is string => part !== null && part !== "")
     .join(" · ");
   const tip = useTruncationTooltip<HTMLSpanElement>(inline);
   const rest: ReactNode[] = [];
-  if (folded.length > 0) {
-    rest.push(
-      <p className="t-caption" key="reasons">
-        {folded.join(" · ")}
-      </p>,
-    );
-  }
   if (readings.detail && item.source !== "notice") {
     rest.push(
       <p className="t-caption" key="detail">
@@ -117,12 +111,13 @@ export function CompactRowLine({
   return (
     <div className="worklist-row-line">
       <p className="t-body worklist-row-title">
-        {!named ? null : href ? (
-          <a className="entity-link" href={href}>
-            {title}
-          </a>
-        ) : (
-          title
+        {named && (
+          <RowName
+            title={title}
+            href={href}
+            open={readings.open}
+            unavailable={readings.sourceUnavailable}
+          />
         )}
         {/* The day's states ride the name at both densities: a rep scanning for
             the row to open before it starts has to see them without reading
@@ -132,6 +127,9 @@ export function CompactRowLine({
           <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
         )}
       </p>
+      {said.length > 0 && (
+        <p className="worklist-row-because">{said.join(" · ")}</p>
+      )}
       {inline && (
         <span
           className="t-caption worklist-row-inline"
@@ -143,7 +141,7 @@ export function CompactRowLine({
         </span>
       )}
       {item.source === "notice" && readings.detail && (
-        <p className="t-caption worklist-row-notice">{readings.detail}</p>
+        <p className="t-caption">{readings.detail}</p>
       )}
       <VerdictLine verdict={item.verdict} zone={zone} />
       {rest.length > 0 && (

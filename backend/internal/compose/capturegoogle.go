@@ -134,7 +134,7 @@ func newCaptureRegistryWithGoogle(
 	cfg CaptureConfig,
 ) *capture.Registry {
 	reg := NewCaptureRegistry(pool, vault, cfg)
-	if googleAppReachable(resolve, c) {
+	if appReachable(resolve, c.canSync()) {
 		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPI(nil, "")).
 			WithBounceSink(newBounceSink(pool)))
 		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
@@ -142,12 +142,11 @@ func newCaptureRegistryWithGoogle(
 	return reg
 }
 
-// googleAppReachable reports whether anything in this composition could supply
-// the Google app. Registering on neither would leave a connector that fails
-// every call with "no app configured", which is a worse answer than the
-// declared 501: it looks configured and is not.
-func googleAppReachable(resolve appResolver, c GmailConfig) bool {
-	return resolve != nil || c.canSync()
+// appReachable reports whether anything in this composition could supply a
+// vendor's app. A connector registered on neither looks configured and fails
+// every call, a worse answer than the declared 501.
+func appReachable(resolve appResolver, env bool) bool {
+	return resolve != nil || env
 }
 
 // CaptureSyncRegistry is the worker's sweep registry: always non-nil —
@@ -236,6 +235,9 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 				s.addRedirectURI(capture.AppProviderGoogle, connector.purpose, uri)
 			}
 		}
+		// A unit app's callback rides the same two bases, and this option is the
+		// one every api composes whatever vendor it serves.
+		s.unitCallbackAPIBase, s.unitCallbackPublicBase = c.APIBaseURL, c.PublicBaseURL
 		// Without a vault the connect flow can't seal the refresh token, so
 		// mounting the endpoints would only fail at the callback — leave the
 		// surface its declared 501 instead. (WithKeyvault must precede this.)
@@ -281,6 +283,9 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			// struct, so an omitted resolver is one the next reader cannot see
 			// missing.
 			microsoftCredentials: s.microsoftAppResolver,
+			// Re-derived because this literal replaces the struct: a backfill wired
+			// before this option would otherwise leave the connect import unstarted.
+			importer: s.importOnConnect(),
 		}
 		// The send pre-flight reads the registry the connect flow just wrote to
 		// — the same one, not a second construction: a mailbox the user connects

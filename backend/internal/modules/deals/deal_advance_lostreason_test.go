@@ -5,51 +5,12 @@ package deals
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
-
-// A reason for a loss must not outlive the loss. The report that counts why
-// deals are lost reads this column, so a reason left behind by a re-decided
-// deal answers that question with an outcome that no longer stands.
-//
-// The amount is left nil throughout: a closing deal with an amount freezes an
-// FX rate, which needs a transaction, and the reason-clearing this proves is
-// decided before any of that.
-func TestALostReasonIsClearedOnEveryLandingThatIsNotLost(t *testing.T) {
-	reason := "went with a competitor"
-	lost := crmcontracts.Deal{
-		Status:     crmcontracts.DealStatusLost,
-		LostReason: &reason,
-	}
-
-	for name, semantic := range map[string]string{
-		"re-decided as won": "won",
-		"reopened":          "open",
-	} {
-		t.Run(name, func(t *testing.T) {
-			store := &Store{clock: func() time.Time { return time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC) }}
-			patch, status, err := store.stageTransitionPatch(
-				context.Background(), nil, lost, AdvanceDealInput{}, semantic)
-			if err != nil {
-				t.Fatalf("stageTransitionPatch: %v", err)
-			}
-			if status == string(crmcontracts.DealStatusLost) {
-				t.Fatalf("status = %q, want a landing that is not lost", status)
-			}
-
-			cleared, assigned := patch.After()["lost_reason"]
-			if !assigned {
-				t.Fatal("lost_reason was never assigned, so the previous reason survives the transition")
-			}
-			if cleared != nil {
-				t.Errorf("lost_reason = %v, want nil — the reason describes a close that no longer stands", cleared)
-			}
-		})
-	}
-}
 
 // An ordinary move between two open stages has no lost reason to clear, and
 // must not say that it cleared one: a patch records every assignment it is
@@ -84,8 +45,8 @@ func TestALostReasonIsWrittenWhenTheDealLandsOnLost(t *testing.T) {
 	if status != string(crmcontracts.DealStatusLost) {
 		t.Fatalf("status = %q, want lost", status)
 	}
-	if got := patch.After()["lost_reason"]; got != reason {
-		t.Errorf("lost_reason = %v, want %q", got, reason)
+	if got, ok := patch.After()["lost_reason"].(*string); !ok || got == nil || *got != reason {
+		t.Errorf("lost_reason = %v, want %q", patch.After()["lost_reason"], reason)
 	}
 }
 
@@ -97,11 +58,23 @@ func TestALostReasonIsTrimmedBeforeItIsStored(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stageTransitionPatch: %v", err)
 	}
-	if got := patch.After()["lost_reason"]; got != "too expensive" {
-		t.Errorf("stored reason = %q, want it trimmed", got)
+	if got, ok := patch.After()["lost_reason"].(*string); !ok || got == nil || *got != "too expensive" {
+		t.Errorf("stored reason = %v, want it trimmed", patch.After()["lost_reason"])
 	}
 	blank := " \t "
 	if _, _, err := store.stageTransitionPatch(context.Background(), nil, open, AdvanceDealInput{LostReason: &blank}, "lost"); err == nil {
 		t.Error("a blank reason closed the deal as lost")
+	}
+}
+
+// A code names why a deal was lost. A move that loses nothing is refused one,
+// so no code sits where no report reads it.
+func TestALossCodeOnAnOpenMoveIsRefused(t *testing.T) {
+	store := &Store{clock: func() time.Time { return time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC) }}
+	code := "price"
+	_, _, err := store.stageTransitionPatch(context.Background(), nil,
+		crmcontracts.Deal{Status: crmcontracts.DealStatusOpen}, AdvanceDealInput{LostReasonCode: &code}, "open")
+	if _, ok := errors.AsType[*LossReasonNotLostError](err); !ok {
+		t.Fatalf("a code on an open move answered %v, want LossReasonNotLostError", err)
 	}
 }

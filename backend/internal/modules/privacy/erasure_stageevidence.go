@@ -22,7 +22,7 @@ import (
 // included because a held record reads as gone, and a deal would go on showing
 // its words.
 func redactQuotationsOf(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string) error {
-	if err := redactApprovalsCitingActivities(ctx, tx, activities, ErasedSourceWithdrawal); err != nil {
+	if err := redactApprovalsCitingActivities(ctx, tx, activities, ErasedSourceWithdrawal, causeContactErasure); err != nil {
 		return err
 	}
 	return redactEvidenceQuoting(ctx, tx, activities, reason, causeContactErasure)

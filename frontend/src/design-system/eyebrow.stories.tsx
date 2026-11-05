@@ -3,7 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LocaleProvider } from "../i18n";
+import { Button } from "./atoms";
 import { Eyebrow } from "./eyebrow";
+import { Heading } from "./heading";
 
 // The micro-label above the thing it names, in the one spelling: 11px,
 // semibold, uppercase, tracked open, meta colour.
@@ -62,4 +64,34 @@ function DefinitionDemo() {
 
 export const InADefinitionList: Story = {
   render: () => <DefinitionDemo />,
+};
+
+// A step line over a page title: an h2 in the outline, set small. The title
+// under it stays the largest line on the screen.
+function OverATitleDemo() {
+  return (
+    <section>
+      <Eyebrow as="h2" size="xxsmall">
+        Step 2 of 4
+      </Eyebrow>
+      <Heading size="xlarge" as="h1">
+        Connect your mail and calendar
+      </Heading>
+    </section>
+  );
+}
+
+export const OverAPageTitle: Story = { render: () => <OverATitleDemo /> };
+
+export const WithAction: Story = {
+  args: {
+    as: "h2",
+    size: "xxsmall",
+    children: "Recent",
+    action: <Button variant="ghost">Clear</Button>,
+  },
+};
+export const WithActionDark: Story = {
+  ...WithAction,
+  globals: { theme: "dark" },
 };

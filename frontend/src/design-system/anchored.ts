@@ -132,4 +132,4 @@ export function verticalPlacement(
 // The breathing room between the panel and both the trigger above it and the
 // viewport edge beside it, in px because it is arithmetic rather than a
 // stylesheet value: --space-1.
-const MENU_EDGE_GAP = 4;
+export const MENU_EDGE_GAP = 4;

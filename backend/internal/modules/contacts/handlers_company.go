@@ -67,8 +67,12 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
-	in.Industry = params.Industry
+	in.Industry = enumArg(params.Industry)
 	in.SizeBand = enumArg(params.SizeBand)
+	in.SourceSystem, in.SourceID = params.SourceSystem, params.SourceId
+	in.Partner = partnerProgramFilter{
+		Kind: enumArg(params.PartnerKind), Stage: params.PartnerStage, Meaning: enumArg(params.PartnerStageMeaning),
+	}
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, companyEntity); err != nil {
 			writeStoreErr(w, r, err)
@@ -93,7 +97,7 @@ func (h Handlers) CreateCompany(w http.ResponseWriter, r *http.Request, _ crmcon
 	// A declared importer (a HUMAN holding import_run:create) may stamp the
 	// reserved mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
-	mapInput := companyCreateInput
+	mapInput := CompanyCreationInput
 	if auth.DeclaredImporter(r.Context()) {
 		mapInput = companyCreateInputFromImporter
 	}

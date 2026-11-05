@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryProviders } from "../../testing/story-utils";
 import { ContactBillingRoles } from "./contactbillingroles";
-import "../../screens/company360.css";
+import "../companies/company360.css";
 
 // The contact's side of billing, beside their employers rather than inside
 // them: whose invoices this contact handles, one company per row, the role as

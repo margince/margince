@@ -111,6 +111,9 @@ type OnboardingCompanyDraft struct {
 	LegalName         *string `json:"legal_name,omitempty"`
 	RegisteredAddress *string `json:"registered_address,omitempty"`
 	RegisterVAT       *string `json:"register_vat,omitempty"`
+	LegalForm         *string `json:"legal_form,omitempty"`
+	RegisterCourt     *string `json:"register_court,omitempty"`
+	RegisterNumber    *string `json:"register_number,omitempty"`
 	Industry          *string `json:"industry,omitempty"`
 	History           *string `json:"history,omitempty"`
 }
@@ -178,7 +181,7 @@ func NewOnboardingStore(db *database.DB) *OnboardingStore {
 
 func onboardingActor(ctx context.Context, mutate bool) (principal.Principal, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
 		return principal.Principal{}, apperrors.ErrPermissionDenied
 	}
 	if mutate && !actor.SeatType.CanMutate() {

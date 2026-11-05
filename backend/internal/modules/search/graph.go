@@ -56,6 +56,8 @@ type graphItem struct {
 	// "October" for a September email is the reading that reaches the
 	// customer. Zero for a record that is not an event.
 	occurredAt time.Time
+	// dateOnly says occurredAt is a date's anchor, not a moment.
+	dateOnly bool
 }
 
 // graphExpansionLimit caps EVERY leg of the fixed-depth walk — the
@@ -248,7 +250,7 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 	// way — the namespace, the coalesce, and what each would break without.
 	activitySQL := fmt.Sprintf(`
 		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, ''),
-		       (coalesce(a.source_system, '') LIKE '%s%%')
+		       (coalesce(a.source_system, '') LIKE '%s%%'), a.occurred_precision = 'day'
 		FROM activity a %s
 		WHERE %s AND a.archived_at IS NULL`, provenance.ReservedSourceSystemPrefix, join, reach)
 	if scope != "" {
@@ -266,9 +268,9 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 	for rows.Next() {
 		var id ids.ActivityID
 		var summary, kind, capturedBy string
-		var isDone, imported bool
+		var isDone, imported, dateOnly bool
 		var occurredAt time.Time
-		if err := rows.Scan(&id, &summary, &kind, &isDone, &occurredAt, &capturedBy, &imported); err != nil {
+		if err := rows.Scan(&id, &summary, &kind, &isDone, &occurredAt, &capturedBy, &imported, &dateOnly); err != nil {
 			return nil, nil, nil, err
 		}
 		activityIDs = append(activityIDs, id)
@@ -277,7 +279,7 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 		// the untyped UUID.
 		item := graphItem{
 			entityType: string(datasource.EntityActivity), id: id.UUID, summary: summary,
-			score: rankScore(0, occurredAt, capturedBy, imported, now), occurredAt: occurredAt,
+			score: rankScore(0, occurredAt, capturedBy, imported, now), occurredAt: occurredAt, dateOnly: dateOnly,
 		}
 		if kind == "task" && !isDone {
 			openTasks = append(openTasks, item)

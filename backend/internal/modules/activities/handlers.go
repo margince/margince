@@ -13,17 +13,21 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	store *Store
-	// settings writes the follow-up window; nil refuses both its endpoints.
-	settings *settings.Store
+	// settings reads and writes the follow-up window; nil refuses both its
+	// endpoints.
+	settings *config.Config
 	// emailDrafter is the compose-owned optional model drafting seam. Nil
 	// preserves the deterministic draft, so an AI outage or unconfigured
 	// deployment never blocks a user from preparing a reply.
@@ -98,6 +102,12 @@ type EmailDrafter interface {
 // NewHandlers builds the module's HTTP surface over a workspace-bound handle.
 func NewHandlers(db *database.DB) Handlers {
 	return Handlers{store: NewStore(db)}
+}
+
+// WithLeadQualifyTasks wires the task committed with a lead's booking.
+func (h Handlers) WithLeadQualifyTasks(tasks LeadQualifyTasks) Handlers {
+	h.store = h.store.WithLeadQualifyTasks(tasks)
+	return h
 }
 
 // WithTranscriptEnqueue lets a transcript POSTED to this transport start its

@@ -3,11 +3,12 @@ import {
   type ExtensionVerbDescriptor,
   extensions,
 } from "@composition/extensions";
-import { extensionScreens } from "@composition/screens";
+import { extensionPanels, extensionScreens } from "@composition/screens";
 import type { ComponentType } from "react";
 import { readableKey } from "../format/rbacobjects";
 import { type Locale, translate } from "../i18n";
 import type { ExtensionRbacObject } from "./capability";
+import type { EntityKind } from "./entity";
 
 // What the SPA knows about the units an installation composed.
 //
@@ -29,11 +30,10 @@ export type { ExtensionDescriptor, ExtensionVerbDescriptor };
 /**
  * The screens an installation composes, keyed by unit name.
  *
- * The type lives HERE, beside the descriptor registry, and not next to either
- * implementation of it: both lanes' modules import it, and one of those modules
- * (`src/screens/ext/`) is outside the vanilla TypeScript program entirely — a
- * type imported from there would pull the whole excluded directory back into
- * it.
+ * The type lives here, beside the descriptor registry, not next to either
+ * implementation of it. Both lanes' modules import it. A unit's frontend under
+ * `extensions/` is outside the vanilla TypeScript program, and a type
+ * imported from there would pull that directory into it.
  *
  * A component, not a rendered node: React needs a stable type to mount, and a
  * registry of pre-rendered elements would build every unit's screen on every
@@ -85,6 +85,26 @@ export const composedExtensions: readonly ExtensionDescriptor[] = extensions;
  * through, and the two would eventually disagree about what the registry holds.
  */
 export const composedScreens: ExtensionScreenRegistry = extensionScreens;
+
+/** What a core page hands a unit's panel: the record the page shows. */
+export type ExtensionPanelProps = Readonly<{
+  record: Readonly<{ type: EntityKind; id: string }>;
+}>;
+
+/**
+ * The panels an installation composes: by unit, then by slot. Annotated here,
+ * at the registry's one import site, for the reason composedScreens is: a
+ * unit's export that is not a panel component fails this assignment.
+ */
+export type ExtensionPanelRegistry = Readonly<
+  Record<
+    string,
+    Readonly<Record<string, ComponentType<ExtensionPanelProps> | undefined>>
+  >
+>;
+
+/** The composed panel registry, annotated once. */
+export const composedPanels: ExtensionPanelRegistry = extensionPanels;
 
 /**
  * The two secret scopes a unit's settings entry can be placed by.

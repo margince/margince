@@ -442,7 +442,7 @@ func nameMatchCandidates(ctx context.Context, tx pgx.Tx, owner, onlyContact ids.
 // consented to appearing in this CRM; saying "Lars knows 3 contacts at Acme"
 // discloses nothing about them, while naming them would publish a private
 // address book to the colleague's whole team.
-func CompanyLinkedInReach(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (map[ids.UUID]int, error) {
+func CompanyLinkedInReach(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (map[ids.UUID]ColleagueReach, error) {
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -463,7 +463,7 @@ func CompanyLinkedInReach(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 	// LEFT JOIN and a coalesce. A member who never opened the setting has no
 	// account row, which an inner join would read as withheld.
 	rows, err := tx.Query(ctx, `
-		SELECT g.owner_user_id, count(*)
+		SELECT g.owner_user_id, coalesce(g.position, '')
 		  FROM linkedin_connection g
 		  JOIN app_user u ON u.id = g.owner_user_id
 		                 AND `+workforce.LiveMemberSQL("u")+`
@@ -471,22 +471,12 @@ func CompanyLinkedInReach(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 		 WHERE g.matched_company_id = $1
 		   AND g.tombstoned_at IS NULL
 		   AND g.match_status <> 'rejected'
-		   AND coalesce(a.reach_visible_to_team, true)
-		 GROUP BY g.owner_user_id`, companyID)
+		   AND coalesce(a.reach_visible_to_team, true)`, companyID)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: counting LinkedIn reach into an account: %w", err)
 	}
 	defer rows.Close()
-	out := map[ids.UUID]int{}
-	for rows.Next() {
-		var user ids.UUID
-		var n int
-		if err := rows.Scan(&user, &n); err != nil {
-			return nil, err
-		}
-		out[user] = n
-	}
-	return out, rows.Err()
+	return tallyReach(rows)
 }
 
 // nullableOwner renders the zero id as SQL NULL, which the scoping clauses

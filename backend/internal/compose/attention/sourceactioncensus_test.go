@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -55,21 +56,26 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"meeting_follow_up": {"open", "reply"},
 	"lead_response":     {"open"},
 	"deal_at_risk":      {"open"},
+	"deal_review":       {"open"},
 	// `complete` settles the claim as done, through POST /claims/{id}/settle.
 	"conversation_claim": {"open", "complete"},
 	"meeting":            {"open"},
-	// Answered inline, like an approval: `decide` reaches MeetingOutcome, which
-	// writes meeting_status through PATCH /activities/{id}.
-	"meeting_outcome": {"decide"},
+	// Answered inline, like an approval: `decide` and `cancel` reach
+	// MeetingOutcome, which writes meeting_status through PATCH /activities/{id}.
+	"meeting_outcome": {"decide", "cancel"},
 	// The task's own verbs. `complete` acts in place through TaskComplete;
-	// `snooze` opens the record, where the due date lives.
-	"task": {"complete", "snooze", "open"},
+	// `snooze` opens the record, where the due date lives. `take` assigns the
+	// task to the reader through TakeVerb.
+	"task": {"complete", "snooze", "open", "take"},
 	// Answered inline: the decision card is on the row itself.
 	"approval": {"decide", "open"},
 	// Both answered by PairDecision in worklist.pair.tsx, and each on its own
 	// guard: the Keep buttons ask for `merge`, and the "Not the same" line asks
 	// for `dismiss`. A pair no merge would accept still carries the second.
 	"dedupe_candidate": {"merge", "dismiss", "open"},
+	// Reviewed in the case modal the row's own button opens (worklist.contactcase.tsx),
+	// which reads the case and not the row's verbs.
+	"contact_case": {},
 	// Answered by SuggestionDecision in worklist.suggestion.tsx: `decide` opens
 	// the deal it proposes, `dismiss` records that it is not one, and `open`
 	// reaches the company through the routing table.
@@ -100,7 +106,9 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// exclusion. Neither needs anything typed, which is what lets a domain
 	// question settle from a queue row — and there is no `open`, because the
 	// subject is a domain rather than a record with a page.
-	"domain_question": {"keep", "discard"},
+	//
+	// `keep_as_vendor` answers a vendor question with the triage's verdict.
+	"domain_question": {"keep", "keep_as_vendor", "discard", "reopen"},
 	// The privacy queue's own row. It is read here and answered there.
 	"dsr": {"open"},
 	// The disclosure duty, read here and discharged on the contact's own screen
@@ -145,6 +153,7 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 		"lead_response":     "the same lane shape as customer_waiting, and unreachable for the same reason",
 		"awaiting_reply":    "read beside Assemble like the plan lane; awaitinglane_test exercises its rows",
 		"meeting_follow_up": "read beside Assemble with awaiting_reply; awaitinglane_test exercises its rows",
+		"deal_review":       "read beside Assemble like the plan lane and folded on the worklist; dealreviewlane_test exercises its rows",
 	}
 	reached := map[string]bool{}
 	for _, items := range lanes {
@@ -278,6 +287,9 @@ func TestTheCensusDescribesEverySourceTheQueueClassifies(t *testing.T) {
 // so every stub carries a row.
 func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 	t.Helper()
+	briefDeal := ids.NewV7()
+	commitment := promise("a promise", readInstant)
+	commitment.ActivityID = ids.NewV7()
 	svc := NewService(
 		// The four lanes the sibling check leaves empty, filled here on purpose:
 		// a lane the fixture does not feed is a lane this census silently does
@@ -293,11 +305,11 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			LinkType: "contact", LinkID: ids.NewV7(),
 		}}},
 		stubReceipts{},
-		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}},
-		&stubCommitments{rows: []Commitment{promise("a promise", readInstant)}},
-		stubAtRisk{rows: []RiskyDeal{{Name: "a deal", QuietDays: 20}}},
-		&stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
-		&stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}},
+		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: briefDeal, Rank: 1}}},
+		&stubCommitments{rows: []Commitment{commitment}},
+		stubAtRisk{rows: []RiskyDeal{{DealID: briefDeal, Name: "a deal", QuietDays: 20}}},
+		&stubDecay{rows: []QuietRelationship{{ContactID: ids.NewV7(), Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
+		&stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "a meeting", StartsAt: readInstant}}},
 		&stubFailedEffects{rows: []FailedEffect{{
 			ID: ids.NewV7(), Kind: "send_email",
 			Sentence: "this was approved, but the work it released did not run",
@@ -323,8 +335,9 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		// The other clock the law started, an Option for the same reason and so
 		// just as easy to leave out of a fixture.
 		WithNoticeCases(&stubNoticeCases{rows: []NoticeCase{{
-			ID: ids.NewV7(), Rule: "art14", DueAt: readInstant,
-		}}})).
+			ID: ids.NewV7(), ContactID: ids.NewV7(), Rule: "art14", DueAt: readInstant,
+		}}}),
+		WithContactCases(&stubContactCases{cases: []ContactCase{aContactCase(ids.NewV7())}})).
 		WithUndelivered(&stubUndelivered{rows: []ParkedSend{{
 			ID: ids.NewV7(), Subject: "a send that never left",
 			Reason: "the address bounced twice", ParkedAt: readInstant,
@@ -340,6 +353,9 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		WithDomainQuestions(&stubDomainQuestions{rows: []DomainQuestion{{
 			Domain: "mckinsey.com", Reason: "Nothing on the site named a company.",
 			AskedAt: readInstant,
+		}, {
+			Domain: "hosting.example", Reason: "The site reads as a mail or hosting vendor.",
+			ReasonCode: contacts.PendingVendorVerdict, AskedAt: readInstant,
 		}}}).
 		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("proposal_sent")}}).
 		WithTagSuggestions(&stubTagSuggestions{rows: []crmcontracts.TagSuggestion{

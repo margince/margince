@@ -1,8 +1,4 @@
-import { readFileSync } from "node:fs";
 import ts from "typescript";
-import { ASYNC_UTIL_TIMEOUT_MS } from "../vitest.budget";
-import { parseSource, resolveRelative } from "./lib/source-tree";
-
 // Reads a test file and works out, for every test in it, how long that test is
 // ALLOWED to spend waiting — the sum of the budgets of the waiters it runs in
 // sequence — and how long it is allowed to take. Issue 1144 is what happens
@@ -20,6 +16,14 @@ import { parseSource, resolveRelative } from "./lib/source-tree";
 // matters — the budget it hides is exactly the budget nobody checked. An
 // earlier version defaulted an unfoldable `{ timeout: … }` to the smallest
 // possible value and walked straight past a live 11000ms violation.
+import { bindingOf } from "../src/testing/classnames";
+import { ASYNC_UTIL_TIMEOUT_MS } from "../vitest.budget";
+import { importedConsts, parse, resolver } from "./test-budget.consts";
+import {
+  OPAQUE,
+  statedTimeout,
+  timeoutExpression,
+} from "./test-budget.timeouts";
 
 /** A waiter that states no timeout takes Testing Library's default. */
 const DEFAULT_WAITER_MS = ASYNC_UTIL_TIMEOUT_MS;
@@ -69,244 +73,6 @@ export type TestBudget = {
   unresolved: string[];
 };
 
-/** `X * 4` and `X + 3000`, the two ways a budget here is built from another. */
-function arithmetic(
-  node: ts.BinaryExpression,
-  value: (node: ts.Expression) => number | undefined,
-): number | undefined {
-  const left = value(node.left);
-  const right = value(node.right);
-  if (left === undefined || right === undefined) return undefined;
-  if (node.operatorToken.kind === ts.SyntaxKind.AsteriskToken)
-    return left * right;
-  if (node.operatorToken.kind === ts.SyntaxKind.PlusToken) return left + right;
-  return undefined;
-}
-
-/**
- * A resolver for numbers written in this file: a literal, a name it gave a
- * number to, or arithmetic over those. A name imported from elsewhere does not
- * resolve, and that is reported rather than guessed at.
- */
-function resolver(consts: Map<string, number>) {
-  const value = (node: ts.Expression): number | undefined => {
-    if (ts.isNumericLiteral(node)) return Number(node.text);
-    if (ts.isIdentifier(node)) return consts.get(node.text);
-    if (ts.isParenthesizedExpression(node)) return value(node.expression);
-    if (ts.isBinaryExpression(node)) return arithmetic(node, value);
-    return undefined;
-  };
-  return value;
-}
-
-/** `const X = 5000` and `const Y = X * 4` anywhere in one file. */
-function declaredConsts(
-  source: ts.SourceFile,
-  seeded: Map<string, number>,
-): Map<string, number> {
-  // Every value each name is ever given, not the last one. This reader has no
-  // scope information, so two `describe` blocks that each declare their own
-  // `SETTLE_MS`, or a module-level one shadowed by a function-local, were
-  // collapsed to whichever came last in source order — the same last-wins
-  // defect `exportedConsts` fixes across a module boundary, one hop closer.
-  // A name given two different values resolves to nothing, and a waiter that
-  // needed it is reported rather than folded to the wrong number.
-  const seen = new Map<string, Set<number>>();
-  for (const [name, resolved] of seeded) seen.set(name, new Set([resolved]));
-  const single = (): Map<string, number> => {
-    const settled = new Map<string, number>();
-    for (const [name, values] of seen) {
-      const only = values.size === 1 ? [...values][0] : undefined;
-      if (only !== undefined) settled.set(name, only);
-    }
-    return settled;
-  };
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer
-    ) {
-      const resolved = resolver(single())(node.initializer);
-      if (resolved !== undefined) {
-        const values = seen.get(node.name.text);
-        if (values) values.add(resolved);
-        else seen.set(node.name.text, new Set([resolved]));
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return single();
-}
-
-function parse(file: string): ts.SourceFile {
-  return parseSource(file, readFileSync(file, "utf8"));
-}
-
-/**
- * The numbers a module EXPORTS at its top level. Not `declaredConsts`, which
- * walks a whole file flat and lets the last declaration of a name win: a
- * function-local `const POLL_MS = 1` in the imported module then overwrote the
- * exported `POLL_MS = 5000`, and a 10000ms budget folded to 2ms with nothing
- * reported.
- */
-function exportedConsts(source: ts.SourceFile): Map<string, number> {
-  const known = new Map<string, number>();
-  const value = resolver(known);
-  for (const statement of source.statements) {
-    if (!ts.isVariableStatement(statement)) continue;
-    const exported = statement.modifiers?.some(
-      (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
-    );
-    if (!exported) continue;
-    for (const declaration of statement.declarationList.declarations) {
-      if (!ts.isIdentifier(declaration.name) || !declaration.initializer)
-        continue;
-      const resolved = value(declaration.initializer);
-      if (resolved !== undefined) known.set(declaration.name.text, resolved);
-    }
-  }
-  return known;
-}
-
-/** The numeric constants ONE named import brings in, added to `into`. */
-function takeImport(
-  statement: ts.ImportDeclaration,
-  file: string,
-  into: Map<string, number>,
-): void {
-  if (!ts.isStringLiteral(statement.moduleSpecifier)) return;
-  const bindings = statement.importClause?.namedBindings;
-  if (!bindings || !ts.isNamedImports(bindings)) return;
-  const target = resolveRelative(file, statement.moduleSpecifier.text);
-  if (!target) return;
-  const theirs = exportedConsts(parse(target));
-  for (const element of bindings.elements) {
-    const value = theirs.get((element.propertyName ?? element.name).text);
-    if (value !== undefined) into.set(element.name.text, value);
-  }
-}
-
-/**
- * A test's numeric constants, including the ones it imports from a sibling
- * module — `{ timeout: READ_POLL_MS * EXPECTED_READS * 5 }` is a real waiter
- * budget in this tree and READ_POLL_MS lives in the hook it drives. One hop
- * only: a budget written two modules away is reported unresolved rather than
- * chased, and reported is the safe end of that trade.
- */
-function numericConsts(
-  source: ts.SourceFile,
-  file: string,
-): Map<string, number> {
-  const imported = new Map<string, number>();
-  for (const statement of source.statements) {
-    if (ts.isImportDeclaration(statement))
-      takeImport(statement, file, imported);
-  }
-  return declaredConsts(source, imported);
-}
-
-/**
- * Whether a property key names the timeout, however it is written. Comparing
- * source text read `{ "timeout": 5000 }` and `{ ["timeout"]: 5000 }` as "states
- * no timeout", which is the silent-default path this file exists to close — and
- * it would have rested on a lint rule the reader knows nothing about.
- */
-function isTimeoutKey(name: ts.PropertyName): boolean {
-  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) {
-    return name.text === "timeout";
-  }
-  if (
-    ts.isComputedPropertyName(name) &&
-    ts.isStringLiteralLike(name.expression)
-  ) {
-    return name.expression.text === "timeout";
-  }
-  return false;
-}
-
-/**
- * The `timeout:` of one options object — `{ timeout: 4000 }` and the shorthand
- * `{ timeout }` alike, since the shorthand is the idiomatic spelling once the
- * value has a name. A spread carries properties this reader cannot see, so the
- * whole object is reported unreadable rather than searched and found wanting.
- */
-function timeoutExpression(
-  options: ts.ObjectLiteralExpression,
-): ts.Expression | typeof OPAQUE | undefined {
-  for (const property of options.properties) {
-    if (ts.isSpreadAssignment(property)) return OPAQUE;
-    if (ts.isShorthandPropertyAssignment(property)) {
-      if (property.name.text === "timeout") return property.name;
-      continue;
-    }
-    if (!ts.isPropertyAssignment(property)) continue;
-    if (!isTimeoutKey(property.name)) continue;
-    return property.initializer;
-  }
-  return undefined;
-}
-
-/**
- * The `timeout:` a waiter states, wherever among its arguments it sits — or
- * OPAQUE when an argument might carry one this reader cannot read. Only
- * arguments after the first are considered: a waiter's first argument is its
- * matcher or callback, and an options object never sits there.
- */
-function statedTimeout(
-  call: ts.CallExpression,
-): ts.Expression | typeof OPAQUE | undefined {
-  let found: ts.Expression | typeof OPAQUE | undefined;
-  for (const argument of call.arguments.slice(1)) {
-    if (cannotCarryOptions(argument)) continue;
-    if (!ts.isObjectLiteralExpression(argument)) return OPAQUE;
-    const stated = timeoutExpression(argument);
-    if (stated === OPAQUE) return OPAQUE;
-    if (stated !== undefined && found === undefined) found = stated;
-  }
-  return found;
-}
-
-/**
- * An options argument this reader cannot see inside — a spread, or an object
- * handed over by name. Distinguished from "states no timeout" because the two
- * mean opposite things: one is a default budget, the other is a budget nobody
- * checked, and collapsing them is what let an 11000ms test read as 4000.
- */
-const OPAQUE = Symbol("an options argument this reader cannot read");
-
-/**
- * Shapes that definitively CANNOT be an options object carrying a timeout — a
- * matcher, a placeholder, a callback. Everything else is treated as possibly
- * carrying one, because the default has to be "unreadable", not "absent".
- *
- * That direction is the whole lesson of this file. A whitelist of shapes the
- * reader understands sends every other shape down the same path as "states no
- * timeout", and that path ends at the 1000ms default — the smallest number,
- * which is the one that keeps the gate green. Property access, a call, a
- * ternary, an `as` cast and a `!` assertion all reached it that way.
- */
-function cannotCarryOptions(argument: ts.Expression): boolean {
-  if (ts.isIdentifier(argument)) return argument.text === "undefined";
-  switch (argument.kind) {
-    case ts.SyntaxKind.NullKeyword:
-    case ts.SyntaxKind.TrueKeyword:
-    case ts.SyntaxKind.FalseKeyword:
-      return true;
-    default:
-      break;
-  }
-  return (
-    ts.isStringLiteralLike(argument) ||
-    ts.isNumericLiteral(argument) ||
-    ts.isRegularExpressionLiteral(argument) ||
-    ts.isArrayLiteralExpression(argument) ||
-    ts.isArrowFunction(argument) ||
-    ts.isFunctionExpression(argument)
-  );
-}
-
 /**
  * The root name a call is made through: `it` for `it`, `it.only`, `it.each(…)`
  * and `it.each(…)(…)` alike. Walking to the root is what keeps the table-driven
@@ -343,39 +109,108 @@ function directCallee(call: ts.CallExpression): string {
 
 type Reading = { ms: number; unresolved: string[] };
 
+type Helper = ts.ArrowFunction | ts.FunctionExpression | ts.FunctionDeclaration;
+
+const isHelper = (node: ts.Node | undefined): node is Helper =>
+  node !== undefined &&
+  (ts.isArrowFunction(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isFunctionDeclaration(node));
+
 /**
- * The helpers one file declares, EVERY declaration of each name. Two suites in
- * one file commonly declare their own `mount` or `settle`, and this reader has
- * no scope information to tell a call which one it meant. Keeping only the last
- * silently reported suite A's 8000ms helper as suite B's 2000ms one.
- *
- * Holding all of them lets the disagreement decide: when every declaration of a
- * name costs the same, which is the ordinary case, the answer is that cost
- * whichever one was meant. Only when they differ is the call genuinely
- * unreadable, and only then is it reported.
+ * The helper a bare call names, read from the scope of the call. Two suites in
+ * one file commonly declare their own `mount` or `settle`, and each call means
+ * the one it can see. A helper may also come back from another one, as
+ * `const { confirm } = await mount()` takes it, and that is followed too.
  */
-type Helpers = Map<string, ts.Node[]>;
+function helperNamed(name: ts.Identifier, hops = 3): Helper | undefined {
+  const bound = bindingOf(name);
+  if (bound && ts.isFunctionDeclaration(bound)) return bound;
+  if (!bound || !ts.isVariableDeclaration(bound)) return undefined;
+  if (ts.isIdentifier(bound.name)) {
+    return isHelper(bound.initializer) ? bound.initializer : undefined;
+  }
+  return hops > 0 ? handedBack(bound, name.text, hops - 1) : undefined;
+}
+
+/** The helper `const { local } = await maker()` takes from what `maker`
+ * returns, as a shorthand or a function-valued property. */
+function handedBack(
+  declared: ts.VariableDeclaration,
+  local: string,
+  hops: number,
+): Helper | undefined {
+  if (!ts.isObjectBindingPattern(declared.name)) return undefined;
+  const element = declared.name.elements.find(
+    (e) => ts.isIdentifier(e.name) && e.name.text === local,
+  );
+  const key = element && (element.propertyName ?? element.name);
+  const maker = makerOf(declared.initializer, hops);
+  if (!key || !ts.isIdentifier(key) || !maker) return undefined;
+  for (const returned of returnedBy(maker)) {
+    const property = returned.properties.find(
+      (one) => one.name?.getText() === key.text,
+    );
+    if (property) return propertyHelper(property, hops);
+  }
+  return undefined;
+}
+
+/** The helper `maker()` or `await maker()` calls. */
+function makerOf(
+  init: ts.Expression | undefined,
+  hops: number,
+): Helper | undefined {
+  const made = init && ts.isAwaitExpression(init) ? init.expression : init;
+  return made && ts.isCallExpression(made) && ts.isIdentifier(made.expression)
+    ? helperNamed(made.expression, hops)
+    : undefined;
+}
+
+function propertyHelper(
+  property: ts.ObjectLiteralElementLike,
+  hops: number,
+): Helper | undefined {
+  if (ts.isShorthandPropertyAssignment(property)) {
+    return helperNamed(property.name, hops);
+  }
+  const value = ts.isPropertyAssignment(property)
+    ? property.initializer
+    : undefined;
+  if (isHelper(value)) return value;
+  return value && ts.isIdentifier(value) ? helperNamed(value, hops) : undefined;
+}
+
+/** The object literals a helper returns, not counting its nested functions. */
+function returnedBy(helper: Helper): ts.ObjectLiteralExpression[] {
+  const found: ts.ObjectLiteralExpression[] = [];
+  const take = (value: ts.Expression | undefined) => {
+    const bare =
+      value && ts.isParenthesizedExpression(value) ? value.expression : value;
+    if (bare && ts.isObjectLiteralExpression(bare)) found.push(bare);
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isReturnStatement(node)) take(node.expression);
+    if (!ts.isFunctionLike(node)) ts.forEachChild(node, visit);
+  };
+  const body = helper.body;
+  if (body && ts.isBlock(body)) ts.forEachChild(body, visit);
+  else take(body);
+  return found;
+}
 
 /**
  * Whether this node is the DEFINITION of a helper, rather than a call to one.
- * The initializer has to BE a function: a local variable that merely shares a
- * module-level helper's name — `const renderAs = await screen.findByText(…)` —
- * is not a definition, and skipping it dropped its waiter entirely.
+ * The initializer has to BE a function. A local such as
+ * `const renderAs = await screen.findByText(…)` is not a definition, and
+ * skipping it would drop its waiter.
  */
-function declaresHelper(node: ts.Node, helpers: Helpers): boolean {
-  if (
-    ts.isVariableDeclaration(node) &&
-    ts.isIdentifier(node.name) &&
-    node.initializer &&
-    (ts.isArrowFunction(node.initializer) ||
-      ts.isFunctionExpression(node.initializer))
-  ) {
-    return helpers.has(node.name.text);
+function declaresHelper(node: ts.Node): boolean {
+  if (ts.isVariableDeclaration(node)) {
+    const fn = node.initializer;
+    return !!fn && (ts.isArrowFunction(fn) || ts.isFunctionExpression(fn));
   }
-  if (ts.isFunctionDeclaration(node) && node.name) {
-    return helpers.has(node.name.text);
-  }
-  return false;
+  return ts.isFunctionDeclaration(node) && node.body !== undefined;
 }
 
 /**
@@ -389,53 +224,27 @@ function declaresHelper(node: ts.Node, helpers: Helpers): boolean {
  */
 function budgetOf(
   node: ts.Node,
-  consts: Map<string, number>,
-  helpers: Helpers,
-  path: Set<string>,
-  memo: Map<string, Reading>,
+  imported: ReadonlyMap<string, number>,
+  path: Set<ts.Node>,
+  memo: Map<ts.Node, Reading>,
 ): Reading {
-  const value = resolver(consts);
+  const value = resolver(imported);
   let ms = 0;
   const unresolved: string[] = [];
 
-  const helperCost = (name: string): Reading => {
-    const cached = memo.get(name);
+  const helperCost = (body: ts.Node): Reading => {
+    const cached = memo.get(body);
     if (cached) return cached;
-    // Recursion guard. A helper reached while it is already being computed
-    // contributes nothing to THIS reading, and that truncated answer is not
-    // cached, which keeps a later DIRECT call from inheriting the under-count.
-    //
-    // It does not make mutual recursion order-independent, and saying so would
-    // be claiming more than the code does: with `a()` calling `b()` and `b()`
-    // calling `a()`, the outermost reading memoized still embeds a truncated
-    // inner one, so `await b(); await a()` and `await a(); await b()` differ.
-    // Both under-count, which is the direction that lets a violation through
-    // rather than inventing one. Mutually recursive helpers do not occur in
-    // this tree; if they arrive, the honest fix is to key the memo on the
-    // path rather than on the name.
-    if (path.has(name)) return { ms: 0, unresolved: [] };
-    const bodies = helpers.get(name);
-    if (!bodies || bodies.length === 0) return { ms: 0, unresolved: [] };
+    // A helper reached while it is being computed adds nothing here, and that
+    // truncated reading is not cached. Mutual recursion still under-counts by
+    // call order; none occurs in this tree, and keying the memo on the path
+    // would make it exact.
+    if (path.has(body)) return { ms: 0, unresolved: [] };
     const outermost = path.size === 0;
-    path.add(name);
-    const readings = bodies.map((body) =>
-      budgetOf(body, consts, helpers, path, memo),
-    );
-    path.delete(name);
-    const costs = new Set(readings.map((reading) => reading.ms));
-    const reading: Reading =
-      costs.size === 1
-        ? {
-            ms: readings[0]?.ms ?? 0,
-            unresolved: readings.flatMap((one) => one.unresolved),
-          }
-        : {
-            ms: 0,
-            unresolved: [
-              `${name}() is declared ${bodies.length} times in this file with different waiter budgets (${[...costs].sort((a, b) => a - b).join("ms, ")}ms)`,
-            ],
-          };
-    if (outermost) memo.set(name, reading);
+    path.add(body);
+    const reading = budgetOf(body, imported, path, memo);
+    path.delete(body);
+    if (outermost) memo.set(body, reading);
     return reading;
   };
 
@@ -460,8 +269,8 @@ function budgetOf(
     else ms += folded;
   };
 
-  const takeHelper = (name: string): void => {
-    const reading = helperCost(name);
+  const takeHelper = (body: ts.Node): void => {
+    const reading = helperCost(body);
     ms += reading.ms;
     for (const item of reading.unresolved) {
       if (!unresolved.includes(item)) unresolved.push(item);
@@ -472,12 +281,13 @@ function budgetOf(
     // A helper DECLARED inside the body being read is counted at each call, so
     // descending into its definition as well would charge the test once more
     // for a waiter it may never reach.
-    if (declaresHelper(current, helpers)) return;
+    if (declaresHelper(current)) return;
     if (ts.isCallExpression(current)) {
-      const name = directCallee(current);
-      if (WAITER.test(name)) takeWaiter(current);
-      else if (ts.isIdentifier(current.expression) && helpers.has(name))
-        takeHelper(name);
+      const helper = ts.isIdentifier(current.expression)
+        ? helperNamed(current.expression)
+        : undefined;
+      if (WAITER.test(directCallee(current))) takeWaiter(current);
+      else if (helper?.body) takeHelper(helper.body);
     }
     ts.forEachChild(current, visit);
   };
@@ -516,38 +326,10 @@ function statedCeiling(
     .find((expression) => expression !== undefined);
 }
 
-/** Named `function f() {}` and `const f = () => {}` bodies, by name, anywhere. */
-function namedHelpers(source: ts.SourceFile): Helpers {
-  const byName: Helpers = new Map();
-  const remember = (name: string, body: ts.Node): void => {
-    const bodies = byName.get(name);
-    if (bodies) bodies.push(body);
-    else byName.set(name, [body]);
-  };
-  const visit = (node: ts.Node): void => {
-    if (ts.isFunctionDeclaration(node) && node.name && node.body) {
-      remember(node.name.text, node.body);
-    } else if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
-      const initializer = node.initializer;
-      if (
-        initializer &&
-        (ts.isArrowFunction(initializer) ||
-          ts.isFunctionExpression(initializer))
-      ) {
-        remember(node.name.text, initializer.body);
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return byName;
-}
-
 export function budgetsIn(file: string, globalCeilingMs: number): TestBudget[] {
   const source = parse(file);
-  const consts = numericConsts(source, file);
-  const value = resolver(consts);
-  const helpers = namedHelpers(source);
+  const imported = importedConsts(source, file);
+  const value = resolver(imported);
   const found: TestBudget[] = [];
 
   const record = (call: ts.CallExpression): void => {
@@ -580,7 +362,7 @@ export function budgetsIn(file: string, globalCeilingMs: number): TestBudget[] {
     }
 
     const title = call.arguments[0];
-    const reading = budgetOf(body, consts, helpers, new Set(), new Map());
+    const reading = budgetOf(body, imported, new Set(), new Map());
     found.push({
       file,
       line:

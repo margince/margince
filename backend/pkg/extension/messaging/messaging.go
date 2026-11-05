@@ -99,6 +99,12 @@ type Rules struct {
 	// declare one requires consent rather than silently permitting a send.
 	MarketingExceptions []MarketingException
 
+	// ConsentOnly says advertising to a recipient here needs their prior
+	// consent and nothing else. No one-message exception a sender or an admin
+	// records stands in for it. False keeps that exception, which is the
+	// default.
+	ConsentOnly bool
+
 	// Disclosures are what a first message to somebody must carry.
 	//
 	// The send path renders them into the message footer. Held by
@@ -124,6 +130,9 @@ type Rules struct {
 	//
 	// Held by the same gate as Disclosures.
 	OptOutAcknowledgement bool
+
+	// OptOutAcknowledgementWithin bounds receipt delivery from the recorded refusal; zero declares no deadline.
+	OptOutAcknowledgementWithin time.Duration
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
@@ -301,6 +310,9 @@ func (r Rules) Validate() error {
 	// apply gets refused.
 	if r.Version > math.MaxInt32 {
 		return fmt.Errorf("messaging rules for %q carry version %d — a decision records the version on a 32-bit column, so a larger number would refuse every send under this pack rather than being recorded", string(r.Jurisdiction), r.Version)
+	}
+	if r.OptOutAcknowledgementWithin < 0 || (r.OptOutAcknowledgementWithin > 0 && !r.OptOutAcknowledgement) {
+		return errors.New("messaging rules declare an invalid opt-out receipt deadline")
 	}
 	if r.ReplyWindow < 0 || r.DealFollowUpWindow < 0 {
 		return fmt.Errorf("messaging rules for %q carry a negative window — a window reaches back, never forward", string(r.Jurisdiction))

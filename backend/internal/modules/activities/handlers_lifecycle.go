@@ -4,10 +4,12 @@
 package activities
 
 import (
+	"fmt"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -89,7 +91,13 @@ func (h Handlers) RelinkThread(w http.ResponseWriter, r *http.Request, _ crmcont
 	if !ok {
 		return
 	}
-	out, err := h.store.RelinkThread(r.Context(), req.ThreadKey, RelinkActivityInput{
+	// thread_key alone is still accepted by the contract but no longer names a
+	// conversation, so a request without activity_id is refused.
+	if req.ActivityId == nil {
+		httperr.Write(w, r, fmt.Errorf("%w: activity_id names the conversation to move and is required", apperrors.ErrInvalidArgument))
+		return
+	}
+	out, err := h.store.RelinkThread(r.Context(), ids.From[ids.ActivityKind](ids.UUID(*req.ActivityId)), RelinkActivityInput{
 		EntityType:            string(req.EntityType),
 		EntityID:              ids.UUID(req.EntityId),
 		ReplaceExistingOfType: req.ReplaceExistingOfType != nil && *req.ReplaceExistingOfType,
@@ -315,4 +323,24 @@ func (h Handlers) snoozeFromRequest(
 		ref = &named
 	}
 	return h.store.SnoozeMessage(r.Context(), id, on, req.SnoozedUntil, ref)
+}
+
+// ClaimTaskReminderDelivery answers whether this tab shows a due reminder's
+// notification, so a member on two browsers sees it once.
+func (h Handlers) ClaimTaskReminderDelivery(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.TaskReminderClaimRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// A claim with no instant would answer false, which a tab reads as shown elsewhere.
+	if req.RemindAt.IsZero() {
+		httperr.Write(w, r, httperr.Validation("remind_at", codeRequired, "remind_at names the reminder instant being shown"))
+		return
+	}
+	claimed, err := h.store.ClaimReminderDelivery(r.Context(), pathID[ids.ActivityKind](id), req.RemindAt)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.TaskReminderClaim{Claimed: claimed})
 }

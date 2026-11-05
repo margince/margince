@@ -138,6 +138,25 @@ func readLiveRelationshipTypes(ctx context.Context, tx pgx.Tx, companyID ids.Com
 	return live, rows.Err()
 }
 
+const (
+	codePartnerRowExists  = "partner_row_exists"
+	codePartnerRowMissing = "partner_row_missing"
+)
+
+// partnerRowMissingMessage names both ways to a partner program: a human on
+// the company page, and an assistant asking for the approval a human gives.
+func partnerRowMissingMessage() string {
+	return "a partner is a company with a partner program. A human sets one up on the company page " +
+		"(More actions → Set up partner program). An assistant can ask for one with change_state " +
+		"action set_up_partner, and a human approves it."
+}
+
+// partnerRowExistsMessage states what ends a partner program: archiving the company.
+func partnerRowExistsMessage() string {
+	return "this company has a partner program, so it stays a partner. " +
+		"A partner program ends only when the company is archived."
+}
+
 // hasPartnerRow reports whether the company carries the partner program
 // extension — the other half of the invariant this file guards.
 func hasPartnerRow(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (bool, error) {
@@ -183,11 +202,9 @@ func reconcileCompanyRelationshipTypes(
 	}
 	switch {
 	case isPartner && !desiredSet[relationshipTypePartner]:
-		return nil, httperr.Validation("relationship_types", "partner_row_exists",
-			"this company has a partner programme, so it stays a partner — remove the programme first")
+		return nil, httperr.Validation("relationship_types", codePartnerRowExists, partnerRowExistsMessage())
 	case !isPartner && desiredSet[relationshipTypePartner]:
-		return nil, httperr.Validation("relationship_types", "partner_row_missing",
-			"a partner is a company with a partner programme — set one up first")
+		return nil, httperr.Validation("relationship_types", codePartnerRowMissing, partnerRowMissingMessage())
 	}
 
 	liveSet := make(map[string]bool, len(live))
@@ -220,13 +237,12 @@ func reconcileCompanyRelationshipTypes(
 }
 
 // ensureCompanyRelationshipType asserts one type without disturbing the others.
-// The partner upsert calls it to keep its half of the invariant, inside the
-// same transaction that writes the partner row — the classification flip it
-// replaces did exactly this, for exactly this reason.
+// The partner upsert calls it inside the transaction that writes the partner
+// row, to keep its half of the invariant. It reports whether it added the type.
 func ensureCompanyRelationshipType(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, relType, source, by string,
-) error {
-	_, err := tx.Exec(ctx,
+) (added bool, err error) {
+	tag, err := tx.Exec(ctx,
 		`INSERT INTO company_relationship_type
 		   (company_id, relationship_type, source, captured_by)
 		 SELECT $1, $2, $3, $4
@@ -235,9 +251,9 @@ func ensureCompanyRelationshipType(
 		   WHERE company_id = $1 AND relationship_type = $2 AND archived_at IS NULL)`,
 		companyID, relType, source, by)
 	if err != nil {
-		return fmt.Errorf("ensure relationship type %q: %w", relType, err)
+		return false, fmt.Errorf("ensure relationship type %q: %w", relType, err)
 	}
-	return nil
+	return tag.RowsAffected() == 1, nil
 }
 
 // moveCompanyRelationshipTypes re-homes the loser's types onto the survivor in a
@@ -281,6 +297,8 @@ var validLifecycles = map[string]bool{
 	string(crmcontracts.CompanyLifecycleTarget):         true,
 	string(crmcontracts.CompanyLifecycleProspect):       true,
 	string(crmcontracts.CompanyLifecycleOpportunity):    true,
+	string(crmcontracts.CompanyLifecycleOnboarding):     true,
+	string(crmcontracts.CompanyLifecycleLive):           true,
 	string(crmcontracts.CompanyLifecycleCustomer):       true,
 	string(crmcontracts.CompanyLifecycleFormerCustomer): true,
 	string(crmcontracts.CompanyLifecycleDisqualified):   true,

@@ -68,11 +68,16 @@ func TestNoOfferedDescriptionNamesAnUnlistedTool(t *testing.T) {
 			continue
 		}
 		spec = registry.Listed(spec)
+		// A router's own action values are offered: the model sends them.
+		offered := map[string]bool{}
+		for _, action := range spec.Actions {
+			offered[action.Action] = true
+		}
 		text := spec.Description + " " + strings.Join(argumentDescriptions(t, spec.InputSchema), " ")
 		for _, word := range strings.FieldsFunc(text, func(c rune) bool {
 			return c != '_' && !unicode.IsLower(c) && !unicode.IsDigit(c)
 		}) {
-			if unlisted[word] && !namesAnApprovalKind.Waived(t, spec.Name+":"+word) {
+			if unlisted[word] && !offered[word] && !namesAnApprovalKind.Waived(t, spec.Name+":"+word) {
 				t.Errorf("%s's description names %s, which is not offered; name the tool that reaches it",
 					spec.Name, word)
 			}

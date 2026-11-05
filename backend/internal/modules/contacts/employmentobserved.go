@@ -12,8 +12,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // employmentFirstObservedSQL is the earliest message from any of a contact's
@@ -29,13 +31,14 @@ func employmentFirstObservedSQL(contact, domain, activity, skew string) string {
 		   JOIN activity_participant ap ON lower(ap.address) = lower(pe.email)
 		   JOIN activity ev ON ev.id = ap.activity_id
 		  WHERE pe.contact_id = %[1]s
-		    -- A literal suffix compare, never LIKE — see OnDomain.
-		    AND (split_part(pe.email, '@', 2) = %[2]s
-		         OR right(split_part(pe.email, '@', 2), length(%[2]s) + 1) = '.' || %[2]s)
-		    AND ev.occurred_at <= now() + %[4]s::interval),
+		    AND `+owndomain.CoversSQL("pe.email_domain_folded", "%[2]s")+`
+		    AND %[4]s
+		),
 		(SELECT ev.occurred_at FROM activity ev
-		  WHERE ev.id = %[3]s AND ev.occurred_at <= now() + %[4]s::interval))`,
-		contact, domain, activity, skew)
+		  WHERE ev.id = %[3]s
+		    AND %[4]s
+		))`,
+		contact, domain, activity, occurredday.BegunSQL("ev", "now() + "+skew+"::interval"))
 }
 
 // observeEmployment moves an existing edge's first observation earlier when
@@ -52,8 +55,10 @@ func observeEmployment(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInpu
 	)
 	err := tx.QueryRow(ctx, `
 		WITH msg AS (
-			SELECT occurred_at FROM activity
-			 WHERE id = $4 AND occurred_at <= now() + $5::interval),
+			SELECT m.occurred_at FROM activity m
+			 WHERE m.id = $4
+			   AND `+occurredday.BegunSQL("m", "now() + $5::interval")+`
+		),
 		edge AS (
 			SELECT r.id, r.first_observed_at
 			  FROM relationship r
@@ -72,7 +77,7 @@ func observeEmployment(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInpu
 		 WHERE r.id = seen.id AND seen.at IS NOT NULL
 		   AND (seen.was IS NULL OR seen.at < seen.was)
 		RETURNING r.id, seen.was, r.first_observed_at`,
-		contactID, companyID, domain, in.ActivityID, mailClockSkewAllowance).Scan(&edgeID, &before, &after)
+		contactID, companyID, owndomain.Fold(domain), in.ActivityID, mailClockSkewAllowance).Scan(&edgeID, &before, &after)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
@@ -130,29 +135,18 @@ const fieldFirstObservedAt = "first_observed_at"
 // mergedColumn is the endpoint the merge rewrites ("contact_id" or
 // "company_id"); the edges must agree on the other one.
 func foldFirstObservations(ctx context.Context, tx pgx.Tx, mergedColumn string, source, target ids.UUID) error {
-	sharedColumn := contactFK
-	if mergedColumn == contactFK {
-		sharedColumn = companyFK
-	}
-	rows, err := tx.Query(ctx, storekit.SQLf(`
-		UPDATE relationship s SET first_observed_at = f.earliest
-		  FROM (SELECT b.id, b.first_observed_at AS was, min(a.first_observed_at) AS earliest
-		          FROM relationship a
-		          JOIN relationship b ON b.kind = a.kind AND b.id <> a.id AND b.archived_at IS NULL
-		           AND b.%[2]s = a.%[2]s AND b.%[1]s = $2
-		         WHERE a.kind = 'employment' AND a.archived_at IS NULL AND a.%[1]s = $1
-		           AND `+roleKeyedDuplicateSQL+`
-		         GROUP BY b.id, b.first_observed_at) f
-		 WHERE s.id = f.id AND f.earliest IS NOT NULL
-		   AND (f.was IS NULL OR f.earliest < f.was)
-		RETURNING s.id, s.contact_id, s.company_id, f.was, s.first_observed_at`,
-		mergedColumn, sharedColumn), source, target)
+	rows, err := tx.Query(ctx, `
+ UPDATE relationship s SET first_observed_at = f.earliest
+ FROM (`+mergeObservationCandidates(mergedColumn)+`) f
+ WHERE s.id = f.id AND `+mergeObservationChanges+`
+ RETURNING s.id, s.contact_id, s.company_id, f.was, s.first_observed_at`,
+		pgx.StrictNamedArgs{mergeSourceKey: source, mergeTargetKey: target})
 	if err != nil {
 		return fmt.Errorf("contacts: folding the merged employment edges' first observations: %w", err)
 	}
 	var moves []firstObservationMove
 	for rows.Next() {
-		move := firstObservationMove{origin: "merge"}
+		move := firstObservationMove{origin: originMerge}
 		if err := rows.Scan(&move.edge, &move.contact, &move.company, &move.before, &move.after); err != nil {
 			rows.Close()
 			return fmt.Errorf("contacts: folding the merged employment edges' first observations: %w", err)
@@ -169,4 +163,21 @@ func foldFirstObservations(ctx context.Context, tx pgx.Tx, mergedColumn string, 
 		}
 	}
 	return nil
+}
+
+const mergeObservationChanges = "f.earliest IS NOT NULL AND (f.was IS NULL OR f.earliest < f.was)"
+
+func mergeObservationCandidates(mergedColumn string) string {
+	sharedColumn := contactFK
+	if mergedColumn == contactFK {
+		sharedColumn = companyFK
+	}
+	return storekit.SQLf(`
+ SELECT b.id, b.first_observed_at AS was, min(a.first_observed_at) AS earliest
+ FROM relationship a
+ JOIN relationship b ON b.kind = a.kind AND b.id <> a.id AND b.archived_at IS NULL
+ AND b.%[2]s = a.%[2]s AND b.%[1]s = @target
+ WHERE a.kind = 'employment' AND a.archived_at IS NULL AND a.%[1]s = @source
+ AND `+roleKeyedDuplicateSQL+`
+ GROUP BY b.id, b.first_observed_at`, mergedColumn, sharedColumn)
 }

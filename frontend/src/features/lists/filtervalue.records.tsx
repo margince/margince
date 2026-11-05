@@ -13,8 +13,8 @@ import {
 } from "../../design-system/debouncedsearch";
 import { useT } from "../../i18n";
 import "./filterbuilder.css";
+import { searchCompanies } from "../../components/filterreference";
 import type { LeafValue } from "../../lib/segmentpredicate";
-import { searchCompanies } from "./filterreference";
 
 /**
  * The ids a list clause already names, and a way to drop one.

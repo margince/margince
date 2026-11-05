@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { derivedRecordKeys } from "../lib/activitykeys";
+import { sameEditValue } from "../lib/independentedit";
 import {
   ProblemError,
   problemExistingId,
@@ -131,8 +132,10 @@ export function EditRecordModal({
   error,
   existing,
   resolveExisting,
+  notice,
   onSubmit,
   onValuesChange,
+  onDirtyChange,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -143,6 +146,8 @@ export function EditRecordModal({
   error: string | null;
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
+  /** A refusal the caller answers with its own verbs, in place of `error`. */
+  notice?: ReactNode;
   // The form's answers, and the record they were PREFILLED FROM.
   //
   // Everything the write compares against has to describe ONE reading: the
@@ -165,6 +170,8 @@ export function EditRecordModal({
   // from them. optionsFor cannot do that narrowing, because it is a pure
   // function of the values. See usePublishedValues (create.fields.ts).
   onValuesChange?: (values: Record<string, string>) => void;
+  /** The answers differ from the reading they opened on, or a save is out. */
+  onDirtyChange?: (dirty: boolean) => void;
 }>) {
   const [values, setValues] = useState<Record<string, string>>({});
   usePublishedValues(values, onValuesChange);
@@ -234,6 +241,15 @@ export function EditRecordModal({
     }
   }
 
+  const dirty =
+    open &&
+    (pending ||
+      !sameEditValue(values, prefillFromRecord(fields, opened)) ||
+      !sameEditValue(rows, prefillRowsFromRecord(fields, opened)));
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
   return (
     <RecordFormBody
       dialog={{ open, title }}
@@ -246,6 +262,7 @@ export function EditRecordModal({
       error={error}
       existing={existing}
       resolveExisting={resolveExisting}
+      notice={notice}
       onSubmit={(submitted, submittedRows) =>
         onSubmit(submitted, submittedRows, opened)
       }

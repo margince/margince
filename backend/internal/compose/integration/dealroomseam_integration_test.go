@@ -39,6 +39,8 @@ func roomWriter(t *testing.T, e *apptest.AppEnv) context.Context {
 			Objects: map[string]principal.ObjectGrant{
 				"deal":      {Read: true, Update: true},
 				"deal_room": {Create: true, Read: true, Update: true},
+				// A room file that arrived on an email shows only to a seat that may read the email.
+				"activity": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

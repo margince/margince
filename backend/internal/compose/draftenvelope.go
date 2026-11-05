@@ -8,11 +8,14 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // draftEnvelope builds the resolver that answers what language a draft is
@@ -39,6 +42,14 @@ func draftEnvelope(pool *pgxpool.Pool, log *slog.Logger) *draftfloor.Resolver {
 		}).
 		WithBaseLanguage(func(ctx context.Context) string {
 			return identity.BaseLanguageForPrompt(ctx, pool)
+		}).
+		WithZone(func(ctx context.Context) (*time.Location, error) {
+			// A caller who may not read the zone drafts in UTC, so the draft never needs the grant.
+			readCtx, err := auth.Unrecorded(ctx, identity.Timezone.Object(), principal.ActionRead)
+			if err != nil {
+				return nil, err
+			}
+			return installationZone(readCtx, pool)
 		}).
 		WithLogger(log)
 }

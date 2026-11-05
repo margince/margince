@@ -24,7 +24,6 @@ import {
   type ComponentPropsWithRef,
   type ReactNode,
   useCallback,
-  useEffect,
   useId,
   useRef,
   useState,
@@ -32,8 +31,8 @@ import {
 import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button, type ButtonVariant } from "./atoms";
-import { coveredByDialog } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
+import { usePanelDismiss } from "./popoverdismiss";
 import { usePortalPanelFocus } from "./portalfocus";
 import "./popover.css";
 
@@ -56,6 +55,9 @@ export function Popover({
   onOpenChange,
   dialog,
   panelClassName,
+  width = "default",
+  align = "start",
+  pinned = false,
   children,
 }: Readonly<{
   label: ReactNode;
@@ -106,6 +108,14 @@ export function Popover({
    *  a non-modal dialog and the trigger says it opens one. */
   dialog?: boolean;
   panelClassName?: string;
+  /** `wide` is for a panel of rows that each carry a title and a verb on one
+   *  line; prose asides stay `default`. */
+  width?: "default" | "wide";
+  /** `end` for a trigger at the end of its row, so the panel stays over it. */
+  align?: "start" | "end";
+  /** `panelClassName` places the panel, as the top bar does for every panel
+   *  it opens, so it is not moved to the trigger. */
+  pinned?: boolean;
   children: ReactNode;
 }>) {
   const [ownOpen, setOwnOpen] = useState(false);
@@ -125,10 +135,9 @@ export function Popover({
   const panel = useRef<HTMLElement | null>(null);
   const panelId = useId();
   const triggerId = useId();
-  // From the trigger's leading edge: a popover is opened by words as often
-  // as by a chip, and a panel hung off the end of a full-width sentence lands
-  // at the margin with nothing under it.
-  const at = useAnchoredToTrigger(open, trigger, panel, "start");
+  // The leading edge by default, since words open a popover as often as a chip
+  // does. A panel hung off the end of a full-width sentence lands at the margin.
+  const at = useAnchoredToTrigger(open && !pinned, trigger, panel, align);
 
   // Focus, shared with the evidence mark's own portalled panel: into the panel
   // when a press opened it, back to the trigger if the close dropped it, and
@@ -164,40 +173,10 @@ export function Popover({
     setOpen(!open);
   };
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || coveredByDialog(trigger.current)) {
-        return;
-      }
-      event.preventDefault();
-      // Focus goes back to the trigger through `panelFocus`, once the panel
-      // has really gone: a controlled caller may refuse the close.
-      setOpen(false);
-    };
-    const onPointer = (event: MouseEvent) => {
-      if (!(event.target instanceof Node)) {
-        return;
-      }
-      // The panel lives at the body rather than inside the trigger's box, so
-      // "outside" means outside BOTH — a click on a link inside the panel is
-      // otherwise a click away from it.
-      if (
-        !trigger.current?.contains(event.target) &&
-        !panel.current?.contains(event.target)
-      ) {
-        setOpen(false);
-      }
-    };
-    globalThis.addEventListener("keydown", onKey);
-    globalThis.addEventListener("mousedown", onPointer);
-    return () => {
-      globalThis.removeEventListener("keydown", onKey);
-      globalThis.removeEventListener("mousedown", onPointer);
-    };
-  }, [open, setOpen]);
+  // Focus goes back to the trigger through `panelFocus`, once the panel has
+  // really gone: a controlled caller may refuse the close.
+  const close = useCallback(() => setOpen(false), [setOpen]);
+  usePanelDismiss({ open, anchor: trigger, panel, close });
 
   return (
     <>
@@ -228,16 +207,26 @@ export function Popover({
           <section
             id={panelId}
             ref={panel}
-            className={withClass("popover-panel", panelClassName)}
+            className={withClass(
+              withClass(
+                "popover-panel",
+                width === "wide" ? "popover-panel-wide" : undefined,
+              ),
+              panelClassName,
+            )}
             role={dialog ? "dialog" : undefined}
             aria-labelledby={triggerId}
             {...(onHover ? hover : {})}
             {...panelFocus}
-            style={{
-              top: `${at.top}px`,
-              left: `${at.left}px`,
-              maxHeight: `${at.maxHeight}px`,
-            }}
+            style={
+              pinned
+                ? undefined
+                : {
+                    top: `${at.top}px`,
+                    left: `${at.left}px`,
+                    maxHeight: `${at.maxHeight}px`,
+                  }
+            }
           >
             {children}
           </section>,

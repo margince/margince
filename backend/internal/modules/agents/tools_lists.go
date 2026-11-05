@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -97,6 +98,16 @@ func RegisterListTools(r *Registry, lists Lists) {
 	r.Register(changeLists{lists: lists})
 }
 
+// listOperatorEnum is the operator list the predicate engine accepts, so the
+// tools offer no operator the engine refuses and omit none it admits.
+var listOperatorEnum = func() string {
+	enum, err := json.Marshal(storekit.Operators())
+	if err != nil {
+		panic(err)
+	}
+	return string(enum)
+}()
+
 type readLists struct{ lists Lists }
 
 func (t readLists) Spec() mcp.ToolSpec {
@@ -112,7 +123,7 @@ func (t readLists) Spec() mcp.ToolSpec {
 			"entity_type":{"type":"string","enum":["contact","company","deal","lead","project"],"description":"For find (optional) and preview (required)"},
 			"query":{"type":"string","description":"For find: matches name or purpose"},
 			"sharing":{"type":"array","items":{"type":"string","enum":["private","team","workspace"]},"description":"For find (optional): only lists with one of these sharing settings; private alone is the caller's own private lists"},
-			"definition":{"type":"object","description":"For preview: a filter tree, as a Live List stores it","properties":{"and":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"or":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"field":{"type":"string"},"op":{"type":"string","enum":["eq","neq","gt","lt","gte","lte","in","contains","exists"]},"value":{"description":"A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"}}},
+			"definition":{"type":"object","description":"For preview: a filter tree, as a Live List stores it","properties":{"and":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"or":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"field":{"type":"string"},"op":{"type":"string","enum":` + listOperatorEnum + `},"value":{"description":"A value, a list for in, true or false for exists, {\"days_ago\": N} for a date, or {\"lat\": N, \"lon\": N, \"radius_km\": N, \"label\": \"optional place name\"} for within_radius"}}},
 			"limit":{"type":"integer","minimum":1,"maximum":100},
 			"cursor":{"type":"string","description":"For members and history: the next_cursor a page answered"}},
 			"additionalProperties":false}`),
@@ -160,7 +171,7 @@ func (t changeLists) Spec() mcp.ToolSpec {
 			"purpose":{"type":"string"},
 			"entity_type":{"type":"string","enum":["contact","company","deal","lead","project"],"description":"For create, and the record type of record_id"},
 			"list_type":{"type":"string","enum":["static","dynamic"],"description":"For create: static is a Shortlist, dynamic a Live List"},
-			"definition":{"type":"object","description":"A Live List's filter tree","properties":{"and":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"or":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"field":{"type":"string"},"op":{"type":"string","enum":["eq","neq","gt","lt","gte","lte","in","contains","exists"]},"value":{"description":"A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"}}},
+			"definition":{"type":"object","description":"A Live List's filter tree","properties":{"and":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"or":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"field":{"type":"string"},"op":{"type":"string","enum":` + listOperatorEnum + `},"value":{"description":"A value, a list for in, true or false for exists, {\"days_ago\": N} for a date, or {\"lat\": N, \"lon\": N, \"radius_km\": N, \"label\": \"optional place name\"} for within_radius"}}},
 			"sharing":{"type":"string","enum":["private","team","workspace"]},
 			"team_id":{"type":"string","format":"uuid"},
 			"steward_id":{"type":"string","format":"uuid"},

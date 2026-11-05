@@ -24,9 +24,9 @@ package integration
 // measuring is now held deterministically, by the seq_scan count in
 // lastactivity_integration_test.go. Run this one with `make bench-perf`
 // (mid-market, writes a record) or `make bench-perf-check` (SMB, writes
-// nothing); the scheduled workflow runs the latter weekly. Mid-market is by
-// hand only: its seed does not finish inside a CI budget, so no schedule
-// measures the tier the SLO actually binds at.
+// nothing); the scheduled workflow records SMB weekly through `make bench-perf
+// BENCH_PERF_TIER=smb`. Mid-market is by hand only, so no schedule measures
+// the tier the SLO actually binds at.
 
 import (
 	"context"
@@ -168,9 +168,9 @@ func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
 		t.Fatalf("trigger evidence names tier %s, ran %s", evidence.Tier, spec.tier)
 	}
 
-	// The published page's PERF-3/PERF-7 rows come from here, but only when a
-	// human asked for them: `make bench-perf` sets MARGINCE_BENCH_RECORD and the
-	// standing integration lane does not. Written before the gate, so a breach
+	// The published page's PERF-3/PERF-7 rows come from here, but only when
+	// asked for: `make bench-perf` sets MARGINCE_BENCH_RECORD and the standing
+	// integration lane does not. Written before the gate, so a breach
 	// is recorded rather than hidden by its own failure.
 	if RecordingEnabled() {
 		writeTierBenchRecord(t, owner, report)

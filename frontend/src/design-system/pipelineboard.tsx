@@ -1,11 +1,20 @@
 import type { ReactNode } from "react";
-import { Fragment } from "react";
-import { formatMoneyOrAbsent, formatNumber } from "../format/format";
+import { Fragment, useContext, useRef } from "react";
+import { formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
-import { OptionCount } from "./atoms";
+import { AnsweredSearch } from "./answeredsearch";
+import { Button, OptionCount } from "./atoms";
+import { ColumnTotals, largestStageTotal } from "./boardtotals";
+import { Callout } from "./callout";
 import "./composed.css";
 
 import { type BoardDealMail, DealCard, type DealCardHooks } from "./dealcard";
+import {
+  matchesTitle,
+  matchingColumns,
+  scrollColumnIn,
+  useOffScreenMatches,
+} from "./pipelinereveal";
 
 export type BoardRecord = {
   id: string;
@@ -70,7 +79,8 @@ export type BoardDeal = BoardRecord & {
    */
   valueMinor: number | null;
   currency: string | null;
-  ageMs: number;
+  idleSince: string;
+  measuredAt: number;
   /**
    * When the deal is expected to close, as the calendar day the record holds.
    * Null on a deal nobody has dated, and the card then states no date rather
@@ -89,8 +99,7 @@ export type BoardDeal = BoardRecord & {
   owner?: Readonly<{ id: string; name: string }> | null;
   /**
    * The newest email on the deal that the whole workspace may see, as how long
-   * ago it was and which way it went. A span rather than an instant, for the
-   * reason `ageMs` is one: the caller owns the clock. A card that read
+   * ago it was and which way it went. The caller owns the clock. A card that read
    * `Date.now()` would be a card no test could pin. Absent or null on a deal
    * nobody has mailed about, and the card then draws no mail line at all.
    * "No mail yet" is a fact the timeline states, not one worth a row on every
@@ -112,27 +121,13 @@ export type BoardColumn<Record extends BoardRecord = BoardDeal> = {
    * loaded. A caller with a capped/paginated card fetch (the Kanban board) has
    * a real count from a server aggregate that `deals.length` cannot give it.
    * Falls back to `deals.length` when absent, which is correct for a caller
-   * whose card list is the whole stage.
+   * whose card list is the whole stage. `null`, not known yet, states no figure.
    */
-  count?: number;
-  /**
-   * The stage holds deals in more than one currency, so it has no total to
-   * state: native minor units are never summed across currencies. The column
-   * then reports how many deals it holds and no figure at all, rather than a
-   * zero that reads as an empty stage.
-   */
+  count?: number | null;
+  /** Totals withheld because the aggregate cannot measure the card filters.
+   *  A plain board's one total is its count, so its head drops the figure. */
   sumHidden?: boolean;
-  /**
-   * Why the sum is hidden, as the words to print in its place.
-   *
-   * The default says the stage mixes currencies. That was the only reason a
-   * total could go missing when this column was written, and it is not now. A
-   * board whose card list and totals query measure different populations has
-   * no true figure to print either. The mixed-currency sentence there would
-   * state a reason that is not true.
-   *
-   * A caller that hides a sum for its own reason passes its own words.
-   */
+  /** The caller's explanation of the withheld total. */
   sumHiddenReason?: string;
   /**
    * Draw the column narrow: its head and its count, and none of its cards.
@@ -169,6 +164,9 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
   rawMinor: number | null;
   weightedMinor: number | null;
   currency: string | null;
+  asOf?: string | null;
+  timezone?: string | null;
+  unpricedCount?: number | null;
 };
 
 type BoardHandlers<Record extends BoardRecord> = {
@@ -233,6 +231,25 @@ function BoardLayout<Record extends BoardRecord>({
 }: Readonly<BoardLayoutProps<Record>>) {
   const t = useT();
   const { locale } = useLocale();
+  const sections = useRef(new Map<string, HTMLElement>());
+  const spokenCount =
+    countLabel ??
+    ((count: number) =>
+      translatePlural(locale, "board.count", count, {
+        count: formatNumber(count, locale),
+      }));
+  const board = useRef<HTMLDivElement>(null);
+  // The search the cards answer, from the list the board is drawn in. With no
+  // match in view, the board scrolls to the first and says where they are.
+  const revealKey = useContext(AnsweredSearch);
+  const matches = revealKey ? matchingColumns(columns) : [];
+  const scaleMinor = largestStageTotal(columns.map(moneyFor));
+  const offScreen = useOffScreenMatches(
+    board,
+    sections,
+    revealKey,
+    matches.map((column) => column.stage),
+  );
   // The head's interactive half, or nothing at all. Written as a function so
   // the column's JSX stays one line of props rather than a spread conditional
   // the reader has to unpick.
@@ -252,50 +269,76 @@ function BoardLayout<Record extends BoardRecord>({
     };
   }
   return (
-    <div className="board">
-      {columns.map((column) => {
-        const money = moneyFor(column);
-        const dealCount = column.count ?? column.deals.length;
-        return (
-          <section
-            key={column.stage}
-            className={
-              column.collapsed ? "board-col board-col-collapsed" : "board-col"
+    <>
+      {offScreen && matches.length > 0 && (
+        // The host's gutter comes from this wrapper, as a Callout takes no class.
+        <div className="board-reveal">
+          <Callout
+            kind="outcome"
+            title={matchesTitle(matches, locale)}
+            actions={
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  scrollColumnIn(sections.current.get(matches[0]?.stage ?? ""))
+                }
+              >
+                {t("board.showMatches")}
+              </Button>
             }
-            data-stage={column.stage}
-            aria-label={column.label}
-            // listtable.css gives every column `overflow-y: auto` so a stage
-            // with many deals scrolls its own cards instead of stretching the
-            // rest to match it. A column with too few cards to overflow, or
-            // none at all, is still declared scrollable. A card's own link
-            // makes a full column keyboard-reachable but says nothing about an
-            // empty one, which axe's scrollable-region-focusable rule catches.
-            // The section is the scroller, so it takes the fallback stop
-            // itself rather than depending on what is inside it. That is the
-            // WCAG-sanctioned fix for a non-interactive scrollable region. It
-            // is also why the a11y linter's default posture forbids tabIndex
-            // on a section at all.
-            // biome-ignore lint/a11y/noNoninteractiveTabindex: the scrollable region itself needs the keyboard stop; see the comment above.
-            tabIndex={0}
-            {...columnDropHandlers?.(column)}
-          >
-            {/* The stage and how much is in it, on one line and stuck to the
+          />
+        </div>
+      )}
+      <div className="board" ref={board}>
+        {columns.map((column) => {
+          const money = moneyFor(column);
+          const dealCount = column.count ?? column.deals.length;
+          const countHidden =
+            column.count === null || (!money && column.sumHidden);
+          return (
+            <section
+              key={column.stage}
+              className={
+                column.collapsed ? "board-col board-col-collapsed" : "board-col"
+              }
+              data-stage={column.stage}
+              ref={(node) => {
+                if (node) sections.current.set(column.stage, node);
+                else sections.current.delete(column.stage);
+              }}
+              aria-label={column.label}
+              // listtable.css gives every column `overflow-y: auto` so a stage
+              // with many deals scrolls its own cards instead of stretching the
+              // rest to match it. A column with too few cards to overflow, or
+              // none at all, is still declared scrollable. A card's own link
+              // makes a full column keyboard-reachable but says nothing about an
+              // empty one, which axe's scrollable-region-focusable rule catches.
+              // The section is the scroller, so it takes the fallback stop
+              // itself rather than depending on what is inside it. That is the
+              // WCAG-sanctioned fix for a non-interactive scrollable region. It
+              // is also why the a11y linter's default posture forbids tabIndex
+              // on a section at all.
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: the scrollable region itself needs the keyboard stop; see the comment above.
+              tabIndex={0}
+              {...columnDropHandlers?.(column)}
+            >
+              {/* The stage and how much is in it, on one line and stuck to the
                 top of the column. A board is scrolled, and a reader halfway
                 down a long stage had nothing on screen saying which stage they
                 were in. The head is the only thing that says it, so it holds
                 its place. The count moved up here with it: it is the figure a
                 reader compares across the board, and under the money totals it
                 was the third figure on a two-line sub. */}
-            {/* A button only where there is something to press, and that is
+              {/* A button only where there is something to press, and that is
                 per column rather than per board. A column says it can fold by
                 carrying `collapsed` at all; one that never folds keeps the
                 plain div it has always been, even on a board that has a
                 foldable column beside it. A control that does nothing is worse
                 than no control, and a lead board would otherwise have made its
                 three open stages focusable to no effect. */}
-            <div className="board-col-head" {...foldProps(column)}>
-              <span className="stage">{column.label}</span>
-              {/* Its own node, not one composed string. The name is data of
+              <div className="board-col-head" {...foldProps(column)}>
+                <span className="stage">{column.label}</span>
+                {/* Its own node, not one composed string. The name is data of
                   unbounded length and truncates; the count is three characters
                   and must not. Written as "{label}: {count}" into the
                   truncating span, a long stage name ellipsised the figure away.
@@ -307,84 +350,46 @@ function BoardLayout<Record extends BoardRecord>({
                   deals" below, with the unit a bare figure leaves out. So the
                   whole chip, separator included, stays out of the accessible
                   tree rather than announcing the number twice. */}
-              <span className="board-col-count" aria-hidden="true">
-                <OptionCount count={dealCount} />
-              </span>
-              {money && (
-                <span className="prob">
-                  {formatNumber(money.probabilityPct, locale)}%
+                <span
+                  className="board-col-count"
+                  aria-hidden="true"
+                  hidden={countHidden}
+                >
+                  <OptionCount count={dealCount} />
                 </span>
-              )}
-            </div>
-            {/* The stage's total is the figure being scanned down the board,
-              so it leads with the deal count beside it. The weighted figure is
-              its own server-sourced total (not derived from the raw total). It
-              reads underneath rather than competing on the line. */}
-            <div className="board-col-sub">
-              <span className="board-col-total">
-                {money && !column.sumHidden && (
-                  <span className="board-col-money">
-                    {formatMoneyOrAbsent(
-                      money.rawMinor,
-                      money.currency,
-                      locale,
-                    )}
+                {money && (
+                  <span className="prob">
+                    {formatNumber(money.probabilityPct, locale)}%
                   </span>
                 )}
-                {/* The count is in the head; what a screen reader needs here
-                    is the unit the head's bare figure leaves out, so the column
-                    announces "12 deals" rather than "Qualified: 12". */}
-                <span className="sr-only">
-                  {countLabel
-                    ? countLabel(dealCount)
-                    : translatePlural(locale, "board.count", dealCount, {
-                        count: formatNumber(dealCount, locale),
-                      })}
+              </div>
+              {/* The stage's money leads the sub. The count is in the head;
+                  a screen reader gets it here with its unit, as "12 deals". */}
+              <div className="board-col-sub">
+                {money && !column.sumHidden && (
+                  <ColumnTotals money={money} scaleMinor={scaleMinor} />
+                )}
+                <span className="sr-only" hidden={countHidden}>
+                  {spokenCount(dealCount)}
                 </span>
-              </span>
-              {money && !column.sumHidden && (
-                <span className="board-col-weighted">
-                  {t("board.weighted", {
-                    value: formatMoneyOrAbsent(
-                      money.weightedMinor,
-                      money.currency,
-                      locale,
-                    ),
-                  })}
-                </span>
-              )}
-              {/* A refused sum says it was refused. Omitting the figure and
-                  leaving the count alone is a blank where a total belongs. A
-                  blank cannot distinguish "these are in two currencies, so no
-                  one total means anything" from "nobody has priced these". A
-                  column that has a real reason and no words for it reads as a
-                  column that failed to load. On a board whose stages hold
-                  euros, dollars and dong, five of six columns are this state.
-
-                  It is a sentence, and it takes the wrapping class rather than
-                  the weighted figure's. Sharing that class cut the sentence
-                  off after a few words in a 240px stage.
-
-                  An empty column says nothing: with no deals counted there is
-                  no sum to refuse, and ten columns repeating the sentence over
-                  a blank board read as ten errors. */}
-              {money && column.sumHidden && dealCount > 0 && (
-                <span className="board-col-refusal">
-                  {column.sumHiddenReason ?? t("board.mixedCurrencies")}
-                </span>
-              )}
-            </div>
-            {!column.collapsed &&
-              column.deals.map((record) => (
-                <Fragment key={record.id}>
-                  {renderCard(record, column)}
-                </Fragment>
-              ))}
-            {!column.collapsed && columnExtras?.(column)}
-          </section>
-        );
-      })}
-    </div>
+                {column.sumHidden && (countHidden || dealCount > 0) && (
+                  <span className="board-col-refusal">
+                    {column.sumHiddenReason}
+                  </span>
+                )}
+              </div>
+              {!column.collapsed &&
+                column.deals.map((record) => (
+                  <Fragment key={record.id}>
+                    {renderCard(record, column)}
+                  </Fragment>
+                ))}
+              {!column.collapsed && columnExtras?.(column)}
+            </section>
+          );
+        })}
+      </div>
+    </>
   );
 }
 

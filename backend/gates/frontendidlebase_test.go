@@ -32,7 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 )
 
-const frontendIdleBase = "../frontend/src/format/idlebase.ts"
+const frontendIdleBase = "../frontend/src/features/deals/idlebase.ts"
 
 // tsIdleFallback reads the two properties either side of the nullish
 // coalescing in the frontend helper.

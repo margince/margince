@@ -19,25 +19,29 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // recordInverses holds the module entry points an inverse runs through.
 type recordInverses struct {
-	provider *Provider
-	contacts *contacts.Store
-	deals    *deals.Store
+	provider   *Provider
+	contacts   *contacts.Store
+	deals      *deals.Store
+	activities *activities.Store
 }
 
-// demoteReason is what a demotion an undo performs records as its why: the
-// demote verb requires one, and "undone from the history" is the honest answer.
-const demoteReason = "Undone from the record's history."
+var recordInverseWords = struct{ Demoted langcopy.Phrase }{
+	Demoted: langcopy.Phrase{En: "Undone from the record's history.", De: "Über den Verlauf des Datensatzes rückgängig gemacht.", Vi: "Đã hoàn tác từ lịch sử bản ghi."},
+}
 
 // reverseByVerb decides, then performs the module verb, then answers with the
 // line that recorded it. The decision checks the path record's version in its
@@ -91,7 +95,8 @@ func (r recordInverses) perform(
 			return err
 		})
 	case inverseDemote:
-		_, err = r.contacts.DemoteLead(ctx, ids.From[ids.LeadKind](row.EntityID), demoteReason,
+		said := langcopy.For(identity.BaseLanguageForPrompt(ctx, pool))
+		_, err = r.contacts.DemoteLead(ctx, ids.From[ids.LeadKind](row.EntityID), said.Say(recordInverseWords.Demoted),
 			contacts.OnlyAtVersion(&ifVersion), contacts.NotWorkedOnByAColleagueSince(row.OccurredAt, row.ID))
 	case inverseRetractFill:
 		fill, _ := fillOf(row)
@@ -173,6 +178,8 @@ func refuseColleagueWork(ctx context.Context, tx pgx.Tx, row AuditRow) error {
 func (r recordInverses) unarchive(ctx context.Context, tx pgx.Tx, row AuditRow, ifVersion int64) (storekit.RestoreReport, error) {
 	with := unarchiveWith(nil)
 	switch row.EntityType {
+	case entityTypeActivity:
+		return r.activities.RestoreActivityTx(ctx, tx, ids.From[ids.ActivityKind](row.EntityID), &ifVersion, with)
 	case entityTypeContact:
 		return r.contacts.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](row.EntityID), &ifVersion, with)
 	case entityTypeCompany:

@@ -15,11 +15,10 @@ import type { MessageKey } from "../i18n/en";
 //
 // This is the same seam with the same property, and the property is the design:
 // NOTHING A FORK OWNS IS A FILE UPSTREAM EDITS. A fork adds a directory under
-// `src/screens/custom/` and nothing else. The registry below discovers it with
-// `import.meta.glob`, the way `migrations/custom/` is discovered by an embed
-// rather than by a list somebody maintains — a registry file a fork appended to
-// would be a shared file again, and would conflict on exactly the releases this
-// exists to make clean.
+// `src/custom/` and nothing else. The registry below finds it with
+// `import.meta.glob`, as an embed finds `migrations/custom/`. A list a fork
+// appended to would be a shared file again, and would conflict on the very
+// releases this seam keeps clean.
 //
 // The address is `#/x/<key>`, and the `x` is the hash-route spelling of the
 // prefix the schema already uses for the same reason (`x_` columns "can never
@@ -136,7 +135,7 @@ export const CUSTOM_SCREEN = "x";
  * directory layout, and it is stated in the README beside it.
  */
 const declared = import.meta.glob<{ readonly screen?: CustomScreen }>(
-  "../screens/custom/*/screen.tsx",
+  "../custom/*/screen.tsx",
   { eager: true },
 );
 

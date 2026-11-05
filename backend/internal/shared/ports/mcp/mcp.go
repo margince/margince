@@ -108,6 +108,10 @@ type ToolSpec struct {
 	// joined by "/"; each declares this tool as its x-mcp-tool verb.
 	OpenAPIOp string
 	Egress    bool // true if the tool reaches outside the workspace (send_email, webhooks)
+	// WaitsEvenForItsUser keeps a confirm-first tool waiting for a human when an
+	// agent acts as its user. Set where the model, not the colleague, picks the
+	// address the call reaches, and where a call cannot name the rows it changes.
+	WaitsEvenForItsUser bool
 	// HumanOnly marks a tool that exists in the registry so REST can dispatch
 	// it by name, but that no Agent or Buyer principal may ever invoke or be
 	// shown — the wire twin of a contract's x-agent-access: human-only. The
@@ -124,6 +128,11 @@ type ToolSpec struct {
 	// volume budget refuses such a call outright instead of asking the connecting
 	// human for a release, so no inbox question is ever opened on its behalf.
 	ConfirmsInConversation bool
+	// AskUserFirst marks a tool whose effect cannot be taken back from the
+	// conversation. While it runs at once, its listing tells the client to get
+	// the user's yes first. Nothing enforces that; a human-approved call already
+	// has its yes.
+	AskUserFirst bool
 	// UI names the interactive view that renders this tool's result, and is
 	// nil on a tool that has none. It carries no authority: a view is a second
 	// renderer for an answer this tool already gives in text, never a second
@@ -155,9 +164,10 @@ type ToolSpec struct {
 
 // ToolAction is one choice a router offers.
 type ToolAction struct {
-	Action string
-	Verb   string
-	Tier   RiskTier
+	Action       string
+	Verb         string
+	Tier         RiskTier
+	AskUserFirst bool
 }
 
 // ReadOnly reports whether the tool only reads — the protocol's

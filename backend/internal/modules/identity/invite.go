@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -32,6 +33,9 @@ type InviteUserInput struct {
 	// TeamIDs are the teams the member joins on arrival, in the same
 	// transaction as the seat and the role.
 	TeamIDs []ids.UUID
+	// Mailed marks the set-password link as handed to the mail sender, which
+	// the roster reads as an invitation mail on its way.
+	Mailed bool
 }
 
 // InviteUser provisions a new INVITED member with the one target system role and
@@ -70,7 +74,6 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 	if err != nil {
 		return ids.UserID{}, "", err
 	}
-	ctx = actorCtx(ctx, actor)
 	var newUserID ids.UserID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
@@ -93,14 +96,17 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		// out a role is handing out a role whichever verb spells it.
 		// No teams to weigh: only an admin invites onto a team, and an admin
 		// needs no containment.
+		if err := refuseRemovedEmail(ctx, tx, in.Email); err != nil {
+			return err
+		}
 		roleID, err := roleForAssignment(ctx, tx, actor, in.Role, nil)
 		if err != nil {
 			return err
 		}
 		insErr := tx.QueryRow(ctx,
-			`INSERT INTO app_user (email, password_hash, display_name, greeting_name, status)
-			 VALUES (lower($1), NULL, $2, $3, 'invited') RETURNING id`,
-			in.Email, in.DisplayName, in.GreetingName).Scan(&newUserID)
+			`INSERT INTO app_user (email, password_hash, display_name, greeting_name, status, email_domain_folded)
+			 VALUES (lower($1), NULL, $2, $3, 'invited', $4) RETURNING id`,
+			in.Email, in.DisplayName, in.GreetingName, owndomain.StoredOfAddress(in.Email)).Scan(&newUserID)
 		if storekit.IsUniqueViolation(insErr) {
 			return errEmailTaken
 		}
@@ -119,9 +125,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at)
-			 VALUES ($1, 'password_reset', $2, now() + $3::interval)`,
-			newUserID, tokenHash, inviteTokenTTL.String()); err != nil {
+			`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at, mail_queued_at)
+			 VALUES ($1, 'password_reset', $2, now() + $3::interval, CASE WHEN $4 THEN now() END)`,
+			newUserID, tokenHash, inviteTokenTTL.String(), in.Mailed); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "user", newUserID.UUID,

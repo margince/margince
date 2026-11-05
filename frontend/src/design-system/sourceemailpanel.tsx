@@ -5,10 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { ActivityWhenFormatter } from "../format/activitywhen";
 import { useT } from "../i18n";
-import { EmailEnvelope, emailDetailKey } from "./emaildetail";
+import { Button } from "./atoms";
+import { EmailEnvelope, emailDetailKey } from "./emailmessage";
 import { EmailText } from "./emailtext";
 import { Heading } from "./heading";
+import { ReaderRendering } from "./readerrendering";
 import { SurfaceState } from "./surfacestate";
 import "./sourceemailpanel.css";
 
@@ -42,10 +45,14 @@ type EmailPresentation = components["schemas"]["EmailPresentation"];
 export function SourceEmailPanel({
   activityId,
   formatWhen,
+  onOpenThread,
 }: Readonly<{
   activityId: string;
   /** The caller owns the reader's timezone, so it owns the formatting. */
-  formatWhen: (iso: string) => string;
+  formatWhen: ActivityWhenFormatter;
+  /** Opens the whole message with its thread, reply and records. Absent, the
+   *  panel offers no way there. */
+  onOpenThread?: () => void;
 }>) {
   const t = useT();
   const read = useQuery({
@@ -100,7 +107,13 @@ export function SourceEmailPanel({
       </SurfaceState>
     );
   }
-  return <SourceEmailBody presentation={read.data} formatWhen={formatWhen} />;
+  return (
+    <SourceEmailBody
+      presentation={read.data}
+      formatWhen={formatWhen}
+      onOpenThread={onOpenThread}
+    />
+  );
 }
 
 /**
@@ -116,9 +129,11 @@ export function SourceEmailPanel({
 function SourceEmailBody({
   presentation,
   formatWhen,
+  onOpenThread,
 }: Readonly<{
   presentation: EmailPresentation;
-  formatWhen: (iso: string) => string;
+  formatWhen: ActivityWhenFormatter;
+  onOpenThread?: () => void;
 }>) {
   const t = useT();
   if (presentation.access.content_state === "withheld") {
@@ -147,7 +162,17 @@ function SourceEmailBody({
         <p className="sourceemail__subject">{subject}</p>
         <EmailEnvelope presentation={presentation} formatWhen={formatWhen} />
       </div>
-      <EmailText body={presentation.body ?? ""} />
+      <ReaderRendering
+        activityId={presentation.id}
+        language={presentation.language}
+      >
+        <EmailText body={presentation.body ?? ""} />
+      </ReaderRendering>
+      {onOpenThread && (
+        <Button variant="ghost" aria-haspopup="dialog" onClick={onOpenThread}>
+          {t("timeline.group.openThread")}
+        </Button>
+      )}
     </section>
   );
 }

@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
@@ -59,7 +60,10 @@ func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
 	var background sync.WaitGroup
 	defer joinLanes(stopLanes, &background, laneLog)
 
-	lanes, err := startEventLanes(laneCtx, &background, workerConfig{webhookKey: "not-a-valid-signing-key"},
+	lanes, err := startEventLanes(laneCtx, &background, workerConfig{
+		webhookKey: "not-a-valid-signing-key",
+		settings:   bootSettings(t),
+	},
 		pool, rdb, nil, compose.ModelPath{}, laneLog, &announced)
 	if err == nil {
 		t.Fatal("startEventLanes accepted a malformed webhook signing key — this test needs it to fail AFTER a lane was launched")
@@ -111,4 +115,16 @@ func workerTestPool(t *testing.T) *pgxpool.Pool {
 	}
 	t.Cleanup(pool.Close)
 	return pool
+}
+
+// bootSettings are the worker's own settings, as a bare dev environment loads
+// them. The boot then reads every setting it asks for from its real registry.
+// The DSN is only required here; the test hands the boot its own pool.
+func bootSettings(t *testing.T) *config.Config {
+	t.Helper()
+	_, loaded, err := loadWorkerConfig(nil, []string{"MARGINCE_ENV=dev", "MARGINCE_DSN=postgres://boot-test"})
+	if err != nil {
+		t.Fatalf("loading the worker's settings: %v", err)
+	}
+	return loaded
 }

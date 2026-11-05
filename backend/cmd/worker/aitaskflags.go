@@ -19,7 +19,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/platform/cliflags"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
@@ -55,11 +55,9 @@ type aiTaskFlags struct {
 //
 // Its output is discarded and its usage suppressed. This tool prints its own
 // help, and `flag`'s would otherwise print a second, poorer one beside it every
-// time an argument is mistyped — and print it into the stderr of a container,
-// which is why cliflags exists at all.
-func aiTaskFlagSet(verb string) (*flag.FlagSet, *aiTaskFlags, *cliflags.Env) {
+// time an argument is mistyped.
+func aiTaskFlagSet(verb string) (*flag.FlagSet, *aiTaskFlags, *laneSettings, error) {
 	cfg := &aiTaskFlags{verb: verb}
-	env := &cliflags.Env{}
 	fs := flag.NewFlagSet("worker aitask "+verb, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.Usage = func() {}
@@ -72,12 +70,9 @@ func aiTaskFlagSet(verb string) (*flag.FlagSet, *aiTaskFlags, *cliflags.Env) {
 	fs.StringVar(&cfg.jsonPath, "json", "", "write the machine-readable probe result here ('-' = stdout)")
 	fs.StringVar(&cfg.dumpDir, "dump-request", "", "directory to write each post-stripper request into")
 	fs.StringVar(&cfg.corpusDir, "corpus", corpusDirDefault, "corpus directory, read by list and scaffold")
-	env.String(fs, &cfg.workDir, "work-dir", "MARGINCE_AITASK_DIR", workDirDefault,
-		"gitignored directory probe artifacts are written to; they carry whatever the probed source carried")
 	fs.StringVar(&cfg.outPath, "out", "", "write this verb's artifact here instead of the work directory ('-' = stdout)")
-	env.String(fs, &cfg.logLevel, "log-level", "MARGINCE_LOG_LEVEL", "info", "log level: debug|info|warn|error")
-	env.String(fs, &cfg.logFormat, "log-format", "MARGINCE_LOG_FORMAT", "text", "log format: text|json")
-	return fs, cfg, env
+	shared, err := addLaneSettings(fs, ps.AITaskDir, ps.LogLevel, ps.LogFormat)
+	return fs, cfg, shared, err
 }
 
 func parseAITaskFlags(args []string) (aiTaskFlags, error) {
@@ -88,7 +83,10 @@ func parseAITaskFlags(args []string) (aiTaskFlags, error) {
 		return aiTaskFlags{}, fmt.Errorf("aitask: unknown verb %q — want %s",
 			args[0], strings.Join(probeFlagVerbs, ", "))
 	}
-	fs, parsed, env := aiTaskFlagSet(args[0])
+	fs, parsed, shared, err := aiTaskFlagSet(args[0])
+	if err != nil {
+		return aiTaskFlags{}, err
+	}
 
 	// stdlib flag stops at the first positional; re-parsing the remainder lets
 	// the positional and the flags interleave, as siteread's seeds do.
@@ -96,7 +94,7 @@ func parseAITaskFlags(args []string) (aiTaskFlags, error) {
 	var positionals []string
 	for {
 		if err := fs.Parse(rest); err != nil {
-			return aiTaskFlags{}, err
+			return aiTaskFlags{}, config.FlagFault(fs, err)
 		}
 		rest = fs.Args()
 		if len(rest) == 0 {
@@ -105,10 +103,13 @@ func parseAITaskFlags(args []string) (aiTaskFlags, error) {
 		positionals = append(positionals, rest[0])
 		rest = rest[1:]
 	}
-	if err := env.Apply(fs, config.FromOS); err != nil {
+	loaded, err := shared.load()
+	if err != nil {
 		return aiTaskFlags{}, err
 	}
 	cfg := *parsed
+	cfg.workDir = config.Val(loaded, ps.AITaskDir)
+	cfg.logLevel, cfg.logFormat = config.Val(loaded, ps.LogLevel), config.Val(loaded, ps.LogFormat)
 	if len(positionals) > 1 {
 		return aiTaskFlags{}, fmt.Errorf("aitask %s takes one positional, got %d: %s",
 			cfg.verb, len(positionals), strings.Join(positionals, " "))

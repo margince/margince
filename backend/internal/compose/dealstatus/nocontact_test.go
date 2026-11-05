@@ -6,13 +6,15 @@ package dealstatus
 import (
 	"strings"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// A note, a booked meeting and a canceled one are on the timeline but are no
-// contact. A deal holding only those must not be told that nothing is logged.
-func TestADealWithNoContactIsNotToldNothingWasLogged(t *testing.T) {
+const noContactShown = "No exchange is shown in this deal’s recent history"
+
+// A note or an unheld meeting does not prove that contact took place.
+func TestRecentHistoryDoesNotClaimThatNoContactEverHappened(t *testing.T) {
 	canceled := crmcontracts.ActivityMeetingStatusCanceled
 	called := act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -2))
 	called.MeetingStatus = &canceled
@@ -23,7 +25,7 @@ func TestADealWithNoContactIsNotToldNothingWasLogged(t *testing.T) {
 		"a canceled meeting": {called},
 	} {
 		t.Run(name, func(t *testing.T) {
-			f := facts{deal: openDeal(), now: testNow, timeline: timeline}
+			f := facts{deal: openDeal(), now: testNow, loc: time.UTC, timeline: timeline}
 			texts := []string{nextStepReason(f)}
 			for _, l := range storyLines(f) {
 				texts = append(texts, l.Text)
@@ -33,11 +35,11 @@ func TestADealWithNoContactIsNotToldNothingWasLogged(t *testing.T) {
 					t.Errorf("a deal with %s was told %q", name, text)
 				}
 			}
-			if got := nextStepReason(f); !strings.Contains(got, noContactYet) {
+			if got := nextStepReason(f); !strings.Contains(got, noContactShown) {
 				t.Errorf("next step reason %q does not say what is missing", got)
 			}
-			if got := storyLines(f)[1].Text; got != noContactYet+"." {
-				t.Errorf("story line %q, want %q", got, noContactYet+".")
+			if got := storyLines(f)[1].Text; got != noContactShown+"." {
+				t.Errorf("story line %q, want %q", got, noContactShown+".")
 			}
 		})
 	}

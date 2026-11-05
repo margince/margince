@@ -24,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -48,14 +49,24 @@ func newAnalyticsQueryHandlers(
 
 // GetAnalyticsSchema implements GET /analytics/schema.
 func (h analyticsQueryHandlers) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
-	schema := AnalyticsSchemaFor(r.Context())
+	ctx := r.Context()
+	var schema analyticsquery.Schema
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+		var err error
+		schema, err = AnalyticsSchemaWithCoverage(ctx, tx)
+		return err
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	out := crmcontracts.AnalyticsSchema{Version: schema.Version}
 	for _, name := range schema.EntityNames() {
 		entity := schema.Entities[name]
 		out.Entities = append(out.Entities, crmcontracts.AnalyticsEntity{
-			Name:     name,
-			GroupBy:  entity.FieldNames(analyticsquery.KindDimension),
-			Measures: entity.FieldNames(analyticsquery.KindMeasure),
+			Name:         name,
+			GroupBy:      entity.FieldNames(analyticsquery.KindDimension),
+			Measures:     entity.FieldNames(analyticsquery.KindMeasure),
+			CustomFields: analyticsCustomFieldsOf(entity),
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
@@ -74,7 +85,7 @@ func (h analyticsQueryHandlers) RunAnalyticsQuery(w http.ResponseWriter, r *http
 		answer AnalyticsAnswer
 		runID  *ids.UUID
 	)
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		answer, err = RunAnalyticsQuery(ctx, tx, q, h.floor)
 		if err != nil {
@@ -104,13 +115,86 @@ func (h analyticsQueryHandlers) RunAnalyticsQuery(w http.ResponseWriter, r *http
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// ListReportRuns implements GET /analytics/runs.
+func (h analyticsQueryHandlers) ListReportRuns(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.ListReportRunsParams,
+) {
+	var after *storekit.Cursor
+	if params.Cursor != nil && *params.Cursor != "" {
+		cursor, err := storekit.DecodeCursor(*params.Cursor)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		after = &cursor
+	}
+	var (
+		runs   []ReportRunSummary
+		more   bool
+		schema analyticsquery.Schema
+	)
+	ctx := r.Context()
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+		var err error
+		if schema, _, err = AnalyticsSchemaIn(ctx, tx); err != nil {
+			return err
+		}
+		runs, more, err = ListReportRuns(ctx, tx, after, storekit.ClampLimit(params.Limit), params.Entity)
+		return err
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.ReportRunList{Data: make([]crmcontracts.ReportRunSummary, 0, len(runs)), Page: crmcontracts.PageInfo{HasMore: more}}
+	for _, run := range runs {
+		summary, askable, err := runSummary(run, schema)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		if askable {
+			out.Data = append(out.Data, summary)
+		}
+	}
+	if more {
+		last := runs[len(runs)-1]
+		next, err := storekit.EncodeCursor(last.AskedAt, last.ID)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		out.Page.NextCursor = &next
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// runSummary lists a saved question by its shape alone. Its filter values and
+// scope name records and teams, so they stay out. A question the caller's
+// vocabulary no longer admits is not listed; the page keeps its place by the
+// last row read, listed or not. One that now mixes currencies is listed, so
+// opening it shows the refusal and how to re-ask it.
+func runSummary(run ReportRunSummary, schema analyticsquery.Schema) (crmcontracts.ReportRunSummary, bool, error) {
+	shape := analyticsquery.Query{Entity: run.Query.Entity, GroupBy: run.Query.GroupBy, Measures: run.Query.Measures, Limit: run.Query.Limit}
+	if shape.ValidateVocabulary(schema) != nil {
+		return crmcontracts.ReportRunSummary{}, false, nil //nolint:nilerr // a question the vocabulary no longer admits is skipped, not a fault
+	}
+	asked, err := wireFromQuery(shape)
+	if err != nil {
+		return crmcontracts.ReportRunSummary{}, false, err
+	}
+	return crmcontracts.ReportRunSummary{
+		Id: openapi_types.UUID(run.ID), Entity: asked.Entity, GroupBy: asked.GroupBy, Measures: asked.Measures,
+		Limit: asked.Limit, Filtered: len(run.Query.Filters) > 0, AskedAt: run.AskedAt,
+	}, true, nil
+}
+
 // GetReportRun implements GET /analytics/runs/{run_id}.
 func (h analyticsQueryHandlers) GetReportRun(
 	w http.ResponseWriter, r *http.Request, runID openapi_types.UUID,
 ) {
 	ctx := r.Context()
 	var run ReportRun
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		// The caller's floor, not the stored one. A run saved under a laxer
 		// floor must not serve rows this installation would withhold today.
@@ -188,7 +272,7 @@ func (h analyticsQueryHandlers) ExplainReportRunCell(
 
 	ctx := r.Context()
 	var out AnalyticsExplanation
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		out, err = ExplainReportRunCell(ctx, tx, ids.UUID(runID), group, h.floor)
 		return err
@@ -348,7 +432,7 @@ func (h analyticsQueryHandlers) ExplainAnalyticsCell(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 	var out AnalyticsExplanation
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		out, err = ExplainAnalyticsCell(ctx, tx, in, h.floor)
 		return err

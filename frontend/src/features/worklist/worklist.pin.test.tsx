@@ -17,8 +17,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import {
+  day,
+  findRowMenu,
+  renderWorklist,
+  row,
+} from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
-import { day, findRowMenu, renderWorklist, row } from "./worklist.testkit";
 
 // The pin is a line of the row's menu, so every press opens that first.
 async function openRowMenu() {

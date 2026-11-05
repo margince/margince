@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -41,8 +42,12 @@ type UpdateCompanyInput struct {
 	SizeBand        *string
 	OwnerID         *ids.UserID
 	ParentCompanyID *ids.CompanyID
-	Address         *crmcontracts.Address
-	IfVersion       *int64
+	// AssessAgainstEntityID, when non-nil, chooses the legal entity whose
+	// offering the growth fit judges this company against. The default
+	// entity's id means the main offering and stores NULL.
+	AssessAgainstEntityID *ids.LegalEntityID
+	Address               *crmcontracts.Address
+	IfVersion             *int64
 	// LinkedInURL, when non-nil, sets or (when empty) clears the canonical
 	// LinkedIn company URL (PO-DDL-N-2). nil leaves it untouched.
 	LinkedInURL *string
@@ -53,6 +58,10 @@ type UpdateCompanyInput struct {
 	// Lifecycle, when non-nil, moves where the account stands with us
 	// (ADR-0079/A124). nil leaves it untouched.
 	Lifecycle *string
+	// Phone and Email, when non-nil, set or (when empty) clear the main number
+	// and the general address. nil leaves them untouched.
+	Phone *string
+	Email *string
 	// Visibility, when non-nil, moves who may see this company between
 	// 'workspace' and 'owner'. nil leaves it untouched. companyvisibility.go
 	// carries the two rules it owes that no other column here does.
@@ -62,10 +71,12 @@ type UpdateCompanyInput struct {
 	// clears them, except that 'partner' cannot be dropped while the partner
 	// extension row lives.
 	RelationshipTypes *[]string
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
+	// AdoptSource stamps an outside id onto a company that holds none. Only an
+	// intake that matched a hand-made company by a natural key sets it.
+	AdoptSource *OutsideID
 }
 
 // UpdateCompany applies one edit to one company, in a single
@@ -100,11 +111,14 @@ func (s *Store) updateCompanyInTx(
 	if err := lockCompanyNameWritesForEdit(ctx, tx, in); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	current, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)
+	current, err := readCompanyRow(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read company before update: %w", err)
 	}
 	if err := refuseUnreadableCompany(current, in); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	if err := checkCompanyDescription(in.Description); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
@@ -115,7 +129,16 @@ func (s *Store) updateCompanyInTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+	// A stale version answers 409 before a refused custom field answers 422.
+	if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	if err := stageAdoptedSource(ctx, tx, id, p, in.AdoptSource); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return crmcontracts.Company{}, err
+	}
 
 	by, err := stageCompanyReplaceSets(ctx, tx, id, current, in, p)
 	if err != nil {
@@ -125,12 +148,19 @@ func (s *Store) updateCompanyInTx(
 		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 			return crmcontracts.Company{}, err
 		}
-		return current, nil
+		return withCompanyCreator(ctx, tx, current)
 	}
 	if in.Visibility != nil {
 		if err := refuseStaleCompanyVisibility(ctx, tx, id, current); err != nil {
 			return crmcontracts.Company{}, err
 		}
+	}
+	// MOVED, not merely set. Re-sending the same name is not a re-authoring.
+	// Otherwise an agent round-tripping a record it just read would freeze a
+	// provisional domain-derived name as human-chosen. The stamp is the top of
+	// the name-source lattice, so no automated source overwrites it.
+	if _, changed := p.Moved()[fieldDisplayName]; changed {
+		p.SetStamp("name_source", nameSourceHuman)
 	}
 	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
@@ -139,27 +169,13 @@ func (s *Store) updateCompanyInTx(
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
 			return crmcontracts.Company{}, &DuplicateCompanyLinkedInError{URL: deref(in.LinkedInURL)}
 		}
+		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companySourceKey {
+			return crmcontracts.Company{}, fmt.Errorf("a company with this source_system and source_id already exists: %w", apperrors.ErrConflict)
+		}
 		return crmcontracts.Company{}, fmt.Errorf("apply company patch: %w", err)
 	}
 	if err := s.relocateIfAddressMoved(ctx, tx, id, p); err != nil {
 		return crmcontracts.Company{}, err
-	}
-	// MOVED, not merely set. A human editing the display name is the top of the
-	// name-source lattice (ADR-0072/A118): stamp 'human' so no automated source
-	// ever overwrites it. Re-sending the same value is not a re-authoring, and
-	// reading After() made it one — an agent round-tripping a record it had just
-	// read froze a provisional domain-derived name for good, with nothing in the
-	// record saying a contact had never chosen it.
-	//
-	// Spelled HERE rather than beside the description stamp it belongs with,
-	// because it is a by-id UPDATE of a shareable record and its guard is the
-	// row this function's ApplyGuarded just locked. Moved into a helper, the
-	// write leaves its guard and its write-authority probe behind, and the two
-	// gates that check for them are right to say so.
-	if _, changed := p.Moved()[fieldDisplayName]; changed {
-		if _, err := tx.Exec(ctx, `UPDATE company SET name_source = 'human' WHERE id = $1`, id); err != nil {
-			return crmcontracts.Company{}, fmt.Errorf("stamp company name provenance: %w", err)
-		}
 	}
 	if err := recordCompanyUpdate(ctx, tx, id, p, in, by); err != nil {
 		return crmcontracts.Company{}, err
@@ -173,7 +189,7 @@ func (s *Store) updateCompanyInTx(
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read updated company: %w", err)
 	}
-	return out, nil
+	return out, s.followShareOwnerTx(ctx, tx, entityCompany, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
 }
 
 // recordCompanyUpdate is everything the write OWES once it has landed: the
@@ -186,7 +202,7 @@ func recordCompanyUpdate(
 	p *storekit.Patch, in UpdateCompanyInput, by string,
 ) error {
 	before, after := p.Before(), p.After()
-	if err := stampEditedDescriptionAuthor(ctx, tx, id, p); err != nil {
+	if err := stampEditedDescriptionAuthor(ctx, tx, id, in, p); err != nil {
 		return err
 	}
 	if err := recheckRenamedCompany(ctx, tx, id, p); err != nil {
@@ -195,7 +211,11 @@ func recordCompanyUpdate(
 	if err := reconcileCompanyReplaceSets(ctx, tx, id, by, in, before, after); err != nil {
 		return err
 	}
-	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "company", id.UUID, before, after)
+	trail, err := withRestoredProfileFields(ctx, tx, id, in.Trail)
+	if err != nil {
+		return err
+	}
+	auditID, err := storekit.AuditWithTrail(ctx, tx, trail, "company", id.UUID, before, after)
 	if err != nil {
 		return fmt.Errorf("audit company update: %w", err)
 	}
@@ -273,8 +293,10 @@ func (s *Store) relocateIfAddressMoved(ctx context.Context, tx pgx.Tx, id ids.Co
 // TYPES by construction — *string as read from the row, string as the request
 // supplied it — and Moved counts a type change as a move, so it would call
 // every send a rewrite. describedDifferently compares the values themselves.
-func stampEditedDescriptionAuthor(ctx context.Context, tx pgx.Tx, id ids.CompanyID, p *storekit.Patch) error {
-	if !describedDifferently(p.Before(), p.After()) {
+func stampEditedDescriptionAuthor(ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput, p *storekit.Patch) error {
+	// A source note the industry funnel appended moves the description without
+	// the contact having written it, so only a sent description claims it.
+	if in.Description == nil || !describedDifferently(p.Before(), p.After()) {
 		return nil
 	}
 	// Not the replace-set principal: that one is empty unless the edit also
@@ -334,11 +356,16 @@ func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 		}
 		*in.Domains = electPrimary(*in.Domains, live)
 	}
-	// A replace-set changes no column on the row itself, so this bump is what
-	// makes the patch non-empty and carries the version guard. Once, after both
-	// branches: a request naming both sets is still one write at one instant, and
-	// which branch happened to run last should not pick the timestamp.
-	p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
+	changed, err := companyReplaceSetsChanged(ctx, tx, id, in)
+	if err != nil {
+		return "", err
+	}
+	if changed {
+		// A replace-set changes no column on the row itself, so this bump makes
+		// the patch non-empty and carries the version guard. It is stamped once,
+		// after both sets, so one request has one timestamp.
+		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
+	}
 	return by, nil
 }
 

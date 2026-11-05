@@ -25,13 +25,14 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // sweepContactPerms may create the contact this fixture strands mail under.
 var sweepContactPerms = principal.Permissions{
-	Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}},
+	Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}, "company": {Create: true, Read: true}},
 	RowScope: principal.RowScopeAll,
 }
 
@@ -42,7 +43,7 @@ func TestTheRepairSweepActuallyRepairsWhenDrivenAsTheJob(t *testing.T) {
 	// A contact, and mail captured under their address that no link reaches —
 	// the shape a backfill leaves when the contact arrives mid-run.
 	contact, err := store.EnsureContactByEmail(e.As(e.Rep1, []ids.UUID{e.Team1}, sweepContactPerms),
-		"Stranded Sender", "stranded@sweep.test", "manual")
+		"Stranded Sender", "stranded@sweep.test", "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("seeding the contact: %v", err)
 	}

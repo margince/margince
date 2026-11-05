@@ -49,6 +49,8 @@ type Envelope struct {
 	// an unsigned draft rather than failing (DRAFT-AC-E-6).
 	SenderName  string `json:"sender_name,omitempty"`
 	SenderEmail string `json:"sender_email,omitempty"`
+	// zone says which date is today for a date-only activity. Not sent to a model.
+	zone *time.Location
 }
 
 // IdentityMaxRunes bounds the sender's name and address in the prompt.
@@ -119,6 +121,20 @@ func (e Envelope) At() time.Time {
 		return time.Time{}
 	}
 	return at
+}
+
+// InZone is the envelope with the zone its date-only activities are read in.
+func (e Envelope) InZone(zone *time.Location) Envelope {
+	e.zone = zone
+	return e
+}
+
+// Zone is the zone InZone set, and UTC, the installation default, when none was.
+func (e Envelope) Zone() *time.Location {
+	if e.zone == nil {
+		return time.UTC
+	}
+	return e.zone
 }
 
 // Greeting renders the opening line in this envelope's language, band and

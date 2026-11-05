@@ -64,3 +64,26 @@ export const LabelAndHelp: Story = {
     </Field>
   ),
 };
+
+export const UnavailableRow: Story = {
+  render: () => (
+    <div style={{ maxWidth: 320 }}>
+      <RecordPicker
+        label="Search companies…"
+        initialTerm="a"
+        searchTargets={() =>
+          Promise.resolve([
+            { id: "company-1", name: "Brandt Automotive", writable: true },
+            { id: "company-2", name: "Weber Logistics", writable: false },
+          ])
+        }
+        unavailableReason={(candidate) =>
+          candidate.writable === true
+            ? undefined
+            : "You can only read this record, so it cannot be kept."
+        }
+        onPick={() => undefined}
+      />
+    </div>
+  ),
+};

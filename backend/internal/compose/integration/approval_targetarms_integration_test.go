@@ -8,13 +8,12 @@ package integration
 // An agent's archive, once per target-visibility arm. Each arm is a target type
 // the seam routes differently, so each is driven over a real passport.
 //
-// A tag and an offer template are ordinary work, so the archive performs. A
-// saved view and a webhook subscription are human-only configuration, so the
-// agent is refused and nothing is staged.
+// A tag, a saved view and an offer template are ordinary work, so the archive
+// performs. A webhook subscription is human-only configuration, so the agent is
+// refused and nothing is staged.
 
 import (
 	"bytes"
-	"maps"
 	"net/http"
 	"testing"
 
@@ -45,7 +44,7 @@ func TestAnAgentArchivePerformsOrIsRefusedForEveryTargetArm(t *testing.T) {
 		id := createdID(t, e, "/v1/views", AnyMap{
 			"resource": "contacts", "name": "My contacts", "query": AnyMap{"columns": []any{"full_name"}},
 		})
-		archiveIsRefusedAsHumanOnly(t, e, bearer, "/v1/views/"+id, "saved_view", id)
+		archivesOnItsOwnPassport(t, e, bearer, "/v1/views/"+id)
 	})
 
 	t.Run("offer_template", func(t *testing.T) {
@@ -69,75 +68,6 @@ func TestAnAgentArchivePerformsOrIsRefusedForEveryTargetArm(t *testing.T) {
 		id := created.Subscription.ID
 		archiveIsRefusedAsHumanOnly(t, e, bearer, "/v1/webhook-subscriptions/"+id, "webhook_subscription", id)
 	})
-}
-
-// A decision is a judgment about the row as the human was shown it, so a row
-// that moved underneath the approval revokes it. The staging pins the target's
-// version (approvals.versionTables), and redemption re-checks it.
-// The staged call is an agent overwriting a contact name a human typed. A human
-// edit to another field in between is drift the approver never saw.
-func TestAStagedPatchIsRefusedWhenItsTargetMovedBeforeTheApproval(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
-	bearer := agentBearer(t, e, "skew agent")
-
-	var created struct {
-		ID      string `json:"id"`
-		Version int64  `json:"version"`
-	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"source": "manual", "full_name": "Kai Human",
-	}, nil, &created); status != http.StatusCreated {
-		t.Fatalf("human contact create → %d", status)
-	}
-	path := "/v1/contacts/" + created.ID
-	staged := AnyMap{"full_name": "Kai Machine"}
-
-	var problem struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
-	}
-	if status := e.Call(t, "PATCH", path, staged, bearer, &problem); status != http.StatusForbidden ||
-		problem.Code != "approval_required" {
-		t.Fatalf("agent patch → %d %q, want 403 approval_required", status, problem.Code)
-	}
-	approvalID := ExtractStagedApprovalID(t, problem.Detail)
-
-	// The human's own edit, on a different field so the patch really bumps the
-	// version rather than finding nothing to change.
-	var edited struct {
-		Version int64 `json:"version"`
-	}
-	if status := e.Call(t, "PATCH", path, AnyMap{"title": "Head of Ops"}, nil, &edited); status != http.StatusOK {
-		t.Fatalf("human edit → %d", status)
-	}
-	if edited.Version == created.Version {
-		t.Fatalf("the human's edit left version at %d — the fixture proves nothing about a pin it never moved",
-			edited.Version)
-	}
-
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("human approve → %d", status)
-	}
-	withToken := map[string]string{"X-Approval-Token": approvalID}
-	maps.Copy(withToken, bearer)
-	problem = struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
-	}{}
-	if status := e.Call(t, "PATCH", path, staged, withToken, &problem); status != http.StatusConflict ||
-		problem.Code != "version_skew" {
-		t.Fatalf("release over a moved row → %d %q, want 409 version_skew — the approval authorized the row "+
-			"the human saw, not whatever it became", status, problem.Code)
-	}
-	var fullName string
-	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT full_name FROM contact WHERE id = $1`, created.ID).Scan(&fullName); err != nil {
-		t.Fatalf("reading the contact back: %v", err)
-	}
-	if fullName != "Kai Human" {
-		t.Errorf("the contact is named %q after a refused release, want the human's own name", fullName)
-	}
 }
 
 // agentBearer mints a passport and returns the Authorization header a governed

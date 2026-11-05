@@ -46,4 +46,5 @@ func (s Server) writeMetricsSections(w io.Writer) {
 	s.writeCaptureSection(w)
 	s.writeAuthzSection(w)
 	s.writeAgentVolumeSection(w)
+	s.writeWorklistStageSection(w)
 }

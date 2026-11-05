@@ -105,12 +105,13 @@ func contextAnchorEnum(t *testing.T) []string {
 }
 
 // Which searchBranches elements a gate asks about: every one, or only those a
-// context read can anchor on.
-type branchSelection bool
+// context read can anchor on, or only those the near-match pass reads.
+type branchSelection int
 
 const (
-	everyBranch branchSelection = false
-	anchorsOnly branchSelection = true
+	everyBranch branchSelection = iota
+	anchorsOnly
+	nearNamed
 )
 
 // searchableEntitiesFromSource extracts the `entity:` value of each
@@ -166,6 +167,9 @@ func branchEntities(t *testing.T, values []ast.Expr, selection branchSelection) 
 			if selection == anchorsOnly && branchIsTextOnly(branch) {
 				continue
 			}
+			if selection == nearNamed && !branchSetsField(branch, "nearName") {
+				continue
+			}
 			for _, field := range branch.Elts {
 				kv, ok := field.(*ast.KeyValueExpr)
 				if !ok {
@@ -203,6 +207,18 @@ func branchIsTextOnly(branch *ast.CompositeLit) bool {
 		}
 		value, ok := kv.Value.(*ast.Ident)
 		return ok && value.Name == "true"
+	}
+	return false
+}
+
+// branchSetsField reports whether a searchBranches element names the field.
+func branchSetsField(branch *ast.CompositeLit, name string) bool {
+	for _, field := range branch.Elts {
+		if kv, ok := field.(*ast.KeyValueExpr); ok {
+			if key, ok := kv.Key.(*ast.Ident); ok && key.Name == name {
+				return true
+			}
+		}
 	}
 	return false
 }

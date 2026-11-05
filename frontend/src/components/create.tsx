@@ -5,7 +5,7 @@ export {
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
@@ -28,6 +28,7 @@ import {
   usePublishedValues,
 } from "./create.fields";
 import { RecordFormBody } from "./create.form";
+import { fieldRefusals } from "./create.refusals";
 
 export { fieldControl } from "./create.controls";
 export {
@@ -53,6 +54,15 @@ const CREATE_MUTATION_HEAD: Readonly<Partial<Record<Screen, string>>> = {
   deals: "deal-new",
 };
 
+// A screen's create transport. `extra` carries body fields a refusal's own
+// verb adds when it sends the same form again, such as the leads to convert.
+export type CreateTransport<Created> = (
+  values: Record<string, string>,
+  rows: FormRows | undefined,
+  idempotencyKey: string,
+  extra?: Record<string, unknown>,
+) => Promise<Created>;
+
 // The shared post-create choreography: refresh the list, close the modal,
 // open the fresh record's 360. Screens supply only their transport.
 export function useCreateRecord<Created extends { id: string }>({
@@ -64,11 +74,7 @@ export function useCreateRecord<Created extends { id: string }>({
   aboutId,
   onCreated,
 }: Readonly<{
-  create: (
-    values: Record<string, string>,
-    rows: FormRows | undefined,
-    idempotencyKey: string,
-  ) => Promise<Created>;
+  create: CreateTransport<Created>;
   invalidate: string;
   screen: Screen;
   onDone: () => void;
@@ -92,11 +98,13 @@ export function useCreateRecord<Created extends { id: string }>({
       values,
       rows,
       idempotencyKey,
+      extra,
     }: {
       values: Record<string, string>;
       rows: FormRows;
       idempotencyKey: string;
-    }) => create(values, rows, idempotencyKey),
+      extra?: Record<string, unknown>;
+    }) => create(values, rows, idempotencyKey, extra),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       onCreated?.(created);
@@ -125,9 +133,17 @@ export function CreateAction<Created extends { id: string }>({
   onCreated,
   onValuesChange,
   testId,
+  reason,
+  link,
+  refusalNotice,
 }: Readonly<{
   label: string;
   fields: CreateField[];
+  // Draws the verb as a card's text link. See NewRecordButton.
+  link?: boolean;
+  // Why this reader may not create, drawn beside the refused button. The verb
+  // stays visible, because a hidden create reads as "there is nothing to add".
+  reason?: string;
   // The form's live answers, for a screen whose field list depends on them —
   // a dependent picker whose options only the server can narrow. See
   // usePublishedValues.
@@ -135,11 +151,14 @@ export function CreateAction<Created extends { id: string }>({
   // The key is one per open dialog and per record. A repeat of the same save
   // carries it, so a double press answers the first record. A POST that takes
   // no Idempotency-Key ignores it.
-  create: (
-    values: Record<string, string>,
-    rows: FormRows | undefined,
-    idempotencyKey: string,
-  ) => Promise<Created>;
+  create: CreateTransport<Created>;
+  // A refusal this screen answers with its own verbs, or null for the
+  // ordinary error line. `resend` sends the last submit again with `extra`.
+  refusalNotice?: (
+    error: unknown,
+    resend: (extra: Record<string, unknown>) => void,
+    pending: boolean,
+  ) => ReactNode | null;
   invalidate: string;
   screen: Screen;
   startOpen?: boolean;
@@ -189,6 +208,17 @@ export function CreateAction<Created extends { id: string }>({
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
+  const refused = fieldRefusals(mutation.error, fields, t);
+  const notice = mutation.isError
+    ? refusalNotice?.(
+        mutation.error,
+        (extra) => {
+          const last = mutation.variables;
+          if (last) mutation.mutate({ ...last, extra });
+        },
+        mutation.isPending,
+      )
+    : null;
   return (
     <>
       <NewRecordButton
@@ -199,16 +229,26 @@ export function CreateAction<Created extends { id: string }>({
         }}
         testId={testId}
         pending={creating && !shown}
+        reason={reason}
+        link={link}
       />
       <CreateRecordModal
-        open={shown}
+        // A refusal that lands while the dialog is open closes it. A verb the
+        // reader may no longer take must not stay one press from the server.
+        open={shown && reason === undefined}
         onClose={() => setCreating(false)}
         title={label}
         fields={fields}
         pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+        error={
+          mutation.isError && !refused.allPlaced
+            ? problemMessageOf(mutation.error, t)
+            : null
+        }
+        fieldRefusals={refused.byField}
         existing={existing}
         resolveExisting={resolveExisting}
+        notice={notice}
         resetToken={saved}
         onValuesChange={onValuesChange}
         onSubmit={(values, rows) =>
@@ -224,17 +264,34 @@ export function NewRecordButton({
   onClick,
   testId = "new-record",
   pending,
+  reason,
+  link,
 }: Readonly<{
   label: string;
   onClick: () => void;
+  // A record page card's header link ("New deal"): text only, no plus glyph.
+  link?: boolean;
   // Two create buttons can share a list header (full form, quick capture); a
   // shared id would make both unaddressable.
   testId?: string;
   pending?: boolean;
+  reason?: string;
 }>) {
   return (
-    <Button onClick={onClick} data-testid={testId} pending={pending}>
-      <Plus aria-hidden /> {label}
+    <Button
+      onClick={onClick}
+      data-testid={testId}
+      pending={pending}
+      reason={reason}
+      variant={link ? "link" : undefined}
+    >
+      {link ? (
+        label
+      ) : (
+        <>
+          <Plus aria-hidden /> {label}
+        </>
+      )}
     </Button>
   );
 }
@@ -246,8 +303,10 @@ export function CreateRecordModal({
   fields,
   pending,
   error,
+  fieldRefusals,
   existing,
   resolveExisting,
+  notice,
   onSubmit,
   onValuesChange,
   resetToken = 0,
@@ -258,8 +317,10 @@ export function CreateRecordModal({
   fields: CreateField[];
   pending: boolean;
   error: string | null;
+  fieldRefusals?: ReadonlyMap<string, string>;
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
+  notice?: ReactNode;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
   // The form's live answers, for a caller driving a server read from them.
   onValuesChange?: (values: Record<string, string>) => void;
@@ -311,8 +372,10 @@ export function CreateRecordModal({
       setRows={setRows}
       pending={pending}
       error={error}
+      fieldRefusals={fieldRefusals}
       existing={existing}
       resolveExisting={resolveExisting}
+      notice={notice}
       onSubmit={(sent, sentRows) => {
         setSubmitted(sent);
         onSubmit(sent, sentRows);

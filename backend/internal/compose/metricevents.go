@@ -17,8 +17,14 @@ import (
 
 func readReportingQualified(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, framework crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if !reportingHasQualification(frame, framework) {
-		return nil, reportingGap("not_configured", "Choose qualifying stages in Reporting setup"), nil
+		return nil, reportingGap("not_configured", reporting.ExplanationCopy(frame).Say(reportingCoverageWords.Qualification)), nil
 	}
+	return readDealMetricFacts(ctx, tx, frame, reportingQualifiedPipelineCreated, qualifiedMetricQuery(framework))
+}
+
+// qualifiedMetricQuery reads each deal's first qualifying stage entry under
+// the framework revision in force when it happened.
+func qualifiedMetricQuery(framework crmcontracts.ReportingFramework) metricFactQuery {
 	// Revisions apply prospectively; an explicit reversal voids its event,
 	// whereas an ordinary regression leaves the first qualifying entry intact.
 	from := `JOIN LATERAL (SELECT h.* FROM deal_stage_history h
@@ -28,8 +34,7 @@ func readReportingQualified(ctx context.Context, tx pgx.Tx, frame crmcontracts.R
  AND EXISTS(SELECT 1 FROM jsonb_array_elements(f.definition->'qualification') q
  WHERE q->>'pipeline_id'=h.pipeline_id_at_change::text AND (q->'stage_ids') ? h.to_stage_id::text)
  ORDER BY h.changed_at,h.id LIMIT 1) qualified ON true`
-	query := metricFactQuery{pipeline: "qualified.pipeline_id_at_change", revision: framework.Revision, from: from, where: "t.archived_at IS NULL", owner: "qualified.owner_id_at_change", at: "qualified.changed_at", key: "qualified.id::text", stage: "qualified.to_stage_id::text", stageLabel: "''", outcome: "'qualified'", provenance: "COALESCE(qualified.valuation_provenance,'legacy_unavailable')", value: "qualified.base_minor_at_change", money: true}
-	return readDealMetricFacts(ctx, tx, frame, reportingQualifiedPipelineCreated, query)
+	return metricFactQuery{pipeline: "qualified.pipeline_id_at_change", revision: framework.Revision, from: from, where: "t.archived_at IS NULL", owner: "qualified.owner_id_at_change", at: "qualified.changed_at", key: "qualified.id::text", stage: "qualified.to_stage_id::text", stageLabel: "''", outcome: "'qualified'", provenance: "COALESCE(qualified.valuation_provenance,'legacy_unavailable')", value: "qualified.base_minor_at_change", money: true}
 }
 
 func reportingGap(status crmcontracts.ReportingStatus, reason string) crmcontracts.ReportingCoverage {
@@ -38,7 +43,7 @@ func reportingGap(status crmcontracts.ReportingStatus, reason string) crmcontrac
 
 func readReportingAccepted(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
-		return nil, reportingGap("unsupported", "Acceptance credit has no historical pipeline dimension; choose all pipelines"), nil
+		return nil, reportingGap("unsupported", reporting.ExplanationCopy(frame).Say(reportingCoverageWords.AcceptancePipeline)), nil
 	}
 	var b reportingBindings
 	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), "credit.submitter_id_at_change", b.arg, unownedIsExcluded)
@@ -49,23 +54,42 @@ func readReportingAccepted(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		population = sqlUnnarrowed
 	}
 	// Primary credit is deduplicated before narrowing the SDR population.
-	query := `SELECT credit.id::text,credit.handoff_id,'Accepted opportunity',credit.submitter_id_at_change,COALESCE(u.display_name,''),credit.occurred_at,'accepted_handoff'
- FROM (SELECT DISTINCT ON (e.deal_id_at_change) e.* FROM sdr_handoff_event e JOIN sdr_handoff h ON h.id=e.handoff_id
- WHERE e.to_status='accepted' AND e.deal_id_at_change IS NOT NULL ORDER BY e.deal_id_at_change,e.occurred_at,e.id) credit
+	earliest, evaluated, limit := b.add(reportingEarliest(frame)), b.add(frame.EvaluatedAt), b.add(reportingFactLimit+1)
+	query := fmt.Sprintf(`SELECT credit.id::text,credit.handoff_id,'Accepted opportunity',credit.submitter_id_at_change,COALESCE(u.display_name,''),credit.occurred_at,NULL::text,NULL::timestamptz,'accepted_handoff'
+ FROM `+acceptedCreditSQL+`
  LEFT JOIN app_user u ON u.id=credit.submitter_id_at_change
- WHERE credit.occurred_at>=` + b.add(reportingEarliest(frame)) + " AND credit.occurred_at<" + b.add(frame.EvaluatedAt) + " AND " + population + " ORDER BY credit.id LIMIT " + b.add(reportingFactLimit+1)
+ WHERE credit.occurred_at>=%s AND credit.occurred_at<%s -- occurred_at raw: a hand-off event's time, not an activity's
+ AND %s ORDER BY credit.id LIMIT %s`, earliest, evaluated, population, limit)
 	return readOutcomeFacts(ctx, tx, frame, reportingAcceptedOpportunities, "sdr_handoff", query, b)
 }
 
+// acceptedCreditSQL is each deal's first acceptance from a handoff, aliased
+// credit, credited to the submitter that event names. A prospect sent back and
+// then accepted is one accepted opportunity. A later reassignment takes no
+// credit away.
+const acceptedCreditSQL = `(SELECT DISTINCT ON (e.deal_id_at_change) e.* FROM sdr_handoff_event e JOIN sdr_handoff h ON h.id=e.handoff_id
+ WHERE e.to_status='accepted' AND e.deal_id_at_change IS NOT NULL ORDER BY e.deal_id_at_change,e.occurred_at,e.id) credit`
+
 func readOutcomeFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, source, query string, b reportingBindings) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
-	rows, err := tx.Query(ctx, query, b.values...)
+	facts, err := scanOutcomeFacts(ctx, tx, metric, source, query, b)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	return reportingCohorts(frame, facts), crmcontracts.ReportingCoverage{Status: "ok"}, nil
+}
+
+// scanOutcomeFacts reads one outcome row per fact, before any period is
+// applied, so a caller can judge rows that fall in no period.
+func scanOutcomeFacts(ctx context.Context, tx pgx.Tx, metric crmcontracts.ReportingMetricID, source, query string, b reportingBindings) ([]reporting.Fact, error) {
+	rows, err := tx.Query(ctx, query, b.values...)
+	if err != nil {
+		return nil, err
 	}
 	facts, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (reporting.Fact, error) {
 		fact := reporting.Fact{Metric: metric, SourceType: source}
 		var owner *ids.UUID
-		err := row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &fact.Provenance)
+		err := row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt,
+			&fact.Row.OccurredPrecision, &fact.PlacedAt, &fact.Provenance)
 		one := 1.0
 		fact.Row.Value = &one
 		if owner != nil {
@@ -83,10 +107,10 @@ func readOutcomeFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reporti
 		return fact, err
 	})
 	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
+		return nil, err
 	}
 	if len(facts) > reportingFactLimit {
-		return nil, crmcontracts.ReportingCoverage{}, fmt.Errorf("narrow the reporting population: %w", apperrors.ErrInvalidArgument)
+		return nil, fmt.Errorf("narrow the reporting population: %w", apperrors.ErrInvalidArgument)
 	}
-	return reportingCohorts(frame, facts), crmcontracts.ReportingCoverage{Status: "ok"}, nil
+	return facts, nil
 }

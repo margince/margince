@@ -13,7 +13,7 @@ reads a docs change against this page.
   handbook, the identifier in a reference page.
 - **Specific.** A reason names the mechanism and what fails without it. "Retries are capped at five because the
   provider bans a key after ten failures" is a reason. "This keeps things robust" is not.
-- **Current.** A page says what is true now. History belongs in git and in [CHANGELOG.md](../../CHANGELOG.md).
+- **Current.** A page says what is true now. History belongs in git and in the release notes.
 - **Checkable.** Every number, path, command and default is one a reader can find in the tree. A count the code owns
   is linked from the page that generates it, never typed by hand.
 - **Public.** Name nothing a reader cannot open: no private repository, document, pull request or spec id. State the
@@ -35,6 +35,51 @@ The handbook (`docs/handbook/`) and `user-guide/` are for those who use Margince
 the words on the screen. Server, transaction, row, token, an API path or a permission key appears only when the
 reader must type it. One handbook page owns a topic, and the others link to it.
 
+## A list the code owns is linked, and a page names the code it describes
+
+### Link a whole list
+
+A page never types a whole list the code holds: every table, every job, every setting. It links the
+page that lists them, and the code keeps that page true:
+
+- tables: the [entity model](entity-model/README.md), the one list of tables and their owners;
+- settings: [configuration.md](configuration.md);
+- a list with no generated page, such as jobs or AI tasks: the file that declares it
+  (`backend/api/jobs.yaml`, `backend/api/ai-tasks.yaml`).
+
+A page may still state one value that its explanation needs, such as one job's schedule. Then its
+`describes:` line names the file that sets that value, so a change to the value asks about the page.
+
+### Name the code a page describes
+
+An explanation or handbook page states how the product behaves, so it names the code that decides that
+behaviour in one line above its title:
+
+```markdown
+<!-- prose:plain -->
+<!-- describes: backend/internal/modules/comms/dispatcher.go frontend/src/features/outbox -->
+# How a message goes out
+```
+
+Name the files whose change would make the page false, not every file it mentions. A folder path
+matches every file under it. `docsdescribes_test.go` checks that each path exists. A `README.md`
+page needs no line.
+
+The knowledge chunker (`backend/internal/modules/knowledge/chunk.go`) leaves a whole-line HTML comment
+out of every passage, so **Ask your documents** never quotes this line.
+
+### Answer for each page in the pull request
+
+`make docs-describing` lists the pages whose named code a branch changes, and `docs-describing.yml`
+asks the same on the pull request. The pull request body answers each page on a line of its own:
+
+```markdown
+- docs/<folder>/<page>.md: still true
+- docs/<folder>/<page>.md: updated
+```
+
+A page the pull request edits counts as answered.
+
 ## What the gate holds
 
 Each rule runs on prose with fenced code, inline code, link targets and HTML comments removed. Tables count as prose.
@@ -52,7 +97,7 @@ Each rule runs on prose with fenced code, inline code, link targets and HTML com
 | `count` | A typed count of 5 or more modules, AI tasks, tools, gates, tables and similar | A link to the page that lists them |
 | `leadin` | "Three things:" over a list that is not three long | No number, or the right one |
 
-Capitals for acronyms and runs of SQL keywords (`NOT NULL`, `ON CONFLICT DO UPDATE`) are fine. `CHANGELOG.md`,
+Capitals for acronyms and runs of SQL keywords (`NOT NULL`, `ON CONFLICT DO UPDATE`) are fine.
 `docs/evidence/` and the pull-request template may describe history; every other rule still applies to them.
 `CODE_OF_CONDUCT.md` is adopted text and is exempt.
 

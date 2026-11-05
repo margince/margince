@@ -15,10 +15,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 //craft:ignore naked-any pgx binds heterogeneous scalar types at the SQL boundary.
@@ -52,19 +54,31 @@ func errUnsupportedCloseWindow() error {
 	return fmt.Errorf("choose a supported expected-close window, all_open or fiscal_quarter: %w", apperrors.ErrInvalidArgument)
 }
 
-func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, at time.Time) (crmcontracts.ReportingContext, error) {
+func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, owners reporting.MeasurableOwners, at time.Time) (crmcontracts.ReportingContext, error) {
 	out := crmcontracts.ReportingContext{EvaluatedAt: at, StateAt: at, FrameworkRevision: framework.Revision, DefinitionVersion: "1", PeriodKind: string(selection.Period), PipelineId: selection.PipelineId}
 	calendar, err := reportingCalendar(ctx, tx)
 	if err != nil {
 		return out, err
 	}
+	language := string(identity.ReaderLanguageForRecord(ctx, tx))
+	out.ProseLanguage = &language
 	out.Timezone = calendar.Timezone
 	out.Currency = calendar.Currency
+	fiscalStart := calendar.FiscalStartMonth
+	out.FiscalYearStartMonth = &fiscalStart
 	out.Scope, err = (reportingAuthority{}).Scope(ctx, tx, selection.Scope, false)
 	if err != nil {
 		return out, err
 	}
+	holds, err := scopeHoldsDeals(ctx, tx, reportingRequested(out.Scope), unownedIsExcluded)
+	if err != nil {
+		return out, err
+	}
+	out.ScopeHoldsDeals = &holds
 	if err := reportingPipeline(ctx, tx, selection.PipelineId); err != nil {
+		return out, err
+	}
+	if err := reportingDimensionContext(ctx, tx, selection, &out); err != nil {
 		return out, err
 	}
 	out.Interval, err = reporting.Interval(selection, calendar, at)
@@ -76,6 +90,11 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 		return out, err
 	}
 	out.TargetInterval = &target
+	horizon, err := reporting.Horizon(selection, calendar, out.Interval)
+	if err != nil {
+		return out, err
+	}
+	out.Horizon = &horizon
 	switch selection.CloseWindow {
 	case "all_open":
 	case "fiscal_quarter":
@@ -96,7 +115,11 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 		return out, err
 	}
 	out.PopulationFingerprint, err = reportingPopulationFingerprint(out.Scope, reportingMemberStrings(out))
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	out.MemberIds = measurableMemberIDs(owners, out.MemberIds)
+	return out, nil
 }
 
 func reportingPopulationFingerprint(scope crmcontracts.ReportingScope, members []string) (string, error) {
@@ -122,5 +145,23 @@ func reportingMemberStrings(frame crmcontracts.ReportingContext) []string {
 
 func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Service {
 	db := InstallationDB(pool)
-	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now)
+	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db), initiatives: newInitiativeStore(pool)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).
+		WithBaseLanguage(identity.BaseLanguageForRecord).
+		WithReaderLanguage(identity.ReaderLanguageForRecord).
+		WithQuestions(reportingQuestions{floor: analyticsquery.DefaultFloor, names: newAttentionNames(db)})
+}
+
+// measurableMemberIDs narrows a scope's members to the owners the reader may
+// measure one by one, so owner targets and owner lists name no one else.
+func measurableMemberIDs(owners reporting.MeasurableOwners, scopeMembers []openapi_types.UUID) []openapi_types.UUID {
+	if owners.Every {
+		return scopeMembers
+	}
+	out := make([]openapi_types.UUID, 0, len(scopeMembers))
+	for _, id := range scopeMembers {
+		if owners.Includes(ids.UUID(id)) {
+			out = append(out, id)
+		}
+	}
+	return out
 }

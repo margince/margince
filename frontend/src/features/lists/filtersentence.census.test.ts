@@ -32,7 +32,7 @@ const OPERATOR_FAMILY = "filters.op";
 // the filter catalog's words.
 const EXEMPT: ReadonlyMap<string, string> = new Map([
   [
-    "frontend/src/screens/analytics.questions.vocab.ts",
+    "frontend/src/features/analytics/analytics.questions.vocab.ts",
     "maps the analytics engine's own operator enum, not FilterOp",
   ],
 ]);

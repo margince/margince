@@ -25,10 +25,6 @@ vendors:
   chi:    { in: github.com/go-chi/** }
   oapi:   { in: github.com/oapi-codegen/** }
   redis:  { in: github.com/redis/** }
-  # ownedfile's Windows half: the Win32 access-control calls that make a 0600
-  # mean something on a platform where the mode argument is advisory. POSIX
-  # needs nothing here, so the import exists only in the _windows.go file.
-  xsyswindows: { in: golang.org/x/sys/windows }
   xcrypto: { in: golang.org/x/crypto/** }
   xterm:   { in: golang.org/x/term }
   yaml:   { in: gopkg.in/** }
@@ -90,6 +86,7 @@ components:
   capture:     { in: [internal/modules/capture, internal/modules/capture/**] }
   consent:     { in: internal/modules/consent }
   collections: { in: internal/modules/collections }
+  initiatives: { in: internal/modules/initiatives }
   signals:     { in: internal/modules/signals }
   contacts:      { in: internal/modules/contacts }
   privacy:     { in: internal/modules/privacy }
@@ -114,6 +111,7 @@ components:
   automation:  { in: internal/modules/automation }
   migration:   { in: internal/modules/migration }
   webhooks:    { in: internal/modules/webhooks }
+  webforms:    { in: internal/modules/webforms }
   comms:       { in: internal/modules/comms }
   notices:     { in: internal/modules/notices }
   assignments: { in: internal/modules/assignments }
@@ -142,12 +140,11 @@ deps:
     # xnet: webread's crawl mechanics (html tokenizer + publicsuffix).
     # wazero + brotli: licensecheck's runtime for the bundled validation
     # module, and the compression it is published in.
-    # xsyswindows: ownedfile's DACL, the Windows half of an owner-only file.
     # pdfium + gopool: pdftext reads a PDF's text layer through a sandboxed
     # pdfium; fpdf is its TESTS building the fixtures they then read.
     # xtext: pdftext NFKC-folds a PDF's typographic ligatures back to the
     # characters the word is made of — a Unicode normal form the stdlib lacks.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus, pdfium, gopool, fpdf, xtext]
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:
@@ -170,6 +167,9 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   collections:
+    mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
+  initiatives:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   signals:
@@ -245,6 +245,9 @@ deps:
   migration:
     mayDependOn: [platform]
     canUse: [pgx]
+  webforms:
+    mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
   webhooks:
     mayDependOn: [contracts, platform]
     # xnet: httpguts checks a custom header's name and value before it is sealed.
@@ -277,7 +280,7 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   compose:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
     # xtext: the evidence gate normalizes page text to NFC before matching
     # (evidencematch.go) — Unicode normal forms need golang.org/x/text.
     # yaml: aicert's corpus loader parses scenario files directly — the
@@ -372,9 +375,11 @@ deps:
     # the same shape as aitaskparity_test.go above, and failing in both
     # directions because fewer lets the prose return and more rewrites a
     # completed outcome into "cancelled".
+    # reviewoutcomes_test.go reads assurance.ReviewOutcomes so the answer sheet
+    # offers the outcomes the server accepts without copying its catalog.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy]
+    mayDependOn: [contracts, compose, ai, collections, webforms, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy, assurance]
     canUse: [yaml, jsonschema]
   cmd:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

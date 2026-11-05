@@ -1,0 +1,60 @@
+name: intent_is_separate_from_sales_direction_de
+task: owed_verdict
+site: owed
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+- subject: Message
+  body: Das unterschriebene Formular ist angehängt. Ich habe es heute Morgen verschickt.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Erhalten, vielen Dank.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Falls es hilfreich ist, könnte ich nächste Woche etwas entwerfen.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: 'Unser monatlicher Newsletter: Buche ein Gespräch zu unseren Angeboten. Diese Nachricht geht
+    an alle Abonnenten.'
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Kannst du unser Lieferantenangebot für eure Bürodrucker freigeben?
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Kannst du die Kinder nach der Schule abholen?
+  to:
+  - recipient@example.test
+- subject: Message
+  body: 'Interne Notiz: Der Interessent prüft das Angebot. Im Moment ist nichts zu tun.'
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Bitte schick das überarbeitete Angebot.
+  to:
+  - recipient@example.test
+- subject: Message
+  body: Wir verlängern den Dienstleistungsvertrag nicht. Er endet am 30. September 2026. Unsere Entscheidung
+    steht fest; eine Antwort ist nicht nötig.
+  to:
+  - recipient@example.test
+expect:
+  outcome: accepted
+  answer:
+  - informs_us
+  - informs_us
+  - informs_us
+  - informs_us
+  - asks_us
+  - asks_us
+  - informs_us
+  - asks_us
+  - informs_us
+  judge: none
+  judge_none_reason: Each closed verdict is checked. Supplier and personal requests still ask for
+    action; commercial relevance is a separate fact. Reports, mass promotions, optional offers and
+    termination notices without a question do not create a request.

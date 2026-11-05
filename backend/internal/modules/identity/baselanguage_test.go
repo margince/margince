@@ -69,10 +69,11 @@ func TestBaseLanguageDefaultsToALanguageTheProductSpeaks(t *testing.T) {
 	// existed reads, because BaseLanguageOf falls back instead of refusing. A
 	// default its own validator would reject would make every such
 	// installation unwritable through the settings screen.
-	def, err := BaseLanguage.DefaultJSON()
-	if err != nil {
-		t.Fatalf("encoding the registered default: %v", err)
+	text, ok := BaseLanguage.DefaultText()
+	if !ok {
+		t.Fatal("base language declares no default")
 	}
+	def := languageJSON(t, text)
 	if err := BaseLanguage.ValidateJSON(def); err != nil {
 		t.Fatalf("the registered default %s does not pass this setting's own validator: %v", def, err)
 	}

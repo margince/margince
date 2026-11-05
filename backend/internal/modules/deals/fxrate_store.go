@@ -31,9 +31,9 @@ type FxRateRow struct {
 }
 
 // SetFxRateInput sets one effective-dated rate. EffectiveDate is the calendar
-// day the rate takes effect, read in the installation's zone; it may be today
-// or later, never the past (strict append-forward — a past-dated row prices
-// historical rollups and must never change).
+// day the rate takes effect, read in the installation's zone. It may be today
+// or later, or a past day before the currency's earliest rate. A row that
+// already prices a past day never changes.
 type SetFxRateInput struct {
 	FromCurrency  string
 	Rate          string
@@ -85,8 +85,9 @@ func (s *Store) todayIn(ctx context.Context, tx pgx.Tx, zoneOf InstallationValue
 }
 
 // SetFxRate appends (or corrects, same installation-zone day) one effective-
-// dated FX rate. Admin/ops-gated; append-forward (rejects a past effective date);
-// resolves ToCurrency to the workspace base and rejects from == base.
+// dated FX rate. Admin/ops-gated; append-forward, except that history may be
+// extended before the earliest rate; resolves ToCurrency to the workspace base
+// and rejects from == base.
 func (s *Store) SetFxRate(ctx context.Context, in SetFxRateInput) (FxRateRow, error) {
 	// RBAC + pure shape validation BEFORE acquiring a connection, so a denied
 	// (403) or malformed-shape (422) write never depends on pool health or
@@ -193,8 +194,8 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 	if !in.EffectiveDate.IsZero() {
 		effDate = storekit.AsDate(in.EffectiveDate)
 	}
-	if effDate.Before(today) {
-		return FxRateRow{}, fxInvalid("effective_date", "fx_rate_past", "effective_date cannot be in the past")
+	if err := refuseRewritingHistory(ctx, tx, from, effDate, today); err != nil {
+		return FxRateRow{}, err
 	}
 	rate := in.Rate
 	base, err := s.installation.BaseCurrency(ctx, tx)
@@ -251,6 +252,28 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 	return out, nil
 }
 
+// refuseRewritingHistory keeps the sheet append-forward with one exception: a
+// past date strictly earlier than every stored rate for the currency. Such a
+// row only prices days that had no rate, so no figure already computed moves.
+// The caller holds the currency's write-identity lock, so the earliest date
+// cannot change between this read and the write.
+func refuseRewritingHistory(ctx context.Context, tx pgx.Tx, from string, effDate, today time.Time) error {
+	if !effDate.Before(today) {
+		return nil
+	}
+	var earliest *time.Time
+	if err := tx.QueryRow(ctx,
+		`SELECT min(rate_date) FROM fx_rate WHERE from_currency = $1`, from).Scan(&earliest); err != nil {
+		return fmt.Errorf("read the earliest fx_rate for %s: %w", from, err)
+	}
+	if earliest == nil || effDate.Before(*earliest) {
+		return nil
+	}
+	return fxInvalid("effective_date", "fx_rate_past", fmt.Sprintf(
+		"effective_date cannot be in the past unless it is before the earliest %s rate (%s)",
+		from, earliest.Format(time.DateOnly)))
+}
+
 // normalizeFxCurrencyRate validates and upper-cases the currency and checks the
 // rate is a positive plain decimal — the connection-free, clock-free shape gates
 // (no DB, no time). The effective-day resolution and past-date guard live in
@@ -258,7 +281,7 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 // needs the base currency and lives in the tx.
 func normalizeFxCurrencyRate(in SetFxRateInput) (from string, err error) {
 	from = strings.ToUpper(strings.TrimSpace(in.FromCurrency))
-	if !values.ValidCurrency(from) {
+	if !values.AssignableCurrency(from) {
 		return "", fxInvalid("from_currency", "fx_rate_currency", "from_currency must be a 3-letter ISO code")
 	}
 	rate := strings.TrimSpace(in.Rate)
@@ -288,18 +311,52 @@ func (s *Store) ListLatestFxRates(ctx context.Context) ([]FxRateRow, error) {
 		if err != nil {
 			return err
 		}
-		r, err := tx.Query(ctx, `
-			SELECT DISTINCT ON (from_currency) from_currency, to_currency, rate::text, rate_date
-			FROM fx_rate WHERE to_currency = $1
-			ORDER BY from_currency, rate_date DESC`, base)
-		if err != nil {
-			return fmt.Errorf("list fx_rate: %w", err)
-		}
-		defer r.Close()
-		rows, err = scanFxRows(r)
+		rows, err = sheetHeadTx(ctx, tx, base)
 		return err
 	})
 	return rows, err
+}
+
+// RateSheetCurrencies returns the base currency and the foreign currencies on
+// the sheet head, in code order, for a currency picker to offer first.
+// The gate is deal read, not fx_rate read: the answer holds codes and never
+// a rate. Every role that may create a deal needs it for the picker, so the
+// base is read without the installation_settings gate too.
+func (s *Store) RateSheetCurrencies(ctx context.Context) (string, []string, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return "", nil, err
+	}
+	var base string
+	codes := []string{}
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		if base, err = s.installation.BaseCurrencyApplied(ctx, tx); err != nil {
+			return err
+		}
+		rows, err := sheetHeadTx(ctx, tx, base)
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			codes = append(codes, row.FromCurrency)
+		}
+		return nil
+	})
+	return base, codes, err
+}
+
+// sheetHeadTx reads the sheet head for both sheet reads: the latest-dated row
+// per foreign currency that converts into base, ordered by currency code.
+func sheetHeadTx(ctx context.Context, tx pgx.Tx, base string) ([]FxRateRow, error) {
+	r, err := tx.Query(ctx, `
+		SELECT DISTINCT ON (from_currency) from_currency, to_currency, rate::text, rate_date
+		FROM fx_rate WHERE to_currency = $1
+		ORDER BY from_currency, rate_date DESC`, base)
+	if err != nil {
+		return nil, fmt.Errorf("list fx_rate: %w", err)
+	}
+	defer r.Close()
+	return scanFxRows(r)
 }
 
 // ListEffectiveFxRates returns the rate in force TODAY per foreign currency —

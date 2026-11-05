@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -62,7 +63,7 @@ func TestACalendarInvitationNamesAContactItsAddressCouldNot(t *testing.T) {
 	// correctly refused — the test asserted the opposite of what its own setup
 	// described.
 	store := contacts.NewStore(e.DB())
-	buyer, err := store.EnsureContactByEmail(connectorCreator(e), "Buyer", "buyer@acme.com", "manual")
+	buyer, err := store.EnsureContactByEmail(connectorCreator(e), "Buyer", "buyer@acme.com", "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("seeding the attendee: %v", err)
 	}
@@ -90,7 +91,7 @@ func TestAnInvitationNeverRenamesAContactAHumanNamed(t *testing.T) {
 	e := integration.SetupSearch(t)
 
 	store := contacts.NewStore(e.DB())
-	buyer, err := store.EnsureContactByEmail(contactCreator(e), "Robin Q. Buyer-Smith", "buyer@acme.com", "manual")
+	buyer, err := store.EnsureContactByEmail(contactCreator(e), "Robin Q. Buyer-Smith", "buyer@acme.com", "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("seeding the attendee: %v", err)
 	}

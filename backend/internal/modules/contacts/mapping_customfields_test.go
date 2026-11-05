@@ -30,7 +30,7 @@ func TestContactCreateInputCarriesCustomFieldKeys(t *testing.T) {
 	var req crmcontracts.CreateContactRequest
 	decodeInto(t, `{"full_name":"Ada","source":"manual","cf_tier":"gold","cf_seats":12}`, &req)
 
-	in, err := contactCreateInput(req)
+	in, err := ContactCreationInput(req)
 	if err != nil {
 		t.Fatalf("contactCreateInput: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestCompanyCreateInputCarriesCustomFieldKeys(t *testing.T) {
 	var req crmcontracts.CreateCompanyRequest
 	decodeInto(t, `{"display_name":"Acme","source":"manual","cf_region":"emea"}`, &req)
 
-	in, err := companyCreateInput(req)
+	in, err := CompanyCreationInput(req)
 	if err != nil {
 		t.Fatalf("companyCreateInput: %v", err)
 	}
@@ -79,9 +79,9 @@ func TestLeadCreateInputCarriesCustomFieldKeys(t *testing.T) {
 	var req crmcontracts.CreateLeadRequest
 	decodeInto(t, `{"source":"manual","cf_iscool":true,"cf_tier":"gold"}`, &req)
 
-	in, err := leadCreateInput(req)
+	in, err := LeadCreationInput(req)
 	if err != nil {
-		t.Fatalf("leadCreateInput: %v", err)
+		t.Fatalf("LeadCreationInput: %v", err)
 	}
 	if got := in.CustomFields["cf_iscool"]; got != true {
 		t.Errorf(`CustomFields["cf_iscool"] = %v, want true`, got)

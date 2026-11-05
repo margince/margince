@@ -1,9 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
-import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import {
+  formatDateAbbrev,
+  formatMoney,
+  formatNumber,
+  ordinalNumber,
+} from "../format/format";
+import { browserZone } from "../format/timezone";
 import { useLocale } from "../i18n";
 import { Badge, Button, OverflowMenu } from "./atoms";
+import { Avatar } from "./avatar";
 import type { ListChip } from "./listsurface";
 import { CellStrip, type ListColumn, ListTable } from "./listtable";
 import { SelectionBar } from "./selectionbar";
@@ -31,6 +38,7 @@ type Company = {
   owner: string;
   region: string;
   valueMinor: number;
+  createdAt: string;
 };
 
 const INDUSTRIES = ["Manufacturing", "Logistics", "Healthcare", "SaaS"];
@@ -45,6 +53,7 @@ function companies(count: number): Company[] {
     owner: index % 2 === 0 ? "Lars" : "Mia",
     region: REGIONS[index % REGIONS.length] ?? "DACH",
     valueMinor: (index + 1) * 12_500,
+    createdAt: new Date(Date.UTC(2026, 0, 1 + index * 9)).toISOString(),
   }));
 }
 
@@ -60,7 +69,19 @@ const columns = [
   },
   { key: "industry", header: "Industry", cell: (row: Company) => row.industry },
   { key: "size", header: "Size", cell: (row: Company) => row.size },
-  { key: "owner", header: "Owner", cell: (row: Company) => row.owner },
+  {
+    key: "owner",
+    header: "Owner",
+    // A colleague's face before their name, and a colleague column's width: no
+    // wider than a name needs, however wide the page.
+    holds: "colleague" as const,
+    cell: (row: Company) => (
+      <span className="avatar-row">
+        <Avatar identity={row.owner} name={row.owner} />
+        <span>{row.owner}</span>
+      </span>
+    ),
+  },
   { key: "region", header: "Region", cell: (row: Company) => row.region },
   {
     key: "value",
@@ -71,6 +92,13 @@ const columns = [
     // reference copy of the surface, so a hand-rolled currency string here is
     // the version somebody else copies.
     cell: (row: Company) => formatMoney(row.valueMinor, "EUR", "en"),
+  },
+  {
+    key: "created",
+    header: "Created",
+    holds: "date" as const,
+    cell: (row: Company) =>
+      formatDateAbbrev(row.createdAt, "en", browserZone()),
   },
 ];
 
@@ -107,7 +135,7 @@ function Surface({
   rows: Company[];
   /** The page's own name, for the story where the surface IS the page. */
   title?: string;
-  /** Defaults to the six this file reads as the reference set. */
+  /** Defaults to the seven this file reads as the reference set. */
   columns?: ListColumn<Company>[];
   pending?: boolean;
   problem?: ReactNode;
@@ -149,7 +177,7 @@ function Surface({
       rowKey={(row) => row.id}
       unit="companies"
       action={noAction ? undefined : <Button>New company</Button>}
-      search={{ value: search, onChange: setSearch }}
+      search={{ value: search, answered: search, onChange: setSearch }}
       sort={{ value: sort, onChange: setSort }}
       chips={chips}
       chosen={chosen}
@@ -212,9 +240,23 @@ export const SortedByAMenu: Story = {
 // optional columns are one question to a reader — both answer "show me more of
 // this at once" — and each group is named a rung under the menu's own head, so
 // the panel reads as one question in two parts rather than as three headings.
+// Each optional column carries a grip that moves it.
 export const DisplayMenuOpen: Story = {
   render: () => <Surface rows={companies(12)} />,
   play: openMenu(/^Display$/),
+};
+
+// A column moved by its grip: the second optional column, taken up one place
+// from the keyboard. The grid's headers follow the menu's order.
+export const ColumnMoved: Story = {
+  render: () => <Surface rows={companies(12)} />,
+  play: async (context) => {
+    await openMenu(/^Display$/)(context);
+    const page = within(context.canvasElement);
+    const grips = await page.findAllByRole("button", { name: /^Move / });
+    grips[1]?.focus();
+    await userEvent.keyboard("{ArrowUp}");
+  },
 };
 
 // The filter menu's SECOND step, which is the half a list of attributes cannot
@@ -628,6 +670,43 @@ export const RowMenuOnPhone: Story = {
   tags: ["uat-phone"],
 };
 
+const cardColumns: ListColumn<Company>[] = [
+  ...columns.slice(0, 2),
+  {
+    key: "email",
+    header: "E-mail",
+    cell: (row: Company) => (
+      <a href={`mailto:${row.id}`}>
+        {`procurement.department.${row.id}@a-very-long-company-domain.example`}
+      </a>
+    ),
+  },
+  // A renderer that wraps nothing in an element, as the Last activity cell does.
+  { key: "seen", header: "Last activity", cell: () => <span /> },
+];
+
+// On a phone a card keeps a long value inside its edge, and a field with
+// nothing in it shows no label.
+export const CardsOnPhone: Story = {
+  render: () => <Surface rows={companies(3)} columns={cardColumns} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const value = await canvas.findByText(/^procurement\.department\.c1@/);
+    const card = value.closest("tr");
+    await expect(value.getBoundingClientRect().right).toBeLessThanOrEqual(
+      card?.getBoundingClientRect().right ?? 0,
+    );
+    for (const cell of canvasElement.querySelectorAll(
+      'td[data-label="Last activity"]',
+    )) {
+      await expect(cell).not.toBeVisible();
+    }
+  },
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 const longHeaderColumns: ListColumn<Company>[] = [
   ...columns.slice(0, 4),
   {
@@ -674,5 +753,61 @@ export const LongHeadersWrap: Story = {
     await expect(arrow.getBoundingClientRect().right).toBeLessThanOrEqual(
       grip.getBoundingClientRect().left,
     );
+  },
+};
+
+const WIDE_FIGURES = ["₫120,000,000,000", "₫4,500,000", "₫900,000"];
+
+// Figures wider than a numeric column's share, in a box too narrow for the
+// row. The column takes its widest figure, so no amount reads as another.
+export const WideFigures: Story = {
+  name: "Wide figures",
+  render: () => (
+    <div style={{ maxWidth: "420px" }}>
+      <Surface
+        rows={companies(3)}
+        columns={[
+          {
+            key: "name",
+            header: "Company",
+            fixed: true,
+            cell: (row: Company) => <strong>{row.name}</strong>,
+          },
+          {
+            key: "value",
+            header: "Value",
+            numeric: true,
+            cell: (row: Company) => (
+              <span className="t-num">
+                {WIDE_FIGURES[Number(row.id.slice(1)) - 1]}
+              </span>
+            ),
+          },
+          {
+            key: "region",
+            header: "Region",
+            cell: (row: Company) => row.region,
+          },
+        ]}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const figure = await within(canvasElement).findByRole("cell", {
+      name: WIDE_FIGURES[0],
+    });
+    const ink = document.createRange();
+    ink.selectNodeContents(figure);
+    const style = getComputedStyle(figure);
+    await waitFor(() => {
+      const cell = figure.getBoundingClientRect();
+      const text = ink.getBoundingClientRect();
+      expect(text.left).toBeGreaterThanOrEqual(
+        cell.left + Number.parseFloat(style.paddingLeft) - 0.5,
+      );
+      expect(text.right).toBeLessThanOrEqual(
+        cell.right - Number.parseFloat(style.paddingRight) + 0.5,
+      );
+    });
   },
 };

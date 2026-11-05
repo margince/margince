@@ -21,7 +21,7 @@ import (
 // list.
 func TestContractTierNeverBelowRegistryTier(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, nil)
-	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil)
 
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool {
@@ -52,7 +52,7 @@ func TestContractTierNeverBelowRegistryTier(t *testing.T) {
 // staging, so both artifacts are pinned.
 func TestUpdateRecordIsAutoExecuteOnBothArtifacts(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, nil)
-	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil)
 
 	spec, ok := registry.Spec("update_record")
 	if !ok || spec.Tier != mcp.TierAutoExecute {
@@ -75,10 +75,9 @@ func TestUpdateRecordIsAutoExecuteOnBothArtifacts(t *testing.T) {
 	}
 }
 
-// The credential class and the config surface the advance_deal floor reads must
-// stay human-only in the contract: lending authority, recording somebody's
-// consent and moving which stages count as won/lost are decisions that belong to
-// a contact in their own seat, and no passport carries them.
+// The credential class must stay human-only in the contract. Lending authority
+// belongs to a user in their own seat, and no passport carries it. A stage's
+// semantic, which the advance_deal floor reads, is held by the stage's writer.
 //
 // Deciding an approval is NOT in this class, and the difference is worth stating
 // because it reads like the same thing. A passport is a credential a human
@@ -90,13 +89,8 @@ func TestUpdateRecordIsAutoExecuteOnBothArtifacts(t *testing.T) {
 // widen what a credential may do, which no amount of acting-as can justify.
 func TestGovernanceOperationsAreHumanOnly(t *testing.T) {
 	humanOnly := map[string]bool{
-		"recordConsent": true, "createConsentPurpose": true,
-		"createDataSubjectRequest": true, "updateDataSubjectRequest": true,
-		"createPipeline": true, "updatePipeline": true,
-		"reorderPipelines": true, "reorderStages": true,
-		"createStage": true, "updateStage": true,
-		"issuePassport": true, "revokePassport": true,
-		"issueDoubleOptIn": true,
+		"createConsentPurpose": true,
+		"issuePassport":        true, "revokePassport": true,
 		// Pinned because the contract annotation alone is a line someone
 		// can re-add: without this entry a revert restores an
 		// agent-reachable op with every other gate, arch and drift test
@@ -154,7 +148,7 @@ func TestGovernanceOperationsAreHumanOnly(t *testing.T) {
 // tool fails closed.
 func TestOperationSpecTightenOnly(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, nil)
-	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil)
 
 	spec, _, ok := operationSpec(agentPolicy{Op: "archiveContact", Access: accessTool, Tool: "update_record", Tier: tierConfirmationRequired}, registry)
 	if !ok || spec.Tier != mcp.TierConfirmationRequired {

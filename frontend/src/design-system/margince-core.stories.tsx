@@ -140,7 +140,9 @@ export const Surfaces: Story = {
       <div style={{ padding: "var(--space-6)", background: "var(--bgPage)" }}>
         <MarginceCoreScene state="working" size="md" surface="auto" />
       </div>
-      <div style={{ padding: "var(--space-6)", background: "var(--bgRail)" }}>
+      <div
+        style={{ padding: "var(--space-6)", background: "var(--bgInkField)" }}
+      >
         <MarginceCoreScene state="working" size="md" surface="dark" />
       </div>
     </div>
@@ -191,7 +193,7 @@ export const Ladder: Story = {
  * present must not carry it.
  *
  * It is also what a Core sitting next to copy needs. The agent rail
- * (agentrail.tsx) and the voice scene (voice-scenes.tsx) both run
+ * (agentrail.tsx) and the voice build scene (voice-scenes.build.tsx) both run
  * `feed={false}` for exactly that reason.
  */
 export const WithoutFeed: Story = {

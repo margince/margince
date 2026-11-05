@@ -37,29 +37,17 @@ expect:
   answer:
     - verdict: settled
     - verdict: still_owed
-      # "quote", not "angebot". The thread is German and the thing owed is an
-      # Angebot, but `remaining` is not a quotation from their message: the
-      # site's prompt calls it "what WE still owe, in a few plain words from our
-      # own seat" and offers "Send the quote" as its worked example, and this
-      # lane pins the installation language to English so a record stays
-      # comparable between installations. Testing for the German noun failed a
-      # model that answered with the prompt's own example phrase.
-      #
-      # What the check is for is that the phrase NAMES the thing rather than
-      # restating their message, which is what the rubric below asks for.
-      # Each names the DOCUMENT, not a verb that happens to share a word. Bare
-      # "offer" also matches "Offer a meeting next week", which names something
-      # this conversation never owed; "offer for" keeps the measured reply
-      # "Send offer for the second batch" without admitting it.
-      remaining_names: angebot|offer for|the offer|an offer|quote
+      # The remaining phrase quotes their German request, so it names the
+      # Angebot in their words.
+      remaining_names: angebot
   rubric: >
     The first conversation is settled. They proposed a time and offered to move
     it; the reply agrees to the date in four words. Nothing is left for our side
     to do, and the brevity is not hedging — "passt" accepts.
     The second is still_owed. Acknowledging a request is not doing it: they
     asked for a quote, and the reply promises to come back rather than sending
-    one. The remaining phrase must name the quote (Angebot), from our own seat,
-    not restate their whole message.
+    one. The remaining phrase must quote the ask for the Angebot from their
+    request, not restate their whole message.
     Score high only if both are right. A model that answers settled to both is
     reading the EXISTENCE of a reply as an answer, which is the exact defect
     this site was built to fix, and should score at the floor. A model that

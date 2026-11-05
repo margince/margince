@@ -23,9 +23,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -43,13 +43,19 @@ const transcriptTargetType = string(recordTypeActivity)
 // could not be used closes the run as failed and returns nil, because retrying
 // would ask the same question of the same text and get the same answer.
 func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID) error {
+	reader := *p
+	reader.said = transcriptCopyFor(identity.BaseLanguageForPrompt(ctx, p.pool))
+	return reader.readTranscript(ctx, store, readID, activityID)
+}
+
+func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID) error {
 	if _, err := store.BeginTranscriptRead(ctx, readID, activities.TranscriptReadLease); err != nil {
 		return err
 	}
 	reading, err := store.ReadTranscript(ctx, activityID)
 	if err != nil {
-		if detail, terminal := unreadableTranscript(err); terminal {
-			return p.fail(ctx, store, readID, activityID, detail)
+		if failure, terminal := unreadableTranscript(err); terminal {
+			return p.fail(ctx, store, readID, activityID, *failure)
 		}
 		// Anything else — the database unreachable, a scoped transient fault —
 		// is the JOB's to retry. Closing the reading here would turn a blip
@@ -60,7 +66,10 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	// between the request and the reading, and a re-normalized transcript is a
 	// different size than the one that was queued.
 	if err := activities.WithinReadingBounds(reading.Lines); err != nil {
-		return p.fail(ctx, store, readID, activityID, err.Error())
+		if failure, terminal := unreadableTranscript(err); terminal {
+			return p.fail(ctx, store, readID, activityID, *failure)
+		}
+		return err
 	}
 	// The day the activity is FILED under, which is the best available answer
 	// to "when was this conversation". The composer offers it as an editable
@@ -83,14 +92,18 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	// to give it — the meeting's own summary is what the reader recognises, so
 	// an unnamed reading draws the rail's unnamed sentence rather than a
 	// quotation from somebody's transcript.
+	parties, err := p.readCommitmentParties(ctx, activityID)
+	if err != nil {
+		return err
+	}
 	steps, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""),
-		reading.Lines, reading.OccurredAt.Format(time.DateOnly))
+		reading.Lines, reading.OccurredAt.Format(time.DateOnly), parties)
 	if err != nil {
 		if errors.Is(err, errRefusedTranscript) {
 			p.log.WarnContext(ctx, "transcript reading refused",
 				"transcript_read_id", readID, "activity_id", activityID, "reason", err)
 			return p.fail(ctx, store, readID, activityID,
-				"the model's reading of this transcript could not be used; the transcript is unchanged and can be read again")
+				activities.TranscriptFailure{Code: activities.TranscriptFailureRefused})
 		}
 		return err
 	}
@@ -129,11 +142,13 @@ func (p *TranscriptProposer) stageAndFinish(
 			if err != nil {
 				return activities.TranscriptReadOutcome{}, err
 			}
+			facts := staged.facts(len(kept))
 			return activities.TranscriptReadOutcome{
 				Status:      activities.TranscriptReadDone,
-				ProposalIDs: staged.proposals,
+				ProposalIDs: staged.approvalIDs(),
 				LineCount:   len(reading.Lines),
-				Detail:      transcriptReadDetail(len(kept), staged),
+				Detail:      p.said.outcomeSentence(*facts, transcriptAudience{}),
+				Facts:       facts,
 			}, nil
 		})
 }
@@ -192,46 +207,16 @@ func readingIsRunning(ctx context.Context, tx pgx.Tx, readID ids.UUID) (bool, er
 	return true, nil
 }
 
-// unreadableTranscript separates a refusal a rep can act on from a fault the
-// job should retry, and answers with the message the rep is shown.
-//
-// Only the typed refusals reach status_detail. A raw err.Error() there would
-// put a driver string ("failed to connect to host=…") in front of a rep on the
-// one field this feature exists to make readable, and would settle a transient
-// blip as a permanent failure.
-func unreadableTranscript(err error) (detail string, terminal bool) {
-	var notTranscript *activities.NotATranscriptError
-	var tooLong *activities.TranscriptTooLongError
-	switch {
-	case errors.As(err, &notTranscript), errors.As(err, &tooLong):
-		return err.Error(), true
-	case errors.Is(err, activities.ErrBlankTranscript):
-		return "this transcript is empty, so there is nothing to read", true
-	case errors.Is(err, apperrors.ErrNotFound):
-		return "this transcript is no longer available to read", true
-	}
-	return "", false
-}
-
 // fail closes the run with a reason a rep can act on. A failure to record the
 // failure is returned, so a run cannot be left claimed and silent.
 func (p *TranscriptProposer) fail(
-	ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID, detail string,
+	ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID,
+	failure activities.TranscriptFailure,
 ) error {
 	return p.finishUnderLock(ctx, store, readID, activityID,
 		func(pgx.Tx) (activities.TranscriptReadOutcome, error) {
-			return activities.TranscriptReadOutcome{
-				Status: activities.TranscriptReadFailed,
-				Detail: detail,
-			}, nil
+			return p.said.failedOutcome(failure), nil
 		})
-}
-
-// transcriptStaging is what one reading did with the promises it found.
-type transcriptStaging struct {
-	proposals []ids.UUID
-	tasks     int
-	watched   int
 }
 
 // stage hands each promise to the commitment rule, under one bundle id.
@@ -244,14 +229,14 @@ func (p *TranscriptProposer) stage(
 	ctx context.Context, tx pgx.Tx, steps []proposedStep,
 	reading activities.TranscriptReading, activityID ids.ActivityID,
 ) (transcriptStaging, error) {
-	ctx, err := transcriptSeat(ctx, tx, reading.Links)
-	if err != nil {
+	bundleID := ids.NewV7()
+	asOf := p.now()
+	out := newTranscriptStaging()
+	if err := lockPromiseSources(ctx, tx, []ids.UUID{activityID.UUID}); err != nil {
 		return transcriptStaging{}, err
 	}
-	bundleID := ids.NewV7()
-	var out transcriptStaging
 	for _, step := range steps {
-		commitment, err := p.commitmentFrom(ctx, tx, step, reading, activityID)
+		commitment, err := p.commitmentFrom(ctx, tx, step, reading, activityID, asOf)
 		if err != nil {
 			return transcriptStaging{}, err
 		}
@@ -259,16 +244,29 @@ func (p *TranscriptProposer) stage(
 		if err != nil {
 			return transcriptStaging{}, err
 		}
+		if outcome.withheld() {
+			out.withheld[outcome]++
+			continue
+		}
 		switch outcome {
-		case CommitmentProposed:
-			out.proposals = append(out.proposals, id)
+		case CommitmentProposed, CommitmentHistoricalProposed:
+			seat, err := proposalDecider(ctx, tx, id)
+			if err != nil {
+				return transcriptStaging{}, err
+			}
+			out.proposals = append(out.proposals, activities.TranscriptProposal{ApprovalID: id, SeatID: seat})
 		case CommitmentTaskWritten:
-			out.tasks++
+			seat, err := transcriptTaskAssignee(ctx, tx, id)
+			if err != nil {
+				return transcriptStaging{}, err
+			}
+			out.tasks[seat]++
 		case CommitmentWatched:
 			out.watched++
-		case CommitmentRemembered:
+		case CommitmentRemembered, CommitmentRetained:
 			// Already a task, already waiting, refused or dismissed: this
-			// reading adds nothing new.
+			// reading adds nothing new, and says whom it was put to.
+			out.known[derefSeat(commitment.Seat)]++
 		}
 	}
 	return out, nil

@@ -84,7 +84,14 @@ func New(cfg Config) (Vault, error) {
 //
 //nolint:ireturn // the seam has two providers behind one Vault; returning the interface is the design.
 func FromEnv(ctx context.Context, pool *pgxpool.Pool, env config.Lookup) (vault Vault, configured bool, err error) {
-	encoded := env(EnvRootKey)
+	return fromRootKey(ctx, pool, env(EnvRootKey))
+}
+
+// RootKey is the loaded root key, encoded, or "" with no vault configured.
+func RootKey(c *config.Config) string { return config.Val(c, rootKeySetting) }
+
+//nolint:ireturn // the seam has two providers behind one Vault; returning the interface is the design.
+func fromRootKey(ctx context.Context, pool *pgxpool.Pool, encoded string) (vault Vault, configured bool, err error) {
 	if encoded == "" {
 		return nil, false, refuseIfAnythingIsSealed(ctx, pool)
 	}
@@ -245,17 +252,17 @@ func refLogSafe(ref Ref) string {
 	return fmt.Sprintf("mgv.%d.%s.<token>", p.keyVersion, p.workspace)
 }
 
-// ConfigItems declares this package's surface. Not Required: a deployment
-// without a vault boots, and a capture-capable role then declares the gap at
-// wiring time rather than nil-dereferencing at Authenticate. A key that IS set
-// but malformed is a hard error, which is a different failure from absence.
-func ConfigItems() []config.Item {
-	return []config.Item{{
-		Name: EnvRootKey, Kind: config.KindString, Secret: true,
-		Roles: []string{config.RoleAPI, config.RoleWorker},
-		Doc:   "base64 (standard, padded) 32-byte root key sealing connector credentials; unset disables the vault",
-	}}
-}
+// The root key is not required: a deployment without a vault boots, and a
+// capture-capable role declares the gap at wiring time. A key that is set but
+// malformed is a hard error.
+var rootKeySetting = config.Define(config.Spec[string]{
+	Key: "keyvault_root_key", Env: EnvRootKey, Type: config.String, Secret: true,
+	Roles: []config.Role{config.RoleAPI, config.RoleWorker},
+	Doc:   "Standard Base64 of the 32-byte root key that seals connector credentials; unset disables the vault.",
+})
+
+// Settings are this package's boot settings.
+func Settings() []config.Any { return []config.Any{rootKeySetting} }
 
 // refuseIfAnythingIsSealed turns "no vault configured" into a boot error when
 // the installation is holding sealed ciphertext.
@@ -320,8 +327,8 @@ func refuseIfAnythingIsSealed(ctx context.Context, pool *pgxpool.Pool) error {
 // role names the binary in the boot error, which is the only place it appears.
 //
 //nolint:ireturn // the seam has two providers behind one Vault; returning the interface is the design.
-func ForRole(ctx context.Context, role string, pool *pgxpool.Pool, env config.Lookup) (Vault, error) {
-	vault, configured, err := FromEnv(ctx, pool, env)
+func ForRole(ctx context.Context, role string, pool *pgxpool.Pool, c *config.Config) (Vault, error) {
+	vault, configured, err := fromRootKey(ctx, pool, RootKey(c))
 	if err != nil {
 		return nil, fmt.Errorf("%s: keyvault: %w", role, err)
 	}

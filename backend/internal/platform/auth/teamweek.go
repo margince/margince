@@ -13,7 +13,9 @@ package auth
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -52,7 +54,20 @@ const (
 //
 // The system principal reaches every team, as it passes every object grant. A
 // buyer reaches none: Allows refuses it and it is not a human seat.
+//
+// A week names each member's figures, so it opens to nobody while the
+// installation has switched off individual performance.
 func TeamWeekReachOf(ctx context.Context) TeamWeekReach {
+	if allowed, bound := IndividualPerformanceOf(ctx); bound && !allowed {
+		return ReachesNoTeam
+	}
+	return TeamLeadReachOf(ctx)
+}
+
+// TeamLeadReachOf is TeamWeekReachOf without the individual-performance switch: which
+// teams a seat answers for. Setting a team's target or forecast is about the
+// team's total, which the switch leaves alone.
+func TeamLeadReachOf(ctx context.Context) TeamWeekReach {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.Permissions.RowScope == principal.RowScopeOwn {
 		return ReachesNoTeam
@@ -69,4 +84,30 @@ func TeamWeekReachOf(ctx context.Context) TeamWeekReach {
 		return ReachesTeamsLed
 	}
 	return ReachesNoTeam
+}
+
+// teamWeekChecks are the grants TeamLeadReachOf reads, as checks.
+func teamWeekChecks() []Check {
+	read := []principal.Action{principal.ActionRead}
+	return []Check{
+		{RowScope: principal.RowScopeTeam},
+		{Object: "deal", Actions: read},
+		{OneOf: []Check{{Object: objTeamOversight, Actions: read}, {Object: objTeamLead, Actions: read}}},
+	}
+}
+
+// RequireTeamWeekReach is TeamWeekReachOf for the store that serves a week. It
+// records the grants the answer read, and refuses a caller it reaches no team
+// for. A refusal the individual-performance switch made is the caller's to ask.
+func RequireTeamWeekReach(ctx context.Context) (TeamWeekReach, error) {
+	reach := TeamWeekReachOf(ctx)
+	if p, ok := principal.Actor(ctx); ok {
+		for _, c := range teamWeekChecks() {
+			RecordDecision(ctx, c, reach != ReachesNoTeam || c.HeldBy(p))
+		}
+	}
+	if reach == ReachesNoTeam {
+		return reach, fmt.Errorf("a team's week: %w", apperrors.ErrPermissionDenied)
+	}
+	return reach, nil
 }

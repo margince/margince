@@ -48,10 +48,6 @@ const (
 	// ReviewNeedsRepair is a refusal no evidence can answer, because something
 	// about the message or the address is wrong.
 	ReviewNeedsRepair = "needs_repair"
-	// ReviewAwaitingDecision is a refusal the rep has handed to somebody who
-	// may override it. It is the rep's work no longer, and a surface should say
-	// so rather than showing them a form they have already filled in.
-	ReviewAwaitingDecision = "awaiting_decision"
 	// ReviewResolved is work somebody finished.
 	ReviewResolved = "resolved"
 	// ReviewSuperseded is a review replaced by a fresher attempt at the same
@@ -78,9 +74,41 @@ type RefusedRecipient struct {
 	SubjectID   string `json:"subject_id,omitempty"`
 	ReasonCode  string `json:"reason_code"`
 	Category    string `json:"category,omitempty"`
+	// Requested is what the sender claimed the message is, which an unproven
+	// claim never writes into Category. Empty on a snapshot from before it.
+	Requested string `json:"requested,omitempty"`
+	// DealID is the deal the message named as its evidence, so an answer to
+	// this refusal is recorded about that deal. Nil when it named none.
+	DealID *ids.UUID `json:"deal_id,omitempty"`
 	// PurposeID is the purpose the SEND resolved to, nil for a broad send —
 	// and nil, additively, for a snapshot written before this field existed.
 	PurposeID *ids.UUID `json:"purpose_id,omitempty"`
+	// CanBeOverruled is the preview's own answer for this refusal. It is told
+	// to the sender and never stored: a stored copy would outlive the rule.
+	CanBeOverruled bool `json:"-"`
+	// RequestedCategory is the reason for contact the sender picked. It is told
+	// to the sender and never stored: the decision row already records it, and
+	// Category stays the engine's own reading. An unproven claim never
+	// resolves, so this is the only place the sender's pick travels, and the
+	// remedy for a failed active-deal claim is named from it.
+	RequestedCategory string `json:"-"`
+}
+
+// claim is what the sender said the message is: the claim when one was made,
+// otherwise the engine's reading.
+func (r RefusedRecipient) claim() commsauthz.Category {
+	if r.Requested != "" {
+		return commsauthz.Category(r.Requested)
+	}
+	return commsauthz.Category(r.Category)
+}
+
+// dealID is the deal the refused message named, or zero.
+func (r RefusedRecipient) dealID() ids.UUID {
+	if r.DealID == nil {
+		return ids.UUID{}
+	}
+	return *r.DealID
 }
 
 // Review is a refused send somebody can look at.
@@ -92,9 +120,6 @@ type Review struct {
 	InitiatedBy ids.UUID
 	Refusals    []RefusedRecipient
 	ReasonCode  string
-	// ApprovalID is the card a routed review was handed to. Zero on a review
-	// nobody has asked about, which is most of them.
-	ApprovalID ids.UUID
 }
 
 // OpenReviewTx records one refusal, inside the transaction that refused.
@@ -192,11 +217,10 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 // the reason every scoped read here does: "forbidden" tells a caller the id
 // exists, which is itself a disclosure about a message they may not see.
 func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error) {
-	// A HUMAN. auth.RequireHuman admits connectors, which run with the
-	// granting human's grants — so on the decider's door it would hand one
-	// seat's refused correspondence to anything holding their credentials.
-	// The initiator's own door is bounded by the seat either way.
-	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
+	// A user or their agent, never a connector. It runs with the granting user's
+	// grants, so it would hand one seat's refused correspondence to anything
+	// holding their credentials.
+	if err := requireAUserOrTheirAgent(ctx); err != nil {
 		return Review{}, err
 	}
 	seat := initiatingSeat(ctx)
@@ -210,7 +234,7 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 	// who may SEE the queue of refusals. An installation can hand somebody the
 	// reviewer's view without thereby letting them override anything, and
 	// gating a read on the write grant would take that choice away.
-	decider := auth.Require(ctx, entityCommunicationException, principal.ActionRead) == nil
+	decider := auth.Allows(ctx, entityCommunicationException, principal.ActionRead)
 	if seat.IsZero() && !decider {
 		return Review{}, apperrors.ErrNotFound
 	}
@@ -220,20 +244,23 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 		err := tx.QueryRow(ctx, `
 			SELECT id, state, kind, coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
 			       refusals, reason_code,
-			       coalesce(approval_id, '00000000-0000-0000-0000-000000000000'::uuid),
 			       coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid)
 			  FROM communication_review
 			 WHERE id = $1
 			   AND (($2::uuid IS NOT NULL AND initiated_by = $2) OR $3)`, id, zeroSeatAsNull(seat), decider).
 			Scan(&out.ID, &out.State, &out.Kind, &out.IntentID, &payload, &out.ReasonCode,
-				&out.ApprovalID, &out.InitiatedBy)
+				&out.InitiatedBy)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
 		if err != nil {
 			return fmt.Errorf("consent: reading the review: %w", err)
 		}
-		return json.Unmarshal(payload, &out.Refusals)
+		if err := json.Unmarshal(payload, &out.Refusals); err != nil {
+			return err
+		}
+		out.State = openStateFor(out.State, out.Refusals)
+		return nil
 	})
 	return out, err
 }
@@ -248,23 +275,32 @@ func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
 	}
 	out := make([]RefusedRecipient, 0, len(denied))
 	for _, d := range denied {
-		refusal := RefusedRecipient{
-			// NORMALIZED ON THE WAY IN, because the erasure sweeps match on it.
-			// An address stored with the whitespace or the casing a caller
-			// typed is one a lowercased, trimmed comparison walks past — and
-			// what it walks past is an erased subject's mailbox.
-			Address:     strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
-			SubjectKind: d.SubjectKind,
-			ReasonCode:  d.ReasonCode,
-			Category:    string(d.Resolved),
-			PurposeID:   d.PurposeID,
-		}
-		if !d.SubjectID.IsZero() {
-			refusal.SubjectID = d.SubjectID.String()
-		}
-		out = append(out, refusal)
+		out = append(out, refusedRecipientOf(d))
 	}
 	return out
+}
+
+func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
+	refusal := RefusedRecipient{
+		// Normalized on the way in, because the erasure sweeps match on it.
+		// A lowercased, trimmed comparison walks past an address stored as
+		// typed. What it walks past is an erased subject's mailbox.
+		Address:     strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
+		SubjectKind: d.SubjectKind,
+		ReasonCode:  d.ReasonCode,
+		Category:    string(d.Resolved),
+		Requested:   string(d.Requested),
+		PurposeID:   d.PurposeID,
+		DealID:      zeroUUIDAsNull(d.Evidence.DealID),
+		// The same answer the preview sends, so the composer picks the same
+		// deciding recipient before and after Send.
+		CanBeOverruled:    d.CanBeOverruledByCategory(),
+		RequestedCategory: string(d.Requested),
+	}
+	if !d.SubjectID.IsZero() {
+		refusal.SubjectID = d.SubjectID.String()
+	}
+	return refusal
 }
 
 // stateFor decides which kind of work this refusal is.
@@ -283,6 +319,16 @@ func stateFor(refusals []RefusedRecipient) string {
 	return ReviewNeedsContext
 }
 
+// openStateFor derives an open review's state from its refusals on every read.
+// A row stored before the answerable list narrowed may still say needs_context
+// for a refusal RecordContext now refuses. Closed states are returned as stored.
+func openStateFor(stored string, refusals []RefusedRecipient) string {
+	if (stored != ReviewNeedsContext && stored != ReviewNeedsRepair) || len(refusals) == 0 {
+		return stored
+	}
+	return stateFor(refusals)
+}
+
 // answerableByContext reports whether evidence could still make this send
 // lawful.
 //
@@ -291,9 +337,12 @@ func stateFor(refusals []RefusedRecipient) string {
 // offers no argument — the safe direction, because the alternative is a form
 // inviting a rep to argue with a withdrawal.
 //
-// The two here are the refusals about what the INSTALLATION knows: no evidence
-// that this message has a ground to stand on, and a purpose key nothing
-// defines. Somebody who was on the call can answer both.
+// The review state, HeldSubjectsForReview and RecordContext all ask this
+// function. So the work item never offers an answer the store then refuses.
+// A statement is stored as a qualifying event, which no_compatible_evidence,
+// deal_not_requested and opted_out_after_request read. The last is answered
+// by the request the rep confirmed with the contact after the opt-out. Other reasons declare RemedyAnswer (commsauthz.RemediesFor). They need
+// an answer request this store cannot take yet, and join here when it can.
 //
 // Everything else is about the SUBJECT or the ADDRESS and no context repairs
 // it. An objection, a restriction, a withdrawal and a subject request are the
@@ -301,11 +350,11 @@ func stateFor(refusals []RefusedRecipient) string {
 // is a fact about volume that time answers rather than evidence.
 func answerableByContext(reasonCode string) bool {
 	switch reasonCode {
-	case commsauthz.ReasonNoEvidence, commsauthz.ReasonUnknownPurpose,
-		commsauthz.ReasonLegacyTransactionalUnevidenced:
+	case commsauthz.ReasonNoEvidence, commsauthz.ReasonDealNotRequested, commsauthz.ReasonOptedOutAfterRequest:
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 // initiatingSeat reads the human this send belongs to, or the zero id for a
@@ -368,46 +417,6 @@ func (g *Gate) RecordRefusal(ctx context.Context, set commsauthz.DecisionSet, in
 	return out, err
 }
 
-// SendRefusedError is a refusal that left a review behind.
-//
-// It WRAPS the original refusal rather than replacing it, so every reader that
-// already knows what apperrors.ErrConsentNotGranted means keeps working — the
-// 409 mapping, the job-fault table, the tests. What it adds is the one thing
-// the rep was missing: a reference to the record of what happened, which is how
-// they get from "this was refused" to "here is what was refused and for whom".
-type SendRefusedError struct {
-	ReviewID ids.UUID
-	Cause    error
-	// Actions is what THIS caller may do about the refusal, decided where the
-	// refusal is recorded because that is where the principal is known. Empty
-	// for a caller with nothing to do but stop and report, which is the honest
-	// answer for an agent: routing a decision is human-only and bound to the
-	// review's initiator.
-	Actions []string
-}
-
-func (e *SendRefusedError) Error() string {
-	return e.Cause.Error() + " (review " + e.ReviewID.String() + ")"
-}
-
-// Unwrap keeps the refusal's own identity reachable, which is what lets the
-// existing 409 mapping and every errors.Is on it go on working.
-func (e *SendRefusedError) Unwrap() error { return e.Cause }
-
-// NO FieldFault, deliberately, though every other typed refusal in this module
-// carries one.
-//
-// A field fault answers 422 and names an input the caller should change. This
-// refusal is neither: the caller's input was fine, the engine refused the send
-// on consent grounds, and that answer is a 409 with the code every client and
-// every test already recognises. Implementing FieldFault here changed the
-// status from 409 to 422 across the send surface — the transport prefers a
-// module's declared fault over a wrapped sentinel — which would have broken
-// clients to deliver a reference.
-//
-// The reference travels in the message instead, which is where a human reads
-// it and where the MCP surface renders it too.
-
 // ReviewForInitiator reads one review back for the colleague who pressed send, and
 // for nobody else.
 //
@@ -442,7 +451,11 @@ func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, er
 			return fmt.Errorf("consent: reading the review: %w", err)
 		}
 		out.InitiatedBy = seat
-		return json.Unmarshal(payload, &out.Refusals)
+		if err := json.Unmarshal(payload, &out.Refusals); err != nil {
+			return err
+		}
+		out.State = openStateFor(out.State, out.Refusals)
+		return nil
 	})
 	return out, err
 }
@@ -459,42 +472,3 @@ func zeroSeatAsNull(seat ids.UUID) *ids.UUID {
 	}
 	return &seat
 }
-
-// FaultReference implements apperrors.ReferencedFault: the review this refusal
-// opened, as a field rather than as a sentence.
-//
-// STILL NO FieldFault, and the distinction matters. A field fault says "you
-// sent a bad input" and answers 422; this refusal is neither — the caller's
-// input was fine and the engine refused on consent grounds, which is the 409
-// every client and every test already recognises. Implementing FieldFault here
-// once flipped the whole send surface from 409 to 422.
-//
-// What a reference adds is orthogonal to that: the status and the code are
-// unchanged, and the id appears beside them where a machine can read it. The
-// tool surface is why — an agent handed a sentence can do nothing, and the same
-// refusal naming its review can hand the question to a human.
-func (e *SendRefusedError) FaultReference() map[string]any {
-	if e.ReviewID.IsZero() {
-		return nil
-	}
-	return map[string]any{
-		FieldReviewID: e.ReviewID.String(),
-		// WHAT THIS CALLER MAY DO, not what the route exists for.
-		//
-		// Routing a decision is human-only and bound to the review's own
-		// initiator, so naming it unconditionally would promise an agent a move
-		// it cannot make — and an agent that tries and is refused has been sent
-		// somewhere by us rather than by its own mistake. Worse than saying
-		// nothing.
-		//
-		// An empty list is the honest answer for a caller with nothing to do
-		// but stop and report: the reference still travels, and a human
-		// reading the agent's transcript can pick the review up.
-		"available_actions": e.Actions,
-	}
-}
-
-// Unreferenced answers the refusal without the reference, which is what decides
-// the status. It is the wrapped cause rather than this value, or classification
-// would come straight back here.
-func (e *SendRefusedError) Unreferenced() error { return e.Cause }

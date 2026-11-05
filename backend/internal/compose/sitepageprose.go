@@ -31,6 +31,7 @@ func pageFrom(url string, kind crmcontracts.SiteReadPageKind, page webread.Page)
 	}
 	return crawlPage{
 		URL:             url,
+		RedirectChain:   page.RedirectChain,
 		Kind:            kind,
 		Text:            page.Text,
 		Sections:        sections,

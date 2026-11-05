@@ -77,12 +77,24 @@ type CreateContactInput struct {
 	// SourceSystem names the system an import took this contact from; nil
 	// for one created here, which is what makes it unattributable.
 	SourceSystem *string
+	// SourceID is this contact's id in SourceSystem; the pair is unique.
+	SourceID *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
+	// auditEvidence rides on the create's audit row. Unexported, so no request
+	// can claim the evidence an import writes for itself.
+	auditEvidence map[string]any
+	// erasure is set only by EnsureContactByEmail, from its caller.
+	erasure storekit.ErasureAdmission
+	// ConvertLeadIDs are the live leads holding this contact's address or
+	// profile, which the user chose to convert into the new contact.
+	ConvertLeadIDs []ids.LeadID
+	// Employer is written with the contact, in its transaction.
+	Employer       EmployerChoice
+	EmployerResult *EmployerAttached
 }
 
 // CreateContact inserts the contact + child rows + audit + event atomically.
@@ -91,7 +103,7 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	by, err := s.readyContactCreate(ctx, in)
+	by, err := s.readyContactCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -109,7 +121,7 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 		out, err = s.createContactInTx(ctx, tx, in, by, active)
 		return err
 	})
-	return out, err
+	return out, s.AskHolderToShare(ctx, err)
 }
 
 // CreateContactTx is CreateContact for a caller that already opened a
@@ -125,7 +137,7 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	by, err := s.readyContactCreate(ctx, in)
+	by, err := s.readyContactCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -136,10 +148,15 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 // the contact parse and the captured-by resolution — and answers the
 // attribution the write shape stamps. Both entry points call it, so neither
 // can drift from the other's validation.
-func (s *Store) readyContactCreate(ctx context.Context, in CreateContactInput) (string, error) {
+func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) (string, error) {
 	if err := parseContactContacts(in.Emails, in.Phones); err != nil {
 		return "", err
 	}
+	address, err := checkedAddress(in.Address)
+	if err != nil {
+		return "", err
+	}
+	in.Address = address
 	return storekit.CapturedBy(ctx)
 }
 
@@ -154,21 +171,19 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 	}
 	in.OwnerID = owner
 
-	if err := ensureContactEmailsUnclaimed(ctx, tx, in.Emails); err != nil {
-		return crmcontracts.Contact{}, err
-	}
-
-	match, err := manualDedupeContact(ctx, tx, in)
+	match, converting, err := admitAndDedupeContactCreate(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
 
-	id, err := createContact(ctx, tx, match, ContactSpec{
+	id, err := createContact(ctx, tx, s, match, ContactSpec{
 		// Whatever the caller declared. An unset kind records unknown_legacy,
 		// which is the honest answer for a contact somebody typed in without
 		// saying why — and the answer that makes the gap visible rather than
 		// leaving the question unasked.
-		Acquisition: acquisitionForCreate(in),
+		Acquisition:      acquisitionForCreate(in),
+		Employer:         in.Employer,
+		EmployerAttached: in.EmployerResult,
 		// A typed create publishes to the workspace, whoever typed it. An agent
 		// creating a contact on a rep's behalf is doing the rep's filing, and a
 		// contact only its creator can see is not in the CRM in any useful
@@ -190,27 +205,29 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		Phones:       in.Phones,
 		Source:       in.Source,
 		SourceSystem: in.SourceSystem,
+		SourceID:     in.SourceID,
 		Author:       in.Author,
 		CapturedBy:   by,
 		CustomFields: in.CustomFields,
 		Active:       active,
+		erasure:      in.erasure,
+		converting:   converting,
 	})
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
 
-	auditID, err := storekit.Audit(ctx, tx, "create", "contact", id.UUID, nil, map[string]any{"full_name": in.FullName})
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "contact", id.UUID, nil, map[string]any{"full_name": in.FullName}, in.auditEvidence)
 	if err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("audit contact create: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactCreated{FullName: in.FullName}); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("emit contact.created: %w", err)
 	}
-	if err := match.recordIfReview(ctx, tx, id, in.FullName, in.Source, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, id, in.FullName, in.Source, by); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	// Somebody typing in a contact who is already a lead has qualified them.
-	if err := s.promoteHeldLeadsTx(ctx, tx, id, TriggerHumanQualify, nil, by); err != nil {
+	if err := s.convertLeadsIntoTx(ctx, tx, id, converting, by); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 
@@ -262,10 +279,32 @@ func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 	return readContact(ctx, tx, id, archived, active.cols)
 }
 
+// EnsureBookerByEmail is EnsureContactByEmail for the public booking page. A
+// live lead holding the address is the booker's record. No contact is made,
+// and one of the two ids is set.
+func (s *Store) EnsureBookerByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, ids.LeadID, error) {
+	contact, err := s.EnsureContactByEmail(ctx, fullName, email, source, erasure)
+	if _, held := errors.AsType[*LeadHoldsIdentityError](err); !held {
+		return contact, ids.LeadID{}, err
+	}
+	lead, err := s.CounterpartyLead(ctx, email)
+	if err == nil && lead.IsZero() {
+		// The lead the refusal named is gone, or a contact took the address:
+		// the same race the claimed-email retry above answers, met the other way.
+		err = apperrors.ErrConflict
+	}
+	return ids.Nil, lead, err
+}
+
 // EnsureContactByEmail returns the contact holding this address, creating one
 // when none does — where an address seen on a message becomes a record.
-func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error) {
+func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+		return ids.Nil, err
+	}
+	// Before the lookup, so a machine-address contact made before the refusal
+	// existed is not handed back either.
+	if err := refuseMachineAddress(email); err != nil {
 		return ids.Nil, err
 	}
 	lookup := func() (ids.UUID, bool, error) {
@@ -295,13 +334,14 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 		FullName: fullName,
 		Emails:   []ContactEmailInput{{Email: email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:   source,
+		erasure:  erasure,
 	})
 	if err == nil {
 		return ids.UUID(created.Id), nil
 	}
 	// A concurrent capture of the same email won the race: its row IS
 	// the idempotent answer.
-	if _, ok := errors.AsType[*DuplicateEmailError](err); ok {
+	if IsClaimedEmail(err) {
 		if id, found, lookupErr := lookup(); lookupErr == nil && found {
 			return id, nil
 		}

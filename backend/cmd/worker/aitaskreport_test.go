@@ -196,10 +196,10 @@ func TestServedIdentityPrefersWhatAnsweredOverWhatWasBound(t *testing.T) {
 // coverage, on the very number the guide tells operators to read.
 func TestPayloadPassagesIgnoreTheFenceMarkers(t *testing.T) {
 	req := model.Request{Messages: []model.Message{{Role: "user", Content: strings.Join([]string{
-		"<untrusted-019fcad9-cec6-7533-b938-7be67a2f9ea9>",
+		"<untrusted-mfrggzdfmzthi2lnnfxgo3dpoi>",
 		"[s0] vendor/a costs $1",
 		"[s1] vendor/b costs $2",
-		"</untrusted-019fcad9-cec6-7533-b938-7be67a2f9ea9>",
+		"</untrusted-mfrggzdfmzthi2lnnfxgo3dpoi>",
 	}, "\n")}}}
 	if got := payloadPassages(req); got != 2 {
 		t.Errorf("payloadPassages = %d, want 2 — the fence markers are not passages", got)
@@ -235,5 +235,16 @@ func TestIsNumberedPassageRequiresTheMarkerToEnd(t *testing.T) {
 		if got := isNumberedPassage(line); got != want {
 			t.Errorf("isNumberedPassage(%q) = %v, want %v", line, got, want)
 		}
+	}
+}
+
+func TestResponseLineNamesCachedInputOnlyWhenTheProviderServedSome(t *testing.T) {
+	served := responseLine(probeCall{Reply: probeReply{InputTokens: 2600, CachedTokens: 2000, OutputTokens: 40}})
+	if !strings.Contains(served, "in 2600 tok  cached 2000 tok  out 40 tok") {
+		t.Errorf("a cache read is not reported beside the input it came from: %q", served)
+	}
+	cold := responseLine(probeCall{Reply: probeReply{InputTokens: 2600, OutputTokens: 40}})
+	if strings.Contains(cold, "cached") {
+		t.Errorf("a call that read nothing from the cache reports a cached count: %q", cold)
 	}
 }

@@ -47,6 +47,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -115,6 +116,8 @@ type StageEvidenceTrigger struct {
 	// a true evidence ledger, and the criteria simply go unread by the policy.
 	propose stageProposer
 	log     *slog.Logger
+	// now is the clock the backlog window is measured on.
+	now func() time.Time
 }
 
 // stageProposer is the proposing half, as this trigger takes it. An interface
@@ -133,8 +136,15 @@ func NewStageEvidenceTrigger(
 	return &StageEvidenceTrigger{
 		pool: pool, deals: store, own: own, read: read, propose: propose,
 		workspace: identity.NewService(pool).InstallationWorkspace,
-		log:       log,
+		log:       log, now: time.Now,
 	}
+}
+
+// WithClock is the trigger on another clock, for a test that fixes one.
+func (t *StageEvidenceTrigger) WithClock(now func() time.Time) *StageEvidenceTrigger {
+	c := *t
+	c.now = now
+	return &c
 }
 
 // StageEvidenceDeals and StageEvidenceDomains are the two halves the worker
@@ -165,7 +175,7 @@ func (t *StageEvidenceTrigger) HandleEvent(ctx context.Context, env events.Envel
 	// from it would place a row against a stage the deal reached long
 	// afterwards, so skipping is nil rather than an error — an error would
 	// redeliver it forever.
-	if time.Since(env.OccurredAt) > stageEvidenceBacklogWindow {
+	if t.now().Sub(env.OccurredAt) > stageEvidenceBacklogWindow {
 		return nil
 	}
 	// Bound HERE rather than at the write, because the READS need it too: the
@@ -323,13 +333,19 @@ func (t *StageEvidenceTrigger) onActivityUpdated(ctx context.Context, env events
 // reaching this point has already proven itself by a rule that does not
 // consult it; it rides along as the trail's account of who called the meeting.
 func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids.UUID) error {
-	facts, err := t.activityFacts(ctx, activityID)
+	facts, zone, err := t.activityFacts(ctx, activityID)
 	if err != nil {
 		// An activity reaching no deal settles nothing.
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return nil
 		}
 		return err
+	}
+	// The activity's own time decides for both halves, not the envelope's. An
+	// envelope is stamped when the event is emitted. An old message filed or
+	// imported today carries a fresh one and would read as if just sent.
+	if t.now().Sub(facts.OccurredAt) > stageEvidenceBacklogWindow {
+		return nil
 	}
 	// The MODEL's half is asked about every activity that reaches a deal,
 	// meeting or not: a criterion settled in prose is settled in an ordinary
@@ -342,14 +358,7 @@ func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids
 	}
 	// A meeting in the future has not been held. The capture path records
 	// scheduled meetings too, and one settles event_held only once it happened.
-	if facts.OccurredAt.After(time.Now()) {
-		return nil
-	}
-	// THE MEETING'S OWN TIME, not the envelope's. An envelope's occurred_at is
-	// stamped when the event is emitted, so a transcript of a six-month-old
-	// meeting imported today carries a fresh envelope and would otherwise be
-	// written as if the meeting had just happened.
-	if time.Since(facts.OccurredAt) > stageEvidenceBacklogWindow {
+	if !occurredday.MeetingTookPlace(occurredday.Moment{At: facts.OccurredAt, DateOnly: facts.DateOnly}, t.now(), zone) {
 		return nil
 	}
 	proof := deals.MeetingWasHeld(
@@ -386,7 +395,8 @@ func (t *StageEvidenceTrigger) readPayload(ctx context.Context, env events.Envel
 	return true
 }
 
-// activityFacts reads what the meeting rules need about one activity.
+// activityFacts reads what the meeting rules need about one activity, and
+// the installation zone that says which date is today.
 //
 // The own-domain list is capture's and the judgement is deals', so the two
 // meet HERE — compose is where an edge between two modules is allowed to
@@ -394,14 +404,18 @@ func (t *StageEvidenceTrigger) readPayload(ctx context.Context, env events.Envel
 // the author side are the domains that counted the attendees.
 func (t *StageEvidenceTrigger) activityFacts(
 	ctx context.Context, activityID ids.UUID,
-) (deals.ActivityAuthorship, error) {
+) (deals.ActivityAuthorship, *time.Location, error) {
 	var out deals.ActivityAuthorship
+	var zone *time.Location
 	err := pgx.BeginFunc(ctx, t.pool, func(tx pgx.Tx) error {
 		var err error
-		out, err = deals.ReadActivityAuthorship(ctx, tx, activityID, t.own)
+		if out, err = deals.ReadActivityAuthorship(ctx, tx, activityID, t.own); err != nil {
+			return err
+		}
+		zone, err = identity.ZoneAppliedTx(ctx, tx)
 		return err
 	})
-	return out, err
+	return out, zone, err
 }
 
 // dealOfContract answers the deal a contract is bound to.

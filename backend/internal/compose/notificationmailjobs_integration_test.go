@@ -139,7 +139,7 @@ func TestAnApprovalWaitingOnAnEmailSeatIsMailedOnce(t *testing.T) {
 	if !strings.Contains(body, "\n"+stagedSummary+"\n") {
 		t.Errorf("the body does not carry the notice's own line:\n%s", body)
 	}
-	if want := noticeMailOrigin + "/#/worklist"; !strings.Contains(body, want) {
+	if want := noticeMailOrigin + "/#/home?approval="; !strings.Contains(body, want) {
 		t.Errorf("the body does not link to the worklist (%q):\n%s", want, body)
 	}
 
@@ -301,7 +301,7 @@ func TestAPreferenceChangedBeforeTheSendIsASkipAndNotAFailure(t *testing.T) {
 // the store bounds their length and nothing strips their structure. A forged
 // "From:" line in a message a colleague reads as the product's is the whole
 // reason every interpolated value goes through OneLine.
-func TestTheNotificationMailCarriesNoLineTheNoticeForged(t *testing.T) {
+func TestAnApprovalNoticeWithoutADecisionCannotInventAnEmail(t *testing.T) {
 	e := setupNoticeMail(t)
 	// The approval class, on its standing default, because it is the only class
 	// with a sending leg — the others are refused the word and so could never
@@ -321,27 +321,12 @@ func TestTheNotificationMailCarriesNoLineTheNoticeForged(t *testing.T) {
 	}
 
 	e.work(t, notice)
-
-	if got := e.relay.count(); got != 1 {
-		t.Fatalf("the notice was handed to the relay %d times, want once", got)
-	}
-	if subject := e.relay.subjects[0]; strings.ContainsAny(subject, "\r\n") {
-		t.Errorf("the subject carries a line break: %q", subject)
-	}
-	body := e.relay.bodies[0]
-	for _, forged := range []string{"\nFrom: finance@margince.test", "\nSubject: something else entirely"} {
-		if strings.Contains(body, forged) {
-			t.Errorf("the notice wrote a line of its own into the message (%q):\n%s", forged, body)
-		}
+	stamp, cause := e.emailState(t, notice)
+	if e.relay.count() != 0 || stamp == nil || cause == nil {
+		t.Fatalf("unverifiable approval was sent or disappeared: %d %v %v", e.relay.count(), stamp, cause)
 	}
 }
 
-// The enqueue's own gate: only a seat who asked for email gets a job at all.
-//
-// It is the ordering the whole design rests on — the preference is read where
-// the notice is written, so a colleague who reads their queue on screen never
-// has a durable job staged about them, and the worker's re-read below is only
-// the race window's guard.
 func TestOnlyAnEmailSeatsNoticeStagesAMailJob(t *testing.T) {
 	e := setupNoticeMail(t)
 	e.grantRole(t, e.e.AdminUser)
@@ -404,5 +389,36 @@ func TestASeatReadingTheirQueueOnScreenStagesNoMailJob(t *testing.T) {
 	}
 	if staged := e.queue.staged(); len(staged) != 0 {
 		t.Fatalf("a seat who reads their queue on screen had %d mail job(s) staged: %+v", len(staged), staged)
+	}
+}
+
+func TestAnApprovalReadFailureIsRecordedAfterTheNoticeClaim(t *testing.T) {
+	e := setupNoticeMail(t)
+	notice := e.pendingNotice(t)
+	owner := integration.OwnerConn(t)
+	if _, err := owner.Exec(context.Background(), `ALTER TABLE approval RENAME TO unavailable_approval`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(), `ALTER TABLE unavailable_approval RENAME TO approval`); err != nil {
+			t.Errorf("restoring the approval table: %v", err)
+		}
+	})
+	e.work(t, notice)
+	stamp, cause := e.emailState(t, notice)
+	if stamp == nil || cause == nil || e.relay.count() != 0 {
+		t.Fatalf("approval read failure disappeared: %v %v %d", stamp, cause, e.relay.count())
+	}
+}
+
+func TestAWithdrawnApprovalIsNotMailedAsAPendingDecision(t *testing.T) {
+	e := setupNoticeMail(t)
+	notice := e.pendingNotice(t)
+	if _, err := integration.OwnerConn(t).Exec(context.Background(), `UPDATE approval SET status='rejected',decided_at=now(),decided_by=$1 WHERE id=(SELECT split_part(dedupe_key,':',2)::uuid FROM notice WHERE id=$2)`, e.e.AdminUser, notice); err != nil {
+		t.Fatal(err)
+	}
+	e.work(t, notice)
+	if e.relay.count() != 0 {
+		t.Fatal("withdrawn decision was mailed as current")
 	}
 }

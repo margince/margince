@@ -88,21 +88,18 @@
   description: "Reporting, saved views, filters, export"
 
 # ---------------------------------------------------------------------------
-# Status — an issue nobody ELSE should pick up: it cannot be worked, it is
-# deliberately not now's work, or somebody already has it. The two waiting
-# states sit in the needs-decision yellow, same axis with the paler one calmer;
-# the third is blue because it reports work happening rather than work parked,
-# and a reader scanning a list should not have to read it to tell those apart.
+# Status records unscheduled work, a needed decision or an active owner.
+# Work with a month uses its milestone. Work with no month stays in the backlog.
 # ---------------------------------------------------------------------------
-- name: "status: deferred"
-  color: "FEF2C0"
-  description: "Real and agreed, deliberately not scheduled - no milestone yet. Do not pick it up"
 - name: "status: in progress"
   color: "1D76DB"
   description: "Somebody is working on this - see the assignee. Do not pick it up"
 - name: "status: needs-decision"
   color: "FBCA04"
   description: "Unactionable until someone rules on it - 'decide or decline X'"
+- name: "status: backlog"
+  color: "D4C5F9"
+  description: "Valid work with no committed month; scheduling it removes this label"
 
 # ---------------------------------------------------------------------------
 # Claim — a lock one session takes so the others do not race it.
@@ -120,6 +117,15 @@
 - name: "claim: main-red"
   color: "5319E7"
   description: "A session is fixing this red on main - check before you start, do not open a second"
+
+# ---------------------------------------------------------------------------
+# Release — what the next tag waits for. Milestones are months and say when;
+# this says what a release cannot ship without, and release-tag.yml refuses a
+# plain tag while an open issue wears it.
+# ---------------------------------------------------------------------------
+- name: "release: blocker"
+  color: "C2185B"
+  description: "The next release cannot be tagged until this closes"
 
 # ---------------------------------------------------------------------------
 # Provenance — why the issue exists, which is the one thing nobody can

@@ -39,7 +39,8 @@ func (s *Service) ListSchedules(ctx context.Context, reportID ids.UUID) (crmcont
 			return err
 		}
 		var b bindings
-		rows, err := tx.Query(ctx, "SELECT "+scheduleColumns+" FROM report_schedule WHERE report_id="+b.add(reportID)+" ORDER BY id", b.values...)
+		query := "SELECT " + scheduleColumns + " FROM report_schedule WHERE report_id=" + b.add(reportID) + " ORDER BY id"
+		rows, err := tx.Query(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}
@@ -60,11 +61,7 @@ func (s *Service) reportRevision(ctx context.Context, tx pgx.Tx, report crmcontr
 	if revision < 1 || revision > report.Revision {
 		return crmcontracts.ReportingSelection{}, 0, apperrors.ErrNotFound
 	}
-	var selection crmcontracts.ReportingSelection
-	var framework int64
-	var b bindings
-	err := tx.QueryRow(ctx, "SELECT selection,framework_revision FROM report_definition_revision WHERE report_id="+b.add(report.Id)+" AND revision="+b.add(revision), b.values...).Scan(&selection, &framework)
-	return selection, framework, storedError(err)
+	return s.revisionSelection(ctx, tx, ids.UUID(report.Id), revision)
 }
 
 func (s *Service) validateSchedule(ctx context.Context, tx pgx.Tx, report crmcontracts.ReportingReport, in crmcontracts.ReportingScheduleInput) error {
@@ -74,7 +71,7 @@ func (s *Service) validateSchedule(ctx context.Context, tx pgx.Tx, report crmcon
 			return err
 		}
 		if !configured {
-			return invalid("configure report edition retention before enabling a schedule")
+			return refuse("enabled", "retention_unconfigured", "configure report edition retention before enabling a schedule")
 		}
 	}
 	if report.ArchivedAt != nil {
@@ -88,7 +85,7 @@ func (s *Service) validateSchedule(ctx context.Context, tx pgx.Tx, report crmcon
 		return err
 	}
 	if selection.Scope.Kind == "managed_teams" {
-		return invalid("choose one fixed team, owner or company for a schedule")
+		return refuse("report_revision", "invalid", "choose one fixed team, owner or company for a schedule")
 	}
 	if _, err := s.authority.Scope(ctx, tx, selection.Scope, true); err != nil {
 		return err
@@ -123,11 +120,12 @@ func (s *Service) CreateSchedule(ctx context.Context, reportID ids.UUID, in crmc
 		}
 		var count int
 		var b bindings
-		if err := tx.QueryRow(ctx, "SELECT count(*) FROM report_schedule WHERE report_id="+b.add(reportID), b.values...).Scan(&count); err != nil {
+		query := "SELECT count(*) FROM report_schedule WHERE report_id=" + b.add(reportID)
+		if err := tx.QueryRow(ctx, query, b.values...).Scan(&count); err != nil {
 			return err
 		}
 		if count >= 20 {
-			return invalid("a report supports at most twenty schedules")
+			return refuse("report_id", "limit_reached", "a report supports at most twenty schedules")
 		}
 		calendar, err := s.calendar(ctx, tx)
 		if err != nil {
@@ -163,7 +161,8 @@ func (s *Service) UpdateSchedule(ctx context.Context, id ids.UUID, version int64
 	var out crmcontracts.ReportingSchedule
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var b bindings
-		before, err := scanSchedule(tx.QueryRow(ctx, "SELECT "+scheduleColumns+" FROM report_schedule WHERE id="+b.add(id), b.values...))
+		query := "SELECT " + scheduleColumns + " FROM report_schedule WHERE id=" + b.add(id)
+		before, err := scanSchedule(tx.QueryRow(ctx, query, b.values...))
 		if err != nil {
 			return err
 		}
@@ -172,7 +171,8 @@ func (s *Service) UpdateSchedule(ctx context.Context, id ids.UUID, version int64
 			return err
 		}
 		b = bindings{}
-		before, err = scanSchedule(tx.QueryRow(ctx, "SELECT "+scheduleColumns+" FROM report_schedule WHERE id="+b.add(id)+" FOR UPDATE", b.values...))
+		statement := "SELECT " + scheduleColumns + " FROM report_schedule WHERE id=" + b.add(id) + " FOR UPDATE"
+		before, err = scanSchedule(tx.QueryRow(ctx, statement, b.values...))
 		if err != nil {
 			return err
 		}
@@ -215,7 +215,8 @@ func (s *Service) writeSchedule(ctx context.Context, tx pgx.Tx, schedule crmcont
 
 func (s *Service) pauseReportSchedules(ctx context.Context, tx pgx.Tx, reportID ids.UUID) error {
 	var b bindings
-	rows, err := tx.Query(ctx, "SELECT "+scheduleColumns+" FROM report_schedule WHERE report_id="+b.add(reportID)+" AND enabled FOR UPDATE", b.values...)
+	query := "SELECT " + scheduleColumns + " FROM report_schedule WHERE report_id=" + b.add(reportID) + " AND enabled FOR UPDATE"
+	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return err
 	}
@@ -241,4 +242,12 @@ func scheduleReady(ctx context.Context, tx pgx.Tx) (bool, error) {
 	var ready bool
 	err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM retention_policy WHERE object_type='report_edition' AND action='erase' AND enabled)").Scan(&ready)
 	return ready, err
+}
+
+// editionRetentionDays is the shortest enabled erase policy for editions, the
+// one that removes an edition first.
+func editionRetentionDays(ctx context.Context, tx pgx.Tx) (int, error) {
+	var days int
+	err := tx.QueryRow(ctx, "SELECT min(retain_days) FROM retention_policy WHERE object_type='report_edition' AND action='erase' AND enabled").Scan(&days)
+	return days, err
 }

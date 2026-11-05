@@ -6,13 +6,11 @@
 package compose
 
 import (
-	"errors"
 	"net/http"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -21,40 +19,44 @@ func TestReportingRejectsInvalidDefinitionsWithoutSavingPartialReports(t *testin
 	f := reportingBusiness(t)
 	cases := []struct {
 		name   string
+		field  string
 		change func(*crmcontracts.ReportingReportInput)
 	}{
-		{"empty name", func(in *crmcontracts.ReportingReportInput) { in.Name = " " }},
-		{"empty metrics", func(in *crmcontracts.ReportingReportInput) { in.Selection.Metrics = nil }},
-		{"duplicate metric", func(in *crmcontracts.ReportingReportInput) {
+		{"empty name", "name", func(in *crmcontracts.ReportingReportInput) { in.Name = " " }},
+		{"empty metrics", "selection.metrics", func(in *crmcontracts.ReportingReportInput) { in.Selection.Metrics = nil }},
+		{"duplicate metric", "selection.metrics", func(in *crmcontracts.ReportingReportInput) {
 			in.Selection.Metrics = []crmcontracts.ReportingMetricID{"bookings_won", "bookings_won"}
 		}},
-		{"unknown metric", func(in *crmcontracts.ReportingReportInput) {
+		{"unknown metric", "selection.metrics", func(in *crmcontracts.ReportingReportInput) {
 			in.Selection.Metrics = []crmcontracts.ReportingMetricID{"unknown"}
 		}},
-		{"duplicate chart", func(in *crmcontracts.ReportingReportInput) {
+		{"duplicate chart", "selection.blocks", func(in *crmcontracts.ReportingReportInput) {
 			in.Selection.Blocks = []crmcontracts.ReportingBlockKind{"bookings_trend", "bookings_trend"}
 		}},
-		{"unrelated chart", func(in *crmcontracts.ReportingReportInput) {
+		{"unrelated chart", "selection.blocks", func(in *crmcontracts.ReportingReportInput) {
 			in.Selection.Blocks = []crmcontracts.ReportingBlockKind{"forecast_support"}
 		}},
-		{"invalid close window", func(in *crmcontracts.ReportingReportInput) { in.Selection.CloseWindow = "unknown" }},
-		{"invalid period", func(in *crmcontracts.ReportingReportInput) { in.Selection.Period = "unknown" }},
-		{"invalid target basis", func(in *crmcontracts.ReportingReportInput) { in.Selection.TargetBasis = "unknown" }},
-		{"team without identity", func(in *crmcontracts.ReportingReportInput) { in.Audience = "team" }},
-		{"private with team", func(in *crmcontracts.ReportingReportInput) { in.AudienceTeamId = ptrUUID(f.env.Team1) }},
-		{"company with team", func(in *crmcontracts.ReportingReportInput) {
+		{"custom period without an interval", "selection.interval", func(in *crmcontracts.ReportingReportInput) { in.Selection.Period = "custom" }},
+		{"too many charts", "selection.blocks", func(in *crmcontracts.ReportingReportInput) {
+			in.Selection.Blocks = make([]crmcontracts.ReportingBlockKind, 21)
+		}},
+		{"invalid close window", "selection.close_window", func(in *crmcontracts.ReportingReportInput) { in.Selection.CloseWindow = "unknown" }},
+		{"invalid period", "selection.period", func(in *crmcontracts.ReportingReportInput) { in.Selection.Period = "unknown" }},
+		{"invalid target basis", "selection.target_basis", func(in *crmcontracts.ReportingReportInput) { in.Selection.TargetBasis = "unknown" }},
+		{"team without identity", "audience_team_id", func(in *crmcontracts.ReportingReportInput) { in.Audience = "team" }},
+		{"private with team", "audience_team_id", func(in *crmcontracts.ReportingReportInput) { in.AudienceTeamId = ptrUUID(f.env.Team1) }},
+		{"company with team", "audience_team_id", func(in *crmcontracts.ReportingReportInput) {
 			in.Audience = "workspace"
 			in.AudienceTeamId = ptrUUID(f.env.Team1)
 		}},
-		{"unknown audience", func(in *crmcontracts.ReportingReportInput) { in.Audience = "unknown" }},
+		{"unknown audience", "audience", func(in *crmcontracts.ReportingReportInput) { in.Audience = "unknown" }},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			input := crmcontracts.ReportingReportInput{Name: "Review", Audience: "private", Selection: f.selection()}
 			test.change(&input)
-			if _, err := f.service.CreateReport(f.human, input); !errors.Is(err, apperrors.ErrInvalidArgument) {
-				t.Fatalf("invalid definition: %v", err)
-			}
+			_, err := f.service.CreateReport(f.human, input)
+			requireRefusedField(t, err, test.field)
 		})
 	}
 	reports, err := f.service.ListReports(f.human, nil, 100, false)

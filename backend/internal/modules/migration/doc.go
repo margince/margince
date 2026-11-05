@@ -8,4 +8,6 @@
 // the Writers seam so this module never imports the record modules it
 // feeds (compose injects both). CSV is the connector it serves today
 // (UC-E11-03); Salesforce plugs into the same engine in its own ticket.
+//
+// Tables owned: docs/reference/entity-model/migration.md.
 package migration

@@ -64,7 +64,7 @@ func (n *namedLinks) stageable(ctx context.Context, links []RecordLink) ([]Recor
 	if n.read && slices.Equal(n.seen, links) {
 		return n.unique, n.rows, nil
 	}
-	unique, err := uniqueRecordLinks(links)
+	unique, err := UniqueRecordLinks(links)
 	if err != nil {
 		return nil, nil, err
 	}

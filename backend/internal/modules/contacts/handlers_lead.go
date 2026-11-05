@@ -26,10 +26,17 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 		AiWritten:       params.AiWritten,
 		MinScore:        params.MinScore,
 		Source:          params.Source,
+		Origin:          params.Origin,
 		SLAState:        params.SlaState,
 		Sort:            params.Sort,
 		TagIDs:          uuidArgs(params.TagId),
 		FromContactID:   idArg[ids.ContactKind](params.FromContactId),
+		CompanyFacts: LeadCompanyFactFilters{
+			Industry: enumArg(params.Industry), Country: params.Country, SizeBand: enumArg(params.SizeBand),
+		},
+		Partner: LeadPartnerFilter{
+			CompanyID: idArg[ids.CompanyKind](params.PartnerCompanyId), Accepted: params.PartnerAccepted,
+		},
 	}
 	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
 	if err != nil {
@@ -69,7 +76,7 @@ func (h Handlers) CreateLead(w http.ResponseWriter, r *http.Request, _ crmcontra
 	// reserved mirror: namespace, which is what gives an import its own replay
 	// key. Everyone else gets the client door, an agent carrying that human's
 	// grants included.
-	mapInput := leadCreateInput
+	mapInput := LeadCreationInput
 	if auth.DeclaredImporter(r.Context()) {
 		mapInput = leadCreateInputFromImporter
 	}
@@ -188,20 +195,7 @@ func (h Handlers) PromoteLead(w http.ResponseWriter, r *http.Request, id crmcont
 		return
 	}
 
-	in := PromoteLeadInput{Trigger: string(req.Trigger)}
-	if req.Evidence != nil {
-		in.EvidenceNote = req.Evidence.Note
-		in.EvidenceActivityID = idArg[ids.ActivityKind](req.Evidence.ActivityId)
-	}
-	if req.Deal != nil {
-		in.Deal = &QualifyDealInput{
-			PipelineID: uuidPtrToIDs(req.Deal.PipelineId), StageID: uuidPtrToIDs(req.Deal.StageId),
-			AmountMinor: req.Deal.AmountMinor, Currency: req.Deal.Currency,
-		}
-		if req.Deal.Name != nil {
-			in.Deal.Name = *req.Deal.Name
-		}
-	}
+	in := PromotionRequestInput(req)
 
 	out, err := h.store.QualifyLead(r.Context(), pathID[ids.LeadKind](id), in)
 	if err != nil {
@@ -214,6 +208,20 @@ func (h Handlers) PromoteLead(w http.ResponseWriter, r *http.Request, id crmcont
 	})
 }
 
+// LinkLeadCompany serves POST /leads/{id}/link-company.
+func (h Handlers) LinkLeadCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.LinkLeadCompanyRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	out, err := h.store.LinkLeadCompany(r.Context(), pathID[ids.LeadKind](id), ids.From[ids.CompanyKind](ids.UUID(req.CompanyId)))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // GetLeadSettings serves GET /leads/settings.
 func (h Handlers) GetLeadSettings(w http.ResponseWriter, r *http.Request) {
 	out, err := h.store.GetLeadSettings(r.Context())
@@ -221,6 +229,7 @@ func (h Handlers) GetLeadSettings(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, r, err)
 		return
 	}
+	out.Locks = h.settingLocks(LeadSettingsSurface()...)
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
@@ -250,13 +259,15 @@ func (h Handlers) UpdateLeadSettings(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, r, err)
 		return
 	}
+	out.Locks = h.settingLocks(LeadSettingsSurface()...)
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // PreviewLeadPromotion serves GET /leads/{id}/promote-preview — what
 // promotion would do, without doing it (ADR-0119/A170).
-func (h Handlers) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	preview, err := h.store.PreviewLeadPromotion(r.Context(), pathID[ids.LeadKind](id))
+func (h Handlers) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.PreviewLeadPromotionParams) {
+	options := PromotionPreviewOptions{DealsCursor: params.DealsCursor, CreateCompany: params.CreateCompany != nil && *params.CreateCompany}
+	preview, err := h.store.PreviewLeadPromotionWithOptions(r.Context(), pathID[ids.LeadKind](id), options)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

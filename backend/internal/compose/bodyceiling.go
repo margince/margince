@@ -8,7 +8,8 @@ import (
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
@@ -32,7 +33,7 @@ import (
 // Paths are as the generated router mounts them, under the /v1 prefix the
 // chassis sees. TestEveryUploadRouteIsDeclared derives the expected set from
 // the contract, so a new upload route cannot be added without appearing here.
-func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
+func uploadCeilings(limits UploadLimits) map[string]int64 {
 	return map[string]int64{
 		"/v1/attachments":             limits.Attachment,     // uploadAttachment
 		"/v1/imports/sources":         limits.CSVImport,      // uploadImportSource
@@ -40,8 +41,10 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 		// A .vcf is a text file of a few hundred bytes per card, so it rides
 		// the CSV import's ceiling rather than earning an operator dial of its
 		// own — the two are the same kind of upload, a delimited address book.
-		"/v1/contacts/vcard-import":            limits.CSVImport,         // importVCards
-		"/v1/knowledge/corpora/{id}/documents": limits.KnowledgeDocument, // uploadCorpusDocument
+		"/v1/contacts/vcard-import": limits.CSVImport, // importVCards
+		// One photo a model reads, so the reading's image bound decides it.
+		"/v1/contacts/card-photos":             contacts.CardPhotoUploadBytes, // importCardPhoto
+		"/v1/knowledge/corpora/{id}/documents": limits.KnowledgeDocument,      // uploadCorpusDocument
 		// A company mark, and the only ceiling here an operator cannot move.
 		// The others bound what a workspace ACCUMULATES — attachments, imports,
 		// corpora — where an installation's appetite is its own business. This
@@ -55,6 +58,11 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 		// is the same kind of upload of the same company's face, so a second
 		// number here would be a difference with no reason behind it.
 		"/v1/company/logo/icon": companyLogoUploadBytes, // uploadCompanyLogoIcon
+		// A legal entity's mark, through the same decode as the company's.
+		"/v1/legal-entities/{id}/logo": companyLogoUploadBytes, // uploadLegalEntityLogo
+		// A website form post. Its contract takes multipart because a browser's
+		// FormData sends it. File parts are skipped, so the bound is the form's.
+		"/v1/public/forms/{form_key}": webforms.MaxBody, // submitWebForm
 	}
 }
 
@@ -69,7 +77,8 @@ func jsonCeilings() map[string]int64 {
 	return map[string]int64{"/mcp": agents.MaxMCPRequestBytes}
 }
 
-// bodyCeilingFor is the chassis's BodyCeiling for this composition.
+// bodyCeilingFor is the chassis's BodyCeiling for this composition, and the bound
+// a tool's in-process call rides (viewDoor.bodyCeiling).
 //
 // THREE conditions, all required, because each closes a different door: the
 // method, so a GET cannot carry a wide body; the route, so only a declared

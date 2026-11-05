@@ -36,7 +36,7 @@ seeds:
       # gemini-3.6-flash thinks at its own default — measured at 4–8k reasoning
       # tokens against the ~8k output cap, which cut one call in eight short.
       premium:     { provider: gemini, model: gemini-3.6-flash, thinking_level: low }
-      frontier:    { provider: gemini, model: gemini-3.1-pro-preview }
+      frontier:    { provider: gemini, model: gemini-3.6-flash, thinking_level: low }
     # The embed lane rides the SAME provider as the tiers above, so this preset
     # needs one credential rather than two.
     #

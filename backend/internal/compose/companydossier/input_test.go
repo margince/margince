@@ -28,7 +28,7 @@ func TestTheInputCarriesTheNameOutsideWhatTheModelAndTheCacheSee(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	for reader, encoded := range map[string]string{"fingerprint": string(fingerprinted), "model": encodeInput(in)} {
+	for reader, encoded := range map[string]string{"fingerprint": string(fingerprinted), "model": encodeInput(in, "en")} {
 		if strings.Contains(encoded, "Acme") {
 			t.Errorf("the name reached the JSON the %s reads: %s", reader, encoded)
 		}
@@ -40,7 +40,7 @@ func TestTheInputCarriesTheNameOutsideWhatTheModelAndTheCacheSee(t *testing.T) {
 // own. A key spelled any other way is a type the grounding filter never matches.
 func TestTheModelReadsEachRecordUnderTheEntityTypeItCites(t *testing.T) {
 	var keyed map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(encodeInput(Input{})), &keyed); err != nil {
+	if err := json.Unmarshal([]byte(encodeInput(Input{}, "en")), &keyed); err != nil {
 		t.Fatalf("the model input is not a JSON object: %v", err)
 	}
 	want := map[string]bool{citeProfileField: true, citeFact: true}

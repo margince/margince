@@ -107,11 +107,12 @@ func TestPromoteRacingAContactMergeBothComplete(t *testing.T) {
 	ctx := context.Background()
 	source := e.createContactWithEmail(t, "Source Contact", "racing@example.test")
 	target := e.mergeTargetAfter(t, source)
-	lead, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{FromContactID: &source, Source: "manual"})
-	if err != nil {
-		t.Fatalf("create the lead worked from the source: %v", err)
+	leadID := seedHistoricalLeadWithEmail(e.ctx, t, e.store, CreateLeadInput{
+		FullName: new("Historic lead"), Source: "manual",
+	}, "racing@example.test")
+	if _, err := e.owner.Exec(ctx, `UPDATE lead SET from_contact_id = $2 WHERE id = $1`, leadID, source); err != nil {
+		t.Fatalf("restore the historic contact link: %v", err)
 	}
-	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
 
 	holder, err := e.owner.Begin(ctx)
 	if err != nil {

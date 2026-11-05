@@ -29,14 +29,14 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // vcardSource is the provenance every row this import writes carries.
-const vcardSource = "vcard_import"
+const vcardSource = captureorigin.VCardSource
 
 // vcardFieldStated marks a field this import answered. The image says WHICH
 // field moved and never what it moved to: audit_log is append-only, and this
@@ -58,8 +58,11 @@ const (
 	// close enough to be sure. The card is not written; the candidate is
 	// named so a human can open it.
 	VCardNeedsReview VCardOutcome = "needs_review"
-	// VCardSkipped means the card could not be written: it states no name, or
-	// it matches a contact this caller may not write.
+	// VCardProposed means nobody matched a card a model read off a photo. It is
+	// not written either: it waits on an approval, with no candidate to open.
+	VCardProposed VCardOutcome = "proposed"
+	// VCardSkipped means the card could not be written: no name, a sending
+	// system's address, or a match this caller may not write.
 	VCardSkipped VCardOutcome = "skipped"
 )
 
@@ -73,6 +76,12 @@ type VCardResult struct {
 	ContactID *ids.ContactID
 	// Reason says why a card was skipped, in words a reader can act on.
 	Reason string
+	// LeadID is the live lead holding a skipped card's address or profile,
+	// when the caller may read it: convert it instead.
+	LeadID *ids.LeadID
+	// Fields is what the import did with each field, for a card it created
+	// or updated; nil for every other outcome.
+	Fields []VCardField
 }
 
 // ImportVCards writes every card in one file and reports what became of each.
@@ -143,6 +152,10 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		result.Reason = "the card states no name"
 		return result, nil
 	}
+	if cardNamesASendingSystem(entry) {
+		result.Outcome, result.Reason = VCardSkipped, vcardMachineAddress
+		return result, nil
+	}
 
 	// The ladder's report about THIS card, raised after the transaction below.
 	var split *LaneConflict
@@ -159,8 +172,19 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		// records this card holds no subject lock on, and taking one here
 		// would order this writer against the eraser the wrong way round.
 		split = decision.Conflict
-		switch decision.Decision {
-		case DecisionExactCollision:
+		// The review match this caller may be shown, or none. A hidden match
+		// leaves the card's outcome as it would be without that record. The
+		// create below still files the pair, through the create's own writer.
+		var shown *ReviewMatch
+		if decision.Decision.queuesReview() {
+			if shown, err = firstVisibleReview(ctx, tx, decision); err != nil {
+				return err
+			}
+		}
+		switch {
+		case entry.ModelRead && decision.Decision == DecisionExactCollision:
+			return skipModelReadMatch(ctx, tx, decision.ContactID, &result)
+		case decision.Decision == DecisionExactCollision:
 			// The card names somebody who exists, so the caller's authority
 			// over THAT ROW decides whether this card may touch it — the
 			// contact:create grant that let them start the import says nothing
@@ -169,8 +193,8 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 			// Reported as a skip rather than skipped silently: an import that
 			// quietly leaves one card out is an import nobody can audit, and
 			// the reader can act on "you may not write this one".
-			return s.updateMatchedByCard(ctx, tx, decision.ContactID, entry, source, &result)
-		case DecisionFuzzyReview, DecisionNameCollisionReview:
+			return s.updateMatchedByCard(ctx, tx, decision, entry, source, &result)
+		case shown != nil:
 			// Named, not merged, and not created either: creating beside a
 			// near-match is how a file of forty cards quietly doubles a
 			// contact list.
@@ -195,15 +219,10 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 				return nil
 			}
 			result.Outcome = VCardNeedsReview
-			if err := auth.EnsureVisible(ctx, tx, entityContact, decision.ContactID.UUID); err != nil {
-				if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-					result.Reason = "this card resembles an existing contact"
-					return nil
-				}
-				return fmt.Errorf("probing visibility of the candidate: %w", err)
-			}
-			result.ContactID = &decision.ContactID
+			result.ContactID = &shown.ContactID
 			return nil
+		case entry.ModelRead:
+			return proposeModelReadCard(ctx, tx, source, &result)
 		default:
 			return s.createFromCard(ctx, tx, entry, source, &result)
 		}
@@ -216,13 +235,14 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		return result, nil
 	}
 	if err != nil {
-		return VCardResult{}, fmt.Errorf("contacts: importing card %d: %w", index+1, err)
+		skipped, err := s.skipHeldCard(ctx, err, index, result.FullName, !source.IsZero())
+		if err != nil {
+			return VCardResult{}, fmt.Errorf("contacts: importing card %d: %w", index+1, err)
+		}
+		return skipped, nil
 	}
-	// After the card's transaction, and a failure does not undo the card or
-	// stop the file: the card is committed by here, and this function's caller
-	// aborts the whole run on an error — a file of forty cards with one
-	// unraisable review would import nothing, against the per-card design
-	// ImportVCards states. raiseCardSplit carries the rest of the reasoning.
+	// After the card's transaction, and a failure undoes neither the card nor
+	// the file. raiseCardSplit carries the reasoning.
 	if split != nil {
 		s.raiseCardSplit(ctx, *split)
 	}
@@ -250,6 +270,12 @@ func vcardCandidate(entry VCardEntry) ContactCandidate {
 	return candidate
 }
 
+// VCardContactName is the name a card's contact is created with. An approval
+// that shows a card shows this, so the decider sees the name that is written.
+func VCardContactName(entry VCardEntry) string {
+	return strings.TrimSpace(entry.FullName)
+}
+
 // ValidateVCardContacts answers whether a reviewed card's addresses and
 // numbers are ones the create will accept, without writing anything.
 //
@@ -268,8 +294,9 @@ func ValidateVCardContacts(entry VCardEntry) error {
 
 func contactFromVCard(entry VCardEntry) CreateContactInput {
 	contact := CreateContactInput{
-		FullName: strings.TrimSpace(entry.FullName),
-		Source:   vcardSource,
+		FullName:      VCardContactName(entry),
+		Source:        vcardSource,
+		auditEvidence: map[string]any{auditKeySource: vcardSource},
 	}
 	if title := strings.TrimSpace(entry.Title); title != "" {
 		contact.Title = &title
@@ -289,12 +316,10 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 			contact.Social = map[string]any{profileURLField: normalized}
 		}
 	}
-	// The card's postal address, as the one line it was reduced to. Parsing a
-	// field and then dropping it is the quieter defect: a reader who sees an
-	// address on the card they just imported expects to find it on the record.
-	if street := strings.TrimSpace(entry.Address); street != "" {
-		contact.Address = &crmcontracts.Address{Line1: &street}
-	}
+	// Parsing a field and then dropping it is the quieter defect. A reader who
+	// sees an address on the card expects to find it on the record.
+	contact.Employer = EmployerChoice{CompanyName: new(entry.Company), Role: contact.Title, Source: vcardSource}
+	contact.Address = vcardRecordAddress(entry)
 	for i, email := range entry.Emails {
 		contact.Emails = append(contact.Emails, ContactEmailInput{
 			Email:     strings.ToLower(strings.TrimSpace(email.Value)),
@@ -318,62 +343,6 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 	return contact
 }
 
-// attachVCardEmployer creates the company the card names and the employment
-// edge to it. A card with no COMPANY leaves the contact unemployed, which is a
-// contact.
-func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) error {
-	name := strings.TrimSpace(entry.Company)
-	if name == "" {
-		return nil
-	}
-	companyID, err := s.employerByName(ctx, tx, name)
-	if err != nil {
-		return err
-	}
-	role := strings.TrimSpace(entry.Title)
-	edge := CreateRelationshipInput{
-		Kind:      employmentKind,
-		ContactID: &contactID,
-		CompanyID: companyID,
-		Source:    vcardSource,
-	}
-	if role != "" {
-		edge.Role = &role
-	}
-	_, err = s.CreateRelationshipTx(ctx, tx, edge)
-	return err
-}
-
-// employerByName finds the company the card names, or creates it.
-//
-// Without the lookup, two cards from the same company create two companies:
-// every employee of Acme arrives with `ORG:Acme`, and a create-only path turns
-// a ten-card export into ten Acmes that a human then has to merge.
-func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*ids.CompanyID, error) {
-	var existing ids.CompanyID
-	err := tx.QueryRow(ctx, `
-		SELECT id FROM company
-		 WHERE lower(display_name) = lower($1) AND archived_at IS NULL AND merged_into_id IS NULL
-		 ORDER BY created_at
-		 LIMIT 1`, name).Scan(&existing)
-	switch {
-	case err == nil:
-		return &existing, nil
-	case errors.Is(err, pgx.ErrNoRows):
-		company, createErr := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
-			DisplayName: name,
-			Source:      vcardSource,
-		}, CustomColumns{})
-		if createErr != nil {
-			return nil, createErr
-		}
-		made := ids.From[ids.CompanyKind](ids.UUID(company.Id))
-		return &made, nil
-	default:
-		return nil, fmt.Errorf("looking for the card's employer: %w", err)
-	}
-}
-
 // fillFromVCard writes the card's stated fields onto a contact who already
 // exists, by the same recency rule the signature pass obeys.
 //
@@ -388,10 +357,36 @@ func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*id
 // import it is the most honest thing available. That also makes a card the
 // newest statement on the record, which is the right answer — somebody is
 // holding it and typing it in.
-func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) error {
+func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) (cardStatement, error) {
+	card, err := readyObservedCard(ctx, tx, entry)
+	if err != nil {
+		return cardStatement{}, err
+	}
+	stated := cardFields(entry)
+	names := make([]string, 0, len(stated)+1)
+	for _, f := range stated {
+		names = append(names, f.name)
+	}
+	corrected, err := s.standingCorrections(ctx, tx, contactID, append(names, fieldPhone))
+	if err != nil {
+		return cardStatement{}, err
+	}
+	corrected, err = keptFromAnAgent(ctx, tx, contactID, names, corrected)
+	if err != nil {
+		return cardStatement{}, err
+	}
+	st, err := applyObservedCard(ctx, tx, contactID, card, corrected)
+	if err != nil {
+		return cardStatement{}, err
+	}
+	return st, auditCardFields(ctx, tx, contactID, st.moved())
+}
+
+// readyObservedCard is the card as a dated statement by the signed-in importer.
+func readyObservedCard(ctx context.Context, tx pgx.Tx, entry VCardEntry) (observedCard, error) {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return err
+		return observedCard{}, err
 	}
 	// The card itself is the evidence, and there is no page to quote: the
 	// snippet is what the card stated, which is what an Art. 15 answer has to
@@ -420,16 +415,18 @@ func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 	if entry.Revised != nil {
 		var now time.Time
 		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
-			return fmt.Errorf("contacts: dating the card against the clock: %w", err)
+			return observedCard{}, fmt.Errorf("contacts: dating the card against the clock: %w", err)
 		}
 		if !entry.Revised.After(now) {
 			card.ObservedAt = *entry.Revised
 		}
 	}
-	applied, err := applyObservedCard(ctx, tx, contactID, card)
-	if err != nil {
-		return err
-	}
+	return card, nil
+}
+
+// auditCardFields records the fields a card moved on a contact, with one
+// audit row and one event.
+func auditCardFields(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, applied []string) error {
 	if len(applied) == 0 {
 		// The card said nothing this record did not already hold. There is no
 		// change to audit, and an audit row with an empty after-image would
@@ -487,7 +484,7 @@ func (s *Store) CreateFromVCardReviewTx(ctx context.Context, tx pgx.Tx, entry VC
 		return ids.ContactID{}, fmt.Errorf("contacts: creating the reviewed card's contact: %w", err)
 	}
 	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	if err := s.attachVCardEmployer(ctx, tx, created, entry); err != nil {
+	if _, err := s.completeCardCreate(ctx, tx, contact, entry); err != nil {
 		return ids.ContactID{}, fmt.Errorf("contacts: attaching the reviewed card's employer: %w", err)
 	}
 	return created, nil

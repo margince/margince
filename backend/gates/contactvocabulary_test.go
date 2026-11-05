@@ -193,9 +193,22 @@ func recordedCriteria() []string {
 // point: a waiver nobody had to justify is how a second spelling survives
 // review for a year.
 var retired = gatekit.Waive(map[string]string{
+	"backend/internal/compose/meetingbrief/coachingcopy.go":  "German human-role wording names the sales colleague and accountable actor, not the contact record type",
+	"backend/internal/compose/meetingbrief/advancecopy.go":   "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/meetingbrief/objectivecopy.go": "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/reportingdefinitioncopy.go":    "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/reportinglabelcopy.go":         "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/modules/reporting/statuscopy.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/shared/kernel/dealrole/words.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
+
+	"backend/internal/modules/contacts/reachfunction.go":      "\"head of people\" is an HR job title the reach card sorts LinkedIn connections by, not the record type",
+	"backend/internal/modules/contacts/reachfunction_test.go": "the same HR job titles, as the test table that pins them",
+
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
 	"backend/migrations/custom": "the same, one namespace over",
+	"backend/migrationrewrites.txt": "each line opens with a shipped migration's file name, verbatim, " +
+		"and a shipped migration is never renamed",
 	"backend/migrations/testdata/rbac_baseline_era_defaults.json": "pinned byte for byte to the " +
 		"baseline commit by rbacbaselineerafixture_test.go; it IS the matrix the server seeded then",
 	"backend/migrations/enginebackfill_integration_test.go": "it REPLAYS a shipped migration, " +
@@ -204,7 +217,6 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/contactretentionscope_integration_test.go": "it seeds the retention rows " +
 		"an installation stored under the retired name, which is what the migration it replays exists " +
 		"to carry over",
-	"CHANGELOG.md": "entries say what they said when they were written",
 	"LICENSE": "the licence defines a Seat as a natural person, a legal term the licensor " +
 		"chose, and a licence is not restyled by a vocabulary rule",
 	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
@@ -227,22 +239,28 @@ var retired = gatekit.Waive(map[string]string{
 	// Settings → People is the SEATS group, beside Company and Sales. It heads
 	// the pages about colleagues with a licence, and it is the one surface in
 	// this tree where the plural still means the humans who work here.
-	"frontend/src/screens/settingscatalog.ts":              "the seats settings group",
-	"frontend/src/app/shell.stories.tsx":                   "the seats settings group",
-	"frontend/src/screens/settings-chrome.test.tsx":        "the seats settings group",
-	"frontend/src/screens/license.stories.tsx":             "a page under the seats settings group",
-	"frontend/src/screens/licenseholder.stories.tsx":       "a page under the seats settings group",
-	"frontend/src/screens/roles-detail.stories.tsx":        "a page under the seats settings group",
-	"frontend/src/screens/roles-drawer.stories.tsx":        "a page under the seats settings group",
-	"frontend/src/screens/roles-settings.stories.tsx":      "a page under the seats settings group",
-	"frontend/src/screens/team-dialogs.stories.tsx":        "a page under the seats settings group",
-	"frontend/src/screens/users-access.stories.tsx":        "a page under the seats settings group",
-	"frontend/src/screens/users-admin.stories.tsx":         "a page under the seats settings group",
-	"frontend/src/screens/users-invite-form.stories.tsx":   "a page under the seats settings group",
-	"frontend/src/screens/users-memberverbs.stories.tsx":   "a page under the seats settings group",
-	"frontend/src/screens/users-password-link.stories.tsx": "a page under the seats settings group",
-	"frontend/src/screens/users-rolecell.stories.tsx":      "a page under the seats settings group",
-	"frontend/src/screens/share.tsx": "the share target kind: a colleague with a seat, or a team " +
+	"frontend/src/lib/settingscatalog.ts":                            "the seats settings group",
+	"frontend/src/lib/settingscatalog.business.ts":                   "the seats settings group",
+	"frontend/src/app/shell.stories.tsx":                             "the seats settings group",
+	"frontend/src/features/settings/settings-chrome.test.tsx":        "the seats settings group",
+	"frontend/src/features/settings/license.stories.tsx":             "a page under the seats settings group",
+	"frontend/src/features/settings/licenseholder.stories.tsx":       "a page under the seats settings group",
+	"frontend/src/features/settings/roles-detail.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/features/settings/roles-drawer.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/features/settings/roles-settings.stories.tsx":      "a page under the seats settings group",
+	"frontend/src/features/settings/sharedmergereviews.stories.tsx":  "a page under the seats settings group",
+	"frontend/src/features/settings/team-dialogs.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/features/settings/users-access.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/components/roster.stories.tsx":                     "the member roster under the seats settings group",
+	"frontend/src/features/settings/users-edit.stories.tsx":          "a page under the seats settings group",
+	"frontend/src/features/settings/users-entitycell.stories.tsx":    "a page under the seats settings group",
+	"frontend/src/features/settings/users-retire.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/features/settings/users-admin.stories.tsx":         "a page under the seats settings group",
+	"frontend/src/features/settings/users-invite-form.stories.tsx":   "a page under the seats settings group",
+	"frontend/src/features/settings/users-memberverbs.stories.tsx":   "a page under the seats settings group",
+	"frontend/src/features/settings/users-password-link.stories.tsx": "a page under the seats settings group",
+	"frontend/src/features/settings/users-rolecell.stories.tsx":      "a page under the seats settings group",
+	"frontend/src/components/share.parts.tsx": "the share target kind: a colleague with a seat, or a team " +
 		"of them — never this record",
 	"docs/handbook/settings.md": "it names the seats settings group, which is the heading a " +
 		"reader navigating Settings actually sees",

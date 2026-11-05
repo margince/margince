@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -38,8 +39,9 @@ import (
 // "promote this lead" and "promote this lead because they replied" are not the
 // same decision. The evidence note does not: nothing here reads it.
 type PromoteLeadCommand struct {
-	LeadID  ids.UUID
-	Trigger string
+	DealChoice datasource.PromotionDealChoice
+	LeadID     ids.UUID
+	Trigger    string
 }
 
 // NewPromoteLeadCall binds one promotion to the resolver that answers for it,
@@ -78,6 +80,9 @@ func (r *promoteLeadResolver) Subject(ctx context.Context, cmd PromoteLeadComman
 // no reply must never even reach the inbox — and then the lead itself, the
 // same two ways patchResolver.Guards refuses its own target.
 func (r *promoteLeadResolver) Guards(ctx context.Context, cmd PromoteLeadCommand) error {
+	if err := datasource.ValidatePromotionDeals(datasource.PromotionDealSelection{New: cmd.DealChoice.Deal != nil, Existing: cmd.DealChoice.ExistingDealID != nil}); err != nil {
+		return err
+	}
 	if err := requireGenuineTrigger(cmd.Trigger); err != nil {
 		return err
 	}
@@ -120,15 +125,24 @@ func genuineTriggerNames() []string {
 // and the tool's own arguments carry nothing else either.
 type DisqualifyLeadCommand struct {
 	LeadID ids.UUID
+	// ReasonID is read by Guards, so a reason no rep could pick is refused before
+	// a user is asked to release the call.
+	ReasonID *ids.UUID
+}
+
+// DisqualifyReasons answers whether a reason is one a rep could pick.
+type DisqualifyReasons interface {
+	CheckDisqualifyReason(ctx context.Context, id ids.UUID) error
 }
 
 // NewDisqualifyLeadCall binds one retirement to the resolver that answers for
 // it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewDisqualifyLeadCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd DisqualifyLeadCommand) GovernedCall {
+func NewDisqualifyLeadCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, reasons DisqualifyReasons, cmd DisqualifyLeadCommand) GovernedCall {
 	return bind[DisqualifyLeadCommand](&disqualifyLeadResolver{
 		language: language,
+		reasons:  reasons,
 		lead:     anchoredRecord{records: records, entityType: datasource.EntityLead},
 	}, cmd)
 }
@@ -136,6 +150,7 @@ func NewDisqualifyLeadCall(records datasource.SystemOfRecordProvider, language b
 type disqualifyLeadResolver struct {
 	lead     anchoredRecord
 	language baselanguage.Resolver
+	reasons  DisqualifyReasons
 }
 
 func (r *disqualifyLeadResolver) Subject(ctx context.Context, cmd DisqualifyLeadCommand) (StageInfo, error) {
@@ -152,7 +167,13 @@ func (r *disqualifyLeadResolver) Subject(ctx context.Context, cmd DisqualifyLead
 }
 
 func (r *disqualifyLeadResolver) Guards(ctx context.Context, cmd DisqualifyLeadCommand) error {
-	return r.lead.refuse(ctx, cmd.LeadID)
+	if err := r.lead.refuse(ctx, cmd.LeadID); err != nil {
+		return err
+	}
+	if cmd.ReasonID == nil || r.reasons == nil {
+		return nil
+	}
+	return r.reasons.CheckDisqualifyReason(ctx, *cmd.ReasonID)
 }
 
 // DemoteLeadCommand is one reversal of a promotion, whichever door asked for
@@ -174,17 +195,17 @@ type DemoteLeadCommand struct {
 func NewDemoteLeadCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd DemoteLeadCommand) GovernedCall {
 	return bind[DemoteLeadCommand](&demoteLeadResolver{
 		language: language,
-		lead:     anchoredRecord{records: records, entityType: datasource.EntityLead},
+		records:  records,
 	}, cmd)
 }
 
 type demoteLeadResolver struct {
-	lead     anchoredRecord
+	records  datasource.SystemOfRecordProvider
 	language baselanguage.Resolver
 }
 
 func (r *demoteLeadResolver) Subject(ctx context.Context, cmd DemoteLeadCommand) (StageInfo, error) {
-	rec, err := r.lead.row(ctx, cmd.LeadID)
+	rec, err := r.row(ctx, cmd.LeadID)
 	if err != nil {
 		return StageInfo{}, err
 	}
@@ -199,13 +220,25 @@ func (r *demoteLeadResolver) Subject(ctx context.Context, cmd DemoteLeadCommand)
 // Guards refuses a reversal with no reason before it can reach the inbox, and
 // then the lead itself, the same two ways the other lead resolvers do.
 func (r *demoteLeadResolver) Guards(ctx context.Context, cmd DemoteLeadCommand) error {
-	if err := requireDemotionReason(cmd.Reason); err != nil {
+	if err := RequireDemotionReason(cmd.Reason); err != nil {
 		return err
 	}
-	return r.lead.refuse(ctx, cmd.LeadID)
+	rec, err := r.row(ctx, cmd.LeadID)
+	if err != nil {
+		return err
+	}
+	return refuseStagingElsewhere(rec)
 }
 
-// requireDemotionReason admits a reversal that says why.
+func (r *demoteLeadResolver) row(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	reader, ok := r.records.(datasource.LeadReversalReaderV2)
+	if !ok {
+		return datasource.Record{}, apperrors.ErrUnsupportedBySoR
+	}
+	return reader.ReadLeadForReversal(ctx, id)
+}
+
+// RequireDemotionReason admits a reversal that says why.
 //
 // One function for both doors, for the reason requireGenuineTrigger states: the
 // staging path asks it through Guards and the execution path through
@@ -213,7 +246,7 @@ func (r *demoteLeadResolver) Guards(ctx context.Context, cmd DemoteLeadCommand) 
 // The contract requires the field; asking here is what makes a caller who omits
 // it read a refusal about the reversal rather than a schema complaint from the
 // store.
-func requireDemotionReason(reason string) error {
+func RequireDemotionReason(reason string) error {
 	if strings.TrimSpace(reason) != "" {
 		return nil
 	}
@@ -380,6 +413,8 @@ func (r *advanceDealResolver) Subject(ctx context.Context, cmd AdvanceDealComman
 		TargetType:    string(datasource.EntityDeal),
 		TargetID:      cmd.DealID,
 		TargetVersion: &rec.Version,
+		CoTargetType:  "stage",
+		CoTargetID:    cmd.ToStageID,
 		Summary:       dealMoveSummary(ctx, summaryIn(ctx, r.language), r.stages, rec, semantic),
 	}, nil
 }

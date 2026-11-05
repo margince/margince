@@ -9,7 +9,7 @@ import { Breadcrumb } from "./breadcrumb";
  * The trail that says where the reader is and how they got here.
  *
  * Its main caller is the TOP BAR (app/topbar.tsx), where it says where the
- * session is; the booking page's head (screens/booking-invite.tsx) draws one
+ * session is; the booking page's head (features/booking/booking-invite.tsx) draws one
  * too. The frames here render the primitive on its own ground, because they are
  * about the rules rather than the strip. Shell/Top bar frames the strip, where
  * the trail shrinks against a real track edge.

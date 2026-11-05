@@ -25,7 +25,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // seedWaitingOfKind writes one inbound message of the given kind, filed under a
@@ -53,6 +55,13 @@ func seedWaitingOfKind(
 			VALUES ($1, 'from', 'dana@acme.example')`, id); err != nil {
 			return err
 		}
+		// Addressed to one seat, so somebody answers for it: mail nobody
+		// answers for is not waiting work.
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, role, address)
+			SELECT $1, 'to', lower(email) FROM app_user WHERE id = $2`, id, e.AdminUser); err != nil {
+			return err
+		}
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_link (activity_id, entity_type, contact_id)
 			VALUES ($1, 'contact', $2)`, id, contact)
@@ -60,7 +69,16 @@ func seedWaitingOfKind(
 	}); err != nil {
 		t.Fatalf("seeding a waiting %s: %v", kind, err)
 	}
+	confirmWaitingRequest(t, e, id, at)
 	return id
+}
+
+func confirmWaitingRequest(t *testing.T, e *integration.Env, id ids.UUID, at time.Time) {
+	t.Helper()
+	judge := principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:owed_verdict", Permissions: principal.Permissions{RowScope: principal.RowScopeAll}})
+	if applied, err := e.Activities.SetOwedVerdict(judge, id, activities.OwedVerdictAsksUs, "test-rules", at); err != nil || !applied {
+		t.Fatalf("confirming waiting request: applied=%t err=%v", applied, err)
+	}
 }
 
 func waitingOf(rows []attention.WaitingCustomer, id ids.UUID) *attention.WaitingCustomer {
@@ -87,7 +105,7 @@ func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
 		store: activities.NewStore(e.DB()),
 		now:   func() time.Time { return asOf },
 	}
-	rows, _, err := seam.Unanswered(e.Admin(), asOf)
+	rows, _, err := seam.Unanswered(e.Admin(), asOf, attention.WaitingFor{})
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}
@@ -132,7 +150,7 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 		store: activities.NewStore(e.DB()),
 		now:   func() time.Time { return asOf },
 	}
-	before, _, err := seam.Unanswered(e.Admin(), asOf)
+	before, _, err := seam.Unanswered(e.Admin(), asOf, attention.WaitingFor{})
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}
@@ -152,7 +170,7 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 	// missing permission. A reader who could not have seen it either way would
 	// pass this test while proving nothing about the audience.
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AdminPerms)
-	after, _, err := seam.Unanswered(colleague, asOf)
+	after, _, err := seam.Unanswered(colleague, asOf, attention.WaitingFor{})
 	if err != nil {
 		t.Fatalf("colleague reading who is waiting: %v", err)
 	}
@@ -163,20 +181,17 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 
 // seedMachineFlood writes count inbound mails from a relay domain, each its own
 // thread and each filed under one contact so it clears the lane's link bar.
-//
-// One statement rather than count of them: the point of the fixture is the
-// scan cap, so it is two hundred rows by construction and a per-row round trip
-// would spend the test's whole budget on seeding.
+// Manually logged mail still reaches the seam before machine senders are removed.
 func seedMachineFlood(t *testing.T, e *integration.Env, contact ids.UUID, count int, from time.Time) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			WITH flooded AS (
 			  INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
-			                        source, captured_by, audience, occurred_at, thread_key)
+			                        source, captured_by, audience, occurred_at, thread_key, sender_is_machine)
 			  SELECT gen_random_uuid(), 'email', 'Build #'||n||' passed', 'Nothing here needs you.',
-			         'inbound', 'gmail', 'flood-'||n, 'gmail:flood-'||n, 'connector:gmail',
-			         'workspace', $1::timestamptz + make_interval(mins => n), 'flood-thread-'||n
+			         'inbound', 'gmail', 'flood-'||n, 'gmail:flood-'||n, $4,
+			         'workspace', $1::timestamptz + make_interval(mins => n), 'flood-thread-'||n, $5
 			    FROM generate_series(1, $2::int) AS n
 			  RETURNING id
 			), wrote AS (
@@ -186,7 +201,8 @@ func seedMachineFlood(t *testing.T, e *integration.Env, contact ids.UUID, count 
 			)
 			INSERT INTO activity_link (activity_id, entity_type, contact_id)
 			SELECT activity_id, 'contact', $3::uuid FROM wrote`,
-			from, count, contact)
+			from, count, contact, "user:"+e.AdminUser.String(),
+			mailidentity.InboundFromSendingSystem("email", "inbound", "bounces@sendgrid.net"))
 		return err
 	}); err != nil {
 		t.Fatalf("seeding %d machine mails: %v", count, err)
@@ -197,7 +213,7 @@ func seedMachineFlood(t *testing.T, e *integration.Env, contact ids.UUID, count 
 // customer off the queue.
 //
 // The store's machine rule is six patterns against an address; the seam's is
-// capture.IsMachineAddress, which reads a registrable domain against the
+// the sender_is_machine stamp, which reads a registrable domain against the
 // transactional baseline. A relay like sendgrid.net matches none of the six, so
 // a scan cap's worth of it is admitted by the store and discarded above the
 // store — and the customer underneath was never read at all. The seam answers
@@ -216,7 +232,7 @@ func TestAFloodOfMachineMailDoesNotHideAWaitingCustomer(t *testing.T) {
 		store: activities.NewStore(e.DB()),
 		now:   func() time.Time { return asOf },
 	}
-	rows, _, err := seam.Unanswered(e.Admin(), asOf)
+	rows, _, err := seam.Unanswered(e.Admin(), asOf, attention.WaitingFor{})
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}

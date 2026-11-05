@@ -185,6 +185,9 @@ const (
 	// Append-forward like ai_model_rate, and for the same reason: a past-dated
 	// row prices a historical rollup.
 	objFxRate = "fx_rate"
+	// The tax rate sheet: rows are added and never changed or removed. So the
+	// seats that keep it hold create and read, and none holds update or delete.
+	objTaxRate = "tax_rate"
 	// Admin/ops-only on EVERY verb, read included: a migration run is a
 	// workspace-wide bulk mutation of the estate, and unlike custom_field there
 	// is no per-rep read surface — the migrate-in screen is an admin surface.
@@ -248,6 +251,7 @@ const (
 	// Operational, not commercial, so Ops reads it: this is the question an
 	// operator is on call for.
 	objJobHealth = "job_health"
+	objDataTask  = "data_task"
 	// Which extension units this installation composed. Read-only because
 	// presence under `extensions/` IS the enablement — there is no runtime
 	// toggle for a grant to gate.
@@ -279,6 +283,10 @@ const (
 	// connector is issued against. Split from objCaptureSettings, which every
 	// sales role holds, because a client secret is not a capture setting.
 	objOauthApplication = "oauth_application"
+	// The OAuth clients an AI tool signs a user in through, with Margince as
+	// the authorization server: the opposite direction to oauth_application.
+	// Registering one admits a new app to the installation.
+	objAgentClient = "agent_client"
 	// How many seats are used against how many are held. Non-commercial by
 	// construction: the licensee, the entitlement and the contract terms stay
 	// on objLicense, so Management can plan headcount without reading them.
@@ -296,6 +304,10 @@ const (
 	// pack, update records the outcome. Admin holds both and hands it to any
 	// seat; no other system role holds it.
 	objLegalReview = "legal_review"
+	// The legal entities the installation trades as: admin describes and
+	// archives them, every other seat reads them. Assigning a user to one also
+	// asks objUserAdmin.
+	objLegalEntity = "legal_entity"
 )
 
 // AdministrationObjects are the grants that reach back and change who may do
@@ -325,6 +337,7 @@ func AdministrationObjects() []string {
 		objConsentConfig,
 		objAuthenticationPolicy,
 		objOauthApplication,
+		objAgentClient,
 		objSeatUsage,
 	}
 }

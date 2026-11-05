@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -54,7 +55,8 @@ func SeatHoldsActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (boo
 			   AND (
 			     a.captured_by LIKE $2
 			     OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $3)
-			     OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = a.id AND ap.user_id = $3)))`,
+			     OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = a.id AND ap.user_id = $3
+			                AND `+auth.ParticipantStandsSQL("ap", "a")+`)))`,
 		id, "%:"+seat.String(), seat).Scan(&held); err != nil {
 		return false, fmt.Errorf("capture: reading whether %s is this seat's to act on: %w", id, err)
 	}

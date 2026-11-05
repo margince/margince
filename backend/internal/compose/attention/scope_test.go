@@ -16,6 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -103,17 +104,17 @@ func TestTheTeamWeekIsOfferedApartFromTheTeamScope(t *testing.T) {
 	cases := []struct {
 		name   string
 		reader context.Context
-		week   crmcontracts.WorklistTeamWeek
+		week   crmcontracts.TeamWeekReach
 	}{
-		{"read_only", seat(principal.RowScopeAll, holds{}), crmcontracts.WorklistTeamWeekNone},
-		{"custom team-scoped seat", seat(principal.RowScopeTeam, holds{}), crmcontracts.WorklistTeamWeekNone},
-		{"custom team-scoped lead", seat(principal.RowScopeTeam, holds{leads: true}), crmcontracts.WorklistTeamWeekTeamsLed},
-		{"manager", seat(principal.RowScopeTeam, holds{leads: true}), crmcontracts.WorklistTeamWeekTeamsLed},
-		{"management", seat(principal.RowScopeAll, holds{leads: true, oversees: true}), crmcontracts.WorklistTeamWeekEveryTeam},
-		{"rep", seat(principal.RowScopeOwn, holds{}), crmcontracts.WorklistTeamWeekNone},
+		{"read_only", seat(principal.RowScopeAll, holds{}), crmcontracts.TeamWeekReachNone},
+		{"custom team-scoped seat", seat(principal.RowScopeTeam, holds{}), crmcontracts.TeamWeekReachNone},
+		{"custom team-scoped lead", seat(principal.RowScopeTeam, holds{leads: true}), crmcontracts.TeamWeekReachTeamsLed},
+		{"manager", seat(principal.RowScopeTeam, holds{leads: true}), crmcontracts.TeamWeekReachTeamsLed},
+		{"management", seat(principal.RowScopeAll, holds{leads: true, oversees: true}), crmcontracts.TeamWeekReachEveryTeam},
+		{"rep", seat(principal.RowScopeOwn, holds{}), crmcontracts.TeamWeekReachNone},
 	}
 	for _, tc := range cases {
-		if got := teamWeekFor(tc.reader); got != tc.week {
+		if got := identity.TeamWeekOf(tc.reader); got != tc.week {
 			t.Errorf("%s was offered the week %q, wanted %q", tc.name, got, tc.week)
 		}
 		if tc.name == "rep" {
@@ -159,8 +160,8 @@ func TestAColleaguesDealLeavesTheQueueAndTheSummaryUnderMine(t *testing.T) {
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
 	rows := []ranked{
-		{item: ownedDeal("mine", reader)},
-		{item: ownedDeal("theirs", colleague)},
+		{item: ownedDeal("mine", reader), ownerRef: deferredToTheDeal()},
+		{item: ownedDeal("theirs", colleague), ownerRef: deferredToTheDeal()},
 	}
 
 	kept := keepReadersOwn(ctx, rows)
@@ -252,7 +253,7 @@ func TestTheReadersOwnPromiseIsNotWorkNobodyAnswersFor(t *testing.T) {
 		Type: principal.PrincipalHuman, UserID: reader,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeOwn},
 	})
-	promise := []ranked{{item: crmcontracts.WorklistItem{
+	promise := []ranked{{ownerRef: ownedByWhoeverIsReading(), item: crmcontracts.WorklistItem{
 		Id: "my-promise", Source: sourceClaim, Actions: []crmcontracts.WorklistItemActions{},
 	}}}
 

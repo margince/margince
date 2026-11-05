@@ -61,9 +61,8 @@ export type MarginceCoreState =
  * are the object. On paper it goes opaque and dark, with the ribbons glowing
  * inside it, because an emissive ball on white is a smudge.
  *
- * `auto` follows the app theme, which is right for anything sitting on the page.
- * The workspace rail is the case that needs telling: it is dark green in BOTH
- * themes, so a Core there is always on a dark surface.
+ * `auto` follows the app theme, right for anything on the page. The ink field
+ * (a toast, the capture chip) is dark in both themes, so a Core there is `dark`.
  */
 export type CoreSurface = "auto" | "dark";
 

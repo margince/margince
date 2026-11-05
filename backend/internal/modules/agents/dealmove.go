@@ -170,8 +170,8 @@ func dealMoveSummary(ctx context.Context, said summaryCopy, stages StageResolver
 		return fmt.Sprintf(said.dealMove, label, target)
 	case source == stageSemanticOpen && target == stageSemanticOpen:
 		// Reachable even though the tier gate calls this transition 🟢: a
-		// per-field precedence split stages an otherwise auto-execute call, and
-		// the human then reads this line about a routine move.
+		// passportless agent stages it, and the human then reads this line
+		// about a routine move.
 		return fmt.Sprintf(said.dealMoveOpen, label)
 	case source != stageSemanticOpen && target == stageSemanticOpen:
 		return fmt.Sprintf(said.dealReopen, label, source)

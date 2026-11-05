@@ -134,19 +134,20 @@ func (s *Service) Draft(
 	// contact they cannot read refuses before a word is written, a deal or
 	// claim they cannot see is not in the view to be found, and a project they
 	// cannot see refuses the scoped read itself (activities.RequireProjectScope).
-	view, err := s.view.AssembleScoped(ctx, contactID, contact360.AssembleOptions{ProjectID: req.ProjectID})
+	view, err := s.view.AssembleScoped(ctx, contactID, contact360.AssembleOptions{ProjectID: req.ProjectID, WrittenByHumanOnly: true})
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
+	zone := s.envelope.Zone(ctx)
 	req.Envelope = s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: CorrespondenceText(view), Rewrite: req.RewriteOf, Purpose: req.Intent},
-		ConversationState(view, s.envelope.Now()))
+		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		ConversationState(view, s.envelope.Now(), zone)).InZone(zone)
 	in := FromView(view, req)
 	if in.AlsoTo, err = s.coRecipients(ctx, contactID, req.AlsoTo); err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	if req.AboutActivityID != nil {
-		if in.About, err = s.aboutActivity(ctx, *req.AboutActivityID, req.Envelope.At()); err != nil {
+		if in.About, err = s.aboutActivity(ctx, *req.AboutActivityID, req.Envelope); err != nil {
 			return crmcontracts.CompanyEmailDraft{}, nil, err
 		}
 		in.Recent = withoutActivity(in.Recent, in.About.ID)
@@ -157,7 +158,7 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, nil, httperr.Validation("project_id", "not_found",
 			"that project is not one this contact is part of, or you cannot see it")
 	}
-	grounding, err := in.Grounding(datasource.EntityContact)
+	grounding, err := in.Grounding()
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}

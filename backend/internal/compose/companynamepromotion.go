@@ -133,8 +133,8 @@ type CompanyNamePromoter struct {
 func NewCompanyNamePromoter(pool *pgxpool.Pool, log *slog.Logger) *CompanyNamePromoter {
 	return &CompanyNamePromoter{
 		pool:      pool,
-		store:     contacts.NewStore(InstallationDB(pool)),
-		approvals: approvals.NewService(InstallationDB(pool)),
+		store:     newContactsStore(InstallationDB(pool)),
+		approvals: NewApprovalsService(InstallationDB(pool)),
 		feedback:  ai.NewFeedbackStore(InstallationDB(pool)),
 		log:       log,
 	}
@@ -365,6 +365,9 @@ func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand c
 		Summary:        fmt.Sprintf(approvalSummaryCopyOver(ctx, p.pool).companyRename, cand.DisplayName, verdict.Name),
 		JoinPending:    true,
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return nil
+	}
 	return err
 }
 

@@ -10,10 +10,13 @@ package storekit
 // and never allowed to shape the query text itself.
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -396,4 +399,45 @@ func operandSQL(value any, arg func(any) int) string {
 		return fmt.Sprintf("(CURRENT_DATE - $%d::integer)", arg(int(days)))
 	}
 	return fmt.Sprintf("$%d", arg(value))
+}
+
+// radiusOperand is the operand of within_radius: a point, a distance, and the
+// label the builder showed for the point. The compiler never looks a name up,
+// so compiling stays pure and reaches no network.
+type radiusOperand struct {
+	Lat      *float64 `json:"lat"`
+	Lon      *float64 `json:"lon"`
+	RadiusKM *float64 `json:"radius_km"`
+	Label    string   `json:"label"`
+}
+
+// compileDistanceLeaf renders a within_radius leaf through geocode.Within, the
+// same predicate the query grammar uses, so both surfaces answer the same rows.
+func compileDistanceLeaf(p Predicate, field Field, arg func(any) int) (string, error) {
+	invalid := func(message string) error {
+		return &PredicateError{Field: p.Field, Code: CodeFilterValueInvalid, Message: message}
+	}
+	cols, ok := geocode.ColumnsFor(field.GeoTarget)
+	if !ok {
+		return "", invalid("this field has no place to measure from")
+	}
+	raw, err := json.Marshal(p.Value)
+	if err != nil {
+		return "", invalid("within_radius takes {lat, lon, radius_km}")
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	var operand radiusOperand
+	if err := dec.Decode(&operand); err != nil || operand.Lat == nil || operand.Lon == nil || operand.RadiusKM == nil {
+		return "", invalid("within_radius takes {lat, lon, radius_km} and an optional label")
+	}
+	if *operand.RadiusKM <= 0 {
+		return "", invalid("radius_km must be greater than zero")
+	}
+	center := geocode.Point{Lat: *operand.Lat, Lon: *operand.Lon}
+	if !geocode.PlausiblePoint(center) {
+		return "", invalid("lat must be within -90..90 and lon within -180..180")
+	}
+	_, where := geocode.Within(field.Expr, cols, center, *operand.RadiusKM, arg)
+	return "(" + strings.Join(where, " AND ") + ")", nil
 }

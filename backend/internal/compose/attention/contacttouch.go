@@ -49,6 +49,16 @@ type ContactTouch interface {
 type TouchMoments struct {
 	LastInbound  *time.Time
 	LastOutbound *time.Time
+	// The precisions of the rows behind the two moments, nil when no row is.
+	LastInboundPrecision, LastOutboundPrecision *crmcontracts.OccurredPrecision
+}
+
+// wire is the moments as a queue row carries them, for a contact or an account.
+func (m TouchMoments) wire() *crmcontracts.WorklistContactTouch {
+	return &crmcontracts.WorklistContactTouch{
+		LastInboundAt: m.LastInbound, LastOutboundAt: m.LastOutbound,
+		LastInboundPrecision: m.LastInboundPrecision, LastOutboundPrecision: m.LastOutboundPrecision,
+	}
 }
 
 // contactOf names the human behind a lane item: the attendee a meeting's brief
@@ -107,10 +117,7 @@ func (s *Service) nameTheContacts(ctx context.Context, rows []crmcontracts.Workl
 		if !known {
 			continue
 		}
-		contact.Touch = &crmcontracts.WorklistContactTouch{
-			LastInboundAt:  touch.LastInbound,
-			LastOutboundAt: touch.LastOutbound,
-		}
+		contact.Touch = touch.wire()
 	}
 	return nil
 }

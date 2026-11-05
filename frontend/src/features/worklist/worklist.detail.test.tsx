@@ -10,6 +10,7 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
 // The supporting line, and the words for a group's cause.
@@ -70,7 +71,14 @@ function day(queue: WorklistItem[]): Worklist {
 function draw(queue: WorklistItem[]) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => jsonResponse(day(queue))),
+    vi.fn(async (input: RequestInfo | URL) =>
+      jsonResponse(
+        echoView(
+          String(input instanceof Request ? input.url : input),
+          day(queue),
+        ),
+      ),
+    ),
   );
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -103,6 +111,7 @@ const sourcesWithProse: ReadonlyArray<{
     name: "a mailbox that stopped capturing",
     says: "lena.fischer@margince.test",
     row: {
+      occurred_precision: "instant",
       id: "c1",
       source: "capture_health",
       category: "system",
@@ -119,6 +128,7 @@ const sourcesWithProse: ReadonlyArray<{
     name: "a message that bounced",
     says: "The address does not exist at that domain.",
     row: {
+      occurred_precision: "instant",
       id: "b1",
       source: "bounce",
       category: "customer_waiting",
@@ -134,6 +144,7 @@ const sourcesWithProse: ReadonlyArray<{
     name: "a send that was held",
     says: "Held: the recipient has not consented to marketing mail.",
     row: {
+      occurred_precision: "instant",
       id: "u1",
       source: "undelivered",
       category: "customer_waiting",
@@ -149,6 +160,7 @@ const sourcesWithProse: ReadonlyArray<{
     name: "an automation that failed",
     says: "The webhook target answered 500 five times.",
     row: {
+      occurred_precision: "instant",
       id: "a1",
       source: "automation_run",
       category: "system",
@@ -164,6 +176,7 @@ const sourcesWithProse: ReadonlyArray<{
     name: "an AI task that broke",
     says: "Acme Renewal",
     row: {
+      occurred_precision: "instant",
       id: "w1",
       source: "ai_work_health",
       category: "system",
@@ -179,6 +192,7 @@ const sourcesWithProse: ReadonlyArray<{
     name: "a colleague waiting on an introduction",
     says: "They asked to be introduced to the buyer at Turbinenbau.",
     row: {
+      occurred_precision: "instant",
       id: "i1",
       source: "introduction_request",
       category: "decisions",
@@ -210,6 +224,7 @@ describe("a group names what is broken", () => {
   it("draws the label and never the identity behind it", async () => {
     draw([
       {
+        occurred_precision: "instant",
         id: "g1",
         source: "automation_run",
         category: "system",
@@ -244,6 +259,7 @@ describe("a group names what is broken", () => {
   it("falls back to a generic phrase, never to the identity", async () => {
     draw([
       {
+        occurred_precision: "instant",
         id: "g2",
         source: "automation_run",
         category: "system",
@@ -282,8 +298,10 @@ describe("a group names what is broken", () => {
 describe("a review row on the queue's own page", () => {
   it("opens the record's pane beside it", async () => {
     const user = userEvent.setup();
+    globalThis.location.hash = "#/worklist?view=system";
     draw([
       {
+        occurred_precision: "instant",
         id: "privacy",
         source: "notice_case",
         category: "system",
@@ -306,5 +324,6 @@ describe("a review row on the queue's own page", () => {
         name: en["worklist.pane.title"],
       }),
     ).toBeTruthy();
+    globalThis.location.hash = "";
   });
 });

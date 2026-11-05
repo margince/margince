@@ -2,12 +2,45 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { X } from "lucide-react";
-import { type KeyboardEvent, useRef, useState } from "react";
+import {
+  type ClipboardEvent,
+  type KeyboardEvent,
+  useRef,
+  useState,
+} from "react";
 import { isImeCommit } from "../lib/imecommit";
+import { Avatar } from "./avatar";
+import { type PeekContent, usePeek } from "./peek";
 import { type Suggestion, SuggestPopup, useSuggestList } from "./suggestlist";
 import "./tokeninput.css";
 
-export type TokenSuggestion = Suggestion;
+/**
+ * An offer that names someone with a record. Its token draws their avatar, and its card is
+ * a contact card. The card holds the avatar, the name linked to `href`, the
+ * address, and `about` (title and company) under them.
+ */
+export type TokenCard = Readonly<{
+  identity: string;
+  href?: string;
+  about?: string;
+}>;
+
+export type TokenSuggestion = Suggestion & Readonly<{ card?: TokenCard }>;
+
+/** What a commit's text reads as: the values it holds, and the parts that are none. */
+export type TokenReading = Readonly<{
+  values: readonly string[];
+  refused: readonly string[];
+}>;
+
+/** How a field reads text into values that have a shape. Refused parts stay in the
+ *  box; `onRefuse` hears them on each commit, and an empty list once none is left. */
+export type TokenParse = Readonly<{
+  /** Keys that commit what is typed, beside Enter. */
+  keys: readonly string[];
+  read: (raw: string) => TokenReading;
+  onRefuse: (refused: readonly string[]) => void;
+}>;
 
 /**
  * A set of short values a reader builds one at a time — the control the `in`
@@ -68,6 +101,9 @@ export type TokenInputProps = Readonly<{
    * reader never chose.
    */
   onEditing?: () => void;
+  /** Omit it and comma splits, nothing is refused, and a paste waits for a
+   *  commit. Given, a paste that holds a value commits at once. */
+  parse?: TokenParse;
   placeholder?: string;
   disabled?: boolean;
   id?: string;
@@ -83,6 +119,7 @@ export function TokenInput({
   onChange,
   suggestions,
   onEditing,
+  parse,
   placeholder,
   disabled,
   ...aria
@@ -105,9 +142,10 @@ export function TokenInput({
     // said twice. Hence one `seen` set covering both: admitting the second would
     // render two tokens under one React key, and give the reader a remove
     // control that takes away a token it does not name.
+    const reading = (parse ?? BY_COMMA).read(raw);
     const seen = new Set(values);
     const fresh: string[] = [];
-    for (const part of raw.split(",")) {
+    for (const part of reading.values) {
       const value = part.trim();
       if (value === "" || seen.has(value)) {
         continue;
@@ -118,8 +156,34 @@ export function TokenInput({
     if (fresh.length > 0) {
       onChange([...values, ...fresh]);
     }
-    setTyped("");
+    const refused = [...new Set(reading.refused)];
+    setTyped(refused.join(", "));
+    parse?.onRefuse(refused);
   };
+
+  const onPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    if (!parse) {
+      return;
+    }
+    const box = event.currentTarget;
+    const text =
+      typed.slice(0, box.selectionStart ?? typed.length) +
+      event.clipboardData.getData("text") +
+      typed.slice(box.selectionEnd ?? typed.length);
+    // A paste of part of one value is still being typed.
+    if (parse.read(text).values.length === 0) {
+      return;
+    }
+    event.preventDefault();
+    onEditing?.();
+    commit(text);
+  };
+
+  // A committed value an offer named reads as that name; what it stands for
+  // waits on the token's card.
+  const offers = new Map(
+    (suggestions ?? EMPTY).map((row) => [row.value, row] as const),
+  );
 
   const list = useSuggestList({
     anchorRef: fieldRef,
@@ -148,7 +212,7 @@ export function TokenInput({
     if (isImeCommit(event)) {
       return;
     }
-    if (event.key === "Enter" || event.key === ",") {
+    if (event.key === "Enter" || (parse ?? BY_COMMA).keys.includes(event.key)) {
       // Enter must not submit the surrounding form: the reader is adding a
       // value, not finishing the filter.
       event.preventDefault();
@@ -171,18 +235,13 @@ export function TokenInput({
       className={`token-input input ${disabled ? "is-disabled" : ""}`.trim()}
     >
       {values.map((value) => (
-        <span key={value} className="token">
-          {value}
-          <button
-            type="button"
-            className="token-remove"
-            disabled={disabled}
-            aria-label={`Remove ${value}`}
-            onClick={() => onChange(values.filter((v) => v !== value))}
-          >
-            <X size={12} aria-hidden />
-          </button>
-        </span>
+        <TokenChip
+          key={value}
+          value={value}
+          offer={offers.get(value)}
+          disabled={disabled}
+          onRemove={() => onChange(values.filter((v) => v !== value))}
+        />
       ))}
       <input
         {...aria}
@@ -204,9 +263,13 @@ export function TokenInput({
           setTyped(event.target.value);
           onEditing?.();
           list.retype();
+          if (event.target.value.trim() === "") {
+            parse?.onRefuse([]);
+          }
         }}
         onFocus={list.show}
         onKeyDown={onKeyDown}
+        onPaste={onPaste}
         // A value left typed but not committed would be silently dropped when
         // the reader clicks away, so blur commits it. The list closes with it:
         // a popup left hanging under a control nobody is focused on is what a
@@ -222,10 +285,88 @@ export function TokenInput({
   );
 }
 
+// A named value shows the name alone, so a row of recipients stays one line
+// beside the field's own controls. The value it stands for waits on the card
+// the name opens on hover or focus.
+function TokenChip({
+  value,
+  offer,
+  disabled,
+  onRemove,
+}: Readonly<{
+  value: string;
+  offer: TokenSuggestion | undefined;
+  disabled: boolean | undefined;
+  onRemove: () => void;
+}>) {
+  const label = offer?.label;
+  const named = label !== undefined && label !== "" && label !== value;
+  const card = named ? offer?.card : undefined;
+  const {
+    ref,
+    props: anchor,
+    panel,
+  } = usePeek<HTMLSpanElement>({
+    content: named ? tokenCard(value, label, card) : undefined,
+  });
+  return (
+    <>
+      <span
+        ref={ref}
+        className={card ? "token token-has-face" : "token"}
+        {...anchor}
+      >
+        {card && <Avatar name={label ?? value} identity={card.identity} />}
+        <span className={named ? "token-label" : "token-value"}>
+          {named ? label : value}
+        </span>
+        <button
+          type="button"
+          className="token-remove"
+          disabled={disabled}
+          aria-label={`Remove ${value}`}
+          onClick={onRemove}
+        >
+          <X size={12} aria-hidden />
+        </button>
+      </span>
+      {panel}
+    </>
+  );
+}
+
+function tokenCard(
+  value: string,
+  label: string,
+  card: TokenCard | undefined,
+): PeekContent {
+  return {
+    head: label,
+    headHidden: true,
+    items: [
+      {
+        key: value,
+        lead: card && (
+          <Avatar name={label} identity={card.identity} size="md" />
+        ),
+        title: label,
+        sub: value,
+        href: card?.href,
+      },
+    ],
+    foot: card?.about || undefined,
+  };
+}
+
 // One frozen empty list rather than a fresh `[]` per render: the suggestion
 // hook filters on identity-stable input, and a new array each time would remake
 // the matches on every keystroke of a field that was given nothing to offer.
-const EMPTY: readonly Suggestion[] = [];
+const EMPTY: readonly TokenSuggestion[] = [];
+
+const BY_COMMA: Omit<TokenParse, "onRefuse"> = {
+  keys: [","],
+  read: (raw) => ({ values: raw.split(","), refused: [] }),
+};
 
 /**
  * The same tokens, WITHOUT a text box: a set somebody built somewhere else.

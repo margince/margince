@@ -82,7 +82,7 @@ func TestEveryRegistryServedRouteRunsTheToolItDeclaresThroughInvoke(t *testing.T
 	}
 	router := crmcontracts.HandlerWithOptions(Server{toolRegistry: registry}, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
-		Middlewares: []crmcontracts.MiddlewareFunc{agentGate(registry, nil, nil, nil, nil, nil, nil, gate)},
+		Middlewares: []crmcontracts.MiddlewareFunc{agentGate(registry, nil, nil, nil, nil, nil, nil, nil, gate)},
 	})
 	contract := operationsByID(t)
 
@@ -213,7 +213,11 @@ type toolShape struct {
 }
 
 func shapeDifferences(at string, declared *openapi3.Schema, answered toolShape) []string {
-	if !declared.Type.Is(answered.Type) {
+	// A nullable member is declared [T, "null"] and answered as T: the tool's
+	// schema states absence through `required`, not through a null type.
+	nullableOfAnswered := declared.Type.Includes("null") && len(declared.Type.Slice()) == 2 && declared.Type.Includes(answered.Type)
+	agrees := declared.Type.Is(answered.Type) || nullableOfAnswered
+	if !agrees {
 		return []string{at + " is " + strings.Join(declared.Type.Slice(), ",") + " in the contract and " +
 			answered.Type + " in the tool's output"}
 	}
@@ -329,4 +333,25 @@ func toolArguments(t *testing.T, spec mcp.ToolSpec) map[string]bool {
 		takes[name] = true
 	}
 	return takes
+}
+
+// placeholderFor is a value of the type the contract declares for a field. An
+// untyped placeholder would make the body a shape the route does not accept.
+//
+//craft:ignore naked-any a JSON value of whichever type the schema declares — the return is fed straight to json.Marshal, and any narrower type would be one of these cases spelled as a union
+func placeholderFor(schema *openapi3.Schema) any {
+	switch {
+	case len(schema.Enum) > 0:
+		return schema.Enum[0]
+	case schema.Type.Is("integer"), schema.Type.Is("number"):
+		return 1
+	case schema.Type.Is("boolean"):
+		return true
+	case schema.Type.Is("array"):
+		return []any{}
+	case schema.Type.Is("object"):
+		return map[string]any{}
+	default:
+		return "placeholder"
+	}
 }

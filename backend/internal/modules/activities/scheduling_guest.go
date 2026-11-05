@@ -33,7 +33,8 @@ func (s *Store) ResolveMeetingToken(ctx context.Context, token string) (ids.UUID
 		args := schedulingArgs{}
 		query := `SELECT i.activity_id,i.host_user_id FROM meeting_invitation i JOIN activity a ON a.id=i.activity_id
    WHERE i.management_hash=` + args.add(hex.EncodeToString(sum[:])) + ` AND a.archived_at IS NULL
-   AND a.occurred_at>` + args.add(s.now().Add(-30*24*time.Hour))
+   AND ` + args.add(s.now().Add(-30*24*time.Hour)) + `<a.occurred_at -- occurred_at raw: the thirty days a guest may manage it
+`
 		return tx.QueryRow(ctx, query, args...).Scan(&id, &host)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -42,19 +43,24 @@ func (s *Store) ResolveMeetingToken(ctx context.Context, token string) (ids.UUID
 	return id, host, err
 }
 
-// GetPublicSchedulingProfile returns the host-approved public identity and meeting policy.
+// GetPublicSchedulingProfile returns the host-approved public identity and
+// meeting policy. A paused page answers only whose page it is.
 func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, slug string) {
 	page, err := h.store.ResolveBookingPage(r.Context(), slug)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	profile, err := h.store.hostSchedulingProfile(r.Context(), page.HostUserID)
-	if err != nil {
-		writeStoreErr(w, r, err)
+	profile, open := h.store.openForBooking(r.Context(), page)
+	if open.err != nil {
+		writeStoreErr(w, r, open.err)
 		return
 	}
-	profile = h.store.brandSchedulingProfile(r.Context(), profile)
+	if open.paused {
+		httperr.WriteJSON(w, http.StatusOK, pausedPublicProfile(profile))
+		return
+	}
+	profile = h.store.brandSchedulingProfile(r.Context(), page.HostUserID, profile)
 	httperr.WriteJSON(w, http.StatusOK, publicProfile(profile, nil))
 }
 
@@ -97,14 +103,26 @@ func (h Handlers) ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.R
 }
 
 func (h Handlers) bookPublicInvitation(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, contact ids.UUID, marketing MarketingOutcome, intent *publicBookingIntent) {
-	profile, err := h.store.hostSchedulingProfile(r.Context(), page.HostUserID)
-	if err != nil {
-		writeStoreErr(w, r, err)
+	out, ok := h.reservePublicInvitation(w, r, page, req, contact, invitationIntent{Public: intent, DescriptionFromBooker: true}, marketing)
+	if !ok {
 		return
 	}
-	if !profile.Enabled || req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
+	if err := h.publicConsent.RecordBookingInquiry(r.Context(), contact, ids.UUID(out.Id)); err != nil {
+		slog.WarnContext(r.Context(), "booking: inquiry basis could not be recorded", "activity_id", out.Id, "err", err)
+	}
+	writePublicInvitation(w, out, marketing)
+}
+
+// reservePublicInvitation reserves the booked slot for the contact, or for the
+// lead the intent names, and writes the refusal when it cannot.
+func (h Handlers) reservePublicInvitation(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, contact ids.UUID, booking invitationIntent, marketing MarketingOutcome) (crmcontracts.MeetingInvitation, bool) {
+	profile, ok := h.openBookingPage(w, r, page)
+	if !ok {
+		return crmcontracts.MeetingInvitation{}, false
+	}
+	if req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
-		return
+		return crmcontracts.MeetingInvitation{}, false
 	}
 	in := crmcontracts.MeetingInvitationRequest{
 		ContactId: crmcontracts.Id(contact), AttendeeEmail: req.Booker.Email,
@@ -113,18 +131,15 @@ func (h Handlers) bookPublicInvitation(w http.ResponseWriter, r *http.Request, p
 	if req.Subject != nil {
 		in.Description = *req.Subject
 	}
-	if intent != nil {
-		intent.Marketing = marketing
+	if booking.Public != nil {
+		booking.Public.Marketing = marketing
 	}
-	out, err := h.store.reserveAndQueueInvitation(r.Context(), page.HostUserID, in, invitationIntent{Public: intent, DescriptionFromBooker: true})
+	out, err := h.store.reserveAndQueueInvitation(r.Context(), page.HostUserID, in, booking)
 	if err != nil {
 		writeStoreErr(w, r, err)
-		return
+		return crmcontracts.MeetingInvitation{}, false
 	}
-	if err := h.publicConsent.RecordBookingInquiry(r.Context(), contact, ids.UUID(out.Id)); err != nil {
-		slog.WarnContext(r.Context(), "booking: inquiry basis could not be recorded", "activity_id", out.Id, "err", err)
-	}
-	writePublicInvitation(w, out, marketing)
+	return out, true
 }
 
 func writePublicInvitation(w http.ResponseWriter, out crmcontracts.MeetingInvitation, marketing MarketingOutcome) {
@@ -135,4 +150,35 @@ func writePublicInvitation(w http.ResponseWriter, out crmcontracts.MeetingInvita
 		Marketing  MarketingOutcome                     `json:"marketing"`
 		Invitation crmcontracts.MeetingInvitation       `json:"invitation"`
 	}{out.Status, out.Start, out.End, marketing, guestInvitationView(out)})
+}
+
+// openBookingPage reads the profile of a page that takes bookings now. A
+// paused page answers as an unknown slug does. The slug is the capability,
+// and a paused one must not confirm that it exists.
+func (h Handlers) openBookingPage(w http.ResponseWriter, r *http.Request, page BookingPage) (crmcontracts.SchedulingProfile, bool) {
+	profile, open := h.store.openForBooking(r.Context(), page)
+	if open.err != nil {
+		writeStoreErr(w, r, open.err)
+		return profile, false
+	}
+	if open.paused {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return profile, false
+	}
+	return profile, true
+}
+
+// pageOpenness is whether a page takes bookings, or why that is unknown.
+type pageOpenness struct {
+	paused bool
+	err    error
+}
+
+func (s *Store) openForBooking(ctx context.Context, page BookingPage) (crmcontracts.SchedulingProfile, pageOpenness) {
+	profile, err := s.hostSchedulingProfile(ctx, page.HostUserID)
+	if err != nil {
+		return profile, pageOpenness{err: err}
+	}
+	paused, err := s.pagePaused(ctx, page.HostUserID, profile)
+	return profile, pageOpenness{paused: paused, err: err}
 }

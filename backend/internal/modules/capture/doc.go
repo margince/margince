@@ -12,31 +12,27 @@
 // grant-time scope intersection: a connector's declared scopes must be
 // ⊆ the granting human's — connector ≤ human, exactly like agents.
 //
-// Tables owned: raw_capture, capture_connection, capture_trace (the
-// 24-hour diagnostic trace of what the pipeline decided about each
-// message, swept rather than retained), capture_exclusion (the addresses
-// and domains the sink refuses before any write), capture_owner_identity
-// (a seat's OTHER addresses, so mail among a colleague's own addresses is
-// not read as correspondence and an alias is never minted as a contact),
-// capture_alias_sighting (the evidence behind a discovered alias: one row
-// per seat, address and message, so the two distinct sightings the ladder
-// demands cannot be one message counted twice),
-// capture_import (one row per mailbox that delivered a message — an email
-// is stored once, so this is the only place a second importing seat's
-// decisions about it can live), capture_counterparty_hold (whose mail one
-// seat keeps out of the shared timeline) and capture_thread_verdict (what a
-// classifier concluded about one thread, for one seat) and
-// capture_sender_override (what a human decided about a sender, which the
-// machine consults first and never writes over) and
-// capture_pending_counterparty (the open question about whose record an
-// address is — raised at capture, re-raised by the sweep for a contact the
-// ceiling refused, and resolved by the verdict engine), and
-// capture_test_mailbox_sent (what the QC-only test_mailbox connector has
-// sent and whether its own Sync has echoed it back yet — internal
-// bookkeeping, not audited; rows are retained, unlike capture_trace's own
-// swept 24-hour window), and capture_sweep_run (one receipt per repair pass
-// per workspace turn, so "when did it last succeed" outlives River's day of
-// retention — bookkeeping about a pass, not audited).
+// Tables owned: docs/reference/entity-model/capture.md.
+//
+// capture_trace is the 24-hour diagnostic trace of what the pipeline decided
+// about each message, swept rather than retained. capture_owner_identity holds
+// a seat's other addresses. So mail among a colleague's own addresses is not
+// read as correspondence, and an alias is never minted as a contact.
+// capture_alias_sighting keeps one row per seat, address and message. So the
+// two sightings the ladder demands cannot be one message counted twice.
+// capture_import is one row per mailbox that delivered a message. An email is
+// stored once, so a second importing seat's decisions about it live here. capture_sender_override is what a human decided about a
+// sender, which the machine consults first and never writes over.
+// capture_pending_counterparty is the open question about whose record an
+// address is. Capture raises it, and the sweep raises it again for a contact the
+// ceiling refused. The verdict engine resolves it.
+// capture_test_mailbox_sent and capture_sweep_run are bookkeeping and not
+// audited; a sweep receipt lets "when did it last succeed" outlive River's day
+// of retention.
+//
+// capture_answered_sweep_cursor is where the pass publishing answered
+// contacts stopped, so it reaches every stored contact. It is bookkeeping and
+// not audited.
 //
 // Two more tables back the undo of an owner identity.
 // capture_owner_identity_withdrawn holds a withdrawn identity for the ten

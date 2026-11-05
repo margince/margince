@@ -61,7 +61,7 @@ func readExtensionIngestHealth(ctx context.Context, tx pgx.Tx, now time.Time) (c
 		WindowDays:  extensionIngestWindowDays,
 		Units:       []crmcontracts.ExtensionUnitIngestHealth{},
 	}
-	since := now.AddDate(0, 0, -(extensionIngestWindowDays - 1))
+	since := extensionIngestWindowStart(now)
 	rows, err := tx.Query(ctx, `
 		SELECT unit, refusal, sum(refused)::bigint AS refused, max(last_at) AS last_at
 		  FROM extension_ingest_refusal
@@ -117,4 +117,9 @@ func appendRefusal(units []crmcontracts.ExtensionUnitIngestHealth, unit, refusal
 		LastRefusedAt: &when,
 	})
 	return units
+}
+
+func extensionIngestWindowStart(now time.Time) time.Time {
+	day := now.UTC()
+	return time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -(extensionIngestWindowDays - 1))
 }

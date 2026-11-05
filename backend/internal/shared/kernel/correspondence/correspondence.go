@@ -40,3 +40,40 @@ func LockIdentity(address string) string {
 func Fold(address string) string {
 	return strings.ToLower(strings.TrimSpace(address))
 }
+
+// LocalPartBase is a local part without its plus-addressing tag: the mailbox
+// owner appends `+tag` to route mail, so `anna+crm` and `anna` are one mailbox.
+// A local part with nothing in front of the `+` has no base and is kept whole.
+func LocalPartBase(local string) string {
+	if base, _, found := strings.Cut(local, "+"); found && base != "" {
+		return base
+	}
+	return local
+}
+
+// gmailDomain and googlemailDomain name one mailbox namespace. Google issues
+// both spellings for one account and ignores the dots of the local part. No
+// other host is known to ignore dots, so no other host folds.
+const (
+	gmailDomain      = "gmail.com"
+	googlemailDomain = "googlemail.com"
+)
+
+// BaseAddress is the folded address with its local part cut to LocalPartBase,
+// and reports whether that changed the address. A Gmail address also loses the
+// dots of its local part and is spelled at gmailDomain. The local part ends at
+// the first `@`, which is where the duplicate check's SQL expression ends it
+// too. The base pairs records for review only and never routes mail.
+func BaseAddress(address string) (string, bool) {
+	folded := Fold(address)
+	local, domain, found := strings.Cut(folded, "@")
+	if !found {
+		return folded, false
+	}
+	base := LocalPartBase(local)
+	if domain == gmailDomain || domain == googlemailDomain {
+		base, domain = strings.ReplaceAll(base, ".", ""), gmailDomain
+	}
+	base += "@" + domain
+	return base, base != folded
+}

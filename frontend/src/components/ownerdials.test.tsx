@@ -37,7 +37,7 @@ const COLLEAGUES = [
  * page. `lastTeamPage` past every index is a server that never stops offering
  * another, which makes the walk stop at its bound and report the list partial.
  */
-function stub(lastTeamPage: number) {
+function stub(lastTeamPage: number, departed: readonly object[] = []) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -50,7 +50,11 @@ function stub(lastTeamPage: number) {
         return json({ ...meFixture(), teams: [] });
       }
       if (url.pathname.endsWith("/users")) {
-        return json({ data: COLLEAGUES, page: { next_cursor: null } });
+        const widened = url.searchParams.get("include_inactive") === "true";
+        return json({
+          data: widened ? [...COLLEAGUES, ...departed] : COLLEAGUES,
+          page: { next_cursor: null },
+        });
       }
       if (url.pathname.endsWith("/users/names")) {
         return json({ data: [] });
@@ -123,6 +127,57 @@ describe("the Owner dial", () => {
           (option) => option.value === "owner_id:u-gone",
         ),
       ).toBe(true),
+    );
+  });
+});
+
+describe("an owner or team removed from a list that opens narrowed", () => {
+  it.each([
+    ["owner", "owner_id"],
+    ["owner_team", "owner_team_id"],
+  ])(
+    "names nobody for the %s marker and asks no names lookup",
+    async (key, param) => {
+      globalThis.location.hash = `#/leads?${param}=all`;
+      stub(0);
+      const { result } = renderHook(() => useOwnerChips(), { wrapper });
+
+      await waitFor(() =>
+        expect(dial(result.current, "owner")?.options.length).toBe(4),
+      );
+      await waitFor(() =>
+        expect(dial(result.current, "owner_team")).toBeTruthy(),
+      );
+      expect(
+        dial(result.current, key)?.options.some((option) =>
+          option.value.endsWith(":all"),
+        ),
+      ).toBe(false);
+      const asked = vi
+        .mocked(fetch)
+        .mock.calls.map(([input]) =>
+          input instanceof Request ? input.url : String(input),
+        );
+      expect(asked.filter((url) => url.includes("/users/names"))).toEqual([]);
+    },
+  );
+});
+
+describe("the Owner dial for a member administrator", () => {
+  // A colleague who left still owns their records until somebody takes them
+  // over, so the dial offers them, named as gone, to find that work.
+  it("offers a deactivated colleague, marked deactivated", async () => {
+    stub(0, [
+      { id: "u-shay", display_name: "Shay Left", status: "deactivated" },
+    ]);
+    const { result } = renderHook(() => useOwnerChips(), { wrapper });
+
+    await waitFor(() =>
+      expect(
+        dial(result.current, "owner")?.options.find(
+          (option) => option.value === "owner_id:u-shay",
+        )?.label,
+      ).toBe("Shay Left (deactivated)"),
     );
   });
 });

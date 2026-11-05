@@ -1,0 +1,29 @@
+# CASE 63 — Is she already here.
+#
+# A routing case. find_records fronts five engines, and "is this contact already
+# in the CRM" is the identify engine: it answers which existing contact or
+# company a name, email or domain is. search_records ranks by words, so it
+# finds a similar name and leaves the decision to the reader. The right route
+# is resolve_entities.
+#
+# The prompt names no tool and no engine.
+name: case63_is_she_already_here
+criteria: [1]
+writes: false
+
+prompt: |
+  I am about to add Lucy Vo from Terralogic after meeting her today. Is she
+  already in our CRM? Check before I create a second one.
+
+must_call:
+  - resolve_entities
+
+may_call:
+  - search_records
+  - list_records
+  - read_record
+  - query_workspace
+  - whoami
+
+runs: 3
+pass_at: 2

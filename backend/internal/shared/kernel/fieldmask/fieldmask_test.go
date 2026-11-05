@@ -29,6 +29,23 @@ func TestMaskingEitherMoneyFigureWithholdsThePair(t *testing.T) {
 	}
 }
 
+// A deal's base amount and rate are computed from the money and the currency,
+// so they answer to a mask on either. The deal's own amount is no derived column.
+func TestTheBaseValueColumnsAnswerToTheMoneyMasks(t *testing.T) {
+	t.Parallel()
+
+	for _, column := range []string{"amount_minor_base", "fx_rate_to_base"} {
+		inputs, derived := DerivedInputs(Deal, column)
+		if !derived || !slices.Equal(inputs, DealBaseValueInputs()) {
+			t.Errorf("DerivedInputs(deal, %q) = %v, %v, want %v — the column prints the masked money back out",
+				column, inputs, derived, DealBaseValueInputs())
+		}
+	}
+	if inputs, derived := DerivedInputs(Deal, DealAmountMinor); derived {
+		t.Errorf("DerivedInputs(deal, amount_minor) = %v, want none — it is a mask's own subject", inputs)
+	}
+}
+
 // A field this table never grouped withholds ITSELF.
 //
 // The table records what a field drags along with it, so an object that groups

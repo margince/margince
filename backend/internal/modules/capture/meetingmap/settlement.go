@@ -3,6 +3,8 @@
 
 package meetingmap
 
+import "strings"
+
 // What capture should DO with one event, and why — as distinct from what an
 // event MAPS to, which is meetingmap.go beside this.
 //
@@ -28,13 +30,30 @@ const (
 	SettleDrop
 )
 
+// Reason names why an event is not captured as a booked meeting. The set is
+// closed because the calendar counters use each one as a label.
+type Reason string
+
+// The reasons Settle gives. The text is what a skip error and a test read.
+const (
+	ReasonNoEventID     Reason = "no event id"
+	ReasonCancelled     Reason = "cancelled"
+	ReasonOwnerDeclined Reason = "declined by the calendar owner"
+	ReasonNoOtherParty  Reason = "no party besides the owner"
+)
+
+// Label is the reason as a metric label value: the text in snake case.
+func (r Reason) Label() string {
+	return strings.ReplaceAll(strings.ReplaceAll(string(r), "'", ""), " ", "_")
+}
+
 // SkipReason names why a meeting is intentionally dropped, or reports that it
 // should be captured. It is the two-way form of Settle below, kept for the
 // callers that only ask whether to write — a cancelled meeting reads as a skip
 // here, which is what it is for a caller that cannot cancel one.
 func (m Meeting) SkipReason() (string, bool) {
 	reason, settle := m.Settle()
-	return reason, settle != SettleCapture
+	return string(reason), settle != SettleCapture
 }
 
 // Settle decides what happens to this event, and why.
@@ -59,37 +78,27 @@ func (m Meeting) SkipReason() (string, bool) {
 // the calendar means. A connector that pulled series masters instead would hand
 // this one id for every occurrence, and one decline would close them all.
 //
-// The owner's domain is a FLOOR here, not the authority. The workspace's
-// registered domains are what decide internal-vs-external for mail and calendar
-// alike, and only the capture writer can read them — a connector holds no
-// database handle by design. So this drops what the owner's own domain alone
-// proves internal, and the writer widens that set, never narrows it.
-func (m Meeting) Settle() (string, Settlement) {
+// Whose side the parties are on is not asked here. Only the capture writer can
+// read the workspace's own domains and consumer list. So the record states
+// whether every party is on the owner's domain (ToRecord), and the writer
+// decides.
+func (m Meeting) Settle() (Reason, Settlement) {
 	if m.id == "" {
 		// Nothing to key on, so nothing to write and nothing to find again.
-		return "no event id", SettleDrop
+		return ReasonNoEventID, SettleDrop
 	}
 	if m.cancelled {
-		return "cancelled", SettleCancel
+		return ReasonCancelled, SettleCancel
 	}
 	if m.ownerDeclined {
-		return "declined by the calendar owner", SettleCancel
+		return ReasonOwnerDeclined, SettleCancel
 	}
 	// An event naming nobody but the owner is a block in their own calendar —
 	// focus time, a reminder, a flight. Nobody was met, so there is no
 	// interaction to log. This asks whether there was a second party at all,
 	// not whose side they were on, so it needs no knowledge of any domain.
 	if len(m.addresses) <= 1 {
-		return "no party besides the owner", SettleDrop
-	}
-	// The owner-domain floor. The workspace's registered domains are the
-	// authority (formulas §20) and the writer applies them over the full party
-	// set, which is wider than this — but that set can be empty or incomplete,
-	// and an internal meeting stored while it is would be readable by the whole
-	// workspace. This drops what the owner's own domain alone can prove
-	// internal; the writer widens it, never narrows it.
-	if !m.hasExternal {
-		return "no party outside the owner's domain", SettleDrop
+		return ReasonNoOtherParty, SettleDrop
 	}
 	return "", SettleCapture
 }

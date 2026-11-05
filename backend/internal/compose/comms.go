@@ -9,10 +9,8 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -24,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -116,7 +115,7 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 	if err != nil {
 		return "", "", err
 	}
-	subject, body := c.store.FloorDraft(ctx, anchor, activity, intent)
+	subject, body := c.store.FloorDraft(ctx, anchor, activity)
 	return subject, body, nil
 }
 
@@ -153,13 +152,10 @@ func (c commsAdapter) SendCompanyEmail(
 func (c commsAdapter) send(
 	ctx context.Context, origin activities.SendOrigin, in agents.SendEmailArgs,
 ) (agents.SendEmailResult, error) {
-	// A tool call that leaves a string out decodes to "", and the HTTP door
-	// refuses the missing keys, so this door refuses the blank ones.
-	if strings.TrimSpace(in.Subject) == "" {
-		return agents.SendEmailResult{}, &activities.RequiredFieldError{Field: activities.FieldSubject}
-	}
-	if strings.TrimSpace(in.Body) == "" {
-		return agents.SendEmailResult{}, &activities.RequiredFieldError{Field: activities.FieldBody}
+	// A tool call that leaves a string out decodes to "", so a missing field
+	// arrives here as a blank one.
+	if err := activities.RefuseBlankMail(in.Subject, in.Body); err != nil {
+		return agents.SendEmailResult{}, err
 	}
 	// FIRST, before the message is composed or a consent decision is recorded:
 	// a record this installation no longer holds is not one to file a send
@@ -321,26 +317,6 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 	return agents.AvailabilityResult{Slots: free, Truncated: truncated, CalendarBacking: backing}, nil
 }
 
-func (c commsAdapter) BookMeeting(ctx context.Context, in agents.BookMeetingArgs) (json.RawMessage, error) {
-	hostID, err := defaultHost(ctx, in.HostUserID)
-	if err != nil {
-		return nil, err
-	}
-	booked := activities.BookMeetingInput{
-		Host: ids.From[ids.UserKind](hostID), Start: in.Start, End: in.End, Subject: in.Subject,
-	}
-	for _, l := range in.Links {
-		booked.Links = append(booked.Links, activities.ActivityLinkInput{
-			EntityType: l.EntityType, EntityID: l.EntityID,
-		})
-	}
-	meeting, err := c.store.BookMeeting(ctx, booked)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(meeting)
-}
-
 // defaultHost resolves the calendar owner: the explicit host, else the
 // acting principal's user. An agent principal has no own calendar —
 // it must name one (and the store's delegation gate answers).
@@ -374,6 +350,11 @@ func defaultHost(ctx context.Context, host *ids.UUID) (ids.UUID, error) {
 		return ids.Nil, errors.New("comms: no host named and the principal has no user calendar")
 	}
 	return actor.UserID, nil
+}
+
+// InvitationRoster resolves the request's addresses as delivery will.
+func (c commsAdapter) InvitationRoster(ctx context.Context, in crmcontracts.MeetingInvitationRequest) ([]connector.CalendarAttendee, error) {
+	return c.store.InvitationRoster(ctx, in)
 }
 
 func (c commsAdapter) InviteMeeting(ctx context.Context, in crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {

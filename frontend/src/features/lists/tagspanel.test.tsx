@@ -14,18 +14,16 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
+import { TagsPanel } from "../../components/tagspanel";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
-import { CompanyTagsSection } from "../../screens/companyrailtags";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ContactTagsSection } from "../contacts/contactrail";
-import { TagsPanel } from "./tagspanel";
+import { CompanyTagsSection } from "../companies/companyrailtags";
 
 // What the panel SAYS in each state. Three of them answer 200 with a list, so
 // the wire cannot tell them apart — only the words on screen can, which is
@@ -44,6 +42,7 @@ type PanelTag = {
 
 function mount(tags: PanelTag[], withheld = false, canEdit = true) {
   installFetchStub({
+    "GET /me": meRoute({ tag: ["read"] }),
     [`GET /records/company/${COMPANY}/tags`]: () =>
       jsonResponse({ data: tags, withheld }),
   });
@@ -75,6 +74,7 @@ describe("the tags panel", () => {
   // until the default landed.
   it("survives an answer that carries no list at all", async () => {
     installFetchStub({
+      "GET /me": meRoute({ tag: ["read"] }),
       [`GET /records/company/${COMPANY}/tags`]: () => jsonResponse({}),
     });
     render(
@@ -84,6 +84,27 @@ describe("the tags panel", () => {
     );
     // The panel draws its empty state rather than throwing.
     expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
+  });
+
+  // The server refuses an archived record's tag list, and "no tags" would be a
+  // false claim. The panel stays out of it.
+  it("draws nothing and asks nothing for an archived record", async () => {
+    const asked: string[] = [];
+    installFetchStub({
+      [`GET /records/company/${COMPANY}/tags`]: () => {
+        asked.push("tags");
+        return jsonResponse({ data: [KEY_ACCOUNT], withheld: false });
+      },
+    });
+    const { container } = render(
+      <StoryProviders>
+        <TagsPanel entityType="company" entityID={COMPANY} canEdit archived />
+      </StoryProviders>,
+    );
+    await act(async () => {});
+    expect(container.querySelector(".tagspanel")).toBeNull();
+    expect(screen.queryByText(en["tags.emptyTitle"])).toBeNull();
+    expect(asked).toEqual([]);
   });
 
   it("draws the words a record carries", async () => {
@@ -176,6 +197,7 @@ describe("taking a tag off a record", () => {
       restore: [],
     };
     installFetchStub({
+      "GET /me": meRoute({ tag: ["read"] }),
       [`GET /records/company/${COMPANY}/tags`]: () =>
         jsonResponse({ data: carried, withheld: false }),
       [REMOVE]: (body) => {
@@ -409,68 +431,6 @@ describe("the company mount's add-tag verb", () => {
 
   it("offers no verb to a seat holding no update grant", async () => {
     mountCompany(false, {});
-    expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
-  });
-});
-
-// The verb belongs to the PANEL, not to each host that mounts it. A contact page
-// once shipped with tags a reader could see and no way to add one, because the
-// add button lived in the company wrapper and the contact mount never placed it.
-// These drive the REAL mount, so they fail if it stops computing `canEdit`
-// correctly — a literal prop would only prove the panel obeys whatever it gets.
-describe("the contact mount offers the verb the panel draws", () => {
-  const CONTACT = "01a06151-0000-7000-8000-000000000002";
-
-  function mountContact(
-    contact: Record<string, unknown>,
-    grants: Record<string, string[]> = { contact: ["update"] },
-    seat: "full" | "read" = "full",
-  ) {
-    installFetchStub({
-      "GET /me": meRoute(grants as never, { seat }),
-      [`GET /records/contact/${CONTACT}/tags`]: () =>
-        jsonResponse({ data: [], withheld: false }),
-    });
-    render(
-      <StoryProviders>
-        <ContactTagsSection
-          view={{ contact: { id: CONTACT, ...contact } } as never}
-        />
-      </StoryProviders>,
-    );
-  }
-
-  // The control: without it, a verb that never renders would pass every test
-  // below for the wrong reason.
-  it("offers the verb on a contact the seat may write", async () => {
-    mountContact({ writable: true });
-    expect(
-      await screen.findByRole("button", { name: en["tags.add"] }),
-    ).toBeInTheDocument();
-  });
-
-  // The row axis. A rep holding `contact.update` on the OBJECT still may not
-  // write a colleague's contact, and the server stamps that as `writable`.
-  it("offers no verb on a contact this reader may not write", async () => {
-    mountContact({ writable: false });
-    expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
-  });
-
-  // The seat axis. A read seat is refused by the licensing middleware before
-  // RBAC is consulted, so a verb offered to one is a control whose save cannot
-  // succeed.
-  it("offers no verb to a read seat", async () => {
-    mountContact({ writable: true }, { contact: ["update"] }, "read");
-    expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
-  });
-
-  // The object axis, for completeness: all three are necessary and none of the
-  // others would catch a mount that dropped this one.
-  it("offers no verb to a seat holding no update grant", async () => {
-    mountContact({ writable: true }, {});
     expect(await screen.findByText(en["tags.emptyTitle"])).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: en["tags.add"] })).toBeNull();
   });

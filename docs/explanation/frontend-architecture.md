@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/App.tsx frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -37,14 +38,15 @@ for the frontend; the agent surface follows the same rule. Three things follow:
 
 The first raw call is the LinkedIn `Connections.csv` file send. It is a
 **`/v1` call the typed client cannot make**: the client cannot build a
-`multipart` body. Its file (`screens/linkedin-import.tsx`) says so in place, and a new exception of that kind
+`multipart` body. Its file (`features/import/linkedin-import.tsx`) says so in place, and a new exception of that kind
 needs the same note. The other raw call is `features/automations/connected-agents.tsx`
 reading `/.well-known/oauth-protected-resource`. That is **not a `/v1` route**,
 so the typed client does not carry it.
 
 Routing uses the **URL hash** (`#/deals/01J9ZK` → `{ screen: "deals", id: "01J9ZK" }`).
-So any plain file host serves `index.html` for every entry point, and the
-server needs no fallback for the web app. A hash may carry a query of its own.
+Record links also carry `/r/{kind}/{id}` before the hash so a preview fetcher can name the record.
+The web tier serves the app for a browser and sends other fetches to the public card endpoint.
+`AppLink` keeps app links rooted at the same origin. A hash may carry a query of its own.
 The router removes it, so a `?utm=…` never ends up in a screen name.
 
 ## The layers
@@ -56,11 +58,10 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
                         ⌘K palette, agent dock, banners
  src/lib/               shared code that draws nothing: hash router, URL
                         state, theme, capability, problem decoding, session
- src/components/        screen parts many surfaces share: create, edit,
+ src/components/        screen parts many features share: create, edit,
                         list query, record fields
- src/screens/           one file per surface (a directory when the surface
-                        is a state machine)
- src/features/<name>/   one folder per feature, moved from screens/
+ src/features/<name>/   one folder per feature: its screens, tests, stories
+ src/testing/           test harnesses, fixtures and tree-wide guards
  src/i18n/  src/format/ the presentation edge: copy, money, dates, zones
  src/api/               the one seam + the generated contract types
 ```
@@ -80,8 +81,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   once, never nothing.
 
   `conformance.test.ts` is the drift gate over the whole
-  tree. No file in `design-system/` imports `app/`, `components/`, `screens/` or `features/`. A part
-  that needs a feature, such as the record page's mail drawer, lives in `screens/`.
+  tree. No file in `design-system/` imports `app/`, `components/` or `features/`. A part
+  that needs a feature, such as the record page's mail drawer, lives in that feature.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
   `topbar.tsx` is the top bar of the session: the control that makes the
@@ -94,23 +95,17 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   the shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
 - **`src/lib/`**: shared code that draws nothing. `router.tsx` (hash routing),
   `urlstate.ts`, `theme.ts` and `capability.ts` live here, with problem
-  decoding and the session. `lib/` never imports `app/`, `components/`, `screens/` or `features/`.
-- **`src/components/`**: the screen parts that many surfaces share. Examples are
+  decoding and the session. `lib/` never imports `app/`, `components/` or `features/`.
+- **`src/components/`**: the screen parts that many features share. Examples are
   the create and edit dialogs, the list query and the record fields.
-  A component never imports `app/`, `screens/` or `features/`. A part used by one surface
-  stays with that surface.
-- **`src/screens/`**: one file per surface. A surface gets a *folder* only
-  when it is a state machine and not a page. One has one:
-  `screens/onboarding-conversation/`. There the conversation machine, each
-  `*-act.tsx` and `*-scene.tsx` file, and the code that loads the conversation
-  again each need their own file. Everything else, even surfaces as
-  large as `companies.tsx` and `deals.tsx`, stays one file, with its
-  `*.test.tsx` and `*.stories.tsx` beside it. An address that no screen answers
-  shows a note that says so (`shell.unknownPage`), never an empty page.
-- **`src/features/<name>/`**: the new home of a surface, one folder for each
-  feature, with its tests and stories. Surfaces move here from `screens/` one
-  feature at a time, by the steps in
-  [move-a-frontend-feature.md](../how-to/move-a-frontend-feature.md).
+  A component never imports `app/` or `features/`.
+- **`src/features/<name>/`**: one folder per feature, with each screen's
+  `*.test.tsx` and `*.stories.tsx` beside it. A screen gets a folder of its own
+  only when it is a state machine and not a page, as
+  `features/onboarding/onboarding-conversation/` is. An address that no screen
+  answers shows a note that says so (`shell.unknownPage`), never an empty page.
+- **`src/custom/`**: the screens a fork adds. Margince ships it with only its
+  README, so a fork's screens never conflict with a new release.
 - **`src/i18n/`**: three catalogs (`en`, `de`, `vi`), with `en` the default.
   Two checks make every catalog hold the same keys. `MessageKey` is
   `keyof typeof en`, and the other catalogs are checked against it with
@@ -134,6 +129,36 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   fixed value such as `+02:00` is rejected at the edge with an error. No turning
   one kind of money into another, no counting on calendar dates, and no locale
   going back into what is stored.
+
+  Every time a signed-in screen shows is read in the reader's own zone,
+  `useViewerZone()` from `lib/viewerzone.tsx`. That is the zone the user chose
+  under Settings → Account, or their browser's until they have one.
+  `useCompanyZone()` (`lib/companyzone.tsx`) is for reports
+  and for days the server counts on the company's clock. `browserZone()` is for
+  public screens, sign-in and a browser's own date-time input.
+  `src/format/timezone.ts` states the rule, and the census in
+  `src/format/zone-by-purpose.test.ts` lists every file that uses an exception,
+  each with its reason. A file that is not on that list reads the reader's
+  zone.
+
+### Each feature stands alone
+
+Only the shell (`app/` and `App`) imports a feature. A feature imports no
+other feature and not the shell. When two features need the same code, it moves
+down: to `components/` if it draws, to `lib/` if it does not. Code that only one
+other feature uses moves into that feature, and a test helper that features
+share moves to `testing/`. A feature that shows another feature's whole screen
+gets it from `app/`, which passes it in.
+
+The other side holds too: a file in `components/`, `lib/` or `format/` that
+only one feature uses belongs in that feature. Without this rule, a move of one
+feature's code into a shared folder would get past the first.
+
+`frontend/scripts/feature-boundaries.test.ts` fails both. The imports that
+crossed a feature line when it landed are frozen in
+`frontend/scripts/feature-boundaries-waivers.txt`. That list only gets shorter,
+and a new line is never added. The steps for a move are in
+[move-frontend-code.md](../how-to/move-frontend-code.md).
 
 ## The shell
 
@@ -228,17 +253,21 @@ too.
 
 ## Colour
 
-The app shell is **glass over the light page**, as
+The app shell has a panel rail and a clear top bar over the theme ground, as
 [DESIGN.md](../../DESIGN.md#6-the-shell) and the top of `src/app/shell.css`
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
 
-The dark rail group in `tokens.css` (`--bgRail`, `--railIconActive`,
-`--overlayScrim`) is for the dark green field
-only. Its comment says it has no theme, `white-alpha` in both themes, which is
-correct for that field. That field is the tooltips the small rail shows, the bar
-of the client surface, and the surfaces for the web site and the deck. A new
-app panel styled from those tokens is styled, in error, as the public web site.
+The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`,
+`--overlayScrim`) is the one dark green field, the same in both themes. It is
+for what passes over the page, such as the tooltips the folded sidebar shows
+and the bar of the client surface. The sidebar is never on it. A new app panel styled from those tokens
+is styled in error.
+
+The text colours made for the page fail on that field: `--textSecondary` and `--accentText` measure
+under 3:1 there. `src/design-system/inkfield.css` lists every part of the app drawn on the field. Inside
+those parts, it points the text, link and focus tokens at the field's own colours. A link there has a line
+under it. A new part on the field goes in that list; `inkfield.test.ts` fails one that is missing.
 
 Both themes ship, and **the theme resolves before React starts**.
 `main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
@@ -296,8 +325,8 @@ The old parts stay in two places, both by design:
 - **On the staging surfaces**, whose job is to set a proposal beside what is
   stored. The first is the approvals lane of the Worklist (`features/worklist/worklist.tsx`,
   `features/automations/approvalrow.tsx`). Then the confirm step of onboarding
-  (`screens/onboarding-conversation/confirm-card.tsx`,
-  `screens/onboarding-company-form.tsx`) and the Company-context settings
+  (`features/onboarding/onboarding-conversation/confirm-card.row.tsx`,
+  `features/onboarding/onboarding-company-form.tsx`) and the Company-context settings
   screen. Last are the record surfaces that show a single line about where a
   value comes from (`contacts.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).
   `StagingCard` and `FieldDiff` are the composed forms of the same parts.
@@ -355,7 +384,7 @@ even if the test tree breaks.
 | Type list | `frontend/scripts/check-font-lock.sh` | a `font-family` other than Outfit (titles), Geist (body text, numbers too) or Geist Mono (code only), plus the named fallbacks; and Mono in any place but `code`, `pre`, `samp` and `.code-block`, which `design-system/mono.test.ts` refuses too |
 | No emoji | `frontend/scripts/check-icon-glyph.sh` | an emoji in rendered code. Comments are removed first, since the 🟢/🟡 tier marks are our style and render through `AutonomyDot` |
 | Spacing | `frontend/scripts/check-ds-spacing.sh` | a **new** `margin`, `padding` or `gap` in `px`, written in place. It reads only lines changed against `origin/main`, and skips a line marked `// ds:ignore <reason>` |
-| Spacing roles | `frontend/scripts/check-ds-spacing-roles.sh` | a screen rule that sets the space of a design-system part the design system already spaces, or sets the size of one it already sizes: `font-size`, `line-height`, `letter-spacing`. Both lists are derived from `design-system/*.css` on every run. Also a rule that writes a fixed step where a role exists: the `*-actions` gap, the `*-cards` gap, the `*-card` or `*-panel` `padding`. **Whole tree**: moving a CSS class into the design system turns screen rules nobody touched into findings in lines no change holds. A case with no role to name it is skipped with `/* ds:ignore <reason> */` on its line. `check-ds-spacing-roles.test.sh` tests its verdict against test trees |
+| Spacing roles | `frontend/scripts/check-ds-spacing-roles.sh` | a screen rule that sets the space of a design-system part the design system already spaces, or sets the size of one it already sizes: `font-size`, `line-height`, `letter-spacing`. Both lists are derived from `design-system/*.css` on every run. Also a rule that writes a fixed step where a role exists: the `*-actions` gap, the `*-cards` gap, the `*-card` or `*-panel` `padding`, the `*-panes` `gap` or `column-gap` (`--gapPanes`), and the `*-pane` `padding` (`--padPane`). **Whole tree**: moving a CSS class into the design system turns screen rules nobody touched into findings in lines no change holds. A case with no role to name it is skipped with `/* ds:ignore <reason> */` on its line. `check-ds-spacing-roles.test.sh` tests its verdict against test trees |
 | Type source | `design-system/type-source.test.ts` | text type set by value in any file but `tokens.css`. In every `.css` under `frontend/src` and every style object outside tests, `font-size`, `line-height`, `letter-spacing` and `text-transform` may say only `inherit`. `font` takes a `--font*` token and `font-weight` a `--fontWeight*` one. Two values that place things are accepted, only inside the two UA style blocks. It refuses `uppercase` text by every route: `font-variant-caps`, the `font-variant` short form, the `small-caps` features, and a `.toUpperCase()` whose result is rendered. Fails closed: a set with no `app.css`, under 100 CSS files or under 100 component files fails and does not pass empty |
 | Action rows | `design-system/actionrow.test.ts` | an element whose direct parts are two or more buttons and nothing else, and that does not get `gap: var(--gapActions)` from a class it names or from its own `style` value. That includes a class that **no CSS file declares**, which a gate that reads only CSS cannot see. A line is skipped with `{/* ds:ignore <reason> */}` |
 | Contract type drift | `make frontend-check` | `pnpm gen:api` changes `src/api/schema.d.ts` or `public-events.ts` |
@@ -372,8 +401,7 @@ even if the test tree breaks.
 
 `craft static`, in `make check` and in CI, reads only the comment lines a
 change adds to a `frontend/` file. The frontend lane is separate from the Go
-merge gate and needs Node and pnpm. Run `make check-fe` (or
-`make frontend-check`) before pushing a frontend change.
+merge gate and needs Node and pnpm.
 
 ## Where to look first
 
@@ -413,8 +441,9 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 | Design gates (tests) | `frontend/src/design-system/{conformance,tokens}.test.ts` |
 | Design gates (shell script checks that fail closed) | `frontend/scripts/check-*.sh` |
 | Render UAT scoped to the change | `frontend/scripts/fe-uat.mjs` |
-| Screen parts many surfaces share | `frontend/src/components/` |
-| Screens | `frontend/src/screens/` (one file per surface; `onboarding-conversation/` is the one state-machine folder) |
+| Screen parts many features share | `frontend/src/components/` |
+| Features | `frontend/src/features/<name>/` (one folder per feature; `onboarding-conversation/` is the one state-machine folder) |
+| The feature boundary gate | `frontend/scripts/feature-boundaries.ts` |
 | Catalogs / the edge where values turn into text | `frontend/src/i18n/`, `frontend/src/format/` |
 
 ## Where to go next

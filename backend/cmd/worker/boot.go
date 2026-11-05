@@ -20,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -53,37 +54,25 @@ func runDebugSubcommand(ctx context.Context, args []string, stdout io.Writer) (b
 	return false, nil
 }
 
-// loadDeployment reads the same deployment file the api boots from — the
-// capture pipeline tuning (capture.freemail_extra), the operator's
-// ai.capture_payloads posture the Surface-B runner honors, and whether the
-// installation armed operations.allow_data_reset, which decides whether this
-// role subscribes to reset announcements at all — and folds the rate sources it
-// declares into cfg. A missing file means defaults; a malformed one
-// is a boot error (a typo must not silently drop the blocklist or flip the
-// payload posture).
-func loadDeployment(cfg *workerConfig) (deployconfig.Config, error) {
-	deployCfg, err := deployconfig.Load(cfg.configPath, cfg.posture)
-	if err != nil {
-		return deployconfig.Config{}, err
-	}
-	cfg.allowDataReset = deployCfg.Operations.AllowDataReset
-	cfg.listsEnabled = deployCfg.Lists.Enabled
-	cfg.ratesFx = deployCfg.Rates.Fx
-	cfg.ratesCurrencies = deployCfg.Rates.FxCurrencies
-	cfg.csvImportCap = deployCfg.EffectiveUploads().CSVImport
-	return deployCfg, nil
+// loadBootstrap reads the seeds from the same files the settings came from:
+// the model binding a fresh installation is bound with. A missing file means
+// none; a malformed one is a boot error.
+func loadBootstrap(cfg workerConfig) (deployconfig.Bootstrap, error) {
+	files := cfg.settings.Files()
+	return deployconfig.LoadBootstrapFiles(files.Base, files.ConfigFile)
 }
 
 // workerModelPathSpec gathers the model-path knobs from where each is
 // declared: the routing choice from the process flags, the capture posture from
 // the deployment config — the same split cmd/api's modelPathSpecFrom reads, so
 // the two roles cannot disagree on whether content capture is on.
-func workerModelPathSpec(cfg workerConfig, deployCfg deployconfig.Config) modelPathSpec {
+func workerModelPathSpec(cfg workerConfig, bootstrap deployconfig.Bootstrap) modelPathSpec {
 	return modelPathSpec{
 		routingPath:     cfg.routingPath,
 		fake:            cfg.fakeBrain,
-		seeds:           deployCfg.Seeds,
-		capturePayloads: deployCfg.AI.CapturePayloads,
+		seeds:           bootstrap.Seeds,
+		capturePayloads: config.Val(cfg.settings, ps.CapturePayloads),
+		keys:            compose.RoutingKeys(cfg.settings),
 	}
 }
 
@@ -145,7 +134,7 @@ func resetFlush(path compose.ModelPath) func(ids.UUID) {
 func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, vault keyvault.Vault, modelPath compose.ModelPath, logger *slog.Logger, stdout io.Writer) (workerLanes, error) {
 	lanes := workerLanes{background: background, ctx: laneCtx, logger: logger}
 
-	blob, blobConfigured, err := blobstore.FromEnv(laneCtx, config.FromOS)
+	blob, blobConfigured, err := blobstore.FromConfig(laneCtx, cfg.settings)
 	if err != nil {
 		return lanes, fmt.Errorf("worker: blobstore: %w", err)
 	}
@@ -170,7 +159,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	// The adapter registry the provider-run lanes execute through, read from
 	// the same variable cmd/api reads: the role that queues a run and the
 	// role that executes it must agree about who they are calling.
-	providers, providersConfigured, err := compose.ProviderRegistryFromEnv(time.Now, config.FromOS)
+	providers, providersConfigured, err := compose.ProviderRegistryFor(time.Now, cfg.settings)
 	if err != nil {
 		return lanes, fmt.Errorf("worker: %w", err)
 	}
@@ -354,6 +343,12 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	_, _ = fmt.Fprintln(stdout, "worker re-scoping derived models on audience changes")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:audience-rescope", rescope.HandleEvent, logger, 0) })
 
+	// A voice sample read from sent mail follows its mail: archived,
+	// restricted, narrowed or marked confidential, the sample is emptied.
+	voiceCopies := compose.NewVoiceCopyRecheckGen(pool)
+	_, _ = fmt.Fprintln(stdout, "worker emptying voice samples whose mail stopped being learnable")
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:voice-copy-recheck", voiceCopies.HandleEvent, logger, 0) })
+
 	// The LinkedIn ghost matcher (ADR-0078 §8b): a ghost attaches the moment
 	// its contact exists, whoever created them. Deterministic like the edge
 	// projection above, so it runs on every worker.
@@ -364,6 +359,8 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// A contact's captured mail finds them however late they arrive: the ensure
 	// links only the message it ran for, so every message captured before the
 	// contact existed needs the cohort repair this consumer runs.
+	dealRefiler := compose.NewDealRefileGen(pool, inserter, time.Now)
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:deal-refile", dealRefiler.HandleEvent, logger, 0) })
 	cohort := compose.NewCohortPromoteGen(pool, contacts.NewStore(compose.InstallationDB(pool)), logger)
 	_, _ = fmt.Fprintln(stdout, "worker repairing captured cohorts as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:cohort-promote", cohort.HandleEvent, logger, 0) })
@@ -381,6 +378,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:approval-notify", notify.HandleEvent, logger, 0) })
 
 	startCommissionAccrual(ctx, pool, rdb, background, logger, stdout)
+	startPartnerActivation(ctx, pool, rdb, background, logger, stdout)
 
 	startIntroAdvance(ctx, pool, rdb, background, logger, stdout)
 	startStageProgressionOutcome(ctx, pool, rdb, background, logger, stdout)
@@ -389,6 +387,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)
 	startCommitmentSettle(ctx, pool, rdb, background, logger, stdout)
+	startAssuranceFreshness(ctx, pool, rdb, background, inserter, logger, stdout)
 
 	// What the AI is doing for one contact, projected into the table the UI
 	// reads. Deterministic like the projections above, so it runs on every

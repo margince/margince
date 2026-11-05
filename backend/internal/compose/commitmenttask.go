@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -22,6 +23,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -32,23 +36,32 @@ import (
 // The links are frozen at staging time: a rep confirms the proposal they were
 // shown, and a relink between the two moments must not move the task.
 type CommitmentTaskProposal struct {
-	SourceActivityID ids.UUID `json:"source_activity_id"`
-	Summary          string   `json:"summary"`
+	ExistingTaskID   *ids.UUID `json:"existing_task_id,omitempty"`
+	SourceActivityID ids.UUID  `json:"source_activity_id"`
+	Summary          string    `json:"summary"`
 	// Party is who made the promise, as the source names them.
 	Party string `json:"party"`
-	// SeatID is the colleague the task is for. Nil when nobody could be named,
-	// and then accepting it makes it the decider's.
+	// SeatID is the colleague the task is for: the promiser for a new task,
+	// the task's holder for added recipients (approvalsubject.CommitmentAskedOf).
 	SeatID *ids.UUID `json:"seat_id,omitempty"`
+	// PromiserSeatID is who made the promise.
+	PromiserSeatID *ids.UUID `json:"promiser_seat_id,omitempty"`
+	// PromiserUnresolved marks a proposal staged before every request named its
+	// promiser; nothing stages one now.
+	PromiserUnresolved bool `json:"promiser_unresolved,omitempty"`
 	// DueDate is a day, YYYY-MM-DD, or empty. Text rather than an instant, so a
 	// reviewer edits a day and acceptance decides when that day ends.
-	DueDate string                         `json:"due_date,omitempty"`
-	Links   []activities.ActivityLinkInput `json:"links"`
-	Quote   string                         `json:"quote"`
-	Locator string                         `json:"locator"`
-	ClaimID *ids.UUID                      `json:"claim_id,omitempty"`
-	Body    string                         `json:"body"`
-	// PrivateTo is the one member the source mail answers to, whose alone the
-	// task is to read. Nil for a shared conversation.
+	DueDate string `json:"due_date,omitempty"`
+	// DueZone is the zone the day ends in; empty is the installation's.
+	DueZone  string                         `json:"due_zone,omitempty"`
+	Links    []activities.ActivityLinkInput `json:"links"`
+	Quote    string                         `json:"quote"`
+	Locator  string                         `json:"locator"`
+	ClaimID  *ids.UUID                      `json:"claim_id,omitempty"`
+	ClaimIDs []ids.UUID                     `json:"claim_ids,omitempty"`
+	Body     string                         `json:"body"`
+	// PrivateTo is the one member the source mail answers to. The task is read
+	// by them and its holder alone. Nil for a shared conversation.
 	PrivateTo *ids.UUID `json:"private_to,omitempty"`
 }
 
@@ -61,9 +74,15 @@ type commitmentTask struct {
 	SourceActivityID ids.UUID
 	Links            []activities.ActivityLinkInput
 	DueDate          string
-	Assignee         ids.UUID
-	ClaimID          *ids.UUID
-	PrivateTo        *ids.UUID
+	DueZone          string
+	// DueAt is a deadline already stated as an instant; DueDate is used when nil.
+	DueAt     *time.Time
+	Assignee  ids.UUID
+	ClaimID   *ids.UUID
+	ClaimIDs  []ids.UUID
+	PrivateTo *ids.UUID
+	// Origin is the taker's when a colleague or their agent took the promise over.
+	Origin string
 }
 
 // writeCommitmentTask writes the task for a promise, keyed on its locator, and
@@ -93,13 +112,17 @@ func writeCommitmentTask(
 		Links:            t.Links,
 		SourceActivityID: &sourceActivity,
 		AssigneeID:       &assignee,
-		Origin:           activities.OriginAgent,
+		Origin:           t.Origin,
+		DueAt:            t.DueAt,
 	}
+	// The promiser's own task waits for them as a task made by hand would,
+	// also before they first sign in.
+	in.AdmitInvitedAssignee()
 	if t.PrivateTo != nil {
-		in.VisibleOnlyTo(*t.PrivateTo)
+		in.VisibleOnlyTo(slices.Compact([]ids.UUID{t.Assignee, *t.PrivateTo})...)
 	}
-	if t.DueDate != "" {
-		due, err := commitmentDueInstant(ctx, tx, t.DueDate)
+	if t.DueAt == nil && t.DueDate != "" {
+		due, err := commitmentDueInstant(ctx, tx, t.DueDate, t.DueZone)
 		if err != nil {
 			return ids.UUID{}, err
 		}
@@ -110,8 +133,9 @@ func writeCommitmentTask(
 		return ids.UUID{}, err
 	}
 	taskID := ids.UUID(task.Id)
-	if t.ClaimID != nil {
-		if err := claims.SetClaimTaskTx(execCtx, tx, *t.ClaimID, taskID); err != nil {
+	claimIDs := commitmentClaimIDs(t.ClaimID, t.ClaimIDs)
+	for _, claimID := range claimIDs {
+		if err := claims.SetClaimTaskTx(execCtx, tx, claimID, taskID); err != nil {
 			return ids.UUID{}, err
 		}
 	}
@@ -130,14 +154,16 @@ func writeCommitmentTask(
 // A day that will not parse is an error rather than a silent skip: a reviewer
 // edited the payload into something acceptance cannot read, and an undated
 // task would hide that from them.
-func commitmentDueInstant(ctx context.Context, tx pgx.Tx, day string) (time.Time, error) {
-	zone, err := identity.TimezoneOf(ctx, tx)
-	if err != nil {
-		return time.Time{}, err
+func commitmentDueInstant(ctx context.Context, tx pgx.Tx, day, zone string) (time.Time, error) {
+	if zone == "" {
+		var err error
+		if zone, err = identity.TimezoneOf(ctx, tx); err != nil {
+			return time.Time{}, err
+		}
 	}
 	loc, err := time.LoadLocation(zone)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("compose: installation timezone %q: %w", zone, err)
+		return time.Time{}, fmt.Errorf("compose: commitment due-date timezone %q: %w", zone, err)
 	}
 	parsed, err := time.ParseInLocation(time.DateOnly, day, loc)
 	if err != nil {
@@ -150,9 +176,9 @@ func commitmentDueInstant(ctx context.Context, tx pgx.Tx, day string) (time.Time
 // commitmentTaskEffect executes an accepted commitment: redeem and write in ONE
 // transaction, so the approval is spent if and only if the task exists.
 //
-// The task goes to the colleague the proposal named. A proposal that named
-// nobody goes to the human who accepted it: it was staged for them, and a task
-// nobody holds reminds nobody. They can hand it on like any task.
+// The task goes to the colleague the proposal is for, who is the only member
+// who may accept it (commitmentTaskPrecheck). Accepting never makes the
+// decider the owner of somebody else's promise.
 func commitmentTaskEffect(
 	svc *approvals.Service, tasks *activities.Store, claims *contacts.Store,
 ) approvals.ApprovedEffect {
@@ -161,43 +187,83 @@ func commitmentTaskEffect(
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
 			return fmt.Errorf("compose: unmarshal commitment proposal: %w", err)
 		}
-		decider, ok := principal.Actor(ctx)
-		if !ok {
-			return errors.New("compose: commitment proposal effect without a deciding principal")
-		}
-		assignee := decider.UserID
-		if proposal.SeatID != nil {
-			assignee = *proposal.SeatID
-		}
-		// Refused before the approval is touched when what was staged already
-		// says so; asked again inside the transaction for a thread made private
-		// since.
-		if !mayHoldPrivateTask(proposal.PrivateTo, assignee) {
-			return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
-				apperrors.ErrPermissionDenied)
+		assignee, err := commitmentDecider(ctx, proposedChange)
+		if err != nil {
+			return err
 		}
 		// The write runs as the deciding human, so each staged link meets the
 		// visibility check a link they typed would. One they cannot see refuses
 		// the whole acceptance, and the approval stays unspent.
 		return svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
-			privateTo, err := sourcePrivateToNow(ctx, tx, proposal.SourceActivityID, proposal.PrivateTo)
+			privateTo, err := privateWorkHeldNow(ctx, tx, proposal, assignee)
 			if err != nil {
 				return err
 			}
-			if !mayHoldPrivateTask(privateTo, assignee) {
-				return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
-					apperrors.ErrPermissionDenied)
+			writer := ctx
+			if heldByAnotherThanOwner(privateTo, assignee) {
+				// Every record a private thread is filed under is its owner's, so
+				// the holder could attach none of them. The links and claims are
+				// the extractor's and cannot be edited, so the reader files them.
+				writer = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: signalScanActor})
 			}
-			_, err = writeCommitmentTask(ctx, tx, tasks, claims, commitmentTask{
+			if proposal.ExistingTaskID != nil {
+				return attachCommitmentRecipients(writer, tx, tasks, claims, proposal)
+			}
+			task := commitmentTask{
 				Locator: proposal.Locator,
 				Summary: proposal.Summary, Body: proposal.Body,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
-				DueDate: proposal.DueDate, Assignee: assignee, ClaimID: proposal.ClaimID,
-				PrivateTo: privateTo,
-			})
+				DueDate: proposal.DueDate, DueZone: proposal.DueZone, Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
+				PrivateTo: privateTo, Origin: activities.OriginAgent,
+			}
+			if heldByAnotherThanOwner(privateTo, assignee) {
+				task.Extractor = signalScanActor
+			}
+			_, err = writeCommitmentTask(writer, tx, tasks, claims, task)
 			return err
 		})
 	}
+}
+
+// commitmentTaskDeclineEffect withdraws the customer claims a turned-down
+// proposal filed, in the rejection's own transaction. The claims are the
+// extractor's, so the extractor withdraws them: a decider who may not write the
+// customer's record can still say no.
+func commitmentTaskDeclineEffect() approvals.DeclinedEffect {
+	return func(ctx context.Context, tx pgx.Tx, _ ids.ApprovalID, proposedChange json.RawMessage) error {
+		var proposal CommitmentTaskProposal
+		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
+			return fmt.Errorf("compose: unmarshal commitment proposal: %w", err)
+		}
+		extractor := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: signalScanActor})
+		return contacts.WithdrawClaimsTx(extractor, tx, commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs))
+	}
+}
+
+// privateWorkHeldNow is who the source mail is private to now, once it is
+// known that the holder may still hold work from it. A sent copy turned back to
+// received mail since staging refuses the acceptance. Read from the rows as
+// they stand, never from the staged payload.
+func privateWorkHeldNow(ctx context.Context, tx pgx.Tx, proposal CommitmentTaskProposal, holder ids.UUID) (*ids.UUID, error) {
+	privateTo, err := sourcePrivateToNow(ctx, tx, proposal.SourceActivityID, proposal.PrivateTo)
+	if err != nil {
+		return nil, err
+	}
+	may, err := auth.SeatMayHoldPrivateWorkTx(ctx, tx, proposal.SourceActivityID, privateTo, holder)
+	if err != nil {
+		return nil, err
+	}
+	if !may {
+		return nil, fmt.Errorf("compose: a commitment read out of private mail is for a colleague who may open that mail: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	return privateTo, nil
+}
+
+// heldByAnotherThanOwner reports a task from private mail held by somebody
+// other than the mailbox owner, such as the colleague who sent the message.
+func heldByAnotherThanOwner(privateTo *ids.UUID, holder ids.UUID) bool {
+	return privateTo != nil && *privateTo != holder
 }
 
 // sourcePrivateToNow is the member the proposal's source mail is private to as
@@ -229,7 +295,7 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 	}
 	if !offered {
 		return nil, fmt.Errorf("compose: the conversation this commitment was read from changed since, "+
-			"and who may read it is no longer known — dismiss this card and let the next reading propose it again: %w",
+			"and who may read it is no longer known — review conversation access before retrying: %w",
 			apperrors.ErrConflict)
 	}
 	if staged != nil || owner.IsZero() {
@@ -238,17 +304,48 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 	return &owner, nil
 }
 
-// commitmentTaskPrecheck refuses a proposal filed under a record the decider
-// cannot see. It runs before the decision, so the card stays pending. The
-// effect asks again as it writes.
-func commitmentTaskPrecheck(tasks *activities.Store) approvals.ReleasePrecheck {
+// commitmentDecider is the member deciding this proposal, when the proposal is
+// for them. A proposal for somebody else, or for nobody, is refused as a
+// conflict, and the card stays pending.
+func commitmentDecider(ctx context.Context, proposal json.RawMessage) (ids.UUID, error) {
+	decider, ok := principal.Actor(ctx)
+	if !ok {
+		return ids.Nil, errors.New("compose: commitment proposal decided without a deciding principal")
+	}
+	asked, named := approvalsubject.CommitmentAskedOf(proposal)
+	if !named || asked != decider.UserID {
+		return ids.Nil, fmt.Errorf("compose: only the colleague who made this promise may accept it: %w",
+			apperrors.ErrConflict)
+	}
+	return asked, nil
+}
+
+// commitmentTaskPrecheck refuses a proposal that is not the decider's. It also
+// refuses one from private mail the decider may no longer hold work from, and
+// one filed under a record the decider cannot see. It runs before the decision,
+// so the card stays pending. The effect asks again as it writes.
+func commitmentTaskPrecheck(db *database.DB, tasks *activities.Store) approvals.ReleasePrecheck {
 	return func(ctx context.Context, staged, edited json.RawMessage) error {
 		var proposal CommitmentTaskProposal
 		if err := json.Unmarshal(staged, &proposal); err != nil {
 			return fmt.Errorf("compose: unmarshal staged commitment proposal: %w", err)
 		}
-		if err := tasks.ProbeLinkWrites(ctx, proposal.Links); err != nil {
+		holder, err := commitmentDecider(ctx, staged)
+		if err != nil {
 			return err
+		}
+		var privateTo *ids.UUID
+		if err := db.Tx(ctx, func(tx pgx.Tx) error {
+			var heldErr error
+			privateTo, heldErr = privateWorkHeldNow(ctx, tx, proposal, holder)
+			return heldErr
+		}); err != nil {
+			return err
+		}
+		if !heldByAnotherThanOwner(privateTo, holder) {
+			if err := tasks.ProbeLinkWrites(ctx, proposal.Links); err != nil {
+				return err
+			}
 		}
 		return refuseCommitmentEdit(staged, edited)
 	}
@@ -276,7 +373,9 @@ func refuseCommitmentEdit(staged, edited json.RawMessage) error {
 		return &approvals.InvalidEditError{Cause: fmt.Errorf(
 			"the due date %q is not a date — write it as YYYY-MM-DD", after.DueDate)}
 	}
-	after.Summary, after.DueDate = before.Summary, before.DueDate
+	if before.ExistingTaskID == nil {
+		after.Summary, after.DueDate = before.Summary, before.DueDate
+	}
 	pinned, err := json.Marshal(after)
 	if err != nil {
 		return fmt.Errorf("compose: marshal edited commitment proposal: %w", err)
@@ -289,4 +388,36 @@ func refuseCommitmentEdit(staged, edited json.RawMessage) error {
 		return &approvals.InvalidEditError{Cause: errors.New("only the promise's wording and its due date may be edited")}
 	}
 	return nil
+}
+
+func commitmentClaimIDs(single *ids.UUID, plural []ids.UUID) []ids.UUID {
+	named := slices.Clone(plural)
+	if single != nil && !slices.Contains(named, *single) {
+		named = append(named, *single)
+	}
+	return named
+}
+
+func attachCommitmentRecipients(ctx context.Context, tx pgx.Tx, tasks *activities.Store, claims *contacts.Store, proposal CommitmentTaskProposal) error {
+	target, err := commitmentRecipientTarget(ctx, tx, tasks, proposal)
+	if err != nil {
+		return err
+	}
+	for _, claim := range commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs) {
+		if err := claims.SetClaimTaskTx(ctx, tx, claim, target); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func commitmentRecipientTarget(ctx context.Context, tx pgx.Tx, tasks *activities.Store, proposal CommitmentTaskProposal) (ids.UUID, error) {
+	target, err := tasks.OpenCommitmentTaskTx(ctx, tx, proposal.Locator, proposal.PrivateTo)
+	if err != nil {
+		return ids.Nil, err
+	}
+	if proposal.ExistingTaskID == nil || target.ID.IsZero() || target.ID != *proposal.ExistingTaskID || derefSeat(target.Assignee) != derefSeat(proposal.SeatID) {
+		return ids.Nil, apperrors.ErrVersionSkew
+	}
+	return target.ID, nil
 }

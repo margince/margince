@@ -1,0 +1,11 @@
+name: buyer_on_cc_is_not_the_partner
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture: [{"direction": "outbound", "subject": "Maple platform migration", "sent": "2026-09-07", "body": "Hi Cedar,\n\nThank you for introducing Mira.\n\nMira, thanks for your request yesterday: \"We need your team to migrate our platform. Please prepare a proposal.\" Is Tuesday a good time to discuss the migration scope?\n\nBest,\nLinh", "participants": [{"key": "seller", "kind": "seat", "role": "from", "name": "Linh Nguyen", "address": "linh@seller.test"}, {"key": "partner", "kind": "contact", "role": "to", "name": "Cedar Partner", "address": "cedar@partner.test"}, {"key": "buyer", "kind": "contact", "role": "cc", "name": "Mira", "address": "mira@maple.test"}]}]
+expect:
+  outcome: accepted
+  answer: [{"kind": "new_opportunity", "message": 1, "buyer": "buyer", "commercial_role": "buyer"}]
+  rubric: "Buying intent belongs to the verified buyer of the stated need. Supplier pitches and event invitations do not establish a buyer request."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

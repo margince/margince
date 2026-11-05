@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"strings"
@@ -92,4 +93,12 @@ func withDrillLedger(ctx context.Context, dsn string,
 	defer pool.Close()
 	db := database.Bind(pool, identity.NewService(pool).InstallationWorkspace)
 	return fn(principal.SystemActing(ctx, drillActor), continuity.NewStore(db))
+}
+
+func addDrillFlags(fs *flag.FlagSet, drill *drillFlags) {
+	fs.StringVar(&drill.by, "by", "", "who runs the restore drill (drill-start only)")
+	fs.StringVar(&drill.restoredTo, "restored-to", "", "RFC 3339 point in time the backup restores to (drill-start only)")
+	fs.StringVar(&drill.drill, "drill", "", "drill id drill-start printed (drill-finish only)")
+	fs.StringVar(&drill.outcome, "outcome", "", "passed or failed (drill-finish only)")
+	fs.StringVar(&drill.note, "note", "", "what the drill checked, or why it failed (drill-start, drill-finish)")
 }

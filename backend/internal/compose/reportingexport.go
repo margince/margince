@@ -18,10 +18,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// reportingHandlers names the module's handler set for the Server embed, since
+// briefs.Handlers already holds the unqualified name.
+type reportingHandlers = reporting.Handlers
+
 type reportingExportHandlers struct{ service *reporting.Service }
 
 func (s reportingExportHandlers) ExportReportingEvaluation(w http.ResponseWriter, r *http.Request, params crmcontracts.ExportReportingEvaluationParams) {
-	selection, err := reporting.SelectionFromQuery(r.URL.Query())
+	selection, err := reporting.SelectionFromQuery(r.URL.Query(), openingSelection())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -31,7 +35,8 @@ func (s reportingExportHandlers) ExportReportingEvaluation(w http.ResponseWriter
 		httperr.Write(w, r, err)
 		return
 	}
-	writeReportingCSV(w, r, evaluation)
+	raw, err := reportingCSV(evaluation)
+	writeReportingCSV(w, r, raw, err)
 }
 
 func (s reportingExportHandlers) ExportReportingEdition(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -40,19 +45,40 @@ func (s reportingExportHandlers) ExportReportingEdition(w http.ResponseWriter, r
 		httperr.Write(w, r, err)
 		return
 	}
-	writeReportingCSV(w, r, edition.Evaluation)
+	raw, err := editionCSV(edition)
+	writeReportingCSV(w, r, raw, err)
 }
 
 func reportingCSV(evaluation crmcontracts.ReportingEvaluation) ([]byte, error) {
+	return encodeReportingCSV(reportingCSVRows(evaluation))
+}
+
+// editionCSV is the edition's readings, then each question card's kept
+// answer in page order, as GetEdition judged it for this reader.
+func editionCSV(edition crmcontracts.ReportingEdition) ([]byte, error) {
+	return encodeReportingCSV(append(reportingCSVRows(edition.Evaluation), questionCSVRows(edition)...))
+}
+
+func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
 	rows := [][]string{{"metric", "block", "label", extractionValueKey, reportingTarget, "comparison", "upper", "unit", reportingCurrency, "context", "coverage", "captured_at"}}
 	appendRow := func(metric, block, label string, value, target, comparison, upper *float64, unit, context, status string) {
+		// A count or a duration has no currency; naming one would read as money.
+		currency := ""
 		if unit == reportingMoney || unit == evaluation.Context.Currency {
-			unit = "minor_units"
+			unit, currency = reportingMinorUnits, evaluation.Context.Currency
 		}
-		rows = append(rows, []string{metric, block, formulacell.Guard(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, evaluation.Context.Currency, context, status, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
+		rows = append(rows, []string{metric, block, formulacell.Guard(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, currency, context, status, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
 	}
 	for _, metric := range evaluation.Metrics {
-		appendRow(string(metric.Id), "headline", string(metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, string(metric.Coverage.Status))
+		appendRow(string(metric.Id), "headline", reportingMetricName(evaluation.Context, metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, string(metric.Coverage.Status))
+		if comparison := metric.TargetComparison; comparison != nil {
+			for _, figure := range targetComparisonCSV(*comparison, metric.Unit) {
+				appendRow(string(metric.Id), reportingTargetComparisonBlock, figure.label, figure.value, nil, nil, nil, figure.unit, figure.context, figure.status)
+			}
+		}
+		for _, figure := range forecastBasisCSV(metric) {
+			appendRow(string(metric.Id), reportingForecastBasisBlock, figure.label, figure.value, nil, nil, nil, metric.Unit, figure.context, string(metric.Coverage.Status))
+		}
 	}
 	for _, chart := range evaluation.Charts {
 		for _, point := range chart.Points {
@@ -65,6 +91,10 @@ func reportingCSV(evaluation crmcontracts.ReportingEvaluation) ([]byte, error) {
 			appendRow(string(chart.Metric), string(chart.Kind), "closing", chart.Closing, nil, nil, nil, chart.Unit, chart.ContextId, string(chart.Coverage.Status))
 		}
 	}
+	return rows
+}
+
+func encodeReportingCSV(rows [][]string) ([]byte, error) {
 	var buffer bytes.Buffer
 	writer := csv.NewWriter(&buffer)
 	if err := writer.WriteAll(rows); err != nil {
@@ -80,15 +110,88 @@ func reportingCSVNumber(value *float64) string {
 	return strconv.FormatFloat(*value, 'f', -1, 64)
 }
 
-func writeReportingCSV(w http.ResponseWriter, r *http.Request, evaluation crmcontracts.ReportingEvaluation) {
-	raw, err := reportingCSV(evaluation)
+func writeReportingCSV(w http.ResponseWriter, r *http.Request, raw []byte, err error) {
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	(httperr.Download{ContentType: reportingCSVContentType, Filename: "reporting.csv", Size: int64(len(raw))}).WriteHeaders(w)
 	w.Header().Set("Cache-Control", "no-store")
-	if _, err := w.Write(raw); err != nil {
+	if _, err := w.Write(raw); err != nil { // #nosec G705 -- a CSV attachment, never rendered as a page
 		slog.WarnContext(r.Context(), "reporting export connection closed", "error", err)
 	}
+}
+
+const (
+	reportingForecastBasisBlock    = "forecast_basis"
+	reportingTargetComparisonBlock = "target_comparison"
+	comparisonStatusRow            = "status"
+)
+
+type comparisonFigure struct {
+	label, unit, context, status string
+	value                        *float64
+}
+
+// targetComparisonCSV is a comparison's status, then each figure it carries.
+// A figure it does not carry has no row, so no blank reads as a zero.
+func targetComparisonCSV(comparison crmcontracts.ReportingTargetComparison, unit string) []comparisonFigure {
+	status := string(comparison.Status)
+	why := ""
+	if comparison.Incompatibility != nil {
+		why = string(*comparison.Incompatibility)
+	}
+	out := []comparisonFigure{{label: comparisonStatusRow, context: why, status: status}}
+	add := func(label, unit, status string, value *float64) {
+		if value != nil {
+			out = append(out, comparisonFigure{label: label, unit: unit, context: reportingTargetComparisonBlock, status: status, value: value})
+		}
+	}
+	add("target", unit, status, comparison.Target)
+	add("landing", unit, status, comparison.Landing)
+	add("won", unit, status, comparison.Won)
+	add("gap", unit, status, comparison.Gap)
+	add("remaining", unit, status, comparison.Remaining)
+	add("open_pipeline", unit, status, comparison.OpenPipeline)
+	add("coverage", "ratio", status, comparison.Coverage)
+	if qualified := comparison.Qualified; qualified != nil {
+		out = append(out, comparisonFigure{label: "qualified_status", context: reportingTargetComparisonBlock, status: string(qualified.Status)})
+		add("qualified_open_pipeline", unit, string(qualified.Status), qualified.OpenPipeline)
+		add("qualified_coverage", "ratio", string(qualified.Status), qualified.Coverage)
+	}
+	return out
+}
+
+// forecastBasisCSV is the measure the landing used, the figures it rests on
+// and the modelled range, each on its own row. A legacy reading without a
+// basis has none of the basis rows, so no blank reads as a measure.
+func forecastBasisCSV(metric crmcontracts.ReportingMetric) []comparisonFigure {
+	out := []comparisonFigure{}
+	add := func(label, context string, minor *int64) {
+		figure := comparisonFigure{label: label, context: context}
+		if minor != nil {
+			figure.value = new(float64(*minor))
+		}
+		out = append(out, figure)
+	}
+	if basis := metric.ForecastBasis; basis != nil {
+		landing := basis.Landing
+		add("measure", string(landing.Measure), nil)
+		add("won", reportingForecastBasisBlock, &landing.WonMinor)
+		add("remaining", reportingForecastBasisBlock, &landing.RemainingMinor)
+		if landing.SystemMinor != nil {
+			add("records_projection", reportingForecastBasisBlock, landing.SystemMinor)
+		}
+		if basis.CallMinor != nil {
+			add("manager_call", reportingForecastBasisBlock, basis.CallMinor)
+		}
+		if landing.Caveat != nil {
+			add("caveat", string(*landing.Caveat), nil)
+		}
+	}
+	if metric.RangeLowMinor != nil && metric.RangeHighMinor != nil {
+		add("range_low", reportingForecastBasisBlock, metric.RangeLowMinor)
+		add("range_high", reportingForecastBasisBlock, metric.RangeHighMinor)
+	}
+	return out
 }

@@ -28,11 +28,14 @@ const sheets = appStylesheets(frontendRoot).map((file) => ({
 }));
 
 const namespaces = [
-  { prefix: "askai-", home: "screens/ai.css" },
-  { prefix: "auth-", home: "screens/auth.css" },
-  { prefix: "book-", home: "screens/book.css" },
-  { prefix: "clientsurface-", home: "screens/client.css" },
-  { prefix: "companydeepread-", home: "screens/companydeepread.css" },
+  { prefix: "askai-", home: "features/ai/ai.css" },
+  { prefix: "auth-", home: "features/sign-in/auth.css" },
+  { prefix: "book-", home: "features/booking/book.css" },
+  { prefix: "clientsurface-", home: "features/settings/client.css" },
+  {
+    prefix: "companydeepread-",
+    home: "features/companies/companydeepread.css",
+  },
   { prefix: "corrections-", home: "features/contacts/contactcorrections.css" },
   { prefix: "create-", home: "components/create.css" },
   {
@@ -40,21 +43,27 @@ const namespaces = [
     home: "features/automations/automations.datefield.css",
   },
   { prefix: "errorboundary-", home: "app/errorboundary.css" },
-  { prefix: "historyfields-", home: "screens/historyfields.css" },
-  { prefix: "leadsignals-", home: "screens/leadsignals.css" },
-  { prefix: "library-", home: "screens/library.css" },
+  { prefix: "historyfields-", home: "features/records/historyfields.css" },
+  { prefix: "leadsignals-", home: "features/leads/leadsignals.css" },
+  { prefix: "library-", home: "features/voice-knowledge/library.css" },
   { prefix: "listquery-", home: "components/listquery.css" },
   { prefix: "oauthconsent-", home: "features/automations/oauthconsent.css" },
-  { prefix: "offers-", home: "screens/offers.css" },
-  { prefix: "partnercommissions-", home: "screens/partnercommissions.css" },
+  { prefix: "offers-", home: "features/deals/offers.css" },
+  {
+    prefix: "partnercommissions-",
+    home: "features/projects/partnercommissions.css",
+  },
   { prefix: "querygate-", home: "design-system/querystates.css" },
-  { prefix: "relationshiprows-", home: "screens/relationshiprows.css" },
-  { prefix: "relationships-", home: "screens/relationships.css" },
+  {
+    prefix: "relationshiprows-",
+    home: "components/relationshiprows.css",
+  },
+  { prefix: "relationships-", home: "components/relationships.css" },
   {
     prefix: "repeatablerowsfield-",
     home: "components/repeatablerowsfield.css",
   },
-  { prefix: "scheduledsends-", home: "screens/scheduledsends.css" },
+  { prefix: "scheduledsends-", home: "features/mail/scheduledsends.css" },
   { prefix: "storyhost-", home: "mcp-apps/story-hosts.css" },
   { prefix: "transcript-", home: "design-system/transcriptread.css" },
 ];

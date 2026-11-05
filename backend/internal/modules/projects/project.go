@@ -55,11 +55,12 @@ type CreateProjectInput struct {
 	// SourceSystem names the system an import took this project from; nil
 	// for one created here, which is what makes it unattributable.
 	SourceSystem *string
+	// SourceID is this project's id in SourceSystem; the pair is unique.
+	SourceID *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (storekit customcolumns).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -93,25 +94,9 @@ func createProjectTx(
 	ctx context.Context, tx pgx.Tx, in CreateProjectInput, by string,
 	active []fieldcatalog.Column, attachCompany AttachCompany, companies ProjectCompanies,
 ) (crmcontracts.Project, error) {
-	// A project with no requested owner belongs to its creator, the same
-	// default contact/company/deal births apply. Ownerless matters
-	// more here than elsewhere: write authority reads an unowned row as
-	// nobody's to change, so an ownerless project can never be attached to a
-	// deal by the rep who just created it (projects.EnsureAttachable).
-	owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
+	var err error
+	in, err = admitProjectCreation(ctx, tx, in, storekit.OwnerOrActor(ctx))
 	if err != nil {
-		return crmcontracts.Project{}, err
-	}
-	in.OwnerID = owner
-
-	// The anchor company is a client-supplied reference to a row-scoped
-	// record, so naming it is a read of it: the caller must be able to see
-	// the company before a project can be hung off it. The composite FK
-	// only proves same-workspace, which is a weaker claim.
-	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.CompanyID.UUID); err != nil {
-		return crmcontracts.Project{}, err
-	}
-	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return crmcontracts.Project{}, err
 	}
 
@@ -129,18 +114,19 @@ func createProjectTx(
 		return crmcontracts.Project{}, fmt.Errorf("put the project's company on it: %w", err)
 	}
 
-	// The birth row: from_phase NULL, exactly as deal_stage_history records
-	// a deal's first placement. A project's history is complete from row one.
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, changed_by)
-		 VALUES ($1, NULL, $2, $3)`,
-		id, PhaseInitiative, by); err != nil {
-		return crmcontracts.Project{}, fmt.Errorf("record project phase history: %w", err)
-	}
-
 	auditID, err := storekit.Audit(ctx, tx, "create", projectObject, id.UUID, nil, map[string]any{projectNameField: in.Name})
 	if err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("audit project create: %w", err)
+	}
+	// The birth row has from_phase NULL, as deal_stage_history records a deal's
+	// first placement. A project's history is complete from row one. The row
+	// names the audit row of the same transaction, so the reader can say who
+	// created the project.
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, changed_by, audit_log_id)
+		 VALUES ($1, NULL, $2, $3, $4)`,
+		id, PhaseInitiative, by, auditID); err != nil {
+		return crmcontracts.Project{}, fmt.Errorf("record project phase history: %w", err)
 	}
 	created := crmcontracts.PublicEventProjectCreated{
 		Name:      in.Name,
@@ -221,14 +207,13 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 		// The stakeholder edges are attributes of the grouping, so they go
 		// with it — the contacts themselves are untouched.
 		if _, err := tx.Exec(ctx,
-			`UPDATE relationship SET archived_at = $2
-			   WHERE project_id = $1 AND kind = 'project_stakeholder' AND archived_at IS NULL`,
-			id, now); err != nil {
+			`UPDATE relationship SET archived_at = @archived WHERE `+projectArchiveRelationships,
+			pgx.StrictNamedArgs{"record": id, "archived": now}); err != nil {
 			return fmt.Errorf("archive project stakeholder edges: %w", err)
 		}
 		var detached storekit.ArchiveCascade
 		if err := detached.DropMemberships(ctx, tx, `WITH gone AS (
-			DELETE FROM list_member WHERE entity_type = 'project' AND entity_id = @record
+			DELETE FROM list_member WHERE `+projectArchiveMemberships+`
 			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
 		logged AS (
 			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
@@ -237,7 +222,7 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 			return fmt.Errorf("detach list memberships: %w", err)
 		}
 		if _, err := tx.Exec(ctx,
-			`DELETE FROM taggable WHERE entity_type = 'project' AND entity_id = $1`, id); err != nil {
+			`DELETE FROM taggable WHERE `+projectArchiveMemberships, pgx.StrictNamedArgs{"record": id}); err != nil {
 			return fmt.Errorf("detach tags: %w", err)
 		}
 
@@ -336,12 +321,6 @@ func (e *ProjectKeyShapeError) FieldFault() (field, code, message string) {
 }
 
 // ProjectPhaseError maps to 422: the phase is not one the lifecycle admits.
-//
-// The contract declares `to_phase` as an enum, but nothing between the wire and
-// the table checks it — httperr.Decode reads JSON and does not validate, and
-// this installation runs no request-validator middleware. So the schema CHECK is
-// the first thing to refuse an unknown phase, and without this arm the caller is
-// handed the constraint's own name instead of the four values it could have sent.
 type ProjectPhaseError struct{}
 
 func (e *ProjectPhaseError) Error() string {

@@ -41,21 +41,12 @@ func (h Handlers) SendMessage(w http.ResponseWriter, r *http.Request, id crmcont
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	claimed, err := sendContextFrom((*string)(req.CommunicationContext),
-		req.MarketingPurpose, req.OperatorReason, req.Evidence)
+	input, err := DecodeSendMessageRequest(req)
 	if err != nil {
 		writeChannelSendErr(w, r, err)
 		return
 	}
-	sent, err := h.store.SendMessage(r.Context(), pathID[ids.ActivityKind](id), SendMessageInput{
-		Body:             req.Body,
-		AttachmentIDs:    attachmentIDsFrom(req.AttachmentIds),
-		ConsentPurpose:   legacyPurposeOf(req.ConsentPurpose),
-		Context:          claimed.category,
-		MarketingPurpose: claimed.marketing,
-		OperatorReason:   claimed.reason,
-		Evidence:         claimed.evidence,
-	}, h.consent, h.channelDelivery)
+	sent, err := h.store.SendMessage(r.Context(), pathID[ids.ActivityKind](id), input, h.consent, h.channelDelivery)
 	if err != nil {
 		writeChannelSendErr(w, r, err)
 		return

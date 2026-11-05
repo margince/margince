@@ -46,6 +46,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
@@ -215,7 +216,20 @@ func renderCorpusAsk(question string, passages []knowledge.Passage) string {
 	return b.String()
 }
 
-// AnswerCorpus turns retrieved passages into the reply the endpoint serves.
+// AnswerCorpus turns retrieved passages into the reply the endpoint serves. A
+// claim from the shipped handbook also names its section and settings page.
+func AnswerCorpus(
+	ctx context.Context, lane corpusAskLane, state knowledge.Readiness,
+	question string, passages []knowledge.Passage, lang string, log *slog.Logger,
+) crmcontracts.KnowledgeAnswer {
+	answer := writeCorpusAnswer(ctx, lane, state, question, passages, lang, log)
+	if answer.Corpus.Shipped && answer.Claims != nil {
+		stampHandbookSections(*answer.Claims)
+	}
+	return answer
+}
+
+// writeCorpusAnswer is the reply before any handbook section is named.
 //
 // With no lane, or a lane that failed, the passages still come back with their
 // citations — but as `unreviewed`, never as `answered`. The distinction is the
@@ -229,7 +243,7 @@ func renderCorpusAsk(question string, passages []knowledge.Passage) string {
 // came to answer a question about the boiling point of nitrogen by quoting its
 // escalation notes: the floor admitted the only passage there was, and with no
 // writer to refuse, the passage WAS the answer.
-func AnswerCorpus(
+func writeCorpusAnswer(
 	ctx context.Context, lane corpusAskLane, state knowledge.Readiness,
 	question string, passages []knowledge.Passage, lang string, log *slog.Logger,
 ) crmcontracts.KnowledgeAnswer {
@@ -335,8 +349,7 @@ type corpusAskEngine struct {
 	// lane writes the prose. Nil is a composition without a chat lane, and the
 	// answer is the passages themselves.
 	lane corpusAskLane
-	// pool resolves the workspace's base language, which is what the answer's
-	// sentences are written in.
+	// pool resolves the base language for a caller who chose none of their own.
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
@@ -357,8 +370,10 @@ func (e *corpusAskEngine) ask(w http.ResponseWriter, r *http.Request, id crmcont
 		modelfailure.Write(w, r, err)
 		return
 	}
+	// The answer goes to the one caller who asked and is stored nowhere, so it
+	// takes their language rather than the shared record's.
 	answer := AnswerCorpus(r.Context(), e.lane, state, question, passages,
-		identity.BaseLanguageForPrompt(r.Context(), e.pool), e.log)
+		identity.ReaderLanguageForPrompt(r.Context(), e.pool), e.log)
 	httperr.WriteJSON(w, http.StatusOK, answer)
 }
 

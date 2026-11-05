@@ -120,6 +120,26 @@ func (e *sendEnv) seedProject(t *testing.T, name string) ids.UUID {
 	return id
 }
 
+// seedDeal writes an open deal on a fresh pipeline, so a deal link has
+// something real to point at.
+func (e *sendEnv) seedDeal(t *testing.T, name string) ids.UUID {
+	t.Helper()
+	pipeline, stage, id := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	for _, statement := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, $2, false, 0)`, []any{pipeline, name + " pipeline"}},
+		{`INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability) VALUES ($1, $2, 'Open', 0, 'open', 10)`, []any{stage, pipeline}},
+		{`INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by) VALUES ($1, $2, $3, $4, 'manual', 'human:x')`, []any{id, name, pipeline, stage}},
+	} {
+		if _, err := e.owner.Exec(context.Background(), statement.sql, statement.args...); err != nil {
+			t.Fatalf("seeding the deal: %v", err)
+		}
+	}
+	return id
+}
+
 // link places an activity on a record's timeline. The entity type steers the
 // id into the one target column activity_link_shape permits it in — the other
 // four stay NULL, which is what makes the coalesced uniqueness index mean
@@ -127,10 +147,11 @@ func (e *sendEnv) seedProject(t *testing.T, name string) ids.UUID {
 func (e *sendEnv) link(t *testing.T, activityID ids.ActivityID, entityType string, target ids.UUID) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO activity_link (activity_id, entity_type, contact_id, project_id)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id, project_id, deal_id)
 		VALUES ($1, $2,
 		        CASE WHEN $2 = 'contact'  THEN $3::uuid END,
-		        CASE WHEN $2 = 'project' THEN $3::uuid END)`, activityID, entityType, target); err != nil {
+		        CASE WHEN $2 = 'project' THEN $3::uuid END,
+		        CASE WHEN $2 = 'deal' THEN $3::uuid END)`, activityID, entityType, target); err != nil {
 		t.Fatalf("linking the activity to a %s: %v", entityType, err)
 	}
 }
@@ -344,6 +365,24 @@ func TestAbsorbLeavesTheEchosProjectLinkBehindWhenTheSurvivorHasOne(t *testing.T
 	// attachments and provenance out of Art. 17's reach.
 	if targets := e.linkedTargets(t, echo, "project"); len(targets) != 1 || targets[0] != theirs {
 		t.Errorf("the echo's project links = %v, want its own project %s retained — erasure reaches the archived echo through its links", targets, theirs)
+	}
+}
+
+// A human's send already on a deal keeps it. The deal the deal rule chose for
+// the echo stays on the echo and is not added beside the human's choice.
+func TestAbsorbLeavesTheEchosDealLinkBehindWhenTheSurvivorHasOne(t *testing.T) {
+	e := setupSend(t)
+	survivor := e.seedSentEmail(t, mintedIdentity)
+	echo := e.seedCapturedEcho(t)
+	ours := e.seedDeal(t, "Rollout")
+	theirs := e.seedDeal(t, "Migration")
+	e.link(t, survivor, "deal", ours)
+	e.link(t, echo, "deal", theirs)
+
+	e.reconcileAbsorbing(t, survivor)
+
+	if targets := e.linkedTargets(t, survivor, "deal"); len(targets) != 1 || targets[0] != ours {
+		t.Errorf("the survivor's deal links = %v, want only the deal it was sent from (%s)", targets, ours)
 	}
 }
 

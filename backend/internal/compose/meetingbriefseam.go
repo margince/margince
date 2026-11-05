@@ -119,7 +119,7 @@ func newMeetingBriefService(db *database.DB) *meetingbrief.Service {
 	view := contact360.NewService(pool, contactsStore, deals.NewStore(db, DealsInstallation()), ProjectsStore(pool),
 		consent.NewStore(db),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
-		ai.NewFeedbackStore(db), time.Now)
+		ai.NewFeedbackStore(db), time.Now).WithMailCoverage(mailCaptureCoverageReader(db))
 	return meetingbrief.NewService(pool, view, contactsStore, time.Now).
 		WithEmailSummaries(activities.NewStore(db))
 }

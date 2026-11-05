@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -32,6 +33,10 @@ import (
 type CreateDealInput struct {
 	Name        string
 	AmountMinor *int64
+	// ReferencesFromRequest says the caller typed the ids this deal points at,
+	// so a miss is refused naming the field. A writer that derives them (a
+	// stored suggestion, a lead, an import row) leaves it false.
+	ReferencesFromRequest bool
 	// ExpectedArrMinor is the recurring half of the price, in the same
 	// currency as AmountMinor.
 	ExpectedArrMinor *int64
@@ -61,6 +66,8 @@ type CreateDealInput struct {
 	// SourceSystem names the system an import took this deal from; nil for
 	// one created here, which is what makes it unattributable.
 	SourceSystem *string
+	// SourceID is this deal's id in SourceSystem; the pair is unique.
+	SourceID *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
 	// Description is the human-authored brief. Distinct from the GENERATED
@@ -73,9 +80,8 @@ type CreateDealInput struct {
 	CommercialMotion  *string
 	Priority          *string
 	AcquisitionSource *string
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (storekit customcolumns).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -157,6 +163,14 @@ func (s *Store) readyDealCreate(ctx context.Context, in CreateDealInput) (bornDe
 	if err := moneyPairError(in.AmountMinor, in.ExpectedArrMinor, in.Currency); err != nil {
 		return bornDeal{}, err
 	}
+	if in.Currency != nil {
+		if err := values.RequireAssignableCurrency(*in.Currency); err != nil {
+			return bornDeal{}, err
+		}
+	}
+	if err := amountSetError(in.AmountMinor); err != nil {
+		return bornDeal{}, err
+	}
 	attribution, err := birthAttribution(in)
 	if err != nil {
 		return bornDeal{}, err
@@ -220,13 +234,17 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 	// than checked as a zero id.
 	var links []recordLink
 	if in.CompanyID != nil {
-		links = append(links, recordLink{linkEntityCompany, in.CompanyID.UUID})
+		links = append(links, recordLink{fieldCompanyID, linkEntityCompany, in.CompanyID.UUID})
 	}
 	if in.PartnerCompanyID != nil {
-		links = append(links, recordLink{linkEntityCompany, in.PartnerCompanyID.UUID})
+		links = append(links, recordLink{fieldPartnerCompanyID, linkEntityCompany, in.PartnerCompanyID.UUID})
 	}
 	for _, link := range links {
-		if err := auth.EnsureLinkTarget(ctx, tx, link.entity, link.id); err != nil {
+		err := auth.EnsureLinkTarget(ctx, tx, link.entity, link.id)
+		if in.ReferencesFromRequest {
+			err = auth.NameMissingReference(link.field, err)
+		}
+		if err != nil {
 			return err
 		}
 	}
@@ -236,15 +254,19 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 	// ensureProjectAttachable says the whole reasoning.
 	if in.ProjectID != nil {
 		if err := ensureProjectAttachable(ctx, tx, in.ProjectID.UUID); err != nil {
+			if in.ReferencesFromRequest {
+				err = auth.NameMissingReference("project_id", err)
+			}
 			return err
 		}
 	}
 	return nil
 }
 
-// recordLink is one row-scoped record a deal points at, named by the entity the
-// visibility gate knows it as.
+// recordLink is one row-scoped record a deal points at: the body field that
+// carried the id, and the entity the visibility gate knows it as.
 type recordLink struct {
+	field  string
 	entity string
 	id     ids.UUID
 }
@@ -256,23 +278,33 @@ const (
 	linkEntityProject = "project"
 )
 
+// The body fields a refusal names for those links.
+const (
+	fieldCompanyID        = "company_id"
+	fieldPartnerCompanyID = "partner_company_id"
+)
+
 // clearedForBirth runs every gate a newborn deal must pass and answers the
 // input with its owner settled. They are one step because they share a
 // moment: each reads the transaction and none of them writes, so a gate that
 // slipped past the insert would be refusing a row that already exists.
 func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInput, pastCloseAllowed bool) (CreateDealInput, error) {
+	return s.clearedForBirthWithOwner(ctx, tx, in, pastCloseAllowed, storekit.OwnerOrActor(ctx))
+}
+
+func (s *Store) clearedForBirthWithOwner(ctx context.Context, tx pgx.Tx, in CreateDealInput, pastCloseAllowed bool, fallback *ids.UserID) (CreateDealInput, error) {
 	// A decided owner arrives already settled: the qualify seam carries the
 	// LEAD's owner over rather than assigning one, and the suggestion seam
 	// asks auth.EnsureAssignee itself before it decides.
 	if !in.OwnerExact {
-		owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
+		owner, err := storekit.NewRecordOwnerWithDefault(ctx, tx, in.OwnerID, fallback)
 		if err != nil {
 			return in, err
 		}
 		in.OwnerID = owner
 	}
 
-	if err := ensureOpenBirthStage(ctx, tx, in.StageID, in.PipelineID); err != nil {
+	if err := ensureOpenBirthStage(ctx, tx, in.StageID, in.PipelineID, in.ReferencesFromRequest); err != nil {
 		return in, err
 	}
 	if err := refuseBirthPastLegalGate(ctx, tx, in.StageID); err != nil {
@@ -325,23 +357,26 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	}
 
 	id := ids.New[ids.DealKind]()
-	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
+	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(in.SourceID, in.Author, []any{
 		id, in.Name, in.AmountMinor, in.Currency, in.PipelineID, in.StageID,
 		in.CompanyID, in.PartnerCompanyID, born.attribution,
 		in.ProjectID, in.OwnerID, in.ExpectedClose, in.Source, born.by,
 		in.Description, in.CommercialMotion, in.Priority, in.AcquisitionSource,
 		in.ExpectedArrMinor, in.SourceSystem, in.CloseDateProvisional,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
-	_, err = tx.Exec(ctx,
+	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	if err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	err = storekit.ExecSourceInsert(ctx, tx, dealTable,
 		`INSERT INTO deal (id, name, amount_minor, currency, pipeline_id, stage_id,
 		                   company_id, partner_company_id, partner_attribution,
 		                   project_id, owner_id, expected_close_date, source, captured_by,
 		                   description, commercial_motion, priority, acquisition_source,
-		                   expected_arr_minor, source_system, close_date_provisional`+authorCols+cfCols+`)
+		                   expected_arr_minor, source_system, close_date_provisional`+provenanceCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-		         $15, $16, $17, $18, $19, $20, $21`+authorHolders+cfHolders+`)`,
-		args...)
+		         $15, $16, $17, $18, $19, $20, $21`+provenanceHolders+cfHolders+`)`,
+		args)
 	if err != nil {
 		// Covers the remaining FKs (pipeline, owner); the stage/pipeline
 		// pairing and the company target were pre-checked above.
@@ -361,7 +396,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		return crmcontracts.Deal{}, fmt.Errorf("insert deal: %w", err)
 	}
 
-	if err := s.recordStageHistory(ctx, tx, stageHistoryInput{
+	if _, err := s.recordStageHistory(ctx, tx, stageHistoryInput{
 		DealID: id, ToStageID: in.StageID, ChangedBy: born.by, OwnerID: uuidOfFilter(in.OwnerID), PipelineID: in.PipelineID.UUID,
 		Amount: in.AmountMinor, Currency: in.Currency,
 	}); err != nil {

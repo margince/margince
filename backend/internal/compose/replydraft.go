@@ -11,19 +11,24 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -63,9 +68,10 @@ type replyActivityData struct {
 	Body    string `json:"body,omitempty"`
 	// OccurredAt is the anchor's own date, RFC 3339. The band alone spans 8 to
 	// 90 days, and a model given only its name wrote "a few weeks" for ten.
-	OccurredAt   string `json:"occurred_at,omitempty"`
-	Intent       string `json:"intent,omitempty"`
-	Conversation string `json:"conversation,omitempty"`
+	OccurredAt string `json:"occurred_at,omitempty"`
+	Intent     string `json:"intent,omitempty"`
+	// RewriteOf is the draft on the composer's screen; empty is a first draft.
+	RewriteOf string `json:"rewrite_of,omitempty"`
 	// Thread identifies inbound evidence for grounding and consent semantics.
 	// Outbound follow-ups get their subject header independently.
 	Thread string `json:"thread,omitempty"`
@@ -86,8 +92,11 @@ type replyDrafter struct {
 	// cannot disagree about any of the three.
 	envelope *draftfloor.Resolver
 	store    *activities.Store
-	voice    *ai.VoiceStore
-	log      *slog.Logger
+	// colleagues tells a co-worker's address from a counterparty's, as the
+	// send path does, so the language follows whoever the reply goes to.
+	colleagues activities.ColleagueDomains
+	voice      *ai.VoiceStore
+	log        *slog.Logger
 }
 
 var (
@@ -102,9 +111,11 @@ func newReplyDrafter(pool *pgxpool.Pool, brain completer, log *slog.Logger) repl
 	return replyDrafter{
 		brain:    brain,
 		envelope: draftEnvelope(pool, log),
-		store:    activities.NewStore(InstallationDB(pool)),
-		voice:    ai.NewVoiceStore(InstallationDB(pool)),
-		log:      log,
+		store: activities.NewStore(InstallationDB(pool)).WithConsumerMail(capture.MatcherTx).
+			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}),
+		colleagues: ColleagueDomainsFor(pool),
+		voice:      ai.NewVoiceStore(InstallationDB(pool)),
+		log:        log,
 	}
 }
 
@@ -124,42 +135,24 @@ func WithReplyDraft(brain completer) Option {
 }
 
 func (d replyDrafter) DraftEmail(ctx context.Context, anchor ids.UUID, intent string) (string, string, error) {
-	result, err := d.DraftEmailWithProvenance(ctx, anchor, intent)
+	result, err := d.DraftEmailWithProvenance(ctx, anchor, draftfloor.Steering{Intent: strings.TrimSpace(intent)})
 	return result.Subject, result.Body, err
 }
 
 // DraftEmailWithProvenance drafts in the actor's Voice DNA when a ready
 // profile exists, with the deterministic anti-AI floor on top; without one,
 // the plain model draft is unchanged (clean fallback per drafting.md).
-func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.UUID, intent string) (activities.DraftResult, error) {
-	activity, err := d.store.GetActivityContent(ctx, ids.From[ids.ActivityKind](anchor), storekit.LiveOnly)
+func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (activities.DraftResult, error) {
+	activity, written, err := d.languageInputs(ctx, anchor, steering)
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
-	conversation, err := d.replyConversation(ctx, activity)
-	if err != nil {
-		return activities.DraftResult{}, err
-	}
-	topic := stringValue(activity.Subject)
-	body := stringValue(activity.Body)
-	threaded := activities.IsMailThread(activity.Kind, activity.Direction)
-
-	// How old the message being answered is, which is what makes "as discussed"
-	// true or false. A reply to something from this morning and a reply to
-	// something from eight months ago are different messages, and only the
-	// timestamp tells them apart.
-	state := d.conversationState(activity)
-	// The thread's own language decides the reply's. The stored label is
-	// preferred where capture recorded one: it was read from the message when
-	// it arrived, where detection now reads a body that has grown a quoted
-	// chain in whatever languages the exchange has since used.
-	envelope := d.envelope.Resolve(ctx, draftfloor.Written{
-		Stored:  activityLanguage(activity),
-		Body:    body,
-		Subject: topic,
-		Purpose: intent,
-	}, state)
-	recipient, surname := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
+	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
+	topic, body := stringValue(activity.Subject), stringValue(activity.Body)
+	threaded := activity.Kind == crmcontracts.ActivityKindEmail && theirTurn(activity)
+	state := d.conversationState(ctx, activity)
+	envelope := d.envelope.Resolve(ctx, written, state)
+	recipient, surname := addressee.GreetingNames()
 
 	fallbackSubject, fallbackBody := activities.DeterministicEmailDraft(activities.DraftContext{
 		Topic: topic,
@@ -170,7 +163,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Band:      state.Band,
 		Threaded:  threaded,
 		Recipient: recipient,
-	}, intent)
+	})
 	data := replyActivityData{
 		// Already bounded: NewEnvelope caps the two identity fields, which are
 		// the only ones that come from a text column rather than being
@@ -181,9 +174,9 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		RecipientLastName: textcut.Runes(surname, recipientMaxRunes),
 		Subject:           textcut.Runes(topic, replyActivityMaxRunes),
 		Body:              textcut.Runes(body, replyActivityMaxRunes),
-		OccurredAt:        activity.OccurredAt.UTC().Format(time.RFC3339),
-		Intent:            textcut.Runes(strings.TrimSpace(intent), replyActivityMaxRunes),
-		Conversation:      conversation,
+		OccurredAt:        activitywhen.Text(activity),
+		Intent:            textcut.Runes(steering.Intent, replyActivityMaxRunes),
+		RewriteOf:         textcut.Runes(steering.RewriteOf, replyActivityMaxRunes),
 	}
 
 	voice := d.loadVoice(ctx)
@@ -234,28 +227,26 @@ func (d replyDrafter) logger() *slog.Logger {
 const recipientMaxRunes = 200
 
 // recipientName is who this reply is written to, or nothing.
-//
-// A failure to resolve the name degrades to no name rather than failing the
-// draft: the contact may be outside this caller's scope, the activity may be
-// linked to nobody, and in both cases an unnamed greeting is the honest answer.
-// The reason is logged, so a lookup that breaks for some other cause is visible
-// rather than silently reading as "no recipient".
-// It answers both names because the two greeting registers take different
-// ones: the familiar form uses the first name, the formal form the surname.
-// Resolving them together keeps one read behind one greeting.
 func (d replyDrafter) recipientName(ctx context.Context, anchor ids.ActivityID) (greeting, surname string) {
+	return d.recipientFor(ctx, anchor).GreetingNames()
+}
+
+// recipientFor is the recipient the greeting names, empty when it cannot be
+// resolved. The language follows deliveredTo instead.
+//
+// A failure degrades to no name rather than failing the draft: the contact may
+// be outside this caller's scope or the activity linked to nobody. The reason
+// is logged so a lookup that breaks for another cause stays visible.
+func (d replyDrafter) recipientFor(ctx context.Context, anchor ids.ActivityID) activities.ReplyRecipient {
 	if d.store == nil {
-		return "", ""
+		return activities.ReplyRecipient{}
 	}
 	recipient, err := d.store.ReplyRecipientFor(ctx, anchor)
 	if err != nil {
 		d.logger().WarnContext(ctx, "reply recipient unavailable; drafting without a greeting name", "err", err)
-		return "", ""
+		return activities.ReplyRecipient{}
 	}
-	if recipient.FirstName != "" {
-		return recipient.FirstName, recipient.LastName
-	}
-	return recipient.FullName, recipient.LastName
+	return recipient
 }
 
 // conversationState places the message being answered on the silence axis.
@@ -270,14 +261,16 @@ func (d replyDrafter) recipientName(ctx context.Context, anchor ids.ActivityID) 
 // not. It carries a real timestamp, so the silence it produces is honest even
 // though nobody spoke: the anchor is treated as our own side's, which is the
 // reading that assumes least about them.
-func (d replyDrafter) conversationState(activity crmcontracts.Activity) convstate.State {
+func (d replyDrafter) conversationState(ctx context.Context, activity crmcontracts.Activity) convstate.State {
+	zone := d.envelope.Zone(ctx)
 	occurred := activity.OccurredAt
-	inbound := activity.Direction != nil &&
-		*activity.Direction == crmcontracts.ActivityDirectionInbound
-	if inbound {
-		return convstate.Classify(d.envelope.Now(), occurred, time.Time{})
+	if occurredday.IsDay(activity.OccurredPrecision) {
+		occurred = occurredday.Begins(occurred, zone)
 	}
-	return convstate.Classify(d.envelope.Now(), time.Time{}, occurred)
+	if theirTurn(activity) {
+		return convstate.Classify(d.envelope.Now(), occurred, time.Time{}, zone)
+	}
+	return convstate.Classify(d.envelope.Now(), time.Time{}, occurred, zone)
 }
 
 // threadFlag spells the thread state for the flat payload. A named value rather
@@ -300,4 +293,57 @@ func activityLanguage(activity crmcontracts.Activity) string {
 		return ""
 	}
 	return string(*activity.Language)
+}
+
+// deliveredTo is the address and contact a reply to this activity is delivered
+// to, by the send path's own rule. It is zero when none can be named. The
+// contact's mail decides the language; the greeting answers another question.
+func (d replyDrafter) deliveredTo(ctx context.Context, anchor ids.ActivityID) activities.ReplyAddressee {
+	if d.store == nil {
+		return activities.ReplyAddressee{}
+	}
+	var covers func(address string) bool
+	if d.colleagues != nil {
+		own, err := d.colleagues.Covers(ctx)
+		if err != nil {
+			d.logger().WarnContext(ctx, "colleague domains unavailable; reading the reply language without an addressee", "err", err)
+			return activities.ReplyAddressee{}
+		}
+		covers = own
+	}
+	to, err := d.store.ReplyAddresseeFor(ctx, anchor, covers)
+	if _, none := errors.AsType[*activities.NoReplyAddressError](err); err != nil && !none {
+		d.logger().WarnContext(ctx, "reply addressee unavailable; ranking inbound mail alike", "err", err)
+	}
+	return to
+}
+
+// theirTurn says the other side spoke last on this row.
+//
+// Who wrote it, not which way it travelled. A colleague's mail can arrive
+// inbound, and read as theirs it told the draft they had spoken last.
+func theirTurn(activity crmcontracts.Activity) bool {
+	ours, known := activities.WroteItOurSide(activity)
+	return known && !ours
+}
+
+func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (activity crmcontracts.Activity, written draftfloor.Written, err error) {
+	activity, err = d.store.GetActivityContent(ctx, ids.From[ids.ActivityKind](anchor), storekit.LiveOnly)
+	if err != nil {
+		return activity, written, err
+	}
+	delivery := d.deliveredTo(ctx, ids.From[ids.ActivityKind](anchor))
+	thread, err := d.replyConversation(ctx, activity, delivery)
+	if err != nil {
+		return activity, written, err
+	}
+	return activity, draftfloor.Written{
+		Addressee: thread.addresseeEvidence(delivery.ContactID),
+		Stored:    activityLanguage(activity),
+		Body:      textlang.MessageOpening(stringValue(activity.Body), draftcore.LanguageEvidenceRunes),
+		Subject:   stringValue(activity.Subject),
+		Thread:    draftcore.LanguageEvidence(thread.evidence, delivery.ContactID),
+		Rewrite:   steering.RewriteOf,
+		Purpose:   steering.Intent,
+	}, nil
 }

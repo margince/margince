@@ -3,6 +3,7 @@
 import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -21,23 +22,10 @@ import {
 } from "../../scripts/lib/source-tree";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { STAT_CARD_TONES, StatCard } from "./statcard";
+import { STAT_CARD_ACTIONS, STAT_CARD_TONES, StatCard } from "./statcard";
 
-// THE DOOR OUT OF A READING SAYS "Open", AND NOTHING ELSE EVER.
-//
-// It used to be the caller's word: `openLabel` let each reading name its own
-// destination, and what the product got was several spellings of one control —
-// "Review urgent work", "View today's meetings", "Review leads owed a reply" —
-// which is a different door on every card to anybody reading them as a set.
-// The reading is already named on the card the door sits in, and a screen
-// reader hears it as the button's DESCRIPTION, so the word itself has one job
-// and one spelling.
-//
-// Three assertions, because the prop can come back three ways and each is
-// invisible to the other two: as a rendered word (the render test), as an
-// attribute somewhere in the tree (the sweep), and as a second word written
-// straight into the foot (the source check). The fourth holds the message the
-// first one reads, so a door that says "Öffnen" in `en` still fails here.
+// Action names belong to the primitive; a caller selects a supported action
+// rather than inventing another label for the same control.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sourceRoot = join(here, "..");
@@ -60,7 +48,73 @@ function drawReading() {
   );
 }
 
-describe("the door always says Open", () => {
+describe("a reading that names what it counts", () => {
+  const peek = {
+    head: "Open deals on this account",
+    items: [
+      { key: "a", title: "Expansion Phase 2", sub: "Proposal", right: "€95k" },
+    ],
+  };
+
+  it("opens its card when keyboard focus lands on the door, and the door keeps its press", async () => {
+    let opened = 0;
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider initial="en">
+        <StatCard
+          label="Open deals"
+          value="€244k"
+          detail="4 open"
+          peek={peek}
+          onOpen={() => (opened += 1)}
+        />
+      </LocaleProvider>,
+    );
+
+    await user.tab();
+    expect(
+      screen.getByRole("region", { name: "Open deals on this account" }),
+    ).toBeTruthy();
+    await user.keyboard("{Enter}");
+
+    expect(opened).toBe(1);
+  });
+
+  it("opens the card on a press where the tile has no door of its own", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider initial="en">
+        <StatCard label="Unanswered" value="2 emails" peek={peek} />
+      </LocaleProvider>,
+    );
+
+    await user.click(screen.getByText("2 emails"));
+
+    expect(
+      screen.getByRole("region", { name: "Open deals on this account" }),
+    ).toBeTruthy();
+  });
+
+  it("draws no card for a figure with nothing behind it", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider initial="en">
+        <StatCard
+          label="Unanswered"
+          value="None"
+          peek={{ head: "Emails", items: [] }}
+          onOpen={() => {}}
+        />
+      </LocaleProvider>,
+    );
+
+    await user.tab();
+
+    expect(screen.queryByRole("region")).toBeNull();
+  });
+});
+
+describe("the door says Open, or View records for records in place", () => {
   it("letters the foot's button with the stat.open message and no other word", () => {
     const { container } = drawReading();
 
@@ -95,8 +149,46 @@ describe("the door always says Open", () => {
       name: en["stat.open"],
       description: "Best route",
     });
-    expect(door.getAttribute("href")).toBe("#/contacts/c-1");
+    expect(door.getAttribute("href")).toBe("/#/contacts/c-1");
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("says View records, with no arrow, for a door that lists the records in place", () => {
+    const { container } = render(
+      <LocaleProvider initial="en">
+        <StatCard label="Urgent" value="4" opens="records" onOpen={() => {}} />
+      </LocaleProvider>,
+    );
+
+    const door = screen.getByRole("button", { description: "Urgent" });
+    expect(door.textContent?.trim()).toBe(en["stat.records"]);
+    expect(container.querySelector(".stat-card-arrow")).toBeNull();
+  });
+
+  it("keeps Open on a link, which always goes to a page", () => {
+    render(
+      <LocaleProvider initial="en">
+        <StatCard label="Best route" value="Ada" opens="records" href="#/c" />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("link", { name: en["stat.open"] })).not.toBeNull();
+  });
+
+  it("names a forecast drill with the shared action", () => {
+    render(
+      <LocaleProvider initial="en">
+        <StatCard
+          label="Expected finish"
+          value="12,000 EUR"
+          opens="forecast"
+          href="#/analytics/forecast"
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByRole("link", { name: en["stat.forecast"] }),
+    ).not.toBeNull();
   });
 
   it("pins the English word, which is what every door in the product reads", () => {
@@ -326,8 +418,15 @@ describe("a reading's name and figure are never cut", () => {
   });
 });
 
-describe("the foot speaks once", () => {
-  it("writes exactly one message into the card's foot", () => {
+describe("the foot speaks once per action", () => {
+  it.each(Object.values(STAT_CARD_ACTIONS))(
+    "uses the shared action key %s",
+    (key) => {
+      expect(en[key].length).toBeGreaterThan(0);
+    },
+  );
+
+  it("writes one message per action into the card's foot", () => {
     const path = join(here, "statcard.tsx");
     const source = sourceFileAt(path);
 
@@ -335,10 +434,7 @@ describe("the foot speaks once", () => {
     expect(foot).not.toBeUndefined();
     if (foot === undefined) return;
 
-    // Every word the foot can draw: a `t(...)` lookup or a literal written
-    // straight in. One lookup, no literals — a second of either is a door
-    // saying something the rest of the product's doors do not.
-    expect(messageLookups(foot)).toEqual(['t("stat.open")']);
+    expect(messageLookups(foot)).toHaveLength(1);
     expect(literalWords(foot)).toEqual([]);
   });
 });

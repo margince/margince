@@ -213,8 +213,8 @@ func TestMfaCompletionFailuresAreRateLimitedPerAccount(t *testing.T) {
 	h := NewHandlers(e.svc).WithMFAChallengeSigner(stubMFASigner{})
 
 	signer := stubMFASigner{}
-	// Ten wrong codes spend the per-account failure budget (the login pair's
-	// number), each on its own challenge so the nonce is never what refuses.
+	// Ten attempts spend the per-account attempt budget (the login pair's
+	// number). Past the fifth the account lockout refuses them, with the same 401.
 	for range 10 {
 		challenge, err := signer.Sign(e.member.UserID.String(), mfaChallengeTTL)
 		if err != nil {

@@ -244,6 +244,41 @@ func TestWithoutAStoreTheQueuePagesTheWayItAlwaysDid(t *testing.T) {
 	}
 }
 
+// A walk that could not be frozen still serves the reader's day. The response
+// carries no walk, which tells the client its next page is unfrozen, and the
+// cursor still reaches every row once.
+func TestAWalkThatCannotBeFrozenStillReachesEveryRow(t *testing.T) {
+	t.Parallel()
+	svc := (&Service{now: func() time.Time { return rankInstant }}).WithWalks(&walkStore{unwritable: true})
+	day := aDayOfTasks(8)
+
+	page := walkFrom(t, svc, day, 3, worklistCursor{})
+	if page.Walk != nil {
+		t.Fatal("a first page whose freeze failed reported a walk it never recorded")
+	}
+	seen := map[string]int{}
+	for pages := 0; ; pages++ {
+		if pages > 4 {
+			t.Fatal("the unfrozen walk did not end in five pages of three")
+		}
+		for _, row := range page.Queue {
+			seen[row.Id]++
+		}
+		if page.NextCursor == nil {
+			break
+		}
+		page = walkFrom(t, svc, day, 3, decodedCursor(t, *page.NextCursor))
+	}
+	if len(seen) != 8 {
+		t.Errorf("the unfrozen walk reached %d distinct rows, want all 8", len(seen))
+	}
+	for id, times := range seen {
+		if times != 1 {
+			t.Errorf("row %q was served %d times on one walk", id, times)
+		}
+	}
+}
+
 // walkFrom pages a day the way the endpoint does: resolve the walk the cursor
 // names FIRST, then project.
 //
@@ -314,12 +349,17 @@ func aDayOfTasks(n int) crmcontracts.Attention {
 type walkStore struct {
 	kept   map[ids.UUID]worklistsnap.Snapshot
 	refuse bool
+	// unwritable fails every Freeze, as a store whose database is down does.
+	unwritable bool
 }
 
 func (w *walkStore) Freeze(
 	_ context.Context, _ string, asOf time.Time,
 	buckets worklistsnap.Buckets, rows []worklistsnap.Row,
 ) (ids.UUID, error) {
+	if w.unwritable {
+		return ids.UUID{}, errors.New("fixture snapshot store unavailable")
+	}
 	if w.kept == nil {
 		w.kept = map[ids.UUID]worklistsnap.Snapshot{}
 	}

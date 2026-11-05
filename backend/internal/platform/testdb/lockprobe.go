@@ -21,8 +21,11 @@ package testdb
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ProbeBudget bounds the wait for a racer that never blocks.
@@ -120,4 +123,35 @@ func whichFailure(racerReturned <-chan struct{}, finishedEarly, missed string) s
 	default:
 		return missed
 	}
+}
+
+// QueuedBehind counts the sessions waiting on holder's backend, directly or
+// behind one that does, since a lock queues its second waiter behind the first.
+func QueuedBehind(ctx context.Context, conn *pgx.Conn, holder int32) (int, error) {
+	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+		return 0, fmt.Errorf("clearing the stats snapshot before probing the lock queue: %w", err)
+	}
+	var queued int
+	if err := conn.QueryRow(ctx, `
+		WITH RECURSIVE queued AS (
+			SELECT pid FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))
+			UNION
+			SELECT a.pid FROM pg_stat_activity a JOIN queued q ON q.pid = ANY(pg_blocking_pids(a.pid)))
+		SELECT count(*) FROM queued`, holder).Scan(&queued); err != nil {
+		return 0, fmt.Errorf("probing the lock queue behind backend %d: %w", holder, err)
+	}
+	return queued, nil
+}
+
+// AwaitQueuedBehind returns once n sessions wait behind holder. Scoped to that
+// backend, so no unrelated lock wait stands in for the racer the failures name.
+func AwaitQueuedBehind(t *testing.T, conn *pgx.Conn, holder int32, n int, racerReturned <-chan struct{}, racer string) {
+	t.Helper()
+	WaitForContention(t, racerReturned,
+		fmt.Sprintf("%s finished without waiting behind backend %d, so the race never happened", racer, holder),
+		fmt.Sprintf("%s never had %d session(s) waiting behind backend %d within %s", racer, n, holder, ProbeBudget),
+		func(ctx context.Context) (bool, error) {
+			queued, err := QueuedBehind(ctx, conn, holder)
+			return queued >= n, err
+		})
 }

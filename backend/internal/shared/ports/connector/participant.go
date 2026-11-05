@@ -42,7 +42,23 @@ type MessageParticipant struct {
 	// member, so a roster naming one proves only that the account was in the
 	// room.
 	ChannelUserID string
+	// Response is the party's answer to a calendar invitation, one of the
+	// Response constants, or "" when the transport states none.
+	Response string
 }
+
+// The answers a calendar guest may give. They are closed by the
+// activity_participant CHECK, and each calendar maps its own vocabulary onto them.
+const (
+	ResponseAccepted    = "accepted"
+	ResponseDeclined    = "declined"
+	ResponseTentative   = "tentative"
+	ResponseNeedsAction = "needs_action"
+)
+
+// Declined reports that the party answered no. A declined colleague is still
+// shown on the meeting, and never bound to their seat.
+func (p MessageParticipant) Declined() bool { return p.Response == ResponseDeclined }
 
 // The roles a further participant may hold. The set is closed by the
 // activity_participant CHECK, so an unlisted value is a constraint violation
@@ -71,6 +87,12 @@ const (
 // report a relationship with everybody who received the same newsletter.
 const MaxParticipants = 50
 
+// MaxGuestsPastCap bounds the outside guests a meeting past MaxParticipants
+// names, by address alone and credited with nothing. Past it a conference
+// invitation costs a row per attendee for a list nobody reads, so the meeting
+// counts the rest instead.
+const MaxGuestsPastCap = 200
+
 // Parties is what one message named, and how many it named before the cap.
 //
 // The count travels because withholding the names loses the difference between
@@ -88,8 +110,7 @@ type Parties struct {
 	Named int
 	// Withheld is the list the cap refused, and empty when it refused nothing.
 	// It travels so capture, which knows the workspace's seats, can bind its own
-	// colleagues from a crowded invitation; the cap's reasoning is about
-	// strangers on a distribution list, and a seat on the event is not one.
+	// colleagues from a crowded invitation and name its outside guests by address.
 	Withheld []MessageParticipant
 }
 

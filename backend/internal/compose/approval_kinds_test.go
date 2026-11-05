@@ -14,7 +14,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -97,10 +96,6 @@ func (stubComms) Availability(context.Context, *ids.UUID, time.Time, time.Time, 
 	return agents.AvailabilityResult{}, nil
 }
 
-func (stubComms) BookMeeting(context.Context, agents.BookMeetingArgs) (json.RawMessage, error) {
-	return nil, nil
-}
-
 // stubSoR satisfies the record reader the 🟡 comms verbs stage against. This
 // walk only reads Specs(), so nothing calls it — but RegisterCommsTools now
 // refuses a nil provider at wiring time, because a surface that advertises
@@ -111,10 +106,10 @@ type stubSoR struct {
 
 func TestEveryConfirmationRequiredToolHasADecisionGrantMapping(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, nil)
-	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil)
 	// A nil brief reader is a legal wiring: this walk reads Specs() only, and
 	// the tool answers the assembled picture when no brief seam is bound.
-	agents.RegisterIntentTools(registry, stubRetriever{}, nil, nil)
+	agents.RegisterIntentTools(registry, stubRetriever{}, nil, nil, nil, nil)
 	agents.RegisterCommsTools(registry, stubComms{}, stubSoR{})
 
 	for _, spec := range registry.Specs() {
@@ -421,10 +416,9 @@ func collectStringConsts(file *ast.File, into map[string]string) {
 // gatekit:fixture the value each exported approvals kind constant carries —
 // resolved constant data, not a cost.
 var exportedApprovalKinds = map[string]string{
-	"KindVolumeRelease":       approvals.KindVolumeRelease,
-	"KindScheduledSendHeld":   approvals.KindScheduledSendHeld,
-	"KindImportCommit":        approvals.KindImportCommit,
-	"KindCommunicationReview": approvals.KindCommunicationReview,
+	"KindVolumeRelease":     approvals.KindVolumeRelease,
+	"KindScheduledSendHeld": approvals.KindScheduledSendHeld,
+	"KindImportCommit":      approvals.KindImportCommit,
 }
 
 // crossPackageKinds resolves a kind another module exports and compose stages
@@ -432,12 +426,11 @@ var exportedApprovalKinds = map[string]string{
 // gatekit:fixture the value each cross-package kind constant carries, keyed as
 // written at the call site — resolved constant data, not a cost.
 var crossPackageKinds = map[string]string{
-	"approvals.KindVolumeRelease":       approvals.KindVolumeRelease,
-	"approvals.KindScheduledSendHeld":   approvals.KindScheduledSendHeld,
-	"approvals.KindCommunicationReview": approvals.KindCommunicationReview,
-	"deals.CloseDateCorrectionKind":     deals.CloseDateCorrectionKind,
-	"deals.FollowUpReconcileKind":       deals.FollowUpReconcileKind,
-	"deals.StageProgressionKind":        deals.StageProgressionKind,
+	"approvals.KindVolumeRelease":     approvals.KindVolumeRelease,
+	"approvals.KindScheduledSendHeld": approvals.KindScheduledSendHeld,
+	"deals.CloseDateCorrectionKind":   deals.CloseDateCorrectionKind,
+	"deals.FollowUpReconcileKind":     deals.FollowUpReconcileKind,
+	"deals.StageProgressionKind":      deals.StageProgressionKind,
 }
 
 // isPackageQualifier reports whether an identifier names an imported package

@@ -19,8 +19,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -51,31 +49,5 @@ func RefreshDisplayNameTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		return false, err
 	}
 	learned := strings.TrimSpace(first) + " " + strings.TrimSpace(last)
-	tag, err := tx.Exec(ctx, `
-		UPDATE contact SET full_name = $2 WHERE id = $1 AND full_name = $3`,
-		contactID, learned, previous)
-	if err != nil {
-		return false, fmt.Errorf("contacts: showing the learned name of contact %s: %w", contactID, err)
-	}
-	if tag.RowsAffected() != 1 {
-		// The display name changed under the lock, which means somebody else
-		// wrote it. Auditing a change that did not happen would put a lie in the
-		// trail.
-		return false, nil
-	}
-	before, after := storekit.ChangedColumns(
-		map[string]any{fieldFullName: previous},
-		map[string]any{fieldFullName: learned},
-	)
-	auditID, err := storekit.Audit(ctx, tx, "update", entityContact, contactID.UUID, before, after)
-	if err != nil {
-		return false, err
-	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, contactID.UUID,
-		crmcontracts.PublicEventContactUpdated{
-			ChangedFields: map[string]any{fieldFullName: learned},
-		}); err != nil {
-		return false, err
-	}
-	return true, nil
+	return rewriteFullNameTx(ctx, tx, contactID, previous, learned)
 }

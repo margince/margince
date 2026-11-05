@@ -25,7 +25,7 @@ func TestANoteOnlyAccountIsNotAFirstTouch(t *testing.T) {
 		Body: &body, OccurredAt: now.Add(-10 * 24 * time.Hour),
 	}}}}
 
-	state := ConversationState(view, now)
+	state := ConversationState(view, now, time.UTC)
 	if state.Band == convstate.BandNone || state.SilenceDays != 10 {
 		t.Errorf("state = %+v, want ten days since the note", state)
 	}

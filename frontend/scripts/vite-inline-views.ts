@@ -23,13 +23,13 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type HTMLElement, parse } from "node-html-parser";
 import { build, type Plugin } from "vite";
+import { inlineDocument } from "./vite-inline-views.document.ts";
+
+export { buildRevision, inlineDocument } from "./vite-inline-views.document.ts";
 
 /** This directory, for resolving the sibling files below whatever cwd a caller
  *  happens to have. */
 const HERE = dirname(fileURLToPath(import.meta.url));
-
-const SPDX = "SPDX-License-Identifier: BUSL-1.1";
-const COPYRIGHT = "SPDX-FileCopyrightText: 2026 Gradion";
 
 /** The shared admission vocabulary. Read from disk rather than imported so this
  *  module works identically under vitest, under a vite build and under the dev
@@ -176,182 +176,6 @@ function inspectNode(node: HTMLElement): string[] {
     }
   }
   return found;
-}
-
-/**
- * inlineDocument folds the emitted entry chunk and stylesheet into the shell.
- *
- * The licence header is injected as an HTML COMMENT because there is nowhere
- * else for it to survive: esbuild strips every comment out of the script even
- * with minify off, SPDX lines included, and `legalComments` does not reach them.
- * The header on the artifact a third party receives is what honest labelling
- * actually means here.
- */
-export function inlineDocument(html: string, js: string, css: string): string {
-  refuseSelfClosingText(js, "script");
-  const styles = stripCSSComments(css);
-  refuseSelfClosingText(styles, "style");
-  const root = parse(html, { comment: true });
-  // Removed rather than rewritten: whatever the bundler linked is being folded
-  // in, and a leftover reference is exactly what the admission check refuses.
-  for (const node of root.querySelectorAll("*")) {
-    const tag = node.rawTagName?.toLowerCase() ?? "";
-    if (tag === "link" || (tag === "script" && node.hasAttribute("src"))) {
-      node.remove();
-    }
-  }
-  // Spliced into the SERIALIZED shell rather than parsed as nodes: a script body
-  // pushed through an HTML parser is a document that depends on the parser's
-  // raw-text handling being right, and this one has no reason to take that risk.
-  let shell = root.toString();
-  shell = spliceBefore(
-    shell,
-    "</head>",
-    styles === "" ? "" : `<style>\n${styles}\n</style>\n`,
-  );
-  shell = spliceBefore(
-    shell,
-    "</body>",
-    js === "" ? "" : `<script>\n${js}\n</script>\n`,
-  );
-  return stampRevision(stampLicence(shell), buildRevision());
-}
-
-/**
- * buildRevision is the commit both images are built from, passed identically to
- * the api and the web builds so the two halves can be compared. Read from the
- * environment rather than a vite `define`, because this runs in the build
- * process itself rather than in the bundled code.
- */
-export function buildRevision(): string {
-  return process.env.MARGINCE_BUILD_REVISION ?? "";
-}
-
-/**
- * stampLicence puts the SPDX lines in an HTML comment AFTER the doctype.
- *
- * After, not before: a comment ahead of the doctype puts the browser into quirks
- * mode, which would silently change how every rule in the stylesheet above is
- * applied. The header has to be the first thing a human reads, not the first
- * thing the parser does.
- */
-/**
- * stampRevision writes the build this document came from into the document, as
- * an HTML comment.
- *
- * A COMMENT, because there is nowhere else it can go: esbuild strips every
- * comment out of the script, and a `<meta>` would be an element the parsed
- * validator has to learn to allow. It is diagnostic metadata read by the api to
- * report skew — never an integrity signature, and never a reason to refuse.
- *
- * An absent revision writes nothing. A local build has no meaningful SHA (the
- * worktree is dirty), and a stamp of "" or "dev" would be a value the api then
- * has to special-case on the read side as well as the write side.
- */
-function stampRevision(shell: string, revision: string): string {
-  if (revision === "" || revision === "dev") return shell;
-  return shell.replace(
-    LICENCE_END,
-    `${LICENCE_END}\n<!-- ${REVISION_MARKER}${revision} -->`,
-  );
-}
-
-/** The marker the api reads the revision back out of. One spelling, here. */
-const REVISION_MARKER = "margince-build-revision: ";
-const LICENCE_END = "-->";
-
-function stampLicence(shell: string): string {
-  const doctype = /^\s*<!doctype[^>]*>/i.exec(shell);
-  if (doctype === null) {
-    throw new Error(
-      "mcp-apps: the built document has no doctype to stamp the licence after",
-    );
-  }
-  const header = `\n<!--\n${SPDX}\n${COPYRIGHT}\n-->`;
-  return (
-    shell.slice(0, doctype[0].length) + header + shell.slice(doctype[0].length)
-  );
-}
-
-/**
- * spliceBefore inserts ahead of a closing tag the shell is required to have. It
- * throws rather than appending on a miss: a document whose script landed
- * somewhere other than where this claims it did is worse than a failed build.
- */
-function spliceBefore(shell: string, marker: string, insert: string): string {
-  if (insert === "") return shell;
-  const at = shell.lastIndexOf(marker);
-  if (at < 0) {
-    throw new Error(`mcp-apps: the shell has no ${marker} to inline into`);
-  }
-  return shell.slice(0, at) + insert + shell.slice(at);
-}
-
-/**
- * stripCSSComments removes CSS comments WITHOUT reaching inside string literals.
- *
- * A regex would: `content: "/* label *​/"` is a legal declaration whose value
- * contains the delimiters, and stripping it silently rewrites the rule to
- * `content: ""`. The comments have to go — tokens.css and brand.css carry prose,
- * including URLs, that the raw-read admission check would otherwise read as code
- * — so this scans instead, tracking quote state, which is the smallest thing
- * that is actually correct.
- */
-function stripCSSComments(css: string): string {
-  let out = "";
-  let i = 0;
-  while (i < css.length) {
-    const c = css[i];
-    if (c === '"' || c === "'") {
-      const end = endOfString(css, i);
-      out += css.slice(i, end);
-      i = end;
-      continue;
-    }
-    if (c === "/" && css[i + 1] === "*") {
-      i = endOfComment(css, i);
-      continue;
-    }
-    out += c;
-    i++;
-  }
-  return out.trim();
-}
-
-/** endOfString answers the index just past the closing quote, honouring
- *  escapes — an escaped quote does not end the literal. */
-function endOfString(css: string, start: number): number {
-  const quote = css[start];
-  for (let i = start + 1; i < css.length; i++) {
-    if (css[i] === "\\") {
-      i++;
-      continue;
-    }
-    if (css[i] === quote) return i + 1;
-  }
-  return css.length;
-}
-
-/** endOfComment answers the index just past the closing delimiter. An
- *  unterminated comment swallows the rest, which is what a browser does too. */
-function endOfComment(css: string, start: number): number {
-  const end = css.indexOf("*/", start + 2);
-  return end < 0 ? css.length : end + 2;
-}
-
-/**
- * refuseSelfClosingText fails the build rather than emitting a document whose
- * inline block ends early. The sequence cannot occur in valid JavaScript or CSS
- * outside a literal, so this is a real condition and not a theoretical one — and
- * escaping it silently would mean the bytes served differ from the bytes built.
- */
-function refuseSelfClosingText(text: string, tag: string): void {
-  if (text.toLowerCase().includes(`</${tag}`)) {
-    throw new Error(
-      `mcp-apps: the inline ${tag} contains "</${tag}", which would end the block early and ` +
-        "leave the rest of it as page text — rewrite the literal that produces it",
-    );
-  }
 }
 
 export function inlineViews(): Plugin {

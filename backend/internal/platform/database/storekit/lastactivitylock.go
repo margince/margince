@@ -46,3 +46,32 @@ func nonNil(list []ids.UUID) []ids.UUID {
 	}
 	return list
 }
+
+// ClockTable is a table that stores a last-activity clock.
+type ClockTable string
+
+// The three tables whose clock counts only the past.
+const (
+	ClockContacts  ClockTable = "contact"
+	ClockCompanies ClockTable = "company"
+	ClockDeals     ClockTable = "deal"
+)
+
+// ClockProjects is the project clock, which keeps its own meeting and time
+// rule but drops tasks as the other three do.
+const ClockProjects ClockTable = "project"
+
+// ClockQuerier is what both a transaction and a data task's estimate read with.
+type ClockQuerier interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+// clockTableIdent renders one of the constants as its literal, so no caller's
+// string is ever formatted into a statement.
+func clockTableIdent(table ClockTable) string {
+	if table == ClockCompanies || table == ClockDeals || table == ClockProjects {
+		return string(table)
+	}
+	return string(ClockContacts)
+}

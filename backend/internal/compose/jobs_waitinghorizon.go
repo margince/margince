@@ -5,7 +5,9 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -50,6 +52,35 @@ func newWaitingHorizonRefreshWorker(pool *pgxpool.Pool, log *slog.Logger) *waiti
 	}
 }
 
+// waitingHorizonStatementBudget is the job's declared timeout less a margin for
+// the own-domain read and the store. Postgres then cuts the statement with a
+// clean error before River abandons the attempt.
+func waitingHorizonStatementBudget() time.Duration {
+	return mustStatementBudgetFor(WaitingHorizonRefreshArgs{}.Kind())
+}
+
+// mustStatementBudgetFor panics for a kind the generated table does not carry.
+// The kind is a compile-time literal of the caller, so a miss is a programming
+// error that a test catches, not a runtime condition.
+func mustStatementBudgetFor(kind string) time.Duration {
+	budget, err := statementBudgetFor(kind)
+	if err != nil {
+		panic(err)
+	}
+	return budget
+}
+
+// statementBudgetFor derives a kind's statement budget from its declared timeout.
+func statementBudgetFor(kind string) (time.Duration, error) {
+	spec, ok := jobs.SpecFor(kind)
+	if !ok {
+		return 0, fmt.Errorf("compose: job kind %q has no declared spec", kind)
+	}
+	return spec.Timeout.Duration() - waitingHorizonBudgetMargin, nil
+}
+
+const waitingHorizonBudgetMargin = 30 * time.Second
+
 type waitingHorizonRefreshWorker struct {
 	activities *activities.Store
 	identity   *identity.Service
@@ -61,7 +92,8 @@ func (w *waitingHorizonRefreshWorker) Work(ctx context.Context, _ *river.Job[Wai
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	days, err := w.activities.RefreshWaitingHorizon(principal.SystemActing(wsCtx, waitingHorizonRefreshActor))
+	days, err := w.activities.RefreshWaitingHorizon(
+		principal.SystemActing(wsCtx, waitingHorizonRefreshActor), waitingHorizonStatementBudget())
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

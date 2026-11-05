@@ -78,7 +78,7 @@ func watchedVersion(t *testing.T, e *Env) string {
 func TestProviderSettings_ABoundHostChangeIsAuditedAndRebindsServingRoles(t *testing.T) {
 	e := Setup(t)
 	ctx := providerSettingsAdmin(e)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	plantBrokerRouting(ctx, t, store)
 	before := watchedVersion(t, e)
 	const audits = `SELECT count(*) FROM audit_log WHERE entity_type = 'ai_routing' AND after::text LIKE '%' || $1 || '%'`
@@ -112,7 +112,7 @@ func TestProviderSettings_ABoundHostChangeIsAuditedAndRebindsServingRoles(t *tes
 func TestProviderSettings_ClearingABoundHostIsRefusedAndStoresNothing(t *testing.T) {
 	e := Setup(t)
 	ctx := providerSettingsAdmin(e)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	plantBrokerRouting(ctx, t, store)
 	before, err := store.Get(ctx)
 	if err != nil {
@@ -140,7 +140,7 @@ func TestProviderSettings_ClearingABoundHostIsRefusedAndStoresNothing(t *testing
 func TestProviderSettings_TheStoredRowIsCanonical(t *testing.T) {
 	e := Setup(t)
 	ctx := providerSettingsAdmin(e)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	plantBrokerRouting(ctx, t, store)
 
 	got, err := store.Get(ctx)
@@ -174,11 +174,11 @@ func TestProviderSettings_GetLiftsAStoredOldShapeRow(t *testing.T) {
 	if err := yaml.Unmarshal([]byte(perLaneBrokerRouting), &old); err != nil {
 		t.Fatalf("the planted binding does not decode: %v", err)
 	}
-	if err := settings.Set(ctx, settingsStore, ai.Routing, old); err != nil {
+	if err := config.Save(ctx, compose.StoredConfig(e.Pool), ai.Routing, old); err != nil {
 		t.Fatalf("planting the old-shape row: %v", err)
 	}
 
-	got, err := ai.NewRoutingStore(settingsStore, config.Static(nil)).Get(ctx)
+	got, err := ai.NewRoutingStore(settingsStore, compose.StoredConfig(e.Pool)).Get(ctx)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}

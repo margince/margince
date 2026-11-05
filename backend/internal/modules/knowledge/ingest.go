@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -62,6 +63,24 @@ func (e *CorpusFullError) Error() string {
 type IngestSource struct {
 	CorpusID   ids.UUID
 	StorageKey string
+}
+
+// IngestOwed reports whether a document is still waiting for its ingest or part
+// way through one. A document that is done, failed, archived or gone is not.
+//
+// It is how a second job for a document that has already been read stops without
+// reading it again: the first run's result stands.
+func (s *Store) IngestOwed(ctx context.Context, documentID ids.UUID) (bool, error) {
+	var owed bool
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM knowledge_document d
+			  WHERE d.id = $1 AND d.archived_at IS NULL AND `+ingestInFlight+`)`, documentID).Scan(&owed)
+	})
+	if err != nil {
+		return false, fmt.Errorf("read whether the document's ingest is owed: %w", err)
+	}
+	return owed, nil
 }
 
 // BeginIngest opens an attempt: the document moves to running, and whatever a
@@ -149,7 +168,7 @@ func (s *Store) WriteChunks(ctx context.Context, documentID ids.UUID, corpusID i
 		if err := insertChunks(ctx, tx, documentID, corpusID, chunks); err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "knowledge_document", documentID,
+		if _, err := storekit.Audit(ctx, tx, "update", auditentity.KnowledgeDocument, documentID,
 			map[string]any{chunkCountColumn: wasCount},
 			map[string]any{chunkCountColumn: len(chunks)}); err != nil {
 			return fmt.Errorf("audit the document's chunking: %w", err)
@@ -235,7 +254,7 @@ func (s *Store) FailIngest(ctx context.Context, documentID ids.UUID, detail stri
 		if tag.RowsAffected() != 1 {
 			return apperrors.ErrNotFound
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "knowledge_document", documentID,
+		if _, err := storekit.Audit(ctx, tx, "update", auditentity.KnowledgeDocument, documentID,
 			map[string]any{"ingest_status": wasStatus, "ingest_detail": wasDetail},
 			map[string]any{"ingest_status": "failed", "ingest_detail": detail}); err != nil {
 			return fmt.Errorf("audit the failed ingest: %w", err)

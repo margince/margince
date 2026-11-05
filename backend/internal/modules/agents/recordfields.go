@@ -110,10 +110,14 @@ func contractFieldNames(t reflect.Type) []string {
 	return names
 }
 
-// acceptedFieldNames is what a write's fields may name: the contract body's own
-// fields and the parent ids its route carries in its path, sorted.
-func acceptedFieldNames(shape reflect.Type, parents []string) []string {
-	names := append(contractFieldNames(shape), parents...)
+// acceptedFieldNames is what a write's fields may name, sorted: the contract
+// body's own fields less the ones this surface withholds. The parent ids its
+// route carries in its path count too.
+func acceptedFieldNames(shape reflect.Type, parents, withheld []string) []string {
+	names := slices.DeleteFunc(contractFieldNames(shape), func(name string) bool {
+		return slices.Contains(withheld, name)
+	})
+	names = append(names, parents...)
 	sort.Strings(names)
 	return names
 }
@@ -150,37 +154,16 @@ const recordFieldsDescription = "The crm.yaml body for the record_type. The fiel
 	"description, is what says what a write may name. An extra key must be cf_<slug> for a " +
 	"custom field; any other key is refused BY NAME " +
 	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
+	"An rfc3339 value carries Z or the offset the user gave. " +
 	"Any field holding a sentence — a description, a summary, a note — is written in whoami's " +
 	"prose_language, whatever language this conversation is in."
-
-// customFieldPrefix is the only shape an extra key may take: the
-// customfields engine derives every column it adds as cf_<slug>, so a key
-// without that prefix is not a custom field under any workspace's catalog.
-const customFieldPrefix = "cf_"
 
 // rejectUnknownFields refuses a `fields` payload carrying keys the record type
 // cannot store, naming them and the ones it accepts.
 //
-// This lives at the TOOL, not in the store, and that placement is the whole
-// point. The store's silence is contract-conformant: the write bodies declare
-// additionalProperties: true, and storekit's package doc ratifies
-// drop-on-mismatch. So a SESSION may keep accepting-and-discarding, while a
-// governed call — whose caller cannot see a response body it did not think to
-// re-read — refuses up front instead of reporting success for a write it did
-// not perform. Two sessions lost data to that silence: company_id on a
-// contact create, and emails on a contact UPDATE, which is a real field on
-// create and no field at all on update.
-//
-// The line is the CREDENTIAL, not the door, and it stopped being the door when
-// the governed-call seam put these guards on the REST agent path
-// (margince/margince#928). An agent's confirm-first create with a stray key is
-// refused where a session's identical request succeeds, and that asymmetry is
-// the intended one: the session's own reader is looking at the screen the write
-// answered, and the agent's is not. Reading this comment as "REST accepts" is
-// what it used to say and is now false of half of REST.
-//
-// A cf_-prefixed key passes: whether that custom field is active in this
-// workspace is the store's ratified question, not a shape this tool can judge.
+// The provider's decode refuses the same keys, so no door drops one. This check
+// runs first to answer with the record type's vocabulary. A cf_ key passes:
+// whether that field is active is the store's question.
 func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawMessage) error {
 	shape, ok := shapes.types[datasource.EntityType(recordType)]
 	if !ok {
@@ -202,15 +185,12 @@ func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawM
 		return &BadArgsError{Field: fieldsArg, Cause: errors.New("fields must be a JSON object, not null")}
 	}
 	accepted := make(map[string]struct{})
-	for _, name := range acceptedFieldNames(shape, shapes.parents[recordType]) {
+	for _, name := range acceptedFieldNames(shape, shapes.parents[recordType], shapes.withheld[recordType]) {
 		accepted[name] = struct{}{}
 	}
 	var unknown []string
 	for key := range submitted {
-		// The prefix alone is not a field name: `cf_` names no slug, so it
-		// can match no catalog column and would be discarded like any other
-		// unknown key.
-		if _, ok := accepted[key]; ok || len(key) > len(customFieldPrefix) && strings.HasPrefix(key, customFieldPrefix) {
+		if _, ok := accepted[key]; ok || datasource.IsCustomFieldKey(key) {
 			continue
 		}
 		unknown = append(unknown, key)
@@ -241,13 +221,57 @@ func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawM
 	}
 }
 
+// The example is UTC: a model copies an example's offset, and a fixed one
+// filed day-only entries at noon in a zone nobody named. The rule also sits
+// on required arguments, so it never says to leave a value out.
+const timestampRule = "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset."
+
 // timestampNote is appended to every date-time argument the tool surface
 // takes. "format": "date-time" is RFC 3339, which REQUIRES a zone offset — but
 // a model reading the bare format keyword writes a local wall-clock time, and
 // the decoder then refuses a value that looks correct. Two failed calls were
 // spent on exactly that before the reason was visible, so the requirement is
 // stated where it is read rather than left implied by a keyword.
-const timestampNote = `,"description":"RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused."`
+const timestampNote = `,"description":"` + timestampRule + `"`
+
+// windowRule is the rule for a time the model must choose, such as a search
+// window or a slot to book. The model picks that hour, so only the offset is
+// fixed.
+const windowRule = "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset."
+
+const windowNote = `,"description":"` + windowRule + `"`
+
+// pastDayNeedsATime is the activity-write sentence for a day named without an
+// hour. An omitted occurred_at is the call's own moment; the server dates a day.
+// meetingStatusRule is the sentence create_record and update_record carry about
+// an activity's meeting_status. log_activity says it on the field itself, where
+// it costs the tool's window less.
+const meetingStatusRule = ` Set meeting_status held only when the user says the meeting took place.`
+
+const pastDayNeedsATime = ` No occurred_at means now; a past day with no time: its date, occurred_precision "day".`
+
+// argumentSchemaFor is schemaFor for a tool ARGUMENT. Every date-time member
+// it derives carries `rule`, like a hand-written one. A result schema has no
+// use for it.
+func argumentSchemaFor[T any](rule string) json.RawMessage {
+	return describedSchema[T]("", rule)
+}
+
+func noteTimestamps(node *jsonSchema, rule string) {
+	if node == nil {
+		return
+	}
+	if node.Format == "date-time" && node.Description == "" {
+		node.Description = rule
+	}
+	for _, member := range node.Properties {
+		noteTimestamps(member, rule)
+	}
+	noteTimestamps(node.Items, rule)
+	if node.AdditionalProperties != nil {
+		noteTimestamps(node.AdditionalProperties.Schema, rule)
+	}
+}
 
 // proseLanguageNote is the description on every argument that stores a
 // sentence a colleague will later read.
@@ -325,10 +349,14 @@ type writeShapes struct {
 	// parents are the parent ids a create names among its fields, which its
 	// REST route carries in its path.
 	parents map[string][]string
+	// withheld are body fields the REST route takes and this tool refuses.
+	withheld map[string][]string
 }
 
 var (
-	createWriteShapes = writeShapes{types: createShapes, rendered: createRecordShapes, parents: createParentFields}
+	createWriteShapes = writeShapes{
+		types: createShapes, rendered: createRecordShapes, parents: createParentFields, withheld: createWithheldFields,
+	}
 	updateWriteShapes = writeShapes{types: updateShapes, rendered: updateRecordShapes}
 )
 

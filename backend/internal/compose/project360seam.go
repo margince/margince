@@ -35,7 +35,7 @@ func newProject360Service(pool *pgxpool.Pool) *project360.Service {
 		ProjectsStore(pool),
 		contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(catalog),
 		contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).WithFieldCatalog(catalog),
-		activities.NewStore(InstallationDB(pool)),
+		activities.NewStore(InstallationDB(pool)).WithFieldCatalog(catalog),
 		clockNow,
 	)
 }

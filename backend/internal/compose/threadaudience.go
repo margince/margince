@@ -15,6 +15,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -62,13 +63,16 @@ type ThreadAudienceOutcome struct {
 type ThreadAudienceSetter struct {
 	pool    *pgxpool.Pool
 	threads *capture.ThreadVerdictStore
+	// released ends the contact holds a shared thread no longer justifies.
+	released *heldContactReleaser
 }
 
 // NewThreadAudienceSetter builds the setter over one database.
 func NewThreadAudienceSetter(pool *pgxpool.Pool) *ThreadAudienceSetter {
 	return &ThreadAudienceSetter{
-		pool:    pool,
-		threads: capture.NewThreadVerdictStore(InstallationDB(pool)),
+		pool:     pool,
+		threads:  capture.NewThreadVerdictStore(InstallationDB(pool)),
+		released: newHeldContactReleaser(pool, slog.Default()),
 	}
 }
 
@@ -80,7 +84,7 @@ func NewThreadAudienceSetter(pool *pgxpool.Pool) *ThreadAudienceSetter {
 // another for even a moment is a thread somebody screenshotted.
 func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, share bool) (ThreadAudienceOutcome, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID == ids.Nil {
 		return ThreadAudienceOutcome{}, apperrors.ErrPermissionDenied
 	}
 	// A read seat is licensed to look, not to change what colleagues can read.
@@ -127,16 +131,20 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 		// reasons this leaves alone — a sender's own subject marking, a
 		// counterparty hold, the workspace floor — are not a recipient's to
 		// lift. ClearConfidentialityVerdictHoldTx enumerates them.
+		//
+		// Any share lifts a members-only hold. That hold only stops automatic
+		// promotion of colleagues' mail. An owner pressing Share is the
+		// human decision it waits for.
 		if share {
+			activityIDs := asActivityIDs(messages)
+			if err := activities.ClearMembersOnlyHoldTx(ctx, tx, activityIDs); err != nil {
+				return err
+			}
 			judged, err := capture.ThreadJudgedByClassifierTx(ctx, tx, threadKey, actor.UserID)
 			if err != nil {
 				return err
 			}
 			if judged {
-				activityIDs := make([]ids.ActivityID, 0, len(messages))
-				for _, id := range messages {
-					activityIDs = append(activityIDs, ids.From[ids.ActivityKind](id))
-				}
 				if err := activities.ClearConfidentialityVerdictHoldTx(ctx, tx, activityIDs); err != nil {
 					return err
 				}
@@ -168,6 +176,9 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 	})
 	if err != nil {
 		return ThreadAudienceOutcome{}, err
+	}
+	if outcome.Shared {
+		s.released.releaseThread(ctx, threadKey)
 	}
 	return outcome, nil
 }

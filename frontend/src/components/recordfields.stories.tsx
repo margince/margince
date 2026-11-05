@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { StoryProviders } from "../testing/story-utils";
-import { type FieldRecord, RecordFields } from "./recordfields";
+import { RecordFields } from "./recordfields";
+import type { FieldRecord } from "./recordfieldtypes";
 
 const meta: Meta = {
   title: "Records/Record 360/Details fields",
@@ -68,5 +70,27 @@ function Example({
   );
 }
 export const Editable: Story = { render: () => <Example /> };
+
+// A group of fields edits in a dialog over the page, never inside its row.
+export const GroupInDialog: Story = {
+  render: () => <Example />,
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    await user.click(
+      await within(canvasElement).findByRole("button", {
+        name: /^Change Email addresses/,
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Email addresses",
+    });
+    // The dialog fades in from transparent, so visible is a state it reaches.
+    await waitFor(() =>
+      expect(
+        within(dialog).getByDisplayValue("mira@example.test"),
+      ).toBeVisible(),
+    );
+  },
+};
 export const ReadOnly: Story = { render: () => <Example readOnly /> };
 export const SaveFailure: Story = { render: () => <Example failed /> };

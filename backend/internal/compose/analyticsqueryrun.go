@@ -17,9 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // AnalyticsAnswer is one generic query's result.
@@ -53,8 +51,11 @@ type AnalyticsAnswer struct {
 func RunAnalyticsQuery(
 	ctx context.Context, tx pgx.Tx, q analyticsquery.Query, floor analyticsquery.Floor,
 ) (AnalyticsAnswer, error) {
-	schema := AnalyticsSchemaFor(ctx)
-	spec, ok := prebuiltReports[q.Entity]
+	schema, specs, err := AnalyticsSchemaIn(ctx, tx)
+	if err != nil {
+		return AnalyticsAnswer{}, err
+	}
+	spec, ok := specs[q.Entity]
 	if !ok {
 		// A name no catalog entry carries is judged by the caller's own
 		// derived vocabulary, so the refusal is Validate's — the one writer
@@ -77,14 +78,17 @@ func RunAnalyticsQuery(
 	// installation's compile-time table, so the name's existence is not the
 	// caller's secret to be kept — and a saved run's reader must hear the
 	// denial, not be told the population their citation names does not exist.
-	if err := auth.Require(ctx, string(spec.entity), principal.ActionRead); err != nil {
+	if err := requireAnalyticsRead(ctx, spec.entity); err != nil {
 		return AnalyticsAnswer{}, err
 	}
 
 	// Every owner a filter names is judged before anything compiles, the same
 	// refusal run_report gives. The explanation re-runs this question first, so
 	// it is judged there too.
-	if err := requireMeasurableTypedOwners(ctx, tx, spec, q.Filters); err != nil {
+	if err := requireMeasurableTypedOwners(ctx, tx, spec, requestedFromQuery(q), q.Filters); err != nil {
+		return AnalyticsAnswer{}, err
+	}
+	if err := requireIndividualQuestion(ctx, tx, spec, requestedFromQuery(q), q.GroupBy, typedFilters(q.Filters)); err != nil {
 		return AnalyticsAnswer{}, err
 	}
 	var narrowed string
@@ -97,7 +101,7 @@ func RunAnalyticsQuery(
 	if err != nil {
 		return AnalyticsAnswer{}, err
 	}
-	sql, args, err := bindReportTokens(ctx, frame, plan.SQL, plan.Args)
+	sql, args, err := bindReportTokens(ctx, tx, frame, plan.SQL, plan.Args)
 	if err != nil {
 		return AnalyticsAnswer{}, err
 	}
@@ -107,6 +111,12 @@ func RunAnalyticsQuery(
 	// somebody who can ask both has it — so a filter that excludes fewer
 	// records than the floor is refused rather than answered.
 	if err := refuseIfTheFilterHidesTooLittle(ctx, tx, frame, plan, floor); err != nil {
+		return AnalyticsAnswer{}, err
+	}
+	if err := requireNoLoneColleagueIn(ctx, tx, frame, plan.ContributorsSQL, plan.ContributorsArgs); err != nil {
+		return AnalyticsAnswer{}, err
+	}
+	if err := requireSpecPopulationFloor(ctx, tx, spec, requestedFromQuery(q)); err != nil {
 		return AnalyticsAnswer{}, err
 	}
 
@@ -150,7 +160,7 @@ func refuseIfTheFilterHidesTooLittle(
 	if plan.ExcludedSQL == "" || floor <= 0 {
 		return nil
 	}
-	sql, args, err := bindReportTokens(ctx, frame, plan.ExcludedSQL, plan.ExcludedArgs)
+	sql, args, err := bindReportTokens(ctx, tx, frame, plan.ExcludedSQL, plan.ExcludedArgs)
 	if err != nil {
 		return err
 	}

@@ -49,6 +49,9 @@ type Service struct {
 	// pending is OPTIONAL for the same reason: unbound, the needs-you lane is
 	// empty rather than the page refusing.
 	pending PendingDecisions
+	// decided is OPTIONAL for the same reason: unbound, the done lane holds
+	// the audit rows alone.
+	decided DecidedReceipts
 	now     func() time.Time
 }
 
@@ -113,53 +116,12 @@ func (s *Service) Read(
 		NotShown:           []crmcontracts.MagicNotShown{},
 		SourcesUnavailable: []crmcontracts.WorklistSourceUnavailable{},
 	}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		entries, capped, err := doneSince(ctx, tx, from, limit)
-		if err != nil {
-			return err
-		}
-		notShown, err := notShownSince(ctx, tx, from)
-		if err != nil {
-			return err
-		}
-		mask, err := newImageMask(ctx)
-		if err != nil {
-			return err
-		}
-		lines, housekeeping := linesOf(mask, entries, capped, limit)
-		// Asked after the lines are drawn and inside the page's own
-		// transaction: the judge reads the record each line names, and a
-		// second connection inside this one can deadlock against a lock it
-		// holds.
-		if err := s.judgeUndoOn(ctx, tx, lines); err != nil {
-			return err
-		}
-		// A line standing for many records has no single way back: the judge
-		// read one of its rows, and its answer about that row is not an answer
-		// about the rest. The line says nothing rather than something untrue.
-		for i := range lines {
-			if lines[i].Count != nil && *lines[i].Count > 1 {
-				lines[i].Undo = nil
-				continue
-			}
-			if lines[i].Entity != nil {
-				if err := attachVersion(ctx, tx, lines[i].Undo, lines[i].Entity.Type, ids.UUID(lines[i].Entity.Id)); err != nil {
-					return err
-				}
-			}
-		}
-		// Retention, as counts beside the records' own lines; it names no
-		// record, so it has nothing for the undo judge to read.
-		retention, err := retentionSince(ctx, tx, from)
-		if err != nil {
-			return err
-		}
-		receipt.Done = mergeNewestFirst(retention, lines, limit)
-		if housekeeping > 0 {
-			notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnadmittedAction)] += housekeeping
-		}
-		receipt.NotShown = notShownOf(notShown)
-		return nil
+	// One snapshot: the images loaded after the arms see the access the arms
+	// were gated by, so no revocation can land between the two.
+	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			return s.drawDone(ctx, tx, from, limit, &receipt)
+		})
 	})
 	if err != nil {
 		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
@@ -174,6 +136,12 @@ func (s *Service) Read(
 	if err := s.gatherSeamLanes(ctx, &receipt, from, limit); err != nil {
 		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
 	}
+	decided, floor, err := s.decidedDone(ctx, receipt.Done, from, limit)
+	if err != nil {
+		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
+	}
+	receipt.Done = mergeNewestFirst(receipt.Done, decided, limit)
+	receipt.DoneIsFloor = &floor
 	// THE TOTALS COUNT WHAT IS DRAWN, and say so by being derived from the
 	// drawn lines rather than from the fetch behind them. The fetch is neither
 	// the page nor the window: each of the six arms applies the same LIMIT
@@ -190,6 +158,62 @@ func (s *Service) Read(
 		Watching:         len(receipt.Watching),
 	}
 	return receipt, nil
+}
+
+// drawDone fills the done lane and its not-shown counts from the page's own
+// transaction.
+func (s *Service) drawDone(
+	ctx context.Context, tx pgx.Tx, from time.Time, limit int, receipt *crmcontracts.MagicReceipt,
+) error {
+	entries, capped, err := doneSince(ctx, tx, from, limit)
+	if err != nil {
+		return err
+	}
+	notShown, countWithheld, err := notShownSince(ctx, tx, from)
+	if err != nil {
+		return err
+	}
+	mask, err := newImageMask(ctx)
+	if err != nil {
+		return err
+	}
+	lines, housekeeping := linesOf(mask, entries, capped, limit)
+	if err := showDeferredImages(ctx, tx, mask, lines, entries); err != nil {
+		return err
+	}
+	// Asked inside the page's own transaction, after the lines are drawn. The
+	// judge reads the record each line names, and a second connection inside
+	// this one can deadlock against a lock it holds.
+	if err := s.judgeUndoOn(ctx, tx, lines); err != nil {
+		return err
+	}
+	// A line standing for many records has no single way back. The judge read
+	// one of its rows, and that answer says nothing about the rest. So the line
+	// says nothing rather than something untrue.
+	for i := range lines {
+		if lines[i].Count != nil && *lines[i].Count > 1 {
+			lines[i].Undo = nil
+			continue
+		}
+		if lines[i].Entity != nil {
+			if err := attachVersion(ctx, tx, lines[i].Undo, lines[i].Entity.Type, ids.UUID(lines[i].Entity.Id)); err != nil {
+				return err
+			}
+		}
+	}
+	// Retention, as counts beside the records' own lines; it names no
+	// record, so it has nothing for the undo judge to read.
+	retention, err := retentionSince(ctx, tx, from)
+	if err != nil {
+		return err
+	}
+	receipt.Done = mergeNewestFirst(retention, lines, limit)
+	if housekeeping > 0 {
+		notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnadmittedAction)] += housekeeping
+	}
+	receipt.NotShown = notShownOf(notShown)
+	receipt.NotShownCountWithheld = &countWithheld
+	return nil
 }
 
 // gatherSeamLanes fills the three lanes that come from a module rather than
@@ -237,6 +261,34 @@ func (s *Service) gatherSeamLanes(
 func (s *Service) windowStart(
 	ctx context.Context, since *time.Time, asOf time.Time,
 ) (time.Time, error) {
+	return ResolveWindow(ctx, s.brief, since, asOf)
+}
+
+// windowKey names the window a receipt with no since covers. It is the
+// reader's brief cutoff once their brief has run, and otherwise the rolling day
+// or the lookback floor.
+func (s *Service) windowKey(ctx context.Context) (string, error) {
+	asOf := s.now().UTC()
+	from, err := s.windowStart(ctx, nil, asOf)
+	if err != nil {
+		return "", err
+	}
+	// The two windows that move with the clock are named, not dated, so the key
+	// holds still while the answer does.
+	switch {
+	case from.Equal(asOf.Add(-defaultWindow)):
+		return "day", nil
+	case from.Equal(asOf.Add(-maxLookback)):
+		return "floor", nil
+	}
+	return from.Format(time.RFC3339Nano), nil
+}
+
+// ResolveWindow is the one answer to where Done for you starts. Home's lane
+// and the worklist's receipts both ask it, so the two never show two windows.
+func ResolveWindow(
+	ctx context.Context, brief LastBrief, since *time.Time, asOf time.Time,
+) (time.Time, error) {
 	// The floor holds whatever the caller asked for. maxLookback states why.
 	floor := asOf.Add(-maxLookback)
 	if since != nil {
@@ -246,10 +298,10 @@ func (s *Service) windowStart(
 		}
 		return asked, nil
 	}
-	if s.brief == nil {
+	if brief == nil {
 		return asOf.Add(-defaultWindow), nil
 	}
-	cutoff, ran, err := s.brief.CutoffFor(ctx)
+	cutoff, ran, err := brief.CutoffFor(ctx)
 	if err != nil {
 		// A brief this reader may not see, or none at all, is not a failure of
 		// this read: it falls back to the day. Any OTHER error is real and

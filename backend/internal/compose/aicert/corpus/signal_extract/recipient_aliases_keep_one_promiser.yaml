@@ -1,0 +1,11 @@
+name: recipient_aliases_keep_one_promiser
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture: [{"direction": "outbound", "subject": "Next steps", "sent": "2026-09-07", "body": "Ines, you agreed to send the payment by Friday.", "participants": [{"key": "mira", "kind": "seat", "role": "from", "name": "Mira Chen", "address": ""}, {"key": "ines", "kind": "contact", "role": "to", "name": "Ines Huber", "address": "ines@example.test"}, {"key": "ines", "kind": "contact", "role": "to", "name": "Ines Huber", "address": "billing@example.test"}]}]
+expect:
+  outcome: accepted
+  answer: [{"kind": "commitment_made", "message": 1, "promiser": "ines"}]
+  rubric: "Identify the promiser from the quoted clause. The expected reference is ines. Direction and CC membership alone do not assign a promise."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

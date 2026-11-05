@@ -209,16 +209,14 @@ test("AC-meeting-brief-7: a cold record says nothing is recorded yet", async ({
   await expect(page.getByText(copy("contact.meeting.empty"))).toBeVisible();
 });
 
-test("AC-meeting-brief-8: a failed read offers the reason and a retry", async ({
+test("AC-meeting-brief-8: a meeting the reader may not open says so, with no retry", async ({
   page,
 }) => {
-  await openBrief(page, { meetingBrief: "failed" });
-  await expect(
-    page.getByText("That meeting is filed under a different engagement."),
-  ).toBeVisible();
+  await openBrief(page, { meetingBrief: "withheld" });
+  await expect(page.getByText(copy("state.withheld"))).toBeVisible();
   await expect(
     page.getByRole("button", { name: copy("state.retry") }),
-  ).toBeVisible();
+  ).toHaveCount(0);
 });
 
 test.describe("with a preparation plan", () => {

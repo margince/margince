@@ -3,7 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { Badge } from "./atoms";
 import { Popover } from "./popover";
+import "./popover.stories.css";
 
 // Popover: a short aside opened beside its trigger, portalled to the body so a
 // card's own overflow clip cannot cut it off. The cases on this canvas are the
@@ -116,4 +118,71 @@ export const LongPanelScrolls: Story = {
     </Popover>
   ),
   play: openByClick,
+};
+
+// `width="wide"`: a panel of rows that each carry a title and a verb.
+export const Wide: Story = {
+  render: () => (
+    <Popover label="Evidence" variant="ghost" width="wide">
+      <p>Three emails and one call reference the March renewal date.</p>
+    </Popover>
+  ),
+  play: openByClick,
+};
+
+// A chip-like trigger: a ghost Button with a count Badge, no pill restyle.
+export const GhostTriggerWithBadge: Story = {
+  render: () => (
+    <Popover
+      label={
+        <>
+          Setup <Badge>2</Badge>
+        </>
+      }
+      variant="ghost"
+      width="wide"
+    >
+      <p>Two steps left.</p>
+    </Popover>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: /Setup/ }));
+    await expect(
+      within(document.body).getByText("Two steps left."),
+    ).toBeVisible();
+  },
+};
+
+// `pinned`: the caller's class places the panel, as the top bar does. The
+// panel carries no placement of its own and is not moved to the trigger.
+export const Pinned: Story = {
+  render: () => (
+    <Popover
+      label="Evidence"
+      variant="ghost"
+      width="wide"
+      pinned
+      panelClassName="popover-story-pinned"
+    >
+      <p>Three emails and one call reference the March renewal date.</p>
+    </Popover>
+  ),
+  play: async (context) => {
+    await openByClick(context);
+    const words = await within(document.body).findByText(
+      "Three emails and one call reference the March renewal date.",
+    );
+    const panel = words.closest(".popover-panel");
+    if (!(panel instanceof HTMLElement)) throw new Error("no popover panel");
+    await expect(panel).not.toHaveAttribute("style");
+    const root = getComputedStyle(document.documentElement);
+    const space = (name: string) =>
+      Number.parseFloat(root.getPropertyValue(name));
+    const box = panel.getBoundingClientRect();
+    await expect(box.top).toBe(space("--space-8"));
+    await expect(document.documentElement.clientWidth - box.right).toBe(
+      space("--space-4"),
+    );
+  },
 };

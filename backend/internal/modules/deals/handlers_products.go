@@ -18,6 +18,7 @@ func (h Handlers) ListProducts(w http.ResponseWriter, r *http.Request, params cr
 		Limit:           params.Limit,
 		Query:           params.Q,
 		Active:          params.Active,
+		TaxCategory:     componentKindOf(params.TaxCategory),
 		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
 		Sort:            params.Sort,
 	}
@@ -80,8 +81,13 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, product)
 }
 
-func (h Handlers) ArchiveProduct(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	product, err := h.store.ArchiveProduct(r.Context(), pathID[ids.ProductKind](id))
+// ArchiveProduct preserves the request version through the native archive writer.
+func (h Handlers) ArchiveProduct(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveProductParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	product, err := h.store.ArchiveProductAt(r.Context(), pathID[ids.ProductKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -110,4 +116,26 @@ func billingClassificationOf[M ~string, I ~int](model *M, months *I) (*string, *
 		outMonths = &v
 	}
 	return outModel, outMonths
+}
+
+func (h Handlers) ListDealProducts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	products, err := h.store.ListDealProducts(r.Context(), pathID[ids.DealKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealProductListResponse{Data: products})
+}
+
+func (h Handlers) ReplaceDealProducts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.ReplaceDealProductsRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	products, err := h.store.ReplaceDealProducts(r.Context(), pathID[ids.DealKind](id), req.Products)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealProductListResponse{Data: products})
 }

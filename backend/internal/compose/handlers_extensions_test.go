@@ -8,11 +8,15 @@ package compose
 // is the JOIN that can be wrong.
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"slices"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -151,5 +155,25 @@ func TestRegisterExtensionsRecordsTheSetTheInventoryReadsBack(t *testing.T) {
 	got := ComposedExtensions()
 	if len(got) != 1 || got[0].Name != "inv-unit" || got[0].Version != "9.9.9" {
 		t.Fatalf("ComposedExtensions() = %v, want the set RegisterExtensions was handed", got)
+	}
+}
+
+// The list is gated by a grant, not by the admin role. The ops role reads it
+// through the same grant.
+func TestExtensionListAnswersTheHolderOfTheReadGrantAndRefusesTheRest(t *testing.T) {
+	t.Parallel()
+	as := func(grants map[string]principal.ObjectGrant) int {
+		ctx := principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalHuman, Permissions: principal.Permissions{Objects: grants},
+		})
+		rec := httptest.NewRecorder()
+		extensionsHandlers{}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
+		return rec.Code
+	}
+	if got := as(map[string]principal.ObjectGrant{"extension_access": {Read: true}}); got != http.StatusOK {
+		t.Errorf("a holder of extension_access.read → %d, want 200", got)
+	}
+	if got := as(map[string]principal.ObjectGrant{"job_health": {Read: true}}); got != http.StatusForbidden {
+		t.Errorf("a caller without extension_access → %d, want 403", got)
 	}
 }

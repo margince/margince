@@ -47,7 +47,7 @@ func TestTheBenchmarkPageKeepsTechnicalWordsInsideItsDetails(t *testing.T) {
 
 func TestTheBenchmarkPageWithNoRecordSaysSo(t *testing.T) {
 	page := renderPlain(map[string]record{})
-	if !strings.Contains(page, "Nobody has measured this yet") || strings.Contains(page, "## How fast does my morning start?") {
+	if !strings.Contains(page, "Nobody has measured the daily screens yet") || strings.Contains(page, "## How fast does my morning start?") {
 		t.Errorf("a checkout with no daily record must say so and show no answers:\n%s", page)
 	}
 }
@@ -76,11 +76,20 @@ func TestATimeIsRoundedTheWayItIsSaidAloud(t *testing.T) {
 func TestAServerErrorIsRedEvenWithinBudget(t *testing.T) {
 	failed := measurement{Name: "contact_360", Seat: "rep", P95Ms: 40, BudgetMs: 300, Samples: 30, Verdict: storedWithin, Status5xx: 2}
 	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Budgets: []measurement{failed}}})
-	if !strings.Contains(page, "| A contact's whole story | 🔴 Under a quarter of a second | ⚪ Not measured | Too slow: some tries failed. |") {
+	if !strings.Contains(page, "| A contact's whole story | 🔴 Some tries failed | ⚪ Not measured | Failed: some tries got no answer, so no time can be trusted. |") {
 		t.Errorf("a 5xx must turn the moment red:\n%s", page)
 	}
 	if got := verdict(failed); got != "**FAILED**: 2 server errors" {
 		t.Errorf("budgets page verdict %q, want the failure named", got)
+	}
+}
+
+func TestARedTimeNeverReadsFasterThanItsPromise(t *testing.T) {
+	slow := measurement{Name: "company_360", Seat: "manager", P95Ms: 528, BudgetMs: 300, Samples: 30, Verdict: storedOver}
+	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Budgets: []measurement{slow}}})
+	want := "| A company's whole page | ⚪ Not measured | 🔴 About 0.5 seconds | Too slow, and nobody is working on it yet. We promise under 0.3 seconds. |"
+	if !strings.Contains(page, want) {
+		t.Errorf("a time over the promise must not be rounded into a faster band:\n%s", page)
 	}
 }
 
@@ -137,5 +146,57 @@ func TestAnAllowedServerErrorOnAListedRowRendersAgainstItsIssue(t *testing.T) {
 	unallowed.Allowed5xx = false
 	if got := verdict(unallowed); got != "**FAILED**: 1 server errors" {
 		t.Errorf("verdict %q; a 5xx no entry allows must still read as a failure", got)
+	}
+}
+
+func TestARefusedRowRendersAsAFailureUnlessItsIssueAllowsIt(t *testing.T) {
+	refused := measurement{
+		Name: "analytics_evaluate", Flow: "analytics_evaluate", Seat: "rep", P95Ms: 6, BudgetMs: 1000, Samples: 30,
+		Verdict: storedWithin, Status422: 30,
+	}
+	if got := verdict(refused); got != "**FAILED**: 30 refused (422)" {
+		t.Errorf("verdict %q; a row every request of which was refused must not read as within budget", got)
+	}
+	allowed := refused
+	allowed.Verdict, allowed.KnownIssue, allowed.Allowed422 = storedOverKnown, 7037, true
+	if got := verdict(allowed); got != "over budget (#7037)" {
+		t.Errorf("verdict %q; a refusal the listed issue allows renders against that issue", got)
+	}
+}
+
+func TestSystemHealthMeasurementsKeepTheirSeatCorpusAndScope(t *testing.T) {
+	records := fixtureRecords(t)
+	records[healthTarget] = record{Target: healthTarget, MeasuredOn: "2026-10-01", Corpus: &corpus{Scale: 1, Contacts: 250000, Activities: 500000}, Budgets: []measurement{{ID: "PERF-11", Name: "system_health", Flow: "system_health", Seat: "admin", P95Ms: 75, BudgetMs: 750, Samples: 30, Verdict: storedWithin, Note: "10000 retained job runs; HTTP reads only"}}}
+	technical, plain := render(records), renderPlain(records)
+	for _, want := range []string{"250,000", "10000 retained job runs; HTTP reads only", "BENCH_DAILY_TEST=TestSystemHealthBudgets"} {
+		if !strings.Contains(technical, want) || !strings.Contains(plain, want) {
+			t.Errorf("health evidence %q missing from rendered pages", want)
+		}
+	}
+	if !strings.Contains(technical, "| `system_health` | admin |") {
+		t.Error("the measured health seat is absent")
+	}
+	if !strings.Contains(plain, "Opening Overview") || !strings.Contains(plain, "not the page in your browser") {
+		t.Error("the plain page must name the view and measurement boundary")
+	}
+}
+
+func TestAHealthRecordRendersWithoutADailyRecord(t *testing.T) {
+	page := renderPlain(map[string]record{healthTarget: {Target: healthTarget}})
+	if !strings.Contains(page, "How quickly can I check System health?") {
+		t.Error("a standalone health record was omitted")
+	}
+}
+
+func TestHealthMeasurementsKeepEachChecksSampleCountAndNote(t *testing.T) {
+	page := renderPlain(map[string]record{healthTarget: {Budgets: []measurement{
+		{Name: "system_health", Samples: 30, Note: "single request"},
+		{Name: "system_health_eight_readers", Samples: 12, Note: "whole-round latency"},
+		{Name: "unknown_check", Samples: 4, Note: "new diagnostic"},
+	}}})
+	for _, want := range []string{"Opening Overview: 30 samples. single request", "Eight readers checking at once: 12 samples. whole-round latency", "Another health check: 4 samples. new diagnostic"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("measurement missing: %s", want)
+		}
 	}
 }

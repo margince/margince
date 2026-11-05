@@ -27,9 +27,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// sourceHuman is what somebody acting in the UI writes. Connectors and imports
-// would name themselves; nothing automated judges a project today.
-const sourceHuman = "human"
+// The writers of the history, in the source column.
+const (
+	// sourceHuman is what somebody acting in the UI writes.
+	sourceHuman = "human"
+	// sourceAgent is what an agent acting for that user writes.
+	sourceAgent = "agent"
+	// sourceAI is what the health job writes, from the quiet and overdue rules.
+	sourceAI = "ai"
+	// sourceUndo is the row a user appends to withdraw an AI reading. It
+	// supersedes that reading and is never itself the current one, so the
+	// reading from before the AI's stands again, or none does.
+	sourceUndo = "undo"
+)
+
+func healthSource(ctx context.Context) string {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return sourceAgent
+	}
+	return sourceHuman
+}
 
 // healthColumns is what a health read returns, shared by the list and the
 // single read.
@@ -40,10 +57,12 @@ const healthColumns = `a.id, a.project_id, a.state, a.note, a.assessed_at,
 // currentHealthWhere narrows to the judgement that STANDS for a project: the
 // newest one nothing has corrected.
 //
-// Superseded rows are excluded rather than ordered around. A correction is the
-// statement that its target was wrong, so a corrected reading is not a stale
-// answer to be outranked — it is not an answer at all.
+// Superseded rows are excluded rather than ordered around. A correction says
+// its target was wrong, so a corrected reading is no answer at all. An undo row
+// is excluded too. It carries a state only because the column demands one, and
+// counting it would make an undone first reading read as a judgement.
 const currentHealthWhere = `a.project_id = $%d
+	AND a.source <> '` + sourceUndo + `'
 	AND NOT EXISTS (SELECT 1 FROM project_health_assessment s WHERE s.supersedes_assessment_id = a.id)
 	ORDER BY a.assessed_at DESC, a.created_at DESC, a.id DESC
 	LIMIT 1`
@@ -114,9 +133,10 @@ func (s *Store) CurrentHealthTx(
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	row := tx.QueryRow(ctx, storekit.SQLf(
+	query := storekit.SQLf(
 		`SELECT `+healthColumns+` FROM project_health_assessment a WHERE `+currentHealthWhere,
-		arg(id)), args...)
+		arg(id))
+	row := tx.QueryRow(ctx, query, args...)
 	out, err := scanHealth(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		//nolint:nilnil // "nobody has judged this project" IS the answer, not a
@@ -147,7 +167,7 @@ func (s *Store) ListHealth(
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		// The history is a fact about the record, gated exactly as the record
 		// is: a caller who cannot see the project is told it is not there.
-		if err := auth.EnsureVisible(ctx, tx, projectObject, id.UUID); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}
 		limit := 50

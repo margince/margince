@@ -6,6 +6,7 @@ package customfields
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -74,19 +75,51 @@ func TestCreate_UnwiredSchemaPoolRefusesSchemaChange(t *testing.T) {
 	}
 }
 
-func TestRename_RequiresUpdateGrant(t *testing.T) {
+func labelPatch(label string) FieldPatch { return FieldPatch{Label: &label} }
+
+func TestUpdate_RequiresUpdateGrant(t *testing.T) {
 	svc := NewService(nil, nil)
-	_, err := svc.Rename(ctxAs(principal.ObjectGrant{Read: true}), ids.NewV7(), "New label", nil)
+	_, err := svc.Update(ctxAs(principal.ObjectGrant{Read: true}), ids.NewV7(), labelPatch("New label"), nil)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("rename without custom_field.update must be permission-denied, got %v", err)
+		t.Fatalf("update without custom_field.update must be permission-denied, got %v", err)
 	}
 }
 
-func TestRename_EmptyLabelRefused(t *testing.T) {
+func TestUpdate_EmptyLabelRefused(t *testing.T) {
 	svc := NewService(nil, nil)
-	_, err := svc.Rename(ctxAs(fullGrant()), ids.NewV7(), "   ", nil)
+	_, err := svc.Update(ctxAs(fullGrant()), ids.NewV7(), labelPatch("   "), nil)
 	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("blank label must return *ValidationError, got %v", err)
+	}
+}
+
+func TestUpdate_EmptyPatchRefused(t *testing.T) {
+	svc := NewService(nil, nil)
+	_, err := svc.Update(ctxAs(fullGrant()), ids.NewV7(), FieldPatch{}, nil)
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
+		t.Fatalf("a patch that changes nothing must return *ValidationError, got %v", err)
+	}
+}
+
+func TestUpdateAuditNamesOnlyTheSettingsThePatchCarried(t *testing.T) {
+	hide := false
+	f := lockedField{Label: "Old owner", ShowInCreate: true}
+	now := f
+	now.ShowInCreate = hide
+	before, after := FieldPatch{ShowInCreate: &hide}.auditDiff(f, now)
+	if len(before) != 1 || before[fieldShow] != true || len(after) != 1 || after[fieldShow] != false {
+		t.Fatalf("a show_in_create patch must audit only that setting, got before=%v after=%v", before, after)
+	}
+}
+
+func TestUpdateAuditNamesTheReportingSettingAlone(t *testing.T) {
+	on := true
+	f := lockedField{Label: "Territory", ShowInCreate: true}
+	now := f
+	now.Reportable = on
+	before, after := FieldPatch{Reportable: &on}.auditDiff(f, now)
+	if len(before) != 1 || before[fieldReport] != false || len(after) != 1 || after[fieldReport] != true {
+		t.Fatalf("a reportable patch must audit only that setting, got before=%v after=%v", before, after)
 	}
 }
 
@@ -141,5 +174,34 @@ func TestColumnTakenErrorReadsAsConflict(t *testing.T) {
 	err := &ColumnTakenError{Column: "cf_renewal_date"}
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatal("ColumnTakenError must map onto the 409 conflict sentinel")
+	}
+}
+
+func TestUpdateAuditNamesTheActivityKindsAlone(t *testing.T) {
+	kinds := []string{"meeting"}
+	f := lockedField{Label: "Visit report", ShowInCreate: true}
+	now := f
+	now.ActivityKinds = kinds
+	before, after := FieldPatch{ActivityKinds: &kinds}.auditDiff(f, now)
+	if len(before) != 1 || len(after) != 1 || fmt.Sprint(after[fieldKinds]) != "[meeting]" {
+		t.Fatalf("an activity_kinds patch must audit only that setting, got before=%v after=%v", before, after)
+	}
+}
+
+func TestUpdateRefusesKindsOnAFieldOfAnotherObject(t *testing.T) {
+	kinds := []string{"meeting"}
+	_, err := FieldPatch{ActivityKinds: &kinds}.apply(t.Context(), nil, ids.NewV7(), lockedField{Object: "deal"})
+	verr, ok := errors.AsType[*ValidationError](err)
+	if !ok || !hasFieldError(verr.Errors, fieldKinds, codeKindsNotActivity) {
+		t.Fatalf("kinds on a deal field must be refused, got %v", err)
+	}
+}
+
+func TestUpdateWithAnEmptyKindListAppliesTheFieldToEveryKind(t *testing.T) {
+	none := []string{}
+	next, err := FieldPatch{ActivityKinds: &none}.apply(t.Context(), nil, ids.NewV7(),
+		lockedField{Object: "activity", ActivityKinds: []string{"meeting"}})
+	if err != nil || next.ActivityKinds != nil {
+		t.Fatalf("an empty kind list must clear the narrowing, got %v, %v", next.ActivityKinds, err)
 	}
 }

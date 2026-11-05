@@ -122,9 +122,18 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *contacts.Store,
 			OnBehalfOf: decider.UserID,
 		})
 		var triageDomain string
+		promotePair, err := contacts.MayPromoteHeldLeads(ctx)
+		if err != nil {
+			return err
+		}
 		if err := svc.RedeemAndApply(ctx, approvalID, counterpartyProposalKind, diffHash, func(tx pgx.Tx) error {
+			// Asked again as the decider on the write's own transaction: the
+			// precheck answered before the decision, and the contact can move.
+			if err := store.ProbeCounterpartyMatchTx(ctx, tx, proposal.Email, proposal.Domain); err != nil {
+				return err
+			}
 			var applyErr error
-			triageDomain, applyErr = applyCounterpartyAccept(execCtx, tx, store, filer, pending, proposal)
+			triageDomain, applyErr = applyCounterpartyAccept(execCtx, tx, store, filer, pending, proposal, promotePair)
 			return applyErr
 		}); err != nil {
 			return err
@@ -145,19 +154,25 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *contacts.Store,
 // It reports the domain still owed a company verdict, for the caller to
 // queue once the redemption has committed.
 func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *contacts.Store,
-	filer *connectorTagFiler, pending *capture.PendingStore, proposal approvalsubject.Counterparty,
+	filer *connectorTagFiler, pending *capture.PendingStore, proposal approvalsubject.Counterparty, promotePair bool,
 ) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, store, filer, counterpartyCreation{
-		Email:       proposal.Email,
-		DisplayName: proposal.DisplayName,
-		Domain:      proposal.Domain,
-		OwnerID:     proposal.OwnerID,
-		ActivityID:  proposal.ActivityID,
-		Source:      counterpartyProposalKind,
-		CapturedBy:  counterpartyExecutorActor,
+		DispositionID: proposal.DispositionID,
+		Email:         proposal.Email,
+		DisplayName:   proposal.DisplayName,
+		Domain:        proposal.Domain,
+		OwnerID:       proposal.OwnerID,
+		ActivityID:    proposal.ActivityID,
+		Source:        counterpartyProposalKind,
+		CapturedBy:    counterpartyExecutorActor,
 	})
 	if err != nil {
 		return "", err
+	}
+	// A seat's address keeps `real` for the reason correctRefusedVerdict gives.
+	if created.SeatAddress {
+		return "", pending.ResolveReviewedAs(ctx, tx, proposal.DispositionID,
+			capture.PendingStatusReal, capture.KindContact, seatAddressReason)
 	}
 	// An address erased while the offer sat in the inbox creates nothing, and
 	// the ledger says so rather than reporting `real` for a contact who does not
@@ -165,6 +180,11 @@ func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *contacts.Sto
 	if created.Suppressed {
 		return "", pending.ResolveReviewed(ctx, tx, proposal.DispositionID,
 			capture.PendingStatusSuppressed, "the address was erased before the review was accepted")
+	}
+	if promotePair && !created.ContactID.IsZero() {
+		if err := store.MergeExistingLeadContactPairForEmailTx(ctx, tx, proposal.Email, created.ContactID); err != nil {
+			return "", err
+		}
 	}
 	// Accepting the offer IS the assertion that a contact is behind the address —
 	// the queue's whole question is whether to create this contact — so the
@@ -183,4 +203,38 @@ func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *contacts.Sto
 		return "", err
 	}
 	return created.TriageDomain, nil
+}
+
+// counterpartyPrecheck refuses an accept whose address already belongs to a
+// contact the decider may not file onto. It runs before the decision, so the
+// card stays pending; the effect asks again as it writes.
+func counterpartyPrecheck(store *contacts.Store) approvals.ReleasePrecheck {
+	return func(ctx context.Context, staged, edited json.RawMessage) error {
+		var proposal approvalsubject.Counterparty
+		if err := json.Unmarshal(staged, &proposal); err != nil {
+			return fmt.Errorf("compose: decoding the counterparty proposal: %w", err)
+		}
+		if err := refuseSenderEdit(proposal, edited); err != nil {
+			return err
+		}
+		return store.ProbeCounterpartyMatch(ctx, proposal.Email, proposal.Domain)
+	}
+}
+
+// refuseSenderEdit refuses an edit that names another sender. The card asks
+// about one address, and an edit aimed at another would file mail elsewhere.
+func refuseSenderEdit(staged approvalsubject.Counterparty, edited json.RawMessage) error {
+	if len(edited) == 0 {
+		return nil
+	}
+	var after approvalsubject.Counterparty
+	if err := json.Unmarshal(edited, &after); err != nil {
+		return &approvals.InvalidEditError{Cause: err}
+	}
+	if !strings.EqualFold(strings.TrimSpace(after.Email), strings.TrimSpace(staged.Email)) ||
+		!strings.EqualFold(strings.TrimSpace(after.Domain), strings.TrimSpace(staged.Domain)) {
+		return &approvals.InvalidEditError{Cause: errors.New(
+			"this card is about one sender; edit the name, not the address or the domain")}
+	}
+	return nil
 }

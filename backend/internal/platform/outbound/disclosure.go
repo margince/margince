@@ -108,6 +108,11 @@ func Disclosures() []Disclosure {
 			Control: "the identity provider binding",
 		},
 		{
+			Product: ExtensionProduct, Endpoint: "the provider an installed extension unit calls", Personal: true,
+			Category: "whatever that unit sends its provider, which can include the deals and colleagues' details its manifest lists under system_reads",
+			Control:  "removing the unit from the installation",
+		},
+		{
 			Product: SelfCheckProduct, Endpoint: "this installation's own public address", Personal: false,
 			Control: "not optional: it is how the installation learns whether it is reachable",
 		},

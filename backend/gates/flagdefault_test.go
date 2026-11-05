@@ -15,9 +15,9 @@ package gates
 // key and the /metrics bearer token. On CI that stderr is a public build log; in a
 // container it is the pod's log stream.
 //
-// internal/platform/cliflags is the shape that avoids it: register the LITERAL
-// default, resolve the environment after Parse. Each role additionally asserts its
-// own usage output carries no environment value — but that check can only seed the
+// platform/config avoids it: a setting's flag carries no default, and Load ranks
+// the flag against the environment. Each role asserts its own usage output
+// carries no environment value. That check can only seed the
 // variables it can SEE, so a flag reverting to a direct read would drop out of its
 // scope entirely. This gate closes that: it bans the shape itself, over every
 // binary, derived from the tree rather than a list of the three that exist today.
@@ -35,10 +35,8 @@ import (
 // `fs.String("name", DEFAULT, …)`. Both spellings of the read are covered — the
 // bare os.Getenv and the literal-fallback envOr helper.
 //
-// Anchored on the registration on purpose. An unanchored `, os.Getenv(` also
-// matches a POST-parse read, which is the shape this gate is steering code
-// towards — cmd/migrate's `cmp.Or(flagValue, os.Getenv(…), os.Getenv(…))` is
-// correct and must not be reported.
+// Anchored on the registration: an unanchored `, os.Getenv(` also matches a
+// read after Parse, which is safe and must not be reported.
 var directEnvFlagDefault = []*regexp.Regexp{
 	regexp.MustCompile(`fs\.StringVar\(&[\w.]+,\s*"[\w-]+",\s*(?:os\.Getenv|envOr)\("(MARGINCE_\w+)"`),
 	regexp.MustCompile(`fs\.String\(\s*"[\w-]+",\s*(?:os\.Getenv|envOr)\("(MARGINCE_\w+)"`),
@@ -67,8 +65,8 @@ func TestNoStringFlagDefaultsToAnEnvironmentValue(t *testing.T) {
 					t.Errorf("%s registers a flag whose default is read straight from %s. "+
 						"flag echoes a non-empty default in its usage output, so a mistyped "+
 						"argument prints that value to stderr — a public build log on CI, the "+
-						"pod's log stream in a container. Register the literal default with "+
-						"internal/platform/cliflags and resolve the environment after Parse.",
+						"pod's log stream in a container. Declare it as a platform/config setting, "+
+						"whose flag carries no default.",
 						path, m[1])
 				}
 			}

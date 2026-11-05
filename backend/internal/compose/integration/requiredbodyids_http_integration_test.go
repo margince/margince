@@ -127,6 +127,10 @@ type requiredIDCase struct {
 	// stated status narrows the expectation without dropping the case from the
 	// census.
 	suppliedStatus int
+	// namesWhenSupplied marks a body whose refusal names the field even for an
+	// id that names nothing. It answers the same for a missing record and a
+	// hidden one, so the status still enumerates no rows.
+	namesWhenSupplied bool
 }
 
 // wantSuppliedStatus is the case's own expectation, defaulted.
@@ -149,6 +153,7 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 		"AdvanceDealRequest.to_stage_id": {
 			method: "POST", path: "/v1/deals/" + f.deal + "/advance",
 			omitted: AnyMap{}, supplied: AnyMap{"to_stage_id": absent}, field: "to_stage_id",
+			suppliedStatus: http.StatusUnprocessableEntity, namesWhenSupplied: true,
 		},
 		"CreateStageRequest.pipeline_id": {
 			method: "POST", path: "/v1/stages",
@@ -252,9 +257,9 @@ func TestAnOmittedRequiredIDIsNamedAndASuppliedOneStaysHidden(t *testing.T) {
 			// And it must not name the field either: a 404 that said "purpose_id"
 			// would confirm the caller's id was structurally accepted and only
 			// the row was missing.
-			if namesField(problem, tc.field) {
-				t.Errorf("the 404 names %q, which tells the caller their id was accepted and the row is "+
-					"simply absent", tc.field)
+			if namesField(problem, tc.field) != tc.namesWhenSupplied {
+				t.Errorf("the answer names %q = %v, want %v: a 404 that names the field tells the caller "+
+					"their id was accepted and the row is simply absent", tc.field, namesField(problem, tc.field), tc.namesWhenSupplied)
 			}
 		})
 	}

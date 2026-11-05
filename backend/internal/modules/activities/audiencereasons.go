@@ -45,6 +45,11 @@ const (
 	// verdict for the same reason a counterparty hold does — a contact marked
 	// this message, and a classifier disagreeing does not unmark it.
 	ReasonConfidentialMarker = "explicitly_confidential"
+	// ReasonMembersOnly: every party to the mail is a member of the workspace.
+	// Colleagues writing to each other are not the workspace's to read, so no
+	// verdict clears it. The mailbox owner sharing the thread does: that is a
+	// human decision, not an automatic promotion.
+	ReasonMembersOnly = "members_only"
 	// ReasonNoRecord: the message is filed under no record because something
 	// JUDGED its sender — a suppression rule, a settled verdict, a thread the
 	// owner's own. Written by the capture ladder rather than derived here, and
@@ -63,7 +68,7 @@ const (
 // EveryReason is every word this column can carry, for the readers that must
 // handle all of them rather than the ones somebody remembered.
 //
-// It exists because the browser held five of these nine and drew NOTHING for
+// It exists because the browser once held five of the nine and drew nothing for
 // the rest. `explicitly_confidential` is what a confidentiality verdict stamps,
 // so an ordinary business mail narrowed to its participants told the reader
 // only that it was not shared with them — never why, and a verdict nobody can
@@ -86,6 +91,7 @@ func EveryReason() []string {
 		ReasonVerdict,
 		ReasonCounterparty,
 		ReasonConfidentialMarker,
+		ReasonMembersOnly,
 		ReasonNoRecord,
 		ReasonNoCounterparty,
 	}

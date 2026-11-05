@@ -578,9 +578,9 @@ func TestMovingAScenarioFileDoesNotMoveItsStamp(t *testing.T) {
 		t.Fatal("the corpus is empty, so this proves nothing about a scenario's stamp")
 	}
 	ctx := context.Background()
-	before, err := ScenarioStamps(ctx, corpus, census)
+	before, _, err := CurrentStamps(ctx, corpus, census)
 	if err != nil {
-		t.Fatalf("ScenarioStamps: %v", err)
+		t.Fatalf("CurrentStamps: %v", err)
 	}
 	for i := range corpus {
 		if corpus[i].Path == "" {
@@ -588,9 +588,9 @@ func TestMovingAScenarioFileDoesNotMoveItsStamp(t *testing.T) {
 		}
 		corpus[i].Path = "somewhere/else/" + corpus[i].Name + ".yaml"
 	}
-	after, err := ScenarioStamps(ctx, corpus, census)
+	after, _, err := CurrentStamps(ctx, corpus, census)
 	if err != nil {
-		t.Fatalf("ScenarioStamps after the move: %v", err)
+		t.Fatalf("CurrentStamps after the move: %v", err)
 	}
 	for name, stamp := range before {
 		if after[name] != stamp {

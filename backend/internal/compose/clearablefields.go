@@ -39,14 +39,17 @@ import "slices"
 //
 //nolint:goconst // the rows are wire FIELD names and record types read as data; the constants goconst points at are other concepts that spell the same word — a report field, a filter param — and hiding these behind them would assert a correspondence this table exists to state on its own
 var clearableFields = map[string][]string{
-	"contact": {"first_name", "last_name", "title", "owner_id"},
+	"contact": {"first_name", "last_name", "title", "owner_id", "relationship_mark"},
 	"company": {
 		"legal_name", "description", "industry", "size_band",
-		"linkedin_url", "owner_id", "parent_company_id",
+		"linkedin_url", "phone", "email", "owner_id", "parent_company_id", "assess_against_entity_id",
 	},
-	"lead": {"email", "phone", "title", "company_name", "candidate_company_key", "project_id", "owner_id"},
+	"lead": {
+		"email", "phone", "title", "company_name", "industry", "candidate_company_key", "project_id", "owner_id",
+		"origin", "origin_detail", "partner_company_id",
+	},
 	"deal": {
-		"expected_close_date", "forecast_category", "wait_until", "owner_id",
+		"expected_close_date", "win_probability", "wait_until", "owner_id",
 		"company_id", "project_id", "partner_company_id", "partner_attribution",
 		"description", "commercial_motion", "priority", "acquisition_source",
 		"expected_arr_minor",
@@ -54,7 +57,8 @@ var clearableFields = map[string][]string{
 	"project": {
 		"description", "owner_id", "started_at", "target_end_date", "ended_at",
 	},
-	"activity": {},
+	// How a call ended: a wrong pick goes back to "no outcome".
+	"activity": {"call_outcome"},
 }
 
 // canClear reports whether this record type's update path can set the field to
