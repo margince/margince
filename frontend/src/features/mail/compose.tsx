@@ -2,6 +2,7 @@ import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { SendPermission } from "../../components/sendpermission";
 import { useT } from "../../i18n";
+import type { CommunicationContext } from "../../lib/compose-context";
 import type { Transport } from "../../lib/contacttransports";
 import { useVoiceProfile } from "../../lib/voice-profile";
 import {
@@ -60,6 +61,8 @@ export type ComposeProps = Readonly<{
   // reply keeps threading and inherits its links. A new message files itself
   // under the record it started from.
   initialMessage?: Readonly<{ subject: string; body: string }>;
+  initialReason?: CommunicationContext;
+  initialDealId?: string;
   activityId?: string;
   entityType: RelinkKind;
   entityId: string;
@@ -160,6 +163,8 @@ function DockedLauncher({
 // reply posts send-message and drops the subject, Cc and drafting.
 export function ComposeWindow({
   initialMessage,
+  initialReason,
+  initialDealId,
   activityId,
   entityType,
   entityId,
@@ -186,6 +191,7 @@ export function ComposeWindow({
   const { isChannelReply } = dial;
   const fields = useComposeFields({
     initialMessage,
+    initialReason,
     askedIntent,
     edit,
   });
@@ -281,6 +287,7 @@ export function ComposeWindow({
     answering,
     entityType,
     entityId,
+    dealId: initialDealId,
     fields,
     files: attached.files,
     carriageBlocked: carriageBlocks.length > 0,

@@ -13,6 +13,7 @@ import { contactQuery } from "../../lib/contact.queries";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
+import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useBookingCalendar } from "./booking-calendar-state";
 import {
@@ -61,7 +62,13 @@ export function BookingInviteScreen({
   const { ready, connections } = useBookingCalendar(provider, false);
   const settled = !profile.isPending && !connections.isPending;
   const name = contact.data?.full_name;
-  const draft = bookingDraft(edits, contact.data, saved, selectedId, t);
+  const [params] = useUrlParams();
+  const draft = {
+    ...bookingDraft(edits, contact.data, saved, selectedId, t),
+    dealId:
+      selectedId === contactId ? (params.get("deal") ?? undefined) : undefined,
+    replyToActivityId: params.get("activity") ?? undefined,
+  };
   const edit = (change: BookingEdit) =>
     setEdits((current) => ({
       ...current,

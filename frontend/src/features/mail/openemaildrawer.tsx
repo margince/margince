@@ -12,6 +12,8 @@ import {
 } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
+import { useCanWrite } from "../../lib/capability";
+import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { EmailAccessEditor } from "../capture/emailaccesseditor";
 import { ComposeModal } from "./compose";
@@ -74,6 +76,7 @@ export function OpenEmailDrawer({
   const formatWhen: ActivityWhenFormatter = (at, precision) =>
     formatActivityWhen(at, precision, locale, zone);
   const viewerUserId = useViewerId();
+  const canBook = useCanWrite("activity", "create");
   // What the reader started from the drawer: a reply or a forward, in the
   // docked composer. The drawer steps aside while it is open, so the page and
   // the composer are both in view, and comes back when it closes.
@@ -126,6 +129,22 @@ export function OpenEmailDrawer({
             onReply={() => setWriting({ kind: "reply", presentation })}
             onForward={() => setWriting({ kind: "forward", presentation })}
             onRelink={() => setRelinking(presentation)}
+            onBook={
+              canBook &&
+              presentation.summary.direction === "inbound" &&
+              presentation.from.length === 1 &&
+              presentation.from[0]?.contact_id
+                ? () => {
+                    const contactId = presentation.from[0]?.contact_id;
+                    if (!contactId) return;
+                    onClose();
+                    navigate(
+                      { screen: "book", id: `contact-${contactId}` },
+                      new Map([["activity", presentation.id]]),
+                    );
+                  }
+                : undefined
+            }
           />
         )}
       />
