@@ -545,9 +545,11 @@ export REDIS_DBS
 test_build_started=$SECONDS
 test_packages=()
 while IFS='|' read -r _ rel; do test_packages+=("$rel"); done < "$WORK"
-( cd "$ROOT/backend" && go test -vet=off -exec=true "${prebuild_flags[@]}" "${test_packages[@]+"${test_packages[@]}"}" ) > /dev/null 2>&1 \
-  || echo "test-integration-parallel: a test package does not compile; its slot reports it"
-echo "test-integration-parallel: compiled the tests once ($(( SECONDS - test_build_started ))s)"
+if ( cd "$ROOT/backend" && go test -vet=off -exec=true "${prebuild_flags[@]}" "${test_packages[@]+"${test_packages[@]}"}" ) > /dev/null 2>&1; then
+  echo "test-integration-parallel: compiled the tests once ($(( SECONDS - test_build_started ))s)"
+else
+  echo "test-integration-parallel: a test package does not compile; its slot prints the error"
+fi
 
 # When the first package could START, which separates two very different costs
 # that both look like "before the tests ran": everything this script does before

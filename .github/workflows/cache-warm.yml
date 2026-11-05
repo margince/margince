@@ -176,7 +176,7 @@ jobs:
           path: ~/.cache/go-build
           key: ${{ steps.go-cache.outputs.key }}
 
-  # The `-tags=integration -cover -coverpkg=./...` compile the twelve shards
+  # The `-tags=integration -cover -coverpkg=./...` compile the eight shards
   # read. ONE shard is enough: every shard compiles substantially the same set,
   # which is why the lane it mirrors also elects a single writer.
   integration:
