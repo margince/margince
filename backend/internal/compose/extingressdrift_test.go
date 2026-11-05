@@ -150,6 +150,10 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 		"core never performed, and the flag decides which replay proof applies",
 	"judged": "unexported, and the sink sets it from Envelope. A unit stating it would state the " +
 		"conclusion the sink exists to draw",
+	"MeetingDocuments": "empty is the right answer for a unit. These are the notes and transcript documents " +
+		"Google's calendar attaches to an event, read by the core's calendar mapper and filed as links to " +
+		"Google Docs files; a unit hands over no such event. Publishing it would let a unit file any link " +
+		"on a meeting as the provider's own notes",
 })
 
 // TestThePublishedActivityMirrorsTheCoreOne is the same rule one level in. The

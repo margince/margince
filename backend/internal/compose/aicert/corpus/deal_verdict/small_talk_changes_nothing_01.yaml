@@ -1,0 +1,34 @@
+name: a_friendly_check_in_changes_nothing
+task: deal_verdict
+site: deal_verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Most nights the evidence says nothing about the date, the price or the
+# chances. The right answer then is no change at all.
+fixture:
+  today: "2026-11-04"
+  deal:
+    name: "Warehouse scanners"
+    stage: "Qualified"
+    amount: 18000
+    currency: EUR
+    close_date: "2027-02-15"
+    probability: 30
+  activities:
+    - kind: email
+      direction: inbound
+      at: "2026-11-01"
+      subject: "Quick hello"
+      body: |
+        Hi, just back from holiday. Still on our list, I will come back to you
+        once I have talked to the team. Have a good week!
+expect:
+  outcome: accepted
+  answer: []
+  rubric: >
+    The mail names no date, no price and no decision. Score high for an empty
+    list of actions. Score at the floor for any change.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

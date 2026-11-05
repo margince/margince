@@ -4517,8 +4517,8 @@ paths:
       security: [{bearerAuth: []}]
       summary: Accept a recorded automatic deal change.
       description: |-
-        Records the human's acceptance of a close-date correction (audit id) or
-        automatic stage progression (approval id). It keeps the applied values;
+        Records the human's acceptance of a change Margince made to a deal (its
+        audit id). It keeps the applied values;
         acceptance is an audited review decision, not another application of the change.
         Requires the displayed deal version. A reversed or superseded change is refused.
 
@@ -4537,61 +4537,56 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /deals/{id}/stage-progressions/{approvalId}/revert:
+  /deals/{id}/margince-changes:
     parameters:
       - $ref: '#/components/parameters/Id'
-      - name: approvalId
-        in: path
-        required: true
-        schema: {type: string, format: uuid}
-        description: The stage-progression approval whose move is being taken back.
-    post:
+    get:
       tags: [Deals]
-      operationId: revertStageProgression
+      operationId: listDealMarginceChanges
       security: [{bearerAuth: []}]
-      summary: Take back a stage move the product made by itself.
+      summary: Every change Margince made to this deal, newest first.
       description: |-
-        Undo for an AUTOMATICALLY applied stage move, inside the window the
-        transition's rule allows (`undo_window_hours`, default 72).
-
-        Needs the passport permission Change records.
-
-        Runs at once.
+        The deal's own list of what Margince changed on it: closed as lost, a new close date,
+        amount or probability, and the close-date checks. Accepted and undone changes stay in
+        the list and say so; a change still open carries its `undo`. Dismissing a change on
+        Home does not remove it here. Paged newest first; `next_cursor` continues the list.
+        A deal the caller may not see answers 404.
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: cursor
+          in: query
+          required: false
+          schema: {type: string}
+          description: The `next_cursor` of the page before. A token this server did not mint is refused with 422.
       responses:
         '200':
-          description: The deal, back at the stage it came from.
+          description: One page of the deal's changes.
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/Deal'}
+              schema: {$ref: '#/components/schemas/DealMarginceChanges'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404':
-          description: |-
-            No such deal, no such progression, or the caller may not see it.
-            Also the answer when the approval names a different deal, so a
-            caller cannot learn that a progression exists by probing ids.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-        '409':
-          description: |-
-            The move cannot be taken back: the undo window has closed, the move
-            was made by a contact rather than automatically, or it has already
-            been reversed.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                windowClosed:
-                  value:
-                    type: 'https://errors.gradion.com/undo_window_closed'
-                    title: The undo window has closed
-                    status: 409
-                    code: undo_window_closed
-                    detail: This move can no longer be taken back automatically; move the deal by hand instead.
+        '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /deal-corrections/pending:
+    get:
+      tags: [Deals]
+      operationId: getPendingMarginceChanges
+      security: [{bearerAuth: []}]
+      summary: The changes Margince made to your deals that you have not accepted or undone.
+      description: |-
+        One bundle per deal: every open change Margince made to one of the caller's own deals,
+        newest first inside the bundle. The counts are deals, counted in SQL over every open
+        change, so a deal changed twice counts once and a cut list never shrinks a count.
+        Bundles are ordered by the deal's value in the base currency, the largest first. At
+        most 500 bundles; `truncated` says when more exist.
+      responses:
+        '200':
+          description: The open changes, one bundle per deal.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MarginceChangeSummary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /deals/{id}/stage-evidence:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -4629,56 +4624,6 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/DealWinEvidence'}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-  /stage-automation/report:
-    get:
-      tags: [Pipelines]
-      operationId: getStageAutomationReport
-      summary: What each stage transition has earned.
-      description: |-
-        Every from→to transition in one pipeline, with what happened to the moves
-        the product proposed on it. This is the evidence behind letting a
-        transition move deals by itself: it reports, and decides nothing.
-      parameters:
-        - name: pipeline_id
-          in: query
-          required: true
-          schema: {type: string, format: uuid}
-        - name: window_days
-          in: query
-          required: false
-          description: |-
-            How far back to count, in days. The default matches the launch
-            gate's own window, so what a reader sees is what the gate reads.
-          schema: {type: integer, minimum: 1, maximum: 365, default: 30}
-      responses:
-        '200':
-          description: The pipeline's transitions and their record.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/StageAutomationReport'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-  /stage-automation/policies/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Pipelines]
-      operationId: listTransitionPolicies
-      summary: What each transition in this pipeline is allowed to do.
-      description: |-
-        One rule per from→to transition an admin has decided about. A transition
-        absent from this list has no rule, which is the default state of every
-        transition in the product and means it proposes.
-      responses:
-        '200':
-          description: The pipeline's transition rules.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/TransitionPolicyList'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -4832,7 +4777,7 @@ paths:
           in: query
           schema: {type: boolean}
           description: >-
-            Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+            Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply. It lists for the whole team, whoever the mail is addressed to, within what the caller may read; the caller's own waiting mail is `GET /v1/worklist`.
         - name: reminder_due
           in: query
           schema: {type: boolean}
@@ -6085,6 +6030,29 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/SchedulingProfile'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /scheduling/profile/shared:
+    post:
+      tags: [Activities]
+      operationId: markBookingPageShared
+      security: [{bearerAuth: []}]
+      summary: Record that the caller shared their booking link.
+      description: |-
+        The app calls this after the caller copies their booking link. The first call marks the
+        caller's booking page as used; later calls change nothing. Home warns a host about a
+        paused booking page only once the page was used: somebody booked through it, or its host
+        shared its link. Answers 404 when the caller has no booking page.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '204': {description: The booking page is marked as used.}
+        '404': {$ref: '#/components/responses/NotFound'}
   /scheduling/invitations:
     post:
       tags: [Activities]
@@ -11296,6 +11264,31 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/TeamBoard'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /worklist/team/changes:
+    get:
+      tags: [Brief]
+      operationId: getTeamMarginceChanges
+      security: [{bearerAuth: []}]
+      summary: What Margince changed on your team's deals.
+      description: |-
+        Per teammate and kind of change: how many deals Margince changed since `since`, their
+        value in the base currency, and how many of those deals had the change undone. The
+        rows follow, newest first, at most 200; `truncated` says when more exist. The counts
+        are read over every change, so a cut list never shrinks them.
+      parameters:
+        - in: query
+          name: since
+          schema: {type: string, format: date-time}
+          description: Where the window starts. Seven days before now when absent.
+      responses:
+        '200':
+          description: The team's changes.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TeamMarginceChanges'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -17512,6 +17505,11 @@ paths:
         Every returned field carries a non-empty source_quote/page_or_section/confidence,
         or is listed in `omitted` with reason "not_stated_in_file" — never a guessed value. Valid for any entity_type; the same parent-visibility gate as
         `downloadAttachment`/`listAttachments` applies.
+      parameters:
+        - name: question
+          in: query
+          required: false
+          schema: {type: string, enum: [deal_facts, chat_capture]}
       responses:
         '200':
           description: The newest reading of this attachment.
@@ -17519,6 +17517,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/AttachmentExtraction'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
@@ -17535,6 +17534,11 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AttachmentReadRequest'}
       responses:
         '202':
           description: The reading is queued; poll it with `getAttachmentExtraction`.
@@ -19933,7 +19937,7 @@ components:
       required: [id, kind, state, company_id, company_name, pipeline_id, stage_id, name_hint, confidence, created_at, evidence]
       properties:
         id: {type: string, format: uuid}
-        kind: {type: string, enum: [open_deal, advance_stage, revive], description: 'Only open_deal is suggested today.'}
+        kind: {type: string, enum: [open_deal, advance_stage, revive], description: 'An open suggestion is open_deal. One Margince reopened a lost deal from is revive.'}
         state: {type: string, enum: [open, accepted, dismissed, superseded]}
         company_id: {type: string, format: uuid}
         company_name: {type: string}
@@ -21841,6 +21845,11 @@ components:
           readOnly: true
           description: >-
             Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         social:
           type: object
           additionalProperties: true
@@ -22236,6 +22245,11 @@ components:
           readOnly: true
           description: >-
             Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS company: the row write gate `writable` asks, plus the `company:delete` grant or being the company's owner with `company:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         parent_company_id: {type: [string, 'null'], format: uuid, description: Single-level hierarchy FK; no cycles.}
         assess_against_entity_id:
           type: [string, 'null']
@@ -28160,7 +28174,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task]
+      required: [lead, contact, company, deal, project, task, webhook]
       properties:
         lead: {type: integer, minimum: 0}
         contact: {type: integer, minimum: 0}
@@ -28168,6 +28182,7 @@ components:
         deal: {type: integer, minimum: 0}
         project: {type: integer, minimum: 0}
         task: {type: integer, minimum: 0, description: Open tasks assigned to the member.}
+        webhook: {type: integer, minimum: 0, description: 'Live webhook subscriptions the member owns. Each delivers only while its owner is active.'}
     UserHandover:
       type: object
       required: [owned]
@@ -28548,176 +28563,6 @@ components:
         `event_held`, `document_signed` and `terms_accepted` each name something the
         BUYER did, so a seller's own message can never settle one.
       enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom, legal_reviewed]
-    TransitionPolicyList:
-      type: object
-      required: [data, automation_enabled]
-      properties:
-        data:
-          type: array
-          items: {$ref: '#/components/schemas/TransitionPolicy'}
-        automation_enabled:
-          type: boolean
-          description: |-
-            Whether this installation permits stage automation at all
-            (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
-            off every transition is forced to `propose` regardless of its own rule.
-    TransitionPolicy:
-      type: object
-      required: [id, pipeline_id, from_stage_id, to_stage_id, mode, clean_acceptance_threshold, correction_reversal_threshold, min_reviewed, min_observation_days, window_days, undo_window_hours, version]
-      properties:
-        id: {type: string, format: uuid}
-        pipeline_id: {type: string, format: uuid}
-        from_stage_id: {type: string, format: uuid}
-        to_stage_id: {type: string, format: uuid}
-        mode:
-          type: string
-          enum: [propose, auto]
-          description: |-
-            What the admin has asked for. `auto` is a request, not a state:
-            moves still go to a contact until the thresholds below hold in the
-            transaction that would apply them.
-        clean_acceptance_threshold:
-          type: number
-          format: double
-          description: |-
-            The share of reviewed proposals a contact must have accepted
-            UNCHANGED. An edit is agreement with a correction, which is a
-            weaker claim about the proposal than agreement without one.
-        correction_reversal_threshold:
-          type: number
-          format: double
-          description: |-
-            The ceiling on moves that were undone or whose evidence was
-            corrected. The one threshold that is a maximum rather than a
-            minimum, and the one the product suspends a rule for crossing.
-        min_reviewed:
-          type: integer
-          description: |-
-            How many proposals a contact must have answered before the rates
-            mean anything. It also bounds suspension: the volume at which a
-            record is worth trusting and the volume at which it is worth
-            distrusting are one judgement.
-        min_observation_days:
-          type: integer
-          description: |-
-            The span the record must cover. A fine acceptance rate earned
-            entirely in one afternoon has not been observed.
-        window_days:
-          type: integer
-          description: How far back the rates are counted.
-        undo_window_hours:
-          type: integer
-          description: |-
-            How long a contact has to take an automatic move back. Frozen onto
-            each move as it is applied, so editing this governs the next move
-            and not the last one.
-        enabled_by:
-          type: string
-          format: uuid
-          description: |-
-            Who FIRST trusted this transition with automatic moves. Not
-            overwritten by later threshold edits — who first trusted it is a
-            different fact from who last adjusted it, and the first is the one
-            an auditor asks for.
-        enabled_at: {type: string, format: date-time}
-        suspended_at:
-          type: string
-          format: date-time
-          description: |-
-            When the PRODUCT turned this rule off. Absent on a rule that is
-            running. It is not an admin's act and an ordinary save does not
-            clear it.
-        suspended_reason:
-          type: string
-          description: Why the product stopped it, in words an operator can act on.
-        version:
-          type: integer
-          format: int64
-    StageAutomationReport:
-      type: object
-      required: [data, window_days]
-      properties:
-        data:
-          type: array
-          items: {$ref: '#/components/schemas/StageTransitionRecord'}
-        window_days:
-          type: integer
-          description: The window the counts were taken over.
-    StageTransitionRecord:
-      type: object
-      required: [pipeline_id, from_stage_id, to_stage_id, from_stage_name, to_stage_name, reviewed, proposed, expired, superseded, accepted_clean, accepted_edited, rejected, auto_applied, unsafe, observation_days, clean_acceptance_rate, edit_rate, rejection_rate, unsafe_rate, evidence_kinds]
-      properties:
-        pipeline_id: {type: string, format: uuid}
-        from_stage_id: {type: string, format: uuid}
-        to_stage_id: {type: string, format: uuid}
-        from_stage_name: {type: string}
-        to_stage_name: {type: string}
-        reviewed:
-          type: integer
-          description: |-
-            Proposals a human answered. The denominator of every rate here, and
-            zero means "nobody has answered one yet" rather than "the rates are
-            bad" — read it before reading any rate below.
-        proposed:
-          type: integer
-          description: Cards still standing, unanswered.
-        expired:
-          type: integer
-          description: |-
-            Cards whose window closed with nobody answering. A refusal by
-            NOBODY, which is why it is neither a rejection nor reviewed.
-        superseded:
-          type: integer
-          description: Cards a fresher reading replaced before anyone answered.
-        accepted_clean:
-          type: integer
-          description: Approved with nothing changed.
-        accepted_edited:
-          type: integer
-          description: |-
-            Approved only after the human changed it. Not a clean acceptance:
-            the question is whether the proposal is right AS IT STANDS.
-        rejected: {type: integer}
-        auto_applied:
-          type: integer
-          description: |-
-            Applied without anybody being asked. Reported apart so a reader can
-            see how much of a transition's record the autopilot wrote about
-            itself.
-        unsafe:
-          type: integer
-          description: |-
-            Reviewed moves that were reversed OR whose evidence a human
-            corrected. One outcome counts once even when both are true.
-        observation_days:
-          type: integer
-          description: |-
-            Whole days from the first answered proposal to the last, rounded
-            down.
-        clean_acceptance_rate: {type: number, format: double, minimum: 0, maximum: 1}
-        edit_rate: {type: number, format: double, minimum: 0, maximum: 1}
-        rejection_rate: {type: number, format: double, minimum: 0, maximum: 1}
-        unsafe_rate:
-          type: number
-          format: double
-          minimum: 0
-          maximum: 1
-          description: The safety number, held to a ceiling rather than a floor.
-        evidence_kinds:
-          type: array
-          description: |-
-            The same moves cut by the criterion kinds they rested on, so an
-            installation can see WHICH evidence it accepts rather than only that
-            it accepts most things.
-          items: {$ref: '#/components/schemas/StageTransitionEvidenceRecord'}
-    StageTransitionEvidenceRecord:
-      type: object
-      required: [kind, reviewed, accepted_clean, unsafe]
-      properties:
-        kind: {type: string}
-        reviewed: {type: integer}
-        accepted_clean: {type: integer}
-        unsafe: {type: integer}
     StageExitCriterionListResponse:
       type: object
       required: [data, page]
@@ -29945,9 +29790,15 @@ components:
         honestly omitted. A reading that is still running carries empty lists; that is not
         the same answer as a finished reading that grounded nothing, which is why `status`
         is required rather than inferable from the lists.
-      required: [id, status, stalled, fields, omitted, created_at]
+      required: [id, question, status, stalled, fields, omitted, created_at]
       properties:
         id: {type: string, format: uuid, description: This reading's own id.}
+        question:
+          type: string
+          enum: [deal_facts, chat_capture]
+          description: |-
+            What the file was read for. `deal_facts` grounds the four deal fields;
+            `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
         status:
           type: string
           enum: [queued, running, done, failed]
@@ -29970,6 +29821,21 @@ components:
         omitted: {type: array, items: {$ref: '#/components/schemas/OmittedExtractionField'}}
         created_at: {type: string, format: date-time}
         finished_at: {type: [string, 'null'], format: date-time}
+        other_counterparty:
+          type: [string, 'null']
+          description: |-
+            For a finished `chat_capture` reading of a screenshot on a contact: the name or
+            number the chat header shows when neither agrees with that contact. Null when
+            they agree, when the header shows neither, and for every other reading.
+            `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
+    AttachmentReadRequest:
+      type: object
+      properties:
+        question:
+          type: string
+          enum: [deal_facts, chat_capture]
+          default: deal_facts
+          description: What to read the file for. `chat_capture` is accepted only on an image.
     AttachmentReadStarted:
       type: object
       description: The reading `readAttachmentForFields` started, or the one already in flight it joined.
@@ -36352,6 +36218,7 @@ components:
         - cold_start
         - corpus_ask
         - deal_health
+        - deal_verdict
         - document_extract
         - draft_reply
         - enrich
@@ -36379,7 +36246,7 @@ components:
         - weekly_review
     AiActivityKind:
       type: string
-      enum: [morning_brief, overnight_at_risk_sweep, document_extract, site_read, brief_ranking, capture_classify, capture_confidentiality_verdict, capture_counterparty_verdict, cert_judge, cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search, offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract, site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build, corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict, request_settlement, account_scan, tag_suggest, report_setup, report_interpret, reader_rendering]
+      enum: [morning_brief, overnight_at_risk_sweep, document_extract, site_read, brief_ranking, capture_classify, capture_confidentiality_verdict, capture_counterparty_verdict, cert_judge, cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search, offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract, site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build, corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict, request_settlement, account_scan, tag_suggest, report_setup, report_interpret, reader_rendering, deal_verdict]
       description: |-
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -38308,6 +38175,12 @@ components:
         target_ref: {type: [string, 'null'], description: 'Record the run acted on (type + id or label).'}
         action_result: {type: [string, 'null'], description: 'What happened (e.g. "created task", "queued to approval inbox").'}
         reason: {type: [string, 'null'], description: 'For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.'}
+        reason_code:
+          type: [string, 'null']
+          description: |-
+            For failed/blocked: why the run stopped, as a code a client puts into the reader's language:
+            target_missing, not_permitted, conflict, record_changed, no_consent, budget_exhausted,
+            not_completed or blocked. A code a client does not know reads as not_completed.
         audit_id: {type: [string, 'null']}
     SettleClaimRequest:
       type: object
@@ -38851,11 +38724,12 @@ components:
         queued:
           type: boolean
           description: |-
-            Whether a mail relay accepted the invitation for sending. False when the
-            installation has no outbound mail configured, or the relay refused it — the
-            participant and the credential are recorded either way, and the caller is
-            expected to pass the link on themselves rather than being told the
-            invitation failed.
+            Whether the mail relay took the invitation. The answer waits for the relay
+            for at most 10 seconds. False when the installation has no outbound mail
+            configured, when the relay refused the mail, or when it did not answer in
+            time; the send stops then too. The participant and the credential are
+            recorded either way, and the caller is expected to pass the link on
+            themselves rather than being told the invitation failed.
       additionalProperties: false
     DealRoomBrief:
       type: object
@@ -40551,7 +40425,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, booking_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -40659,7 +40533,7 @@ components:
       description: The recorded automatic change and its current review state.
       required: [kind, accepted, reversed, version, can_undo, can_accept, writable]
       properties:
-        kind: {type: string, enum: [close_date, close_lost, stage]}
+        kind: {type: string, enum: [close_date, close_lost, amount, probability, stage, deal_open, deal_revive]}
         accepted: {type: boolean}
         reversed: {type: boolean}
         version: {type: integer, format: int64}
@@ -41233,12 +41107,18 @@ components:
         domain_note:
           type: string
           description: The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+        run_reason_code:
+          type: string
+          description: |-
+            On an `automation_run` item: why the firing stopped, in the code set of
+            AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
+            engine's English sentence.
         domain_context: {$ref: '#/components/schemas/DomainQuestionContext'}
         notice_origin: {$ref: '#/components/schemas/NoticeOrigin'}
         id: {type: string, description: "The owning record's id, as its own endpoint spells it."}
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, booking_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: |-
             Which producer raised it, and therefore which endpoint its verbs go to.
         category:
@@ -41669,6 +41549,94 @@ components:
           type: boolean
           description: >-
             Somebody already put this back. The row stays and says so rather than vanishing, which would leave a reader unsure their Undo landed.
+    MarginceChangeSummary:
+      type: object
+      description: |-
+        The changes Margince made to the caller's deals that are neither accepted nor undone.
+        Every count is a number of deals; a deal with two kinds of change counts once in
+        `deals` and once under each kind.
+      required: [as_of, deals, closed, redated, revalued, probabilities, moved, opened, revived, base_currency, bundles, truncated]
+      properties:
+        as_of: {type: string, format: date-time}
+        deals: {type: integer, description: Deals with at least one open change.}
+        closed: {type: integer, description: Deals Margince closed as lost.}
+        redated: {type: integer, description: Deals given a new close date.}
+        revalued: {type: integer, description: Deals given a new amount.}
+        probabilities: {type: integer, description: Deals given a new probability.}
+        moved: {type: integer, description: Deals Margince moved to a later stage.}
+        opened: {type: integer, description: Deals Margince opened from buying evidence.}
+        revived: {type: integer, description: Lost deals Margince reopened from new buying evidence.}
+        base_currency: {type: string, description: The currency of every `value_base_minor`.}
+        bundles:
+          type: array
+          items: {$ref: '#/components/schemas/MarginceChangeBundle'}
+          description: One per deal, the largest value first.
+        truncated: {type: boolean, description: True when more bundles exist than were returned. The counts are never cut.}
+    MarginceChangeBundle:
+      type: object
+      description: Every open change Margince made to one deal. Its Undo takes them all back.
+      required: [deal_id, deal_name, version, audit_log_ids, kinds, latest_at]
+      properties:
+        deal_id: {type: string, format: uuid}
+        deal_name: {type: string}
+        version:
+          type: integer
+          format: int64
+          description: The deal's version as read, for the first undo of the bundle.
+        audit_log_ids:
+          type: array
+          items: {type: string, format: uuid}
+          description: The changes, newest first.
+        kinds:
+          type: array
+          items: {type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability, stage_move, deal_open, deal_revive]}
+        value_base_minor:
+          type: integer
+          format: int64
+          description: The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
+        latest_at: {type: string, format: date-time}
+    DealMarginceChanges:
+      type: object
+      required: [changes]
+      properties:
+        changes:
+          type: array
+          items: {$ref: '#/components/schemas/Receipt'}
+          description: The deal's changes, newest first.
+        next_cursor: {type: string, description: Where the next page starts; absent on the last page.}
+    TeamMarginceChanges:
+      type: object
+      required: [as_of, since, base_currency, groups, rows, truncated]
+      properties:
+        as_of: {type: string, format: date-time}
+        since: {type: string, format: date-time}
+        base_currency: {type: string}
+        groups:
+          type: array
+          items: {$ref: '#/components/schemas/TeamMarginceChangeGroup'}
+        rows:
+          type: array
+          items: {$ref: '#/components/schemas/TeamMarginceChangeRow'}
+        truncated: {type: boolean, description: True when more rows exist than were returned. The groups are never cut.}
+    TeamMarginceChangeGroup:
+      type: object
+      required: [owner_id, owner_name, kind, deals, undone, value_base_minor]
+      properties:
+        owner_id: {type: string, format: uuid}
+        owner_name: {type: string}
+        kind: {type: string}
+        deals: {type: integer, description: Deals changed in this kind.}
+        undone: {type: integer, description: 'Of those deals, how many had the change undone.'}
+        value_base_minor:
+          type: integer
+          format: int64
+          description: The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+    TeamMarginceChangeRow:
+      type: object
+      required: [owner_id, change]
+      properties:
+        owner_id: {type: string, format: uuid}
+        change: {$ref: '#/components/schemas/Receipt'}
     MagicUndo:
       type: object
       description: |-

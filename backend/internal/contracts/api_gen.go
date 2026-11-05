@@ -987,6 +987,7 @@ const (
 	AiActivityKindColdStart                     AiActivityKind = "cold_start"
 	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
+	AiActivityKindDealVerdict                   AiActivityKind = "deal_verdict"
 	AiActivityKindDocumentExtract               AiActivityKind = "document_extract"
 	AiActivityKindDraftReply                    AiActivityKind = "draft_reply"
 	AiActivityKindEnrich                        AiActivityKind = "enrich"
@@ -1037,6 +1038,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCorpusAsk:
 		return true
 	case AiActivityKindDealHealth:
+		return true
+	case AiActivityKindDealVerdict:
 		return true
 	case AiActivityKindDocumentExtract:
 		return true
@@ -1576,6 +1579,7 @@ const (
 	AiTaskColdStart                     AiTask = "cold_start"
 	AiTaskCorpusAsk                     AiTask = "corpus_ask"
 	AiTaskDealHealth                    AiTask = "deal_health"
+	AiTaskDealVerdict                   AiTask = "deal_verdict"
 	AiTaskDocumentExtract               AiTask = "document_extract"
 	AiTaskDraftReply                    AiTask = "draft_reply"
 	AiTaskEnrich                        AiTask = "enrich"
@@ -1625,6 +1629,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskCorpusAsk:
 		return true
 	case AiTaskDealHealth:
+		return true
+	case AiTaskDealVerdict:
 		return true
 	case AiTaskDocumentExtract:
 		return true
@@ -1908,17 +1914,29 @@ func (e AnalyticsScopeKind) Valid() bool {
 
 // Defines values for AppliedDealChangeReviewKind.
 const (
-	AppliedDealChangeReviewKindCloseDate AppliedDealChangeReviewKind = "close_date"
-	AppliedDealChangeReviewKindCloseLost AppliedDealChangeReviewKind = "close_lost"
-	AppliedDealChangeReviewKindStage     AppliedDealChangeReviewKind = "stage"
+	AppliedDealChangeReviewKindAmount      AppliedDealChangeReviewKind = "amount"
+	AppliedDealChangeReviewKindCloseDate   AppliedDealChangeReviewKind = "close_date"
+	AppliedDealChangeReviewKindCloseLost   AppliedDealChangeReviewKind = "close_lost"
+	AppliedDealChangeReviewKindDealOpen    AppliedDealChangeReviewKind = "deal_open"
+	AppliedDealChangeReviewKindDealRevive  AppliedDealChangeReviewKind = "deal_revive"
+	AppliedDealChangeReviewKindProbability AppliedDealChangeReviewKind = "probability"
+	AppliedDealChangeReviewKindStage       AppliedDealChangeReviewKind = "stage"
 )
 
 // Valid indicates whether the value is a known member of the AppliedDealChangeReviewKind enum.
 func (e AppliedDealChangeReviewKind) Valid() bool {
 	switch e {
+	case AppliedDealChangeReviewKindAmount:
+		return true
 	case AppliedDealChangeReviewKindCloseDate:
 		return true
 	case AppliedDealChangeReviewKindCloseLost:
+		return true
+	case AppliedDealChangeReviewKindDealOpen:
+		return true
+	case AppliedDealChangeReviewKindDealRevive:
+		return true
+	case AppliedDealChangeReviewKindProbability:
 		return true
 	case AppliedDealChangeReviewKindStage:
 		return true
@@ -2482,6 +2500,24 @@ func (e AttachmentEntityType) Valid() bool {
 	}
 }
 
+// Defines values for AttachmentExtractionQuestion.
+const (
+	AttachmentExtractionQuestionChatCapture AttachmentExtractionQuestion = "chat_capture"
+	AttachmentExtractionQuestionDealFacts   AttachmentExtractionQuestion = "deal_facts"
+)
+
+// Valid indicates whether the value is a known member of the AttachmentExtractionQuestion enum.
+func (e AttachmentExtractionQuestion) Valid() bool {
+	switch e {
+	case AttachmentExtractionQuestionChatCapture:
+		return true
+	case AttachmentExtractionQuestionDealFacts:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttachmentExtractionStatus.
 const (
 	AttachmentExtractionStatusDone    AttachmentExtractionStatus = "done"
@@ -2500,6 +2536,24 @@ func (e AttachmentExtractionStatus) Valid() bool {
 	case AttachmentExtractionStatusQueued:
 		return true
 	case AttachmentExtractionStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttachmentReadRequestQuestion.
+const (
+	AttachmentReadRequestQuestionChatCapture AttachmentReadRequestQuestion = "chat_capture"
+	AttachmentReadRequestQuestionDealFacts   AttachmentReadRequestQuestion = "deal_facts"
+)
+
+// Valid indicates whether the value is a known member of the AttachmentReadRequestQuestion enum.
+func (e AttachmentReadRequestQuestion) Valid() bool {
+	switch e {
+	case AttachmentReadRequestQuestionChatCapture:
+		return true
+	case AttachmentReadRequestQuestionDealFacts:
 		return true
 	default:
 		return false
@@ -2529,6 +2583,7 @@ const (
 	AttentionLanesFailedAiWorkHealth       AttentionLanesFailed = "ai_work_health"
 	AttentionLanesFailedAtRisk             AttentionLanesFailed = "at_risk"
 	AttentionLanesFailedAutomationHealth   AttentionLanesFailed = "automation_health"
+	AttentionLanesFailedBookingHealth      AttentionLanesFailed = "booking_health"
 	AttentionLanesFailedBounces            AttentionLanesFailed = "bounces"
 	AttentionLanesFailedCaptureHealth      AttentionLanesFailed = "capture_health"
 	AttentionLanesFailedCommitments        AttentionLanesFailed = "commitments"
@@ -2556,6 +2611,8 @@ func (e AttentionLanesFailed) Valid() bool {
 	case AttentionLanesFailedAtRisk:
 		return true
 	case AttentionLanesFailedAutomationHealth:
+		return true
+	case AttentionLanesFailedBookingHealth:
 		return true
 	case AttentionLanesFailedBounces:
 		return true
@@ -2601,6 +2658,7 @@ const (
 	AttentionLanesOmittedAiWorkHealth       AttentionLanesOmitted = "ai_work_health"
 	AttentionLanesOmittedAtRisk             AttentionLanesOmitted = "at_risk"
 	AttentionLanesOmittedAutomationHealth   AttentionLanesOmitted = "automation_health"
+	AttentionLanesOmittedBookingHealth      AttentionLanesOmitted = "booking_health"
 	AttentionLanesOmittedBounces            AttentionLanesOmitted = "bounces"
 	AttentionLanesOmittedCaptureHealth      AttentionLanesOmitted = "capture_health"
 	AttentionLanesOmittedCommitments        AttentionLanesOmitted = "commitments"
@@ -2628,6 +2686,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedAtRisk:
 		return true
 	case AttentionLanesOmittedAutomationHealth:
+		return true
+	case AttentionLanesOmittedBookingHealth:
 		return true
 	case AttentionLanesOmittedBounces:
 		return true
@@ -2829,6 +2889,7 @@ const (
 	AttentionItemSourceAiWorkHealth        AttentionItemSource = "ai_work_health"
 	AttentionItemSourceApproval            AttentionItemSource = "approval"
 	AttentionItemSourceAutomationRun       AttentionItemSource = "automation_run"
+	AttentionItemSourceBookingHealth       AttentionItemSource = "booking_health"
 	AttentionItemSourceBounce              AttentionItemSource = "bounce"
 	AttentionItemSourceBriefItem           AttentionItemSource = "brief_item"
 	AttentionItemSourceCaptureHealth       AttentionItemSource = "capture_health"
@@ -2861,6 +2922,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceApproval:
 		return true
 	case AttentionItemSourceAutomationRun:
+		return true
+	case AttentionItemSourceBookingHealth:
 		return true
 	case AttentionItemSourceBounce:
 		return true
@@ -15466,6 +15529,39 @@ func (e MailLanguage) Valid() bool {
 	}
 }
 
+// Defines values for MarginceChangeBundleKinds.
+const (
+	MarginceChangeBundleKindsCloseLost       MarginceChangeBundleKinds = "close_lost"
+	MarginceChangeBundleKindsDealAmount      MarginceChangeBundleKinds = "deal_amount"
+	MarginceChangeBundleKindsDealCloseDate   MarginceChangeBundleKinds = "deal_close_date"
+	MarginceChangeBundleKindsDealOpen        MarginceChangeBundleKinds = "deal_open"
+	MarginceChangeBundleKindsDealProbability MarginceChangeBundleKinds = "deal_probability"
+	MarginceChangeBundleKindsDealRevive      MarginceChangeBundleKinds = "deal_revive"
+	MarginceChangeBundleKindsStageMove       MarginceChangeBundleKinds = "stage_move"
+)
+
+// Valid indicates whether the value is a known member of the MarginceChangeBundleKinds enum.
+func (e MarginceChangeBundleKinds) Valid() bool {
+	switch e {
+	case MarginceChangeBundleKindsCloseLost:
+		return true
+	case MarginceChangeBundleKindsDealAmount:
+		return true
+	case MarginceChangeBundleKindsDealCloseDate:
+		return true
+	case MarginceChangeBundleKindsDealOpen:
+		return true
+	case MarginceChangeBundleKindsDealProbability:
+		return true
+	case MarginceChangeBundleKindsDealRevive:
+		return true
+	case MarginceChangeBundleKindsStageMove:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeResponsePassportScopes.
 const (
 	MeResponsePassportScopesActWithApproval    MeResponsePassportScopes = "act_with_approval"
@@ -17170,6 +17266,51 @@ func (e PrincipalAttributionActorType) Valid() bool {
 	}
 }
 
+// Defines values for PrivacyInformationPageDataCategories.
+const (
+	PrivacyInformationPageDataCategoriesCorrespondence PrivacyInformationPageDataCategories = "correspondence"
+	PrivacyInformationPageDataCategoriesCustomFields   PrivacyInformationPageDataCategories = "custom_fields"
+	PrivacyInformationPageDataCategoriesDeals          PrivacyInformationPageDataCategories = "deals"
+	PrivacyInformationPageDataCategoriesEmail          PrivacyInformationPageDataCategories = "email"
+	PrivacyInformationPageDataCategoriesEmployer       PrivacyInformationPageDataCategories = "employer"
+	PrivacyInformationPageDataCategoriesJobTitle       PrivacyInformationPageDataCategories = "job_title"
+	PrivacyInformationPageDataCategoriesName           PrivacyInformationPageDataCategories = "name"
+	PrivacyInformationPageDataCategoriesPhone          PrivacyInformationPageDataCategories = "phone"
+	PrivacyInformationPageDataCategoriesPostalAddress  PrivacyInformationPageDataCategories = "postal_address"
+	PrivacyInformationPageDataCategoriesPreferences    PrivacyInformationPageDataCategories = "preferences"
+	PrivacyInformationPageDataCategoriesSocialProfile  PrivacyInformationPageDataCategories = "social_profile"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPageDataCategories enum.
+func (e PrivacyInformationPageDataCategories) Valid() bool {
+	switch e {
+	case PrivacyInformationPageDataCategoriesCorrespondence:
+		return true
+	case PrivacyInformationPageDataCategoriesCustomFields:
+		return true
+	case PrivacyInformationPageDataCategoriesDeals:
+		return true
+	case PrivacyInformationPageDataCategoriesEmail:
+		return true
+	case PrivacyInformationPageDataCategoriesEmployer:
+		return true
+	case PrivacyInformationPageDataCategoriesJobTitle:
+		return true
+	case PrivacyInformationPageDataCategoriesName:
+		return true
+	case PrivacyInformationPageDataCategoriesPhone:
+		return true
+	case PrivacyInformationPageDataCategoriesPostalAddress:
+		return true
+	case PrivacyInformationPageDataCategoriesPreferences:
+		return true
+	case PrivacyInformationPageDataCategoriesSocialProfile:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrivacyInformationPageKind.
 const (
 	PrivacyInformationPageKindPrivacyNotice PrivacyInformationPageKind = "privacy_notice"
@@ -17179,6 +17320,63 @@ const (
 func (e PrivacyInformationPageKind) Valid() bool {
 	switch e {
 	case PrivacyInformationPageKindPrivacyNotice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrivacyInformationPagePurposeBases.
+const (
+	PrivacyInformationPagePurposeBasesConsent                        PrivacyInformationPagePurposeBases = "consent"
+	PrivacyInformationPagePurposeBasesContract                       PrivacyInformationPagePurposeBases = "contract"
+	PrivacyInformationPagePurposeBasesExistingCustomerException      PrivacyInformationPagePurposeBases = "existing_customer_exception"
+	PrivacyInformationPagePurposeBasesLegalObligation                PrivacyInformationPagePurposeBases = "legal_obligation"
+	PrivacyInformationPagePurposeBasesLegitimateInterests            PrivacyInformationPagePurposeBases = "legitimate_interests"
+	PrivacyInformationPagePurposeBasesPrecontractRequest             PrivacyInformationPagePurposeBases = "precontract_request"
+	PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence PrivacyInformationPagePurposeBases = "subject_initiated_correspondence"
+	PrivacyInformationPagePurposeBasesVitalOrSecurityInterest        PrivacyInformationPagePurposeBases = "vital_or_security_interest"
+	PrivacyInformationPagePurposeBasesVnSubjectAgreement             PrivacyInformationPagePurposeBases = "vn_subject_agreement"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPagePurposeBases enum.
+func (e PrivacyInformationPagePurposeBases) Valid() bool {
+	switch e {
+	case PrivacyInformationPagePurposeBasesConsent:
+		return true
+	case PrivacyInformationPagePurposeBasesContract:
+		return true
+	case PrivacyInformationPagePurposeBasesExistingCustomerException:
+		return true
+	case PrivacyInformationPagePurposeBasesLegalObligation:
+		return true
+	case PrivacyInformationPagePurposeBasesLegitimateInterests:
+		return true
+	case PrivacyInformationPagePurposeBasesPrecontractRequest:
+		return true
+	case PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence:
+		return true
+	case PrivacyInformationPagePurposeBasesVitalOrSecurityInterest:
+		return true
+	case PrivacyInformationPagePurposeBasesVnSubjectAgreement:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrivacyInformationPageRecipients.
+const (
+	PrivacyInformationPageRecipientsColleagues       PrivacyInformationPageRecipients = "colleagues"
+	PrivacyInformationPageRecipientsServiceProviders PrivacyInformationPageRecipients = "service_providers"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPageRecipients enum.
+func (e PrivacyInformationPageRecipients) Valid() bool {
+	switch e {
+	case PrivacyInformationPageRecipientsColleagues:
+		return true
+	case PrivacyInformationPageRecipientsServiceProviders:
 		return true
 	default:
 		return false
@@ -20812,24 +21010,6 @@ func (e SetProjectStakeholderRequestRole) Valid() bool {
 	}
 }
 
-// Defines values for SetTransitionPolicyRequestMode.
-const (
-	SetTransitionPolicyRequestModeSetTransitionModeAuto    SetTransitionPolicyRequestMode = "auto"
-	SetTransitionPolicyRequestModeSetTransitionModePropose SetTransitionPolicyRequestMode = "propose"
-)
-
-// Valid indicates whether the value is a known member of the SetTransitionPolicyRequestMode enum.
-func (e SetTransitionPolicyRequestMode) Valid() bool {
-	switch e {
-	case SetTransitionPolicyRequestModeSetTransitionModeAuto:
-		return true
-	case SetTransitionPolicyRequestModeSetTransitionModePropose:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SetUpPartnerRequestPartnerRole.
 const (
 	SetUpPartnerRequestPartnerRoleConsulting SetUpPartnerRequestPartnerRole = "consulting"
@@ -22159,18 +22339,54 @@ func (e TranscriptReadStartedStatus) Valid() bool {
 	}
 }
 
-// Defines values for TransitionPolicyMode.
+// Defines values for UndoMarginceChangeKeptReason.
 const (
-	TransitionPolicyModeTransitionModeAuto    TransitionPolicyMode = "auto"
-	TransitionPolicyModeTransitionModePropose TransitionPolicyMode = "propose"
+	UndoMarginceChangeKeptReasonAccepted          UndoMarginceChangeKeptReason = "accepted"
+	UndoMarginceChangeKeptReasonAlreadyUndone     UndoMarginceChangeKeptReason = "already_undone"
+	UndoMarginceChangeKeptReasonChangedSince      UndoMarginceChangeKeptReason = "changed_since"
+	UndoMarginceChangeKeptReasonNeedsConfirmation UndoMarginceChangeKeptReason = "needs_confirmation"
+	UndoMarginceChangeKeptReasonNotFound          UndoMarginceChangeKeptReason = "not_found"
+	UndoMarginceChangeKeptReasonNotPermitted      UndoMarginceChangeKeptReason = "not_permitted"
+	UndoMarginceChangeKeptReasonVersionSkew       UndoMarginceChangeKeptReason = "version_skew"
 )
 
-// Valid indicates whether the value is a known member of the TransitionPolicyMode enum.
-func (e TransitionPolicyMode) Valid() bool {
+// Valid indicates whether the value is a known member of the UndoMarginceChangeKeptReason enum.
+func (e UndoMarginceChangeKeptReason) Valid() bool {
 	switch e {
-	case TransitionPolicyModeTransitionModeAuto:
+	case UndoMarginceChangeKeptReasonAccepted:
 		return true
-	case TransitionPolicyModeTransitionModePropose:
+	case UndoMarginceChangeKeptReasonAlreadyUndone:
+		return true
+	case UndoMarginceChangeKeptReasonChangedSince:
+		return true
+	case UndoMarginceChangeKeptReasonNeedsConfirmation:
+		return true
+	case UndoMarginceChangeKeptReasonNotFound:
+		return true
+	case UndoMarginceChangeKeptReasonNotPermitted:
+		return true
+	case UndoMarginceChangeKeptReasonVersionSkew:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UndoMarginceChangeResultOutcome.
+const (
+	UndoMarginceChangeResultOutcomePartlyUndone UndoMarginceChangeResultOutcome = "partly_undone"
+	UndoMarginceChangeResultOutcomeRefused      UndoMarginceChangeResultOutcome = "refused"
+	UndoMarginceChangeResultOutcomeUndone       UndoMarginceChangeResultOutcome = "undone"
+)
+
+// Valid indicates whether the value is a known member of the UndoMarginceChangeResultOutcome enum.
+func (e UndoMarginceChangeResultOutcome) Valid() bool {
+	switch e {
+	case UndoMarginceChangeResultOutcomePartlyUndone:
+		return true
+	case UndoMarginceChangeResultOutcomeRefused:
+		return true
+	case UndoMarginceChangeResultOutcomeUndone:
 		return true
 	default:
 		return false
@@ -25001,6 +25217,7 @@ const (
 	WorklistItemSourceAutomationRun       WorklistItemSource = "automation_run"
 	WorklistItemSourceAwaitingReply       WorklistItemSource = "awaiting_reply"
 	WorklistItemSourceBatch               WorklistItemSource = "batch"
+	WorklistItemSourceBookingHealth       WorklistItemSource = "booking_health"
 	WorklistItemSourceBounce              WorklistItemSource = "bounce"
 	WorklistItemSourceBriefItem           WorklistItemSource = "brief_item"
 	WorklistItemSourceCaptureHealth       WorklistItemSource = "capture_health"
@@ -25039,6 +25256,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceAwaitingReply:
 		return true
 	case WorklistItemSourceBatch:
+		return true
+	case WorklistItemSourceBookingHealth:
 		return true
 	case WorklistItemSourceBounce:
 		return true
@@ -25175,6 +25394,7 @@ const (
 	WorklistReachSourceAutomationRun       WorklistReachSource = "automation_run"
 	WorklistReachSourceAwaitingReply       WorklistReachSource = "awaiting_reply"
 	WorklistReachSourceBatch               WorklistReachSource = "batch"
+	WorklistReachSourceBookingHealth       WorklistReachSource = "booking_health"
 	WorklistReachSourceBounce              WorklistReachSource = "bounce"
 	WorklistReachSourceBriefItem           WorklistReachSource = "brief_item"
 	WorklistReachSourceCaptureHealth       WorklistReachSource = "capture_health"
@@ -25213,6 +25433,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceAwaitingReply:
 		return true
 	case WorklistReachSourceBatch:
+		return true
+	case WorklistReachSourceBookingHealth:
 		return true
 	case WorklistReachSourceBounce:
 		return true
@@ -26551,6 +26773,24 @@ func (e UploadAttachmentMultipartBodyEntityType) Valid() bool {
 	case UploadAttachmentMultipartBodyEntityTypeLead:
 		return true
 	case UploadAttachmentMultipartBodyEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAttachmentExtractionParamsQuestion.
+const (
+	GetAttachmentExtractionParamsQuestionChatCapture GetAttachmentExtractionParamsQuestion = "chat_capture"
+	GetAttachmentExtractionParamsQuestionDealFacts   GetAttachmentExtractionParamsQuestion = "deal_facts"
+)
+
+// Valid indicates whether the value is a known member of the GetAttachmentExtractionParamsQuestion enum.
+func (e GetAttachmentExtractionParamsQuestion) Valid() bool {
+	switch e {
+	case GetAttachmentExtractionParamsQuestionChatCapture:
+		return true
+	case GetAttachmentExtractionParamsQuestionDealFacts:
 		return true
 	default:
 		return false
@@ -28997,7 +29237,7 @@ type AIFeedbackInputVerdict string
 
 // AcceptDealSuggestionRequest The caller's corrections. An omitted field keeps the suggestion's value.
 type AcceptDealSuggestionRequest struct {
-	AmountMinor *int64 `json:"amount_minor,omitempty"`
+	AmountMinor *int64 `json:"amount_minor,omitempty" minimum:"0"`
 
 	// CloseDate A date the caller chose. Without one the deal carries the suggestion's date, marked provisional.
 	CloseDate *openapi_types.Date `json:"close_date,omitempty"`
@@ -29163,16 +29403,16 @@ type AccountCoverageRow struct {
 // AccountCoverageThresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
 type AccountCoverageThresholds struct {
 	// MaxEngagedSeats A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1.
-	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty"`
+	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty" maximum:"10" minimum:"0"`
 
 	// SilentDays A won account with no exchange within this many days is silent. Default 30.
-	SilentDays *int `json:"silent_days,omitempty"`
+	SilentDays *int `json:"silent_days,omitempty" maximum:"365" minimum:"1"`
 
 	// UntouchedDays An account with an open deal and no exchange within this many days is untouched. Default 21.
-	UntouchedDays *int `json:"untouched_days,omitempty"`
+	UntouchedDays *int `json:"untouched_days,omitempty" maximum:"365" minimum:"1"`
 
 	// WonWithinDays How far back a won deal still makes an account a won account. Default 180.
-	WonWithinDays *int `json:"won_within_days,omitempty"`
+	WonWithinDays *int `json:"won_within_days,omitempty" maximum:"730" minimum:"1"`
 }
 
 // AccountDraftReason One thing the draft was written from, named so the reader can check it rather than
@@ -29210,7 +29450,7 @@ type AcquisitionSource struct {
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 
 	// DealCount Live deals carrying this key that the caller may see. Absent when the caller may not read deals, because a zero would claim no deal carries it. Set on the list read; absent on the record a write answers.
-	DealCount *int               `json:"deal_count,omitempty"`
+	DealCount *int               `json:"deal_count,omitempty" minimum:"0"`
 	Id        openapi_types.UUID `json:"id"`
 
 	// Key The stable identifier stored on the deal. Lowercase, never changes once created — relabelling edits `label`, so a report keyed on the key survives the rename.
@@ -29354,7 +29594,7 @@ type Activity struct {
 	Guests *[]MeetingGuest `json:"guests,omitempty"`
 
 	// GuestsLeftOut Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`.
-	GuestsLeftOut *int `json:"guests_left_out,omitempty"`
+	GuestsLeftOut *int `json:"guests_left_out,omitempty" minimum:"0"`
 
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
@@ -29418,7 +29658,7 @@ type Activity struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
 	Voice *ActivityVoice `json:"voice,omitempty"`
@@ -29650,7 +29890,7 @@ type ActivityReviewTemplate struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // ActivityReviewTemplateOutcome Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.
@@ -29785,14 +30025,14 @@ type AgentAllowanceDefaults struct {
 // next call. The per-minute limits are fixed by the build and shown here read-only.
 type AgentAllowanceSettings struct {
 	// AgentCallsPerWindow How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.
-	AgentCallsPerWindow int `json:"agent_calls_per_window"`
+	AgentCallsPerWindow int `json:"agent_calls_per_window" maximum:"20000" minimum:"50"`
 
 	// AgentEgressPerWindow How many calls that send something out of the workspace one passport or connection may make per window. Default 20.
-	AgentEgressPerWindow int `json:"agent_egress_per_window"`
+	AgentEgressPerWindow int `json:"agent_egress_per_window" maximum:"200" minimum:"1"`
 
 	// AgentWindowHours How long the window in force lasts, in hours. Default 24. Every passport's window
 	// resets at the same moment, a whole number of windows since 1970-01-01 UTC.
-	AgentWindowHours int `json:"agent_window_hours"`
+	AgentWindowHours int `json:"agent_window_hours" maximum:"168" minimum:"1"`
 
 	// AgentWindowNextHours The window length an admin saved that is not in force yet, in hours. Null when no
 	// change is waiting.
@@ -29807,7 +30047,7 @@ type AgentAllowanceSettings struct {
 	AgentWindowResetsAt time.Time `json:"agent_window_resets_at"`
 
 	// AgentWritesPerWindow How many changing calls one passport or connection may make per window. Default 200.
-	AgentWritesPerWindow int `json:"agent_writes_per_window"`
+	AgentWritesPerWindow int `json:"agent_writes_per_window" maximum:"5000" minimum:"10"`
 
 	// Defaults What each agent allowance is before an admin changes it, so a screen never restates them.
 	Defaults AgentAllowanceDefaults `json:"defaults"`
@@ -29836,7 +30076,7 @@ type AgentClient struct {
 	Confidential bool `json:"confidential"`
 
 	// ConnectedUsers How many users hold a live connection through this client.
-	ConnectedUsers int                `json:"connected_users"`
+	ConnectedUsers int                `json:"connected_users" minimum:"0"`
 	CreatedAt      time.Time          `json:"created_at"`
 	Disabled       bool               `json:"disabled"`
 	Id             openapi_types.UUID `json:"id"`
@@ -29946,13 +30186,13 @@ type AgentContextSection struct {
 type AgentCounterUsage struct {
 	// Limit The allowance in force: the installation's value, plus one more allowance for each
 	// release a user granted in this window.
-	Limit int `json:"limit"`
+	Limit int `json:"limit" minimum:"0"`
 
 	// Released How many times a user released more in this window.
-	Released int `json:"released"`
+	Released int `json:"released" minimum:"0"`
 
 	// Used What has been used in this window.
-	Used int `json:"used"`
+	Used int `json:"used" minimum:"0"`
 }
 
 // AgentExcerpt A quoted passage and the field or record it was read from.
@@ -30166,7 +30406,7 @@ type AgentUserUsage struct {
 	Egress AgentCounterUsage `json:"egress"`
 
 	// PassportCount Live passports and connections. A connection counts once.
-	PassportCount int `json:"passport_count"`
+	PassportCount int `json:"passport_count" minimum:"1"`
 
 	// State The worst of the three allowances. `stopped` when one is used up, so the next call of
 	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
@@ -30189,7 +30429,7 @@ type AiActivity struct {
 
 	// LiveTotal How many occurrences are queued or running WITHIN their lease for this caller, across EVERY kind. Neither the `kinds` parameter nor the 25-row bound on `running` narrows it, so it can exceed the length of `running`. A run past its lease is not counted, because a client pulsing for it would claim work that may have stopped; `running` reports it as `stalled` when its kind is asked for.
 	// It counts work and carries no kind, subject or sentence: a client can tell the AI is busy with something it does not narrate, and must not caption that pulse as if there were a line to read. Optional so an older server can omit it, and a client reads its absence as unknown rather than zero; this server always writes it.
-	LiveTotal *int `json:"live_total,omitempty"`
+	LiveTotal *int `json:"live_total,omitempty" minimum:"0"`
 
 	// Recent Occurrences that SETTLED since midnight in the server's own timezone (not the reader's, and not UTC unless the server runs on it), newest-settled first, at most 10.
 	Recent []AiActivityItem `json:"recent"`
@@ -30319,8 +30559,8 @@ type AiBudgetChange struct {
 
 // AiBudgetConfig defines model for AiBudgetConfig.
 type AiBudgetConfig struct {
-	CompanyMonthlyTokens *int64 `json:"company_monthly_tokens"`
-	TokensPerFullUser    int64  `json:"tokens_per_full_user"`
+	CompanyMonthlyTokens *int64 `json:"company_monthly_tokens" maximum:"1000000000000" minimum:"1"`
+	TokensPerFullUser    int64  `json:"tokens_per_full_user" maximum:"1000000000000" minimum:"1"`
 }
 
 // AiBudgetPreview defines model for AiBudgetPreview.
@@ -30393,7 +30633,7 @@ type AiCall struct {
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
 	// EstimatedCostMicrousd Price-sheet estimate for every attempt of this logical call, in millionths of one US dollar, priced on read exactly as the usage report prices it, so the list sums to the usage total. Omitted, never 0, when any attempt had usage but no effective rate. A cache hit costs 0.
-	EstimatedCostMicrousd *int64 `json:"estimated_cost_microusd,omitempty"`
+	EstimatedCostMicrousd *int64 `json:"estimated_cost_microusd,omitempty" minimum:"0"`
 
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
@@ -30567,7 +30807,7 @@ type AiCallSummary struct {
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
 	// EstimatedCostMicrousd Price-sheet estimate for every attempt of this logical call, in millionths of one US dollar, priced on read exactly as the usage report prices it, so the list sums to the usage total. Omitted, never 0, when any attempt had usage but no effective rate. A cache hit costs 0.
-	EstimatedCostMicrousd *int64 `json:"estimated_cost_microusd,omitempty"`
+	EstimatedCostMicrousd *int64 `json:"estimated_cost_microusd,omitempty" minimum:"0"`
 
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
@@ -30611,10 +30851,10 @@ type AiCallTaskOption struct {
 // AiDecisionSummary One task's decision-model pass and fallback counts over the usage window.
 type AiDecisionSummary struct {
 	// Asked Logical calls that consulted the decision model, including those refused before any call was sent.
-	Asked int `json:"asked"`
+	Asked int `json:"asked" minimum:"0"`
 
 	// Decided Logical calls the decision model answered: its answer stood and no LLM ran.
-	Decided int `json:"decided"`
+	Decided int `json:"decided" minimum:"0"`
 
 	// Fallbacks Logical calls handed to the LLM ladder, keyed by the attempt reason the ladder's first attempt carries (decision_below_floor, decision_error, …). A reason with no calls is absent. Read an unrecognized key as "some reason" rather than refusing it.
 	Fallbacks map[string]int `json:"fallbacks"`
@@ -30848,7 +31088,7 @@ type AiModelRateListResponse struct {
 // `above_tokens`. Above that size every token of the call pays these prices. Absent for a
 // model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
 type AiModelRateLongContext struct {
-	AboveTokens       int    `json:"above_tokens"`
+	AboveTokens       int    `json:"above_tokens" minimum:"1"`
 	CacheReadPerMtok  string `json:"cache_read_per_mtok"`
 	CacheWritePerMtok string `json:"cache_write_per_mtok"`
 	InputPerMtok      string `json:"input_per_mtok"`
@@ -30858,10 +31098,10 @@ type AiModelRateLongContext struct {
 // AiModelRateProviderRefresh defines model for AiModelRateProviderRefresh.
 type AiModelRateProviderRefresh struct {
 	// Added Models priced for the first time today.
-	Added int `json:"added"`
+	Added int `json:"added" minimum:"0"`
 
 	// Kept Models whose price was set by hand, which the sync never rewrites.
-	Kept int `json:"kept"`
+	Kept int `json:"kept" minimum:"0"`
 
 	// Models Model ids written this run.
 	Models []string `json:"models"`
@@ -30883,13 +31123,13 @@ type AiModelRateProviderRefresh struct {
 	Review *[]string `json:"review,omitempty"`
 
 	// Unchanged Models already at the catalogue price.
-	Unchanged int `json:"unchanged"`
+	Unchanged int `json:"unchanged" minimum:"0"`
 
 	// Unlisted Bound model ids the catalogue does not name.
 	Unlisted []string `json:"unlisted"`
 
 	// Updated Prices written today.
-	Updated int `json:"updated"`
+	Updated int `json:"updated" minimum:"0"`
 }
 
 // AiModelRateRefreshReport The outcome of a catalogue refresh, one entry per provider this build knows.
@@ -30899,18 +31139,18 @@ type AiModelRateRefreshReport struct {
 
 // AiOpenRouterPercentiles defines model for AiOpenRouterPercentiles.
 type AiOpenRouterPercentiles struct {
-	P50 *float64 `json:"p50,omitempty"`
-	P75 *float64 `json:"p75,omitempty"`
-	P90 *float64 `json:"p90,omitempty"`
-	P99 *float64 `json:"p99,omitempty"`
+	P50 *float64 `json:"p50,omitempty" minimum:"0"`
+	P75 *float64 `json:"p75,omitempty" minimum:"0"`
+	P90 *float64 `json:"p90,omitempty" minimum:"0"`
+	P99 *float64 `json:"p99,omitempty" minimum:"0"`
 }
 
 // AiOpenRouterPrice The most a request may cost, in USD per million prompt or completion tokens, or per request or image.
 type AiOpenRouterPrice struct {
-	Completion *float64 `json:"completion,omitempty"`
-	Image      *float64 `json:"image,omitempty"`
-	Prompt     *float64 `json:"prompt,omitempty"`
-	Request    *float64 `json:"request,omitempty"`
+	Completion *float64 `json:"completion,omitempty" minimum:"0"`
+	Image      *float64 `json:"image,omitempty" minimum:"0"`
+	Prompt     *float64 `json:"prompt,omitempty" minimum:"0"`
+	Request    *float64 `json:"request,omitempty" minimum:"0"`
 }
 
 // AiOpenRouterProvider OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
@@ -30934,7 +31174,7 @@ type AiOpenRouterProvider struct {
 	Only *[]string `json:"only,omitempty"`
 
 	// Order Host slugs to try first, in this order.
-	Order *[]string `json:"order,omitempty"`
+	Order *[]string `json:"order,omitempty" unique:"items"`
 
 	// PreferredMaxLatency Seconds, one number or per percentile; a soft preference.
 	PreferredMaxLatency *AiOpenRouterProvider_PreferredMaxLatency `json:"preferred_max_latency,omitempty"`
@@ -30943,7 +31183,7 @@ type AiOpenRouterProvider struct {
 	PreferredMinThroughput *AiOpenRouterProvider_PreferredMinThroughput `json:"preferred_min_throughput,omitempty"`
 
 	// Quantizations Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.
-	Quantizations *[]string `json:"quantizations,omitempty"`
+	Quantizations *[]string `json:"quantizations,omitempty" unique:"items"`
 
 	// RequireParameters Keep the request off hosts that lack any parameter it carries.
 	RequireParameters *bool `json:"require_parameters,omitempty"`
@@ -30989,7 +31229,7 @@ type AiOpenRouterReasoning struct {
 
 	// Exclude Think, but leave the reasoning out of the answer.
 	Exclude   *bool `json:"exclude,omitempty"`
-	MaxTokens *int  `json:"max_tokens,omitempty"`
+	MaxTokens *int  `json:"max_tokens,omitempty" minimum:"1"`
 }
 
 // AiOpenRouterReasoningEffort defines model for AiOpenRouterReasoning.Effort.
@@ -31075,10 +31315,10 @@ type AiOpenRouterUpstream struct {
 	EnforceDistillableText *bool `json:"enforce_distillable_text,omitempty"`
 
 	// Ignore Upstream slugs excluded; a hard filter.
-	Ignore *[]string `json:"ignore,omitempty"`
+	Ignore *[]string `json:"ignore,omitempty" unique:"items"`
 
 	// Only Upstream slugs allowed; a hard filter.
-	Only *[]string `json:"only,omitempty"`
+	Only *[]string `json:"only,omitempty" unique:"items"`
 
 	// Zdr Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request.
 	Zdr *bool `json:"zdr,omitempty"`
@@ -31126,7 +31366,7 @@ type AiProfile struct {
 	Name             AiProfileName              `json:"name"`
 
 	// Providers Distinct configured provider keys, sorted; fake is never returned.
-	Providers []AiProfileProviders `json:"providers"`
+	Providers []AiProfileProviders `json:"providers" unique:"items"`
 	State     AiProfileState       `json:"state"`
 }
 
@@ -31227,7 +31467,7 @@ type AiProviderKeyTestResult struct {
 	KeyConfirmed *bool `json:"key_confirmed,omitempty"`
 
 	// ModelCount How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one.
-	ModelCount *int `json:"model_count,omitempty"`
+	ModelCount *int `json:"model_count,omitempty" minimum:"0"`
 
 	// Ok Whether the test passed: the vendor answered the probe the operation describes for it (a model list, a key endpoint, or the empty decision request) without refusing this credential.
 	Ok bool `json:"ok"`
@@ -31328,41 +31568,41 @@ type AiRoutingPreview struct {
 
 // AiRunModelUsage One task, route, and served-model slice within a correlated AI run.
 type AiRunModelUsage struct {
-	CacheWriteTokens int64 `json:"cache_write_tokens"`
-	CachedTokens     int64 `json:"cached_tokens"`
-	CallAttempts     int   `json:"call_attempts"`
+	CacheWriteTokens int64 `json:"cache_write_tokens" minimum:"0"`
+	CachedTokens     int64 `json:"cached_tokens" minimum:"0"`
+	CallAttempts     int   `json:"call_attempts" minimum:"0"`
 
 	// ConfiguredModel Provider model selected by the validated routing configuration.
 	ConfiguredModel string `json:"configured_model"`
 
 	// EstimatedCostMicrousd Price-sheet estimate in millionths of one US dollar.
-	EstimatedCostMicrousd int64     `json:"estimated_cost_microusd"`
+	EstimatedCostMicrousd int64     `json:"estimated_cost_microusd" minimum:"0"`
 	LastUsedAt            time.Time `json:"last_used_at"`
-	LatencyMs             int64     `json:"latency_ms"`
+	LatencyMs             int64     `json:"latency_ms" minimum:"0"`
 	Provider              string    `json:"provider"`
-	ReasoningTokens       int64     `json:"reasoning_tokens"`
+	ReasoningTokens       int64     `json:"reasoning_tokens" minimum:"0"`
 
 	// ServedModel Provider-reported model identity; empty only when no provider response supplied one.
 	ServedModel string `json:"served_model"`
 	Task        string `json:"task"`
 	Tier        string `json:"tier"`
-	TokensIn    int64  `json:"tokens_in"`
-	TokensOut   int64  `json:"tokens_out"`
+	TokensIn    int64  `json:"tokens_in" minimum:"0"`
+	TokensOut   int64  `json:"tokens_out" minimum:"0"`
 
 	// UnpricedCalls Calls with usage but no effective rate; never folded into a silent zero.
-	UnpricedCalls int `json:"unpriced_calls"`
+	UnpricedCalls int `json:"unpriced_calls" minimum:"0"`
 }
 
 // AiRunSummary Cumulative price-on-read transparency for model calls carrying one run correlation id.
 type AiRunSummary struct {
-	CallAttempts          int                  `json:"call_attempts"`
+	CallAttempts          int                  `json:"call_attempts" minimum:"0"`
 	Currency              AiRunSummaryCurrency `json:"currency"`
-	EstimatedCostMicrousd int64                `json:"estimated_cost_microusd"`
-	LatencyMs             int64                `json:"latency_ms"`
+	EstimatedCostMicrousd int64                `json:"estimated_cost_microusd" minimum:"0"`
+	LatencyMs             int64                `json:"latency_ms" minimum:"0"`
 	Models                []AiRunModelUsage    `json:"models"`
-	TokensIn              int64                `json:"tokens_in"`
-	TokensOut             int64                `json:"tokens_out"`
-	UnpricedCalls         int                  `json:"unpriced_calls"`
+	TokensIn              int64                `json:"tokens_in" minimum:"0"`
+	TokensOut             int64                `json:"tokens_out" minimum:"0"`
+	UnpricedCalls         int                  `json:"unpriced_calls" minimum:"0"`
 }
 
 // AiRunSummaryCurrency defines model for AiRunSummary.Currency.
@@ -31436,10 +31676,10 @@ type AiTaskFlow struct {
 // AiTaskOverride An admin's settings for one task. An absent field keeps the product's own value.
 type AiTaskOverride struct {
 	// AttemptTimeoutMs How long one model call on the ladder may take before the next tier is tried.
-	AttemptTimeoutMs *int `json:"attempt_timeout_ms,omitempty"`
+	AttemptTimeoutMs *int `json:"attempt_timeout_ms,omitempty" maximum:"300000" minimum:"10000"`
 
 	// DecisionTimeoutMs How long the decision model may take before the task falls back to its ladder. Decision tasks only.
-	DecisionTimeoutMs *int `json:"decision_timeout_ms,omitempty"`
+	DecisionTimeoutMs *int `json:"decision_timeout_ms,omitempty" maximum:"60000" minimum:"5000"`
 
 	// Thinking The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.
 	Thinking *AiTaskOverrideThinking `json:"thinking,omitempty"`
@@ -31569,7 +31809,7 @@ type AiUsage struct {
 			TokensOut int    `json:"tokens_out"`
 
 			// UnpricedCalls Calls on this line that carried usage and no effective rate, so their spend is in the token columns and NOT in cost_est_minor. Present so a reader can tell a partial dollar figure from a whole one: a line with some priced calls reports a real total that is missing this many calls'' worth, and a money number that is short without saying so is worse than one that is absent.
-			UnpricedCalls *int `json:"unpriced_calls,omitempty"`
+			UnpricedCalls *int `json:"unpriced_calls,omitempty" minimum:"0"`
 		} `json:"tasks"`
 	} `json:"days"`
 
@@ -31925,17 +32165,17 @@ type ApplyLegacyLossReasonsRequest struct {
 	// Mappings The decisions the administrator reviewed, each at the version shown.
 	Mappings []struct {
 		Id      openapi_types.UUID `json:"id"`
-		Version int64              `json:"version"`
+		Version int64              `json:"version" minimum:"1"`
 	} `json:"mappings"`
 }
 
 // ApplyLegacyLossReasonsResponse defines model for ApplyLegacyLossReasonsResponse.
 type ApplyLegacyLossReasonsResponse struct {
 	// Deals How many lost deals this run changes. One run changes at most 1000; apply again for the rest. Zero starts no run.
-	Deals int `json:"deals"`
+	Deals int `json:"deals" maximum:"1000" minimum:"0"`
 
 	// Mappings How many reviewed mappings the correction applies.
-	Mappings int `json:"mappings"`
+	Mappings int `json:"mappings" minimum:"0"`
 }
 
 // ApplyTagRequest defines model for ApplyTagRequest.
@@ -31961,7 +32201,7 @@ type Approval struct {
 	// the fresh act's bundle, so a bundle always holds exactly what its act proposed rather
 	// than only the part of it that was new.
 	BundleId   *openapi_types.UUID `json:"bundle_id,omitempty"`
-	Confidence *float32            `json:"confidence,omitempty"`
+	Confidence *float32            `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 	CreatedAt  time.Time           `json:"created_at"`
 	DecidedAt  *time.Time          `json:"decided_at,omitempty"`
 	DecidedBy  *openapi_types.UUID `json:"decided_by,omitempty"`
@@ -32100,7 +32340,7 @@ type ApprovalPendingCount struct {
 	AsOf time.Time `json:"as_of"`
 
 	// Count Pending approvals this caller could decide now.
-	Count int `json:"count"`
+	Count int `json:"count" minimum:"0"`
 
 	// NextExpiryAt When the first counted approval expires. Absent when none of them can expire.
 	NextExpiryAt *time.Time `json:"next_expiry_at,omitempty"`
@@ -32149,7 +32389,7 @@ type ApprovalPreview struct {
 
 	// State Whether the full effect can still be explained from authorized records.
 	State   string `json:"state"`
-	Version int    `json:"version"`
+	Version int    `json:"version" minimum:"1"`
 }
 
 // ApprovalPreviewChange defines model for ApprovalPreviewChange.
@@ -32230,7 +32470,7 @@ type ApprovalSummaryParts struct {
 	Fields []ApprovalSummaryField `json:"fields"`
 
 	// MoreFields How many further fields the list leaves out.
-	MoreFields int `json:"more_fields"`
+	MoreFields int `json:"more_fields" minimum:"0"`
 
 	// Sentence The act in words, such as "Update deal Acme renewal".
 	Sentence string `json:"sentence"`
@@ -32239,7 +32479,7 @@ type ApprovalSummaryParts struct {
 // ApproveImportRunRequest What the approver read. Without a body, the run is approved at whatever version it holds.
 type ApproveImportRunRequest struct {
 	// Version The run's `version` the approved report was read at.
-	Version *int `json:"version,omitempty"`
+	Version *int `json:"version,omitempty" minimum:"1"`
 }
 
 // ApproveRequest Approve a staged 🟡 action. **Who may approve:** the principal must hold the RBAC required
@@ -32383,7 +32623,7 @@ type AssistantProfile struct {
 	Name          AssistantProfileName          `json:"name"`
 
 	// Providers Distinct configured provider keys, sorted; fake is never returned.
-	Providers []AssistantProfileProviders `json:"providers"`
+	Providers []AssistantProfileProviders `json:"providers" unique:"items"`
 	State     AssistantProfileState       `json:"state"`
 }
 
@@ -32415,10 +32655,10 @@ type AssuranceFindingCountSeverity string
 // AssuranceFreshness Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none.
 type AssuranceFreshness struct {
 	// ChangedDeals Deals whose record, offers, contracts or activities changed after the check.
-	ChangedDeals int `json:"changed_deals"`
+	ChangedDeals int `json:"changed_deals" minimum:"0"`
 
 	// ChangedSignals Buying signals whose signal, company or deal suggestion changed after the check.
-	ChangedSignals int `json:"changed_signals"`
+	ChangedSignals int `json:"changed_signals" minimum:"0"`
 
 	// ChangedSince The oldest change the check has not read. Absent when there is none.
 	ChangedSince *time.Time `json:"changed_since,omitempty"`
@@ -32563,6 +32803,16 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
+	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact: the name or
+	// number the chat header shows when neither agrees with that contact. Null when
+	// they agree, when the header shows neither, and for every other reading.
+	// `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
+	OtherCounterparty *string `json:"other_counterparty,omitempty"`
+
+	// Question What the file was read for. `deal_facts` grounds the four deal fields;
+	// `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
+	Question AttachmentExtractionQuestion `json:"question"`
+
 	// Stalled true when a live reading has aged past the lease its worker holds: the worker
 	// died, timed out, or never claimed it, and nothing will move the reading on its
 	// own. Derived at read time, never stored. Asking for the file to be read again
@@ -32578,6 +32828,10 @@ type AttachmentExtraction struct {
 	// does not explain itself reads as a broken feature.
 	StatusDetail *string `json:"status_detail,omitempty"`
 }
+
+// AttachmentExtractionQuestion What the file was read for. `deal_facts` grounds the four deal fields;
+// `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
+type AttachmentExtractionQuestion string
 
 // AttachmentExtractionStatus queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
 type AttachmentExtractionStatus string
@@ -32612,6 +32866,15 @@ type AttachmentOrigin struct {
 	Sender  *EmailParty `json:"sender,omitempty"`
 	Subject *string     `json:"subject,omitempty"`
 }
+
+// AttachmentReadRequest defines model for AttachmentReadRequest.
+type AttachmentReadRequest struct {
+	// Question What to read the file for. `chat_capture` is accepted only on an image.
+	Question *AttachmentReadRequestQuestion `json:"question,omitempty"`
+}
+
+// AttachmentReadRequestQuestion What to read the file for. `chat_capture` is accepted only on an image.
+type AttachmentReadRequestQuestion string
 
 // AttachmentReadStarted The reading `readAttachmentForFields` started, or the one already in flight it joined.
 type AttachmentReadStarted struct {
@@ -32673,6 +32936,16 @@ type Attention struct {
 	// automation screens themselves refuse. Absent — not empty — on an
 	// installation whose feed does not read the run ledger.
 	AutomationHealth *[]AttentionItem `json:"automation_health,omitempty"`
+
+	// BookingHealth The reader's OWN booking page when it takes no bookings: at most one card. A page
+	// counts only when it is switched on and was used, meaning somebody booked through it
+	// or its host copied its link. `kind` is the page's `blocker` (`no_calendar`,
+	// `calendar_read_only` or `calendar_unavailable`). Fixing it lives on the booking
+	// settings screen, so the card offers no verbs.
+	//
+	// Withheld — named in `lanes_omitted` — for a caller with no human behind it. Absent —
+	// not empty — on an installation whose feed does not read booking pages.
+	BookingHealth *[]AttentionItem `json:"booking_health,omitempty"`
 
 	// Bounces The reader's OWN sends whose delivery reports came back hard, newest
 	// report first, inside the recent window — read from the bounce stamp on
@@ -33023,71 +33296,74 @@ type AttentionContactCaseMergeMode string
 // lanes offer no second page to find the thirteenth by.
 type AttentionCounts struct {
 	// AiWorkHealth How many troubled AI runs the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest failures.
-	AiWorkHealth *int `json:"ai_work_health,omitempty"`
+	AiWorkHealth *int `json:"ai_work_health,omitempty" minimum:"0"`
 
 	// ApprovalsOpen Every pending approval this read's scope holds that the caller may decide, counted by the approvals engine behind `GET /v1/approvals/pending-count` rather than from the bounded lane. Absent when the lane was not read.
-	ApprovalsOpen *int `json:"approvals_open,omitempty"`
+	ApprovalsOpen *int `json:"approvals_open,omitempty" minimum:"0"`
 
 	// AtRisk How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under.
-	AtRisk *int `json:"at_risk,omitempty"`
+	AtRisk *int `json:"at_risk,omitempty" minimum:"0"`
 
 	// AutomationHealth How many troubled automation firings the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
-	AutomationHealth *int `json:"automation_health,omitempty"`
+	AutomationHealth *int `json:"automation_health,omitempty" minimum:"0"`
+
+	// BookingHealth How many paused booking pages need the reader's hand: zero or one.
+	BookingHealth *int `json:"booking_health,omitempty" minimum:"0"`
 
 	// Bounces How many hard-bounced sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest reports.
-	Bounces *int `json:"bounces,omitempty"`
+	Bounces *int `json:"bounces,omitempty" minimum:"0"`
 
 	// CaptureHealth How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page.
-	CaptureHealth *int `json:"capture_health,omitempty"`
+	CaptureHealth *int `json:"capture_health,omitempty" minimum:"0"`
 
 	// Commitments How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
-	Commitments *int `json:"commitments,omitempty"`
+	Commitments *int `json:"commitments,omitempty" minimum:"0"`
 
 	// DealSuggestionsOpen Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`.
-	DealSuggestionsOpen *int `json:"deal_suggestions_open,omitempty"`
+	DealSuggestionsOpen *int `json:"deal_suggestions_open,omitempty" minimum:"0"`
 
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
-	DidNotRun *int `json:"did_not_run,omitempty"`
+	DidNotRun *int `json:"did_not_run,omitempty" minimum:"0"`
 
 	// DomainQuestions How many open domain questions the bounded reader returned. This is a lower bound when `domain_questions_more_available` is true. The paged domain review provides the remaining questions.
-	DomainQuestions *int `json:"domain_questions,omitempty"`
+	DomainQuestions *int `json:"domain_questions,omitempty" minimum:"0"`
 
 	// Dsr How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
-	Dsr *int `json:"dsr,omitempty"`
+	Dsr *int `json:"dsr,omitempty" minimum:"0"`
 
 	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.
-	DuplicatesOpen *int `json:"duplicates_open,omitempty"`
+	DuplicatesOpen *int `json:"duplicates_open,omitempty" minimum:"0"`
 
 	// Introductions How many introduction asks the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the ones lapsing soonest, which is the order this lane pages in.
-	Introductions *int `json:"introductions,omitempty"`
+	Introductions *int `json:"introductions,omitempty" minimum:"0"`
 
 	// Meetings How many of today's meetings are still ahead — the bounded page, as the other lanes report.
-	Meetings *int `json:"meetings,omitempty"`
+	Meetings *int `json:"meetings,omitempty" minimum:"0"`
 
 	// MeetingsUnreported How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
-	MeetingsUnreported *int `json:"meetings_unreported,omitempty"`
-	NeedsYou           int  `json:"needs_you"`
+	MeetingsUnreported *int `json:"meetings_unreported,omitempty" minimum:"0"`
+	NeedsYou           int  `json:"needs_you" minimum:"0"`
 
 	// NoticeCases How many undischarged disclosure duties this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
-	NoticeCases *int `json:"notice_cases,omitempty"`
+	NoticeCases *int `json:"notice_cases,omitempty" minimum:"0"`
 
 	// Notices How many unread notices the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
-	Notices *int `json:"notices,omitempty"`
+	Notices *int `json:"notices,omitempty" minimum:"0"`
 
 	// Planned How many pieces of agreed work are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it. The lane shows the soonest-due dozen; the number says how many there are, which is the reading `needs_you` has always had.
-	Planned int `json:"planned"`
+	Planned int `json:"planned" minimum:"0"`
 
 	// RelationshipDecay How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in.
-	RelationshipDecay *int `json:"relationship_decay,omitempty"`
+	RelationshipDecay *int `json:"relationship_decay,omitempty" minimum:"0"`
 
 	// TagSuggestionsOpen Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`.
-	TagSuggestionsOpen *int `json:"tag_suggestions_open,omitempty"`
+	TagSuggestionsOpen *int `json:"tag_suggestions_open,omitempty" minimum:"0"`
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
-	ThisMorning int `json:"this_morning"`
+	ThisMorning int `json:"this_morning" minimum:"0"`
 
 	// Undelivered How many given-up-on sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
-	Undelivered *int `json:"undelivered,omitempty"`
+	Undelivered *int `json:"undelivered,omitempty" minimum:"0"`
 }
 
 // AttentionDealFacts The deal behind a `deal_at_risk` item: the facts its card states, so a client
@@ -33131,7 +33407,7 @@ type AttentionDealFacts struct {
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 
 	// WinProbability The deal's win probability: its own where one is set, else its stage's. Never a weighting applied to `amount_minor`.
-	WinProbability *int `json:"win_probability,omitempty"`
+	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 }
 
 // AttentionItem One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -33215,7 +33491,7 @@ type AttentionItem struct {
 	CauseRef *string `json:"cause_ref,omitempty"`
 
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
-	Confidence *float32 `json:"confidence,omitempty"`
+	Confidence *float32 `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 
 	// Connection The connection a `capture_health` row is about. Sent only for `source: capture_health`.
 	//
@@ -33330,10 +33606,10 @@ type AttentionItem struct {
 	// deal card's own figure, and the age each row carries into the ordering. A number
 	// parsed back out of a sentence reads as zero the day somebody rewords the
 	// sentence, and every one of those uses would go quietly wrong together.
-	QuietDays *int `json:"quiet_days,omitempty"`
+	QuietDays *int `json:"quiet_days,omitempty" minimum:"0"`
 
 	// Rank Position in its producer's own ordering, where the producer ranks (the briefing queue). 1 is first.
-	Rank *int `json:"rank,omitempty"`
+	Rank *int `json:"rank,omitempty" minimum:"1"`
 
 	// Relationship What the lapsed relationship behind a `relationship_decay` item was WORTH before
 	// it went quiet. Sent only for `source: relationship_decay`.
@@ -33353,6 +33629,11 @@ type AttentionItem struct {
 
 	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve. For a `deal_suggestion` it is the company's current owner, read at request time; absent when the company has no owner.
 	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
+
+	// RunReasonCode On an `automation_run` item: why the firing stopped, in the code set of
+	// AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
+	// engine's English sentence.
+	RunReasonCode *string `json:"run_reason_code,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
@@ -33986,7 +34267,7 @@ type Automation struct {
 	PausedReason *AutomationPausedReason `json:"paused_reason,omitempty"`
 
 	// RunsLast30Days Runs other than skipped ones in the 30 days before the server read the list. Every GET /automations item carries it, 0 for a rule that has not run; a single read, a create and an update leave it out.
-	RunsLast30Days *int             `json:"runs_last_30_days,omitempty"`
+	RunsLast30Days *int             `json:"runs_last_30_days,omitempty" minimum:"0"`
 	Status         AutomationStatus `json:"status"`
 	UpdatedAt      *time.Time       `json:"updated_at,omitempty"`
 	Version        *int             `json:"version,omitempty"`
@@ -34053,7 +34334,7 @@ type AutomationPreviewRequest struct {
 	Params *map[string]interface{} `json:"params,omitempty"`
 
 	// WindowDays Trailing window for the would-have-fired estimate (default 30).
-	WindowDays *int `json:"window_days,omitempty"`
+	WindowDays *int `json:"window_days,omitempty" maximum:"90" minimum:"1"`
 }
 
 // AutomationRetryResult What a retry did, or why it did nothing. `refusal` is present exactly when `retried`
@@ -34100,6 +34381,11 @@ type AutomationRun struct {
 
 	// Reason For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.
 	Reason *string `json:"reason,omitempty"`
+
+	// ReasonCode For failed/blocked: why the run stopped, as a code a client puts into the reader's language:
+	// target_missing, not_permitted, conflict, record_changed, no_consent, budget_exhausted,
+	// not_completed or blocked. A code a client does not know reads as not_completed.
+	ReasonCode *string `json:"reason_code,omitempty"`
 
 	// TargetRef Record the run acted on (type + id or label).
 	TargetRef *string `json:"target_ref,omitempty"`
@@ -34265,7 +34551,7 @@ type BaseCurrencyLock struct {
 	BaseCurrency *string `json:"base_currency,omitempty"`
 
 	// Count How many records froze a rate (`rates_frozen`), or how many currency rates convert into the base (`rate_sheet`).
-	Count int `json:"count"`
+	Count int `json:"count" minimum:"1"`
 
 	// Reason `rates_frozen`: closed deals, sent offers, mirrored invoices, contracts or commission entries have frozen a conversion rate against the base, and nothing undoes that. `rate_sheet`: currency rates convert into the base; clearing them lifts the lock.
 	Reason BaseCurrencyLockReason `json:"reason"`
@@ -34478,7 +34764,7 @@ type BriefDelivery struct {
 	CombineRoutineEmail *bool `json:"combine_routine_email,omitempty"`
 
 	// DeliveryHourLocal Legacy morning-only hour floor in the installation reporting timezone. Kept unchanged until routine_delivery_time is explicitly chosen.
-	DeliveryHourLocal *int `json:"delivery_hour_local,omitempty"`
+	DeliveryHourLocal *int `json:"delivery_hour_local,omitempty" maximum:"23" minimum:"0"`
 
 	// MorningBriefDelivery Whether the morning brief arrives by mail. `none` is a CHOICE to receive
 	// nothing; absent is not.
@@ -34502,7 +34788,7 @@ type BriefDelivery struct {
 	WeeklyDelivery *BriefDeliveryWeeklyDelivery `json:"weekly_delivery,omitempty"`
 
 	// WeeklyDeliveryDay Earliest weekday, Monday 1 through Sunday 7. A non-working choice rolls to the next working weekday; later workdays allow catch-up.
-	WeeklyDeliveryDay *int `json:"weekly_delivery_day,omitempty"`
+	WeeklyDeliveryDay *int `json:"weekly_delivery_day,omitempty" maximum:"7" minimum:"1"`
 }
 
 // BriefDeliveryMorningBriefDelivery Whether the morning brief arrives by mail. `none` is a CHOICE to receive
@@ -35447,8 +35733,8 @@ type CaptureOwnerIdentitySource string
 // CaptureOwnerReview defines model for CaptureOwnerReview.
 type CaptureOwnerReview struct {
 	DisplayName     *string            `json:"display_name,omitempty"`
-	SenderDecisions int                `json:"sender_decisions"`
-	ThreadDecisions int                `json:"thread_decisions"`
+	SenderDecisions int                `json:"sender_decisions" minimum:"0"`
+	ThreadDecisions int                `json:"thread_decisions" minimum:"0"`
 	UserId          openapi_types.UUID `json:"user_id"`
 }
 
@@ -35543,7 +35829,7 @@ type CaptureSenderDecision struct {
 
 	// MessageCount How many messages stored from your mailbox have this address as their counterparty, sent
 	// or received. Archived mail is not counted.
-	MessageCount int `json:"message_count"`
+	MessageCount int `json:"message_count" minimum:"0"`
 
 	// Overruled Whether your own decision is what governs this sender.
 	Overruled bool `json:"overruled"`
@@ -35582,7 +35868,7 @@ type CaptureSettings struct {
 	// paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
 	// budget. Read at the top of every sweep and on every capture, so a change applies
 	// without a restart. Default 500.
-	AutoEnrichDailyCap int `json:"auto_enrich_daily_cap"`
+	AutoEnrichDailyCap int `json:"auto_enrich_daily_cap" maximum:"20000" minimum:"1"`
 
 	// ConfidentialityPassCap How many held mail threads one confidentiality pass asks the model about, per run,
 	// answered or not. The threads beyond the cap wait for the next run, so
@@ -35590,7 +35876,7 @@ type CaptureSettings struct {
 	// when `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the
 	// pass runs. Read at the start of every pass, so a change applies without a restart.
 	// Default 40.
-	ConfidentialityPassCap int `json:"confidentiality_pass_cap"`
+	ConfidentialityPassCap int `json:"confidentiality_pass_cap" maximum:"200" minimum:"1"`
 
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
@@ -35612,7 +35898,7 @@ type CaptureSettings struct {
 
 	// MailSyncIntervalSeconds How long a mailbox waits after a successful sync before the next one, in seconds.
 	// Applies from each mailbox's next sync. Default 120.
-	MailSyncIntervalSeconds int `json:"mail_sync_interval_seconds"`
+	MailSyncIntervalSeconds int `json:"mail_sync_interval_seconds" maximum:"3600" minimum:"30"`
 
 	// SharedPostureAllowed Whether a seat may put their mailbox in the `shared` posture at all — colleagues
 	// reading a captured message the moment it lands, before anything has judged it.
@@ -35765,7 +36051,7 @@ type CaptureUnreadPeriod struct {
 // CaptureVerdictClock When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
 type CaptureVerdictClock struct {
 	// EverySeconds How often this pass is scheduled. Zero for a deployment where no clock runs it.
-	EverySeconds int `json:"every_seconds"`
+	EverySeconds int `json:"every_seconds" minimum:"0"`
 
 	// NextPassAt When the next pass runs. Absent when this deployment cannot say — nothing scheduled and no completed run still in the queue's retention — in which case a reader is owed the cadence rather than an invented time. Never a substitute for `every_seconds`: a contact reading one time learns nothing about the rhythm they are living with.
 	NextPassAt *time.Time `json:"next_pass_at,omitempty"`
@@ -35893,7 +36179,7 @@ type ChannelProviderEntry struct {
 		// MaxTotalBytes Largest total across every file on one message, in bytes — the smaller of
 		// this transport's own aggregate and the product's send budget. Always
 		// present and always positive.
-		MaxTotalBytes int64 `json:"max_total_bytes"`
+		MaxTotalBytes int64 `json:"max_total_bytes" minimum:"1"`
 	} `json:"attachments"`
 
 	// CredentialModel How a connection to this transport is credentialed — one shared bot for the
@@ -35936,7 +36222,7 @@ type ClaimEvidence struct {
 	// Confidence The model's confidence. ABSENT for the `connector`, `human` and `migration` kinds — none
 	// of them carries a model confidence, and printing one would fabricate a number
 	// (DOSS-AC-16).
-	Confidence *float32                `json:"confidence,omitempty"`
+	Confidence *float32                `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 	EntityId   openapi_types.UUID      `json:"entity_id"`
 	EntityType ClaimEvidenceEntityType `json:"entity_type"`
 
@@ -36003,16 +36289,16 @@ type CloseDateChange struct {
 
 // CloseDateEstimateBasis Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values.
 type CloseDateEstimateBasis struct {
-	MedianDaysPerStage float64 `json:"median_days_per_stage"`
-	RemainingStages    int     `json:"remaining_stages"`
-	WonDeals           int     `json:"won_deals"`
+	MedianDaysPerStage float64 `json:"median_days_per_stage" minimum:"0"`
+	RemainingStages    int     `json:"remaining_stages" minimum:"1"`
+	WonDeals           int     `json:"won_deals" minimum:"1"`
 }
 
 // ColdStartField One read-back field. EVERY field carries a non-empty `evidence_snippet` + `confidence`, or it is
 // omitted (the no-guess gate). `source_kind` says where the evidence lives; `source_url` is present
 // ONLY for `source_kind=url` (nullable otherwise — text/self-description evidence has no URL).
 type ColdStartField struct {
-	Confidence float32 `json:"confidence"`
+	Confidence float32 `json:"confidence" maximum:"1" minimum:"0"`
 
 	// EvidenceOffset Optional char offset of evidence_snippet within the pasted text (source_kind=text), for highlight-back; null for url/self_description.
 	EvidenceOffset *int `json:"evidence_offset,omitempty"`
@@ -36147,7 +36433,7 @@ type CommissionEntry struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// VoidReason Required on a void; what a partner dispute is answered from.
 	VoidReason *string `json:"void_reason,omitempty"`
@@ -36308,7 +36594,10 @@ type Company struct {
 
 	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
 	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
-	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS company: the row write gate `writable` asks, plus the `company:delete` grant or being the company's owner with `company:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
 	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
@@ -36326,7 +36615,7 @@ type Company struct {
 	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
 
 	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
-	ContactCount *int      `json:"contact_count,omitempty"`
+	ContactCount *int      `json:"contact_count,omitempty" minimum:"0"`
 	CreatedAt    time.Time `json:"created_at"`
 
 	// CreatedBy Who created the company, from its earliest create audit row, read the way
@@ -36384,7 +36673,7 @@ type Company struct {
 	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 
 	// OpenDealCount How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
-	OpenDealCount *int                `json:"open_deal_count,omitempty"`
+	OpenDealCount *int                `json:"open_deal_count,omitempty" minimum:"0"`
 	OwnerId       *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// ParentCompanyId Single-level hierarchy FK; no cycles.
@@ -36416,7 +36705,7 @@ type Company struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 	Visibility *CompanyVisibility `json:"visibility,omitempty"`
@@ -36594,7 +36883,7 @@ type Company360 struct {
 	// Absent exactly when `suggestions` is — a section the caller's grants withheld
 	// was never computed, and a `0` there would state "no further suggestions"
 	// about an account this read never looked at.
-	SuggestionsDropped *int   `json:"suggestions_dropped,omitempty"`
+	SuggestionsDropped *int   `json:"suggestions_dropped,omitempty" minimum:"0"`
 	Tags               *[]Tag `json:"tags,omitempty"`
 }
 
@@ -36683,7 +36972,7 @@ type Company360ContactTitleSource string
 // contact is gone, what happened is not.
 type Company360ContactRoutes struct {
 	// Remainder How many further colleagues have a recorded exchange with this contact, beyond `top`.
-	Remainder int `json:"remainder"`
+	Remainder int `json:"remainder" minimum:"0"`
 
 	// Top The strongest routes, ordered by the per-colleague relationship projection.
 	Top []Company360Route `json:"top"`
@@ -36739,7 +37028,7 @@ type Company360DealRole struct {
 // Company360Deals The account's open deals plus the two lifetime figures the header needs.
 type Company360Deals struct {
 	Data      []Company360Deal `json:"data"`
-	LostCount int              `json:"lost_count"`
+	LostCount int              `json:"lost_count" minimum:"0"`
 	Page      PageInfo         `json:"page"`
 
 	// WonLifetime Every won deal on this account, converted at each deal's frozen close-time rate. Never a live re-conversion.
@@ -36779,7 +37068,7 @@ type Company360Health struct {
 	Relationship *HealthDimension `json:"relationship,omitempty"`
 
 	// ReplyBalance Of the interactions in the strength window, the share that came from them. 0.5 is an even exchange; near 0 is us talking to ourselves. Null when nothing was captured.
-	ReplyBalance *float32 `json:"reply_balance,omitempty"`
+	ReplyBalance *float32 `json:"reply_balance,omitempty" maximum:"1" minimum:"0"`
 
 	// SingleThreaded The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
 	SingleThreaded *bool `json:"single_threaded,omitempty"`
@@ -36913,7 +37202,7 @@ type Company360SinceLastVisit struct {
 
 	// DealStageMoves Null when the caller has no deal read grant — not counted, as opposed to counted as zero.
 	DealStageMoves *int `json:"deal_stage_moves,omitempty"`
-	NewActivities  int  `json:"new_activities"`
+	NewActivities  int  `json:"new_activities" minimum:"0"`
 
 	// PendingProposals Null when the caller cannot triage approvals (an agent principal) — not
 	// counted, as opposed to counted as zero. Exact: every pending proposal on this
@@ -36938,27 +37227,27 @@ type Company360StateStrip struct {
 		BaseCurrency *string `json:"base_currency,omitempty"`
 
 		// ConvertedCount How many of `priced_count` needed a currency conversion to enter the sum — the rest were already in the base. Zero means the total is a same-currency sum and no rate stands behind it.
-		ConvertedCount int `json:"converted_count"`
+		ConvertedCount int `json:"converted_count" minimum:"0"`
 
 		// FxAsOf The OLDEST rate date among the converted deals. An open deal has frozen no rate — that happens on close — so each converts at the latest rate stored on or before this read's day, and an installation does not hold every currency's rate for every day: the dates behind one total can differ, and this is the furthest back any part of the figure reaches. §4.2 forbids a cross-currency sum without an explicit conversion source and as-of date, and this is that date. Null when nothing needed converting.
 		FxAsOf *openapi_types.Date `json:"fx_as_of,omitempty"`
 
 		// NextCloseOn The nearest expected close date among the open deals; null when none names one.
 		NextCloseOn *openapi_types.Date `json:"next_close_on,omitempty"`
-		OpenCount   int                 `json:"open_count"`
+		OpenCount   int                 `json:"open_count" minimum:"0"`
 
 		// OpenPipelineMinorBase The open pipeline in the workspace's base currency, integer minor units. Null when NO open deal carries a figure that can be converted — distinct from zero, which would claim a priced pipeline worth nothing.
 		OpenPipelineMinorBase *int `json:"open_pipeline_minor_base,omitempty"`
 
 		// PricedCount How many of `open_count` contributed to the sum. A deal with no amount, and one whose currency has no conversion rate on its date, both contribute nothing — so a total below `open_count` covers PART of the pipeline, and the page says so rather than showing a figure that is quietly short (plan §4.2: never a cross-currency sum without its conversion source).
-		PricedCount  int `json:"priced_count"`
-		StalledCount int `json:"stalled_count"`
+		PricedCount  int `json:"priced_count" minimum:"0"`
+		StalledCount int `json:"stalled_count" minimum:"0"`
 	} `json:"commercial,omitempty"`
 
 	// Contracts What this account is under contract for. Null when the caller has no contract grant — gated independently of `commercial` above, because a role may read the pipeline and not the agreements behind it, and a zero would answer a question this reader has no standing to ask.
 	Contracts *struct {
 		// ActiveCount How many agreements are under contract today (CONTRACT-FORM-1) — the derived reading, not a status count.
-		ActiveCount int `json:"active_count"`
+		ActiveCount int `json:"active_count" minimum:"0"`
 
 		// AnnualizedValueMinorBase The summed value of the active agreements recorded as ANNUALIZED, kept apart from the total-basis figure above and NEVER added to it (ADR-0109 §5). A three-year total and a per-year figure span different periods, so one number covering both would describe nothing. A surface holding both shows both.
 		AnnualizedValueMinorBase *int `json:"annualized_value_minor_base,omitempty"`
@@ -36976,7 +37265,7 @@ type Company360StateStrip struct {
 		NearestRenewalOn *openapi_types.Date `json:"nearest_renewal_on,omitempty"`
 
 		// PricedCount How many of `active_count` contributed to either sum. A lower number means the figures cover part of the account, and the page says so.
-		PricedCount *int `json:"priced_count,omitempty"`
+		PricedCount *int `json:"priced_count,omitempty" minimum:"0"`
 
 		// TotalBasisValueMinorBase The summed value of the active agreements recorded as a TOTAL, in base-currency minor units. Null when none carries a convertible figure — distinct from zero, which would claim agreements worth nothing.
 		TotalBasisValueMinorBase *int `json:"total_basis_value_minor_base,omitempty"`
@@ -37455,7 +37744,7 @@ type CompanyContextCapabilitiesRollout string
 // CompanyContextItem defines model for CompanyContextItem.
 type CompanyContextItem struct {
 	CapturedBy *string                  `json:"captured_by,omitempty"`
-	Confidence *float32                 `json:"confidence,omitempty"`
+	Confidence *float32                 `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 	Key        string                   `json:"key"`
 	Source     CompanyContextItemSource `json:"source"`
 	SourceUrl  *string                  `json:"source_url,omitempty"`
@@ -37622,7 +37911,7 @@ type CompanyCoverageSeat struct {
 	// changed while the page was open, and the write that lost would leave no
 	// trace — the point of the conditional write is that the second one is
 	// refused rather than silently winning.
-	RelationshipVersion *int64 `json:"relationship_version,omitempty"`
+	RelationshipVersion *int64 `json:"relationship_version,omitempty" minimum:"1"`
 	Role                string `json:"role"`
 
 	// Routes Who on our side can actually reach this contact, strongest first (ADR-0089).
@@ -37788,14 +38077,14 @@ type CompanyEmailDraft struct {
 	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
 
 	// VoiceProfileVersion The Voice DNA profile version that styled this draft; null when no ready profile shaped it.
-	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
+	VoiceProfileVersion *int `json:"voice_profile_version,omitempty" minimum:"1"`
 }
 
 // CompanyFact defines model for CompanyFact.
 type CompanyFact struct {
 	CapturedBy      *string             `json:"captured_by,omitempty"`
 	Category        CompanyFactCategory `json:"category"`
-	Confidence      *float32            `json:"confidence,omitempty"`
+	Confidence      *float32            `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 	EvidenceSnippet *string             `json:"evidence_snippet,omitempty"`
 	Field           CompanyFactField    `json:"field"`
 
@@ -37924,7 +38213,7 @@ type CompanyGraph struct {
 	// DroppedCount How many nodes the per-group caps left out, summed across the groups that were
 	// read. Zero means the graph is the whole one-hop neighbourhood this caller can
 	// see; anything else means the card is showing a deterministic top slice.
-	DroppedCount int                `json:"dropped_count"`
+	DroppedCount int                `json:"dropped_count" minimum:"0"`
 	Edges        []CompanyGraphEdge `json:"edges"`
 
 	// GroupsOmitted The groups withheld for lack of a grant — so a client can say "you can't see
@@ -38021,7 +38310,7 @@ type CompanyGraphEdge struct {
 	//
 	// Null also when the colleague and contact have no qualifying interaction in the
 	// scoring window, which is not the same as a zero — see `strength_bucket`.
-	Strength *int `json:"strength,omitempty"`
+	Strength *int `json:"strength,omitempty" maximum:"100" minimum:"0"`
 
 	// StrengthBucket The display band for `strength`, so a surface renders the same words everywhere.
 	// `none` means no qualifying interaction at all and is shown as "no signal yet",
@@ -38108,7 +38397,7 @@ type CompanyGraphNode struct {
 	// Strength The contact's §4 relationship strength, for weighting the node. Null for an
 	// company, a deal or a user, none of which have a relationship of their own,
 	// and for a contact whose strength this caller's contact scope did not resolve.
-	Strength *int `json:"strength,omitempty"`
+	Strength *int `json:"strength,omitempty" maximum:"100" minimum:"0"`
 
 	// StrengthBucket The server's band for `strength` — the same vocabulary `RelationshipStrength.bucket` uses. Never re-derived from the score by a client.
 	StrengthBucket *CompanyGraphNodeStrengthBucket `json:"strength_bucket,omitempty"`
@@ -38289,7 +38578,7 @@ type CompanyLinkedInReachColleague struct {
 	// Connections How many of their connections work at this account. At least one, because a
 	// colleague with none is not listed. Never a list of who those connections
 	// are: they are third parties who never consented to appearing in this CRM.
-	Connections int `json:"connections"`
+	Connections int `json:"connections" minimum:"1"`
 
 	// DisplayName The colleague to ask.
 	DisplayName string `json:"display_name"`
@@ -38413,7 +38702,7 @@ type CompanyProfile struct {
 // CompanyProfileField defines model for CompanyProfileField.
 type CompanyProfileField struct {
 	CapturedBy      *string                  `json:"captured_by,omitempty"`
-	Confidence      *float32                 `json:"confidence,omitempty"`
+	Confidence      *float32                 `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 	EvidenceSnippet *string                  `json:"evidence_snippet,omitempty"`
 	Field           CompanyProfileFieldField `json:"field"`
 
@@ -38563,7 +38852,7 @@ type CompanyScan struct {
 	Findings []Company360Suggestion `json:"findings"`
 
 	// FindingsDropped How many of this reader's undismissed findings the cap left out.
-	FindingsDropped int `json:"findings_dropped"`
+	FindingsDropped int `json:"findings_dropped" minimum:"0"`
 
 	// GeneratedAt When the stored findings were written. Null until a read has settled.
 	GeneratedAt *time.Time `json:"generated_at,omitempty"`
@@ -38575,11 +38864,11 @@ type CompanyScan struct {
 	// last 180 days and 3 open deals" rather than "done". Null until a read has settled.
 	Read *struct {
 		// Deals The account's open deals the read took in.
-		Deals     int `json:"deals"`
-		Exchanges int `json:"exchanges"`
+		Deals     int `json:"deals" minimum:"0"`
+		Exchanges int `json:"exchanges" minimum:"0"`
 
 		// WindowDays How many days back an exchange was read; older ones were not.
-		WindowDays int `json:"window_days"`
+		WindowDays int `json:"window_days" minimum:"1"`
 	} `json:"read,omitempty"`
 
 	// ResumesAt When a read the AI budget deferred will try again. Null unless the scan is in
@@ -38641,7 +38930,7 @@ type CompanySiteRead struct {
 
 	// DeferralReason Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.
 	DeferralReason *string               `json:"deferral_reason,omitempty"`
-	DraftVersion   int                   `json:"draft_version"`
+	DraftVersion   int                   `json:"draft_version" minimum:"1"`
 	Facts          []CompanySiteReadFact `json:"facts"`
 	Id             openapi_types.UUID    `json:"id"`
 
@@ -38661,7 +38950,7 @@ type CompanySiteRead struct {
 	LogoUrl       *string               `json:"logo_url,omitempty"`
 	NextAttemptAt *time.Time            `json:"next_attempt_at"`
 	Pages         []CompanySiteReadPage `json:"pages"`
-	PagesRead     *int                  `json:"pages_read,omitempty"`
+	PagesRead     *int                  `json:"pages_read,omitempty" minimum:"0"`
 	Phase         *CompanySiteReadPhase `json:"phase,omitempty"`
 	ProfileFields []ColdStartField      `json:"profile_fields"`
 	ProposalHash  string                `json:"proposal_hash"`
@@ -38750,7 +39039,7 @@ type CompanySiteReadConversationTurnRole string
 // CompanySiteReadFact defines model for CompanySiteReadFact.
 type CompanySiteReadFact struct {
 	Category        CompanySiteReadFactCategory `json:"category"`
-	Confidence      float32                     `json:"confidence"`
+	Confidence      float32                     `json:"confidence" maximum:"1" minimum:"0"`
 	EvidenceSnippet string                      `json:"evidence_snippet"`
 	EvidenceUrl     string                      `json:"evidence_url"`
 	Field           CompanySiteReadFactField    `json:"field"`
@@ -38848,7 +39137,7 @@ type CompanyStrength struct {
 	ComputedAt *time.Time `json:"computed_at,omitempty"`
 
 	// ContactCount How many current contacts of this account the caller can see and the score was chosen from.
-	ContactCount int `json:"contact_count"`
+	ContactCount int `json:"contact_count" minimum:"0"`
 
 	// ContributingActivities The same receipts, named. In the order they were counted, and omitting an id this reader cannot discover at all — so the list can be SHORTER than `contributing_activity_ids`, which stays the count. A number that shrank to what one reader may open would tell two readers different things about one score.
 	ContributingActivities *[]ActivityReference `json:"contributing_activities,omitempty"`
@@ -38863,14 +39152,14 @@ type CompanyStrength struct {
 
 	// Factors The 0..1 sub-scores the composite was built from (the explanation).
 	Factors struct {
-		Direction   float32 `json:"direction"`
-		Frequency   float32 `json:"frequency"`
-		Recency     float32 `json:"recency"`
-		Reciprocity float32 `json:"reciprocity"`
+		Direction   float32 `json:"direction" maximum:"1" minimum:"0"`
+		Frequency   float32 `json:"frequency" maximum:"1" minimum:"0"`
+		Recency     float32 `json:"recency" maximum:"1" minimum:"0"`
+		Reciprocity float32 `json:"reciprocity" maximum:"1" minimum:"0"`
 	} `json:"factors"`
 
 	// Inbound90d Count of qualifying inbound interactions in the trailing 90-day window.
-	Inbound90d *int `json:"inbound_90d,omitempty"`
+	Inbound90d *int `json:"inbound_90d,omitempty" minimum:"0"`
 
 	// LastEngaged The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
 	LastEngaged *time.Time `json:"last_engaged,omitempty"`
@@ -38879,10 +39168,10 @@ type CompanyStrength struct {
 	LastInteraction *time.Time `json:"last_interaction,omitempty"`
 
 	// Outbound90d Count of qualifying outbound interactions in the trailing 90-day window.
-	Outbound90d *int `json:"outbound_90d,omitempty"`
+	Outbound90d *int `json:"outbound_90d,omitempty" minimum:"0"`
 
 	// Score 0..100 composite.
-	Score int `json:"score"`
+	Score int `json:"score" maximum:"100" minimum:"0"`
 }
 
 // CompanyStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
@@ -39047,7 +39336,7 @@ type ConfigurationEntryRoles string
 
 // ConfirmCompanySiteReadRequest defines model for ConfirmCompanySiteReadRequest.
 type ConfirmCompanySiteReadRequest struct {
-	DraftVersion int `json:"draft_version"`
+	DraftVersion int `json:"draft_version" minimum:"1"`
 
 	// Profile The company form's body. New onboarding requires the semantic minimum: display_name,
 	// offer_summary and icp. The OpenAPI wire keeps only display_name structurally required so clients
@@ -39063,7 +39352,7 @@ type ConfirmCompanySiteReadRequest struct {
 	Resolutions *[]CompanySiteReadResolution `json:"resolutions,omitempty"`
 
 	// SelectedFactKeys The proposed facts to keep, exactly as the read stated them. A fact the reader wants to correct is left out of this list and sent as a use_value resolution instead.
-	SelectedFactKeys []string `json:"selected_fact_keys"`
+	SelectedFactKeys []string `json:"selected_fact_keys" unique:"items"`
 }
 
 // ConfirmFieldOrigin One line of where a held value came from, for the Art. 14 disclosure on the confirm page.
@@ -39198,8 +39487,8 @@ type ConnectConnectorRequest struct {
 		Mailbox *string `json:"mailbox,omitempty"`
 
 		// MaxMessages Upper bound on messages pulled per sync, and on the bounded recent window a first sync re-anchors with.
-		MaxMessages *int `json:"max_messages,omitempty"`
-		Port        *int `json:"port,omitempty"`
+		MaxMessages *int `json:"max_messages,omitempty" maximum:"200" minimum:"1"`
+		Port        *int `json:"port,omitempty" maximum:"65535" minimum:"1"`
 
 		// Secret Password or app-specific password. Sealed to the vault; never returned.
 		Secret *string `json:"secret,omitempty"`
@@ -39516,7 +39805,10 @@ type Contact struct {
 
 	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
 	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
-	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// Author Who created this contact in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
@@ -39602,7 +39894,7 @@ type Contact struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
 	Visibility *ContactVisibility `json:"visibility,omitempty"`
@@ -39861,7 +40153,7 @@ type Contact360Employment struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // Contact360EmploymentEmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
@@ -39896,7 +40188,7 @@ type Contact360NextMeeting struct {
 type Contact360SinceLastVisit struct {
 	// BaselineAt The caller's last acknowledged visit, or null if they have never acknowledged one (first visit — counts run from the contact's whole history).
 	BaselineAt    *time.Time `json:"baseline_at,omitempty"`
-	NewActivities int        `json:"new_activities"`
+	NewActivities int        `json:"new_activities" minimum:"0"`
 }
 
 // ContactBrief A written brief over one contact, assembled from what the READER can see — the company
@@ -39945,7 +40237,7 @@ type ContactCase struct {
 	CanMerge bool `json:"can_merge"`
 
 	// Confidence The strongest open pair in the case.
-	Confidence float32             `json:"confidence"`
+	Confidence float32             `json:"confidence" maximum:"1" minimum:"0"`
 	Edges      []ContactCaseEdge   `json:"edges"`
 	Members    []ContactCaseMember `json:"members"`
 
@@ -39987,7 +40279,7 @@ type ContactCaseStatus string
 // ContactCaseDecisionRequest defines model for ContactCaseDecisionRequest.
 type ContactCaseDecisionRequest struct {
 	// MemberIds The members the reviewer says are duplicates of one another. They must be connected by open pairs, and no two of them may carry a `not_a_duplicate` pair.
-	MemberIds []openapi_types.UUID `json:"member_ids"`
+	MemberIds []openapi_types.UUID `json:"member_ids" unique:"items"`
 
 	// OwnerId Who owns the remaining contact: the live owner of one of the selected members.
 	OwnerId openapi_types.UUID `json:"owner_id"`
@@ -40013,7 +40305,7 @@ type ContactCaseEdge struct {
 	CanMerge bool `json:"can_merge"`
 
 	// Confidence A weight that ranks pairs, not the chance that the two are the same contact. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised.
-	Confidence float32          `json:"confidence"`
+	Confidence float32          `json:"confidence" maximum:"1" minimum:"0"`
 	Evidence   []DedupeEvidence `json:"evidence"`
 
 	// KeepId Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
@@ -40625,7 +40917,7 @@ type ContactNetwork struct {
 
 	// CaptureGapsTotal How many colleagues meet the `capture_gaps` condition in all. When it is larger
 	// than the length of `capture_gaps`, the list names only the most recent of them.
-	CaptureGapsTotal int                       `json:"capture_gaps_total"`
+	CaptureGapsTotal int                       `json:"capture_gaps_total" minimum:"0"`
 	Colleagues       []ContactNetworkColleague `json:"colleagues"`
 	ContactId        openapi_types.UUID        `json:"contact_id"`
 }
@@ -40635,8 +40927,8 @@ type ContactNetworkColleague struct {
 	DisplayName string `json:"display_name"`
 
 	// Inbound90d Interactions in the last 90 days where they wrote to this colleague.
-	Inbound90d      *int       `json:"inbound_90d,omitempty"`
-	Interactions90d int        `json:"interactions_90d"`
+	Inbound90d      *int       `json:"inbound_90d,omitempty" minimum:"0"`
+	Interactions90d int        `json:"interactions_90d" minimum:"0"`
 	LastAt          *time.Time `json:"last_at,omitempty"`
 
 	// LastInboundAt When they last replied to this colleague. Null means they never have.
@@ -40646,13 +40938,13 @@ type ContactNetworkColleague struct {
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
 
 	// Outbound90d Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent.
-	Outbound90d *int `json:"outbound_90d,omitempty"`
+	Outbound90d *int `json:"outbound_90d,omitempty" minimum:"0"`
 
 	// Sent90d Messages in the last 90 days this colleague sent to the contact as the sender (participant role `from`). Being copied on a colleague's mail does not count, so it can be lower than outbound_90d.
-	Sent90d *int `json:"sent_90d,omitempty"`
+	Sent90d *int `json:"sent_90d,omitempty" minimum:"0"`
 
 	// Strength PO-F-3b, computed at read; null when the band is `none`.
-	Strength       *int                                  `json:"strength,omitempty"`
+	Strength       *int                                  `json:"strength,omitempty" maximum:"100" minimum:"0"`
 	StrengthBucket ContactNetworkColleagueStrengthBucket `json:"strength_bucket"`
 
 	// TwoWay Whether both sides have written within the relationship window, decided by the shared direction rule.
@@ -40723,7 +41015,7 @@ type ContactProfileField struct {
 
 	// ClaimKey The stable identity of this field as a claim. Pass it to `POST /ai/feedback` as `claim_path` to correct or confirm the value — keyed on WHICH field, so the verdict survives the value being re-derived.
 	ClaimKey   *string  `json:"claim_key,omitempty"`
-	Confidence *float32 `json:"confidence,omitempty"`
+	Confidence *float32 `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 
 	// EvidenceSnippet The verbatim source text the value was read from, so the reader can check the claim against its own source.
 	EvidenceSnippet string                   `json:"evidence_snippet"`
@@ -40818,7 +41110,7 @@ type ContactProviderJobHistory struct {
 
 // ContactProviderPhone defines model for ContactProviderPhone.
 type ContactProviderPhone struct {
-	Confidence *float32 `json:"confidence,omitempty"`
+	Confidence *float32 `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 	Value      string   `json:"value"`
 }
 
@@ -40831,11 +41123,11 @@ type ContactProviderProfile struct {
 	Attributes *[]ContactProviderAttribute `json:"attributes,omitempty"`
 
 	// CategoriesAsked What the latest run actually PUT TO the provider. Usually every requested category, but not always: a fallback fires only when the category it follows comes back empty, and a category with a prerequisite is skipped when that prerequisite found nothing — Surfe asks for no mobile number when it found no email. Neither was sent, so neither is a question the provider declined to answer, and counting them would report a lookup nobody made. This is the honest denominator for "how much of what we asked came back".
-	CategoriesAsked        *[]string `json:"categories_asked,omitempty"`
-	CategoriesNotRequested []string  `json:"categories_not_requested"`
+	CategoriesAsked        *[]string `json:"categories_asked,omitempty" unique:"items"`
+	CategoriesNotRequested []string  `json:"categories_not_requested" unique:"items"`
 
 	// CategoriesWithoutAnswer What the latest run ASKED FOR and the provider returned nothing for. The counterpart to `categories_not_requested`, and a different fact: that list is "nobody bought it", this one is "we paid to ask and they had none". Without it a run that answered one category out of six renders as a success with five silently blank fields, and the reader cannot tell an empty purchase from a full one. Empty when every requested category came back with something.
-	CategoriesWithoutAnswer *[]string `json:"categories_without_answer,omitempty"`
+	CategoriesWithoutAnswer *[]string `json:"categories_without_answer,omitempty" unique:"items"`
 	City                    *string   `json:"city,omitempty"`
 
 	// ContributingRuns Every retained completed run whose claims contribute to this snapshot. Normally the
@@ -40923,7 +41215,7 @@ type ContactResearchClaim struct {
 	Confidence ContactResearchClaimConfidence `json:"confidence"`
 
 	// Ordinal The claim's number in the drawer, so a conversation angle can cite "Claim 3".
-	Ordinal int                     `json:"ordinal"`
+	Ordinal int                     `json:"ordinal" minimum:"1"`
 	Sources []ContactResearchSource `json:"sources"`
 }
 
@@ -40941,7 +41233,7 @@ type ContactResearchRun struct {
 	ProviderName *string `json:"provider_name,omitempty"`
 
 	// SourcesRead How many documents the provider consulted — a different question from how many claims it made, and a surface showing one as both would overstate the work.
-	SourcesRead *int `json:"sources_read,omitempty"`
+	SourcesRead *int `json:"sources_read,omitempty" minimum:"0"`
 
 	// State `not_connected` — no provider is configured, and nothing was asked. `ready` — the provider answered. The two are different facts and a surface must not render an unconfigured installation as a provider that found nothing.
 	State ContactResearchRunState `json:"state"`
@@ -41063,10 +41355,10 @@ type Contract struct {
 	MaskedFields *[]string `json:"masked_fields,omitempty"`
 
 	// NoticePeriodDays Drives the renewal warning, which fires against the notice deadline rather than the renewal date (CONTRACT-FORM-3).
-	NoticePeriodDays *int `json:"notice_period_days,omitempty"`
+	NoticePeriodDays *int `json:"notice_period_days,omitempty" minimum:"0"`
 
 	// PaymentTermDays How many days the customer has to pay. Zero is a real value and means due on receipt; absent means nobody has recorded terms, which is not the same thing.
-	PaymentTermDays *int `json:"payment_term_days,omitempty"`
+	PaymentTermDays *int `json:"payment_term_days,omitempty" minimum:"0"`
 
 	// ProjectId The delivery this agreement funds, when one is attached. Null for no project and for a project the reader may not open; `masked_fields` names it only in the second case.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
@@ -41271,7 +41563,7 @@ type ConversationClaimKind string
 // slot, so the card never blanks.
 type ConversationMemoryEntry struct {
 	// ActivityCount How many captured activities this entry folds, so the reader knows whether it is one message or a long exchange.
-	ActivityCount int                            `json:"activity_count"`
+	ActivityCount int                            `json:"activity_count" minimum:"1"`
 	Channel       ConversationMemoryEntryChannel `json:"channel"`
 
 	// ChannelProvider Which transport carried the thread — non-null exactly when `channel=message`
@@ -41549,7 +41841,7 @@ type CreateConsentPurposeRequest struct {
 // CreateContactEnrichmentRunRequest defines model for CreateContactEnrichmentRunRequest.
 type CreateContactEnrichmentRunRequest struct {
 	// Categories Narrow this ONE run to a subset of what the connection buys — how a reader purchases a single priced detail for one contact without changing the setting for every future run. Omit for the connection's own selection. It can only narrow: a category the connection does not carry is refused with 422 rather than trimmed, because buying less than was asked for while answering as though nothing was wrong is a failure the caller cannot see, and an admin's selection is a ceiling a rep must not be able to raise.
-	Categories *[]string `json:"categories,omitempty"`
+	Categories *[]string `json:"categories,omitempty" unique:"items"`
 
 	// Provider A licensed data provider registered in THIS installation; the domain/run contract
 	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
@@ -41613,8 +41905,8 @@ type CreateContractRequest struct {
 	Currency             *string                          `json:"currency,omitempty"`
 	DealId               *openapi_types.UUID              `json:"deal_id,omitempty"`
 	EndsOn               *openapi_types.Date              `json:"ends_on,omitempty"`
-	NoticePeriodDays     *int                             `json:"notice_period_days,omitempty"`
-	PaymentTermDays      *int                             `json:"payment_term_days,omitempty"`
+	NoticePeriodDays     *int                             `json:"notice_period_days,omitempty" minimum:"0"`
+	PaymentTermDays      *int                             `json:"payment_term_days,omitempty" minimum:"0"`
 	ProjectId            *openapi_types.UUID              `json:"project_id,omitempty"`
 	RenewalOn            *openapi_types.Date              `json:"renewal_on,omitempty"`
 	SignedOn             *openapi_types.Date              `json:"signed_on,omitempty"`
@@ -41681,7 +41973,7 @@ type CreateDealRequest struct {
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
 
 	// AmountMinor The deal's one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.
-	AmountMinor *int64 `json:"amount_minor,omitempty"`
+	AmountMinor *int64 `json:"amount_minor,omitempty" minimum:"0"`
 
 	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 	CommercialMotion *CreateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
@@ -42140,7 +42432,7 @@ type CreatePipelineStage struct {
 	// Position Omitted or 0, the stage takes its place in the list (1-based).
 	Position       *int                         `json:"position,omitempty"`
 	Semantic       *CreatePipelineStageSemantic `json:"semantic,omitempty"`
-	WinProbability *int                         `json:"win_probability,omitempty"`
+	WinProbability *int                         `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 }
 
 // CreatePipelineStageSemantic defines model for CreatePipelineStage.Semantic.
@@ -42162,7 +42454,7 @@ type CreateProductRequest struct {
 	Currency      string                             `json:"currency"`
 
 	// DefaultTaxRate Percent; defaults to 0.
-	DefaultTaxRate *float64 `json:"default_tax_rate,omitempty"`
+	DefaultTaxRate *float64 `json:"default_tax_rate,omitempty" minimum:"0"`
 	Description    *string  `json:"description,omitempty"`
 	Name           string   `json:"name"`
 	Sku            *string  `json:"sku,omitempty"`
@@ -42173,7 +42465,7 @@ type CreateProductRequest struct {
 
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
 	Unit           *string `json:"unit,omitempty"`
-	UnitPriceMinor int64   `json:"unit_price_minor"`
+	UnitPriceMinor int64   `json:"unit_price_minor" minimum:"0"`
 }
 
 // CreateProductRequestBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -42315,7 +42607,7 @@ type CreateRetentionPolicyRequest struct {
 	Action      RetentionAction `json:"action"`
 	Enabled     *bool           `json:"enabled,omitempty"`
 	LawfulBasis *string         `json:"lawful_basis,omitempty"`
-	RetainDays  int             `json:"retain_days"`
+	RetainDays  int             `json:"retain_days" minimum:"1"`
 
 	// Scope An authorable retention scope (GCS-PARAM-8) — a `(object_type, category)` pair the nightly
 	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
@@ -42393,7 +42685,7 @@ type CreateStageRequest struct {
 	PipelineId     openapi_types.UUID          `json:"pipeline_id"`
 	Position       int                         `json:"position"`
 	Semantic       *CreateStageRequestSemantic `json:"semantic,omitempty"`
-	WinProbability *int                        `json:"win_probability,omitempty"`
+	WinProbability *int                        `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 }
 
 // CreateStageRequestSemantic defines model for CreateStageRequest.Semantic.
@@ -42503,7 +42795,7 @@ type CreateWebhookSubscriptionRequest struct {
 	CustomHeaders *[]WebhookCustomHeaderInput `json:"custom_headers,omitempty"`
 
 	// EventTypes At least one event type from the published catalog; a true set — duplicates are rejected.
-	EventTypes []string `json:"event_types"`
+	EventTypes []string `json:"event_types" unique:"items"`
 
 	// TargetUrl HTTPS-only; http:// is rejected (the contract enforces the scheme, matching the store's check).
 	TargetUrl string `json:"target_url"`
@@ -42575,7 +42867,7 @@ type CustomField struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // CustomFieldActivityKinds defines model for CustomField.ActivityKinds.
@@ -42692,7 +42984,7 @@ type DataTaskControl struct {
 	Action  DataTaskControlAction `json:"action"`
 	Step    string                `json:"step"`
 	TaskId  string                `json:"task_id"`
-	Version int64                 `json:"version"`
+	Version int64                 `json:"version" minimum:"1"`
 }
 
 // DataTaskControlAction defines model for DataTaskControl.Action.
@@ -42701,16 +42993,16 @@ type DataTaskControlAction string
 // DataTaskProgress defines model for DataTaskProgress.
 type DataTaskProgress struct {
 	BatchLimit          int                            `json:"batch_limit"`
-	Batches             int64                          `json:"batches"`
+	Batches             int64                          `json:"batches" minimum:"0"`
 	BlockedBy           *string                        `json:"blocked_by,omitempty"`
 	BlockedReason       *DataTaskProgressBlockedReason `json:"blocked_reason,omitempty"`
-	Changed             int64                          `json:"changed"`
-	ConsecutiveFailures int                            `json:"consecutive_failures"`
+	Changed             int64                          `json:"changed" minimum:"0"`
+	ConsecutiveFailures int                            `json:"consecutive_failures" minimum:"0"`
 	ErrorRemedy         *string                        `json:"error_remedy,omitempty"`
 	ErrorSentence       *string                        `json:"error_sentence,omitempty"`
 
 	// Estimate Bounded count of rows to inspect; absent means unknown, not zero.
-	Estimate             *int64                      `json:"estimate,omitempty"`
+	Estimate             *int64                      `json:"estimate,omitempty" minimum:"0"`
 	EstimateCapped       bool                        `json:"estimate_capped"`
 	EstimatedAt          *time.Time                  `json:"estimated_at,omitempty"`
 	FirstRelease         *string                     `json:"first_release,omitempty"`
@@ -42720,13 +43012,13 @@ type DataTaskProgress struct {
 	NextAttemptAt        *time.Time                  `json:"next_attempt_at,omitempty"`
 	ReviewKind           *DataTaskProgressReviewKind `json:"review_kind,omitempty"`
 	RunId                *openapi_types.UUID         `json:"run_id,omitempty"`
-	Scanned              int64                       `json:"scanned"`
+	Scanned              int64                       `json:"scanned" minimum:"0"`
 	Status               DataTaskProgressStatus      `json:"status"`
 	Step                 string                      `json:"step"`
 	TaskId               string                      `json:"task_id"`
 	TaskVersion          int                         `json:"task_version"`
 	Title                string                      `json:"title"`
-	Version              int64                       `json:"version"`
+	Version              int64                       `json:"version" minimum:"0"`
 }
 
 // DataTaskProgressBlockedReason defines model for DataTaskProgress.BlockedReason.
@@ -42848,7 +43140,7 @@ type Deal struct {
 	StageId *openapi_types.UUID `json:"stage_id"`
 
 	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
-	StageWinProbability *int `json:"stage_win_probability,omitempty"`
+	StageWinProbability *int `json:"stage_win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
@@ -42860,13 +43152,13 @@ type Deal struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
 	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
-	WinProbability *int `json:"win_probability,omitempty"`
+	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
 	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
@@ -43008,7 +43300,7 @@ type DealAdvanced struct {
 	StageId *openapi_types.UUID `json:"stage_id"`
 
 	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
-	StageWinProbability *int `json:"stage_win_probability,omitempty"`
+	StageWinProbability *int `json:"stage_win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool              `json:"stalled,omitempty"`
@@ -43020,13 +43312,13 @@ type DealAdvanced struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
 	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
-	WinProbability *int `json:"win_probability,omitempty"`
+	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
 	WinProbabilitySource *DealAdvancedWinProbabilitySource `json:"win_probability_source,omitempty"`
@@ -43149,7 +43441,7 @@ type DealCoverageRisk struct {
 	// other kind. It carries the number rather than a second `kind`, so the 30-day and
 	// 60-day no-touch views (REPORT-PARAM-2) are the same finding filtered — a deal at
 	// 61 days cannot appear on one surface and not the other.
-	DaysSinceTouch *int                  `json:"days_since_touch,omitempty"`
+	DaysSinceTouch *int                  `json:"days_since_touch,omitempty" minimum:"0"`
 	Kind           DealCoverageRiskKind  `json:"kind"`
 	Summary        string                `json:"summary"`
 	UserIds        *[]openapi_types.UUID `json:"user_ids,omitempty"`
@@ -43224,7 +43516,7 @@ type DealFollowUpDraftRequest struct {
 	IdempotencyKey *string `json:"idempotency_key,omitempty"`
 
 	// Limit How many of the worst deals to draft for. Omit it for 25, the most one call writes.
-	Limit *int `json:"limit,omitempty"`
+	Limit *int `json:"limit,omitempty" maximum:"25" minimum:"1"`
 
 	// Segment The deal set to draft for. Drafts land on each deal's timeline and are never sent.
 	Segment DealFollowUpDraftRequestSegment `json:"segment"`
@@ -43263,6 +43555,15 @@ type DealListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
+// DealMarginceChanges defines model for DealMarginceChanges.
+type DealMarginceChanges struct {
+	// Changes The deal's changes, newest first.
+	Changes []Receipt `json:"changes"`
+
+	// NextCursor Where the next page starts; absent on the last page.
+	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
 // DealNextBestActionEvidence defines model for DealNextBestActionEvidence.
 type DealNextBestActionEvidence struct {
 	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
@@ -43282,7 +43583,7 @@ type DealProbabilitySet struct {
 	// Note The same fact as one English sentence, for a model or a log. A web client writes its own from the two fields.
 	Note           string `json:"note"`
 	StageName      string `json:"stage_name"`
-	WinProbability int    `json:"win_probability"`
+	WinProbability int    `json:"win_probability" maximum:"100" minimum:"0"`
 }
 
 // DealProduct defines model for DealProduct.
@@ -43310,7 +43611,7 @@ type DealProductSource string
 // DealProductInput defines model for DealProductInput.
 type DealProductInput struct {
 	// AmountMinor The value allocated to the product in the currency of the deal. Omit to name the product without an amount.
-	AmountMinor *int64             `json:"amount_minor,omitempty"`
+	AmountMinor *int64             `json:"amount_minor,omitempty" minimum:"0"`
 	ProductId   openapi_types.UUID `json:"product_id"`
 }
 
@@ -43336,7 +43637,7 @@ type DealRoleProposalResult struct {
 	// front of the reader that dropping it removed. The number is here so an empty
 	// answer can tell "nothing was proposed" apart from "everything proposed was
 	// refused", which are different facts about the account.
-	Skipped int `json:"skipped"`
+	Skipped int `json:"skipped" minimum:"0"`
 
 	// Written The seats this read actually created, in the order it wrote them. Each is a
 	// real `deal_stakeholder` relationship carrying `ai_suggested`, so the committee
@@ -43346,7 +43647,7 @@ type DealRoleProposalResult struct {
 
 // DealRoleProposalWritten defines model for DealRoleProposalWritten.
 type DealRoleProposalWritten struct {
-	Confidence float32            `json:"confidence"`
+	Confidence float32            `json:"confidence" maximum:"1" minimum:"0"`
 	ContactId  openapi_types.UUID `json:"contact_id"`
 
 	// EvidenceSnippet The words this role was read out of, quoted verbatim from the contact's own
@@ -43407,7 +43708,7 @@ type DealRoom struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// WelcomeMessage The buyer's first paragraph on opening the room.
 	WelcomeMessage       *string                `json:"welcome_message,omitempty"`
@@ -43482,8 +43783,8 @@ type DealRoomCredentialRequest struct {
 // apart from access. A bounced invitation and a revoked one look identical
 // otherwise, and a seller chasing silence needs to tell them apart.
 //
-// `pending` was minted but not handed to a mail relay (the installation may have
-// none configured). `sent` left the building. `delivered` was accepted by the
+// `pending` was minted and the relay has not answered yet, or the installation
+// has no relay configured. `sent` left the building. `delivered` was accepted by the
 // recipient's server. `failed` bounced. `consumed` was exchanged for a session —
 // they are in. `superseded` was retired by a later resend. `none` means no
 // credential currently stands, which is what a revoked participant shows.
@@ -43526,7 +43827,7 @@ type DealRoomDocument struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version              *RowVersion            `json:"version,omitempty"`
+	Version              *RowVersion            `json:"version,omitempty" minimum:"1"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -43557,16 +43858,18 @@ type DealRoomInvitationIssued struct {
 	// no licence, holds no CRM authority, and their whole reach is this one room.
 	Participant DealRoomParticipant `json:"participant"`
 
-	// Queued Whether a mail relay accepted the invitation for sending. False when the
-	// installation has no outbound mail configured, or the relay refused it — the
-	// participant and the credential are recorded either way, and the caller is
-	// expected to pass the link on themselves rather than being told the
-	// invitation failed.
+	// Queued Whether the mail relay took the invitation. The answer waits for the relay
+	// for at most 10 seconds. False when the installation has no outbound mail
+	// configured, when the relay refused the mail, or when it did not answer in
+	// time; the send stops then too. The participant and the credential are
+	// recorded either way, and the caller is expected to pass the link on
+	// themselves rather than being told the invitation failed.
 	//
-	// Deliberately not `delivered`: a relay accepting a message is not a mailbox
-	// receiving it, and an address that hard-bounces a second later was `queued`
-	// all the same. The one attempt is stamped onto the invitation, which the
-	// roster reports; nothing revises it afterwards.
+	// The relay's answer is also stamped on the participant's `delivery_state`,
+	// as `sent` or `failed`, a moment after the answer. Deliberately not
+	// `delivered`: a relay accepting a message is not a mailbox receiving it, and
+	// an address that hard-bounces a second later was `sent` all the same. The
+	// one attempt is stamped onto the invitation; nothing revises it afterwards.
 	Queued bool `json:"queued"`
 }
 
@@ -43605,8 +43908,8 @@ type DealRoomParticipant struct {
 	// apart from access. A bounced invitation and a revoked one look identical
 	// otherwise, and a seller chasing silence needs to tell them apart.
 	//
-	// `pending` was minted but not handed to a mail relay (the installation may have
-	// none configured). `sent` left the building. `delivered` was accepted by the
+	// `pending` was minted and the relay has not answered yet, or the installation
+	// has no relay configured. `sent` left the building. `delivered` was accepted by the
 	// recipient's server. `failed` bounced. `consumed` was exchanged for a session —
 	// they are in. `superseded` was retired by a later resend. `none` means no
 	// credential currently stands, which is what a revoked participant shows.
@@ -43731,7 +44034,7 @@ type DealRoomThread struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // DealRoomThreadListResponse defines model for DealRoomThreadListResponse.
@@ -43867,7 +44170,7 @@ type DealSuggestion struct {
 	CloseDate   *openapi_types.Date `json:"close_date,omitempty"`
 	CompanyId   openapi_types.UUID  `json:"company_id"`
 	CompanyName string              `json:"company_name"`
-	Confidence  float32             `json:"confidence"`
+	Confidence  float32             `json:"confidence" maximum:"1" minimum:"0"`
 	CreatedAt   time.Time           `json:"created_at"`
 
 	// Currency Present when amount_minor is, and only then.
@@ -43875,7 +44178,7 @@ type DealSuggestion struct {
 	Evidence []DealSuggestionEvidence `json:"evidence"`
 	Id       openapi_types.UUID       `json:"id"`
 
-	// Kind Only open_deal is suggested today.
+	// Kind An open suggestion is open_deal. One Margince reopened a lost deal from is revive.
 	Kind DealSuggestionKind `json:"kind"`
 
 	// NameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
@@ -43890,7 +44193,7 @@ type DealSuggestion struct {
 	State   DealSuggestionState `json:"state"`
 }
 
-// DealSuggestionKind Only open_deal is suggested today.
+// DealSuggestionKind An open suggestion is open_deal. One Margince reopened a lost deal from is revive.
 type DealSuggestionKind string
 
 // DealSuggestionNameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
@@ -43901,7 +44204,7 @@ type DealSuggestionState string
 
 // DealSuggestionAcceptance defines model for DealSuggestionAcceptance.
 type DealSuggestionAcceptance struct {
-	AcknowledgedSignals int                `json:"acknowledged_signals"`
+	AcknowledgedSignals int                `json:"acknowledged_signals" minimum:"0"`
 	DealId              openapi_types.UUID `json:"deal_id"`
 
 	// Suggestion One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal.
@@ -44021,7 +44324,7 @@ type DedupeCandidate struct {
 	CanMerge bool `json:"can_merge"`
 
 	// Confidence The PO-F-1/PO-F-2 fuzzy score at detection.
-	Confidence float32             `json:"confidence"`
+	Confidence float32             `json:"confidence" maximum:"1" minimum:"0"`
 	CreatedAt  time.Time           `json:"created_at"`
 	DisposedAt *time.Time          `json:"disposed_at,omitempty"`
 	DisposedBy *openapi_types.UUID `json:"disposed_by,omitempty"`
@@ -44173,7 +44476,7 @@ type DismissRelationshipNudgeRequest struct {
 	// a moment, because the server owns "now" — a client computing an instant from a
 	// clock that is minutes out writes a dismissal that expires early or late for a
 	// reason nobody can see. Send `days` or `permanent: true`, not both.
-	Days *int `json:"days,omitempty"`
+	Days *int `json:"days,omitempty" maximum:"90" minimum:"1"`
 
 	// Permanent Stop following this contact for good, for this reader only. It has no end
 	// date; the reader resumes it with the DELETE verb. A colleague, or a later
@@ -44184,10 +44487,10 @@ type DismissRelationshipNudgeRequest struct {
 // DismissRelationshipNudgesRequest defines model for DismissRelationshipNudgesRequest.
 type DismissRelationshipNudgesRequest struct {
 	// ContactIds The contacts to set aside, as the Worklist listed them.
-	ContactIds []openapi_types.UUID `json:"contact_ids"`
+	ContactIds []openapi_types.UUID `json:"contact_ids" unique:"items"`
 
 	// Days How long they stay off the lane, counted from now. Send `days` or `permanent: true`, not both.
-	Days *int `json:"days,omitempty"`
+	Days *int `json:"days,omitempty" maximum:"90" minimum:"1"`
 
 	// Permanent Stop following them for good, for this reader only, until resumed one by one.
 	Permanent *bool `json:"permanent,omitempty"`
@@ -44231,7 +44534,7 @@ type DomainQuestionContact struct {
 // reader may not see is counted in `contact_count` and never named.
 type DomainQuestionContext struct {
 	// ContactCount How many contacts sent the mail behind the question, seen or not.
-	ContactCount int `json:"contact_count"`
+	ContactCount int `json:"contact_count" minimum:"0"`
 
 	// Contacts Up to three senders of the question's mail the reader may see, newest mail first.
 	Contacts []DomainQuestionContact `json:"contacts"`
@@ -44242,7 +44545,7 @@ type DomainQuestionContext struct {
 	// LinkedContactCount How many contacts the reader may see that confirming a company would employ there: every
 	// live contact with an address on the domain, less workspace seats and anyone who already
 	// holds a primary employment. Those keep the employer they have.
-	LinkedContactCount int `json:"linked_contact_count"`
+	LinkedContactCount int `json:"linked_contact_count" minimum:"0"`
 
 	// OriginActivityId The newest mail behind the question, which the reader may read.
 	OriginActivityId *openapi_types.UUID `json:"origin_activity_id,omitempty"`
@@ -44450,7 +44753,7 @@ type EmailDraft struct {
 	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
 
 	// VoiceProfileVersion The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.
-	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
+	VoiceProfileVersion *int `json:"voice_profile_version,omitempty" minimum:"1"`
 }
 
 // EmailParty One address on a message, resolved to a contact or a seat when it is one.
@@ -45138,6 +45441,29 @@ type FieldHistoryListResponse struct {
 	Page PageInfo            `json:"page"`
 }
 
+// FileChatCaptureRequest defines model for FileChatCaptureRequest.
+type FileChatCaptureRequest struct {
+	// Body The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone.
+	Body *string `json:"body,omitempty"`
+
+	// ChannelProvider The messaging app the chat happened in.
+	ChannelProvider ProviderRef `json:"channel_provider"`
+
+	// ConfirmOtherCounterparty The caller confirms the chat belongs on this contact although its header shows
+	// someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
+	// is refused with 409.
+	ConfirmOtherCounterparty *bool `json:"confirm_other_counterparty,omitempty"`
+
+	// ExtractionId The `chat_capture` reading the caller was shown.
+	ExtractionId openapi_types.UUID `json:"extraction_id"`
+}
+
+// FiledChatCapture defines model for FiledChatCapture.
+type FiledChatCapture struct {
+	// ActivityId The message activity the chat is filed as.
+	ActivityId openapi_types.UUID `json:"activity_id"`
+}
+
 // FilterPreview What a candidate filter would select for this caller (LVS-EXT-9).
 type FilterPreview struct {
 	// Columns The column order the rows below are keyed by, schema-derived and
@@ -45187,7 +45513,7 @@ type FilterPreviewRequest struct {
 
 	// Limit The page size. The COUNT is unaffected by this — it is the full match
 	// count for the caller on every page, not the size of the page.
-	Limit    *int                         `json:"limit,omitempty"`
+	Limit    *int                         `json:"limit,omitempty" maximum:"100" minimum:"1"`
 	Resource FilterPreviewRequestResource `json:"resource"`
 }
 
@@ -45499,7 +45825,7 @@ type FinanceSummaryState string
 // FollowUpSettings defines model for FollowUpSettings.
 type FollowUpSettings struct {
 	// FollowUpAfterDays Days a sent message may stay unanswered before its sender is reminded to follow up.
-	FollowUpAfterDays int `json:"follow_up_after_days"`
+	FollowUpAfterDays int `json:"follow_up_after_days" maximum:"30" minimum:"1"`
 
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
@@ -45605,13 +45931,13 @@ type ForecastCallScopeKind string
 // ForecastContribution One deal's part in the forecast: what it adds to each reading and the chance it is weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once.
 type ForecastContribution struct {
 	// AppliedProbability The chance in use with `effect` applied to its odds, in percent.
-	AppliedProbability int `json:"applied_probability"`
+	AppliedProbability int `json:"applied_probability" maximum:"100" minimum:"0"`
 
 	// BaseMinor The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
 	BaseMinor *int64 `json:"base_minor,omitempty"`
 
 	// ChanceInUse The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals.
-	ChanceInUse int                `json:"chance_in_use"`
+	ChanceInUse int                `json:"chance_in_use" maximum:"100" minimum:"0"`
 	DealId      openapi_types.UUID `json:"deal_id"`
 	DealName    string             `json:"deal_name"`
 
@@ -45619,7 +45945,7 @@ type ForecastContribution struct {
 	Effect *float64 `json:"effect,omitempty"`
 
 	// EvidenceN How many recorded deals that entered this stage in the last two years have closed. Absent while self-correction is off.
-	EvidenceN *int `json:"evidence_n,omitempty"`
+	EvidenceN *int `json:"evidence_n,omitempty" minimum:"0"`
 
 	// ExclusionReason Why a deal in the reading contributes no money.
 	ExclusionReason *ForecastContributionExclusionReason `json:"exclusion_reason,omitempty"`
@@ -45638,7 +45964,7 @@ type ForecastContribution struct {
 	StageId *openapi_types.UUID  `json:"stage_id,omitempty"`
 
 	// TypedProbability The deal's own probability where one is set, else the chance typed on its stage, in percent.
-	TypedProbability *int  `json:"typed_probability,omitempty"`
+	TypedProbability *int  `json:"typed_probability,omitempty" maximum:"100" minimum:"0"`
 	WeightedMinor    int64 `json:"weighted_minor"`
 }
 
@@ -45754,7 +46080,7 @@ type ForecastReadings struct {
 	Landing *ForecastLanding `json:"landing,omitempty"`
 
 	// LikelyThreshold The installation setting `forecast_likely_threshold` this read used.
-	LikelyThreshold int   `json:"likely_threshold"`
+	LikelyThreshold int   `json:"likely_threshold" maximum:"100" minimum:"1"`
 	OpenMinor       int64 `json:"open_minor"`
 
 	// PeriodEnd The last day INSIDE the period, not an exclusive bound.
@@ -45765,10 +46091,10 @@ type ForecastReadings struct {
 	PricedCount int `json:"priced_count"`
 
 	// RangeHighMinor The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
-	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
+	RangeHighMinor *int64 `json:"range_high_minor,omitempty" maximum:"9007199254740991" minimum:"0"`
 
 	// RangeLowMinor The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so at most one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
-	RangeLowMinor *int64 `json:"range_low_minor,omitempty"`
+	RangeLowMinor *int64 `json:"range_low_minor,omitempty" maximum:"9007199254740991" minimum:"0"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
 	ScopeHoldsDeals *bool               `json:"scope_holds_deals,omitempty"`
@@ -45806,10 +46132,10 @@ type ForecastReadingsScopeKind string
 // ForecastRiskSignal One risk signal and its facts. `close_pushed`: the close date moved more than twice in 90 days (`count`), and `close_passed` when that date is behind us. `no_next_step`: no open task or booked meeting, with `closes_in_days` when the close is 0 to 7 days away. `quiet`: the customer has said nothing past the viability threshold (`days` of silence). `stuck`: longer in the stage (`stage_id`) than nine in ten won deals stayed (`days` in it).
 type ForecastRiskSignal struct {
 	ClosePassed  *bool                  `json:"close_passed,omitempty"`
-	ClosesInDays *int                   `json:"closes_in_days,omitempty"`
+	ClosesInDays *int                   `json:"closes_in_days,omitempty" maximum:"7" minimum:"0"`
 	Code         ForecastRiskSignalCode `json:"code"`
-	Count        *int                   `json:"count,omitempty"`
-	Days         *int                   `json:"days,omitempty"`
+	Count        *int                   `json:"count,omitempty" minimum:"0"`
+	Days         *int                   `json:"days,omitempty" minimum:"0"`
 	StageId      *openapi_types.UUID    `json:"stage_id,omitempty"`
 }
 
@@ -45858,15 +46184,15 @@ type ForecastSourceTotal struct {
 
 // ForecastStageChance defines model for ForecastStageChance.
 type ForecastStageChance struct {
-	ChanceInUse int `json:"chance_in_use"`
+	ChanceInUse int `json:"chance_in_use" maximum:"100" minimum:"0"`
 
 	// EvidenceN Recorded entries into this stage that have closed won or lost.
-	EvidenceN        int                `json:"evidence_n"`
+	EvidenceN        int                `json:"evidence_n" minimum:"0"`
 	StageId          openapi_types.UUID `json:"stage_id"`
-	TypedProbability int                `json:"typed_probability"`
+	TypedProbability int                `json:"typed_probability" maximum:"100" minimum:"0"`
 
 	// WonPercent The estimated share of those deals that end won. Absent when none closed.
-	WonPercent *int `json:"won_percent,omitempty"`
+	WonPercent *int `json:"won_percent,omitempty" maximum:"100" minimum:"0"`
 }
 
 // ForecastStageChances defines model for ForecastStageChances.
@@ -45942,7 +46268,7 @@ type FxRate struct {
 type FxRateCurrencyListResponse struct {
 	// BaseCurrency The workspace's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with.
 	BaseCurrency string   `json:"base_currency"`
-	Data         []string `json:"data"`
+	Data         []string `json:"data" unique:"items"`
 }
 
 // FxRateListResponse defines model for FxRateListResponse.
@@ -45994,7 +46320,7 @@ type GrowthFitSubScore struct {
 	Reason string `json:"reason"`
 
 	// Score 0-100 for THIS dimension only. Never summed or averaged with the others (DOSS-AC-19) — the band is the verdict, and these are what it was read from.
-	Score int `json:"score"`
+	Score int `json:"score" maximum:"100" minimum:"0"`
 }
 
 // GrowthFitSubScoreDimension The four the assessment decomposes into. A closed enum rather than free text, so a surface can label and order them and a model cannot invent a fifth.
@@ -46038,14 +46364,17 @@ type HandledForYou struct {
 
 // HandoverCounts Live records per kind.
 type HandoverCounts struct {
-	Company int `json:"company"`
-	Contact int `json:"contact"`
-	Deal    int `json:"deal"`
-	Lead    int `json:"lead"`
-	Project int `json:"project"`
+	Company int `json:"company" minimum:"0"`
+	Contact int `json:"contact" minimum:"0"`
+	Deal    int `json:"deal" minimum:"0"`
+	Lead    int `json:"lead" minimum:"0"`
+	Project int `json:"project" minimum:"0"`
 
 	// Task Open tasks assigned to the member.
-	Task int `json:"task"`
+	Task int `json:"task" minimum:"0"`
+
+	// Webhook Live webhook subscriptions the member owns. Each delivers only while its owner is active.
+	Webhook int `json:"webhook" minimum:"0"`
 }
 
 // HealthAction defines model for HealthAction.
@@ -46123,7 +46452,7 @@ type HealthFinding struct {
 	Action          HealthAction           `json:"action"`
 	Code            string                 `json:"code"`
 	Condition       HealthFindingCondition `json:"condition"`
-	Count           *int                   `json:"count,omitempty"`
+	Count           *int                   `json:"count,omitempty" minimum:"0"`
 	FirstObservedAt *time.Time             `json:"first_observed_at,omitempty"`
 
 	// Id Stable identity of the source condition and affected scope.
@@ -46143,7 +46472,7 @@ type HealthFinding struct {
 	Scope          HealthFindingScope       `json:"scope"`
 	Source         string                   `json:"source"`
 	Unit           *HealthFindingUnit       `json:"unit,omitempty"`
-	Urgency        int                      `json:"urgency"`
+	Urgency        int                      `json:"urgency" maximum:"3" minimum:"0"`
 	WindowEnd      *time.Time               `json:"window_end,omitempty"`
 	WindowStart    *time.Time               `json:"window_start,omitempty"`
 }
@@ -46172,11 +46501,11 @@ type HealthSource struct {
 	// Code Safe presentation code, never raw failure text.
 	Code               string                `json:"code"`
 	Condition          HealthSourceCondition `json:"condition"`
-	Count              *int                  `json:"count,omitempty"`
-	ExpectationSeconds *int                  `json:"expectation_seconds,omitempty"`
+	Count              *int                  `json:"count,omitempty" minimum:"0"`
+	ExpectationSeconds *int                  `json:"expectation_seconds,omitempty" minimum:"0"`
 	Id                 string                `json:"id"`
 	ObservedAt         *time.Time            `json:"observed_at,omitempty"`
-	OldestWaitSeconds  *int                  `json:"oldest_wait_seconds,omitempty"`
+	OldestWaitSeconds  *int                  `json:"oldest_wait_seconds,omitempty" minimum:"0"`
 	Permission         string                `json:"permission"`
 	Scope              HealthSourceScope     `json:"scope"`
 	Unit               *HealthSourceUnit     `json:"unit,omitempty"`
@@ -46251,7 +46580,7 @@ type HeldThread struct {
 
 	// ParticipantCount How many addresses outside the workspace that message names, of which `participants`
 	// shows up to five. Absent when `participants` is.
-	ParticipantCount *int `json:"participant_count,omitempty"`
+	ParticipantCount *int `json:"participant_count,omitempty" minimum:"0"`
 
 	// Participants Up to five addresses outside the workspace on the message that opened the thread, so you
 	// can tell who a held thread is with. Colleagues are left out. Present exactly when
@@ -46322,20 +46651,20 @@ type HiddenBacklog struct {
 	// The domains are the vouched-for ones — those the company claims and those an
 	// administrator confirmed — never every domain a connected mailbox happened to
 	// see. A contractor's genuine account at a customer must not read as internal.
-	Colleagues int `json:"colleagues"`
+	Colleagues int `json:"colleagues" minimum:"0"`
 
 	// InformsUs Mail the classifier judged to ask nothing of us — a report, a receipt, a
 	// notification — hidden by this rule alone. A MODEL'S CHOICE, and watched for
 	// that reason: one model call's opinion about a customer's mail ends the
 	// obligation, so a wrong verdict has to show up somewhere a lead can see it. A
 	// request a human accepted is never hidden by it, whatever the verdict.
-	InformsUs int `json:"informs_us"`
+	InformsUs int `json:"informs_us" minimum:"0"`
 
 	// NotSales Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
 	// the judgement worth watching: it hides the thread from the WHOLE workspace and
 	// never lifts, so one rep's mistake removes a customer from everybody's day
 	// permanently.
-	NotSales int `json:"not_sales"`
+	NotSales int `json:"not_sales" minimum:"0"`
 
 	// PastHorizon Work older than the queue's horizon with no open deal behind it. NOBODY CHOSE
 	// THIS. A customer who wrote four months ago and was never answered is exactly
@@ -46345,7 +46674,7 @@ type HiddenBacklog struct {
 	// Bounded at a year: past that a message is history by any reading, and an
 	// unbounded scan would answer a different question at the cost of a full table
 	// read.
-	PastHorizon int `json:"past_horizon"`
+	PastHorizon int `json:"past_horizon" minimum:"0"`
 
 	// SetAside Work this reader has snoozed, marked `not_mine` or marked `handled`. THEIR OWN
 	// CHOICE, and the least alarming of the four: a snooze lifts on its own moment, so
@@ -46353,7 +46682,7 @@ type HiddenBacklog struct {
 	// names no moment, and lifts only when the reader picks the message back up or the
 	// record it is filed under changes hands. `handled` lifts only when the reader picks
 	// it back up.
-	SetAside int `json:"set_aside"`
+	SetAside int `json:"set_aside" minimum:"0"`
 
 	// Shown What the eligibility query FOUND under the rules as they stand. Here so the
 	// others read as a proportion rather than as bare volumes — three hidden against
@@ -46375,7 +46704,7 @@ type HiddenBacklog struct {
 	// The hidden figures are differences between runs of THIS query, so they
 	// are counted the same way and the proportions hold. It is the absolute figure
 	// that is a near neighbour of the page's own count rather than equal to it.
-	Shown int `json:"shown"`
+	Shown int `json:"shown" minimum:"0"`
 
 	// Truncated True when a read stopped at its own scan bound, which makes every figure above
 	// it a FLOOR rather than a count.
@@ -46395,7 +46724,7 @@ type HiddenBacklog struct {
 	// is right — a rep's dentist is not a customer — and it is also where a real
 	// customer lands when capture failed to link their thread. Its own figure for
 	// that reason rather than folded into a total.
-	Unlinked int `json:"unlinked"`
+	Unlinked int `json:"unlinked" minimum:"0"`
 }
 
 // HiddenBacklogRow One thread a hiding rule is keeping off the queue — enough to say what it is and
@@ -46462,18 +46791,18 @@ type HistoryEdgeOtherEntityType string
 
 // HomeRepairCounts defines model for HomeRepairCounts.
 type HomeRepairCounts struct {
-	Archive int `json:"archive"`
-	Keep    int `json:"keep"`
+	Archive int `json:"archive" minimum:"0"`
+	Keep    int `json:"keep" minimum:"0"`
 
 	// Normalize Pristine automatic tasks with a proved source reference or generated notification date to correct.
-	Normalize  *int `json:"normalize,omitempty"`
-	Reclassify int  `json:"reclassify"`
+	Normalize  *int `json:"normalize,omitempty" minimum:"0"`
+	Reclassify int  `json:"reclassify" minimum:"0"`
 
 	// Revalidate Older settled request verdicts the email-request settlement pass judges again.
-	Revalidate *int `json:"revalidate,omitempty"`
-	Review     int  `json:"review"`
-	Supersede  int  `json:"supersede"`
-	Withdraw   int  `json:"withdraw"`
+	Revalidate *int `json:"revalidate,omitempty" minimum:"0"`
+	Review     int  `json:"review" minimum:"0"`
+	Supersede  int  `json:"supersede" minimum:"0"`
+	Withdraw   int  `json:"withdraw" minimum:"0"`
 }
 
 // HomeRepairReview defines model for HomeRepairReview.
@@ -46481,7 +46810,7 @@ type HomeRepairReview struct {
 	AsOf   time.Time        `json:"as_of"`
 	Counts HomeRepairCounts `json:"counts"`
 	Digest string           `json:"digest"`
-	Limit  int              `json:"limit"`
+	Limit  int              `json:"limit" maximum:"1000" minimum:"0"`
 
 	// PreviewToken Reader-bound classification review token; expires after fifteen minutes and is consumed on activation.
 	PreviewToken *string `json:"preview_token,omitempty"`
@@ -46519,7 +46848,7 @@ type HomeRepairTaskSource string
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
 	// FillRate Non-empty values ÷ rows profiled. A column at 0.02 is usually a mapping mistake waiting to happen, and the number is the only way to see that before committing.
-	FillRate float32 `json:"fill_rate"`
+	FillRate float32 `json:"fill_rate" maximum:"1" minimum:"0"`
 
 	// Header The column name as the file spells it.
 	Header string `json:"header"`
@@ -46544,7 +46873,7 @@ type ImportFormat struct {
 	Order []ImportObject `json:"order"`
 
 	// SizeLimitMb The largest upload this installation accepts, in MB.
-	SizeLimitMb int                 `json:"size_limit_mb"`
+	SizeLimitMb int                 `json:"size_limit_mb" minimum:"0"`
 	Version     ImportFormatVersion `json:"version"`
 }
 
@@ -46756,8 +47085,8 @@ type ImportPartProfile struct {
 	Object ImportObject `json:"object"`
 
 	// RowCount Rows the file holds, as `ImportRun.parts[].row_count` counts them.
-	RowCount     int `json:"row_count"`
-	RowsProfiled int `json:"rows_profiled"`
+	RowCount     int `json:"row_count" minimum:"0"`
+	RowsProfiled int `json:"rows_profiled" minimum:"0"`
 
 	// SuggestedMappings One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file's type needs no second call.
 	SuggestedMappings map[string]map[string]string `json:"suggested_mappings"`
@@ -46766,10 +47095,10 @@ type ImportPartProfile struct {
 // ImportPartReport One file's slice of a run's report.
 type ImportPartReport struct {
 	// ClosedLost Deals of a deals file that land already lost, as closed history. Absent when none does.
-	ClosedLost *int `json:"closed_lost,omitempty"`
+	ClosedLost *int `json:"closed_lost,omitempty" minimum:"1"`
 
 	// ClosedWon Deals of a deals file that land already won, as closed history. Absent when none does.
-	ClosedWon *int `json:"closed_won,omitempty"`
+	ClosedWon *int `json:"closed_won,omitempty" minimum:"1"`
 
 	// Disposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
 	Disposition ImportRunDisposition `json:"disposition"`
@@ -46811,7 +47140,7 @@ type ImportPartReport struct {
 	// match — so a file of duplicates produces a review queue, not a silent
 	// merge.
 	Object   ImportObject `json:"object"`
-	RowsRead int          `json:"rows_read"`
+	RowsRead int          `json:"rows_read" minimum:"0"`
 }
 
 // ImportPartRequest One file of a ZIP run, with the type and mapping the human settled for it.
@@ -46888,7 +47217,7 @@ type ImportRowIssue struct {
 	Kind *ImportProblemKind `json:"kind,omitempty"`
 
 	// Line The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file.
-	Line *int `json:"line,omitempty"`
+	Line *int `json:"line,omitempty" minimum:"1"`
 
 	// Params The values the sentence of `reason_code` names, by name. Absent when the code names none, and for a report written before codes existed.
 	Params *map[string]string `json:"params,omitempty"`
@@ -46912,7 +47241,7 @@ type ImportRun struct {
 	CapturedBy *string `json:"captured_by,omitempty"`
 
 	// Checkpoint Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from.
-	Checkpoint int                `json:"checkpoint"`
+	Checkpoint int                `json:"checkpoint" minimum:"0"`
 	Connector  ImportRunConnector `json:"connector"`
 
 	// ContextTagId The tag every record this run creates is filed under, as the run was staged with it. Absent when the run names none.
@@ -46923,7 +47252,7 @@ type ImportRun struct {
 	DraftStep *ImportDraftStep `json:"draft_step,omitempty"`
 
 	// ElapsedSeconds Seconds from `started_at` to now, or to `finished_at` once the run ended. Counted on the database clock.
-	ElapsedSeconds *int `json:"elapsed_seconds,omitempty"`
+	ElapsedSeconds *int `json:"elapsed_seconds,omitempty" minimum:"0"`
 
 	// Error Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message.
 	Error *string `json:"error,omitempty"`
@@ -46932,10 +47261,10 @@ type ImportRun struct {
 	EtaScope *ImportRunEtaScope `json:"eta_scope,omitempty"`
 
 	// EtaSecondsHigh The latest it is likely done, in seconds from now. A range, never a promise: the speed of one minute is not the speed of the next.
-	EtaSecondsHigh *int `json:"eta_seconds_high,omitempty"`
+	EtaSecondsHigh *int `json:"eta_seconds_high,omitempty" minimum:"1"`
 
 	// EtaSecondsLow The soonest the item in `eta_scope` is likely done, in seconds from now. Absent whenever `rate_rows_per_second` is.
-	EtaSecondsLow *int `json:"eta_seconds_low,omitempty"`
+	EtaSecondsLow *int `json:"eta_seconds_low,omitempty" minimum:"1"`
 
 	// FileName The uploaded file's name, as the run was created with it. Display only.
 	FileName *string `json:"file_name,omitempty"`
@@ -46944,11 +47273,11 @@ type ImportRun struct {
 	FinishedAt *time.Time `json:"finished_at,omitempty"`
 
 	// HeartbeatAgeSeconds Seconds since the worker last said it is alive. Absent when the run is not being worked.
-	HeartbeatAgeSeconds *int               `json:"heartbeat_age_seconds,omitempty"`
+	HeartbeatAgeSeconds *int               `json:"heartbeat_age_seconds,omitempty" minimum:"0"`
 	Id                  openapi_types.UUID `json:"id"`
 
 	// IdleSeconds Seconds since the run last made progress. Absent when the run is not being worked.
-	IdleSeconds *int `json:"idle_seconds,omitempty"`
+	IdleSeconds *int `json:"idle_seconds,omitempty" minimum:"0"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
@@ -47014,7 +47343,7 @@ type ImportRun struct {
 	Progress *ImportRunProgress `json:"progress,omitempty"`
 
 	// RateRowsPerSecond Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle.
-	RateRowsPerSecond *float32 `json:"rate_rows_per_second,omitempty"`
+	RateRowsPerSecond *float32 `json:"rate_rows_per_second,omitempty" minimum:"0"`
 	Source            string   `json:"source"`
 
 	// SourceName The name the run's source is filed under.
@@ -47043,7 +47372,7 @@ type ImportRun struct {
 	UpdatedAt    time.Time           `json:"updated_at"`
 
 	// Version Bumped by every saved change of a choice. A save, a test and an approval may name it, and are refused on another.
-	Version int `json:"version"`
+	Version int `json:"version" minimum:"1"`
 }
 
 // ImportRunConnector defines model for ImportRun.Connector.
@@ -47054,7 +47383,7 @@ type ImportRunEtaScope string
 
 // ImportRunDisposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
 type ImportRunDisposition struct {
-	Created int `json:"created"`
+	Created int `json:"created" minimum:"0"`
 
 	// Duplicates Rows naming a record the estate already holds. NOT a fifth outcome
 	// and never added to the other four — each duplicate is already
@@ -47062,14 +47391,14 @@ type ImportRunDisposition struct {
 	// `skipped` (when the run asked for `on_duplicate: skip`). It is the
 	// number a human needs before approving: "100 companies, 94 of them
 	// already here" is a different decision from "100 new companies".
-	Duplicates *int `json:"duplicates,omitempty"`
-	Skipped    int  `json:"skipped"`
+	Duplicates *int `json:"duplicates,omitempty" minimum:"0"`
+	Skipped    int  `json:"skipped" minimum:"0"`
 
 	// Unchanged Matched, and every mapped value already equal. Counted separately from `updated` because reporting work that never happened inflates both the report and the audit trail.
-	Unchanged int `json:"unchanged"`
+	Unchanged int `json:"unchanged" minimum:"0"`
 
 	// Updated Rows matched to an existing record whose mapped values differ. An editable source re-imported after a correction lands here — this is not the frozen-snapshot case, where a match can never differ.
-	Updated int `json:"updated"`
+	Updated int `json:"updated" minimum:"0"`
 }
 
 // ImportRunLinks The connections between records a run makes, counted apart from the rows
@@ -47084,12 +47413,12 @@ type ImportRunDisposition struct {
 // named by a company column the mapping points at `company`.
 type ImportRunLinks struct {
 	// Applied Links actually written. Zero on a dry run, which writes nothing.
-	Applied int `json:"applied"`
+	Applied int `json:"applied" minimum:"0"`
 
 	// Offered Links the file asks for. A dry run reports this and nothing else,
 	// because resolving an endpoint is a read the dry run has not done —
 	// it says how many rows named an employer, not how many will find one.
-	Offered int `json:"offered"`
+	Offered int `json:"offered" minimum:"0"`
 
 	// Unresolved The links that named something the run could not act on, each with
 	// the reason. Enumerated rather than counted, because the answer a
@@ -47148,7 +47477,7 @@ type ImportRunPart struct {
 	Object ImportObject `json:"object"`
 
 	// RowCount Rows the file holds, once a dry run has read it; 0 before.
-	RowCount int `json:"row_count"`
+	RowCount int `json:"row_count" minimum:"0"`
 }
 
 // ImportRunPhase What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.
@@ -47157,19 +47486,19 @@ type ImportRunPhase string
 // ImportRunProgress What a run has done so far, per object and in total. Absent on a run that never moved. While a run is `undoing`, `objects` lists the types it reverses in undo order, each with the rows reversed of the rows it created, and `counts` stays zero.
 type ImportRunProgress struct {
 	Counts struct {
-		Created int `json:"created"`
+		Created int `json:"created" minimum:"0"`
 
 		// Problems Rows that carry a problem, skipped or landed.
-		Problems  int `json:"problems"`
-		Skipped   int `json:"skipped"`
-		Unchanged int `json:"unchanged"`
-		Updated   int `json:"updated"`
+		Problems  int `json:"problems" minimum:"0"`
+		Skipped   int `json:"skipped" minimum:"0"`
+		Unchanged int `json:"unchanged" minimum:"0"`
+		Updated   int `json:"updated" minimum:"0"`
 	} `json:"counts"`
 	Objects []struct {
 		// Object An import object, or `links` for the link phase after every object.
 		Object    string `json:"object"`
-		RowsDone  int    `json:"rows_done"`
-		RowsTotal int    `json:"rows_total"`
+		RowsDone  int    `json:"rows_done" minimum:"0"`
+		RowsTotal int    `json:"rows_total" minimum:"0"`
 	} `json:"objects"`
 }
 
@@ -47202,7 +47531,7 @@ type ImportRunReport struct {
 
 	// Parts The same counts per file, in import order. A single CSV reports one part.
 	Parts    *[]ImportPartReport `json:"parts,omitempty"`
-	RowsRead int                 `json:"rows_read"`
+	RowsRead int                 `json:"rows_read" minimum:"0"`
 	RunId    openapi_types.UUID  `json:"run_id"`
 
 	// SourceKeyUsed Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it.
@@ -47238,7 +47567,7 @@ type ImportRunStatus string
 
 // ImportRunVersion The run's `version` a call was made on.
 type ImportRunVersion struct {
-	Version int `json:"version"`
+	Version int `json:"version" minimum:"1"`
 }
 
 // ImportSourceProfile What one uploaded file looks like, plus the mapping proposed for it.
@@ -47292,10 +47621,10 @@ type ImportSourceProfile struct {
 	Parts *[]ImportPartProfile `json:"parts,omitempty"`
 
 	// RowCount Rows the upload holds: the file's for a single CSV, the sum of `parts[].row_count` for a ZIP.
-	RowCount int `json:"row_count"`
+	RowCount int `json:"row_count" minimum:"0"`
 
 	// RowsProfiled Rows read to build this profile. May be fewer than the file holds — the profile is a sample, and saying so is what keeps `fill_rate` honest.
-	RowsProfiled int `json:"rows_profiled"`
+	RowsProfiled int `json:"rows_profiled" minimum:"0"`
 
 	// RunId The draft run the upload opened. Every later choice and test is made on it.
 	RunId openapi_types.UUID `json:"run_id"`
@@ -47432,7 +47761,7 @@ type ImportUndoReport struct {
 	} `json:"kept"`
 
 	// ReversedCount Import-created rows that were untouched since and have been reversed (archived).
-	ReversedCount int                `json:"reversed_count"`
+	ReversedCount int                `json:"reversed_count" minimum:"0"`
 	RunId         openapi_types.UUID `json:"run_id"`
 
 	// Status IEM-DDL-1's lifecycle. `pending` is a draft: uploaded, with choices
@@ -47448,7 +47777,7 @@ type ImportUndoReport struct {
 	Status ImportRunStatus `json:"status"`
 
 	// UpdatesNotReversed Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`.
-	UpdatesNotReversed *int `json:"updates_not_reversed,omitempty"`
+	UpdatesNotReversed *int `json:"updates_not_reversed,omitempty" minimum:"0"`
 }
 
 // ImportUnresolvedLink defines model for ImportUnresolvedLink.
@@ -47485,7 +47814,7 @@ type IngestVoiceCorpusSourceRequest struct {
 
 	// SpeakerLabel Required for transcript format; only this speaker is retained.
 	SpeakerLabel *string  `json:"speaker_label,omitempty"`
-	Weight       *float32 `json:"weight,omitempty"`
+	Weight       *float32 `json:"weight,omitempty" maximum:"2" minimum:"0"`
 }
 
 // IngestVoiceCorpusSourceRequestFormat Send `transcript` for anything conversational — .vtt, .srt, transcript JSON,
@@ -47570,7 +47899,7 @@ type InputCheckExposure struct {
 // InputCheckGroup The findings of one type. Findings and the distinct deals they are about are counted apart, because one deal can carry several findings.
 type InputCheckGroup struct {
 	// Deals How many distinct deals those findings are about.
-	Deals int `json:"deals"`
+	Deals int `json:"deals" minimum:"0"`
 
 	// Destination The screen a finding or a group of findings opens on, decided by the server under the caller's authority so a client never offers an answer the server would refuse.
 	Destination InputCheckDestination `json:"destination"`
@@ -47579,10 +47908,10 @@ type InputCheckGroup struct {
 	Exposure []InputCheckExposure `json:"exposure"`
 
 	// Findings How many findings of this type.
-	Findings int `json:"findings"`
+	Findings int `json:"findings" minimum:"0"`
 
 	// OtherFindings Findings of this type about something other than a deal, such as a forecast call or a signal.
-	OtherFindings int `json:"other_findings"`
+	OtherFindings int `json:"other_findings" minimum:"0"`
 
 	// Type The finding type, as `InputCheck.type` spells it.
 	Type string `json:"type"`
@@ -47590,9 +47919,9 @@ type InputCheckGroup struct {
 
 // InputCheckTotals Every finding in the list, with deals counted once however many findings they carry.
 type InputCheckTotals struct {
-	Deals         int `json:"deals"`
-	Findings      int `json:"findings"`
-	OtherFindings int `json:"other_findings"`
+	Deals         int `json:"deals" minimum:"0"`
+	Findings      int `json:"findings" minimum:"0"`
+	OtherFindings int `json:"other_findings" minimum:"0"`
 }
 
 // InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
@@ -47613,13 +47942,13 @@ type InstallationBrand struct {
 // quarter, follows the new start.
 type InstallationFiscalYearImpact struct {
 	// ReportsWithKeptPeriods Live reports with a card whose saved question filters on a period.
-	ReportsWithKeptPeriods int `json:"reports_with_kept_periods"`
+	ReportsWithKeptPeriods int `json:"reports_with_kept_periods" minimum:"0"`
 
 	// ReportsWithRelativePeriods Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
-	ReportsWithRelativePeriods int `json:"reports_with_relative_periods"`
+	ReportsWithRelativePeriods int `json:"reports_with_relative_periods" minimum:"0"`
 
 	// SavedQuestions Saved questions, of every member, that filter on a period.
-	SavedQuestions int `json:"saved_questions"`
+	SavedQuestions int `json:"saved_questions" minimum:"0"`
 }
 
 // InstallationJurisdiction Which jurisdiction this installation runs under and what that selection puts in force.
@@ -47710,7 +48039,7 @@ type InstallationSettings struct {
 	// figure. This bounds only the number that is styled as an alarm: River keeps a
 	// terminal row for a week, so without it an outage that ended an hour ago goes on
 	// asking for a hand until the rows retire.
-	DeadWorkBannerHours int `json:"dead_work_banner_hours"`
+	DeadWorkBannerHours int `json:"dead_work_banner_hours" maximum:"168" minimum:"1"`
 
 	// FiscalYearStartMonth The month the installation's business year begins, 1..12. January (1) is the
 	// default, which is the calendar year every installation reported by before this
@@ -47729,7 +48058,7 @@ type InstallationSettings struct {
 	// calendar in force before it. A relative period, such as this quarter, follows the
 	// current setting.
 	// `/installation/settings/fiscal-year-impact` counts both before a move.
-	FiscalYearStartMonth int `json:"fiscal_year_start_month"`
+	FiscalYearStartMonth int `json:"fiscal_year_start_month" maximum:"12" minimum:"1"`
 
 	// ForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. A setting
 	// rather than a fixed choice, because it is a question about how this installation
@@ -47749,7 +48078,7 @@ type InstallationSettings struct {
 
 	// ForecastLikelyThreshold The win probability, in percent, from which an open deal with a confirmed close date
 	// counts in the Likely forecast. 90 by default.
-	ForecastLikelyThreshold int `json:"forecast_likely_threshold"`
+	ForecastLikelyThreshold int `json:"forecast_likely_threshold" maximum:"100" minimum:"1"`
 
 	// ForecastSelfCorrecting Let the forecast correct itself. On by default. On, each open stage's chance moves
 	// toward the outcomes of deals recorded entering it in the last two years, weighted
@@ -47792,7 +48121,7 @@ type InstallationSettings struct {
 	// for the code exchange and every refresh rotation alike. 30 days by default, at most
 	// 90. A change applies to the next token minted; tokens already issued keep the expiry
 	// they were issued with.
-	OauthAccessTokenTtlMinutes int `json:"oauth_access_token_ttl_minutes"`
+	OauthAccessTokenTtlMinutes int `json:"oauth_access_token_ttl_minutes" maximum:"129600" minimum:"5"`
 
 	// Operations The worker's operating values: how often each background pass runs, how far ahead a
 	// mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
@@ -48144,10 +48473,10 @@ type IssuePassportRequest struct {
 	Label *string `json:"label,omitempty"`
 
 	// Scopes Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC.
-	Scopes []IssuePassportRequestScopes `json:"scopes"`
+	Scopes []IssuePassportRequestScopes `json:"scopes" unique:"items"`
 
 	// TtlHours Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time.
-	TtlHours *int `json:"ttl_hours,omitempty"`
+	TtlHours *int `json:"ttl_hours,omitempty" maximum:"2160" minimum:"1"`
 }
 
 // IssuePassportRequestScopes defines model for IssuePassportRequest.Scopes.
@@ -48468,20 +48797,20 @@ type KnowledgeClaim struct {
 	ChunkId openapi_types.UUID `json:"chunk_id"`
 
 	// Column The 1-based column on that line, counted in CHARACTERS rather than bytes: it is read by a contact counting across a line, not by a program seeking in a file. Absent whenever `line` is.
-	Column       *int               `json:"column,omitempty"`
+	Column       *int               `json:"column,omitempty" minimum:"1"`
 	DocumentId   openapi_types.UUID `json:"document_id"`
 	DocumentName string             `json:"document_name"`
 
 	// EndColumn The 1-based column on `end_line` just PAST the quote's last character, counted in CHARACTERS for the reason `column` is. Past rather than on, so the range is half-open: a quote that ends a line then needs no column the line does not have. Absent whenever `line` is.
-	EndColumn *int `json:"end_column,omitempty"`
+	EndColumn *int `json:"end_column,omitempty" minimum:"1"`
 
 	// EndLine The 1-based line the quote ENDS on. A reader who follows a citation wants the sentence marked, not a cursor dropped at its first character, and with the start alone a viewer can only guess how far the quoted span runs — a guess that runs long marks words the claim does not rest on. With `end_column` it closes the half-open range [line, column) .. [end_line, end_column) a highlight covers.
 	// It is a line and column rather than a character offset into the document because nothing on this side holds the document. What the answer is written from is the retrieved passage, and a passage records the line it starts on and no offset at all — so a document-relative offset would want a new column, a migration and a backfill of every passage already stored, to say what the quote and the start location already determine between them.
 	// Absent whenever `line` is: a span the passage could not locate has no end either, and half a range is a highlight over the wrong words.
-	EndLine *int `json:"end_line,omitempty"`
+	EndLine *int `json:"end_line,omitempty" minimum:"1"`
 
 	// Line The 1-based line of the document where this quote begins, so a reader can open the file and land on it. Absent when the quote could not be located in the passage's own text — a line number pointing at the wrong line is worse than none.
-	Line *int `json:"line,omitempty"`
+	Line *int `json:"line,omitempty" minimum:"1"`
 
 	// Opens The settings page the claim's handbook section is about, from the page's `opens:` marker. The client shows a button to it only when the reader may open that page.
 	Opens *KnowledgeClaimOpens `json:"opens,omitempty"`
@@ -48505,7 +48834,7 @@ type KnowledgeClaimOpens struct {
 // KnowledgeClaimSection The handbook section the quote sits in. Present only on a claim from a page that ships with Margince, and only when the claim carries a `line`; an uploaded document has no section the server can name.
 type KnowledgeClaimSection struct {
 	// Line The 1-based line of the heading.
-	Line int `json:"line"`
+	Line int `json:"line" minimum:"1"`
 
 	// Title The section's heading, without its `#` marks.
 	Title string `json:"title"`
@@ -48522,7 +48851,7 @@ type KnowledgeCorpus struct {
 	Id          openapi_types.UUID `json:"id"`
 
 	// MinSimilarity The grounding floor in force: the cosine a passage must reach before it may be cited at all. It is this corpus's own override when min_similarity_overridden is true, else the floor measured for the embedding binding that reads the corpus (0 where that binding has none). The floor removes what is obviously far and is NOT what tells a covered question from an uncovered one — cosine is not calibrated across embedding models, and under some bindings no value separates the two. A reader is told what read the passages by generated_by and by the unreviewed outcome.
-	MinSimilarity float64 `json:"min_similarity"`
+	MinSimilarity float64 `json:"min_similarity" maximum:"1" minimum:"0"`
 
 	// MinSimilarityOverridden True when min_similarity is this corpus's own number rather than the binding's measured floor. An override may sit below the measured floor.
 	MinSimilarityOverridden *bool  `json:"min_similarity_overridden,omitempty"`
@@ -48849,7 +49178,7 @@ type Lead struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
 	Writable             *bool                  `json:"writable,omitempty"`
@@ -48920,7 +49249,7 @@ type LeadDisqualifyReason struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // LeadDisqualifyReasonListResponse defines model for LeadDisqualifyReasonListResponse.
@@ -48940,7 +49269,7 @@ type LeadListResponse struct {
 type LeadManualSignal struct {
 	// Band The band picked for this factor; validated per factor.
 	Band       string   `json:"band"`
-	Confidence *float32 `json:"confidence,omitempty"`
+	Confidence *float32 `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 
 	// Factor The factors a human may supply. Served, with their bands, by `getLeadSignalCatalog`.
 	Factor LeadManualSignalFactor `json:"factor"`
@@ -49003,7 +49332,7 @@ type LeadOrigin struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // LeadOriginListResponse defines model for LeadOriginListResponse.
@@ -49200,7 +49529,7 @@ type LeadSource struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // LeadSourceIntent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
@@ -49215,13 +49544,13 @@ type LeadSourceListResponse struct {
 // LegacyLossReason One note of lost deals a mapping speaks for.
 type LegacyLossReason struct {
 	// DealCount Lost deals the caller may read that carry it with no code or a mapped one.
-	DealCount int `json:"deal_count"`
+	DealCount int `json:"deal_count" minimum:"1"`
 
 	// Mapping An administrator's decision that one legacy note counts under one loss reason.
 	Mapping *LossReasonMapping `json:"mapping,omitempty"`
 
 	// PendingCount Of those, how many the decision would change if applied now. Zero with no decision.
-	PendingCount int `json:"pending_count"`
+	PendingCount int `json:"pending_count" minimum:"0"`
 
 	// Text The note as one of its deals carries it.
 	Text string `json:"text"`
@@ -49235,7 +49564,7 @@ type LegacyLossReasonListResponse struct {
 	Data []LegacyLossReason `json:"data"`
 
 	// DistinctTotal How many notes the list holds, of which `data` is the first page.
-	DistinctTotal int `json:"distinct_total"`
+	DistinctTotal int `json:"distinct_total" minimum:"0"`
 }
 
 // LegalEntity One legal entity the installation trades as. On the default entity
@@ -49566,13 +49895,13 @@ type LicenseEntitlement struct {
 
 	// SeatsGranted Full seats the license admits. ABSENT when nothing caps them — no license, or a
 	// grant carrying no seat count — which is not a grant of zero.
-	SeatsGranted *int `json:"seats_granted,omitempty"`
+	SeatsGranted *int `json:"seats_granted,omitempty" minimum:"0"`
 
 	// SeatsUsed Full seats in use: every one the installation has not withdrawn — neither
 	// deactivated nor suspended — agent seats included. Read seats are unlimited and
 	// never counted (ADR-0047). This is the number a seat creation is refused
 	// against, so the meter and the ceiling can never disagree.
-	SeatsUsed int `json:"seats_used"`
+	SeatsUsed int `json:"seats_used" minimum:"0"`
 
 	// State Whether a license was verified, none was configured, or one was refused. A client
 	// that cannot read a value it recognizes MUST NOT assume entitlement.
@@ -49647,7 +49976,7 @@ type LifecyclePreviewEvidenceScope string
 // LinkCompanyContactsRequest defines model for LinkCompanyContactsRequest.
 type LinkCompanyContactsRequest struct {
 	// ContactIds The candidates to link. An empty list answers 422 `required`, more than 50 `too_many`, and a repeated id `duplicate`.
-	ContactIds []openapi_types.UUID `json:"contact_ids"`
+	ContactIds []openapi_types.UUID `json:"contact_ids" unique:"items"`
 }
 
 // LinkCompanyContactsResult defines model for LinkCompanyContactsResult.
@@ -49720,19 +50049,19 @@ type LinkedInAccount struct {
 // message is worse than a refusal.
 type LinkedInImportSummary struct {
 	// Confirmed Matched to a contact by exact email address, which is identity here.
-	Confirmed int `json:"confirmed"`
+	Confirmed int `json:"confirmed" minimum:"0"`
 
 	// Imported Rows stored (created or updated).
-	Imported int `json:"imported"`
+	Imported int `json:"imported" minimum:"0"`
 
 	// Rows Connection rows found in the file.
-	Rows int `json:"rows"`
+	Rows int `json:"rows" minimum:"0"`
 
 	// Skipped Rows with no usable name — they identify nobody.
-	Skipped int `json:"skipped"`
+	Skipped int `json:"skipped" minimum:"0"`
 
 	// Suggested Matched by name and employer — plausible, awaiting a human.
-	Suggested int `json:"suggested"`
+	Suggested int `json:"suggested" minimum:"0"`
 }
 
 // LinkedInReachAccount One account this member's network reaches.
@@ -49740,12 +50069,12 @@ type LinkedInReachAccount struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
 
 	// Connections How many of the caller's connections resolved to this account. An account with none is not listed.
-	Connections int `json:"connections"`
+	Connections int `json:"connections" minimum:"1"`
 
 	// ContactsOnFile How many of those are already contacts — confirmed matches only. The gap
 	// between this and `connections` is the answer the import was for: contacts you
 	// know at this account who are not in the CRM.
-	ContactsOnFile int    `json:"contacts_on_file"`
+	ContactsOnFile int    `json:"contacts_on_file" minimum:"0"`
 	DisplayName    string `json:"display_name"`
 }
 
@@ -49757,7 +50086,7 @@ type LinkedInReachFunction string
 // LinkedInReachFunctionCount defines model for LinkedInReachFunctionCount.
 type LinkedInReachFunctionCount struct {
 	// Connections How many of the colleague's connections there work in this function.
-	Connections int `json:"connections"`
+	Connections int `json:"connections" minimum:"2"`
 
 	// Function The function a connection's job title names. A title that names a department and
 	// a rank counts as the department: "Head of IT" is `it`, and only a title that names
@@ -49770,12 +50099,12 @@ type LinkedInReachResponse struct {
 	Accounts []LinkedInReachAccount `json:"accounts"`
 
 	// AccountsTotal Every account reached, not just the page returned — a truncated list read as the whole network would understate reach.
-	AccountsTotal int `json:"accounts_total"`
+	AccountsTotal int `json:"accounts_total" minimum:"0"`
 
 	// UnresolvedConnections Connections whose employer matched no account on file. Reported because it is
 	// the honest size of what this view cannot show, and because it is the number
 	// that shrinks as accounts are created.
-	UnresolvedConnections int `json:"unresolved_connections"`
+	UnresolvedConnections int `json:"unresolved_connections" minimum:"0"`
 }
 
 // List A Live List (list_type dynamic: its members are its filter's current result) or a Shortlist (static: members chosen by hand). Mirrors the `list` table.
@@ -50128,7 +50457,7 @@ type LossReason struct {
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 
 	// DealCount Live lost deals carrying this key that the caller may see. Absent when the caller may not read deals. Set on the list read; absent on the record a write answers.
-	DealCount *int               `json:"deal_count,omitempty"`
+	DealCount *int               `json:"deal_count,omitempty" minimum:"0"`
 	Id        openapi_types.UUID `json:"id"`
 
 	// Key The stable identifier stored on the deal. Lowercase, never changes once created, so a report keyed on it survives a rename.
@@ -50249,7 +50578,7 @@ type MagicLine struct {
 	Consequence *string `json:"consequence,omitempty"`
 
 	// Count How many records this line stands for. One background job that did the same thing to many records is ONE line with a count, not one line per record: a receipt of 1,200 identical rows says nothing a reader can use. Absent means one; `entity` then names the most recent of them. Read with `count_is_floor`, which says whether this number is the whole of it.
-	Count *int `json:"count,omitempty"`
+	Count *int `json:"count,omitempty" minimum:"1"`
 
 	// CountIsFloor True when the line's records were counted from a read that was cut short, so `count` is a lower bound and the job touched at least that many. Lines are grouped from the audit rows one read returns, and that read is capped; a job over more records than the cap reports the cap. Absent or false means the count is exact. A reader deciding whether a machine went too far needs to know which of the two they are looking at.
 	CountIsFloor *bool `json:"count_is_floor,omitempty"`
@@ -50325,7 +50654,7 @@ type MagicLineRecords struct {
 
 // MagicNotShown One kind of thing this read left out, and how many of it there were.
 type MagicNotShown struct {
-	Count int `json:"count"`
+	Count int `json:"count" minimum:"0"`
 
 	// Reason `unadmitted_action` — a machine write whose action carries no customer-facing
 	// meaning: a maintenance sweep, a projection refresh.
@@ -50424,10 +50753,10 @@ type MagicSentence struct {
 // thing that makes it worth counting; a figure asserted before then would be
 // neither the page nor the window.
 type MagicTotals struct {
-	CouldNotComplete int `json:"could_not_complete"`
-	Done             int `json:"done"`
-	NeedsYou         int `json:"needs_you"`
-	Watching         int `json:"watching"`
+	CouldNotComplete int `json:"could_not_complete" minimum:"0"`
+	Done             int `json:"done" minimum:"0"`
+	NeedsYou         int `json:"needs_you" minimum:"0"`
+	Watching         int `json:"watching" minimum:"0"`
 }
 
 // MagicUndo Whether this change can be taken back, and why not when it cannot.
@@ -50474,7 +50803,7 @@ type MailCaptureCoverageState string
 
 // MailDealRepairOutcomeCount defines model for MailDealRepairOutcomeCount.
 type MailDealRepairOutcomeCount struct {
-	Count   int                               `json:"count"`
+	Count   int                               `json:"count" minimum:"0"`
 	Outcome MailDealRepairOutcomeCountOutcome `json:"outcome"`
 }
 
@@ -50485,7 +50814,7 @@ type MailDealRepairOutcomeCountOutcome string
 type MailDealRepairPreview struct {
 	// Complete False when more captured mail follows this page.
 	Complete  bool `json:"complete"`
-	Inspected int  `json:"inspected"`
+	Inspected int  `json:"inspected" minimum:"0"`
 
 	// NextAfter The last mail inspected; send it as `after` for the next page.
 	NextAfter *openapi_types.UUID          `json:"next_after,omitempty"`
@@ -50561,6 +50890,65 @@ type MailHistoryBaseline struct {
 
 // MailLanguage A language this build writes the installation's own mail in.
 type MailLanguage string
+
+// MarginceChangeBundle Every open change Margince made to one deal. Its Undo takes them all back.
+type MarginceChangeBundle struct {
+	// AuditLogIds The changes, newest first.
+	AuditLogIds []openapi_types.UUID        `json:"audit_log_ids"`
+	DealId      openapi_types.UUID          `json:"deal_id"`
+	DealName    string                      `json:"deal_name"`
+	Kinds       []MarginceChangeBundleKinds `json:"kinds"`
+	LatestAt    time.Time                   `json:"latest_at"`
+
+	// ValueBaseMinor The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
+	ValueBaseMinor *int64 `json:"value_base_minor,omitempty"`
+
+	// Version The deal's version as read, for the first undo of the bundle.
+	Version int64 `json:"version"`
+}
+
+// MarginceChangeBundleKinds defines model for MarginceChangeBundle.Kinds.
+type MarginceChangeBundleKinds string
+
+// MarginceChangeSummary The changes Margince made to the caller's deals that are neither accepted nor undone.
+// Every count is a number of deals; a deal with two kinds of change counts once in
+// `deals` and once under each kind.
+type MarginceChangeSummary struct {
+	AsOf time.Time `json:"as_of"`
+
+	// BaseCurrency The currency of every `value_base_minor`.
+	BaseCurrency string `json:"base_currency"`
+
+	// Bundles One per deal, the largest value first.
+	Bundles []MarginceChangeBundle `json:"bundles"`
+
+	// Closed Deals Margince closed as lost.
+	Closed int `json:"closed"`
+
+	// Deals Deals with at least one open change.
+	Deals int `json:"deals"`
+
+	// Moved Deals Margince moved to a later stage.
+	Moved int `json:"moved"`
+
+	// Opened Deals Margince opened from buying evidence.
+	Opened int `json:"opened"`
+
+	// Probabilities Deals given a new probability.
+	Probabilities int `json:"probabilities"`
+
+	// Redated Deals given a new close date.
+	Redated int `json:"redated"`
+
+	// Revalued Deals given a new amount.
+	Revalued int `json:"revalued"`
+
+	// Revived Lost deals Margince reopened from new buying evidence.
+	Revived int `json:"revived"`
+
+	// Truncated True when more bundles exist than were returned. The counts are never cut.
+	Truncated bool `json:"truncated"`
+}
 
 // MeResponse defines model for MeResponse.
 type MeResponse struct {
@@ -51114,7 +51502,7 @@ type MeetingProposalRequest struct {
 	AttendeeEmail   openapi_types.Email `json:"attendee_email"`
 	ContactId       openapi_types.UUID  `json:"contact_id"`
 	Description     string              `json:"description"`
-	DurationMinutes int                 `json:"duration_minutes"`
+	DurationMinutes int                 `json:"duration_minutes" maximum:"480" minimum:"15"`
 	Location        string              `json:"location"`
 	Options         []struct {
 		End   time.Time `json:"end"`
@@ -51165,7 +51553,7 @@ type MemberRetirementPreview struct {
 
 	// Owned Live records per kind.
 	Owned         HandoverCounts       `json:"owned"`
-	SignalCount   int                  `json:"signal_count"`
+	SignalCount   int                  `json:"signal_count" minimum:"0"`
 	SourceEmail   openapi_types.Email  `json:"source_email"`
 	SourceName    string               `json:"source_name"`
 	SurvivorEmail *openapi_types.Email `json:"survivor_email,omitempty"`
@@ -51194,7 +51582,7 @@ type MergeTagsRequest struct {
 	// else here. It belongs in the body rather than in `If-Match` because it qualifies
 	// the id beside it, not the resource in the path: `If-Match` on this route would
 	// pin the tag being retired, which is a different precondition.
-	IntoTagVersion *int64 `json:"into_tag_version,omitempty"`
+	IntoTagVersion *int64 `json:"into_tag_version,omitempty" minimum:"1"`
 }
 
 // MergeTagsResult What the merge did, in the two numbers that differ.
@@ -51265,7 +51653,7 @@ type MorningBrief struct {
 	AsOf time.Time `json:"as_of"`
 
 	// CandidateCount Deals that cleared the §10 honest-short bar (may exceed the queue length).
-	CandidateCount int `json:"candidate_count"`
+	CandidateCount int `json:"candidate_count" minimum:"0"`
 
 	// FactorsOmitted The ranking factors this run could not read, so a client can say "the order does
 	// not account for this" instead of presenting a queue as fully ranked. Never
@@ -51318,19 +51706,19 @@ type MorningBriefFactorsOmitted string
 // MorningBriefFeatureVector The §10.1 factor decomposition, each normalized 0..1 — the composite reconciles to it.
 type MorningBriefFeatureVector struct {
 	// Momentum 1.0 with an evidenced overnight change, else the 0.4 floor.
-	Momentum float32 `json:"momentum"`
+	Momentum float32 `json:"momentum" maximum:"1" minimum:"0"`
 
 	// Revenue min(1, base value / REVENUE_NORM); floor 0 when no evidencable amount.
-	Revenue float32 `json:"revenue"`
+	Revenue float32 `json:"revenue" maximum:"1" minimum:"0"`
 
 	// Timing bucketed days-until-expected-close urgency.
-	Timing float32 `json:"timing"`
+	Timing float32 `json:"timing" maximum:"1" minimum:"0"`
 
 	// Warmth strongest visible stakeholder's §4 strength / 100; floor 0 without contributing interactions.
-	Warmth float32 `json:"warmth"`
+	Warmth float32 `json:"warmth" maximum:"1" minimum:"0"`
 
 	// Winnability stage win probability / 100.
-	Winnability float32 `json:"winnability"`
+	Winnability float32 `json:"winnability" maximum:"1" minimum:"0"`
 }
 
 // MorningBriefItem One ranked queue entry: the §10.1 composite, its per-factor decomposition (no mystery
@@ -51339,7 +51727,7 @@ type MorningBriefFeatureVector struct {
 // deterministic candidate set, so it is not necessarily descending in `composite`.
 type MorningBriefItem struct {
 	// Composite The deterministic §10.1 composite score.
-	Composite float32            `json:"composite"`
+	Composite float32            `json:"composite" maximum:"1" minimum:"0"`
 	DealId    openapi_types.UUID `json:"deal_id"`
 
 	// EvidenceIds The source rows (deal / activity / relationship) behind the factors; never empty (evidence-or-omit).
@@ -51365,7 +51753,7 @@ type MorningBriefItem struct {
 	Lineage *MorningBriefItemLineage `json:"lineage,omitempty"`
 
 	// Rank Position in the queue (1 = top), after the L2 re-order.
-	Rank int `json:"rank"`
+	Rank int `json:"rank" minimum:"1"`
 
 	// ReopenOn What the item is waiting for; set exactly while state=snoozed, null otherwise.
 	ReopenOn *MorningBriefItemReopenOn `json:"reopen_on,omitempty"`
@@ -51581,7 +51969,7 @@ type MyWorkingHoursResponse struct {
 
 // NewForecastCall defines model for NewForecastCall.
 type NewForecastCall struct {
-	AmountMinor int64 `json:"amount_minor"`
+	AmountMinor int64 `json:"amount_minor" minimum:"0"`
 
 	// AsOf A day inside the period being called. Omitted means today's period.
 	AsOf     *openapi_types.Date `json:"as_of,omitempty"`
@@ -52094,7 +52482,7 @@ type Offer struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version              *RowVersion            `json:"version,omitempty"`
+	Version              *RowVersion            `json:"version,omitempty" minimum:"1"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -52121,7 +52509,7 @@ type OfferLineItem struct {
 	Id       openapi_types.UUID      `json:"id"`
 
 	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
-	IntervalCount *int `json:"interval_count,omitempty"`
+	IntervalCount *int `json:"interval_count,omitempty" minimum:"1"`
 
 	// LineNetMinor round(qty × unit_price × (1 − discount_pct/100)) — server-computed.
 	LineNetMinor *int64 `json:"line_net_minor,omitempty"`
@@ -52159,7 +52547,7 @@ type OfferLineItem struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // OfferLineItemBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -52181,13 +52569,13 @@ type OfferLineItemInput struct {
 	// BillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 	BillingModel *OfferLineItemInputBillingModel `json:"billing_model,omitempty"`
 	Description  *string                         `json:"description,omitempty"`
-	DiscountPct  *float64                        `json:"discount_pct,omitempty"`
+	DiscountPct  *float64                        `json:"discount_pct,omitempty" maximum:"100" minimum:"0"`
 
 	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
-	IntervalCount *int `json:"interval_count,omitempty"`
+	IntervalCount *int `json:"interval_count,omitempty" minimum:"1"`
 
 	// Position Defaults to the next free position.
-	Position  *int                `json:"position,omitempty"`
+	Position  *int                `json:"position,omitempty" minimum:"1"`
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity > 0, up to 3 decimal places.
@@ -52197,11 +52585,11 @@ type OfferLineItemInput struct {
 	TaxCategory *OfferLineItemInputTaxCategory `json:"tax_category,omitempty"`
 
 	// TaxRate A typed rate. The line then has no tax category and keeps this rate. Refused together with `tax_category` (422 `tax_rate_and_category`).
-	TaxRate *float64 `json:"tax_rate,omitempty"`
+	TaxRate *float64 `json:"tax_rate,omitempty" minimum:"0"`
 
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`.
 	Unit           *string `json:"unit,omitempty"`
-	UnitPriceMinor *int64  `json:"unit_price_minor,omitempty"`
+	UnitPriceMinor *int64  `json:"unit_price_minor,omitempty" minimum:"0"`
 }
 
 // OfferLineItemInputBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -52242,7 +52630,7 @@ type OfferTemplate struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // OfferTemplateListResponse defines model for OfferTemplateListResponse.
@@ -52348,7 +52736,7 @@ type OnboardingCompanyMessageReply struct {
 	Message                 string                                                 `json:"message"`
 	NextRequiredField       *OnboardingCompanyMessageReplyNextRequiredField        `json:"next_required_field,omitempty"`
 	ProposedChanges         []CompanySiteReadSuggestedChange                       `json:"proposed_changes"`
-	RemainingRequiredFields []OnboardingCompanyMessageReplyRemainingRequiredFields `json:"remaining_required_fields"`
+	RemainingRequiredFields []OnboardingCompanyMessageReplyRemainingRequiredFields `json:"remaining_required_fields" unique:"items"`
 }
 
 // OnboardingCompanyMessageReplyAvailableAction defines model for OnboardingCompanyMessageReply.AvailableAction.
@@ -52396,7 +52784,7 @@ type OnboardingCompanyProposal struct {
 
 // OnboardingCompanyProposalField defines model for OnboardingCompanyProposalField.
 type OnboardingCompanyProposalField struct {
-	Confidence      float32 `json:"confidence"`
+	Confidence      float32 `json:"confidence" maximum:"1" minimum:"0"`
 	EvidenceSnippet string  `json:"evidence_snippet"`
 	Field           string  `json:"field"`
 	SourceUrl       string  `json:"source_url"`
@@ -52414,12 +52802,12 @@ type OnboardingState struct {
 	ConnectSkipped   bool                       `json:"connect_skipped"`
 	CreatedAt        *time.Time                 `json:"created_at,omitempty"`
 	Path             *OnboardingStatePath       `json:"path,omitempty"`
-	SelectedFactKeys []string                   `json:"selected_fact_keys"`
+	SelectedFactKeys []string                   `json:"selected_fact_keys" unique:"items"`
 	SiteReadId       *openapi_types.UUID        `json:"site_read_id,omitempty"`
 	SourceMode       *OnboardingStateSourceMode `json:"source_mode"`
 	Step             OnboardingStateStep        `json:"step"`
 	UpdatedAt        *time.Time                 `json:"updated_at,omitempty"`
-	Version          *int                       `json:"version,omitempty"`
+	Version          *int                       `json:"version,omitempty" minimum:"1"`
 	VoiceSkipped     bool                       `json:"voice_skipped"`
 	WebsiteUrl       *string                    `json:"website_url,omitempty"`
 }
@@ -52475,49 +52863,49 @@ type OpenDealRoomThreadRequest struct {
 // them again within a minute of a change, so none needs a restart.
 type OperationSettings struct {
 	// AgentRunnerIntervalSeconds How often scheduled agents are checked for a run that is due, in seconds. Default 30.
-	AgentRunnerIntervalSeconds int `json:"agent_runner_interval_seconds"`
+	AgentRunnerIntervalSeconds int `json:"agent_runner_interval_seconds" maximum:"3600" minimum:"10"`
 
 	// CloseDateSweepIntervalSeconds How often deals whose close date has passed are flagged, in seconds. Default 86400.
-	CloseDateSweepIntervalSeconds int `json:"close_date_sweep_interval_seconds"`
+	CloseDateSweepIntervalSeconds int `json:"close_date_sweep_interval_seconds" maximum:"604800" minimum:"3600"`
 
 	// FollowUpReconcileIntervalSeconds How often stalled deals are checked for a follow-up to propose, in seconds. Default 86400.
-	FollowUpReconcileIntervalSeconds int `json:"follow_up_reconcile_interval_seconds"`
+	FollowUpReconcileIntervalSeconds int `json:"follow_up_reconcile_interval_seconds" maximum:"604800" minimum:"3600"`
 
 	// GeocodeBackfillIntervalSeconds How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600.
-	GeocodeBackfillIntervalSeconds int `json:"geocode_backfill_interval_seconds"`
+	GeocodeBackfillIntervalSeconds int `json:"geocode_backfill_interval_seconds" maximum:"604800" minimum:"0"`
 
 	// GmailWatchRenewWithinHours How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48.
-	GmailWatchRenewWithinHours int `json:"gmail_watch_renew_within_hours"`
+	GmailWatchRenewWithinHours int `json:"gmail_watch_renew_within_hours" maximum:"144" minimum:"24"`
 
 	// GmailWatchScanIntervalSeconds How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.
-	GmailWatchScanIntervalSeconds int `json:"gmail_watch_scan_interval_seconds"`
+	GmailWatchScanIntervalSeconds int `json:"gmail_watch_scan_interval_seconds" maximum:"43200" minimum:"600"`
 
 	// GraphWatchRenewWithinHours How far ahead of expiry a Microsoft 365 mail subscription is renewed, in hours. A subscription lasts just under three days. Default 24.
-	GraphWatchRenewWithinHours int `json:"graph_watch_renew_within_hours"`
+	GraphWatchRenewWithinHours int `json:"graph_watch_renew_within_hours" maximum:"60" minimum:"24"`
 
 	// GraphWatchScanIntervalSeconds How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.
-	GraphWatchScanIntervalSeconds int `json:"graph_watch_scan_interval_seconds"`
+	GraphWatchScanIntervalSeconds int `json:"graph_watch_scan_interval_seconds" maximum:"43200" minimum:"600"`
 
 	// RetentionSweepIntervalSeconds How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off.
-	RetentionSweepIntervalSeconds int `json:"retention_sweep_interval_seconds"`
+	RetentionSweepIntervalSeconds int `json:"retention_sweep_interval_seconds" maximum:"604800" minimum:"3600"`
 
 	// SendMaxAgeHours How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.
-	SendMaxAgeHours int `json:"send_max_age_hours"`
+	SendMaxAgeHours int `json:"send_max_age_hours" maximum:"168" minimum:"1"`
 
 	// SendRateLimit How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.
-	SendRateLimit int `json:"send_rate_limit"`
+	SendRateLimit int `json:"send_rate_limit" maximum:"1000" minimum:"1"`
 
 	// SendRateWindowSeconds The window the send rate is counted over, in seconds. Default 60.
-	SendRateWindowSeconds int `json:"send_rate_window_seconds"`
+	SendRateWindowSeconds int `json:"send_rate_window_seconds" maximum:"3600" minimum:"10"`
 
 	// TechnicalBackfillIntervalSeconds How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600.
-	TechnicalBackfillIntervalSeconds int `json:"technical_backfill_interval_seconds"`
+	TechnicalBackfillIntervalSeconds int `json:"technical_backfill_interval_seconds" maximum:"604800" minimum:"0"`
 
 	// TimeScanIntervalSeconds How often time-based automation rules are checked, in seconds. Default 3600.
-	TimeScanIntervalSeconds int `json:"time_scan_interval_seconds"`
+	TimeScanIntervalSeconds int `json:"time_scan_interval_seconds" maximum:"86400" minimum:"60"`
 
 	// WebhookRetryIntervalSeconds How often failed webhook deliveries are retried, in seconds. Default 30.
-	WebhookRetryIntervalSeconds int `json:"webhook_retry_interval_seconds"`
+	WebhookRetryIntervalSeconds int `json:"webhook_retry_interval_seconds" maximum:"3600" minimum:"10"`
 }
 
 // OutcomeReview defines model for OutcomeReview.
@@ -52640,7 +53028,7 @@ type PageInfo struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 
 	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means.
-	Total *int `json:"total,omitempty"`
+	Total *int `json:"total,omitempty" minimum:"0"`
 }
 
 // Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
@@ -52687,10 +53075,10 @@ type Partner struct {
 	PartnerFitOverrideReason *string `json:"partner_fit_override_reason,omitempty"`
 
 	// PartnerFitScore Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.
-	PartnerFitScore *int `json:"partner_fit_score,omitempty"`
+	PartnerFitScore *int `json:"partner_fit_score,omitempty" maximum:"100" minimum:"0"`
 
 	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
-	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty"`
+	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty" maximum:"100" minimum:"0"`
 
 	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
 	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
@@ -52723,7 +53111,7 @@ type Partner struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // PartnerActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
@@ -52775,7 +53163,7 @@ type PartnerStage struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // PartnerStageListResponse defines model for PartnerStageListResponse.
@@ -52860,7 +53248,7 @@ type Pipeline struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // PipelineListResponse defines model for PipelineListResponse.
@@ -53121,6 +53509,19 @@ type PrincipalAttribution struct {
 // PrincipalAttributionActorType defines model for PrincipalAttribution.ActorType.
 type PrincipalAttributionActorType string
 
+// PrivacyInformationController Who is responsible for the data, from the installation's own controller particulars, by the
+// rule the mail's disclosure lines use. A part the installation has not stated is absent.
+type PrivacyInformationController struct {
+	// Identity The legal name and postal address, as lines. Absent unless both are stated.
+	Identity *string `json:"identity,omitempty"`
+
+	// ObjectionRoute How to object, where the installation states a way of its own.
+	ObjectionRoute *string `json:"objection_route,omitempty"`
+
+	// PrivacyContact How to reach whoever answers questions about the data.
+	PrivacyContact *string `json:"privacy_contact,omitempty"`
+}
+
 // PrivacyInformationPage The answer for a privacy-notice link: what the installation holds about this contact, where
 // it came from, what it is used for, and the rights the contact has over it.
 //
@@ -53142,11 +53543,23 @@ type PrivacyInformationPage struct {
 	AcquiredAs string `json:"acquired_as"`
 
 	// AcquiredAt When the acquisition happened, absent where the door could not say.
-	AcquiredAt *time.Time                 `json:"acquired_at,omitempty"`
-	Kind       PrivacyInformationPageKind `json:"kind"`
+	AcquiredAt *time.Time `json:"acquired_at,omitempty"`
+
+	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
+	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
+	Controller *PrivacyInformationController `json:"controller,omitempty"`
+
+	// DataCategories The kinds of data held about the reader, read from the subject-access export's own
+	// sections. Codes only: the page names each kind and never shows a value.
+	DataCategories []PrivacyInformationPageDataCategories `json:"data_categories"`
+	Kind           PrivacyInformationPageKind             `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
+
+	// PurposeBases The basis on record for each entry in `purposes`, at the same index: `consent` for a
+	// purpose the reader agreed to, else the kind of a live communication basis.
+	PurposeBases []PrivacyInformationPagePurposeBases `json:"purpose_bases"`
 
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
 	// product seeds in its reader's language by its key, and shows the published name of any
@@ -53156,16 +53569,51 @@ type PrivacyInformationPage struct {
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
 
+	// Recipients Who the data is shared with, as codes the page names in its reader's language.
+	Recipients []PrivacyInformationPageRecipients `json:"recipients"`
+
+	// Retention The retention rules that act on the reader's data today, from the installation's own
+	// retention settings, for the kinds of data the reader has. A rule switched off, or held
+	// back by the retain-only setting, is not listed.
+	Retention []PrivacyInformationRetention `json:"retention"`
+
 	// Rights The rights the contact holds over this data, as codes a page renders in its own
 	// language. Art. 14(2)(c)-(e) requires naming them.
 	Rights []PrivacyInformationPageRights `json:"rights"`
 }
 
+// PrivacyInformationPageDataCategories defines model for PrivacyInformationPage.DataCategories.
+type PrivacyInformationPageDataCategories string
+
 // PrivacyInformationPageKind defines model for PrivacyInformationPage.Kind.
 type PrivacyInformationPageKind string
 
+// PrivacyInformationPagePurposeBases defines model for PrivacyInformationPage.PurposeBases.
+type PrivacyInformationPagePurposeBases string
+
+// PrivacyInformationPageRecipients defines model for PrivacyInformationPage.Recipients.
+type PrivacyInformationPageRecipients string
+
 // PrivacyInformationPageRights defines model for PrivacyInformationPage.Rights.
 type PrivacyInformationPageRights string
+
+// PrivacyInformationRetention One retention rule that acts on the reader's data.
+type PrivacyInformationRetention struct {
+	// Action What happens to a record past its window. One action per policy row — a ladder is separate
+	// rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
+	// `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
+	Action     RetentionAction             `json:"action"`
+	KeptByLaw  *JurisdictionRetentionClass `json:"kept_by_law,omitempty"`
+	RetainDays int                         `json:"retain_days" minimum:"1"`
+
+	// Scope An authorable retention scope (GCS-PARAM-8) — a `(object_type, category)` pair the nightly
+	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
+	// scope that would be stored and then skipped every pass. `activity` is the bare object type
+	// (the row whose `category` is null); every other value carries its category after the slash.
+	//
+	// Extending this enum means adding a selector in the same change.
+	Scope RetentionScope `json:"scope"`
+}
 
 // Problem RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Problem struct {
@@ -53235,7 +53683,7 @@ type Product struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version              *RowVersion            `json:"version,omitempty"`
+	Version              *RowVersion            `json:"version,omitempty" minimum:"1"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -53368,7 +53816,7 @@ type Project struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
 	Writable             *bool                  `json:"writable,omitempty"`
@@ -53470,8 +53918,8 @@ type Project360Company struct {
 // activity linked to one of the project's deals or stakeholder contacts that carries no
 // project link at all — the filing debt a rep can work down.
 type Project360Coverage struct {
-	Attributed         int `json:"attributed"`
-	UnattributedNearby int `json:"unattributed_nearby"`
+	Attributed         int `json:"attributed" minimum:"0"`
+	UnattributedNearby int `json:"unattributed_nearby" minimum:"0"`
 }
 
 // Project360Health How the project is going now. `current` is absent when nobody has judged it yet, which is different from a project judged and found healthy.
@@ -53487,7 +53935,7 @@ type Project360PhaseDuration struct {
 	Phase   string `json:"phase"`
 
 	// Seconds Time spent in the phase so far, summed over every visit, measured up to `as_of` for the current one.
-	Seconds int64 `json:"seconds"`
+	Seconds int64 `json:"seconds" minimum:"0"`
 }
 
 // Project360PhaseHistory Every phase transition the project has made, oldest first — the birth row has
@@ -53525,25 +53973,25 @@ type Project360PhaseTransition struct {
 // no work.
 type Project360Rollups struct {
 	// ActivityCount Every live activity filed under the project.
-	ActivityCount int `json:"activity_count"`
+	ActivityCount int `json:"activity_count" minimum:"0"`
 
 	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
 	LastActivityAt *time.Time `json:"last_activity_at"`
 
 	// OpenCommitments Open tasks filed under the project, whole lifecycle.
-	OpenCommitments int `json:"open_commitments"`
+	OpenCommitments int `json:"open_commitments" minimum:"0"`
 
 	// OpenDealValue Money as integer minor-units + ISO-4217 currency. Never a float.
 	OpenDealValue Money `json:"open_deal_value"`
 
 	// OpenDealsUnpriced Open deal amounts with no available base-currency price.
-	OpenDealsUnpriced *int `json:"open_deals_unpriced,omitempty"`
+	OpenDealsUnpriced *int `json:"open_deals_unpriced,omitempty" minimum:"0"`
 
 	// WonDealValue Money as integer minor-units + ISO-4217 currency. Never a float.
 	WonDealValue Money `json:"won_deal_value"`
 
 	// WonDealsUnpriced Won deal amounts with no available base-currency price.
-	WonDealsUnpriced *int `json:"won_deals_unpriced,omitempty"`
+	WonDealsUnpriced *int `json:"won_deals_unpriced,omitempty" minimum:"0"`
 }
 
 // Project360Section One section of the project page, as `sections_omitted` names it.
@@ -53712,13 +54160,13 @@ type ProjectListResponse struct {
 // under the caller's own row scope. Both are ABSENT, not zero, when the caller holds
 // no activity grant: the project is still named, the count is not invented.
 type ProjectScope struct {
-	InScope *int `json:"in_scope,omitempty"`
+	InScope *int `json:"in_scope,omitempty" minimum:"0"`
 
 	// Key The subject-line handle, when the project has one.
 	Key       *string            `json:"key,omitempty"`
 	Name      string             `json:"name"`
 	ProjectId openapi_types.UUID `json:"project_id"`
-	Total     *int               `json:"total,omitempty"`
+	Total     *int               `json:"total,omitempty" minimum:"0"`
 }
 
 // PromiseTakeOver A promise one colleague took over, and the task it became.
@@ -53868,7 +54316,7 @@ type ProviderConfiguration struct {
 	// rejected; at least one selected category is required. Keys are not enumerated here because
 	// they belong to the provider, not to the contract.
 	Categories    ProviderCategorySelection `json:"categories"`
-	DailyRunLimit *int                      `json:"daily_run_limit,omitempty"`
+	DailyRunLimit *int                      `json:"daily_run_limit,omitempty" minimum:"1"`
 	Mode          ProviderConnectionMode    `json:"mode"`
 
 	// Preset A named shortcut the connected provider's descriptor declares (Surfe offers `full`,
@@ -53876,7 +54324,7 @@ type ProviderConfiguration struct {
 	// per-category choices are authoritative, and the descriptor validates the value, so a second
 	// provider may declare different presets without a contract change.
 	Preset           ProviderPreset `json:"preset"`
-	RefreshAfterDays *int           `json:"refresh_after_days,omitempty"`
+	RefreshAfterDays *int           `json:"refresh_after_days,omitempty" minimum:"1"`
 }
 
 // ProviderConfigurationPatch defines model for ProviderConfigurationPatch.
@@ -53890,7 +54338,7 @@ type ProviderConfigurationPatch struct {
 	// rejected; at least one selected category is required. Keys are not enumerated here because
 	// they belong to the provider, not to the contract.
 	Categories    *ProviderCategorySelection `json:"categories,omitempty"`
-	DailyRunLimit *int                       `json:"daily_run_limit,omitempty"`
+	DailyRunLimit *int                       `json:"daily_run_limit,omitempty" minimum:"1"`
 	Mode          *ProviderConnectionMode    `json:"mode,omitempty"`
 
 	// Preset A named shortcut the connected provider's descriptor declares (Surfe offers `full`,
@@ -53898,7 +54346,7 @@ type ProviderConfigurationPatch struct {
 	// per-category choices are authoritative, and the descriptor validates the value, so a second
 	// provider may declare different presets without a contract change.
 	Preset           *ProviderPreset `json:"preset,omitempty"`
-	RefreshAfterDays *int            `json:"refresh_after_days,omitempty"`
+	RefreshAfterDays *int            `json:"refresh_after_days,omitempty" minimum:"1"`
 }
 
 // ProviderConnection defines model for ProviderConnection.
@@ -53944,7 +54392,7 @@ type ProviderConnection struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // ProviderConnectionMode defines model for ProviderConnectionMode.
@@ -53998,7 +54446,7 @@ type ProviderLookupBacklog struct {
 	Paused bool `json:"paused"`
 
 	// Remaining Contacts with no completed free lookup and no live one in flight. Counts down to zero as the sweep works through them, and rises when contacts are created faster than it can reach them.
-	Remaining int `json:"remaining"`
+	Remaining int `json:"remaining" minimum:"0"`
 }
 
 // ProviderMonthlySpend One calendar month's consumption for one credit pool, from this installation's own
@@ -54012,26 +54460,26 @@ type ProviderMonthlySpend struct {
 	// ChargedCredits Credits consumed: the provider's actual charge where it reported one, otherwise
 	// the reservation still held. An unreconciled hold counts as charged, because
 	// assuming a refund nobody promised understates the bill.
-	ChargedCredits int `json:"charged_credits"`
+	ChargedCredits int `json:"charged_credits" minimum:"0"`
 
 	// HeldCredits Credits held by runs in `submission_unknown` — outcome never learned (PI-AC-4).
 	// Reported separately and NEVER inside charged_credits: a total that folded these
 	// in either direction would assert something the platform does not know.
-	HeldCredits int `json:"held_credits"`
+	HeldCredits int `json:"held_credits" minimum:"0"`
 
 	// Month First day of the UTC calendar month, matching the ceiling's window.
 	Month openapi_types.Date `json:"month"`
 
 	// Pool The provider's own pool name.
 	Pool string `json:"pool"`
-	Runs int    `json:"runs"`
+	Runs int    `json:"runs" minimum:"0"`
 }
 
 // ProviderPoolBudget Ceilings for one of the provider's credit pools (Surfe meters `email` and `mobile`
 // separately). Reservation is atomic per connection per pool (PI-PARAM-6).
 type ProviderPoolBudget struct {
-	MonthlyCeiling    *int `json:"monthly_ceiling,omitempty"`
-	PauseBelowBalance *int `json:"pause_below_balance,omitempty"`
+	MonthlyCeiling    *int `json:"monthly_ceiling,omitempty" minimum:"0"`
+	PauseBelowBalance *int `json:"pause_below_balance,omitempty" minimum:"0"`
 }
 
 // ProviderPreset A named shortcut the connected provider's descriptor declares (Surfe offers `full`,
@@ -54069,7 +54517,7 @@ type ProviderRun struct {
 	ClaimsUnwritten       bool                  `json:"claims_unwritten"`
 	CompletedAt           *time.Time            `json:"completed_at,omitempty"`
 	ConfigurationSnapshot ProviderConfiguration `json:"configuration_snapshot"`
-	ConnectionVersion     int64                 `json:"connection_version"`
+	ConnectionVersion     int64                 `json:"connection_version" minimum:"1"`
 
 	// ContactId Populated when `subject_kind` is `contact`, and null otherwise. Each supported
 	// subject kind has its own typed id field; the pairing is enforced by the shape check on
@@ -54086,7 +54534,7 @@ type ProviderRun struct {
 	// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
 	// live set.
 	Provider            Provider `json:"provider"`
-	RequestedCategories []string `json:"requested_categories"`
+	RequestedCategories []string `json:"requested_categories" unique:"items"`
 
 	// Reservations Maximum credits held per pool before submission, reconciled to actual spend on a terminal result (PI-FORM-1).
 	Reservations []ProviderRunReservation `json:"reservations"`
@@ -54151,9 +54599,9 @@ type ProviderRunSubjectKind string
 
 // ProviderRunReservation defines model for ProviderRunReservation.
 type ProviderRunReservation struct {
-	ActualCredits   *int   `json:"actual_credits,omitempty"`
+	ActualCredits   *int   `json:"actual_credits,omitempty" minimum:"0"`
 	Pool            string `json:"pool"`
-	ReservedCredits int    `json:"reserved_credits"`
+	ReservedCredits int    `json:"reserved_credits" minimum:"0"`
 }
 
 // ProviderRunTrigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
@@ -54236,8 +54684,8 @@ type PutOnboardingStateRequest struct {
 	ConnectSkipped bool                   `json:"connect_skipped"`
 
 	// ExpectedVersion Zero creates; otherwise the version last read.
-	ExpectedVersion  int                                  `json:"expected_version"`
-	SelectedFactKeys []string                             `json:"selected_fact_keys"`
+	ExpectedVersion  int                                  `json:"expected_version" minimum:"0"`
+	SelectedFactKeys []string                             `json:"selected_fact_keys" unique:"items"`
 	SiteReadId       *openapi_types.UUID                  `json:"site_read_id,omitempty"`
 	SourceMode       *PutOnboardingStateRequestSourceMode `json:"source_mode"`
 
@@ -54465,7 +54913,7 @@ type RecordAccess struct {
 	Archived bool `json:"archived"`
 
 	// CanChangeCount How many of the members who can open the record can also change it.
-	CanChangeCount int                  `json:"can_change_count"`
+	CanChangeCount int                  `json:"can_change_count" minimum:"0"`
 	Data           []RecordAccessMember `json:"data"`
 
 	// Detail True for a caller holding the `user_admin` read grant, the boundary `GET /users` applies to
@@ -54486,7 +54934,7 @@ type RecordAccess struct {
 	RefreshAt *time.Time `json:"refresh_at,omitempty"`
 
 	// TeamAccessCount How many members have access or edit rights only through a team and are not shown as such, because `detail` is false. Always 0 when `detail` is true.
-	TeamAccessCount int `json:"team_access_count"`
+	TeamAccessCount int `json:"team_access_count" minimum:"0"`
 
 	// Visibility `workspace` opens to every member whose role reads this record type; `owner` only to its owner and the members it is shared with.
 	Visibility RecordAccessVisibility `json:"visibility"`
@@ -54500,10 +54948,10 @@ type RecordAccessVisibility string
 
 // RecordAccessGroupCounts How many members fall in each group, by their first reason in the order owner, direct share, team share, everyone.
 type RecordAccessGroupCounts struct {
-	Everyone   int `json:"everyone"`
-	Owner      int `json:"owner"`
-	Shared     int `json:"shared"`
-	TeamShared int `json:"team_shared"`
+	Everyone   int `json:"everyone" minimum:"0"`
+	Owner      int `json:"owner" minimum:"0"`
+	Shared     int `json:"shared" minimum:"0"`
+	TeamShared int `json:"team_shared" minimum:"0"`
 }
 
 // RecordAccessMember A member who can open the record.
@@ -54614,7 +55062,7 @@ type RecordClaim struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // RecordClaimRecordType defines model for RecordClaim.RecordType.
@@ -55072,7 +55520,7 @@ type Relationship struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // RelationshipEmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
@@ -55127,14 +55575,14 @@ type RelationshipStrength struct {
 
 	// Factors The 0..1 sub-scores the composite was built from (the explanation).
 	Factors struct {
-		Direction   float32 `json:"direction"`
-		Frequency   float32 `json:"frequency"`
-		Recency     float32 `json:"recency"`
-		Reciprocity float32 `json:"reciprocity"`
+		Direction   float32 `json:"direction" maximum:"1" minimum:"0"`
+		Frequency   float32 `json:"frequency" maximum:"1" minimum:"0"`
+		Recency     float32 `json:"recency" maximum:"1" minimum:"0"`
+		Reciprocity float32 `json:"reciprocity" maximum:"1" minimum:"0"`
 	} `json:"factors"`
 
 	// Inbound90d Count of qualifying inbound interactions in the trailing 90-day window.
-	Inbound90d *int `json:"inbound_90d,omitempty"`
+	Inbound90d *int `json:"inbound_90d,omitempty" minimum:"0"`
 
 	// LastEngaged The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
 	LastEngaged *time.Time `json:"last_engaged,omitempty"`
@@ -55143,10 +55591,10 @@ type RelationshipStrength struct {
 	LastInteraction *time.Time `json:"last_interaction,omitempty"`
 
 	// Outbound90d Count of qualifying outbound interactions in the trailing 90-day window.
-	Outbound90d *int `json:"outbound_90d,omitempty"`
+	Outbound90d *int `json:"outbound_90d,omitempty" minimum:"0"`
 
 	// Score 0..100 composite.
-	Score int `json:"score"`
+	Score int `json:"score" maximum:"100" minimum:"0"`
 }
 
 // RelationshipStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
@@ -55263,8 +55711,8 @@ type RenewContractRequest struct {
 	Currency         *string             `json:"currency,omitempty"`
 	DealId           *openapi_types.UUID `json:"deal_id,omitempty"`
 	EndsOn           *openapi_types.Date `json:"ends_on,omitempty"`
-	NoticePeriodDays *int                `json:"notice_period_days,omitempty"`
-	PaymentTermDays  *int                `json:"payment_term_days,omitempty"`
+	NoticePeriodDays *int                `json:"notice_period_days,omitempty" minimum:"0"`
+	PaymentTermDays  *int                `json:"payment_term_days,omitempty" minimum:"0"`
 	ProjectId        *openapi_types.UUID `json:"project_id,omitempty"`
 	RenewalOn        *openapi_types.Date `json:"renewal_on,omitempty"`
 	SignedOn         *openapi_types.Date `json:"signed_on,omitempty"`
@@ -55330,7 +55778,7 @@ type ReplyRecipient struct {
 	// MailboxUserIds Every member of this company whose OWN mailbox this message was delivered to, in the order the imports were recorded. It says whose conversation a reply would be joining: a thread that reached only a colleague's mailbox is theirs, and a reply still goes out from the caller's own mailbox under the caller's own name.
 	// A label of where the message arrived, never a grant. It is answered only to a caller who may already read the message's content, and a seat named here is named because their credential delivered the row.
 	// Empty is an answer: a hand-logged activity was typed rather than delivered, and a row whose recorded provenance names no seat this company still holds resolves to nobody. Always an array, never null.
-	MailboxUserIds []openapi_types.UUID `json:"mailbox_user_ids"`
+	MailboxUserIds []openapi_types.UUID `json:"mailbox_user_ids" unique:"items"`
 
 	// ViewerOnConversation Whether the caller already belongs to this conversation, so a composer can say when a reply comes from somebody the contact has not been writing with. A label, never a grant: it never refuses a send.
 	// True when either holds. The caller is on the thread: one of their own addresses, or their seat, is the From, To or Cc of the message or of another message in its thread that they may read. Their addresses are their login, the addresses they declared and their connected mailboxes; an address another seat holds on equal or stronger evidence is not theirs. Or the caller is on the team of a deal the message is filed under: its owner, assigned to it, or a member of a team assigned to it. A deal counts only when the caller may read it, so the answer never shows that a hidden deal exists.
@@ -55476,7 +55924,7 @@ type ReportEvidenceSearchRequest struct {
 	Cell *[]interface{} `json:"cell,omitempty"`
 
 	// Limit How many citations, counterexamples and abstentions to return, each.
-	Limit *int `json:"limit,omitempty"`
+	Limit *int `json:"limit,omitempty" maximum:"25" minimum:"1"`
 
 	// Query The words the evidence would carry.
 	Query string `json:"query"`
@@ -55506,7 +55954,7 @@ type ReportResult struct {
 	ExcludedByPermission *int `json:"excluded_by_permission,omitempty"`
 
 	// FiscalYearStartMonth The month the installation's financial year opens, so a quarter in this result can be placed without assuming it starts in January.
-	FiscalYearStartMonth int        `json:"fiscal_year_start_month"`
+	FiscalYearStartMonth int        `json:"fiscal_year_start_month" maximum:"12" minimum:"1"`
 	GeneratedAt          *time.Time `json:"generated_at,omitempty"`
 
 	// Plan The validated query plan that was executed (shown before/after run).
@@ -55583,7 +56031,7 @@ type ReportScopeKind string
 type ReportSetupObjective struct {
 	Deadline    *openapi_types.Date `json:"deadline,omitempty"`
 	Metric      ReportingMetricID   `json:"metric"`
-	TargetValue *int64              `json:"target_value,omitempty"`
+	TargetValue *int64              `json:"target_value,omitempty" minimum:"1"`
 }
 
 // ReportSetupProposal defines model for ReportSetupProposal.
@@ -55740,7 +56188,7 @@ type ReportingCardQuestion struct {
 	GroupBy *[]string `json:"group_by,omitempty"`
 
 	// Limit The rows the card shows; 100 when absent.
-	Limit    *int               `json:"limit,omitempty"`
+	Limit    *int               `json:"limit,omitempty" maximum:"1000" minimum:"1"`
 	Measures []AnalyticsMeasure `json:"measures"`
 
 	// SavedQuestionId Sent on a save to bind the card to this saved question. Never served back.
@@ -55752,7 +56200,7 @@ type ReportingCatalog struct {
 	AssessmentViews *[]SalesAssessmentView `json:"assessment_views,omitempty"`
 
 	// EditionRetentionDays How many days a sent edition keeps its readings and question answers before retention erases them. Present for schedule authors while the policy is on.
-	EditionRetentionDays *int                        `json:"edition_retention_days,omitempty"`
+	EditionRetentionDays *int                        `json:"edition_retention_days,omitempty" minimum:"1"`
 	Metrics              []ReportingMetricDefinition `json:"metrics"`
 
 	// Presets The default selections the Analytics screen opens on. Each lists only metrics this reader may read and the charts those metrics draw; a preset with none of the reader's metrics is left out.
@@ -55796,7 +56244,7 @@ type ReportingChart struct {
 
 // ReportingCohortCount defines model for ReportingCohortCount.
 type ReportingCohortCount struct {
-	Count int64 `json:"count"`
+	Count int64 `json:"count" minimum:"0"`
 
 	// DurationBasis `completed` is the time from entry to the outcome: for a stage, the
 	// time the deal spent in the stage. `current_age` is the time from
@@ -55840,7 +56288,7 @@ type ReportingContext struct {
 	EvaluatedAt       time.Time         `json:"evaluated_at"`
 
 	// FiscalYearStartMonth The fiscal start month in force. Absent on older editions.
-	FiscalYearStartMonth *int  `json:"fiscal_year_start_month,omitempty"`
+	FiscalYearStartMonth *int  `json:"fiscal_year_start_month,omitempty" maximum:"12" minimum:"1"`
 	FrameworkRevision    int64 `json:"framework_revision"`
 
 	// Horizon The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
@@ -55874,8 +56322,8 @@ type ReportingCountry = string
 
 // ReportingCoverage defines model for ReportingCoverage.
 type ReportingCoverage struct {
-	EligibleCount *int64  `json:"eligible_count,omitempty"`
-	PricedCount   *int64  `json:"priced_count,omitempty"`
+	EligibleCount *int64  `json:"eligible_count,omitempty" minimum:"0"`
+	PricedCount   *int64  `json:"priced_count,omitempty" minimum:"0"`
 	Reason        *string `json:"reason,omitempty"`
 
 	// Status `failed` means the database could not calculate this figure on this
@@ -56021,20 +56469,20 @@ type ReportingForecastBasis struct {
 	CallMinor *int64 `json:"call_minor,omitempty"`
 
 	// EligibleCount Deals the forecast considered, priced or not.
-	EligibleCount int64 `json:"eligible_count"`
+	EligibleCount int64 `json:"eligible_count" minimum:"0"`
 
 	// FxMissingCount Priced deals with no exchange rate to the base currency, left out of every total.
-	FxMissingCount int64 `json:"fx_missing_count"`
+	FxMissingCount int64 `json:"fx_missing_count" minimum:"0"`
 
 	// IncludedCount The priced deals the totals count: `priced_count` without the `fx_missing_count` ones. Absent on editions captured before the field existed; a reader then states no included count rather than working one out.
-	IncludedCount *int64 `json:"included_count,omitempty"`
+	IncludedCount *int64 `json:"included_count,omitempty" minimum:"0"`
 
 	// Landing Where the period finishes if nothing changes, and what that answer rests on.
 	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 	Landing ForecastLanding `json:"landing"`
 
 	// OpenCount Open deals eligible for this forecast period.
-	OpenCount    *int64                `json:"open_count,omitempty"`
+	OpenCount    *int64                `json:"open_count,omitempty" minimum:"0"`
 	OpenEvidence *ReportingEvidenceRef `json:"open_evidence,omitempty"`
 
 	// OpenPipelineMinor Open deal value eligible for the forecast period, in base minor units.
@@ -56044,7 +56492,7 @@ type ReportingForecastBasis struct {
 	Period ReportingWindow `json:"period"`
 
 	// PricedCount How many of them carried an amount; an unpriced deal adds nothing to the range.
-	PricedCount int64 `json:"priced_count"`
+	PricedCount int64 `json:"priced_count" minimum:"0"`
 }
 
 // ReportingFramework defines model for ReportingFramework.
@@ -56094,10 +56542,10 @@ type ReportingMetric struct {
 	Numerator     *float64                `json:"numerator,omitempty"`
 
 	// RangeHighMinor `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
-	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
+	RangeHighMinor *int64 `json:"range_high_minor,omitempty" maximum:"9007199254740991" minimum:"0"`
 
 	// RangeLowMinor `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. At most one finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
-	RangeLowMinor *int64   `json:"range_low_minor,omitempty"`
+	RangeLowMinor *int64   `json:"range_low_minor,omitempty" maximum:"9007199254740991" minimum:"0"`
 	Target        *float64 `json:"target,omitempty"`
 	TargetActual  *float64 `json:"target_actual,omitempty"`
 
@@ -56153,7 +56601,7 @@ type ReportingMetricID string
 
 // ReportingOverviewAction An application-supplied action over the exact records named by its evidence reference.
 type ReportingOverviewAction struct {
-	Count    int                  `json:"count"`
+	Count    int                  `json:"count" minimum:"1"`
 	Evidence ReportingEvidenceRef `json:"evidence"`
 	Id       string               `json:"id"`
 	Label    string               `json:"label"`
@@ -56161,7 +56609,7 @@ type ReportingOverviewAction struct {
 
 // ReportingPeriodBasis The calendar a kept question's period filters keep their dates in.
 type ReportingPeriodBasis struct {
-	FiscalYearStartMonth int    `json:"fiscal_year_start_month"`
+	FiscalYearStartMonth int    `json:"fiscal_year_start_month" maximum:"12" minimum:"1"`
 	Timezone             string `json:"timezone"`
 }
 
@@ -56179,7 +56627,7 @@ type ReportingPoint struct {
 	Evidence     *ReportingEvidenceRef   `json:"evidence,omitempty"`
 	Key          string                  `json:"key"`
 	Label        string                  `json:"label"`
-	Observations *int64                  `json:"observations,omitempty"`
+	Observations *int64                  `json:"observations,omitempty" minimum:"0"`
 
 	// Outcomes On a cohort point, what became of its members by the evaluation
 	// instant. Every member is in exactly one outcome, so the counts add
@@ -56260,14 +56708,14 @@ type ReportingReport struct {
 	// DraftRevision The unpublished draft revision, shown only to an editor of the report. Absent when there
 	// is no draft. Evaluate it with `revision` to preview it.
 	DraftRevision       *int64             `json:"draft_revision,omitempty"`
-	EditionCount        *int               `json:"edition_count,omitempty"`
+	EditionCount        *int               `json:"edition_count,omitempty" minimum:"0"`
 	Id                  openapi_types.UUID `json:"id"`
 	LastStatus          *string            `json:"last_status,omitempty"`
 	LatestCapturedAt    *time.Time         `json:"latest_captured_at,omitempty"`
 	Name                string             `json:"name"`
 	NextDueAt           *time.Time         `json:"next_due_at,omitempty"`
 	OwnerId             openapi_types.UUID `json:"owner_id"`
-	PausedScheduleCount *int               `json:"paused_schedule_count,omitempty"`
+	PausedScheduleCount *int               `json:"paused_schedule_count,omitempty" minimum:"0"`
 	Revision            int64              `json:"revision"`
 	Selection           ReportingSelection `json:"selection"`
 	Version             int64              `json:"version"`
@@ -56334,11 +56782,11 @@ type ReportingSchedule struct {
 
 // ReportingScheduleInput defines model for ReportingScheduleInput.
 type ReportingScheduleInput struct {
-	Day            int                             `json:"day"`
+	Day            int                             `json:"day" maximum:"31" minimum:"1"`
 	Enabled        bool                            `json:"enabled"`
 	Frequency      ReportingScheduleInputFrequency `json:"frequency"`
 	LocalTime      string                          `json:"local_time"`
-	ReportRevision int64                           `json:"report_revision"`
+	ReportRevision int64                           `json:"report_revision" minimum:"1"`
 }
 
 // ReportingScheduleInputFrequency defines model for ReportingScheduleInput.Frequency.
@@ -56539,7 +56987,7 @@ type ReportingTargetInput struct {
 	// Retired Excludes this allocation from live progress while preserving its revisions and saved snapshots.
 	Retired *bool          `json:"retired,omitempty"`
 	Scope   ReportingScope `json:"scope"`
-	Value   int64          `json:"value"`
+	Value   int64          `json:"value" minimum:"0"`
 }
 
 // ReportingTargetInputPeriodKind defines model for ReportingTargetInput.PeriodKind.
@@ -56623,7 +57071,7 @@ type ResponseMetrics struct {
 	// denominator `median_minutes` is worth reading against: a fast median over three
 	// answered messages says less about the workspace than a slower one over three
 	// hundred.
-	Answered int `json:"answered"`
+	Answered int `json:"answered" minimum:"0"`
 
 	// AtRiskBookedSameDay How many of those deal-days got a next step booked the same day: a task on the
 	// deal created within that day, done or not. The day's bounds are the ones in force
@@ -56631,7 +57079,7 @@ type ResponseMetrics struct {
 	// not move which tasks fell on it. A meeting
 	// does not count, because its record is created when the calendar sync sees it
 	// rather than when somebody booked it.
-	AtRiskBookedSameDay *int `json:"at_risk_booked_same_day,omitempty"`
+	AtRiskBookedSameDay *int `json:"at_risk_booked_same_day,omitempty" minimum:"0"`
 
 	// AtRiskFromDay The first day the two figures above count: the first whole day inside the
 	// window, in the installation's timezone.
@@ -56653,7 +57101,7 @@ type ResponseMetrics struct {
 	// zero — for a caller whose field masks withhold a deal's amount or currency on any
 	// row. The deals were chosen by amounts that caller may not read, so a rate over
 	// them would say something about those amounts.
-	AtRiskJudged *int `json:"at_risk_judged,omitempty"`
+	AtRiskJudged *int `json:"at_risk_judged,omitempty" minimum:"0"`
 
 	// AtRiskRecordedSince The first day on record in this installation. Absent when there is none yet, and
 	// absent with the rest of the group when the figure is withheld.
@@ -56679,12 +57127,12 @@ type ResponseMetrics struct {
 	// Over the conversations THIS caller may open, like every figure beside it. Two
 	// readers of the same workspace can therefore see different totals here, and each
 	// is answering "how much of the work I can see is being put down".
-	Disposed int `json:"disposed"`
+	Disposed int `json:"disposed" minimum:"0"`
 
 	// DisposedNotSales How many of those were the workspace-wide judgement. Its own figure because it
 	// is the one that costs everybody: the other two hide a row from one reader, this
 	// one hides the conversation from all of them and does not lift.
-	DisposedNotSales int `json:"disposed_not_sales"`
+	DisposedNotSales int `json:"disposed_not_sales" minimum:"0"`
 
 	// From The start of the window, inclusive.
 	From time.Time `json:"from"`
@@ -56697,7 +57145,7 @@ type ResponseMetrics struct {
 	//
 	// Zero when nothing was answered, which `answered` tells apart from a genuine
 	// zero-minute median.
-	MedianMinutes int `json:"median_minutes"`
+	MedianMinutes int `json:"median_minutes" minimum:"0"`
 
 	// To The end of the window, exclusive — so consecutive windows partition time and a message on a boundary is counted once.
 	To time.Time `json:"to"`
@@ -56822,7 +57270,7 @@ type RetentionPolicy struct {
 	ObjectType string `json:"object_type"`
 
 	// RetainDays Age in days past which the action fires. Whole days; the evaluator compares against `now()`.
-	RetainDays int `json:"retain_days"`
+	RetainDays int `json:"retain_days" minimum:"1"`
 
 	// Scope An authorable retention scope (GCS-PARAM-8) — a `(object_type, category)` pair the nightly
 	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
@@ -57169,7 +57617,7 @@ type SalesInitiative struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // SalesInitiativeInput defines model for SalesInitiativeInput.
@@ -57191,7 +57639,7 @@ type SalesInitiativeInput struct {
 
 	// Reason Why a live initiative's definition changed.
 	Reason      *string `json:"reason,omitempty"`
-	TargetValue *int64  `json:"target_value,omitempty"`
+	TargetValue *int64  `json:"target_value,omitempty" minimum:"1"`
 }
 
 // SalesInitiativeListResponse defines model for SalesInitiativeListResponse.
@@ -57424,7 +57872,7 @@ type ScheduledSend struct {
 	// kept without bytes, or empty. Not named: a file the sender cannot see answers 404
 	// everywhere else. Like `attachments`, resolved only by the detail read of a waiting
 	// message; absent there when every file resolves.
-	AttachmentsUnavailable *int `json:"attachments_unavailable,omitempty"`
+	AttachmentsUnavailable *int `json:"attachments_unavailable,omitempty" minimum:"1"`
 
 	// Bcc Visible to the SENDER, who is the only contact this record is readable by. A scheduled
 	// message's blind-copy list is not workspace-readable the way a sent activity is.
@@ -57552,17 +58000,17 @@ type SchedulingProfile struct {
 	// the connection is gone or refused. Answered on the host's own profile read only.
 	Blocker           *SchedulingProfileBlocker `json:"blocker,omitempty"`
 	BlockingCalendars *[]string                 `json:"blocking_calendars,omitempty"`
-	BufferMinutes     int                       `json:"buffer_minutes"`
+	BufferMinutes     int                       `json:"buffer_minutes" maximum:"120" minimum:"0"`
 	CalendarId        string                    `json:"calendar_id"`
 
 	// CompanyName The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
 	CompanyName     *string `json:"company_name,omitempty"`
-	DurationMinutes int     `json:"duration_minutes"`
+	DurationMinutes int     `json:"duration_minutes" maximum:"480" minimum:"15"`
 
 	// EmailReminder Send one operational email reminder one hour before future meetings.
 	EmailReminder *bool `json:"email_reminder,omitempty"`
 	Enabled       bool  `json:"enabled"`
-	HorizonDays   int   `json:"horizon_days"`
+	HorizonDays   int   `json:"horizon_days" maximum:"90" minimum:"1"`
 
 	// HostName Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
 	HostName *string `json:"host_name,omitempty"`
@@ -57570,7 +58018,7 @@ type SchedulingProfile struct {
 
 	// LogoUrl The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl       *string                   `json:"logo_url,omitempty"`
-	NoticeMinutes int                       `json:"notice_minutes"`
+	NoticeMinutes int                       `json:"notice_minutes" maximum:"10080" minimum:"0"`
 	Provider      SchedulingProfileProvider `json:"provider"`
 
 	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
@@ -57594,38 +58042,38 @@ type SchedulingProfileProvider string
 
 // SdrHandoffCohort defines model for SdrHandoffCohort.
 type SdrHandoffCohort struct {
-	Accepted int `json:"accepted"`
+	Accepted int `json:"accepted" minimum:"0"`
 
 	// MedianDecisionHours Median hours from submission to decision over the decided rounds. Absent with none decided.
-	MedianDecisionHours *float32 `json:"median_decision_hours,omitempty"`
-	Recycled            int      `json:"recycled"`
-	Rejected            int      `json:"rejected"`
+	MedianDecisionHours *float32 `json:"median_decision_hours,omitempty" minimum:"0"`
+	Recycled            int      `json:"recycled" minimum:"0"`
+	Rejected            int      `json:"rejected" minimum:"0"`
 
 	// Rounds Rounds submitted in the period. The denominator of the other four, which add up to it.
-	Rounds int `json:"rounds"`
+	Rounds int `json:"rounds" minimum:"0"`
 
 	// Waiting Rounds still undecided at `observed_through`.
-	Waiting int `json:"waiting"`
+	Waiting int `json:"waiting" minimum:"0"`
 }
 
 // SdrHandoffOutcomes defines model for SdrHandoffOutcomes.
 type SdrHandoffOutcomes struct {
 	// Accepted Deals first accepted from a handoff in the period, each deal once.
-	Accepted int `json:"accepted"`
+	Accepted int `json:"accepted" minimum:"0"`
 
 	// Recycled Handoffs sent back to the submitter in the period, to try again.
-	Recycled int `json:"recycled"`
+	Recycled int `json:"recycled" minimum:"0"`
 
 	// Rejected Handoffs rejected in the period. A rejection ends the handoff.
-	Rejected int `json:"rejected"`
+	Rejected int `json:"rejected" minimum:"0"`
 
 	// Submitted Rounds submitted in the period, resubmissions included.
-	Submitted int `json:"submitted"`
+	Submitted int `json:"submitted" minimum:"0"`
 }
 
 // SdrHandoffReasonCount defines model for SdrHandoffReasonCount.
 type SdrHandoffReasonCount struct {
-	Count int `json:"count"`
+	Count int `json:"count" minimum:"1"`
 
 	// Given False for the decisions that recorded no reason, so the reasons of one outcome add up to its count in `outcomes`.
 	Given bool `json:"given"`
@@ -57659,19 +58107,19 @@ type SdrHandoffSubjectType string
 // SdrHandoffTotals defines model for SdrHandoffTotals.
 type SdrHandoffTotals struct {
 	// Blocked Waiting handoffs whose named recipient can no longer act, so nobody will decide them until someone reassigns them.
-	Blocked int `json:"blocked"`
+	Blocked int `json:"blocked" minimum:"0"`
 
 	// OldestWaitingSince When the longest current wait began. Absent with nothing waiting.
 	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
 
 	// Returned Handoffs sent back to the submitter to try again. These wait on the submitter.
-	Returned int `json:"returned"`
+	Returned int `json:"returned" minimum:"0"`
 
 	// Unassigned Waiting handoffs offered to nobody in particular.
-	Unassigned int `json:"unassigned"`
+	Unassigned int `json:"unassigned" minimum:"0"`
 
 	// Waiting Handoffs submitted and not yet decided.
-	Waiting int `json:"waiting"`
+	Waiting int `json:"waiting" minimum:"0"`
 }
 
 // SdrMeetingRecord The first customer record the meeting is linked to that the seat may read, a lead before a contact before a company.
@@ -57697,7 +58145,7 @@ type SdrSummary struct {
 	Scope AnalyticsScope `json:"scope"`
 
 	// UpcomingMeetings Booked meetings that have not happened by `as_of` and start before `upcoming_window.end_at`, credited to the scope.
-	UpcomingMeetings *int `json:"upcoming_meetings,omitempty"`
+	UpcomingMeetings *int `json:"upcoming_meetings,omitempty" minimum:"0"`
 
 	// UpcomingWindow The span `upcoming_meetings` and the meeting list count in. It is present whenever `upcoming_meetings` is.
 	UpcomingWindow *SdrUpcomingWindow `json:"upcoming_window,omitempty"`
@@ -57718,14 +58166,14 @@ type SdrTeamHandoffs struct {
 	Reasons []SdrHandoffReasonCount `json:"reasons"`
 
 	// Unattributed Decisions and submissions in the period that recorded no submitter, counted for the whole company only. No team can tell whether they were its own, and no member's row holds them.
-	Unattributed int              `json:"unattributed"`
+	Unattributed int              `json:"unattributed" minimum:"0"`
 	Waiting      SdrHandoffTotals `json:"waiting"`
 }
 
 // SdrTeamMeetings defines model for SdrTeamMeetings.
 type SdrTeamMeetings struct {
 	// Held Held customer meetings in the period credited to the team, each counted once.
-	Held int `json:"held"`
+	Held int `json:"held" minimum:"0"`
 
 	// LimitedHistory Some meetings were recorded before their history was kept, so their credit is read from the meeting as it is today.
 	LimitedHistory bool `json:"limited_history"`
@@ -57733,41 +58181,41 @@ type SdrTeamMeetings struct {
 
 // SdrTeamMember One member's figures. `submitted`, `accepted`, `rejected`, `recycled` and `waiting` are absent when `withheld_figures` names `handoffs`, and present otherwise, a zero included.
 type SdrTeamMember struct {
-	Accepted    *int                 `json:"accepted,omitempty"`
+	Accepted    *int                 `json:"accepted,omitempty" minimum:"0"`
 	EventTarget *SdrTeamMemberTarget `json:"event_target,omitempty"`
 	Id          openapi_types.UUID   `json:"id"`
 	Label       string               `json:"label"`
 
 	// MeetingsHeld Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is.
-	MeetingsHeld *int `json:"meetings_held,omitempty"`
+	MeetingsHeld *int `json:"meetings_held,omitempty" minimum:"0"`
 
 	// OldestWaitingSince When this member's longest current wait began. Absent with nothing waiting.
 	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
 
 	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the arrival-cohort reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`.
-	Qualified *int `json:"qualified,omitempty"`
+	Qualified *int `json:"qualified,omitempty" minimum:"0"`
 
 	// QualifiedEvents First qualifications in the period credited to the owner at qualification. Counts attributed events only; qualification_unattributed identifies partial history.
-	QualifiedEvents *int                 `json:"qualified_events,omitempty"`
-	Recycled        *int                 `json:"recycled,omitempty"`
-	Rejected        *int                 `json:"rejected,omitempty"`
-	Submitted       *int                 `json:"submitted,omitempty"`
+	QualifiedEvents *int                 `json:"qualified_events,omitempty" minimum:"0"`
+	Recycled        *int                 `json:"recycled,omitempty" minimum:"0"`
+	Rejected        *int                 `json:"rejected,omitempty" minimum:"0"`
+	Submitted       *int                 `json:"submitted,omitempty" minimum:"0"`
 	Target          *SdrTeamMemberTarget `json:"target,omitempty"`
 
 	// Unanswered Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads` or `unanswered`.
-	Unanswered *int `json:"unanswered,omitempty"`
+	Unanswered *int `json:"unanswered,omitempty" minimum:"0"`
 
 	// Waiting This member's handoffs waiting on somebody else now.
-	Waiting *int `json:"waiting,omitempty"`
+	Waiting *int `json:"waiting,omitempty" minimum:"0"`
 }
 
 // SdrTeamMemberTarget defines model for SdrTeamMemberTarget.
 type SdrTeamMemberTarget struct {
 	// Actual Leads that arrived in the target month up to `as_of`, owned by the member now and qualified by `as_of`: the `qualified` rule over the month.
-	Actual int `json:"actual"`
+	Actual int `json:"actual" minimum:"0"`
 
 	// Value The member's own target for `member_targets.metric` over `member_targets.window`.
-	Value int64 `json:"value"`
+	Value int64 `json:"value" minimum:"0"`
 }
 
 // SdrTeamMemberTargets What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week.
@@ -57810,16 +58258,16 @@ type SdrTeamReview struct {
 	QualificationBasis *SdrTeamReviewQualificationBasis `json:"qualification_basis,omitempty"`
 
 	// QualificationTargetUnattributed First qualifications in the target month whose historical owner was not recorded.
-	QualificationTargetUnattributed *int `json:"qualification_target_unattributed,omitempty"`
+	QualificationTargetUnattributed *int `json:"qualification_target_unattributed,omitempty" minimum:"0"`
 
 	// QualificationUnattributed First qualifications in the period whose historical owner was not recorded. Member figures cover only the attributed events.
-	QualificationUnattributed *int `json:"qualification_unattributed,omitempty"`
+	QualificationUnattributed *int `json:"qualification_unattributed,omitempty" minimum:"0"`
 
 	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 	Scope AnalyticsScope `json:"scope"`
 
 	// SmallSampleBelow A count of rounds below this is too small to compare with another. Show its size, not a rate.
-	SmallSampleBelow int `json:"small_sample_below"`
+	SmallSampleBelow int `json:"small_sample_below" minimum:"1"`
 
 	// Withheld Individual performance is off and these figures would show one colleague's work, so `meetings` and `handoffs` are absent.
 	Withheld bool `json:"withheld"`
@@ -57958,7 +58406,7 @@ type SearchResponseTypesWithMore string
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
 	// CarriedBy For a `tag` hit only: how many contacts, companies, deals and leads carry this word, as THIS caller may see them — the same types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
-	CarriedBy *int `json:"carried_by,omitempty"`
+	CarriedBy *int `json:"carried_by,omitempty" minimum:"0"`
 
 	// EmailSummary The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not.
 	EmailSummary *EmailSummary      `json:"email_summary,omitempty"`
@@ -58041,7 +58489,7 @@ type SeatUsage struct {
 	// deactivated nor suspended — agent seats included. Read seats are unlimited and
 	// never counted (ADR-0047). This is the same number the entitlement surface
 	// reports and the same one a seat creation is refused against; there is one meter.
-	SeatsUsed int `json:"seats_used"`
+	SeatsUsed int `json:"seats_used" minimum:"0"`
 }
 
 // SendAuthorizationPreview What the engine would decide, per recipient, for a message nobody has sent.
@@ -58720,7 +59168,7 @@ type SetFxRateRequest struct {
 // SetLeadManualSignalRequest defines model for SetLeadManualSignalRequest.
 type SetLeadManualSignalRequest struct {
 	Band       string   `json:"band"`
-	Confidence *float32 `json:"confidence,omitempty"`
+	Confidence *float32 `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 
 	// Factor The factors a human may supply. Served, with their bands, by `getLeadSignalCatalog`.
 	Factor LeadManualSignalFactor `json:"factor"`
@@ -58799,35 +59247,6 @@ type SetSignatureEnrichmentRequest struct {
 	// Enabled true or false is this mailbox's own answer; null follows the tenant default.
 	Enabled *bool `json:"enabled"`
 }
-
-// SetTransitionPolicyRequest Every threshold is optional. Omitting one KEEPS what the rule has, or
-// takes the product default on a first write — so a caller turning a
-// transition on cannot silently reset a bar somebody set.
-type SetTransitionPolicyRequest struct {
-	CleanAcceptanceThreshold    *float64           `json:"clean_acceptance_threshold,omitempty"`
-	CorrectionReversalThreshold *float64           `json:"correction_reversal_threshold,omitempty"`
-	FromStageId                 openapi_types.UUID `json:"from_stage_id"`
-
-	// IfVersion The rule's version as the caller read it, refusing the write with
-	// 409 when the row has moved on since.
-	//
-	// OPTIONAL, and its absence is not a conflict. A first write has no
-	// row to have read, and an edit that offers no pin is a caller who
-	// did not read first rather than one holding a stale copy — the same
-	// bargain the exit-criteria editor makes. A client that wants the
-	// guarantee sends the version it read; one that does not, does not
-	// get it.
-	IfVersion          *int64                         `json:"if_version,omitempty"`
-	MinObservationDays *int                           `json:"min_observation_days,omitempty"`
-	MinReviewed        *int                           `json:"min_reviewed,omitempty"`
-	Mode               SetTransitionPolicyRequestMode `json:"mode"`
-	ToStageId          openapi_types.UUID             `json:"to_stage_id"`
-	UndoWindowHours    *int                           `json:"undo_window_hours,omitempty"`
-	WindowDays         *int                           `json:"window_days,omitempty"`
-}
-
-// SetTransitionPolicyRequestMode defines model for SetTransitionPolicyRequest.Mode.
-type SetTransitionPolicyRequestMode string
 
 // SetUpPartnerRequest What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
 // or `served_segments`: the tier is a human's choice, and the others are set after set-up.
@@ -58923,7 +59342,7 @@ type ShareCaptureHoldHistoryResponse struct {
 	// stays limited, because the audience is the strictest answer across every seat that
 	// imported it. Zero means every message the caller's holds caught is held for some
 	// other reason too, or was captured before the product recorded more than one reason.
-	Released int `json:"released"`
+	Released int `json:"released" minimum:"0"`
 }
 
 // SharedForecastView What one caller reads through a share.
@@ -59012,7 +59431,7 @@ type Signal struct {
 	// says how it stands now. Every append is kept, and an audit reader
 	// is where the earlier ones belong.
 	Resolution           *SignalResolution `json:"resolution,omitempty"`
-	ResolutionConfidence *float32          `json:"resolution_confidence,omitempty"`
+	ResolutionConfidence *float32          `json:"resolution_confidence,omitempty" maximum:"1" minimum:"0"`
 
 	// ResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
 	ResolutionState SignalResolutionState `json:"resolution_state"`
@@ -59040,7 +59459,7 @@ type Signal struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // SignalEntityType The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
@@ -59303,7 +59722,7 @@ type SlippingDeal struct {
 	DealId   openapi_types.UUID `json:"deal_id"`
 	Evidence []SlippingEvidence `json:"evidence"`
 	Name     string             `json:"name"`
-	Rank     int                `json:"rank"`
+	Rank     int                `json:"rank" minimum:"1"`
 }
 
 // SlippingDealList What `whats_slipping_this_week` answers, worst first.
@@ -59348,10 +59767,10 @@ type SourceAuthor struct {
 // SourceQuoteProof A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
 type SourceQuoteProof struct {
 	// Cut How the source message was cut before it was hashed, so a proof verifies against the same text. Absent on a proof stored before cuts were named.
-	Cut    *int   `json:"cut,omitempty"`
-	End    int    `json:"end"`
+	Cut    *int   `json:"cut,omitempty" minimum:"0"`
+	End    int    `json:"end" minimum:"1"`
 	Sha256 string `json:"sha256"`
-	Start  int    `json:"start"`
+	Start  int    `json:"start" minimum:"0"`
 }
 
 // Stage A pipeline stage. Mirrors the `stage` table.
@@ -59360,7 +59779,7 @@ type Stage struct {
 	CreatedAt  *time.Time `json:"created_at,omitempty"`
 
 	// DealCount Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not promise the removal succeeds.
-	DealCount *int `json:"deal_count,omitempty"`
+	DealCount *int `json:"deal_count,omitempty" minimum:"0"`
 
 	// ExitCriteria The stage's live exit criteria, split by whether each blocks a deal leaving.
 	ExitCriteria *StageExitCriteriaCounts `json:"exit_criteria,omitempty"`
@@ -59377,22 +59796,14 @@ type Stage struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// WinProbability won=100, lost=0, open=0..100.
-	WinProbability int `json:"win_probability"`
+	WinProbability int `json:"win_probability" maximum:"100" minimum:"0"`
 }
 
 // StageSemantic defines model for Stage.Semantic.
 type StageSemantic string
-
-// StageAutomationReport defines model for StageAutomationReport.
-type StageAutomationReport struct {
-	Data []StageTransitionRecord `json:"data"`
-
-	// WindowDays The window the counts were taken over.
-	WindowDays int `json:"window_days"`
-}
 
 // StageCriterionKind What KIND of fact settles a criterion. This is not decoration: the kind
 // decides which evidence sources may satisfy it. `buyer_confirmed`,
@@ -59426,7 +59837,7 @@ type StageEvidence struct {
 
 	// Confidence How sure the reader was. Absent for a deterministic writer: a record
 	// either states the fact or it does not.
-	Confidence  *float32           `json:"confidence,omitempty"`
+	Confidence  *float32           `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
 	CriterionId openapi_types.UUID `json:"criterion_id"`
 	DealId      openapi_types.UUID `json:"deal_id"`
@@ -59498,10 +59909,10 @@ type StageEvidenceSource string
 // StageExitCriteriaCounts The stage's live exit criteria, split by whether each blocks a deal leaving.
 type StageExitCriteriaCounts struct {
 	// Optional Criteria gathered and shown that never block.
-	Optional int `json:"optional"`
+	Optional int `json:"optional" minimum:"0"`
 
 	// Required Criteria a deal must meet to leave the stage.
-	Required int `json:"required"`
+	Required int `json:"required" minimum:"0"`
 }
 
 // StageExitCriterion One thing that must be true of a deal before it leaves a stage. Mirrors the
@@ -59554,69 +59965,6 @@ type StageListResponse struct {
 type StageOrderRequest struct {
 	// StageIds Every live stage of the pipeline, each exactly once, in the new order.
 	StageIds []openapi_types.UUID `json:"stage_ids"`
-}
-
-// StageTransitionEvidenceRecord defines model for StageTransitionEvidenceRecord.
-type StageTransitionEvidenceRecord struct {
-	AcceptedClean int    `json:"accepted_clean"`
-	Kind          string `json:"kind"`
-	Reviewed      int    `json:"reviewed"`
-	Unsafe        int    `json:"unsafe"`
-}
-
-// StageTransitionRecord defines model for StageTransitionRecord.
-type StageTransitionRecord struct {
-	// AcceptedClean Approved with nothing changed.
-	AcceptedClean int `json:"accepted_clean"`
-
-	// AcceptedEdited Approved only after the human changed it. Not a clean acceptance:
-	// the question is whether the proposal is right AS IT STANDS.
-	AcceptedEdited int `json:"accepted_edited"`
-
-	// AutoApplied Applied without anybody being asked. Reported apart so a reader can
-	// see how much of a transition's record the autopilot wrote about
-	// itself.
-	AutoApplied         int     `json:"auto_applied"`
-	CleanAcceptanceRate float64 `json:"clean_acceptance_rate"`
-	EditRate            float64 `json:"edit_rate"`
-
-	// EvidenceKinds The same moves cut by the criterion kinds they rested on, so an
-	// installation can see WHICH evidence it accepts rather than only that
-	// it accepts most things.
-	EvidenceKinds []StageTransitionEvidenceRecord `json:"evidence_kinds"`
-
-	// Expired Cards whose window closed with nobody answering. A refusal by
-	// NOBODY, which is why it is neither a rejection nor reviewed.
-	Expired       int                `json:"expired"`
-	FromStageId   openapi_types.UUID `json:"from_stage_id"`
-	FromStageName string             `json:"from_stage_name"`
-
-	// ObservationDays Whole days from the first answered proposal to the last, rounded
-	// down.
-	ObservationDays int                `json:"observation_days"`
-	PipelineId      openapi_types.UUID `json:"pipeline_id"`
-
-	// Proposed Cards still standing, unanswered.
-	Proposed      int     `json:"proposed"`
-	Rejected      int     `json:"rejected"`
-	RejectionRate float64 `json:"rejection_rate"`
-
-	// Reviewed Proposals a human answered. The denominator of every rate here, and
-	// zero means "nobody has answered one yet" rather than "the rates are
-	// bad" — read it before reading any rate below.
-	Reviewed int `json:"reviewed"`
-
-	// Superseded Cards a fresher reading replaced before anyone answered.
-	Superseded  int                `json:"superseded"`
-	ToStageId   openapi_types.UUID `json:"to_stage_id"`
-	ToStageName string             `json:"to_stage_name"`
-
-	// Unsafe Reviewed moves that were reversed OR whose evidence a human
-	// corrected. One outcome counts once even when both are true.
-	Unsafe int `json:"unsafe"`
-
-	// UnsafeRate The safety number, held to a ceiling rather than a floor.
-	UnsafeRate float64 `json:"unsafe_rate"`
 }
 
 // StartBackfillRequest defines model for StartBackfillRequest.
@@ -59674,7 +60022,7 @@ type SubscriptionConfirmationPageState string
 // SystemHealth defines model for SystemHealth.
 type SystemHealth struct {
 	// ActionCount Number of findings requiring a human action.
-	ActionCount int                    `json:"action_count"`
+	ActionCount int                    `json:"action_count" minimum:"0"`
 	Assessment  SystemHealthAssessment `json:"assessment"`
 
 	// Complete Whether all authorized sources have sufficient evidence.
@@ -59698,7 +60046,7 @@ type Tag struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// CarriedBy How many live contacts, companies, deals and leads carry this tag, as THIS caller may see them: a type the caller may not read counts nothing, and within a readable type only the rows the caller's scope admits are counted. The sum of the tag page's `usage`. Set on the list read that asks `with_carried_by`; absent otherwise.
-	CarriedBy   *int               `json:"carried_by,omitempty"`
+	CarriedBy   *int               `json:"carried_by,omitempty" minimum:"0"`
 	Color       *TagColor          `json:"color,omitempty"`
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
 	Description *string            `json:"description,omitempty"`
@@ -60024,6 +60372,44 @@ type TeamListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
+// TeamMarginceChangeGroup defines model for TeamMarginceChangeGroup.
+type TeamMarginceChangeGroup struct {
+	// Deals Deals changed in this kind.
+	Deals     int                `json:"deals"`
+	Kind      string             `json:"kind"`
+	OwnerId   openapi_types.UUID `json:"owner_id"`
+	OwnerName string             `json:"owner_name"`
+
+	// Undone Of those deals, how many had the change undone.
+	Undone int `json:"undone"`
+
+	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+	ValueBaseMinor int64 `json:"value_base_minor"`
+}
+
+// TeamMarginceChangeRow defines model for TeamMarginceChangeRow.
+type TeamMarginceChangeRow struct {
+	// Change One completed act, and the record it was about.
+	//
+	// `subject` is present only where the act named a record. Not every approval is
+	// about one, and an empty subject is a real state rather than a missing field — a
+	// client draws the summary alone rather than inventing something to open.
+	Change  Receipt            `json:"change"`
+	OwnerId openapi_types.UUID `json:"owner_id"`
+}
+
+// TeamMarginceChanges defines model for TeamMarginceChanges.
+type TeamMarginceChanges struct {
+	AsOf         time.Time                 `json:"as_of"`
+	BaseCurrency string                    `json:"base_currency"`
+	Groups       []TeamMarginceChangeGroup `json:"groups"`
+	Rows         []TeamMarginceChangeRow   `json:"rows"`
+	Since        time.Time                 `json:"since"`
+
+	// Truncated True when more rows exist than were returned. The groups are never cut.
+	Truncated bool `json:"truncated"`
+}
+
 // TeamWeekReach Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
 // answered by the rule that endpoint is served on. `every_team` for a seat holding
 // `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
@@ -60036,9 +60422,9 @@ type TeamWeekReach string
 
 // TeamWeeklyCounts defines model for TeamWeeklyCounts.
 type TeamWeeklyCounts struct {
-	CommitmentsDue  int `json:"commitments_due"`
-	CommitmentsKept int `json:"commitments_kept"`
-	DealsLost       int `json:"deals_lost"`
+	CommitmentsDue  int `json:"commitments_due" minimum:"0"`
+	CommitmentsKept int `json:"commitments_kept" minimum:"0"`
+	DealsLost       int `json:"deals_lost" minimum:"0"`
 
 	// DealsMoved Deals that changed stage in the week without closing — what the team ADVANCED.
 	//
@@ -60048,16 +60434,16 @@ type TeamWeeklyCounts struct {
 	//
 	// Snapshots written before this figure existed carry zero. A count of zero is a
 	// count, unlike a money sum of zero over deals nobody could price.
-	DealsMoved            int `json:"deals_moved"`
-	DealsWon              int `json:"deals_won"`
-	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
-	LeadsBreached         int `json:"leads_breached"`
-	LeadsRouted           int `json:"leads_routed"`
-	MeetingsHeld          int `json:"meetings_held"`
-	MeetingsWithNextStep  int `json:"meetings_with_next_step"`
+	DealsMoved            int `json:"deals_moved" minimum:"0"`
+	DealsWon              int `json:"deals_won" minimum:"0"`
+	LeadsAnsweredInTarget int `json:"leads_answered_in_target" minimum:"0"`
+	LeadsBreached         int `json:"leads_breached" minimum:"0"`
+	LeadsRouted           int `json:"leads_routed" minimum:"0"`
+	MeetingsHeld          int `json:"meetings_held" minimum:"0"`
+	MeetingsWithNextStep  int `json:"meetings_with_next_step" minimum:"0"`
 
 	// RepsCounted Members whose week was read and totalled.
-	RepsCounted int `json:"reps_counted"`
+	RepsCounted int `json:"reps_counted" minimum:"0"`
 }
 
 // TeamWeeklyCoverage Whether the team's open pipeline covered what one horizon needs, frozen at close. Read as
@@ -60097,18 +60483,18 @@ type TeamWeeklyCoveragePeriodKind string
 // week was assembled. Moves an import brought in neither enter nor convert a deal.
 type TeamWeeklyFunnelDeviation struct {
 	// DeviationBp The rep's conversion rate less the team's, in basis points.
-	DeviationBp int `json:"deviation_bp"`
+	DeviationBp int `json:"deviation_bp" maximum:"10000" minimum:"-10000"`
 
 	// NextStageName The stage after this one when the week was assembled; absent for the last.
 	NextStageName *string            `json:"next_stage_name,omitempty"`
 	PipelineId    openapi_types.UUID `json:"pipeline_id"`
 	PipelineName  string             `json:"pipeline_name"`
-	RepConverted  int                `json:"rep_converted"`
-	RepEntered    int                `json:"rep_entered"`
+	RepConverted  int                `json:"rep_converted" minimum:"0"`
+	RepEntered    int                `json:"rep_entered" minimum:"0"`
 	StageId       openapi_types.UUID `json:"stage_id"`
 	StageName     string             `json:"stage_name"`
-	TeamConverted int                `json:"team_converted"`
-	TeamEntered   int                `json:"team_entered"`
+	TeamConverted int                `json:"team_converted" minimum:"0"`
+	TeamEntered   int                `json:"team_entered" minimum:"0"`
 }
 
 // TeamWeeklyMember defines model for TeamWeeklyMember.
@@ -60137,16 +60523,16 @@ type TeamWeeklyPatternKind string
 type TeamWeeklyQuality struct {
 	// AutoChangeReversals Changes an agent, a connector or the system made that a member of the team undid
 	// inside the week.
-	AutoChangeReversals *int `json:"auto_change_reversals,omitempty"`
-	ProposalsAccepted   *int `json:"proposals_accepted,omitempty"`
-	ProposalsRejected   *int `json:"proposals_rejected,omitempty"`
+	AutoChangeReversals *int `json:"auto_change_reversals,omitempty" minimum:"0"`
+	ProposalsAccepted   *int `json:"proposals_accepted,omitempty" minimum:"0"`
+	ProposalsRejected   *int `json:"proposals_rejected,omitempty" minimum:"0"`
 }
 
 // TeamWeeklyRep One member's week as their lead reads it, with what to raise.
 type TeamWeeklyRep struct {
-	CommitmentsDue  int `json:"commitments_due"`
-	CommitmentsKept int `json:"commitments_kept"`
-	DealsWon        int `json:"deals_won"`
+	CommitmentsDue  int `json:"commitments_due" minimum:"0"`
+	CommitmentsKept int `json:"commitments_kept" minimum:"0"`
+	DealsWon        int `json:"deals_won" minimum:"0"`
 
 	// DisplayName What they were called that week — frozen, and it survives the seat being deleted.
 	DisplayName string `json:"display_name"`
@@ -60170,9 +60556,9 @@ type TeamWeeklyRep struct {
 	Funnel *[]TeamWeeklyFunnelDeviation `json:"funnel,omitempty"`
 
 	// HelpRequested Commitments they asked for help on.
-	HelpRequested int `json:"help_requested"`
-	LeadsBreached int `json:"leads_breached"`
-	MeetingsHeld  int `json:"meetings_held"`
+	HelpRequested int `json:"help_requested" minimum:"0"`
+	LeadsBreached int `json:"leads_breached" minimum:"0"`
+	MeetingsHeld  int `json:"meetings_held" minimum:"0"`
 
 	// Patterns Every rule that fired for this rep, in the order a lead raises them. The first is
 	// the focus. A snapshot frozen before the list existed reads its focus as the one
@@ -60268,7 +60654,7 @@ type TeamWeeklyReview struct {
 
 	// RepsUnread Members whose week could not be read at all. Zero is the claim that every member's
 	// week was counted.
-	RepsUnread *int `json:"reps_unread,omitempty"`
+	RepsUnread *int `json:"reps_unread,omitempty" minimum:"0"`
 
 	// StaleDeals LIVE, like `exceptions`: the members' open deals with no activity for the stalled
 	// period, quietest first. Together with `exceptions` at most 25 items, findings first.
@@ -60286,7 +60672,7 @@ type TeamWeeklyReview struct {
 
 // TeamWeeklyStaleDeal defines model for TeamWeeklyStaleDeal.
 type TeamWeeklyStaleDeal struct {
-	DaysQuiet      int                `json:"days_quiet"`
+	DaysQuiet      int                `json:"days_quiet" minimum:"0"`
 	DealId         openapi_types.UUID `json:"deal_id"`
 	DealName       string             `json:"deal_name"`
 	LastActivityAt time.Time          `json:"last_activity_at"`
@@ -60456,87 +60842,65 @@ type TransferProjectOwnershipResult struct {
 	Transferred int `json:"transferred"`
 }
 
-// TransitionPolicy defines model for TransitionPolicy.
-type TransitionPolicy struct {
-	// CleanAcceptanceThreshold The share of reviewed proposals a contact must have accepted
-	// UNCHANGED. An edit is agreement with a correction, which is a
-	// weaker claim about the proposal than agreement without one.
-	CleanAcceptanceThreshold float64 `json:"clean_acceptance_threshold"`
+// UndoMarginceChangeItem defines model for UndoMarginceChangeItem.
+type UndoMarginceChangeItem struct {
+	// ArchiveConfirmedFor The `team_work` a `needs_confirmation` answer named: the owner confirmed archiving
+	// a deal Margince opened, or closing again a deal it reopened, over exactly that work. Without it, or when the team's
+	// work changed since, such a deal is kept with `needs_confirmation`, the new counts
+	// and the new `team_work`.
+	ArchiveConfirmedFor *string `json:"archive_confirmed_for,omitempty"`
 
-	// CorrectionReversalThreshold The ceiling on moves that were undone or whose evidence was
-	// corrected. The one threshold that is a maximum rather than a
-	// minimum, and the one the product suspends a rule for crossing.
-	CorrectionReversalThreshold float64    `json:"correction_reversal_threshold"`
-	EnabledAt                   *time.Time `json:"enabled_at,omitempty"`
+	// AuditLogIds The changes to take back, all on this deal.
+	AuditLogIds []openapi_types.UUID `json:"audit_log_ids"`
+	DealId      openapi_types.UUID   `json:"deal_id"`
 
-	// EnabledBy Who FIRST trusted this transition with automatic moves. Not
-	// overwritten by later threshold edits — who first trusted it is a
-	// different fact from who last adjusted it, and the first is the one
-	// an auditor asks for.
-	EnabledBy   *openapi_types.UUID `json:"enabled_by,omitempty"`
-	FromStageId openapi_types.UUID  `json:"from_stage_id"`
-	Id          openapi_types.UUID  `json:"id"`
-
-	// MinObservationDays The span the record must cover. A fine acceptance rate earned
-	// entirely in one afternoon has not been observed.
-	MinObservationDays int `json:"min_observation_days"`
-
-	// MinReviewed How many proposals a contact must have answered before the rates
-	// mean anything. It also bounds suspension: the volume at which a
-	// record is worth trusting and the volume at which it is worth
-	// distrusting are one judgement.
-	MinReviewed int `json:"min_reviewed"`
-
-	// Mode What the admin has asked for. `auto` is a request, not a state:
-	// moves still go to a contact until the thresholds below hold in the
-	// transaction that would apply them.
-	Mode       TransitionPolicyMode `json:"mode"`
-	PipelineId openapi_types.UUID   `json:"pipeline_id"`
-
-	// SuspendedAt When the PRODUCT turned this rule off. Absent on a rule that is
-	// running. It is not an admin's act and an ordinary save does not
-	// clear it.
-	SuspendedAt *time.Time `json:"suspended_at,omitempty"`
-
-	// SuspendedReason Why the product stopped it, in words an operator can act on.
-	SuspendedReason *string            `json:"suspended_reason,omitempty"`
-	ToStageId       openapi_types.UUID `json:"to_stage_id"`
-
-	// UndoWindowHours How long a contact has to take an automatic move back. Frozen onto
-	// each move as it is applied, so editing this governs the next move
-	// and not the last one.
-	UndoWindowHours int   `json:"undo_window_hours"`
-	Version         int64 `json:"version"`
-
-	// WindowDays How far back the rates are counted.
-	WindowDays int `json:"window_days"`
+	// Version The deal's version as the caller read it. A deal changed since is refused, as the single Undo's If-Match is.
+	Version int64 `json:"version"`
 }
 
-// TransitionPolicyMode What the admin has asked for. `auto` is a request, not a state:
-// moves still go to a contact until the thresholds below hold in the
-// transaction that would apply them.
-type TransitionPolicyMode string
+// UndoMarginceChangeKept One change an undo left in place, and why.
+type UndoMarginceChangeKept struct {
+	AuditLogId openapi_types.UUID `json:"audit_log_id"`
 
-// TransitionPolicyList defines model for TransitionPolicyList.
-type TransitionPolicyList struct {
-	// AutomationEnabled Whether this installation permits stage automation at all
-	// (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
-	// off every transition is forced to `propose` regardless of its own rule.
-	//
-	// A rule's `mode` therefore describes what was asked for, not what will
-	// happen: read both before telling somebody a transition moves deals by
-	// itself.
-	AutomationEnabled bool               `json:"automation_enabled"`
-	Data              []TransitionPolicy `json:"data"`
+	// Kind The kind of change; absent when the change could not be read.
+	Kind   *string                      `json:"kind,omitempty"`
+	Reason UndoMarginceChangeKeptReason `json:"reason"`
+
+	// TeamNotes With `needs_confirmation`, the notes the team added to the opened or reopened deal.
+	TeamNotes *int `json:"team_notes,omitempty"`
+
+	// TeamTasks With `needs_confirmation`, the tasks the team added to the opened or reopened deal.
+	TeamTasks *int `json:"team_tasks,omitempty"`
+
+	// TeamWork With `needs_confirmation`, names the counted work. Send it back as `archive_confirmed_for`.
+	TeamWork *string `json:"team_work,omitempty"`
 }
 
-// TransitionRef One transition, named by the stages at its two ends. Both must belong
-// to the pipeline in the path — the foreign keys admit a pair from two
-// different pipelines, which would be a rule describing a move no deal
-// can make.
-type TransitionRef struct {
-	FromStageId openapi_types.UUID `json:"from_stage_id"`
-	ToStageId   openapi_types.UUID `json:"to_stage_id"`
+// UndoMarginceChangeKeptReason defines model for UndoMarginceChangeKept.Reason.
+type UndoMarginceChangeKeptReason string
+
+// UndoMarginceChangeResult What happened to one deal. `undone` lists the kinds taken back; `kept` lists each
+// change left in place and why.
+type UndoMarginceChangeResult struct {
+	DealId  openapi_types.UUID              `json:"deal_id"`
+	Kept    []UndoMarginceChangeKept        `json:"kept"`
+	Outcome UndoMarginceChangeResultOutcome `json:"outcome"`
+
+	// Undone The kinds of change taken back.
+	Undone []string `json:"undone"`
+}
+
+// UndoMarginceChangeResultOutcome defines model for UndoMarginceChangeResult.Outcome.
+type UndoMarginceChangeResultOutcome string
+
+// UndoMarginceChangesRequest defines model for UndoMarginceChangesRequest.
+type UndoMarginceChangesRequest struct {
+	Items []UndoMarginceChangeItem `json:"items"`
+}
+
+// UndoMarginceChangesResult defines model for UndoMarginceChangesResult.
+type UndoMarginceChangesResult struct {
+	Results []UndoMarginceChangeResult `json:"results"`
 }
 
 // Undoability Whether this history entry can be put back, and if not, why. COMPUTED per read,
@@ -60633,7 +60997,7 @@ type UpdateActivityReviewTemplateRequest struct {
 	Questions []ReviewQuestion `json:"questions"`
 
 	// Version Last read template version.
-	Version int64 `json:"version"`
+	Version int64 `json:"version" minimum:"1"`
 }
 
 // UpdateAgentClientRequest defines model for UpdateAgentClientRequest.
@@ -60691,16 +61055,16 @@ type UpdateCaptureSettingsRequest struct {
 	AutoEnrich *bool `json:"auto_enrich,omitempty"`
 
 	// AutoEnrichDailyCap Set the daily ceiling on automatic website reads.
-	AutoEnrichDailyCap *int `json:"auto_enrich_daily_cap,omitempty"`
+	AutoEnrichDailyCap *int `json:"auto_enrich_daily_cap,omitempty" maximum:"20000" minimum:"1"`
 
 	// ConfidentialityPassCap Set how many held mail threads one confidentiality pass judges.
-	ConfidentialityPassCap *int `json:"confidentiality_pass_cap,omitempty"`
+	ConfidentialityPassCap *int `json:"confidentiality_pass_cap,omitempty" maximum:"200" minimum:"1"`
 
 	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
 	// MailSyncIntervalSeconds Set how long a mailbox waits between syncs, in seconds.
-	MailSyncIntervalSeconds *int `json:"mail_sync_interval_seconds,omitempty"`
+	MailSyncIntervalSeconds *int `json:"mail_sync_interval_seconds,omitempty" maximum:"3600" minimum:"30"`
 
 	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.
 	SharedPostureAllowed *bool `json:"shared_posture_allowed,omitempty"`
@@ -60709,13 +61073,13 @@ type UpdateCaptureSettingsRequest struct {
 	SignatureEnrich *bool `json:"signature_enrich,omitempty"`
 
 	// SiteReadMaxMib Set the size limit of one website read, in MiB.
-	SiteReadMaxMib *int `json:"site_read_max_mib,omitempty"`
+	SiteReadMaxMib *int `json:"site_read_max_mib,omitempty" maximum:"128" minimum:"1"`
 
 	// SiteReadMaxPages Set the page limit of one website read.
-	SiteReadMaxPages *int `json:"site_read_max_pages,omitempty"`
+	SiteReadMaxPages *int `json:"site_read_max_pages,omitempty" maximum:"200" minimum:"1"`
 
 	// SiteReadWallSeconds Set the time limit of one website crawl, in seconds.
-	SiteReadWallSeconds *int `json:"site_read_wall_seconds,omitempty"`
+	SiteReadWallSeconds *int `json:"site_read_wall_seconds,omitempty" maximum:"600" minimum:"30"`
 }
 
 // UpdateCompanyFactRequest The correction path the fact store never had — without it the page can render a confirmed state nothing is able to produce.
@@ -60925,8 +61289,8 @@ type UpdateContractRequest struct {
 	Currency             *string                          `json:"currency,omitempty"`
 	DealId               *openapi_types.UUID              `json:"deal_id,omitempty"`
 	EndsOn               *openapi_types.Date              `json:"ends_on,omitempty"`
-	NoticePeriodDays     *int                             `json:"notice_period_days,omitempty"`
-	PaymentTermDays      *int                             `json:"payment_term_days,omitempty"`
+	NoticePeriodDays     *int                             `json:"notice_period_days,omitempty" minimum:"0"`
+	PaymentTermDays      *int                             `json:"payment_term_days,omitempty" minimum:"0"`
 	ProjectId            *openapi_types.UUID              `json:"project_id,omitempty"`
 	RenewalOn            *openapi_types.Date              `json:"renewal_on,omitempty"`
 	SignedOn             *openapi_types.Date              `json:"signed_on,omitempty"`
@@ -60969,7 +61333,14 @@ type UpdateDataSubjectRequest struct {
 	// is an address. Ignored on a patch that does not close the request.
 	RequesterEmail *openapi_types.Email `json:"requester_email,omitempty"`
 
-	// Resolution A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.
+	// Resolution A closed (fulfilled or rejected) request keeps its answer: null, or text other than
+	// the stored answer, is refused with 422. An open request takes any draft.
+	//
+	// Fulfilling an erasure takes no answer: leave this out. The erasure answers for itself
+	// from a fixed list, `erased` when it removed or anonymised something and `nothing_held`
+	// when there was nothing left to erase. Any text on an erasure's fulfilment is refused
+	// with 422 on `resolution`, before anything is erased, because typed prose could name the
+	// subject the erasure removes. Rejecting an erasure still needs a written answer.
 	Resolution *string                         `json:"resolution,omitempty"`
 	Status     *UpdateDataSubjectRequestStatus `json:"status,omitempty"`
 }
@@ -60994,7 +61365,7 @@ type UpdateDealRequest struct {
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
 
 	// AmountMinor The deal's one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.
-	AmountMinor *int64 `json:"amount_minor,omitempty"`
+	AmountMinor *int64 `json:"amount_minor,omitempty" minimum:"0"`
 
 	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 	CommercialMotion *UpdateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
@@ -61036,7 +61407,7 @@ type UpdateDealRequest struct {
 	WaitUntil *openapi_types.Date      `json:"wait_until,omitempty"`
 
 	// WinProbability The deal's own win probability in percent. Null sets it back to the stage's probability. Refused 422 `probability_fixed_when_closed` on a won or lost deal, whose probability its stage fixes.
-	WinProbability       *int                   `json:"win_probability,omitempty"`
+	WinProbability       *int                   `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -61191,28 +61562,28 @@ type UpdateImportRunRequest struct {
 	SourceName *string `json:"source_name,omitempty"`
 
 	// Version The run's `version` this save was made on.
-	Version int `json:"version"`
+	Version int `json:"version" minimum:"1"`
 }
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
 	// AgentCallsPerWindow Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.
-	AgentCallsPerWindow *int `json:"agent_calls_per_window,omitempty"`
+	AgentCallsPerWindow *int `json:"agent_calls_per_window,omitempty" maximum:"20000" minimum:"50"`
 
 	// AgentEgressPerWindow Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.
-	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty"`
+	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty" maximum:"200" minimum:"1"`
 
 	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.
-	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty"`
+	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty" maximum:"3600" minimum:"10"`
 
 	// AgentWindowHours Set how long one agent allowance window lasts, in hours. The window in force is never
 	// cut short: the new length takes effect at its next reset, and the response names that
 	// moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
 	// in force cancels a change that is still waiting.
-	AgentWindowHours *int `json:"agent_window_hours,omitempty"`
+	AgentWindowHours *int `json:"agent_window_hours,omitempty" maximum:"168" minimum:"1"`
 
 	// AgentWritesPerWindow Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window.
-	AgentWritesPerWindow *int `json:"agent_writes_per_window,omitempty"`
+	AgentWritesPerWindow *int `json:"agent_writes_per_window,omitempty" maximum:"5000" minimum:"10"`
 
 	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
 	// rate against the current base.
@@ -61232,7 +61603,7 @@ type UpdateInstallationSettingsRequest struct {
 	CallZalo *bool `json:"call_zalo,omitempty"`
 
 	// CloseDateSweepIntervalSeconds Set the value `OperationSettings.close_date_sweep_interval_seconds` describes.
-	CloseDateSweepIntervalSeconds *int `json:"close_date_sweep_interval_seconds,omitempty"`
+	CloseDateSweepIntervalSeconds *int `json:"close_date_sweep_interval_seconds,omitempty" maximum:"604800" minimum:"3600"`
 
 	// Country The installation's jurisdiction: the lower-case ISO 3166-1 alpha-2 code of a pack
 	// compiled into this build, or the empty string for no pack. A code with no
@@ -61252,7 +61623,7 @@ type UpdateInstallationSettingsRequest struct {
 	// figure. This bounds only the number that is styled as an alarm: River keeps a
 	// terminal row for a week, so without it an outage that ended an hour ago goes on
 	// asking for a hand until the rows retire.
-	DeadWorkBannerHours *int `json:"dead_work_banner_hours,omitempty"`
+	DeadWorkBannerHours *int `json:"dead_work_banner_hours,omitempty" maximum:"168" minimum:"1"`
 
 	// DynamicClientRegistration Let AI tools register their own OAuth client (DCR). Off stops new sign-ins through a
 	// self-registered client and answers `/oauth/register` with 404; connections already made
@@ -61274,10 +61645,10 @@ type UpdateInstallationSettingsRequest struct {
 	//
 	// A saved period filter keeps the dates it was saved with, and a relative period
 	// follows the new start. `/installation/settings/fiscal-year-impact` counts both.
-	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty"`
+	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty" maximum:"12" minimum:"1"`
 
 	// FollowUpReconcileIntervalSeconds Set the value `OperationSettings.follow_up_reconcile_interval_seconds` describes.
-	FollowUpReconcileIntervalSeconds *int `json:"follow_up_reconcile_interval_seconds,omitempty"`
+	FollowUpReconcileIntervalSeconds *int `json:"follow_up_reconcile_interval_seconds,omitempty" maximum:"604800" minimum:"3600"`
 
 	// ForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. Never frozen:
 	// it is applied on READ and stores nothing, so changing it re-computes every landing
@@ -61285,25 +61656,25 @@ type UpdateInstallationSettingsRequest struct {
 	ForecastForwardMeasure *UpdateInstallationSettingsRequestForecastForwardMeasure `json:"forecast_forward_measure,omitempty"`
 
 	// ForecastLikelyThreshold The probability from which a deal counts as Likely. Omit to leave it unchanged. Each change is audited.
-	ForecastLikelyThreshold *int `json:"forecast_likely_threshold,omitempty"`
+	ForecastLikelyThreshold *int `json:"forecast_likely_threshold,omitempty" maximum:"100" minimum:"1"`
 
 	// ForecastSelfCorrecting Let the forecast correct itself. Omit to leave it unchanged. Each change is audited.
 	ForecastSelfCorrecting *bool `json:"forecast_self_correcting,omitempty"`
 
 	// GeocodeBackfillIntervalSeconds Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.
-	GeocodeBackfillIntervalSeconds *int `json:"geocode_backfill_interval_seconds,omitempty"`
+	GeocodeBackfillIntervalSeconds *int `json:"geocode_backfill_interval_seconds,omitempty" maximum:"604800" minimum:"0"`
 
 	// GmailWatchRenewWithinHours Set the value `OperationSettings.gmail_watch_renew_within_hours` describes.
-	GmailWatchRenewWithinHours *int `json:"gmail_watch_renew_within_hours,omitempty"`
+	GmailWatchRenewWithinHours *int `json:"gmail_watch_renew_within_hours,omitempty" maximum:"144" minimum:"24"`
 
 	// GmailWatchScanIntervalSeconds Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes.
-	GmailWatchScanIntervalSeconds *int `json:"gmail_watch_scan_interval_seconds,omitempty"`
+	GmailWatchScanIntervalSeconds *int `json:"gmail_watch_scan_interval_seconds,omitempty" maximum:"43200" minimum:"600"`
 
 	// GraphWatchRenewWithinHours Set the value `OperationSettings.graph_watch_renew_within_hours` describes.
-	GraphWatchRenewWithinHours *int `json:"graph_watch_renew_within_hours,omitempty"`
+	GraphWatchRenewWithinHours *int `json:"graph_watch_renew_within_hours,omitempty" maximum:"60" minimum:"24"`
 
 	// GraphWatchScanIntervalSeconds Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.
-	GraphWatchScanIntervalSeconds *int `json:"graph_watch_scan_interval_seconds,omitempty"`
+	GraphWatchScanIntervalSeconds *int `json:"graph_watch_scan_interval_seconds,omitempty" maximum:"43200" minimum:"600"`
 
 	// IndividualPerformance Show individual performance. Omit to leave it unchanged. Each change is audited.
 	IndividualPerformance *bool `json:"individual_performance,omitempty"`
@@ -61320,7 +61691,7 @@ type UpdateInstallationSettingsRequest struct {
 	Name *string `json:"name,omitempty"`
 
 	// OauthAccessTokenTtlMinutes Set how long a connector's access token lives, in minutes. Reaches the next token minted.
-	OauthAccessTokenTtlMinutes *int `json:"oauth_access_token_ttl_minutes,omitempty"`
+	OauthAccessTokenTtlMinutes *int `json:"oauth_access_token_ttl_minutes,omitempty" maximum:"129600" minimum:"5"`
 
 	// OidcGroupRoleMap Directory groups that GRANT roles at corporate sign-in. Each key is a group
 	// exactly as the IdP spells it in the ID token's `groups` claim; each value is
@@ -61352,31 +61723,31 @@ type UpdateInstallationSettingsRequest struct {
 	RequireSso *bool `json:"require_sso,omitempty"`
 
 	// RetentionSweepIntervalSeconds Set the value `OperationSettings.retention_sweep_interval_seconds` describes.
-	RetentionSweepIntervalSeconds *int `json:"retention_sweep_interval_seconds,omitempty"`
+	RetentionSweepIntervalSeconds *int `json:"retention_sweep_interval_seconds,omitempty" maximum:"604800" minimum:"3600"`
 
 	// SendMaxAgeHours Set the value `OperationSettings.send_max_age_hours` describes.
-	SendMaxAgeHours *int `json:"send_max_age_hours,omitempty"`
+	SendMaxAgeHours *int `json:"send_max_age_hours,omitempty" maximum:"168" minimum:"1"`
 
 	// SendRateLimit Set the value `OperationSettings.send_rate_limit` describes.
-	SendRateLimit *int `json:"send_rate_limit,omitempty"`
+	SendRateLimit *int `json:"send_rate_limit,omitempty" maximum:"1000" minimum:"1"`
 
 	// SendRateWindowSeconds Set the value `OperationSettings.send_rate_window_seconds` describes.
-	SendRateWindowSeconds *int `json:"send_rate_window_seconds,omitempty"`
+	SendRateWindowSeconds *int `json:"send_rate_window_seconds,omitempty" maximum:"3600" minimum:"10"`
 
 	// TechnicalBackfillIntervalSeconds Set the value `OperationSettings.technical_backfill_interval_seconds` describes.
-	TechnicalBackfillIntervalSeconds *int `json:"technical_backfill_interval_seconds,omitempty"`
+	TechnicalBackfillIntervalSeconds *int `json:"technical_backfill_interval_seconds,omitempty" maximum:"604800" minimum:"0"`
 
 	// TimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
 	TimeFormat *UpdateInstallationSettingsRequestTimeFormat `json:"time_format,omitempty"`
 
 	// TimeScanIntervalSeconds Set the value `OperationSettings.time_scan_interval_seconds` describes.
-	TimeScanIntervalSeconds *int `json:"time_scan_interval_seconds,omitempty"`
+	TimeScanIntervalSeconds *int `json:"time_scan_interval_seconds,omitempty" maximum:"86400" minimum:"60"`
 
 	// Timezone The IANA reporting zone.
 	Timezone *string `json:"timezone,omitempty"`
 
 	// WebhookRetryIntervalSeconds Set the value `OperationSettings.webhook_retry_interval_seconds` describes.
-	WebhookRetryIntervalSeconds *int `json:"webhook_retry_interval_seconds,omitempty"`
+	WebhookRetryIntervalSeconds *int `json:"webhook_retry_interval_seconds,omitempty" maximum:"3600" minimum:"10"`
 }
 
 // UpdateInstallationSettingsRequestBaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
@@ -61459,7 +61830,7 @@ type UpdateLeadRequest struct {
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
 	// Score Manual human score override (formulas §3.1, AC-S1). Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute.
-	Score *int `json:"score,omitempty"`
+	Score *int `json:"score,omitempty" maximum:"100" minimum:"0"`
 
 	// ScoreOverrideReason Written reason for the Commercial Judgement override (formulas §3.1). REQUIRED when `score` is set (422 otherwise); the override is sticky — it suppresses recompute until cleared.
 	ScoreOverrideReason *string `json:"score_override_reason,omitempty"`
@@ -61480,7 +61851,7 @@ type UpdateLeadRequestStatus string
 // UpdateLeadSettingsRequest defines model for UpdateLeadSettingsRequest.
 type UpdateLeadSettingsRequest struct {
 	FirstResponseEnabled       *bool `json:"first_response_enabled,omitempty"`
-	FirstResponseTargetMinutes *int  `json:"first_response_target_minutes,omitempty"`
+	FirstResponseTargetMinutes *int  `json:"first_response_target_minutes,omitempty" maximum:"10080" minimum:"15"`
 
 	// UnassignedEscalationUserId Who answers when a lead nobody can answer for misses its first-response target:
 	// one nobody owns, or one whose owner cannot be handed work: not active, archived, an
@@ -61579,20 +61950,20 @@ type UpdateOfferLineItemRequest struct {
 	// BillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 	BillingModel *UpdateOfferLineItemRequestBillingModel `json:"billing_model,omitempty"`
 	Description  *string                                 `json:"description,omitempty"`
-	DiscountPct  *float64                                `json:"discount_pct,omitempty"`
+	DiscountPct  *float64                                `json:"discount_pct,omitempty" maximum:"100" minimum:"0"`
 
 	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
-	IntervalCount *int     `json:"interval_count,omitempty"`
-	Position      *int     `json:"position,omitempty"`
+	IntervalCount *int     `json:"interval_count,omitempty" minimum:"1"`
+	Position      *int     `json:"position,omitempty" minimum:"1"`
 	Quantity      *float64 `json:"quantity,omitempty"`
 
 	// TaxCategory Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
 	TaxCategory *UpdateOfferLineItemRequestTaxCategory `json:"tax_category,omitempty"`
 
 	// TaxRate A typed rate. It drops the line's tax category, so the send leaves the rate alone.
-	TaxRate        *float64 `json:"tax_rate,omitempty"`
+	TaxRate        *float64 `json:"tax_rate,omitempty" minimum:"0"`
 	Unit           *string  `json:"unit,omitempty"`
-	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty"`
+	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty" minimum:"0"`
 }
 
 // UpdateOfferLineItemRequestBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -61668,7 +62039,7 @@ type UpdateProductRequest struct {
 	// ComponentKind What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.
 	ComponentKind  *UpdateProductRequestComponentKind `json:"component_kind,omitempty"`
 	Currency       *string                            `json:"currency,omitempty"`
-	DefaultTaxRate *float64                           `json:"default_tax_rate,omitempty"`
+	DefaultTaxRate *float64                           `json:"default_tax_rate,omitempty" minimum:"0"`
 	Description    *string                            `json:"description,omitempty"`
 	Name           *string                            `json:"name,omitempty"`
 	Sku            *string                            `json:"sku,omitempty"`
@@ -61676,7 +62047,7 @@ type UpdateProductRequest struct {
 	// TaxCategory Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.
 	TaxCategory    *UpdateProductRequestTaxCategory `json:"tax_category,omitempty"`
 	Unit           *string                          `json:"unit,omitempty"`
-	UnitPriceMinor *int64                           `json:"unit_price_minor,omitempty"`
+	UnitPriceMinor *int64                           `json:"unit_price_minor,omitempty" minimum:"0"`
 }
 
 // UpdateProductRequestBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -61765,7 +62136,7 @@ type UpdateRetentionPolicyRequest struct {
 	Action      *RetentionAction `json:"action,omitempty"`
 	Enabled     *bool            `json:"enabled,omitempty"`
 	LawfulBasis *string          `json:"lawful_basis,omitempty"`
-	RetainDays  *int             `json:"retain_days,omitempty"`
+	RetainDays  *int             `json:"retain_days,omitempty" minimum:"1"`
 }
 
 // UpdateRetentionSettingsRequest A sparse retention-posture patch (admin/ops).
@@ -61828,7 +62199,7 @@ type UpdateStageRequest struct {
 	Name           *string                     `json:"name,omitempty"`
 	Position       *int                        `json:"position,omitempty"`
 	Semantic       *UpdateStageRequestSemantic `json:"semantic,omitempty"`
-	WinProbability *int                        `json:"win_probability,omitempty"`
+	WinProbability *int                        `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 }
 
 // UpdateStageRequestSemantic defines model for UpdateStageRequest.Semantic.
@@ -61864,7 +62235,7 @@ type UpdateTeamRequest struct {
 // UpdateVoiceCorpusSourceRequest defines model for UpdateVoiceCorpusSourceRequest.
 type UpdateVoiceCorpusSourceRequest struct {
 	Included *bool    `json:"included,omitempty"`
-	Weight   *float32 `json:"weight,omitempty"`
+	Weight   *float32 `json:"weight,omitempty" maximum:"2" minimum:"0"`
 }
 
 // UpdateVoiceProfileRequest defines model for UpdateVoiceProfileRequest.
@@ -61903,9 +62274,12 @@ type UpdateWebhookSubscriptionRequest struct {
 	BodyTemplate *string `json:"body_template,omitempty"`
 
 	// CustomHeaders Headers sent with every delivery. Names are unique ignoring case; reserved names are refused.
-	CustomHeaders *[]WebhookCustomHeaderInput            `json:"custom_headers,omitempty"`
-	EventTypes    *[]string                              `json:"event_types,omitempty"`
-	State         *UpdateWebhookSubscriptionRequestState `json:"state,omitempty"`
+	CustomHeaders *[]WebhookCustomHeaderInput `json:"custom_headers,omitempty"`
+	EventTypes    *[]string                   `json:"event_types,omitempty" unique:"items"`
+
+	// OwnerId The member the subscription runs under from now on. A delivery carries what its owner may see, so naming one is acting for that member: the caller needs `user_admin` update and the reach over the new owner a handover takes (403 otherwise). The owner must be an active seat the caller may assign work to; a deactivated one answers 422. The signing secret stays the same.
+	OwnerId *openapi_types.UUID                    `json:"owner_id,omitempty"`
+	State   *UpdateWebhookSubscriptionRequestState `json:"state,omitempty"`
 }
 
 // UpdateWebhookSubscriptionRequestState defines model for UpdateWebhookSubscriptionRequest.State.
@@ -62158,8 +62532,8 @@ type VoiceBuild struct {
 	NextAttemptAt  *time.Time            `json:"next_attempt_at"`
 	ProfileId      openapi_types.UUID    `json:"profile_id"`
 	Reason         VoiceBuildReason      `json:"reason"`
-	ResultVersion  *int                  `json:"result_version"`
-	SourceCount    int                   `json:"source_count"`
+	ResultVersion  *int                  `json:"result_version" minimum:"1"`
+	SourceCount    int                   `json:"source_count" minimum:"0"`
 	SourceHash     string                `json:"source_hash"`
 	Stage          *VoiceBuildStage      `json:"stage"`
 	StartedAt      *time.Time            `json:"started_at"`
@@ -62169,7 +62543,7 @@ type VoiceBuild struct {
 	// StatusDetail Safe operator guidance; never provider payload, prompt, SQL, or stack data.
 	StatusDetail *string   `json:"status_detail"`
 	UpdatedAt    time.Time `json:"updated_at"`
-	Version      int       `json:"version"`
+	Version      int       `json:"version" minimum:"1"`
 }
 
 // VoiceBuildCandidateAction defines model for VoiceBuild.CandidateAction.
@@ -62208,11 +62582,11 @@ type VoiceCorpusPreviewResult struct {
 	IngestibleAsTranscript bool                                   `json:"ingestible_as_transcript"`
 	Speakers               []struct {
 		Label string `json:"label"`
-		Turns int    `json:"turns"`
-		Words int    `json:"words"`
+		Turns int    `json:"turns" minimum:"0"`
+		Words int    `json:"words" minimum:"0"`
 	} `json:"speakers"`
-	TotalWords        int `json:"total_words"`
-	UnattributedWords int `json:"unattributed_words"`
+	TotalWords        int `json:"total_words" minimum:"0"`
+	UnattributedWords int `json:"unattributed_words" minimum:"0"`
 }
 
 // VoiceCorpusPreviewResultDetectedFormat defines model for VoiceCorpusPreviewResult.DetectedFormat.
@@ -62239,9 +62613,9 @@ type VoiceCorpusSource struct {
 	// SourceRef Stable owner-scoped natural key; not raw content.
 	SourceRef string    `json:"source_ref"`
 	UpdatedAt time.Time `json:"updated_at"`
-	Version   int       `json:"version"`
-	Weight    float32   `json:"weight"`
-	WordCount int       `json:"word_count"`
+	Version   int       `json:"version" minimum:"1"`
+	Weight    float32   `json:"weight" maximum:"2" minimum:"0"`
+	WordCount int       `json:"word_count" minimum:"0"`
 }
 
 // VoiceCorpusSourceKind defines model for VoiceCorpusSource.Kind.
@@ -62258,9 +62632,9 @@ type VoiceCorpusSummary struct {
 	Maturity      VoiceCorpusSummaryMaturity    `json:"maturity"`
 	QualityBand   VoiceCorpusSummaryQualityBand `json:"quality_band"`
 	RegisterWords map[string]int                `json:"register_words"`
-	SourceCount   int                           `json:"source_count"`
+	SourceCount   int                           `json:"source_count" minimum:"0"`
 	TargetWords   VoiceCorpusSummaryTargetWords `json:"target_words"`
-	TotalWords    int                           `json:"total_words"`
+	TotalWords    int                           `json:"total_words" minimum:"0"`
 }
 
 // VoiceCorpusSummaryMaturity defines model for VoiceCorpusSummary.Maturity.
@@ -62274,21 +62648,21 @@ type VoiceCorpusSummaryTargetWords int
 
 // VoiceIngestStats What the speaker filter did to one ingested source; kept words are the only words that count.
 type VoiceIngestStats struct {
-	DiscardedTurns int      `json:"discarded_turns"`
-	InputWords     int      `json:"input_words"`
-	KeptTurns      int      `json:"kept_turns"`
-	KeptWords      int      `json:"kept_words"`
+	DiscardedTurns int      `json:"discarded_turns" minimum:"0"`
+	InputWords     int      `json:"input_words" minimum:"0"`
+	KeptTurns      int      `json:"kept_turns" minimum:"0"`
+	KeptWords      int      `json:"kept_words" minimum:"0"`
 	SpeakersSeen   []string `json:"speakers_seen"`
 }
 
 // VoiceLearningSummary defines model for VoiceLearningSummary.
 type VoiceLearningSummary struct {
-	Accepted              int                           `json:"accepted"`
-	Drafted               int                           `json:"drafted"`
-	EditedSent            int                           `json:"edited_sent"`
-	QualifyingSourceCount int                           `json:"qualifying_source_count"`
-	QualifyingWords       int                           `json:"qualifying_words"`
-	Rejected              int                           `json:"rejected"`
+	Accepted              int                           `json:"accepted" minimum:"0"`
+	Drafted               int                           `json:"drafted" minimum:"0"`
+	EditedSent            int                           `json:"edited_sent" minimum:"0"`
+	QualifyingSourceCount int                           `json:"qualifying_source_count" minimum:"0"`
+	QualifyingWords       int                           `json:"qualifying_words" minimum:"0"`
+	Rejected              int                           `json:"rejected" minimum:"0"`
 	Transformations       []VoiceLearningTransformation `json:"transformations"`
 }
 
@@ -62297,7 +62671,7 @@ type VoiceLearningTransformation struct {
 	// Description Aggregate transformation description; never copied user text.
 	Description      string `json:"description"`
 	Key              string `json:"key"`
-	ObservationCount int    `json:"observation_count"`
+	ObservationCount int    `json:"observation_count" minimum:"5"`
 }
 
 // VoiceProfile The calling owner's live personal Voice DNA control record and active derived artifact.
@@ -62307,12 +62681,12 @@ type VoiceProfile struct {
 
 	// AutoLearningEnabled Explicit owner opt-in; defaults off.
 	AutoLearningEnabled bool      `json:"auto_learning_enabled"`
-	CandidateVersion    *int      `json:"candidate_version,omitempty"`
+	CandidateVersion    *int      `json:"candidate_version,omitempty" minimum:"1"`
 	CapturedBy          *string   `json:"captured_by,omitempty"`
 	CreatedAt           time.Time `json:"created_at"`
 
 	// FirstBuildWordsRemaining Included corpus words still missing before a first build can learn anything; zero once maturity leaves collecting.
-	FirstBuildWordsRemaining *int               `json:"first_build_words_remaining,omitempty"`
+	FirstBuildWordsRemaining *int               `json:"first_build_words_remaining,omitempty" minimum:"0"`
 	Id                       openapi_types.UUID `json:"id"`
 	LastBuiltAt              *time.Time         `json:"last_built_at,omitempty"`
 
@@ -62325,12 +62699,12 @@ type VoiceProfile struct {
 	PersonalityMd string `json:"personality_md"`
 
 	// ProfileVersion Zero means no active artifact yet.
-	ProfileVersion *int                     `json:"profile_version,omitempty"`
+	ProfileVersion *int                     `json:"profile_version,omitempty" minimum:"0"`
 	QualityBand    *VoiceProfileQualityBand `json:"quality_band,omitempty"`
 	Source         string                   `json:"source"`
 	Status         VoiceProfileStatus       `json:"status"`
 	UpdatedAt      time.Time                `json:"updated_at"`
-	Version        int                      `json:"version"`
+	Version        int                      `json:"version" minimum:"1"`
 
 	// VoiceProfileMd Active derived Voice DNA artifact; empty while collecting.
 	VoiceProfileMd *string `json:"voice_profile_md,omitempty"`
@@ -62349,19 +62723,19 @@ type VoiceProfileStatus string
 type VoiceProfileDelta struct {
 	ActivationOutcome    VoiceProfileDeltaActivationOutcome `json:"activation_outcome"`
 	ArchivedAt           *time.Time                         `json:"archived_at"`
-	AvoidRulesAdded      int                                `json:"avoid_rules_added"`
-	AvoidRulesRemoved    int                                `json:"avoid_rules_removed"`
+	AvoidRulesAdded      int                                `json:"avoid_rules_added" minimum:"0"`
+	AvoidRulesRemoved    int                                `json:"avoid_rules_removed" minimum:"0"`
 	Classification       VoiceProfileDeltaClassification    `json:"classification"`
 	CreatedAt            time.Time                          `json:"created_at"`
-	FromVersion          *int                               `json:"from_version"`
+	FromVersion          *int                               `json:"from_version" minimum:"1"`
 	Id                   openapi_types.UUID                 `json:"id"`
-	IdentityWordJaccard  *float32                           `json:"identity_word_jaccard"`
+	IdentityWordJaccard  *float32                           `json:"identity_word_jaccard" maximum:"1" minimum:"0"`
 	ProfileId            openapi_types.UUID                 `json:"profile_id"`
-	RegisterRulesRemoved int                                `json:"register_rules_removed"`
-	SignatureSetJaccard  *float32                           `json:"signature_set_jaccard"`
-	SourcesAdded         int                                `json:"sources_added"`
-	SourcesExcluded      int                                `json:"sources_excluded"`
-	ToVersion            int                                `json:"to_version"`
+	RegisterRulesRemoved int                                `json:"register_rules_removed" minimum:"0"`
+	SignatureSetJaccard  *float32                           `json:"signature_set_jaccard" maximum:"1" minimum:"0"`
+	SourcesAdded         int                                `json:"sources_added" minimum:"0"`
+	SourcesExcluded      int                                `json:"sources_excluded" minimum:"0"`
+	ToVersion            int                                `json:"to_version" minimum:"1"`
 	UpdatedAt            time.Time                          `json:"updated_at"`
 	WordsAdded           int                                `json:"words_added"`
 }
@@ -62374,21 +62748,21 @@ type VoiceProfileDeltaClassification string
 
 // VoiceProfileEvaluation defines model for VoiceProfileEvaluation.
 type VoiceProfileEvaluation struct {
-	ActiveMedianVoiceScore    *float32                               `json:"active_median_voice_score"`
-	AntiAiHardFailures        int                                    `json:"anti_ai_hard_failures"`
-	CandidateMedianVoiceScore *float32                               `json:"candidate_median_voice_score,omitempty"`
+	ActiveMedianVoiceScore    *float32                               `json:"active_median_voice_score" maximum:"1" minimum:"0"`
+	AntiAiHardFailures        int                                    `json:"anti_ai_hard_failures" minimum:"0"`
+	CandidateMedianVoiceScore *float32                               `json:"candidate_median_voice_score,omitempty" maximum:"1" minimum:"0"`
 	Classification            VoiceProfileEvaluationClassification   `json:"classification"`
 	CorpusCitationsValid      bool                                   `json:"corpus_citations_valid"`
 	HeldOutPrompts            VoiceProfileEvaluationHeldOutPrompts   `json:"held_out_prompts"`
-	IdentityWordJaccard       float32                                `json:"identity_word_jaccard"`
+	IdentityWordJaccard       float32                                `json:"identity_word_jaccard" maximum:"1" minimum:"0"`
 	Passed                    bool                                   `json:"passed"`
-	RemovedAvoidRules         int                                    `json:"removed_avoid_rules"`
-	RemovedRegisterRules      int                                    `json:"removed_register_rules"`
+	RemovedAvoidRules         int                                    `json:"removed_avoid_rules" minimum:"0"`
+	RemovedRegisterRules      int                                    `json:"removed_register_rules" minimum:"0"`
 	RepeatsPerPrompt          VoiceProfileEvaluationRepeatsPerPrompt `json:"repeats_per_prompt"`
 
 	// ReviewReasonDetails Typed explanations in the same order as review_reasons. Unknown codes use their recorded text.
 	ReviewReasonDetails   *[]VoiceReviewReason `json:"review_reason_details,omitempty"`
-	SignatureSetJaccard   float32              `json:"signature_set_jaccard"`
+	SignatureSetJaccard   float32              `json:"signature_set_jaccard" maximum:"1" minimum:"0"`
 	StructuredOutputValid bool                 `json:"structured_output_valid"`
 }
 
@@ -62413,21 +62787,21 @@ type VoiceProfileVersion struct {
 	Id                      openapi_types.UUID        `json:"id"`
 	ModelName               string                    `json:"model_name"`
 	ModelProvider           string                    `json:"model_provider"`
-	PredecessorVersion      *int                      `json:"predecessor_version"`
+	PredecessorVersion      *int                      `json:"predecessor_version" minimum:"1"`
 	ProfileId               openapi_types.UUID        `json:"profile_id"`
 	ProfileJson             map[string]interface{}    `json:"profile_json"`
-	ProfileVersion          int                       `json:"profile_version"`
+	ProfileVersion          int                       `json:"profile_version" minimum:"1"`
 	Reason                  VoiceProfileVersionReason `json:"reason"`
 	ReviewReasons           []string                  `json:"review_reasons"`
 	Source                  string                    `json:"source"`
-	SourceCount             int                       `json:"source_count"`
+	SourceCount             int                       `json:"source_count" minimum:"0"`
 	SourceHash              string                    `json:"source_hash"`
 	StatsJson               map[string]interface{}    `json:"stats_json"`
 	Status                  VoiceProfileVersionStatus `json:"status"`
 	UpdatedAt               time.Time                 `json:"updated_at"`
 
 	// Version Row concurrency version; distinct from the immutable artifact's profile_version.
-	Version        int    `json:"version"`
+	Version        int    `json:"version" minimum:"1"`
 	VoiceProfileMd string `json:"voice_profile_md"`
 }
 
@@ -62448,10 +62822,10 @@ type VoiceReviewReason struct {
 // each of them is `added`, `already_present` (a source already, left as it is), or
 // `no_own_words` (only quoted text, a signature, or too few words of the owner's own).
 type VoiceSentMailLearned struct {
-	Added          int                `json:"added"`
-	AlreadyPresent int                `json:"already_present"`
-	NoOwnWords     int                `json:"no_own_words"`
-	Read           int                `json:"read"`
+	Added          int                `json:"added" minimum:"0"`
+	AlreadyPresent int                `json:"already_present" minimum:"0"`
+	NoOwnWords     int                `json:"no_own_words" minimum:"0"`
+	Read           int                `json:"read" minimum:"0"`
 	Summary        VoiceCorpusSummary `json:"summary"`
 }
 
@@ -62736,10 +63110,15 @@ type WebhookSubscription struct {
 	CustomHeaders []WebhookCustomHeader `json:"custom_headers"`
 
 	// EventTypes The subscribed event types, each from the published event catalog.
-	EventTypes []string                 `json:"event_types"`
-	Id         openapi_types.UUID       `json:"id"`
-	OwnerId    openapi_types.UUID       `json:"owner_id"`
-	State      WebhookSubscriptionState `json:"state"`
+	EventTypes []string           `json:"event_types"`
+	Id         openapi_types.UUID `json:"id"`
+
+	// OwnerActive Whether the owner is still an active member. False when they were deactivated or archived: they see nothing, so no event is delivered, while `state` may still read `active`. Give the subscription a new `owner_id`, or hand the member's work over.
+	OwnerActive *bool `json:"owner_active,omitempty"`
+
+	// OwnerId The member every delivery runs under: an event goes out only when they may see its record.
+	OwnerId openapi_types.UUID       `json:"owner_id"`
+	State   WebhookSubscriptionState `json:"state"`
 
 	// TargetUrl HTTPS-only delivery endpoint.
 	TargetUrl string     `json:"target_url"`
@@ -62888,10 +63267,10 @@ type WeeklyPlanCapacity struct {
 	// Meetings Meetings BOOKED in next week's local window. Booked and not held: the week has not
 	// happened, so a meeting there has no outcome yet, and counting `held` would only
 	// find rows somebody backdated.
-	Meetings int `json:"meetings"`
+	Meetings int `json:"meetings" minimum:"0"`
 
 	// Tasks Open tasks assigned to the rep and due inside next week's local window.
-	Tasks int `json:"tasks"`
+	Tasks int `json:"tasks" minimum:"0"`
 }
 
 // WeeklyPlanCommitment One thing a rep said they would do this week.
@@ -63045,64 +63424,64 @@ type WeeklyReview struct {
 // WeeklyReviewCounts defines model for WeeklyReviewCounts.
 type WeeklyReviewCounts struct {
 	// BriefItemsActed Morning-brief items this rep acted on in the week.
-	BriefItemsActed int `json:"brief_items_acted"`
+	BriefItemsActed int `json:"brief_items_acted" minimum:"0"`
 
 	// BriefItemsDismissed And dismissed.
-	BriefItemsDismissed int `json:"brief_items_dismissed"`
+	BriefItemsDismissed int `json:"brief_items_dismissed" minimum:"0"`
 
 	// CommitmentsDue Commitments the rep stood by in the week's plan. A dropped commitment is in
 	// neither this nor `commitments_kept`: deciding on Wednesday that a thing is not
 	// worth doing is not failing to do it, and counting it against a rep teaches them
 	// to leave dead commitments open rather than say so.
-	CommitmentsDue int `json:"commitments_due"`
+	CommitmentsDue int `json:"commitments_due" minimum:"0"`
 
 	// CommitmentsKept And how many were done.
-	CommitmentsKept int `json:"commitments_kept"`
-	DealsLost       int `json:"deals_lost"`
+	CommitmentsKept int `json:"commitments_kept" minimum:"0"`
+	DealsLost       int `json:"deals_lost" minimum:"0"`
 
 	// DealsMoved Deals that changed stage, excluding those that closed.
-	DealsMoved int `json:"deals_moved"`
-	DealsWon   int `json:"deals_won"`
+	DealsMoved int `json:"deals_moved" minimum:"0"`
+	DealsWon   int `json:"deals_won" minimum:"0"`
 
 	// LeadsAnsweredInTarget Of those, leads with a first response recorded before the week closed, including late
 	// responses. Breaches are counted separately. The legacy field name is retained for
 	// compatibility; the figure is a recorded-response count, not an SLA success rate.
-	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
+	LeadsAnsweredInTarget int `json:"leads_answered_in_target" minimum:"0"`
 
 	// LeadsBreached And the ones whose target ran out.
-	LeadsBreached int `json:"leads_breached"`
+	LeadsBreached int `json:"leads_breached" minimum:"0"`
 
 	// LeadsRouted Inbound leads routed to this rep during the week.
-	LeadsRouted int `json:"leads_routed"`
+	LeadsRouted int `json:"leads_routed" minimum:"0"`
 
 	// MeetingsHeld Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
 	// week can be judged by, and counting it would credit a conversation that never occurred.
-	MeetingsHeld int `json:"meetings_held"`
+	MeetingsHeld int `json:"meetings_held" minimum:"0"`
 
 	// MeetingsWithNextStep Of those, meetings with a readable task explicitly linked through source_activity_id
 	// and created between the meeting and the week closing. Never greater than
 	// `meetings_held`. Missing linkage does not prove that no follow-up happened.
-	MeetingsWithNextStep int `json:"meetings_with_next_step"`
+	MeetingsWithNextStep int `json:"meetings_with_next_step" minimum:"0"`
 
 	// ProposalsAccepted Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
 	// `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
 	// decisions nobody made.
-	ProposalsAccepted int `json:"proposals_accepted"`
+	ProposalsAccepted int `json:"proposals_accepted" minimum:"0"`
 
 	// ProposalsRejected The same, rejected.
-	ProposalsRejected int `json:"proposals_rejected"`
+	ProposalsRejected int `json:"proposals_rejected" minimum:"0"`
 
 	// TasksCarriedOver Assigned tasks due before the closing boundary and still unfinished at that boundary.
-	TasksCarriedOver int `json:"tasks_carried_over"`
+	TasksCarriedOver int `json:"tasks_carried_over" minimum:"0"`
 
 	// TasksCompleted Tasks completed during the week, including undated and previously overdue tasks. Absent on reports created before this measure existed.
-	TasksCompleted *int `json:"tasks_completed,omitempty"`
+	TasksCompleted *int `json:"tasks_completed,omitempty" minimum:"0"`
 
 	// TasksDone Of tasks due that week, those completed before its closing boundary, including early completions.
-	TasksDone int `json:"tasks_done"`
+	TasksDone int `json:"tasks_done" minimum:"0"`
 
 	// TasksDue Tasks assigned to this rep that fell due in the week.
-	TasksDue int `json:"tasks_due"`
+	TasksDue int `json:"tasks_due" minimum:"0"`
 }
 
 // WeeklyReviewDeal One deal the week is about, FROZEN. Every word was written when the review was, so a deal
@@ -63284,7 +63663,7 @@ type WeeklyReviewOutlookPeriodKind string
 type WeeklyReviewPipeline struct {
 	// CreatedMinor Value of the deals opened in the week, converted at the latest rate on or before the
 	// week's end and frozen here.
-	CreatedMinor int64 `json:"created_minor"`
+	CreatedMinor int64 `json:"created_minor" minimum:"0"`
 
 	// Currency The currency the three figures are in, stored beside them: the installation's base
 	// currency is an operator-mutable setting, and re-reading it later would re-label old
@@ -63292,11 +63671,11 @@ type WeeklyReviewPipeline struct {
 	Currency string `json:"currency"`
 
 	// LostMinor The same, for deals lost.
-	LostMinor int64 `json:"lost_minor"`
+	LostMinor int64 `json:"lost_minor" minimum:"0"`
 
 	// WonMinor Value of the deals won in the week, at each deal's own close-time rate — the honest
 	// figure for money that has already moved.
-	WonMinor int64 `json:"won_minor"`
+	WonMinor int64 `json:"won_minor" minimum:"0"`
 }
 
 // WeeklyReviewPrior The week before this one, for comparison.
@@ -63324,31 +63703,31 @@ type WeeklyReviewScorecard struct {
 type WeeklyScorecardDealBlock struct {
 	// Advances Moves to a LATER stage of the same pipeline, by stage position. A deal that crossed
 	// pipelines has no comparable position and counts as neither direction.
-	Advances int `json:"advances"`
+	Advances int `json:"advances" minimum:"0"`
 
 	// CloseDateSound Open deals whose close date is set, not provisional, and not in the past.
-	CloseDateSound int `json:"close_date_sound"`
-	ForecastDown   int `json:"forecast_down"`
+	CloseDateSound int `json:"close_date_sound" minimum:"0"`
+	ForecastDown   int `json:"forecast_down" minimum:"0"`
 
 	// ForecastUp Deals whose forecast category ended the week higher than it started. Counted ONCE per
 	// deal however many times it was edited — a rep who corrected a typo three times did not
 	// upgrade three times.
-	ForecastUp int `json:"forecast_up"`
+	ForecastUp int `json:"forecast_up" minimum:"0"`
 
 	// MedianDaysInStage Median whole days a deal sat in the stage it left this week. NULL when no deal changed
 	// stage: a median of nothing is absent, never zero.
-	MedianDaysInStage *int `json:"median_days_in_stage,omitempty"`
+	MedianDaysInStage *int `json:"median_days_in_stage,omitempty" minimum:"0"`
 
 	// MultiThreaded Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
 	// the review's own week: the risk measured is the single point of failure, and a deal
 	// worked steadily for a month is multi-threaded whether or not the second contact
 	// happened to appear in these seven days.
-	MultiThreaded int `json:"multi_threaded"`
+	MultiThreaded int `json:"multi_threaded" minimum:"0"`
 
 	// Open The denominator the three coverage counts are read against. Published so a reader can
 	// judge "3 of 5" rather than trust a percentage that cannot be told from 300 of 500.
-	Open        int `json:"open"`
-	Regressions int `json:"regressions"`
+	Open        int `json:"open" minimum:"0"`
+	Regressions int `json:"regressions" minimum:"0"`
 
 	// Unreconstructible Deals left OUT of the four population counts above because their state at the week's
 	// closing instant could not be rebuilt: the audit images describing their week sit
@@ -63360,10 +63739,10 @@ type WeeklyScorecardDealBlock struct {
 	// scored before this reconstruction existed, which is a third fact again: those counts
 	// are the current-state figures they always were, and nothing can retroactively make
 	// them week-end facts.
-	Unreconstructible *int `json:"unreconstructible,omitempty"`
+	Unreconstructible *int `json:"unreconstructible,omitempty" minimum:"0"`
 
 	// WithNextStep Open deals carrying an open task. A count beside `open`, never a rate.
-	WithNextStep int `json:"with_next_step"`
+	WithNextStep int `json:"with_next_step" minimum:"0"`
 }
 
 // WeeklyScorecardLeadBlock How the rep's leads moved, and whether the meetings behind them happened.
@@ -63371,10 +63750,10 @@ type WeeklyScorecardLeadBlock struct {
 	// Advanced Status transitions UP the open ladder inside the week. Counted per transition, so a
 	// lead that went new to contacted to engaged counts twice — the lead's own row records
 	// only where it ended and could report at most one of them.
-	Advanced int `json:"advanced"`
+	Advanced int `json:"advanced" minimum:"0"`
 
 	// AnsweredInTarget Leads arriving this week with a first response recorded before the week closed, including late responses. Breaches are counted separately. This is not an SLA success rate.
-	AnsweredInTarget int `json:"answered_in_target"`
+	AnsweredInTarget int `json:"answered_in_target" minimum:"0"`
 
 	// Arrived The week's lead cohort: leads that arrived in the window (dated by when they were
 	// routed, or created when nobody routed them), are not archived, and no import wrote.
@@ -63385,24 +63764,24 @@ type WeeklyScorecardLeadBlock struct {
 	// Null, or absent from an older server, on a week frozen before the cohort was
 	// recorded. Such a week cannot say how many leads went unanswered, and a reader shows
 	// that as unknown, never as zero and never as every lead answered.
-	Arrived      *int `json:"arrived,omitempty"`
-	Breached     int  `json:"breached"`
-	Disqualified int  `json:"disqualified"`
+	Arrived      *int `json:"arrived,omitempty" minimum:"0"`
+	Breached     int  `json:"breached" minimum:"0"`
+	Disqualified int  `json:"disqualified" minimum:"0"`
 
 	// MeetingsBooked Meetings that BECAME booked this week, read from the meeting's transition history and
 	// never from its current status. A meeting booked Monday and held Friday counts in both
 	// this and `meetings_held`, which is what a funnel means; counting the current column
 	// would report no bookings at all for the week it was booked in.
-	MeetingsBooked int `json:"meetings_booked"`
-	MeetingsHeld   int `json:"meetings_held"`
-	MeetingsNoShow int `json:"meetings_no_show"`
+	MeetingsBooked int `json:"meetings_booked" minimum:"0"`
+	MeetingsHeld   int `json:"meetings_held" minimum:"0"`
+	MeetingsNoShow int `json:"meetings_no_show" minimum:"0"`
 
 	// MeetingsPartialHistory Meetings whose only history row was invented from their current state when the history
 	// table was introduced. They cannot say when they were booked, so they are reported as
 	// partial coverage rather than counted. A non-zero value means the three counts above
 	// are a floor, and a reader should say so.
-	MeetingsPartialHistory int `json:"meetings_partial_history"`
-	Promoted               int `json:"promoted"`
+	MeetingsPartialHistory int `json:"meetings_partial_history" minimum:"0"`
+	Promoted               int `json:"promoted" minimum:"0"`
 }
 
 // WorkEvidenceBasis A recommendation's scoped source and classification. Known request kinds
@@ -63432,7 +63811,7 @@ type WorkEvidenceBasis struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	SourceVersion *RowVersion `json:"source_version,omitempty"`
+	SourceVersion *RowVersion `json:"source_version,omitempty" minimum:"1"`
 }
 
 // WorkingHours When one contact is bookable, on their own clock.
@@ -63784,7 +64163,7 @@ type WorklistBatch struct {
 	Cause *string `json:"cause,omitempty"`
 
 	// Count How many decisions this row stands for.
-	Count int `json:"count"`
+	Count int `json:"count" minimum:"0"`
 
 	// Key What the members have in common, which is also what makes them safe to answer
 	// together. `likely_automated` is mail from senders that are not contacts;
@@ -63839,16 +64218,16 @@ type WorklistBatchKey string
 // seller work.
 type WorklistBuckets struct {
 	// DueToday Seller work not already counted urgent, carrying a date that has arrived or passed, or falling due before this installation day ends.
-	DueToday int `json:"due_today"`
+	DueToday int `json:"due_today" minimum:"0"`
 
 	// Planned The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar.
-	Planned int `json:"planned"`
+	Planned int `json:"planned" minimum:"0"`
 
 	// Review Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.
-	Review int `json:"review"`
+	Review int `json:"review" minimum:"0"`
 
 	// Urgent Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows.
-	Urgent int `json:"urgent"`
+	Urgent int `json:"urgent" minimum:"0"`
 }
 
 // WorklistCompanyFacts The account behind the row, and how the silence runs both ways, so a reader
@@ -64010,7 +64389,7 @@ type WorklistCount struct {
 	Category WorklistCountCategory `json:"category"`
 
 	// Considered How many items of this kind were read and ranked, before any narrowing.
-	Considered int `json:"considered"`
+	Considered int `json:"considered" minimum:"0"`
 
 	// MoreAvailable True when any source behind this category was read to its work bound, so items
 	// MAY exist past what was considered. A category inherits its sources' honesty:
@@ -64023,12 +64402,12 @@ type WorklistCount struct {
 	MoreAvailable bool `json:"more_available"`
 
 	// Shown How many of them the page carries, counting a folded group as its members.
-	Shown int `json:"shown"`
+	Shown int `json:"shown" minimum:"0"`
 
 	// Total The exact number of admitted items in this category for this read's scope and
 	// owner. Absent when that population has not been counted exactly; a client then
 	// reads `considered` with `more_available` as today. Absent never means zero.
-	Total *int `json:"total,omitempty"`
+	Total *int `json:"total,omitempty" minimum:"0"`
 }
 
 // WorklistCountCategory Which kind of work these numbers are about. The same vocabulary the filter uses.
@@ -64069,9 +64448,9 @@ type WorklistDealFacts struct {
 	// `because` instead, which says so without telling those cases apart.
 	NoChampion     *bool               `json:"no_champion,omitempty"`
 	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
-	QuietDays      *int                `json:"quiet_days,omitempty"`
+	QuietDays      *int                `json:"quiet_days,omitempty" minimum:"0"`
 	StageId        *openapi_types.UUID `json:"stage_id,omitempty"`
-	WinProbability *int                `json:"win_probability,omitempty"`
+	WinProbability *int                `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 }
 
 // WorklistDealVerdict An earlier assessment of the deal, with the date it was written.
@@ -64164,10 +64543,10 @@ type WorklistFocus struct {
 	Items []WorklistItem `json:"items"`
 
 	// Total Eligible cards before the six-card cut; a grouped card counts once.
-	Total int `json:"total"`
+	Total int `json:"total" minimum:"0"`
 
 	// UrgentRemaining Urgent underlying work items not individually named by focus cards, using the same units as summary.urgent. A group does not certify the urgency of each member.
-	UrgentRemaining int `json:"urgent_remaining"`
+	UrgentRemaining int `json:"urgent_remaining" minimum:"0"`
 }
 
 // WorklistItem One thing to do, with the reason it sits where it sits.
@@ -64421,7 +64800,7 @@ type WorklistItem struct {
 	// approved action that failed, 3 material revenue at risk, 4 an assigned task
 	// or a smaller deal drifting, 5 a decision blocking customer work, 6 data
 	// hygiene. Levels are never mixed by a score.
-	Level int `json:"level"`
+	Level int `json:"level" maximum:"6" minimum:"0"`
 
 	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
 	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
@@ -64514,6 +64893,11 @@ type WorklistItem struct {
 	// caller may read. Best first, each once; `contact` is the first of them. Sent on
 	// `meeting_follow_up` rows only, and absent where no attendee is on file.
 	Recipients *[]WorklistContactFacts `json:"recipients,omitempty"`
+
+	// RunReasonCode On an `automation_run` item: why the firing stopped, in the code set of
+	// AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
+	// engine's English sentence.
+	RunReasonCode *string `json:"run_reason_code,omitempty"`
 
 	// Score Rank within the level. Higher is first. Meaningless across levels.
 	Score *float32 `json:"score,omitempty"`
@@ -64879,7 +65263,7 @@ type WorklistPromiseRecipientStatus string
 // not lost.
 type WorklistReach struct {
 	// Considered How many candidates from this source were read and ranked.
-	Considered int `json:"considered"`
+	Considered int `json:"considered" minimum:"0"`
 
 	// MoreAvailable True when this source was read to its work bound, so candidates MAY exist past what
 	// was considered. A lane that came back exactly full cannot tell a full page from a
@@ -64907,7 +65291,7 @@ type WorklistReach struct {
 	Personal *bool `json:"personal,omitempty"`
 
 	// Shown How many of them the queue is carrying after folding, filtering and the page cut. A folded group counts as its members, so this is in items, not cards.
-	Shown int `json:"shown"`
+	Shown int `json:"shown" minimum:"0"`
 
 	// Source Which producer these numbers are about. The same vocabulary as an item source.
 	Source WorklistReachSource `json:"source"`
@@ -64938,7 +65322,7 @@ type WorklistReachSource string
 // early tells a rep the opposite of the truth.
 type WorklistReadings struct {
 	// BuyerReplies How many customers have written and are waiting on an answer.
-	BuyerReplies int `json:"buyer_replies"`
+	BuyerReplies int `json:"buyer_replies" minimum:"0"`
 
 	// ChangedSinceBrief How many of the rows this page is answerable for report something the overnight
 	// run did not see, counted over the same set the four figures above describe —
@@ -64959,7 +65343,7 @@ type WorklistReadings struct {
 	// overnight run leaves every row's `changed_since_brief` absent, so this counts
 	// zero for the same reason — and a client must read the flags, not this figure,
 	// to tell "nothing changed" from "there was no night".
-	ChangedSinceBrief int `json:"changed_since_brief"`
+	ChangedSinceBrief int `json:"changed_since_brief" minimum:"0"`
 
 	// MoreAvailable True when any source behind any figure here was read to its work bound, so
 	// every number above is a floor. Set once for the strip rather than per reading:
@@ -64968,7 +65352,7 @@ type WorklistReadings struct {
 	MoreAvailable bool `json:"more_available"`
 
 	// Prospecting How much new business is in hand and owed a first response.
-	Prospecting int `json:"prospecting"`
+	Prospecting int `json:"prospecting" minimum:"0"`
 
 	// RevenueAtRiskMinor What the drifting deals are worth, summed over the deals this read PRICED, in
 	// the currency `revenue_currency` names.
@@ -65007,10 +65391,10 @@ type WorklistReadings struct {
 	// records the reader cannot both write is somebody else's decision, and
 	// counting it here tells them a contact is waiting on an answer they are not
 	// able to give.
-	Review int `json:"review"`
+	Review int `json:"review" minimum:"0"`
 
 	// UnpricedDeals Distinct flagged deals excluded from the known value because no comparable expected value was available.
-	UnpricedDeals *int `json:"unpriced_deals,omitempty"`
+	UnpricedDeals *int `json:"unpriced_deals,omitempty" minimum:"0"`
 }
 
 // WorklistReason One fact behind an item's rank, as a typed pair rather than a sentence: the
@@ -65086,7 +65470,7 @@ type WorklistSummary struct {
 	Buckets *WorklistBuckets `json:"buckets,omitempty"`
 
 	// Due Items carrying a date that has arrived or passed.
-	Due int `json:"due"`
+	Due int `json:"due" minimum:"0"`
 
 	// InPlay The middle of the day: revenue at risk, work already agreed, and decisions that
 	// block somebody. Neither an interruption nor hygiene.
@@ -65094,10 +65478,10 @@ type WorklistSummary struct {
 	// Sent because without it those items reached no figure at all — a queue holding
 	// nothing but at-risk deals reported "0 urgent, 0 due, 0 routine" over a page full
 	// of rows, which is the one thing this line promises cannot happen.
-	InPlay *int `json:"in_play,omitempty"`
+	InPlay *int `json:"in_play,omitempty" minimum:"0"`
 
 	// LowerPriority Routine work: decisions that block nothing, and data hygiene.
-	LowerPriority int `json:"lower_priority"`
+	LowerPriority int `json:"lower_priority" minimum:"0"`
 
 	// MaterialThresholdMinor The expected-revenue bar a deal must clear to count as material, in the
 	// installation's base currency — the median open deal at this instant. Sent so
@@ -65106,10 +65490,10 @@ type WorklistSummary struct {
 	MaterialThresholdMinor *int64 `json:"material_threshold_minor,omitempty"`
 
 	// Total How many candidates the requested view holds. The same population as the `considered` figures of that view's categories. Upcoming work is never counted here: none of it is due today.
-	Total int `json:"total"`
+	Total int `json:"total" minimum:"0"`
 
 	// Urgent Items at the top two levels: somebody is waiting, or a promise is breaking.
-	Urgent int `json:"urgent"`
+	Urgent int `json:"urgent" minimum:"0"`
 }
 
 // WorklistValue A typed comparator value — a date, an amount, a count of days, or nothing. Typed
@@ -65117,12 +65501,12 @@ type WorklistSummary struct {
 // client's to apply.
 type WorklistValue struct {
 	// Count How many of something, such as earlier requests folded into one card.
-	Count    *int              `json:"count,omitempty"`
+	Count    *int              `json:"count,omitempty" minimum:"1"`
 	Currency *string           `json:"currency,omitempty"`
 	Date     *time.Time        `json:"date,omitempty"`
 	Days     *int              `json:"days,omitempty"`
 	Kind     WorklistValueKind `json:"kind"`
-	Level    *int              `json:"level,omitempty"`
+	Level    *int              `json:"level,omitempty" maximum:"6" minimum:"0"`
 
 	// Minor Money in minor units of `currency`.
 	Minor *int64 `json:"minor,omitempty"`
@@ -65134,7 +65518,7 @@ type WorklistValue struct {
 	// client printing "0.72 against 0.68" would be offering a precision the score
 	// does not carry and a reader cannot check; the same two rows read honestly as
 	// "the night rated this one higher".
-	Score *float32 `json:"score,omitempty"`
+	Score *float32 `json:"score,omitempty" maximum:"1" minimum:"0"`
 }
 
 // WorklistValueKind defines model for WorklistValue.Kind.
@@ -65181,7 +65565,7 @@ type WorklistWalk struct {
 	// A row missing because its own SOURCE could not be read is never counted here.
 	// The queue has no news about it, which is not the same as it being handled, and
 	// `sources_unavailable` is where that is said.
-	ChangedSinceSnapshot int `json:"changed_since_snapshot"`
+	ChangedSinceSnapshot int `json:"changed_since_snapshot" minimum:"0"`
 
 	// NewAvailable How many items have arrived since this walk started, and are deliberately not in
 	// it. A folded group counts only its members the walk did not freeze, so an unchanged
@@ -65191,7 +65575,7 @@ type WorklistWalk struct {
 	// assembled, so nothing can have arrived behind it yet. A client draws this as
 	// an offer to refresh, never as a count of rows the reader can reach right now:
 	// reaching them means starting a new walk.
-	NewAvailable *int `json:"new_available,omitempty"`
+	NewAvailable *int `json:"new_available,omitempty" minimum:"0"`
 }
 
 // WorkspaceEmailDomain defines model for WorkspaceEmailDomain.
@@ -65453,7 +65837,7 @@ type ListActivitiesParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -65504,7 +65888,7 @@ type ListActivitiesParams struct {
 	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), a `day` entry placed where its date begins in the installation's time zone. So a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`, both in that zone.
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
 
-	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply. It lists for the whole team, whoever the mail is addressed to, within what the caller may read; the caller's own waiting mail is `GET /v1/worklist`.
 	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
 
 	// ReminderDue Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out.
@@ -65791,7 +66175,7 @@ type SendMessageParams struct {
 // GetAutomaticWorkHealthParams defines parameters for GetAutomaticWorkHealth.
 type GetAutomaticWorkHealthParams struct {
 	// Days How many days back the window reaches, today included.
-	Days *int `form:"days,omitempty" json:"days,omitempty"`
+	Days *int `form:"days,omitempty" json:"days,omitempty" maximum:"30" minimum:"1"`
 }
 
 // ActivateHomeRepairJSONBody defines parameters for ActivateHomeRepair.
@@ -65800,13 +66184,13 @@ type ActivateHomeRepairJSONBody struct {
 
 	// ReviewedActions Supported action names in the displayed review's row order, required when requires_action_review is true.
 	ReviewedActions *[]string `json:"reviewed_actions,omitempty"`
-	Version         int64     `json:"version"`
+	Version         int64     `json:"version" minimum:"1"`
 }
 
 // PreviewHomeRepairJSONBody defines parameters for PreviewHomeRepair.
 type PreviewHomeRepairJSONBody struct {
 	After  *openapi_types.UUID              `json:"after,omitempty"`
-	Limit  int                              `json:"limit"`
+	Limit  int                              `json:"limit" maximum:"1000" minimum:"1"`
 	Source *PreviewHomeRepairJSONBodySource `json:"source,omitempty"`
 }
 
@@ -65818,7 +66202,7 @@ type GetJobHealthHistoryParams struct {
 	Cursor *string                         `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Kind   *string                         `form:"kind,omitempty" json:"kind,omitempty"`
 	State  *GetJobHealthHistoryParamsState `form:"state,omitempty" json:"state,omitempty"`
-	Days   *int                            `form:"days,omitempty" json:"days,omitempty"`
+	Days   *int                            `form:"days,omitempty" json:"days,omitempty" maximum:"7" minimum:"1"`
 }
 
 // GetJobHealthHistoryParamsState defines parameters for GetJobHealthHistory.
@@ -65827,7 +66211,7 @@ type GetJobHealthHistoryParamsState string
 // PreviewMailDealRepairJSONBody defines parameters for PreviewMailDealRepair.
 type PreviewMailDealRepairJSONBody struct {
 	After *openapi_types.UUID `json:"after,omitempty"`
-	Limit int                 `json:"limit"`
+	Limit int                 `json:"limit" maximum:"1000" minimum:"1"`
 }
 
 // ResetDataJSONBody defines parameters for ResetData.
@@ -65859,7 +66243,7 @@ type ListAvailableModelsParams struct {
 
 	// Top Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
 	// Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
-	Top *int `form:"top,omitempty" json:"top,omitempty"`
+	Top *int `form:"top,omitempty" json:"top,omitempty" maximum:"100" minimum:"1"`
 
 	// Location The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Ignored by every other vendor.
 	Location *string `form:"location,omitempty" json:"location,omitempty"`
@@ -65908,7 +66292,7 @@ type ListAiCallsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Task Filter to one task (capture_classify, enrich, …).
 	Task *string `form:"task,omitempty" json:"task,omitempty"`
@@ -66009,7 +66393,7 @@ type GetReportingEditionEvidenceParams struct {
 	GroupKey  *string           `form:"group_key,omitempty" json:"group_key,omitempty"`
 	Through   *time.Time        `form:"through,omitempty" json:"through,omitempty"`
 	Cursor    *string           `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit     *int              `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit     *int              `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 }
 
 // EvaluateReportingParams defines parameters for EvaluateReporting.
@@ -66076,7 +66460,7 @@ type ExportReportingEvaluationParamsCloseWindow string
 type GetReportingEvidenceParams struct {
 	EvaluationKey     string                                 `form:"evaluation_key" json:"evaluation_key"`
 	EvaluatedAt       time.Time                              `form:"evaluated_at" json:"evaluated_at"`
-	FrameworkRevision int64                                  `form:"framework_revision" json:"framework_revision"`
+	FrameworkRevision int64                                  `form:"framework_revision" json:"framework_revision" minimum:"0"`
 	ContextId         string                                 `form:"context_id" json:"context_id"`
 	ScopeKind         *GetReportingEvidenceParamsScopeKind   `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
 	ScopeId           *openapi_types.UUID                    `form:"scope_id,omitempty" json:"scope_id,omitempty"`
@@ -66097,7 +66481,7 @@ type GetReportingEvidenceParams struct {
 	GroupKey          *string                                `form:"group_key,omitempty" json:"group_key,omitempty"`
 	Through           *time.Time                             `form:"through,omitempty" json:"through,omitempty"`
 	Cursor            *string                                `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit             *int                                   `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit             *int                                   `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 }
 
 // GetReportingEvidenceParamsScopeKind defines parameters for GetReportingEvidence.
@@ -66156,7 +66540,7 @@ type ListSalesInitiativeMembersParamsRecordType string
 // ListReportingReportsParams defines parameters for ListReportingReports.
 type ListReportingReportsParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 
 	// Scheduled Return only reports with an enabled schedule.
 	Scheduled *bool `form:"scheduled,omitempty" json:"scheduled,omitempty"`
@@ -66185,7 +66569,7 @@ type PublishReportingReportDraftParams struct {
 // ListReportingEditionsParams defines parameters for ListReportingEditions.
 type ListReportingEditionsParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 }
 
 // FreezeReportingEditionParams defines parameters for FreezeReportingEdition.
@@ -66195,29 +66579,29 @@ type FreezeReportingEditionParams struct {
 
 // EvaluateReportingReportParams defines parameters for EvaluateReportingReport.
 type EvaluateReportingReportParams struct {
-	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty" minimum:"1"`
 }
 
 // ListReportingExecutionsParams defines parameters for ListReportingExecutions.
 type ListReportingExecutionsParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 }
 
 // AnswerReportingQuestionCardParams defines parameters for AnswerReportingQuestionCard.
 type AnswerReportingQuestionCardParams struct {
-	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty" minimum:"1"`
 }
 
 // ExplainReportingQuestionCardParams defines parameters for ExplainReportingQuestionCard.
 type ExplainReportingQuestionCardParams struct {
-	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty" minimum:"1"`
 }
 
 // PreviewReportingReportAsRoleParams defines parameters for PreviewReportingReportAsRole.
 type PreviewReportingReportAsRoleParams struct {
 	Role     string `form:"role" json:"role"`
-	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty" minimum:"1"`
 }
 
 // RestoreReportingReportRevisionParams defines parameters for RestoreReportingReportRevision.
@@ -66238,7 +66622,7 @@ type ListReportRunsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Entity Only the questions about this population.
 	Entity *string `form:"entity,omitempty" json:"entity,omitempty"`
@@ -66274,7 +66658,7 @@ type ListSdrWaitingHandoffsParams struct {
 
 	// Cursor Opaque position from a previous page's `next_cursor`.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
 }
 
 // ListSdrWaitingHandoffsParamsScopeKind defines parameters for ListSdrWaitingHandoffs.
@@ -66299,7 +66683,7 @@ type ListSdrUpcomingMeetingsParams struct {
 
 	// Cursor Opaque position from a previous page's `next_cursor`. Needs the window it was read in.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
 }
 
 // ListSdrUpcomingMeetingsParamsScopeKind defines parameters for ListSdrUpcomingMeetings.
@@ -66326,7 +66710,7 @@ type GetSdrTeamReviewParamsPeriod string
 // ListReportingTargetsParams defines parameters for ListReportingTargets.
 type ListReportingTargetsParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 
 	// Retired Filter by retirement status; omitted includes both active and retired targets.
 	Retired *bool `form:"retired,omitempty" json:"retired,omitempty"`
@@ -66353,7 +66737,7 @@ type ListApprovalsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// IncludeMuted Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
 	IncludeMuted *bool                      `form:"include_muted,omitempty" json:"include_muted,omitempty"`
@@ -66456,7 +66840,7 @@ type ListAttachmentsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit      *Limit                          `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit      *Limit                          `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 	EntityType ListAttachmentsParamsEntityType `form:"entity_type" json:"entity_type"`
 	EntityId   openapi_types.UUID              `form:"entity_id" json:"entity_id"`
 }
@@ -66476,6 +66860,14 @@ type UploadAttachmentMultipartBody struct {
 // UploadAttachmentMultipartBodyEntityType defines parameters for UploadAttachment.
 type UploadAttachmentMultipartBodyEntityType string
 
+// GetAttachmentExtractionParams defines parameters for GetAttachmentExtraction.
+type GetAttachmentExtractionParams struct {
+	Question *GetAttachmentExtractionParamsQuestion `form:"question,omitempty" json:"question,omitempty"`
+}
+
+// GetAttachmentExtractionParamsQuestion defines parameters for GetAttachmentExtraction.
+type GetAttachmentExtractionParamsQuestion string
+
 // ListAuditLogParams defines parameters for ListAuditLog.
 type ListAuditLogParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -66489,7 +66881,7 @@ type ListAuditLogParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Actor Typed principal filter, e.g. human:<uuid> or agent:sdr.
 	Actor      *string             `form:"actor,omitempty" json:"actor,omitempty"`
@@ -66550,7 +66942,7 @@ type ListAutomationsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // UpdateAutomationParams defines parameters for UpdateAutomation.
@@ -66576,7 +66968,7 @@ type ListAutomationRunsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Outcome Filter by run outcome (matches automation_run.status, data-model §12.5).
 	Outcome *ListAutomationRunsParamsOutcome `form:"outcome,omitempty" json:"outcome,omitempty"`
@@ -66712,7 +67104,7 @@ type ListMyCaptureActivityParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // ListWorkspaceCaptureActivityParams defines parameters for ListWorkspaceCaptureActivity.
@@ -66728,7 +67120,7 @@ type ListWorkspaceCaptureActivityParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // ListConsumerMailBaselineParams defines parameters for ListConsumerMailBaseline.
@@ -66750,7 +67142,7 @@ type ListDomainQuestionsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Domain Return only the question about this domain; normalized to its registrable form.
 	Domain *string `form:"domain,omitempty" json:"domain,omitempty"`
@@ -66788,7 +67180,7 @@ type CatchUpOnRecordParams struct {
 	RecordName *AnchorRecordName `form:"record_name,omitempty" json:"record_name,omitempty"`
 
 	// MaxItems Cap the items in each section.
-	MaxItems *AnchorMaxItems `form:"max_items,omitempty" json:"max_items,omitempty"`
+	MaxItems *AnchorMaxItems `form:"max_items,omitempty" json:"max_items,omitempty" maximum:"20" minimum:"1"`
 
 	// ProjectId Keep only what is filed under this project or under none.
 	ProjectId *AnchorProjectId `form:"project_id,omitempty" json:"project_id,omitempty"`
@@ -66810,7 +67202,7 @@ type ListCommissionEntriesParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// PartnerCompanyId The entries owed to one partner.
 	PartnerCompanyId *openapi_types.UUID `form:"partner_company_id,omitempty" json:"partner_company_id,omitempty"`
@@ -66839,7 +67231,7 @@ type ListOpenCommitmentsParams struct {
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
 
 	// Limit Cap the set. 50 is also the ceiling.
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
 }
 
 // ListCompaniesParams defines parameters for ListCompanies.
@@ -66855,7 +67247,7 @@ type ListCompaniesParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
@@ -67116,7 +67508,7 @@ type GetCompanyAccessParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // AskAboutCompanyJSONBody defines parameters for AskAboutCompany.
@@ -67183,7 +67575,7 @@ type ListCompanyContactsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // ListCompanyContactsParamsSort defines parameters for ListCompanyContacts.
@@ -67202,7 +67594,7 @@ type ListCompanyContractsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit  *Limit                            `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *Limit                            `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 	Status *ListCompanyContractsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// UnderContractOnly Restrict to contracts under contract as of today (CONTRACT-FORM-1).
@@ -67225,7 +67617,7 @@ type ListCompanyDocumentsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit      *Limit                              `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit      *Limit                              `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 	Category   *ListCompanyDocumentsParamsCategory `form:"category,omitempty" json:"category,omitempty"`
 	DocState   *ListCompanyDocumentsParamsDocState `form:"doc_state,omitempty" json:"doc_state,omitempty"`
 	PinnedOnly *bool                               `form:"pinned_only,omitempty" json:"pinned_only,omitempty"`
@@ -67752,7 +68144,7 @@ type ListConfirmSubmissionsParams struct {
 	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
@@ -67795,7 +68187,7 @@ type ListContactsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
@@ -68051,7 +68443,7 @@ type GetContactAccessParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // RecordConsentParams defines parameters for RecordConsent.
@@ -68287,7 +68679,7 @@ type SearchContextParams struct {
 
 	// RecordTypes Restrict the sweep to these types. Omit it to sweep all of them.
 	RecordTypes *[]SearchContextParamsRecordTypes `form:"record_types,omitempty" json:"record_types,omitempty"`
-	Limit       *int                              `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit       *int                              `form:"limit,omitempty" json:"limit,omitempty" maximum:"25" minimum:"1"`
 }
 
 // SearchContextParamsRecordTypes defines parameters for SearchContext.
@@ -68370,7 +68762,7 @@ type ListCustomFieldsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -68517,7 +68909,7 @@ type ListDataSubjectRequestsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // ListDataSubjectRequestsParamsStatus defines parameters for ListDataSubjectRequests.
@@ -68571,7 +68963,7 @@ type ListDealRoomsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -68701,7 +69093,7 @@ type ListDealSuggestionsParams struct {
 
 	// Cursor Opaque keyset cursor.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // AcceptDealSuggestionParams defines parameters for AcceptDealSuggestion.
@@ -68765,7 +69157,7 @@ type ListDealsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
@@ -68816,10 +69208,10 @@ type ListDealsParams struct {
 	// WinProbabilityMin Deals whose win probability is at least this percent (inclusive). The same
 	// `deal.win_probability` the forecast weights by: the deal's own probability where one
 	// is set, else its stage's. A `win_probability_min` above `win_probability_max` is `422`.
-	WinProbabilityMin *int `form:"win_probability_min,omitempty" json:"win_probability_min,omitempty"`
+	WinProbabilityMin *int `form:"win_probability_min,omitempty" json:"win_probability_min,omitempty" maximum:"100" minimum:"0"`
 
 	// WinProbabilityMax Deals whose win probability is at most this percent (inclusive). See `win_probability_min`.
-	WinProbabilityMax *int `form:"win_probability_max,omitempty" json:"win_probability_max,omitempty"`
+	WinProbabilityMax *int `form:"win_probability_max,omitempty" json:"win_probability_max,omitempty" maximum:"100" minimum:"0"`
 
 	// Stalled Deterministic stalled flag (no activity past the threshold, and no booked meeting ahead).
 	Stalled *bool `form:"stalled,omitempty" json:"stalled,omitempty"`
@@ -68873,10 +69265,10 @@ type ListDealsParams struct {
 	// today's rate, or the amount frozen at close. A deal with no amount, or one in a currency
 	// with no rate, is outside every range. A role that withholds the amount or the currency
 	// is refused with `422` `field_masked`. A `value_min` above `value_max` is `422`.
-	ValueMin *int64 `form:"value_min,omitempty" json:"value_min,omitempty"`
+	ValueMin *int64 `form:"value_min,omitempty" json:"value_min,omitempty" minimum:"0"`
 
 	// ValueMax Deals worth at most this much (inclusive), in minor units of the base currency. See `value_min`.
-	ValueMax *int64 `form:"value_max,omitempty" json:"value_max,omitempty"`
+	ValueMax *int64 `form:"value_max,omitempty" json:"value_max,omitempty" minimum:"0"`
 
 	// Currency Deals priced in this ISO-4217 currency, in either case. A code that is not three letters is refused with `422` `currency_malformed`. A role that withholds the currency is refused with `422` `field_masked`.
 	Currency *string `form:"currency,omitempty" json:"currency,omitempty"`
@@ -68955,10 +69347,10 @@ type DraftDealFollowUpsParams struct {
 // ListSlippingDealsParams defines parameters for ListSlippingDeals.
 type ListSlippingDealsParams struct {
 	// QuietDays Days without recorded activity after which an open deal counts as gone quiet.
-	QuietDays *int `form:"quiet_days,omitempty" json:"quiet_days,omitempty"`
+	QuietDays *int `form:"quiet_days,omitempty" json:"quiet_days,omitempty" maximum:"365" minimum:"1"`
 
 	// Limit Cap the ranked list. Omit it for every evidenced deal.
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
 }
 
 // ArchiveDealParams defines parameters for ArchiveDeal.
@@ -69069,13 +69461,19 @@ type ListDealDocumentsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit         *Limit                           `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit         *Limit                           `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 	Category      *ListDealDocumentsParamsCategory `form:"category,omitempty" json:"category,omitempty"`
 	IncludeHidden *bool                            `form:"include_hidden,omitempty" json:"include_hidden,omitempty"`
 }
 
 // ListDealDocumentsParamsCategory defines parameters for ListDealDocuments.
 type ListDealDocumentsParamsCategory string
+
+// ListDealMarginceChangesParams defines parameters for ListDealMarginceChanges.
+type ListDealMarginceChangesParams struct {
+	// Cursor The `next_cursor` of the page before. A token this server did not mint is refused with 422.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
 
 // RestoreDealMoveParams defines parameters for RestoreDealMove.
 type RestoreDealMoveParams struct {
@@ -69096,7 +69494,7 @@ type ListDealOffersParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit  *Limit                      `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *Limit                      `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 	Status *ListDealOffersParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 }
 
@@ -69143,30 +69541,6 @@ type ProgressDealParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
-// RevertStageProgressionParams defines parameters for RevertStageProgression.
-type RevertStageProgressionParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running and carries `Retry-After`;
-	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-	// request under the key failed after it had started, so check whether it took effect before
-	// retrying under a new key.
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
 // GetDealStatusParams defines parameters for GetDealStatus.
 type GetDealStatusParams struct {
 	// IfRecommendation Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew.
@@ -69189,7 +69563,7 @@ type ListDedupeCandidatesParams struct {
 
 	// Cursor Opaque keyset cursor.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 }
 
 // ListDedupeCandidatesParamsStatus defines parameters for ListDedupeCandidates.
@@ -69205,7 +69579,7 @@ type ListContactCasesParams struct {
 
 	// Cursor Opaque keyset cursor.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
 }
 
 // ListContactCasesParamsScope defines parameters for ListContactCases.
@@ -69253,7 +69627,7 @@ type SendCompanyEmailParams struct {
 type BackfillEmploymentImportJSONBody struct {
 	After *openapi_types.UUID `json:"after,omitempty"`
 	Apply *bool               `json:"apply,omitempty"`
-	Limit *int                `json:"limit,omitempty"`
+	Limit *int                `json:"limit,omitempty" maximum:"25" minimum:"1"`
 }
 
 // ExtOauthCallbackParams defines parameters for ExtOauthCallback.
@@ -69281,7 +69655,7 @@ type GetFieldHistoryParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit      *Limit                          `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit      *Limit                          `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 	EntityType GetFieldHistoryParamsEntityType `form:"entity_type" json:"entity_type"`
 	EntityId   openapi_types.UUID              `form:"entity_id" json:"entity_id"`
 
@@ -69320,7 +69694,7 @@ type ListFinanceSourceCustomersParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // GetForecastParams defines parameters for GetForecast.
@@ -69399,7 +69773,7 @@ type ListFxRatesParams struct {
 
 // ListImportRunsParams defines parameters for ListImportRuns.
 type ListImportRunsParams struct {
-	Limit *int                      `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int                      `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
 	View  *ListImportRunsParamsView `form:"view,omitempty" json:"view,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -69488,14 +69862,14 @@ type ListAgentClientsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // CreateCorpusJSONBody defines parameters for CreateCorpus.
 type CreateCorpusJSONBody struct {
 	DefaultAsk     *bool    `json:"default_ask,omitempty"`
 	Description    *string  `json:"description,omitempty"`
-	MinSimilarity  *float64 `json:"min_similarity,omitempty"`
+	MinSimilarity  *float64 `json:"min_similarity,omitempty" maximum:"1" minimum:"0"`
 	Name           string   `json:"name"`
 	TopicStatement string   `json:"topic_statement"`
 }
@@ -69504,7 +69878,7 @@ type CreateCorpusJSONBody struct {
 type UpdateCorpusJSONBody struct {
 	DefaultAsk     *bool    `json:"default_ask,omitempty"`
 	Description    *string  `json:"description,omitempty"`
-	MinSimilarity  *float64 `json:"min_similarity,omitempty"`
+	MinSimilarity  *float64 `json:"min_similarity,omitempty" maximum:"1" minimum:"0"`
 	Name           *string  `json:"name,omitempty"`
 	TopicStatement *string  `json:"topic_statement,omitempty"`
 }
@@ -69676,7 +70050,7 @@ type ListLeadsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
@@ -70043,7 +70417,7 @@ type ExplainLeadScoreParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // ListLegalEntitiesParams defines parameters for ListLegalEntities.
@@ -70103,7 +70477,7 @@ type ListLegalReviewsParams struct {
 
 	// Cursor Opaque keyset cursor.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // ListLegalReviewsParamsStatus defines parameters for ListLegalReviews.
@@ -70146,7 +70520,7 @@ type ListListHistoryParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // ListListMembersParams defines parameters for ListListMembers.
@@ -70162,7 +70536,7 @@ type ListListMembersParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// EntityId Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor.
 	EntityId *[]openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
@@ -70194,7 +70568,7 @@ type CreateLossReasonParams struct {
 
 // ListLegacyLossReasonsParams defines parameters for ListLegacyLossReasons.
 type ListLegacyLossReasonsParams struct {
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // DecideLegacyLossReasonParams defines parameters for DecideLegacyLossReason.
@@ -70249,7 +70623,7 @@ type UpdateLossReasonParams struct {
 type GetMagicParams struct {
 	// Since The instant to report from. Absent means the acting rep's last brief cutoff, and 24 hours where there is no brief — a window the reader has not already seen, rather than a fixed one that repeats what they read this morning.
 	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
-	Limit *int       `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int       `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 }
 
 // GetMagicLineRecordsParams defines parameters for GetMagicLineRecords.
@@ -70259,7 +70633,7 @@ type GetMagicLineRecordsParams struct {
 
 	// Cursor Opaque position from a previous page's `next_cursor`.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 }
 
 // GetMailDraftParams defines parameters for GetMailDraft.
@@ -70300,7 +70674,7 @@ type ImportLinkedInConnectionsMultipartBody struct {
 // GetMyLinkedInReachParams defines parameters for GetMyLinkedInReach.
 type GetMyLinkedInReachParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // SaveNotificationPreferenceJSONBody defines parameters for SaveNotificationPreference.
@@ -70340,7 +70714,7 @@ type PrepForMeetingParams struct {
 	RecordName *AnchorRecordName `form:"record_name,omitempty" json:"record_name,omitempty"`
 
 	// MaxItems Cap the items in each section.
-	MaxItems *AnchorMaxItems `form:"max_items,omitempty" json:"max_items,omitempty"`
+	MaxItems *AnchorMaxItems `form:"max_items,omitempty" json:"max_items,omitempty" maximum:"20" minimum:"1"`
 
 	// ProjectId Keep only what is filed under this project or under none.
 	ProjectId *AnchorProjectId `form:"project_id,omitempty" json:"project_id,omitempty"`
@@ -70354,7 +70728,7 @@ type ListNoticesParams struct {
 	// Limit How many lines to answer with. Fifty is both the ceiling and the default, because
 	// this is a panel somebody opens rather than a record list somebody exports — the
 	// shared list cap of 200 sizes the wrong thing here.
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
 
 	// Cursor Where to continue, from a prior response's root-level `next_cursor`. Omitted starts
 	// at the newest, which is what a reader opening the panel wants.
@@ -70392,7 +70766,7 @@ type ListOfferTemplatesParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -70693,7 +71067,7 @@ type ListPartnersParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -70854,7 +71228,7 @@ type ListNoticeCaseReviewsParams struct {
 	State *[]NoticeCaseReviewState `form:"state,omitempty" json:"state,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's queue time and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
@@ -70866,7 +71240,7 @@ type ListNoticeCasesParams struct {
 	State *[]NoticeCaseState `form:"state,omitempty" json:"state,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
@@ -70885,7 +71259,7 @@ type ListProductsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -70972,7 +71346,7 @@ type ListProjectsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -71207,7 +71581,7 @@ type ListProjectHealthAssessmentsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // CreateProjectHealthAssessmentParams defines parameters for CreateProjectHealthAssessment.
@@ -71537,7 +71911,7 @@ type ListRecordGrantsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // ListRecordGrantsParamsRecordType defines parameters for ListRecordGrants.
@@ -71631,7 +72005,7 @@ type UpdateRecordRoleParams struct {
 // GetRecordContextParams defines parameters for GetRecordContext.
 type GetRecordContextParams struct {
 	// MaxItems Max items per section (default 5, capped at 25).
-	MaxItems *int `form:"max_items,omitempty" json:"max_items,omitempty"`
+	MaxItems *int `form:"max_items,omitempty" json:"max_items,omitempty" maximum:"25" minimum:"1"`
 }
 
 // GetRecordHistoryParams defines parameters for GetRecordHistory.
@@ -71647,7 +72021,7 @@ type GetRecordHistoryParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Action Return only the rows recording this verb. A caller that wants ONE event —
 	// "how was this lead promoted", "when was it erased" — asks for it rather than
@@ -71762,7 +72136,7 @@ type ListRelationshipsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
 	IncludeArchived *IncludeArchived             `form:"include_archived,omitempty" json:"include_archived,omitempty"`
@@ -71832,7 +72206,7 @@ type ListLegalHoldsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // LiftLegalHoldParams defines parameters for LiftLegalHold.
@@ -71896,7 +72270,7 @@ type ListRestrictedActivitiesParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // PinActivityToFloorParams defines parameters for PinActivityToFloor.
@@ -72082,7 +72456,7 @@ type SearchParams struct {
 	Types *[]SearchParamsTypes `form:"types,omitempty" json:"types,omitempty"`
 
 	// PerType Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest.
-	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty"`
+	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty" maximum:"20" minimum:"1"`
 
 	// WithEmployees Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
 	WithEmployees *bool `form:"with_employees,omitempty" json:"with_employees,omitempty"`
@@ -72098,7 +72472,7 @@ type SearchParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // SearchParamsTypes defines parameters for Search.
@@ -72117,7 +72491,7 @@ type ListSignalsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
 	IncludeArchived *IncludeArchived                  `form:"include_archived,omitempty" json:"include_archived,omitempty"`
@@ -72221,39 +72595,6 @@ type ResolveSignalParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// SetTransitionPolicyParams defines parameters for SetTransitionPolicy.
-type SetTransitionPolicyParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running and carries `Retry-After`;
-	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-	// request under the key failed after it had started, so check whether it took effect before
-	// retrying under a new key.
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// GetStageAutomationReportParams defines parameters for GetStageAutomationReport.
-type GetStageAutomationReportParams struct {
-	PipelineId openapi_types.UUID `form:"pipeline_id" json:"pipeline_id"`
-
-	// WindowDays How far back to count, in days. The default matches the launch
-	// gate's own window, so what a reader sees is what the gate reads.
-	WindowDays *int `form:"window_days,omitempty" json:"window_days,omitempty"`
 }
 
 // ListStagesParams defines parameters for ListStages.
@@ -72440,7 +72781,7 @@ type ListTeamsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Q Case-insensitive match over team name that ignores diacritics on both sides.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
@@ -72459,7 +72800,7 @@ type ListUsersParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Q Case-insensitive match over display_name/email that ignores diacritics on both sides.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
@@ -72681,7 +73022,7 @@ type ListVoiceProfileDeltasParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // RejectVoiceDraftParams defines parameters for RejectVoiceDraft.
@@ -72789,7 +73130,7 @@ type ListVoiceProfileVersionsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
 // ApplyVoiceProfileVersionParams defines parameters for ApplyVoiceProfileVersion.
@@ -72913,7 +73254,7 @@ type UpdateWebhookSubscriptionParams struct {
 // ListWebhookDeliveriesParams defines parameters for ListWebhookDeliveries.
 type ListWebhookDeliveriesParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -73057,7 +73398,7 @@ type GetWorklistParams struct {
 	View *GetWorklistParamsView `form:"view,omitempty" json:"view,omitempty"`
 
 	// Limit How many ranked items to return.
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 
 	// Cursor Where to continue a walk, from a prior response's `next_cursor`. Omitted starts at
 	// the top, which is what every reader opening their day wants.
@@ -73229,13 +73570,19 @@ type GetResponseMetricsParams struct {
 	// Days How many days back the window reaches. Capped at 90: past that the figure stops
 	// describing how the workspace works now and starts averaging over a change in
 	// how it works.
-	Days *int `form:"days,omitempty" json:"days,omitempty"`
+	Days *int `form:"days,omitempty" json:"days,omitempty" maximum:"90" minimum:"1"`
 }
 
 // GetTeamBoardParams defines parameters for GetTeamBoard.
 type GetTeamBoardParams struct {
 	// Team A named live team; uses the weekly review's team visibility rule. Omit for the caller's shared teams.
 	Team *openapi_types.UUID `form:"team,omitempty" json:"team,omitempty"`
+}
+
+// GetTeamMarginceChangesParams defines parameters for GetTeamMarginceChanges.
+type GetTeamMarginceChangesParams struct {
+	// Since Where the window starts. Seven days before now when absent.
+	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
 }
 
 // CreateAcquisitionSourceJSONRequestBody defines body for CreateAcquisitionSource for application/json ContentType.
@@ -73427,8 +73774,14 @@ type UpdateRecordAssignmentJSONRequestBody = UpdateRecordAssignmentRequest
 // UploadAttachmentMultipartRequestBody defines body for UploadAttachment for multipart/form-data ContentType.
 type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
 
+// ReadAttachmentForFieldsJSONRequestBody defines body for ReadAttachmentForFields for application/json ContentType.
+type ReadAttachmentForFieldsJSONRequestBody = AttachmentReadRequest
+
 // AcceptAttachmentExtractionJSONRequestBody defines body for AcceptAttachmentExtraction for application/json ContentType.
 type AcceptAttachmentExtractionJSONRequestBody = AcceptExtractionRequest
+
+// FileChatCaptureJSONRequestBody defines body for FileChatCapture for application/json ContentType.
+type FileChatCaptureJSONRequestBody = FileChatCaptureRequest
 
 // UpdateAttachmentMetadataJSONRequestBody defines body for UpdateAttachmentMetadata for application/json ContentType.
 type UpdateAttachmentMetadataJSONRequestBody = UpdateAttachmentMetadataRequest
@@ -73738,6 +74091,9 @@ type CreateDataSubjectRequestJSONRequestBody = CreateDataSubjectRequest
 
 // UpdateDataSubjectRequestJSONRequestBody defines body for UpdateDataSubjectRequest for application/json ContentType.
 type UpdateDataSubjectRequestJSONRequestBody = UpdateDataSubjectRequest
+
+// UndoMarginceChangesJSONRequestBody defines body for UndoMarginceChanges for application/json ContentType.
+type UndoMarginceChangesJSONRequestBody = UndoMarginceChangesRequest
 
 // CreateDealRoomJSONRequestBody defines body for CreateDealRoom for application/json ContentType.
 type CreateDealRoomJSONRequestBody = CreateDealRoomRequest
@@ -74287,12 +74643,6 @@ type CreateSignalJSONRequestBody = CreateSignalRequest
 
 // UpdateSignalJSONRequestBody defines body for UpdateSignal for application/json ContentType.
 type UpdateSignalJSONRequestBody = UpdateSignalRequest
-
-// SetTransitionPolicyJSONRequestBody defines body for SetTransitionPolicy for application/json ContentType.
-type SetTransitionPolicyJSONRequestBody = SetTransitionPolicyRequest
-
-// ResumeTransitionPolicyJSONRequestBody defines body for ResumeTransitionPolicy for application/json ContentType.
-type ResumeTransitionPolicyJSONRequestBody = TransitionRef
 
 // CreateStageJSONRequestBody defines body for CreateStage for application/json ContentType.
 type CreateStageJSONRequestBody = CreateStageRequest
@@ -75530,6 +75880,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "address_country_mismatch")
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -75875,6 +76233,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
+		}
+	}
+
 	if a.ArchivedAt != nil {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
@@ -76186,6 +76551,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "address_country_mismatch")
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -76480,6 +76853,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["address_country_mismatch"], err = json.Marshal(a.AddressCountryMismatch)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address_country_mismatch': %w", err)
+		}
+	}
+
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
 		}
 	}
 
@@ -87408,13 +87788,19 @@ type ServerInterface interface {
 	DownloadAttachment(w http.ResponseWriter, r *http.Request, id Id)
 	// The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted.
 	// (GET /attachments/{id}/extraction)
-	GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
+	GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id, params GetAttachmentExtractionParams)
 	// Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields.
 	// (POST /attachments/{id}/extraction)
 	ReadAttachmentForFields(w http.ResponseWriter, r *http.Request, id Id)
 	// Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
 	// (POST /attachments/{id}/extraction:accept)
 	AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
+	// File a chat screenshot on its contact as one message activity, with the image attached.
+	// (POST /attachments/{id}/extraction:file-chat)
+	FileChatCapture(w http.ResponseWriter, r *http.Request, id Id)
+	// One named reading of this attachment, for a screen polling the reading it started.
+	// (GET /attachments/{id}/extractions/{extraction_id})
+	GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request, id Id, extractionId openapi_types.UUID)
 	// Set a document's category, title, state or supersedes pointer (DOC-WIRE-2).
 	// (PATCH /attachments/{id}/metadata)
 	UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Request, id Id)
@@ -88183,6 +88569,12 @@ type ServerInterface interface {
 	// Download the Art. 15 package an access request asks for.
 	// (GET /data-subject-requests/{id}/package)
 	DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// The changes Margince made to your deals that you have not accepted or undone.
+	// (GET /deal-corrections/pending)
+	GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request)
+	// Undo several changes Margince made, one deal at a time.
+	// (POST /deal-corrections/undo)
+	UndoMarginceChanges(w http.ResponseWriter, r *http.Request)
 	// List Deal Rooms (live by default; cursor-paginated).
 	// (GET /deal-rooms)
 	ListDealRooms(w http.ResponseWriter, r *http.Request, params ListDealRoomsParams)
@@ -88321,6 +88713,9 @@ type ServerInterface interface {
 	// Ask legal to review this deal.
 	// (POST /deals/{id}/legal-reviews)
 	RequestLegalReview(w http.ResponseWriter, r *http.Request, id Id)
+	// Every change Margince made to this deal, newest first.
+	// (GET /deals/{id}/margince-changes)
+	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
 	// Put a set-aside move back on the deal card, the undo behind "Not now".
 	// (DELETE /deals/{id}/move/dismiss)
 	RestoreDealMove(w http.ResponseWriter, r *http.Request, id Id, params RestoreDealMoveParams)
@@ -88354,9 +88749,6 @@ type ServerInterface interface {
 	// What has been observed about this deal against its stage's criteria.
 	// (GET /deals/{id}/stage-evidence)
 	ListStageEvidence(w http.ResponseWriter, r *http.Request, id Id)
-	// Take back a stage move the product made by itself.
-	// (POST /deals/{id}/stage-progressions/{approvalId}/revert)
-	RevertStageProgression(w http.ResponseWriter, r *http.Request, id Id, approvalId openapi_types.UUID, params RevertStageProgressionParams)
 	// List a deal's stakeholders (deal↔contact relationships).
 	// (GET /deals/{id}/stakeholders)
 	ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -89515,6 +89907,9 @@ type ServerInterface interface {
 	// Choose, change or clear the caller's friendly booking address.
 	// (PUT /scheduling/profile/alias)
 	PutSchedulingAlias(w http.ResponseWriter, r *http.Request)
+	// Record that the caller shared their booking link.
+	// (POST /scheduling/profile/shared)
+	MarkBookingPageShared(w http.ResponseWriter, r *http.Request)
 	// List the acting host's open proposals and personal links for one contact.
 	// (GET /scheduling/proposals)
 	ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams)
@@ -89548,18 +89943,6 @@ type ServerInterface interface {
 	// The warm/cold classification with the full "why warm" evidence (B-E08.3).
 	// (GET /signals/{id}/warmth)
 	GetSignalWarmth(w http.ResponseWriter, r *http.Request, id Id)
-	// What each transition in this pipeline is allowed to do.
-	// (GET /stage-automation/policies/{id})
-	ListTransitionPolicies(w http.ResponseWriter, r *http.Request, id Id)
-	// Decide what one transition may do.
-	// (PUT /stage-automation/policies/{id})
-	SetTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id, params SetTransitionPolicyParams)
-	// Lift a suspension the product put on a transition.
-	// (POST /stage-automation/policies/{id}/resume)
-	ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id)
-	// What each stage transition has earned.
-	// (GET /stage-automation/report)
-	GetStageAutomationReport(w http.ResponseWriter, r *http.Request, params GetStageAutomationReportParams)
 	// List stages (optionally filtered by pipeline).
 	// (GET /stages)
 	ListStages(w http.ResponseWriter, r *http.Request, params ListStagesParams)
@@ -89926,6 +90309,9 @@ type ServerInterface interface {
 	// One row per teammate — who is carrying what, so a lead can see where to help.
 	// (GET /worklist/team)
 	GetTeamBoard(w http.ResponseWriter, r *http.Request, params GetTeamBoardParams)
+	// What Margince changed on your team's deals.
+	// (GET /worklist/team/changes)
+	GetTeamMarginceChanges(w http.ResponseWriter, r *http.Request, params GetTeamMarginceChangesParams)
 	// Answer a query plan over the workspace's records.
 	// (POST /workspace-queries)
 	QueryWorkspace(w http.ResponseWriter, r *http.Request)
@@ -90957,7 +91343,7 @@ func (_ Unimplemented) DownloadAttachment(w http.ResponseWriter, r *http.Request
 
 // The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted.
 // (GET /attachments/{id}/extraction)
-func (_ Unimplemented) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id, params GetAttachmentExtractionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -90970,6 +91356,18 @@ func (_ Unimplemented) ReadAttachmentForFields(w http.ResponseWriter, r *http.Re
 // Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
 // (POST /attachments/{id}/extraction:accept)
 func (_ Unimplemented) AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// File a chat screenshot on its contact as one message activity, with the image attached.
+// (POST /attachments/{id}/extraction:file-chat)
+func (_ Unimplemented) FileChatCapture(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One named reading of this attachment, for a screen polling the reading it started.
+// (GET /attachments/{id}/extractions/{extraction_id})
+func (_ Unimplemented) GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request, id Id, extractionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -92509,6 +92907,18 @@ func (_ Unimplemented) DownloadDataSubjectPackage(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The changes Margince made to your deals that you have not accepted or undone.
+// (GET /deal-corrections/pending)
+func (_ Unimplemented) GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Undo several changes Margince made, one deal at a time.
+// (POST /deal-corrections/undo)
+func (_ Unimplemented) UndoMarginceChanges(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List Deal Rooms (live by default; cursor-paginated).
 // (GET /deal-rooms)
 func (_ Unimplemented) ListDealRooms(w http.ResponseWriter, r *http.Request, params ListDealRoomsParams) {
@@ -92785,6 +93195,12 @@ func (_ Unimplemented) RequestLegalReview(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Every change Margince made to this deal, newest first.
+// (GET /deals/{id}/margince-changes)
+func (_ Unimplemented) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Put a set-aside move back on the deal card, the undo behind "Not now".
 // (DELETE /deals/{id}/move/dismiss)
 func (_ Unimplemented) RestoreDealMove(w http.ResponseWriter, r *http.Request, id Id, params RestoreDealMoveParams) {
@@ -92848,12 +93264,6 @@ func (_ Unimplemented) ProposeDealRoles(w http.ResponseWriter, r *http.Request, 
 // What has been observed about this deal against its stage's criteria.
 // (GET /deals/{id}/stage-evidence)
 func (_ Unimplemented) ListStageEvidence(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Take back a stage move the product made by itself.
-// (POST /deals/{id}/stage-progressions/{approvalId}/revert)
-func (_ Unimplemented) RevertStageProgression(w http.ResponseWriter, r *http.Request, id Id, approvalId openapi_types.UUID, params RevertStageProgressionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -95173,6 +95583,12 @@ func (_ Unimplemented) PutSchedulingAlias(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Record that the caller shared their booking link.
+// (POST /scheduling/profile/shared)
+func (_ Unimplemented) MarkBookingPageShared(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the acting host's open proposals and personal links for one contact.
 // (GET /scheduling/proposals)
 func (_ Unimplemented) ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams) {
@@ -95236,30 +95652,6 @@ func (_ Unimplemented) ResolveSignal(w http.ResponseWriter, r *http.Request, id 
 // The warm/cold classification with the full "why warm" evidence (B-E08.3).
 // (GET /signals/{id}/warmth)
 func (_ Unimplemented) GetSignalWarmth(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// What each transition in this pipeline is allowed to do.
-// (GET /stage-automation/policies/{id})
-func (_ Unimplemented) ListTransitionPolicies(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Decide what one transition may do.
-// (PUT /stage-automation/policies/{id})
-func (_ Unimplemented) SetTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id, params SetTransitionPolicyParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Lift a suspension the product put on a transition.
-// (POST /stage-automation/policies/{id}/resume)
-func (_ Unimplemented) ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// What each stage transition has earned.
-// (GET /stage-automation/report)
-func (_ Unimplemented) GetStageAutomationReport(w http.ResponseWriter, r *http.Request, params GetStageAutomationReportParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -95992,6 +96384,12 @@ func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request
 // One row per teammate — who is carrying what, so a lead can see where to help.
 // (GET /worklist/team)
 func (_ Unimplemented) GetTeamBoard(w http.ResponseWriter, r *http.Request, params GetTeamBoardParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What Margince changed on your team's deals.
+// (GET /worklist/team/changes)
+func (_ Unimplemented) GetTeamMarginceChanges(w http.ResponseWriter, r *http.Request, params GetTeamMarginceChangesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -103704,8 +104102,24 @@ func (siw *ServerInterfaceWrapper) GetAttachmentExtraction(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAttachmentExtractionParams
+
+	// ------------- Optional query parameter "question" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "question", r.URL.Query(), &params.Question, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "question"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "question", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAttachmentExtraction(w, r, id)
+		siw.Handler.GetAttachmentExtraction(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -103774,6 +104188,79 @@ func (siw *ServerInterfaceWrapper) AcceptAttachmentExtraction(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AcceptAttachmentExtraction(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FileChatCapture operation middleware
+func (siw *ServerInterfaceWrapper) FileChatCapture(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FileChatCapture(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAttachmentExtractionReading operation middleware
+func (siw *ServerInterfaceWrapper) GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "extraction_id" -------------
+	var extractionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "extraction_id", chi.URLParam(r, "extraction_id"), &extractionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "extraction_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAttachmentExtractionReading(w, r, id, extractionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -114678,6 +115165,48 @@ func (siw *ServerInterfaceWrapper) DownloadDataSubjectPackage(w http.ResponseWri
 	handler.ServeHTTP(w, r)
 }
 
+// GetPendingMarginceChanges operation middleware
+func (siw *ServerInterfaceWrapper) GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPendingMarginceChanges(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoMarginceChanges operation middleware
+func (siw *ServerInterfaceWrapper) UndoMarginceChanges(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoMarginceChanges(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDealRooms operation middleware
 func (siw *ServerInterfaceWrapper) ListDealRooms(w http.ResponseWriter, r *http.Request) {
 
@@ -117444,6 +117973,56 @@ func (siw *ServerInterfaceWrapper) RequestLegalReview(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// ListDealMarginceChanges operation middleware
+func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDealMarginceChangesParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDealMarginceChanges(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RestoreDealMove operation middleware
 func (siw *ServerInterfaceWrapper) RestoreDealMove(w http.ResponseWriter, r *http.Request) {
 
@@ -117934,73 +118513,6 @@ func (siw *ServerInterfaceWrapper) ListStageEvidence(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListStageEvidence(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// RevertStageProgression operation middleware
-func (siw *ServerInterfaceWrapper) RevertStageProgression(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "approvalId" -------------
-	var approvalId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "approvalId", chi.URLParam(r, "approvalId"), &approvalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "approvalId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params RevertStageProgressionParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RevertStageProgression(w, r, id, approvalId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -133773,6 +134285,28 @@ func (siw *ServerInterfaceWrapper) PutSchedulingAlias(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// MarkBookingPageShared operation middleware
+func (siw *ServerInterfaceWrapper) MarkBookingPageShared(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkBookingPageShared(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMeetingProposals operation middleware
 func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r *http.Request) {
 
@@ -134391,182 +134925,6 @@ func (siw *ServerInterfaceWrapper) GetSignalWarmth(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSignalWarmth(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListTransitionPolicies operation middleware
-func (siw *ServerInterfaceWrapper) ListTransitionPolicies(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListTransitionPolicies(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetTransitionPolicy operation middleware
-func (siw *ServerInterfaceWrapper) SetTransitionPolicy(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params SetTransitionPolicyParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetTransitionPolicy(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ResumeTransitionPolicy operation middleware
-func (siw *ServerInterfaceWrapper) ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ResumeTransitionPolicy(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetStageAutomationReport operation middleware
-func (siw *ServerInterfaceWrapper) GetStageAutomationReport(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetStageAutomationReportParams
-
-	// ------------- Required query parameter "pipeline_id" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "window_days" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "window_days", r.URL.Query(), &params.WindowDays, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window_days"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window_days", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetStageAutomationReport(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -139683,6 +140041,47 @@ func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetTeamMarginceChanges operation middleware
+func (siw *ServerInterfaceWrapper) GetTeamMarginceChanges(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTeamMarginceChangesParams
+
+	// ------------- Optional query parameter "since" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "since", r.URL.Query(), &params.Since, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "since"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "since", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeamMarginceChanges(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // QueryWorkspace operation middleware
 func (siw *ServerInterfaceWrapper) QueryWorkspace(w http.ResponseWriter, r *http.Request) {
 
@@ -140330,6 +140729,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/attachments/{id}/extraction:accept", wrapper.AcceptAttachmentExtraction)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attachments/{id}/extraction:file-chat", wrapper.FileChatCapture)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/attachments/{id}/extractions/{extraction_id}", wrapper.GetAttachmentExtractionReading)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/attachments/{id}/metadata", wrapper.UpdateAttachmentMetadata)
@@ -141100,6 +141505,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/data-subject-requests/{id}/package", wrapper.DownloadDataSubjectPackage)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deal-corrections/pending", wrapper.GetPendingMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deal-corrections/undo", wrapper.UndoMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deal-rooms", wrapper.ListDealRooms)
 	})
 	r.Group(func(r chi.Router) {
@@ -141238,6 +141649,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/deals/{id}/legal-reviews", wrapper.RequestLegalReview)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/deals/{id}/move/dismiss", wrapper.RestoreDealMove)
 	})
 	r.Group(func(r chi.Router) {
@@ -141269,9 +141683,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/stage-evidence", wrapper.ListStageEvidence)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/deals/{id}/stage-progressions/{approvalId}/revert", wrapper.RevertStageProgression)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/stakeholders", wrapper.ListDealStakeholders)
@@ -142432,6 +142843,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/scheduling/profile/alias", wrapper.PutSchedulingAlias)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduling/profile/shared", wrapper.MarkBookingPageShared)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/proposals", wrapper.ListMeetingProposals)
 	})
 	r.Group(func(r chi.Router) {
@@ -142463,18 +142877,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/signals/{id}/warmth", wrapper.GetSignalWarmth)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/stage-automation/policies/{id}", wrapper.ListTransitionPolicies)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/stage-automation/policies/{id}", wrapper.SetTransitionPolicy)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/stage-automation/policies/{id}/resume", wrapper.ResumeTransitionPolicy)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/stage-automation/report", wrapper.GetStageAutomationReport)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/stages", wrapper.ListStages)
@@ -142841,6 +143243,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/team/changes", wrapper.GetTeamMarginceChanges)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspace-queries", wrapper.QueryWorkspace)

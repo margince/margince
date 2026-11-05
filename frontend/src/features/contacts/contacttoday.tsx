@@ -5,15 +5,14 @@ import { RecordNextBar } from "../../components/latestinbound";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { formatDue, formatNumber } from "../../format/format";
+import { formatDue } from "../../format/format";
 import { daysPast } from "../../format/lateness";
+import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import {
-  type Locale,
-  translatePlural,
-  useLocale,
-  usePlural,
-  useT,
-} from "../../i18n";
+  type LatePromise,
+  latePromise,
+  type PromiseKind,
+} from "../../lib/latepromise";
 import { useSourceOpener } from "../../lib/opensource";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
@@ -137,7 +136,10 @@ function MomentBar({
   more: More;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const zone = useViewerZone();
+  const late = owedLateness(moment, view, zone, { t, plural, locale });
   const notNow = useMomentSetAside(view.contact.id);
   const defer = notNow.deferOf(moment);
   const task = momentTask(moment, view);
@@ -151,8 +153,14 @@ function MomentBar({
       urgent={URGENT_RULES.has(moment.rule) || undefined}
       about={moment.evidence.map((item) => item.id)}
       title={moment.headline}
-      late={lateness(owedDue(moment, view), view, t, locale)}
-      sub={moment.why_now}
+      late={late ? { label: late.badge, tone: "danger" } : undefined}
+      // A late promise's sentence counts the same calendar days as its badge;
+      // the server's counts elapsed days.
+      sub={
+        moment.rule === "overdue_promise" && late
+          ? late.sentence
+          : moment.why_now
+      }
       insight={
         basisAddsARecord(moment) ? (
           <MomentSource moment={moment} view={view} onOpenEmail={onOpenEmail} />
@@ -236,12 +244,16 @@ function TaskBar({
   more,
 }: Readonly<{ task: Activity; view: Contact360; more: More }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const late =
+    task.due_at &&
+    latePromise(task.due_at, view.as_of, zone, "task", { t, plural, locale });
   return (
     <RecordNextBar
       title={task.subject ?? t("task.untitled")}
-      late={lateness(task.due_at, view, t, locale)}
+      late={late ? { label: late.badge, tone: "danger" } : undefined}
       detail={taskDetail(task)}
       sub={
         task.due_at
@@ -353,48 +365,41 @@ function momentTask(
   return undefined;
 }
 
-// The due date of what the move says is owed: a claim's or a listed task's.
-function owedDue(moment: ContactMoment, view: Contact360): string | undefined {
+// What the move says is owed, as its due date and kind: a claim's or a listed
+// task's. A privacy notice is dated like a task.
+function owedDue(
+  moment: ContactMoment,
+  view: Contact360,
+): { due: string; kind: PromiseKind } | undefined {
   if (moment.rule === "privacy_notice_due") {
-    return view.privacy_notice_duties?.find(
+    const due = view.privacy_notice_duties?.find(
       (duty) => duty.id === moment.recommended_action.destination?.entity_id,
     )?.due_at;
+    return due ? { due, kind: "task" } : undefined;
   }
   for (const { id } of owedRecords(moment)) {
-    const due =
-      view.claims?.find((claim) => claim.id === id)?.due_at ??
-      view.next_steps?.data.find((task) => task.id === id)?.due_at;
-    if (due) {
-      return due;
+    const claim = view.claims?.find((row) => row.id === id)?.due_at;
+    if (claim) {
+      return { due: claim, kind: "claim" };
+    }
+    const task = view.next_steps?.data.find((row) => row.id === id)?.due_at;
+    if (task) {
+      return { due: task, kind: "task" };
     }
   }
   return undefined;
 }
 
-// Lateness against the read's own `as_of`, so the tag agrees with the dates
-// beside it and does not drift while a tab is left open.
-function lateness(
-  due: string | null | undefined,
+// How late the owed thing is, against the read's own `as_of`. So the tag agrees
+// with the dates beside it and does not drift while a tab is left open.
+function owedLateness(
+  moment: ContactMoment,
   view: Contact360,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-): { label: string; tone: "danger" } | undefined {
-  if (!due) {
-    return undefined;
-  }
-  const { late, days } = daysPast(Date.parse(due), Date.parse(view.as_of));
-  if (!late) {
-    return undefined;
-  }
-  return {
-    label:
-      days > 0
-        ? translatePlural(locale, "contact.standing.late", days, {
-            count: formatNumber(days, locale),
-          })
-        : t("co.next.overdue"),
-    tone: "danger",
-  };
+  zone: string,
+  words: Words,
+): LatePromise | undefined {
+  const owed = owedDue(moment, view);
+  return owed && latePromise(owed.due, view.as_of, zone, owed.kind, words);
 }
 
 // The records the move is itself about. A task the move names is the subject

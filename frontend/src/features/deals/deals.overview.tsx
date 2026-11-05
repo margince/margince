@@ -16,6 +16,7 @@ import { DealBrief } from "./deal360/dealbrief";
 import { DealCommitmentsCard } from "./deal360/dealcommitments";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { DealHowItStands } from "./deal360/dealhowitstands";
+import { DealMarginceChangesCard } from "./deal360/dealmarginchanges";
 import { offerRow, otherOpenTaskRows } from "./deal360/dealoverviewrows";
 import { DealProductsCard } from "./deal360/dealproducts";
 import { DealRoomCard } from "./deal360/dealroomcard";
@@ -250,6 +251,7 @@ export function DealOverviewPane({
             />
           )}
           <DealRoomCard dealId={deal.id} onOpen={() => onOpenTab("room")} />
+          <DealMarginceChangesCard dealId={deal.id} />
         </div>
       </div>
     </>

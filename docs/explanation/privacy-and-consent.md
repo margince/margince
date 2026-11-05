@@ -559,8 +559,14 @@ a reply from our team, or a capture date cannot prove where the details came fro
 A source with a notice duty keeps that duty when its date is unknown. The capture date
 gives the latest possible deadline; the notice may already be due.
 
-In **Settings → Privacy**, a user with privacy access records the source and its proof. The
-contact page shows the review under the same access check. If the contact gave the details,
+A user with privacy access answers how the details came in and gives the proof. The question
+opens in **Settings → Privacy** and in a drawer on the contact page. Each answer maps to one
+existing source kind.
+
+The answer changes only the notice duty and the disclosure text. Send permission reads the
+original source record, so a confirmed source never lets a send through.
+
+The contact page shows the review under the same access check. If the contact gave the details,
 no separate notice is needed. A date is optional: a known past date is used as given, and a
 missing date uses the original capture date as a bound. The clock never starts again at review.
 

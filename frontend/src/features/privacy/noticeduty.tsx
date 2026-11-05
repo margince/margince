@@ -20,6 +20,12 @@ import { QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import {
+  acquisitionKindLabel,
+  acquisitionRecorder,
+  noticeRuleHint,
+  noticeRuleLabel,
+} from "../../lib/noticeacquisition";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import type { WorklistItem } from "../worklist/worklist.queries";
@@ -28,12 +34,6 @@ import {
   type ControllerMailIssued,
   type ControllerMailKind,
 } from "./controllermail";
-import {
-  acquisitionKindLabel,
-  acquisitionRecorder,
-  noticeRuleHint,
-  noticeRuleLabel,
-} from "./noticeacquisition";
 import {
   isNoticeResolved,
   NOTICE_STATE_LABEL,

@@ -202,6 +202,9 @@ it.each([false, true])(
     ).toBeNull();
     expect(inHand(container).getByText("Call the buyer")).toBeTruthy();
     expect(screen.queryByText(/you pinned/i)).toBeNull();
+    expect(
+      screen.queryByRole("img", { name: en["worklist.pinnedMark"] }),
+    ).toBeNull();
   },
 );
 
