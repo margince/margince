@@ -259,6 +259,11 @@ const ACCEPTED = new Map<string, string>([
       "inside it keeps its own height, so a row of marks keeps one line",
   ],
   [
+    ".lt-vtrigger, .lt-vpanel .lt-mi",
+    "the list's View button and its panel rows take the coarse-pointer 44px " +
+      "floor; at a fine pointer they are --controlHeight",
+  ],
+  [
     "worklist-rank-select",
     "the rank NUMBER made pressable, held at the column's floor so a row " +
       "offering no press keeps its title at the same x",

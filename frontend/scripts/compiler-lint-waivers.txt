@@ -30,7 +30,6 @@
 8 react-hooks/refs src/design-system/emaildetail.tsx
 1 react-hooks/set-state-in-effect src/design-system/filepreview.tsx
 1 react-hooks/refs src/design-system/hoverintent.ts
-1 react-hooks/set-state-in-effect src/design-system/listfilter.tsx
 2 react-hooks/refs src/design-system/listmenu.tsx
 3 react-hooks/refs src/design-system/listsurface.tsx
 1 react-hooks/set-state-in-effect src/design-system/listsurface.tsx

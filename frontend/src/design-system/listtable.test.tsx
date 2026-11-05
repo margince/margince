@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { openView, openViewStep } from "../testing/listview.testkit";
 import { type ListChip, ListTable } from "./listtable";
 import { columns, render, testRows } from "./listtable.testkit";
 
@@ -14,11 +15,6 @@ import { columns, render, testRows } from "./listtable.testkit";
 // server-query binding on top of this — this file proves the surface alone.
 
 afterEach(cleanup);
-
-// The sort dial names the order in force ("Sort: Name"), so a lookup pinned to
-// the bare word only found it while the list was unsorted. Anchored, because a
-// column header's own control is named "Sort by <column>".
-const SORT_DIAL = /^Sort(:|$)/;
 
 describe("sorting", () => {
   it("clicking a sortable header requests that field, ascending first", async () => {
@@ -102,10 +98,10 @@ describe("sorting", () => {
   });
 });
 
-describe("the sort menu", () => {
-  /** The menu's own entries, so the Display menu's "Value" is never one of them. */
+describe("the Sort step", () => {
+  /** The step's own entries, so the Columns step's "Value" is never one of them. */
   function sortMenu() {
-    return within(screen.getByRole("group", { name: "Sort by" }));
+    return within(screen.getByRole("group", { name: "Sort" }));
   }
 
   it("offers every orderable column and nothing else", async () => {
@@ -118,7 +114,7 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
+    await openViewStep(userEvent, "Sort");
     const menu = sortMenu();
     expect(menu.getByRole("radio", { name: "Name" })).toBeTruthy();
     expect(menu.getByRole("radio", { name: "Value" })).toBeTruthy();
@@ -138,16 +134,13 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Display" }));
+    const shown = await openViewStep(userEvent, "Columns");
     await userEvent.click(
-      within(screen.getByRole("group", { name: "Display" })).getByRole(
-        "checkbox",
-        { name: "Value" },
-      ),
+      within(shown).getByRole("checkbox", { name: "Value" }),
     );
     expect(screen.queryByRole("columnheader", { name: "Value" })).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
+    await openViewStep(userEvent, "Sort");
     expect(sortMenu().getByRole("radio", { name: "Value" })).toBeTruthy();
   });
 
@@ -162,7 +155,7 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
+    await openViewStep(userEvent, "Sort");
     await userEvent.click(sortMenu().getByRole("radio", { name: "Name" }));
     expect(onChange).toHaveBeenCalledWith("name");
 
@@ -184,7 +177,7 @@ describe("the sort menu", () => {
       );
     }
     render(<Harness />);
-    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
+    await openViewStep(userEvent, "Sort");
     const entry = sortMenu().getByRole("radio", { name: /^Name/ });
     expect(entry).toBeChecked();
     expect(entry.closest("label")?.textContent).toContain("ascending");
@@ -196,11 +189,9 @@ describe("the sort menu", () => {
     ).toContain("descending");
   });
 
-  // A sort arrives from three places a reader did not press — a saved view, a
-  // column header, an address they pasted — so the dial is the one control where
-  // all three are visible. Labelled only "Sort" it made them open it to find
-  // out.
-  it("names the order in force on the dial itself", async () => {
+  // A sort also arrives from a saved view, a header or an address, so the row
+  // names it without being opened.
+  it("names the order in force on its row", async () => {
     const { rerender } = render(
       <ListTable
         rows={testRows(1)}
@@ -210,24 +201,25 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
+    const panel = within(await openView(userEvent));
     expect(
-      screen.getByRole("button", { name: SORT_DIAL }),
-    ).toHaveAccessibleName("Sort");
+      panel.getByRole("button", { name: "Sort, Default order" }),
+    ).toBeTruthy();
 
     rerender(
-      <ListTable
-        rows={testRows(1)}
-        columns={columns}
-        rowKey={(row) => row.id}
-        unit="rows"
-        sort={{ value: "-value", onChange: () => {} }}
-      />,
+      <LocaleProvider initial="en">
+        <ListTable
+          rows={testRows(1)}
+          columns={columns}
+          rowKey={(row) => row.id}
+          unit="rows"
+          sort={{ value: "-value", onChange: () => {} }}
+        />
+      </LocaleProvider>,
     );
-    // Which WAY the list runs is the dial's other half, carried in text only a
-    // screen reader hears, so the name says the column and the order together.
     expect(
-      screen.getByRole("button", { name: SORT_DIAL }),
-    ).toHaveAccessibleName("Sort: Value descending");
+      panel.getByRole("button", { name: "Sort, Value, descending" }),
+    ).toBeTruthy();
   });
 
   // ONE order at a time, so the entries are RADIOS: a box is the shape of a set
@@ -243,7 +235,7 @@ describe("the sort menu", () => {
         sort={{ value: "name", onChange: () => {} }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
+    await openViewStep(userEvent, "Sort");
     const menu = sortMenu();
 
     expect(menu.getByRole("radio", { name: /^Name/ })).toBeChecked();
@@ -262,14 +254,14 @@ describe("the sort menu", () => {
         sort={{ value: "name", onChange }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
+    await openViewStep(userEvent, "Sort");
     const fallback = sortMenu().getByRole("radio", { name: "Default order" });
     expect(fallback).not.toBeChecked();
     await userEvent.click(fallback);
     expect(onChange).toHaveBeenCalledWith("");
   });
 
-  it("is not drawn for a list the server cannot order", () => {
+  it("is not drawn for a list the server cannot order", async () => {
     render(
       <ListTable
         rows={testRows(1)}
@@ -279,10 +271,11 @@ describe("the sort menu", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    expect(screen.queryByRole("button", { name: SORT_DIAL })).toBeNull();
+    const panel = within(await openView(userEvent));
+    expect(panel.queryByRole("button", { name: /^Sort,/ })).toBeNull();
   });
 
-  it("is not drawn without a sort control at all", () => {
+  it("is not drawn without a sort control at all", async () => {
     render(
       <ListTable
         rows={testRows(1)}
@@ -291,7 +284,8 @@ describe("the sort menu", () => {
         unit="rows"
       />,
     );
-    expect(screen.queryByRole("button", { name: SORT_DIAL })).toBeNull();
+    const panel = within(await openView(userEvent));
+    expect(panel.queryByRole("button", { name: /^Sort,/ })).toBeNull();
   });
 });
 
@@ -321,7 +315,7 @@ describe("filter chips", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await openViewStep(userEvent, "Filters");
     await userEvent.click(screen.getByRole("button", { name: "Status" }));
     await userEvent.click(screen.getByRole("radio", { name: "New" }));
     expect(onChipChange).toHaveBeenCalledWith("status", "new");

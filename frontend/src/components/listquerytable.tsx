@@ -5,6 +5,7 @@ import {
   type ListColumn,
   type ListSelection,
   ListTable as ListSurface,
+  type ViewRow,
 } from "../design-system/listtable";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
@@ -62,6 +63,8 @@ export function ListTable<Row>({
   searchable = true,
   showArchivedToggle = true,
   tools,
+  layout,
+  viewRows,
   saveView,
   emptyNote,
   scopeKey,
@@ -128,13 +131,13 @@ export function ListTable<Row>({
   /** False for a list whose GET has no `q` param, e.g. /partners. */
   searchable?: boolean;
   showArchivedToggle?: boolean;
-  /** Passed through to the surface's own tools slot, after the Display menu.
-   * For a screen whose board and table views share a dial that lives beside
-   * them, e.g. deals' pipeline picker. */
+  /** A verb that is not a dial, at the toolbar's end; see `ListSurface`. */
   tools?: ReactNode;
-  /** The screen's Save view, in the surface's own last slot; see
-   * `ListSurface`. A slot rather than the tail of `tools`, so the row's order
-   * is the surface's to keep and not each screen's to remember. */
+  /** Table or Board, at the top of the View panel; see `ListSurface`. */
+  layout?: ReactNode;
+  /** The screen's own dials in the View panel (a pipeline); see `ListSurface`. */
+  viewRows?: readonly ViewRow[];
+  /** Save view and Manage views, in the View panel's footer. */
   saveView?: ReactNode;
   /**
    * What the empty table says under its generic line, when this screen knows
@@ -201,6 +204,8 @@ export function ListTable<Row>({
     ...dataViews,
   ];
   const [view, pickView] = useActiveView(railViews, query);
+  // No tab lit means the list departs from every view this rail offers.
+  const changed = railViews.length > 0 && view < 0;
   // Keyed on the values, not on the arrays that carry them. The table treats a
   // new `chosen` object as the reader narrowing the list and resets to page 1.
   // So an object rebuilt every render resets on every render. Pressing Next
@@ -370,6 +375,9 @@ export function ListTable<Row>({
       caption={caption ? t(caption) : undefined}
       footer={footer}
       tools={tools}
+      layout={layout}
+      viewRows={viewRows}
+      changed={changed}
       saveView={saveView}
       search={
         searchable

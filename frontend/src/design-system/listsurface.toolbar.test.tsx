@@ -1,5 +1,8 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   cleanup,
   render as rtlRender,
@@ -11,15 +14,26 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { rulesIn } from "../testing/css";
 import { precedes } from "../testing/domorder";
+import {
+  openView,
+  openViewStep,
+  viewButton,
+} from "../testing/listview.testkit";
 import { Heading } from "./heading";
-import { type ListChip, ListSurface, type SortOption } from "./listsurface";
+import {
+  CountLine,
+  type ListChip,
+  ListSurface,
+  type SortOption,
+} from "./listsurface";
 import { Modal } from "./modal";
 
-// The toolbar as a reader meets it: what the sort dial SAYS without being
-// opened, which triggers promise a list behind them, the order the row is read
-// in, and the way back out of a filter's second step. listtable.test.tsx covers
-// the table's own dials on top of this surface.
+// The toolbar as a reader meets it: the search, View and its panel's rows and
+// steps, and the applied filters under the search.
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 afterEach(cleanup);
 
@@ -54,9 +68,11 @@ const SORT_OPTIONS: readonly SortOption[] = [
 function Surface({
   initialSort = "",
   initialFilters = {},
+  changed = false,
 }: Readonly<{
   initialSort?: string;
   initialFilters?: Readonly<Record<string, string>>;
+  changed?: boolean;
 }>) {
   const [sort, setSort] = useState(initialSort);
   const [chosen, setChosen] = useState(initialFilters);
@@ -73,94 +89,83 @@ function Surface({
         setChosen((prev) => ({ ...prev, [key]: value }))
       }
       archived={{ checked: archived, onChange: setArchived }}
+      changed={changed}
+      saveView={<button type="button">Save view</button>}
     >
       <p>rows</p>
     </ListSurface>
   );
 }
 
-const SORT_DIAL = /^Sort(:|$)/;
+it("holds a search and one View button, and nothing else", () => {
+  render(<Surface />);
 
-function sortDial(): HTMLElement {
-  return screen.getByRole("button", { name: SORT_DIAL });
-}
+  const tools = screen
+    .getByRole("searchbox", { name: "Search" })
+    .closest(".lt-tools");
+  if (!(tools instanceof HTMLElement)) throw new Error("no toolbar");
+  expect(within(tools).getAllByRole("button")).toHaveLength(1);
+  expect(within(tools).queryByRole("checkbox")).toBeNull();
+  expect(within(tools).queryByRole("switch")).toBeNull();
+});
 
-function filterTrigger(): HTMLElement {
-  return screen.getByRole("button", { name: "Filter" });
-}
+it("names on View how many filters apply and that the list left its view", async () => {
+  render(<Surface initialFilters={{ status: "open", owner: "u1" }} changed />);
 
-// A sort arrives from three places a reader did not press — a saved view, a
-// column header, an address they pasted — so which way the list runs has to be
-// legible on the dial itself, and in both halves: the glyph for the reader who
-// sees it and a word for the reader who does not.
-it("says which way the list runs without being opened", async () => {
+  const view = await viewButton();
+  expect(view).toHaveAccessibleName("View, 2 filters, changed");
+  expect(view.querySelector(".optioncount")).toHaveTextContent("2");
+  expect(view.querySelector(".lt-vdot")).toBeTruthy();
+
+  cleanup();
+  render(<Surface />);
+  expect(await viewButton()).toHaveAccessibleName("View");
+});
+
+it("reads every dial's value on its row, in the order the panel holds them", async () => {
+  const user = userEvent.setup();
+  render(
+    <Surface initialSort="-created_at" initialFilters={{ status: "open" }} />,
+  );
+  const panel = await openView(user);
+
+  const rows = within(panel)
+    .getAllByRole("button")
+    .filter((row) => row.classList.contains("lt-vrow"))
+    .map((row) => row.getAttribute("aria-label"));
+  expect(rows).toEqual(["Filters, Status", "Sort, Created, descending"]);
+  const archived = within(panel).getByRole("button", { name: "Show archived" });
+  const save = within(panel).getByRole("button", { name: "Save view" });
+  expect(precedes(archived, save)).toBe(true);
+});
+
+it("flips the sort from its step and says so on the row", async () => {
   const user = userEvent.setup();
   render(<Surface initialSort="-created_at" />);
 
-  expect(sortDial()).toHaveAccessibleName("Sort: Created descending");
-  expect(sortDial().querySelector(".lucide-arrow-down")).toBeTruthy();
+  const step = await openViewStep(user, "Sort");
+  await user.click(within(step).getByRole("radio", { name: /^Created/ }));
+  await user.click(within(step).getByRole("button", { name: /^Sort Back/ }));
 
-  await user.click(sortDial());
-  await user.click(screen.getByRole("radio", { name: /^Created/ }));
-
-  expect(sortDial()).toHaveAccessibleName("Sort: Created ascending");
-  expect(sortDial().querySelector(".lucide-arrow-up")).toBeTruthy();
-  expect(sortDial().querySelector(".lucide-arrow-down")).toBeNull();
-});
-
-it("wears the neutral pair of arrows, and no pressed state, while unsorted", () => {
-  render(<Surface />);
-
-  expect(sortDial()).toHaveAccessibleName("Sort");
-  expect(sortDial().querySelector(".lucide-arrow-down-up")).toBeTruthy();
-  // The dial is not a toggle: a sort is a value it names, not a state it holds,
-  // and the accent an `aria-pressed` ghost draws said the opposite.
-  expect(sortDial()).toHaveClass("btn", "btn-ghost");
-  expect(sortDial()).not.toHaveAttribute("aria-pressed");
-});
-
-// The caret is the product's one promise that a control opens a list, so every
-// toolbar trigger that opens one wears it and the one that does not, does not.
-it("carets the triggers that open a list, and only those", async () => {
-  const user = userEvent.setup();
-  render(<Surface />);
-
-  expect(sortDial().querySelector(".lt-caret")).toBeTruthy();
-  expect(filterTrigger().querySelector(".lt-caret")).toBeTruthy();
-
-  await user.click(filterTrigger());
-  await user.click(screen.getByRole("button", { name: "Status" }));
-  await user.click(screen.getByRole("radio", { name: "Open" }));
-
-  const add = screen.getByRole("button", { name: "Add filter" });
-  expect(add.querySelector(".lucide-plus")).toBeTruthy();
-  expect(add.querySelector(".lt-caret")).toBeNull();
-});
-
-// Two halves, and the archived toggle belongs to the first: it changes WHICH
-// rows are in the list, not how they are drawn, and it sat past the spacer
-// among the presentation dials.
-it("reads left to right as narrow-the-list, then change-the-drawing", () => {
-  render(<Surface />);
-
-  const search = screen.getByRole("searchbox", { name: "Search" });
-  const archived = screen.getByLabelText("Show archived");
-
-  expect(precedes(search, filterTrigger())).toBe(true);
-  expect(precedes(filterTrigger(), archived)).toBe(true);
-  expect(precedes(archived, sortDial())).toBe(true);
-});
-
-it("stands an applied filter's row ahead of the button that adds another", async () => {
-  const user = userEvent.setup();
-  render(<Surface initialFilters={{ status: "open" }} />);
-
-  const row = screen.getByRole("group", { name: "Status: Open" });
   expect(
-    precedes(row, screen.getByRole("button", { name: "Add filter" })),
-  ).toBe(true);
-  await user.click(screen.getByRole("button", { name: "Add filter" }));
-  expect(screen.queryByRole("button", { name: "Status" })).toBeNull();
+    screen.getByRole("button", { name: "Sort, Created, ascending" }),
+  ).toBeTruthy();
+});
+
+// It widens the list as a filter narrows it, so it is a pressed button and
+// never a switch.
+it("presses Show archived on and off from its row", async () => {
+  const user = userEvent.setup();
+  render(<Surface />);
+  const panel = await openView(user);
+  const archived = within(panel).getByRole("button", { name: "Show archived" });
+  expect(archived).toHaveAttribute("aria-pressed", "false");
+
+  await user.click(archived);
+  expect(archived).toHaveAttribute("aria-pressed", "true");
+
+  await user.click(archived);
+  expect(archived).toHaveAttribute("aria-pressed", "false");
 });
 
 // A row that opens a subset says so, and the level it opens says how to leave.
@@ -168,8 +173,7 @@ it("steps into an attribute and back out to the search it came from", async () =
   const user = userEvent.setup();
   render(<Surface />);
 
-  await user.click(filterTrigger());
-  const menu = screen.getByRole("group", { name: "Filter" });
+  const menu = await openViewStep(user, "Filters");
   const row = within(menu).getByRole("button", { name: "Status" });
   expect(row.querySelector(".lucide-chevron-right")).toBeTruthy();
 
@@ -178,8 +182,8 @@ it("steps into an attribute and back out to the search it came from", async () =
   const back = screen.getByRole("button", {
     name: /^Status Back to all filters$/,
   });
+  expect(back).toHaveFocus();
   expect(back.querySelector(".lucide-chevron-left")).toBeTruthy();
-  expect(back).toHaveTextContent("Status");
   expect(screen.queryByPlaceholderText("Search attributes")).toBeNull();
 
   await user.click(back);
@@ -188,42 +192,61 @@ it("steps into an attribute and back out to the search it came from", async () =
   expect(screen.getByRole("button", { name: "Owner" })).toBeTruthy();
 });
 
-// A step takes the control the reader is standing on with it. Each of the
-// three hands focus on rather than dropping it to the top of the document.
-it("hands focus to the way back when it steps into an attribute", async () => {
+// The step replaced the row the reader pressed, so Back hands focus to it.
+it("hands focus to the step's way back, and back to the row that opened it", async () => {
   const user = userEvent.setup();
   render(<Surface />);
 
-  await user.click(filterTrigger());
-  await user.click(screen.getByRole("button", { name: "Status" }));
+  await openViewStep(user, "Sort");
+  const back = screen.getByRole("button", {
+    name: /^Sort Back to view options$/,
+  });
+  expect(back).toHaveFocus();
 
-  expect(
-    screen.getByRole("button", { name: /^Status Back to all filters$/ }),
-  ).toHaveFocus();
+  await user.click(back);
+  expect(screen.getByRole("button", { name: /^Sort,/ })).toHaveFocus();
 });
 
-it("hands focus back to the trigger when a value is picked", async () => {
+it("applies a picked value, returns to the rows, and stands the filter under the search", async () => {
   const user = userEvent.setup();
   render(<Surface />);
 
-  await user.click(filterTrigger());
-  await user.click(screen.getByRole("button", { name: "Status" }));
+  const menu = await openViewStep(user, "Filters");
+  await user.click(within(menu).getByRole("button", { name: "Status" }));
   await user.click(screen.getByRole("radio", { name: "Open" }));
 
-  // The trigger the press LEFT behind: applying the first filter turns the
-  // labelled button into the bare "+".
-  expect(screen.getByRole("button", { name: "Add filter" })).toHaveFocus();
+  const filters = screen.getByRole("button", { name: "Filters, Status" });
+  expect(filters).toHaveFocus();
+  const applied = screen.getByRole("group", { name: "Status: Open" });
+  expect(
+    precedes(screen.getByRole("searchbox", { name: "Search" }), applied),
+  ).toBe(true);
+  // Adding lives in the panel: the row of applied filters offers no "+".
+  expect(screen.queryByRole("button", { name: "Add filter" })).toBeNull();
 });
 
-// Last on the row is the surface's own promise now, not something each screen
-// remembers to put at the end of its `tools` fragment.
-it("stands a saved view after the body's own dials", () => {
+it("offers only the attributes not applied yet", async () => {
+  const user = userEvent.setup();
+  render(<Surface initialFilters={{ status: "open" }} />);
+
+  const menu = await openViewStep(user, "Filters");
+  expect(within(menu).queryByRole("button", { name: "Status" })).toBeNull();
+  expect(within(menu).getByRole("button", { name: "Owner" })).toBeTruthy();
+});
+
+it("draws no applied-filter row while nothing applies", () => {
+  const { container } = render(<Surface />);
+  expect(container.querySelector(".lt-applied")).toBeNull();
+});
+
+// A non-dial verb stays on the row; it is not a dial and has no row to live in.
+it("stands a screen's own verb after View", async () => {
   render(
     <ListSurface
+      search={{ value: "", onChange: () => undefined }}
       sort={{ value: "", onChange: () => undefined }}
       sortOptions={SORT_OPTIONS}
-      tools={<button type="button">Pipeline</button>}
-      saveView={<button type="button">Save view</button>}
+      tools={<button type="button">Coverage</button>}
     >
       <p>rows</p>
     </ListSurface>,
@@ -231,27 +254,47 @@ it("stands a saved view after the body's own dials", () => {
 
   expect(
     precedes(
-      screen.getByRole("button", { name: "Pipeline" }),
-      screen.getByRole("button", { name: "Save view" }),
+      await viewButton(),
+      screen.getByRole("button", { name: "Coverage" }),
     ),
   ).toBe(true);
 });
 
-it("closes the whole menu on Escape, from either step", async () => {
+it("closes the whole panel on Escape, from any step, and hands focus to View", async () => {
   const user = userEvent.setup();
   render(<Surface />);
 
-  await user.click(filterTrigger());
-  await user.click(screen.getByRole("button", { name: "Status" }));
+  const menu = await openViewStep(user, "Filters");
+  await user.click(within(menu).getByRole("button", { name: "Status" }));
   await user.keyboard("{Escape}");
 
-  expect(filterTrigger()).toHaveAttribute("aria-expanded", "false");
-  expect(
-    screen.getByLabelText("Filter", { selector: "fieldset" }),
-  ).toHaveAttribute("inert");
+  const view = await viewButton();
+  expect(view).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(view).toHaveFocus();
 });
 
-it("leaves Escape to a dialog raised over the open menu", async () => {
+// One overlay at a time, whichever opened last.
+it("closes the panel when an applied filter's segment opens, and the other way about", async () => {
+  const user = userEvent.setup();
+  render(<Surface initialFilters={{ status: "open" }} />);
+  const value = () =>
+    within(screen.getByRole("group", { name: "Status: Open" })).getByRole(
+      "button",
+      { name: "Open" },
+    );
+
+  await openView(user);
+  await user.click(value());
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(value()).toHaveAttribute("aria-expanded", "true");
+
+  await user.click(await viewButton());
+  expect(await viewButton()).toHaveAttribute("aria-expanded", "true");
+  expect(value()).toHaveAttribute("aria-expanded", "false");
+});
+
+it("leaves Escape to a dialog raised over the open panel", async () => {
   const onDialogClose = vi.fn();
   const page = (dialogOpen: boolean) => (
     <LocaleProvider initial="en">
@@ -270,13 +313,13 @@ it("leaves Escape to a dialog raised over the open menu", async () => {
   );
   const user = userEvent.setup();
   const { rerender } = rtlRender(page(false));
-  await user.click(filterTrigger());
+  await openView(user);
   rerender(page(true));
 
   await user.keyboard("{Escape}");
 
   expect(onDialogClose).toHaveBeenCalledOnce();
-  expect(filterTrigger()).toHaveAttribute("aria-expanded", "true");
+  expect(await viewButton()).toHaveAttribute("aria-expanded", "true");
 });
 
 // The count gives way on screen, never in the text: however narrow the row, the
@@ -297,5 +340,39 @@ it("keeps the whole count sentence, read before the header's verbs", () => {
   );
   expect(
     precedes(count, screen.getByRole("button", { name: "New company" })),
+  ).toBe(true);
+});
+
+// A list with nothing to count, or still loading, keeps no empty line under
+// its tabs: the sheet hides an empty count, and an empty count is what draws.
+it("draws no count line while there is nothing to count", () => {
+  const { container, rerender } = render(
+    <ListSurface
+      views={[{ label: "All" }]}
+      count={<CountLine unit="leads" first={1} last={0} total={0} />}
+      action={<button type="button">New lead</button>}
+    >
+      <p>rows</p>
+    </ListSurface>,
+  );
+  const count = () => container.querySelector(".lt-count");
+  expect(count()).toBeEmptyDOMElement();
+
+  rerender(
+    <LocaleProvider initial="en">
+      <ListSurface views={[{ label: "All" }]} count={false}>
+        <p>rows</p>
+      </ListSurface>
+    </LocaleProvider>,
+  );
+  expect(count()).toBeEmptyDOMElement();
+
+  const sheet = readFileSync(join(here, "listtable.css"), "utf8");
+  expect(
+    rulesIn(sheet).some(
+      (rule) =>
+        rule.selector.trim() === ".lt-count:empty" &&
+        /display:\s*none/.test(rule.body),
+    ),
   ).toBe(true);
 });

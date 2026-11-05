@@ -10,12 +10,13 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { openView, openViewStep } from "../testing/listview.testkit";
 import { type ListChip, ListTable } from "./listtable";
 import { columns, render } from "./listtable.testkit";
 
 afterEach(cleanup);
 
-describe("filter menu", () => {
+describe("the Filters step", () => {
   const chips: readonly ListChip[] = [
     {
       key: "status",
@@ -44,7 +45,7 @@ describe("filter menu", () => {
         chips={chips}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await openViewStep(userEvent, "Filters");
     expect(screen.getByRole("button", { name: "Status" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Priority" })).toBeTruthy();
 
@@ -53,11 +54,8 @@ describe("filter menu", () => {
     expect(screen.queryByRole("button", { name: "Priority" })).toBeNull();
   });
 
-  // The menu closes on a click outside it. Picking an attribute replaces the
-  // menu's contents, so the clicked button has left the document by the time a
-  // document-level listener sees the event. A detached node has no ancestors.
-  // A listener that asks for them reads that as "outside", and shuts the menu
-  // on the one step that should have advanced it.
+  // Picking an attribute detaches the pressed button before the document's
+  // click listener runs, and a detached node has no ancestors to be inside.
   it("stays open when a click's own target has left the document", async () => {
     render(
       <ListTable
@@ -68,9 +66,7 @@ describe("filter menu", () => {
         chips={chips}
       />,
     );
-    const trigger = screen.getByRole("button", { name: "Filter" });
-    await userEvent.click(trigger);
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    await openViewStep(userEvent, "Filters");
 
     // Reproduce the real sequence: a node inside the document is clicked, and
     // the click's own handling removes it before the document-level listener
@@ -84,7 +80,6 @@ describe("filter menu", () => {
     });
     document.removeEventListener("click", detach, true);
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByRole("button", { name: "Status" })).toBeTruthy();
   });
 
@@ -100,7 +95,7 @@ describe("filter menu", () => {
         onChipChange={onChipChange}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await openViewStep(userEvent, "Filters");
     await userEvent.click(screen.getByRole("button", { name: "Status" }));
     await userEvent.click(screen.getByRole("radio", { name: "New" }));
     expect(onChipChange).toHaveBeenCalledWith("status", "new");
@@ -165,7 +160,7 @@ describe("filter menu", () => {
     expect(condition).toBeChecked();
   });
 
-  it("'+' opens the attribute picker for the remaining attributes", async () => {
+  it("offers only the attributes that do not apply yet", async () => {
     render(
       <ListTable
         rows={[]}
@@ -176,15 +171,15 @@ describe("filter menu", () => {
         chosen={{ status: "new" }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Add filter" }));
-    const menu = document.querySelector(".lt-menu.open");
-    expect(menu).toBeTruthy();
-    // Status already carries its own row, so the attribute picker offers only
-    // what isn't applied yet.
-    expect(within(menu as HTMLElement).queryByText("Status")).toBeNull();
+    const panel = await openView(userEvent);
     expect(
-      within(menu as HTMLElement).getByRole("button", { name: "Priority" }),
+      within(panel).getByRole("button", { name: "Filters, Status" }),
     ).toBeTruthy();
+    const step = within(await openViewStep(userEvent, "Filters"));
+    // Status already carries its own row, so the step offers only what is not
+    // applied yet.
+    expect(step.queryByText("Status")).toBeNull();
+    expect(step.getByRole("button", { name: "Priority" })).toBeTruthy();
   });
 });
 
@@ -204,7 +199,7 @@ describe("a chip with an async search source", () => {
   }
 
   async function openCompanyValueStep() {
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await openViewStep(userEvent, "Filters");
     await userEvent.click(screen.getByRole("button", { name: "Company" }));
   }
 

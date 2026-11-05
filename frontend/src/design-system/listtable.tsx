@@ -7,6 +7,7 @@ import {
   ListSurface,
   type ListView,
   type SortControl,
+  type ViewRow,
 } from "./listsurface";
 import {
   useColumnDisplay,
@@ -33,6 +34,7 @@ export type {
   ListView,
   SortControl,
   SortOption,
+  ViewRow,
 } from "./listsurface";
 export { widthWorthAdopting } from "./listtable.layout";
 export { narrowingSignature } from "./listtable.paging";
@@ -51,7 +53,7 @@ export { narrowingSignature } from "./listtable.paging";
 // Generic on purpose: nothing here knows what a CRM record is, which is why
 // contacts, companies, leads, deals, products and partners share it.
 import type { ListColumn, ListSelection } from "./listcolumn";
-import { DisplayMenu } from "./listdisplaymenu";
+import { useDisplayRows } from "./listdisplaymenu";
 import { EmptyRow, GridBody, ListGrid } from "./listgrid";
 
 export type { ListColumn, ListSelection } from "./listcolumn";
@@ -106,6 +108,9 @@ export function ListTable<Row>({
   problem,
   widthsKey,
   tools,
+  layout: viewLayout,
+  viewRows,
+  changed,
   saveView,
   body,
   bodyOwnsPaging = false,
@@ -291,10 +296,10 @@ export function ListTable<Row>({
   problem?: ReactNode;
   /** Names this table for the column widths it remembers between visits. */
   widthsKey?: string;
-  /** After the Display menu: a caller's own view-switch or picker, e.g. deals'
-   * board/table toggle. A Save view goes in `saveView`, which stands after. */
   tools?: ReactNode;
-  /** Handed to the surface's own last slot; see `ListSurface`. */
+  layout?: ReactNode;
+  viewRows?: readonly ViewRow[];
+  changed?: boolean;
   saveView?: ReactNode;
 }>) {
   const display = useColumnDisplay(columns);
@@ -346,6 +351,11 @@ export function ListTable<Row>({
     scroller,
   );
   const frozen = useFrozenEdge(scroller, shown.length, display.dense);
+  const displayRows = useDisplayRows({
+    optional: placed.filter((column) => !column.fixed),
+    onReorder: order.onReorder,
+    ...display,
+  });
   const short =
     hideShortChrome &&
     !pending &&
@@ -394,26 +404,13 @@ export function ListTable<Row>({
       chosen={chosen}
       onChipChange={onChipChange}
       archived={archived}
-      tools={
-        <>
-          {/* Both of the Display menu's dials describe the grid. A body that
-              draws its own presentation would show controls that do nothing,
-              so they are withheld with the count line and the pager. */}
-          {tools}
-        </>
-      }
-      displayMenu={
-        bodyOwnsPaging
-          ? undefined
-          : (menu) => (
-              <DisplayMenu
-                optional={placed.filter((column) => !column.fixed)}
-                onReorder={order.onReorder}
-                {...display}
-                {...menu}
-              />
-            )
-      }
+      layout={viewLayout}
+      viewRows={viewRows}
+      // Both dials describe the grid, and a body that draws its own
+      // presentation would show controls that do nothing.
+      displayRows={bodyOwnsPaging ? undefined : displayRows}
+      changed={changed}
+      tools={tools}
       saveView={saveView}
       footer={
         <>

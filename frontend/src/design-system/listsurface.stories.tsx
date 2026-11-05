@@ -4,7 +4,6 @@ import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import {
-  expectAppliedFiltersFit,
   expectAppliedFiltersOneLine,
   LONG_FILTER_CHIPS,
   LONG_FILTER_VALUES,
@@ -133,6 +132,28 @@ export const GermanCountPhone: Story = {
   play: async ({ canvasElement }) => nothingPushedOut(canvasElement),
 };
 
+// Nothing to count: the header keeps no empty line under the tabs.
+export const NothingToCountPhone: Story = {
+  name: "Nothing to count, phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <ListSurface
+      title="Leads"
+      views={VIEWS}
+      count={<CountLine unit="Leads" first={1} last={0} total={0} />}
+      action={<Button>Neuer Lead</Button>}
+    >
+      <p>Zeilen</p>
+    </ListSurface>
+  ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", { name: "Alle" });
+    const count = canvasElement.querySelector(".lt-count");
+    await expect(count?.getClientRects().length).toBe(0);
+  },
+};
+
 function SortMenuBesideAVerb() {
   const [open, setOpen] = useState<string | null>("sort");
   useCloseOnEscape(open, () => setOpen(null));
@@ -175,14 +196,33 @@ export const MenuUnderATip: Story = {
   },
 };
 
-// An applied filter longer than a phone's line: its value wraps at its spaces,
-// whole, and the "⋮" that removes the filter stays inside the toolbar.
+// Applied filters longer than a phone's line: they stay one line, which
+// scrolls sideways inside the card, and the page itself never does.
 export const LongAppliedFilterPhone: Story = {
   name: "Long applied filter, phone",
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: () => <LongFilters />,
-  play: async ({ canvasElement }) => expectAppliedFiltersFit(canvasElement),
+  play: async ({ canvasElement }) => {
+    const card = canvasElement.querySelector(".lt");
+    const line = await waitFor(() => {
+      const found = canvasElement.querySelector(".lt-applied-rows");
+      if (!(found instanceof HTMLElement)) {
+        throw new Error("the applied filters drew no line");
+      }
+      return found;
+    });
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("the list surface did not render");
+    }
+    await expect(line.scrollWidth).toBeGreaterThan(line.clientWidth);
+    await expect(line.getBoundingClientRect().right).toBeLessThanOrEqual(
+      card.getBoundingClientRect().right,
+    );
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+  },
 };
 
 // The same filters on a desktop line: each stays one line at the control height.

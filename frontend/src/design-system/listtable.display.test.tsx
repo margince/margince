@@ -13,12 +13,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { precedes } from "../testing/domorder";
+import { openView, openViewStep } from "../testing/listview.testkit";
 import { type ListColumn, ListTable } from "./listtable";
 
-// The toolbar's Display menu: the dials that decide how the grid is DRAWN —
-// row density and which optional columns stand. listtable.test.tsx proves the
-// query dials beside it; this file is the drawing half alone.
+// The Columns and Density rows: how the grid is drawn, not what is in it.
 
 afterEach(cleanup);
 
@@ -42,81 +40,39 @@ function table() {
   return screen.getByRole("table");
 }
 
-function menu() {
-  return within(screen.getByRole("group", { name: "Display" }));
+function grid(cols: readonly ListColumn<Row>[] = columns) {
+  return render(
+    <ListTable
+      rows={rows}
+      columns={cols}
+      rowKey={(row) => row.id}
+      unit="rows"
+    />,
+  );
 }
 
-describe("the Display menu", () => {
-  it("reports on its trigger whether it is standing", async () => {
+describe("the Columns and Density rows", () => {
+  it("say what they hold, and Columns stands only where a column is optional", async () => {
     const user = userEvent.setup();
-    render(
-      <ListTable
-        rows={rows}
-        columns={columns}
-        rowKey={(row) => row.id}
-        unit="rows"
-      />,
-    );
-
-    const trigger = screen.getByRole("button", { name: "Display" });
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-
-    await user.click(trigger);
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    expect(menu().getByText("Density")).toBeTruthy();
-
-    await user.click(trigger);
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-  });
-
-  it("names both groups, and drops the column group where nothing is optional", async () => {
-    const user = userEvent.setup();
-    render(
-      <ListTable
-        rows={rows}
-        columns={columns}
-        rowKey={(row) => row.id}
-        unit="rows"
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: "Display" }));
-    expect(menu().getByText("Density")).toBeTruthy();
-    expect(menu().getByText("Shown columns")).toBeTruthy();
-    // And a rung UNDER the head that names the menu: three labels at one weight
-    // read as three menus in a box rather than one question in two parts.
-    const panel = screen.getByRole("group", { name: "Display" });
-    expect(panel.querySelectorAll(".lt-mhead")).toHaveLength(1);
-    expect(panel.querySelectorAll(".lt-mgroup.t-caption")).toHaveLength(2);
+    grid();
+    const panel = within(await openView(user));
+    expect(panel.getByRole("button", { name: "Columns, 1 of 1" })).toBeTruthy();
+    expect(
+      panel.getByRole("button", { name: "Density, Comfortable" }),
+    ).toBeTruthy();
 
     cleanup();
-    render(
-      <ListTable
-        rows={rows}
-        columns={identityOnly}
-        rowKey={(row) => row.id}
-        unit="rows"
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: "Display" }));
-    // Density is every grid's dial; a heading over an empty set is a group the
-    // reader looks into for options that were never there.
-    expect(menu().getByText("Density")).toBeTruthy();
-    expect(menu().queryByText("Shown columns")).toBeNull();
+    grid(identityOnly);
+    const bare = within(await openView(user));
+    expect(bare.queryByRole("button", { name: /^Columns/ })).toBeNull();
+    expect(bare.getByRole("button", { name: /^Density/ })).toBeTruthy();
   });
 
-  it("tightens the rows from its Compact tick", async () => {
+  it("tightens the rows from the Compact tick", async () => {
     const user = userEvent.setup();
-    render(
-      <ListTable
-        rows={rows}
-        columns={columns}
-        rowKey={(row) => row.id}
-        unit="rows"
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: "Display" }));
-    const compact = menu().getByRole("checkbox", { name: "Compact" });
-    expect(compact).not.toBeChecked();
+    grid();
+    const step = within(await openViewStep(user, "Density"));
+    const compact = step.getByRole("checkbox", { name: "Compact" });
     expect(table()).not.toHaveClass("dense");
 
     await user.click(compact);
@@ -127,50 +83,23 @@ describe("the Display menu", () => {
     expect(table()).not.toHaveClass("dense");
   });
 
-  it("hides and re-shows a column without closing", async () => {
+  it("hides and re-shows a column without leaving the step", async () => {
     const user = userEvent.setup();
-    render(
-      <ListTable
-        rows={rows}
-        columns={columns}
-        rowKey={(row) => row.id}
-        unit="rows"
-      />,
-    );
-    const trigger = screen.getByRole("button", { name: "Display" });
-    await user.click(trigger);
+    grid();
+    const step = within(await openViewStep(user, "Columns"));
     // The identity column is not optional, so it is not on offer.
-    expect(menu().queryByRole("checkbox", { name: "Name" })).toBeNull();
+    expect(step.queryByRole("checkbox", { name: "Name" })).toBeNull();
 
-    await user.click(menu().getByRole("checkbox", { name: "Value" }));
+    await user.click(step.getByRole("checkbox", { name: "Value" }));
     expect(screen.queryByRole("columnheader", { name: "Value" })).toBeNull();
 
     // A set is built in one visit, not one visit per tick.
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    await user.click(menu().getByRole("checkbox", { name: "Value" }));
+    await user.click(step.getByRole("checkbox", { name: "Value" }));
     expect(screen.getByRole("columnheader", { name: "Value" })).toBeTruthy();
   });
 
-  it("stands before the screen's own tools", () => {
-    render(
-      <ListTable
-        rows={rows}
-        columns={columns}
-        rowKey={(row) => row.id}
-        unit="rows"
-        tools={
-          <button type="button" key="save">
-            Save view
-          </button>
-        }
-      />,
-    );
-    const display = screen.getByRole("button", { name: "Display" });
-    const save = screen.getByRole("button", { name: "Save view" });
-    expect(precedes(display, save)).toBe(true);
-  });
-
-  it("is withheld from a body that draws no grid", () => {
+  it("is withheld from a body that draws no grid", async () => {
+    const user = userEvent.setup();
     render(
       <ListTable
         rows={rows}
@@ -179,91 +108,12 @@ describe("the Display menu", () => {
         unit="rows"
         body={<div>Board</div>}
         bodyOwnsPaging
+        archived={{ checked: false, onChange: () => undefined }}
       />,
     );
     // Both dials describe a grid, and this body has none to describe.
-    expect(screen.queryByRole("button", { name: "Display" })).toBeNull();
-  });
-});
-
-// ONE MENU OPEN AT A TIME IS A PROPERTY OF THE ROW, so every dial standing on
-// it reads the same state. The Display menu used to keep an `open` of its own,
-// and the two answers did not agree: Sort and Display stood open side by side.
-describe("the toolbar's menus, against each other", () => {
-  const sortable: readonly ListColumn<Row>[] = [
-    { key: "name", header: "Name", cell: (row) => row.name, fixed: true },
-    {
-      key: "value",
-      header: "Value",
-      cell: (row) => String(row.value),
-      sort: "value",
-    },
-  ];
-
-  const chips = [
-    {
-      key: "owner",
-      label: "Owner",
-      allLabel: "Any owner",
-      options: [{ value: "u1", label: "Ada" }],
-    },
-  ];
-
-  function row() {
-    return rtlRender(
-      <LocaleProvider initial="en">
-        <ListTable
-          rows={rows}
-          columns={sortable}
-          rowKey={(one: Row) => one.id}
-          unit="rows"
-          sort={{ value: "", onChange: () => undefined }}
-          chips={chips}
-          chosen={{}}
-          onChipChange={() => undefined}
-        />
-      </LocaleProvider>,
-    );
-  }
-
-  const dial = (name: string | RegExp) => screen.getByRole("button", { name });
-
-  it("closes an open Sort when Display is opened, and the other way about", async () => {
-    const user = userEvent.setup();
-    row();
-
-    await user.click(dial(/^Sort(:|$)/));
-    expect(dial(/^Sort(:|$)/)).toHaveAttribute("aria-expanded", "true");
-
-    await user.click(dial("Display"));
-    expect(dial("Display")).toHaveAttribute("aria-expanded", "true");
-    expect(dial(/^Sort(:|$)/)).toHaveAttribute("aria-expanded", "false");
-
-    await user.click(dial(/^Sort(:|$)/));
-    expect(dial(/^Sort(:|$)/)).toHaveAttribute("aria-expanded", "true");
-    expect(dial("Display")).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("closes an open Display when Filter is opened", async () => {
-    const user = userEvent.setup();
-    row();
-
-    await user.click(dial("Display"));
-    await user.click(dial("Filter"));
-
-    expect(dial("Filter")).toHaveAttribute("aria-expanded", "true");
-    expect(dial("Display")).toHaveAttribute("aria-expanded", "false");
-  });
-
-  // The surface owns the state, so its one Escape path reaches this menu too —
-  // it used to need a handler of its own beside it.
-  it("closes the Display menu on Escape", async () => {
-    const user = userEvent.setup();
-    row();
-
-    await user.click(dial("Display"));
-    await user.keyboard("{Escape}");
-
-    expect(dial("Display")).toHaveAttribute("aria-expanded", "false");
+    const panel = within(await openView(user));
+    expect(panel.queryByRole("button", { name: /^Columns/ })).toBeNull();
+    expect(panel.queryByRole("button", { name: /^Density/ })).toBeNull();
   });
 });

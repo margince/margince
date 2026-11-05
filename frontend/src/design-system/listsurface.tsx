@@ -16,12 +16,8 @@ import "./listtable.css";
 import { Heading } from "./heading";
 import { useTruncationTooltip } from "./tooltip";
 
-// The list surface's shell: the header (view tabs, count, primary action),
-// the caption and the toolbar (search, filter chips, an archived toggle and
-// whatever presentation dials the caller owns). It knows nothing about
-// columns, density, paging or rows, which belong to ListTable. The pipeline
-// board reuses this same shell, as a contact list and a lead list do. The
-// dials belong to the surface, not to what fills it.
+// The list surface's shell: header, caption and toolbar. It knows nothing of
+// columns, density, paging or rows, so the pipeline board reuses it too.
 //
 // A view tab reports only its index. What a view MEANS — a sort, a set of
 // filters, a stage — is the caller's to decide, which is what lets the board
@@ -42,11 +38,14 @@ export {
 };
 
 import { useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
-import { ArchivedSwitch, Toolbar } from "./listtoolbar";
+import { ArchivedSwitch, Toolbar, VIEW_MENU } from "./listtoolbar";
+import type { ViewRow } from "./listviewmenu";
 
 export { Menu, useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
+export type { ViewRow } from "./listviewmenu";
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
+const NO_ROWS: readonly ViewRow[] = [];
 
 export function ListSurface({
   title,
@@ -64,8 +63,11 @@ export function ListSurface({
   chosen = EMPTY_FILTERS,
   onChipChange,
   archived,
+  layout,
+  viewRows = NO_ROWS,
+  displayRows = NO_ROWS,
+  changed = false,
   tools,
-  displayMenu,
   saveView,
   children,
   footer,
@@ -119,31 +121,20 @@ export function ListSurface({
    */
   sortOptions?: readonly SortOption[];
   archived?: { checked: boolean; onChange: (next: boolean) => void };
+  /** How the body is drawn (Table or Board), at the top of the View panel. */
+  layout?: ReactNode;
+  /** The screen's own dials, as the View panel's first rows (a pipeline). */
+  viewRows?: readonly ViewRow[];
+  /** The body's presentation dials, as the View panel's last rows. */
+  displayRows?: readonly ViewRow[];
+  /** The list departs from every view it offers; View carries a dot. */
+  changed?: boolean;
   /**
-   * Controls that change HOW the body is shown rather than what is in it, kept
-   * to the right: the table's Display menu, the board/table switch, the
-   * pipeline being looked at.
+   * A verb that is not a dial (a company's Coverage explorer), at the end of
+   * the toolbar row.
    */
   tools?: ReactNode;
-  /**
-   * A popover the BODY brings to the row — the table's Display menu — drawn
-   * between the sort dial and `tools`.
-   *
-   * A render prop, and that is the whole of why it exists: ONE MENU OPEN AT A
-   * TIME IS A PROPERTY OF THE ROW, not of any dial standing on it, so the state
-   * belongs where the row does. The body held its own `open` beside this one
-   * and the two agreed about nothing — Sort and Display stood open side by
-   * side, and Escape reached only whichever had spelled its own handler.
-   */
-  displayMenu?: (
-    menu: Readonly<{ open: boolean; onToggle: () => void }>,
-  ) => ReactNode;
-  /**
-   * Saving what the dials currently say, and it is a slot of its own so that
-   * "last on the row" is a fact about this component rather than a habit each
-   * screen keeps. It was the final node of every caller's `tools` fragment,
-   * which held only while every one of them remembered to put it there.
-   */
+  /** Save view and Manage views, in the View panel's footer. */
   saveView?: ReactNode;
   /** The body: a scrolling table, a Kanban board, whatever this surface holds. */
   children: ReactNode;
@@ -152,7 +143,11 @@ export function ListSurface({
 }>) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   useCloseOnOutsideClick(() => setOpenMenu(null));
-  useCloseOnEscape(openMenu, () => setOpenMenu(null));
+  // The View panel and its phone sheet each close on Escape and hand focus
+  // back themselves; a second handler here would land focus inside the sheet.
+  useCloseOnEscape(openMenu === VIEW_MENU ? null : openMenu, () =>
+    setOpenMenu(null),
+  );
 
   return (
     <div className="lt">
@@ -198,8 +193,11 @@ export function ListSurface({
           chosen={chosen}
           onChipChange={onChipChange}
           archived={archived}
+          layout={layout}
+          viewRows={viewRows}
+          displayRows={displayRows}
+          changed={changed}
           tools={tools}
-          displayMenu={displayMenu}
           saveView={saveView}
           openMenu={openMenu}
           setOpenMenu={setOpenMenu}
