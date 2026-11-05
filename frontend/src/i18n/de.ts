@@ -3019,7 +3019,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
   "contact.attachRefused":
-    "Du kannst diesen Kontakt nur lesen. Frage die verantwortliche Person nach Schreibzugriff.",
+    "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
