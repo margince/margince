@@ -36,16 +36,18 @@ const (
 	SystemReadDirectory SystemRead = "directory"
 	// SystemReadActivities admits Activities().Mail.
 	SystemReadActivities SystemRead = "activities"
+	// SystemReadSetAside admits SetAside().Contact and SetAside().Contacts.
+	SystemReadSetAside SystemRead = "set_aside"
 )
 
 // Validate refuses a value that names no group of system reads.
 func (r SystemRead) Validate() error {
 	switch r {
-	case SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities:
+	case SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities, SystemReadSetAside:
 		return nil
 	}
-	return fmt.Errorf("extension: %q is not a system read; declare %q, %q, %q or %q",
-		string(r), SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities)
+	return fmt.Errorf("extension: %q is not a system read; declare %q, %q, %q, %q or %q",
+		string(r), SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities, SystemReadSetAside)
 }
 
 // MaxResponsible bounds what Deals().Responsible answers and how many users one
@@ -168,4 +170,42 @@ type Activities interface {
 	// A deal that does not exist answers ErrNotFound; an id that is not a
 	// canonical UUID, ErrInvalid. A page holds at most MaxReadPage emails.
 	Mail(ctx context.Context, dealID string, q MailQuery) (Page[MailSummary], error)
+}
+
+// SetAsideKind is how one person stands towards one contact they were nudged to
+// follow up.
+type SetAsideKind string
+
+const (
+	// SetAsideNone: not set aside, or the dismissal has run out.
+	SetAsideNone SetAsideKind = "none"
+	// SetAsideUntil: set aside until SetAsideState.Until.
+	SetAsideUntil SetAsideKind = "until"
+	// SetAsidePermanent: set aside for good.
+	SetAsidePermanent SetAsideKind = "permanent"
+)
+
+// SetAsideState is one person's choice about one contact, and nothing else
+// about the contact.
+type SetAsideState struct {
+	Kind SetAsideKind
+	// Until is set only when Kind is SetAsideUntil.
+	Until *time.Time
+}
+
+// SetAside reads whether a person has set a lapsed contact aside, for a job tick
+// or a bus delivery. It reads only: a person changes the choice through the
+// product's own routes.
+type SetAside interface {
+	// Contact answers one person's choice about one contact right now. It is
+	// the person's own choice and never a colleague's. A contact or a person
+	// that does not exist answers none, so an id cannot be used to probe. An id
+	// that is not a canonical UUID answers ErrInvalid.
+	Contact(ctx context.Context, user UserID, contact string) (SetAsideState, error)
+
+	// Contacts is Contact for up to MaxResponsible contacts in one call, so a
+	// nightly job does not ask once per contact. Every contact asked about is in
+	// the answer, keyed by the id as given. More than MaxResponsible answers
+	// ErrInvalid.
+	Contacts(ctx context.Context, user UserID, contacts []string) (map[string]SetAsideState, error)
 }
