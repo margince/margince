@@ -210,7 +210,8 @@ What follows from this:
   - Neither workflow proves itself on a schedule, since both only run by hand. The next user to start
     one finds a change that made it fail. So a PR that touches either is worth starting from its own branch
     before merging.
-- A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`. The
+- A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`, plus the
+  census in `backend-lint` and the composed tests in `extension-reference`. The
   `full_lane` output of `changes` is false only there. The `develop` into `main` pull request runs
   them under the usual path filters:
   [land-through-develop.md](../how-to/land-through-develop.md).

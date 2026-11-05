@@ -953,8 +953,8 @@ fe-edge-padding:
 ## BLOCKER and MAJOR findings both fail it. The code checks judge every
 ## hand-written Go file, and they are green because the backlog was cleared to
 ## arm them. The comment checks read Go and TypeScript and judge only the lines
-## added since origin/main, so old comments improve as files are touched; with
-## no origin/main the gate fails instead of judging nothing. `make check` runs
+## added since DIFF_BASE (origin/main unless set), so old comments improve as
+## files are touched; with no such ref the gate fails instead of judging nothing. `make check` runs
 ## it locally.
 ##
 ## extensions/ and fixtures/ are their own Go modules, so `./...` never reaches
@@ -962,8 +962,9 @@ fe-edge-padding:
 ## and the fixture is the worked example a unit author copies. The gate is a
 ## pinned binary (scripts/craft-pin.sh), and the paths are written from the
 ## repository root, where it runs.
+DIFF_BASE ?= origin/main
 craft-static: test-craft-pin
-	@"$$(./scripts/craft-pin.sh)" static --strict --diff-base origin/main \
+	@"$$(./scripts/craft-pin.sh)" static --strict --diff-base $(DIFF_BASE) \
 		backend extensions fixtures frontend tools
 
 ## craft-review — the OPT-IN model-driven arm of the craftsmanship gate: send

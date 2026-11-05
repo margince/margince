@@ -58,6 +58,10 @@ defaults:
 # backend/gates/buildinputfetch_test.go, which holds this line.
 env:
   GOPROXY: https://proxy.golang.org|direct
+  # The diff-scoped gates (strict lint, comment checks) judge what a pull request
+  # adds to the branch it merges into, so one into develop is not held to all of
+  # develop's lines. The develop into main pull request judges those.
+  DIFF_BASE: origin/${{ github.base_ref || 'main' }}
 
 jobs:
   # Classify the diff so a change runs only the checks it can affect — a
@@ -537,8 +541,10 @@ jobs:
       # and breaks cache-warm's save hours later. Here it fails the PR that
       # adds it. On this job because it finishes minutes before
       # deterministic-gates, so the census's uncached pass adds no wall clock.
+      # Skipped into develop: it guards main's cache-warm, and the develop into
+      # main pull request runs it.
       - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
         run: make test-input-census
 
@@ -602,9 +608,14 @@ jobs:
       - name: Enable the reference extension
         working-directory: .
         run: cp -R fixtures/extensions/crm-hello extensions/
+      # Into develop the composed tree is built but not tested: deterministic-gates
+      # runs the unit and extension lanes, and the develop into main pull request
+      # runs them composed.
       - name: Composed build + unit lane
         working-directory: .
-        run: make -C backend build test check-composition
+        env:
+          COMPOSED_TESTS: ${{ needs.changes.outputs.full_lane == 'true' && 'test' || '' }}
+        run: make -C backend build check-composition $COMPOSED_TESTS
       # Tree-derived: every enabled unit's own module lane (the committed
       # first-party extensions AND the copied-in reference fixture). The
       # same run emits the merged coverage profile the sonarcloud job
@@ -612,6 +623,7 @@ jobs:
       # the shard profiles, and this job runs PARALLEL to the shard
       # fleet, so coverage costs no extra test run and no fan-in latency.
       - name: Extension self-test lanes (+ coverage)
+        if: needs.changes.outputs.full_lane == 'true'
         working-directory: .
         run: make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
       - name: Upload extension coverage

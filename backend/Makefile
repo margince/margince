@@ -606,6 +606,7 @@ perfdoc: ## Re-render docs/reference/performance-budgets.md and benchmark.md fro
 # silently lint at a version CI does not run, which is exactly what the
 # GOLANGCI_LINT_VERSION pin exists to prevent. PATH is the fallback, so a
 # deployment that resolves the pinned binary some other way still works.
+DIFF_BASE ?= origin/main
 GOLANGCI_LINT_BIN := $(shell $(GO) env GOPATH)/bin/golangci-lint
 GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BIN) || command -v golangci-lint 2>/dev/null)
 
@@ -613,6 +614,8 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # baseline (the depguard DAG lives there and must never be diff-scoped);
 # .golangci.strict.yml is the expanded strict set, gated to new
 # code via new-from-merge-base so the pre-existing backlog is not a burn-down.
+# DIFF_BASE is the branch a pull request merges into, so a pull request into
+# develop is judged on its own lines, not on all of develop's.
 #
 # Both go through ../scripts/run-golangci.sh, the wrapper `make lint-modules`
 # also uses: golangci's analysis cache is machine-wide and content-keyed, so in
@@ -626,10 +629,10 @@ lint: composition ## golangci-lint: repo-wide baseline + new-code strict set
 		exit 1; \
 	}
 	$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run ./...
-	@if git rev-parse --verify -q origin/main >/dev/null; then \
-		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run --config .golangci.strict.yml ./...; \
+	@if git rev-parse --verify -q $(DIFF_BASE) >/dev/null; then \
+		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base=$(DIFF_BASE) ./...; \
 	else \
-		echo "SKIP strict lint: origin/main not found — fetch it to arm the new-code gate"; \
+		echo "SKIP strict lint: $(DIFF_BASE) not found — fetch it to arm the new-code gate"; \
 	fi
 
 # Gate-tool resolution: prefer the install from `make tools` (CI restores
