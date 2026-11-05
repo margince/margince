@@ -204,7 +204,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `admission_reason_code` | `text` |  |  |
 | `admission_reason_coded_at` | `timestamp with time zone` |  |  |
 | `admission_sender_kind` | `text` |  |  |
-| `admission_source` | `text` |  | One of `verdict`, `heuristic`, `human`. |
+| `admission_source` | `text` |  | One of `verdict`, `heuristic`, `human`, `agent`. |
 | `attempts` | `integer`, default `0` | yes |  |
 | `candidate_company_id` | `uuid` |  | Points at `company.id`. |
 | `company_id` | `uuid` |  | Points at `company.id`. |
@@ -219,7 +219,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `site_unreadable` | `boolean`, default `false` | yes |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `company`, `personal`, `provider`, `no_site`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` |  | One of `site_read`, `heuristic`, `human`. |
+| `source` | `text` |  | One of `site_read`, `heuristic`, `human`, `agent`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
@@ -235,12 +235,12 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_domain_disposition_admission_check`: `CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed', 'admitted']))))`
 - `company_domain_disposition_admission_shape`: `CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))`
-- `company_domain_disposition_admission_source_check`: `CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict', 'heuristic', 'human']))))`
+- `company_domain_disposition_admission_source_check`: `CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict', 'heuristic', 'human', 'agent']))))`
 - `company_domain_disposition_domain_check`: `CHECK (((domain = lower(domain)) AND (domain <> '')))`
 - `company_domain_disposition_pending_reason_check`: `CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced', 'stale_evidence', 'near_duplicate', 'forwarded_identity', 'vendor_verdict', 'reserved_domain']))))`
 - `company_domain_disposition_pending_reason_shape`: `CHECK (((pending_reason IS NULL) OR ((status = 'pending') AND (admission IS DISTINCT FROM 'suppressed'))))`
 - `company_domain_disposition_settled_shape`: `CHECK ((((status = 'pending') AND (source IS NULL)) OR ((status = 'company') AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal', 'provider', 'no_site'])) AND (source IS NOT NULL))))`
-- `company_domain_disposition_source_check`: `CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read', 'heuristic', 'human']))))`
+- `company_domain_disposition_source_check`: `CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read', 'heuristic', 'human', 'agent']))))`
 - `company_domain_disposition_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'company', 'personal', 'provider', 'no_site'])))`
 
 **Indexes**
@@ -657,7 +657,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_acquisition_evidence
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+13 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -668,6 +668,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `note` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone` |  |  |
 | `purpose_claimed` | `text` |  |  |
+| `recorded_for_addresses` | `text[]` |  |  |
 | `request_retracted_at` | `timestamp with time zone` |  |  |
 | `request_retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |
@@ -1506,7 +1507,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## legal_entity
 
-29 columns · primary key `(id)` · referenced by 3 foreign keys
+29 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

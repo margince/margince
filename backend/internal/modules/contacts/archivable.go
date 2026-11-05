@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// stampArchivable sets each row's archivable flag from auth.ArchivableSubset,
-// which asks the row write gate and the archive rule together, so the flag
+// stampArchivable sets each row's archivable flag from auth.ArchivableSubset.
+// That asks the row write gate and the archive rule together, so the flag
 // answers what the archive itself would.
 func stampArchivable[T any](
 	ctx context.Context, tx pgx.Tx, rule auth.ArchiveRule, rows []T, id func(T) ids.UUID, set func(*T, bool),
@@ -36,8 +36,8 @@ func stampArchivable[T any](
 }
 
 // lockThenEnsureArchivable locks the record before it reads who may archive
-// it, so an owner change that commits meanwhile is read rather than raced: the
-// archive then runs on the authority the row holds when it is written.
+// it. So an owner change that commits meanwhile is read rather than raced, and
+// the archive runs on the authority the row holds when written.
 func lockThenEnsureArchivable(ctx context.Context, tx pgx.Tx, table string, rule auth.ArchiveRule, id ids.UUID) error {
 	if err := lockArchivedRow(ctx, tx, table, id); err != nil {
 		return err
@@ -49,9 +49,9 @@ func lockThenEnsureArchivable(ctx context.Context, tx pgx.Tx, table string, rule
 }
 
 // stampCompaniesArchivable is stampArchivable for companies, narrowed by the
-// refusals the archive itself answers: the anchor, a company that is the only
-// one on a live project, and one others' records still name. So the header
-// never offers an Archive the store then refuses.
+// refusals the archive itself answers. Those are the anchor, the only company
+// on a live project, and one others' records still name. So the header never
+// offers an Archive the store then refuses.
 func stampCompaniesArchivable(ctx context.Context, tx pgx.Tx, companies []crmcontracts.Company) error {
 	if err := stampArchivable(ctx, tx, auth.CompanyArchive, companies,
 		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },

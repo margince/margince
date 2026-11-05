@@ -52,6 +52,7 @@ func (o scoutDealOpener) reviveOne(ctx context.Context, suggestionID ids.UUID, d
 		Record: func(ctx context.Context, tx pgx.Tx, deal ids.DealID, name string) error {
 			return o.recordRevivalOnTimeline(ctx, tx, deal, name)
 		},
+		AsOwner: ownersAgentTx(o.users, owner, marginceActorID),
 	})
 }
 

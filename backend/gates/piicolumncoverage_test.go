@@ -97,6 +97,8 @@ var erasureColumnBaseline = map[string][]string{
 		// requires the erasure to keep.
 		"execution_authority",
 		"legacy_verdict",
+		// A key from the workspace's own purpose list, never subject text.
+		"purpose_key",
 		"mode",
 		"phase",
 		"reason_code",

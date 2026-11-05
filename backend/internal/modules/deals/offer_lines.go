@@ -181,7 +181,7 @@ func (s *Store) AddOfferLineItem(ctx context.Context, offerID ids.OfferID, in Of
 		if err != nil {
 			return err
 		}
-		if err := ensureDraft(current); err != nil {
+		if err := ensureTypedDraft(current); err != nil {
 			return err
 		}
 		basis := s.draftTaxBasis(ctx, tx, legalEntityIDOf(current))
@@ -253,7 +253,7 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		if err != nil {
 			return err
 		}
-		if err := ensureDraft(current); err != nil {
+		if err := ensureTypedDraft(current); err != nil {
 			return err
 		}
 
@@ -411,7 +411,7 @@ func (s *Store) AcceptOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		if err != nil {
 			return err
 		}
-		if err := ensureDraft(current); err != nil {
+		if err := ensureTypedDraft(current); err != nil {
 			return err
 		}
 		tag, err := tx.Exec(ctx,
@@ -465,7 +465,7 @@ func (s *Store) RemoveOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		if err != nil {
 			return err
 		}
-		if err := ensureDraft(current); err != nil {
+		if err := ensureTypedDraft(current); err != nil {
 			return err
 		}
 		tag, err := tx.Exec(ctx,

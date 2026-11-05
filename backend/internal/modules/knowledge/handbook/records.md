@@ -96,7 +96,7 @@ Emails have the types **work, personal or other**; phones **work, mobile, home o
 
 A contact's job title shows in two places. The title on the contact record is a copy, there to save you time. The one that counts is on the job link with the company. A contact can have one current main employer, or none. Margince reads a contact's job title from the signature in their newest mail, and from up to two older mails when that one states none. An older mail only fills an empty title, and mail Margince could not read in full or newsletter mail is never used.
 
-A contact also holds an owner, a consent record for each purpose, a relationship strength and when they were last active. If they started as a lead, it holds a link back to that lead.
+A contact also holds an owner, a consent record for each purpose, a relationship strength and when they were last active. If they started as a lead, it holds a link back to that lead. **Communication permissions** names the fact on record for each purpose, such as **Recent business contact recorded** or **Marketing opt-out recorded**. It is not permission for every message: each one is checked when it is sent.
 
 ### How do I merge duplicate contacts?
 To merge two duplicate contacts in Margince, open the contact you want to remove, choose **More actions**, then **Merge contact**.
@@ -261,7 +261,7 @@ To log an activity in Margince, open the contact, company, lead or deal and choo
 3. For a call or meeting, add the contacts who took part under **Other attendees**, or **Attendees** on a company. Add colleagues who took part under **Colleagues who attended**. A call also takes an **Outcome**, such as **Reached** or **Not reached**, and then needs no subject. Only **Reached** and **Put through** count as contact.
 4. Enter a **Subject** (required) and the **Details**. **Details** keeps its format, such as lists, headings and links. You can paste it from a document or as markdown. If you enter a meeting transcript, tick **This text is a transcript**. The text then stays plain, and you can paste it or use **Or upload a file** (`.txt` only).
 5. Add any files under **Attach files**, then choose **Log**. A call or meeting shows in the History of each contact you named, and of their companies.
-Without permission you see "You do not have permission to log activities on this record."
+Without permission you see "You do not have permission to log activities on this record." A contact you can open only through a **Read** share refuses **Log activity**, **Add task** and **Book a meeting**. Ask its owner to share it at **Write**.
 Also called: add a note, record a call, write a comment.
 
 ### How do I read a whole note, call or meeting from a contact's Overview?
@@ -269,7 +269,7 @@ To read a whole note, call or meeting from a contact's **Overview** in Margince,
 Also called: open a note, see the full call notes, read a meeting in full.
 
 ### How do I add a task on a record?
-To add a task in Margince, open the contact, company, lead, deal or project, choose **More actions** in its header, then **Add task**. Enter a **Subject** (required), a **Due date**, an optional **Time** and an **Assignee** (or **Unassigned**), then choose **Log**. History labels tasks **Open** or **Completed**; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done**, **Snooze 1 day** and **Move to**, which also takes a time. A snoozed task keeps its time on the next day.
+To add a task in Margince, open the contact, company, lead, deal or project, choose **More actions** in its header, then **Add task**. Enter a **Subject** (required), a **Due date**, an optional **Time** and an **Assignee** (or **Unassigned**), then choose **Log**. History labels tasks **Open** or **Completed**; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done**, **Snooze 1 day** and **Move to**, which also takes a time. A snoozed task moves one day later, or to tomorrow if that is later, and keeps its time.
 Also called: create a to-do, follow-up, reminder.
 
 On a contact's or company's **Overview**, the **Next** bar shows a task's subject and the email it came from, with **View full thread**. A past meeting is never the next step. On a deal, lead or project with nothing next, the last exchange shows above the bar, such as **Last meeting** with **View meeting**. It adds **Waiting on them** if you wrote last, or **Your turn to answer** if they did. A contact shows that exchange under **What was said**, and a company under **Last contact**. With no open task, a contact's bar offers **Add follow-up** if you may log activity, under **No follow-up task recorded.**

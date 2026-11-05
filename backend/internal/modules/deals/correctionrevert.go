@@ -57,7 +57,12 @@ import (
 // (somebody got there first), and a field a contact has since edited (their work
 // would be overwritten). Both are 409s about the state of a record rather than
 // anything malformed in the request.
-type CorrectionReversalError struct{ Reason string }
+type CorrectionReversalError struct {
+	Reason string
+	// MovedSince marks a stage reversal whose deal moved again after
+	// Margince's move. It holds the whole deal; the others hold one change.
+	MovedSince bool
+}
 
 // alreadyTakenBack is the refusal a second Undo gets. One spelling, because
 // three paths reach it — the pre-check, the stamp losing its race, and the
@@ -99,47 +104,7 @@ func (s *Store) RevertCorrectionConfirmed(
 	}
 	var out crmcontracts.Deal
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		// AUTHORITY BEFORE ANY CONFLICT, the module's rule everywhere. The row
-		// is located and locked first because the deal it belongs to is not
-		// known until then — but nothing about its STATE reaches a caller before
-		// the probe: an already-reversed correction on a deal somebody may not
-		// see would otherwise answer "already taken back" where it owes a 404,
-		// and the shape of the refusal would tell them the deal exists.
-		correction, err := lockCorrection(ctx, tx, correctionID)
-		if err != nil {
-			return err
-		}
-		// The deal row lock comes after the correction lock, the order
-		// restoreCorrectedFields already takes, and before the write check.
-		if _, err := storekit.LockRow(ctx, tx, dealTable, correction.DealID.UUID, storekit.LiveOnly); err != nil {
-			return err
-		}
-		if err := auth.EnsureWritable(ctx, tx, dealTable, correction.DealID.UUID); err != nil {
-			return err
-		}
-		if correction.Reversed() {
-			return &CorrectionReversalError{Reason: alreadyTakenBack}
-		}
-		// Under the correction lock, so an Accept and an Undo of one change
-		// cannot both land, whichever route the Undo came through.
-		if correction.AcceptedAt != nil {
-			return &CorrectionReversalError{Reason: AlreadyAccepted}
-		}
-		switch correction.Correction {
-		case CloseLostCorrection:
-			err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, closeMovedSince)
-		case VerdictStageMoveCorrection:
-			err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, stageMoveMovedSince)
-		case DealReviveCorrection:
-			err = s.revertDealRevive(ctx, tx, correction, ifVersion, evidence, active, archiveConfirmedFor)
-		case DealOpenCorrection:
-			if err = s.revertDealOpen(ctx, tx, correction, ifVersion, archiveConfirmedFor); err == nil {
-				out, err = readDealForCaller(ctx, tx, correction.DealID, storekit.IncludeArchived, active)
-			}
-			return err
-		default:
-			err = s.restoreCorrectedFields(ctx, tx, correction, ifVersion, evidence)
-		}
+		correction, err := s.revertCorrectionTx(ctx, tx, correctionID, ifVersion, evidence, active, archiveConfirmedFor)
 		if err != nil {
 			return err
 		}
@@ -147,7 +112,11 @@ func (s *Store) RevertCorrectionConfirmed(
 		// deal. GetDeal would take a VISIBILITY probe instead, which a manual
 		// read-share satisfies — the wrong question on a path that has just
 		// changed the record.
-		out, err = readDealForCaller(ctx, tx, correction.DealID, storekit.LiveOnly, active)
+		archived := storekit.LiveOnly
+		if correction.Correction == DealOpenCorrection {
+			archived = storekit.IncludeArchived
+		}
+		out, err = readDealForCaller(ctx, tx, correction.DealID, archived, active)
 		return err
 	})
 	return out, err

@@ -147,6 +147,7 @@ func (o scoutDealOpener) openOne(ctx context.Context, s openableSuggestion) (ids
 		Record: func(ctx context.Context, tx pgx.Tx, deal, _ ids.UUID) error {
 			return o.recordOnTimeline(ctx, tx, deal, suggestion.CompanyName, basis)
 		},
+		AsOwner: ownersAgentTx(o.users, s.owner, marginceActorID),
 	})
 }
 

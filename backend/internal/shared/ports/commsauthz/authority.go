@@ -118,7 +118,8 @@ func LevelForReason(reasonCode string) AuthorityLevel {
 	// request to stop are things the contact did, and Art. 21 makes the first
 	// absolute. No answer, recorded fact or exception lifts these, an admin's
 	// included (see RemediesFor).
-	case ReasonObjection, ReasonRestricted, ReasonSubjectRequest, ReasonConsentWithdrawn:
+	case ReasonObjection, ReasonRestricted, ReasonSubjectRequest, ReasonConsentWithdrawn,
+		ReasonOptedOutAfterRequest:
 		return LevelSubject
 
 	// EVERYTHING ELSE IS THE ENGINE READING AN INCOMPLETE RECORD, and a seat

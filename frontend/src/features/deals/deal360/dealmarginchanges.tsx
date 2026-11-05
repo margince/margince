@@ -9,15 +9,19 @@ import {
   OverviewRow,
 } from "../../../design-system/overviewcard";
 import { formatDayMonth } from "../../../format/format";
-import { useLocale, useT } from "../../../i18n";
-import { useDealMarginceChanges } from "../../../lib/marginchanges";
+import { type Translator, useLocale, useT } from "../../../i18n";
+import {
+  type DealMarginceCheck,
+  useDealMarginceChanges,
+} from "../../../lib/marginchanges";
 import { receiptBasis, receiptSummary } from "../../../lib/receiptcopy";
 import { useViewerZone } from "../../../lib/viewerzone";
 
 /**
  * Every change Margince made to this deal, newest first, with its reason and
  * an Undo while it is not undone. It stays when the change leaves Home, so an
- * owner who dismissed it there can still take it back here.
+ * owner who dismissed it there can still take it back here. A latest check
+ * that changed nothing leads the list.
  */
 export function DealMarginceChangesCard({
   dealId,
@@ -27,9 +31,11 @@ export function DealMarginceChangesCard({
   const zone = useViewerZone();
   const read = useDealMarginceChanges(dealId);
   const changes = read.data?.pages.flatMap((page) => page.changes ?? []) ?? [];
-  if (!read.isSuccess || changes.length === 0) {
+  const check = read.data?.pages[0]?.last_check;
+  if (!read.isSuccess || (changes.length === 0 && !check)) {
     return null;
   }
+  const day = (at: string) => formatDayMonth(at, locale, zone);
   return (
     <OverviewCard
       title={t("changes.deal.title")}
@@ -47,6 +53,12 @@ export function DealMarginceChangesCard({
       }
     >
       <OverviewList>
+        {check && (
+          <OverviewRow
+            title={t("changes.check.title", { date: day(check.checked_at) })}
+            sub={checkLines(check, t, day).join(" · ")}
+          />
+        )}
         {changes.map((change) => (
           <OverviewRow
             key={change.id}
@@ -69,4 +81,44 @@ export function DealMarginceChangesCard({
       </OverviewList>
     </OverviewCard>
   );
+}
+
+/**
+ * Why a check changed nothing, which sources it read, and when it runs next.
+ * A reader the reasons were not made for gets only the next check: the
+ * server sends them nothing else.
+ */
+export function checkLines(
+  check: DealMarginceCheck,
+  t: Translator,
+  day: (at: string) => string,
+): string[] {
+  const next = check.next_check_at
+    ? t("changes.check.next", { date: day(check.next_check_at) })
+    : t("changes.check.nextOnNews");
+  if (!check.explained) {
+    return [t("changes.check.ownerOnly"), next];
+  }
+  const lines: string[] = [];
+  if (check.skipped) {
+    lines.push(t(`changes.check.skipped.${check.skipped}`));
+  }
+  for (const outcome of check.outcomes) {
+    lines.push(
+      t("changes.check.outcome", {
+        kind: t(`changes.check.kind.${outcome.kind}`),
+        why: t(`changes.check.why.${outcome.why}`),
+      }),
+    );
+  }
+  if (check.sources.length > 0) {
+    const sources = check.sources.map((source) =>
+      t(`changes.check.state.${source.state}`, {
+        source: t(`changes.check.source.${source.source}`),
+      }),
+    );
+    lines.push(t("changes.check.sources", { list: sources.join(", ") }));
+  }
+  lines.push(next);
+  return lines;
 }

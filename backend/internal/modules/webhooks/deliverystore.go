@@ -213,8 +213,8 @@ type attemptTarget struct {
 	headers       []storedHeader
 	priorAttempts int
 	// entityType, entityID and ownerID are what every attempt is re-checked
-	// against right before its POST: the owner the enqueue authorized, and the
-	// record they had to see. The answer can change between the two moments.
+	// against right before its POST. They are the owner the enqueue authorized
+	// and the record they had to see. The answer can change between the two.
 	// entityType is empty on a row written before those columns existed, and
 	// an empty subject is refused rather than sent.
 	entityType string

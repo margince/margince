@@ -63,6 +63,10 @@ type approvalSummaryCopy struct {
 	heldMissedWindow     string
 	heldTimerExhausted   string
 	heldSendRefused      string
+	heldFollowupSettled  string
+	heldMeetingCanceled  string
+	heldRecipientStopped string
+	heldRecipientReplied string
 
 	// reviewSendRefused: %s is reviewOneRecipient or reviewRecipients, then the
 	// refusal's reason code, which is an identifier and stays untranslated.
@@ -116,9 +120,13 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		heldSenderInactive:   "the sending account or its mailbox is no longer active",
 		heldPassportRevoked: "the agent credential it was scheduled under has been revoked or expired — " +
 			"your account is fine, so send it yourself if it should still go",
-		heldMissedWindow:   "its moment passed while nothing was running, and it is too late to be the message that was written",
-		heldTimerExhausted: "the job that wakes it ran out of attempts",
-		heldSendRefused:    "a gate refused it at send time",
+		heldMissedWindow:     "its moment passed while nothing was running, and it is too late to be the message that was written",
+		heldTimerExhausted:   "the job that wakes it ran out of attempts",
+		heldSendRefused:      "a gate refused it at send time",
+		heldFollowupSettled:  "the request it followed up was answered or completed after it was scheduled",
+		heldMeetingCanceled:  "the meeting it followed up was canceled after it was scheduled",
+		heldRecipientStopped: "a recipient stopped marketing after it was scheduled",
+		heldRecipientReplied: "new mail came in from a recipient after it was scheduled",
 
 		reviewSendRefused:  "A send was refused for %s (%s) and somebody is asking whether it may go anyway",
 		reviewOneRecipient: "1 recipient",
@@ -158,8 +166,12 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 			"Dein Konto ist in Ordnung, sende sie also selbst, wenn sie noch rausgehen soll",
 		heldMissedWindow: "der geplante Zeitpunkt ist verstrichen, während nichts lief, " +
 			"und für die Nachricht, wie sie geschrieben wurde, ist es jetzt zu spät",
-		heldTimerExhausted: "der Job, der den Versand auslöst, hat alle Versuche aufgebraucht",
-		heldSendRefused:    "eine Prüfung hat den Versand zum Sendezeitpunkt abgelehnt",
+		heldTimerExhausted:   "der Job, der den Versand auslöst, hat alle Versuche aufgebraucht",
+		heldSendRefused:      "eine Prüfung hat den Versand zum Sendezeitpunkt abgelehnt",
+		heldFollowupSettled:  "die Anfrage, an die es anschließt, wurde nach der Planung beantwortet oder erledigt",
+		heldMeetingCanceled:  "der Termin, an den es anschließt, wurde nach der Planung abgesagt",
+		heldRecipientStopped: "jemand unter den Empfangenden hat nach der Planung Werbung gestoppt",
+		heldRecipientReplied: "nach der Planung kam neue Mail von jemandem unter den Empfangenden",
 
 		reviewSendRefused:  "Ein Versand an %s wurde abgelehnt (%s), und jemand fragt, ob er trotzdem rausgehen darf",
 		reviewOneRecipient: "1 Empfangsadresse",
@@ -199,8 +211,12 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 			"Tài khoản của bạn vẫn ổn, hãy tự gửi nếu tin nhắn vẫn cần được gửi",
 		heldMissedWindow: "thời điểm gửi đã trôi qua khi không có gì đang chạy, " +
 			"và giờ đã quá muộn để tin nhắn còn đúng như khi được viết",
-		heldTimerExhausted: "tác vụ kích hoạt việc gửi đã hết số lần thử",
-		heldSendRefused:    "một bước kiểm tra đã từ chối tin nhắn khi gửi",
+		heldTimerExhausted:   "tác vụ kích hoạt việc gửi đã hết số lần thử",
+		heldSendRefused:      "một bước kiểm tra đã từ chối tin nhắn khi gửi",
+		heldFollowupSettled:  "yêu cầu mà thư theo dõi đã được trả lời hoặc hoàn tất sau khi lên lịch",
+		heldMeetingCanceled:  "cuộc họp mà thư theo dõi đã bị hủy sau khi lên lịch",
+		heldRecipientStopped: "một địa chỉ nhận đã dừng nhận tiếp thị sau khi lên lịch",
+		heldRecipientReplied: "có thư mới từ bên nhận sau khi lên lịch",
 
 		reviewSendRefused:  "Một lần gửi tới %s đã bị từ chối (%s) và có người đang hỏi liệu vẫn có thể gửi đi không",
 		reviewOneRecipient: "1 người nhận",

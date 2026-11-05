@@ -15,6 +15,7 @@ import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { Button } from "./button";
 import { ErrorLine } from "./errorline";
+import { NoteMarkdown } from "./markdown";
 import { ProvenanceTag } from "./provenance";
 import "./readerrendering.css";
 
@@ -82,10 +83,14 @@ export function readerRenderingRefusal(error: unknown): MessageKey | null {
 export function ReaderRendering({
   activityId,
   language,
+  note = false,
   children,
 }: Readonly<{
   activityId: string;
   language: MessageLanguage | null | undefined;
+  /** The original is a note's markdown, so the rendering reads as one too:
+   *  through NoteMarkdown, the way the original is drawn. A mail stays text. */
+  note?: boolean;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -101,7 +106,11 @@ export function ReaderRendering({
   return (
     <div className="readerrendering">
       {showing ? (
-        <RenderedText rendering={answer} onOriginal={() => setShown(false)} />
+        <RenderedText
+          rendering={answer}
+          note={note}
+          onOriginal={() => setShown(false)}
+        />
       ) : (
         children
       )}
@@ -132,8 +141,13 @@ export function ReaderRendering({
 
 function RenderedText({
   rendering,
+  note,
   onOriginal,
-}: Readonly<{ rendering: ActivityReaderRendering; onOriginal: () => void }>) {
+}: Readonly<{
+  rendering: ActivityReaderRendering;
+  note: boolean;
+  onOriginal: () => void;
+}>) {
   const t = useT();
   return (
     <section
@@ -149,9 +163,14 @@ function RenderedText({
       {rendering.subject && (
         <p className="readerrendering__subject">{rendering.subject}</p>
       )}
-      {rendering.body && (
-        <p className="readerrendering__body">{rendering.body}</p>
-      )}
+      {rendering.body &&
+        (note ? (
+          <div className="readerrendering__body">
+            <NoteMarkdown source={rendering.body} />
+          </div>
+        ) : (
+          <p className="readerrendering__body">{rendering.body}</p>
+        ))}
       <Button variant="ghost" onClick={onOriginal}>
         {t("readerRendering.showOriginal")}
       </Button>

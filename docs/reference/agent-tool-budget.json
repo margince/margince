@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 45,
+    "tools": 47,
     "system_frame_tokens": 592,
-    "tokens": 32185,
-    "median_tool_tokens": 611,
-    "mean_tool_tokens": 714
+    "tokens": 35835,
+    "median_tool_tokens": 620,
+    "mean_tool_tokens": 762
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 45,
+      "of_served_tools": 47,
       "tokens": 4319,
       "listing_tokens": 2134,
       "step_schema_tokens": 1592,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 45,
+      "of_served_tools": 47,
       "tokens": 6422,
       "listing_tokens": 3373,
       "step_schema_tokens": 2457,
@@ -85,31 +85,35 @@
   "tool_cost": [
     {
       "name": "read_reports",
-      "tokens": 2318
+      "tokens": 2498
+    },
+    {
+      "name": "read_workspace",
+      "tokens": 2061
+    },
+    {
+      "name": "change_activities",
+      "tokens": 1884
     },
     {
       "name": "find_records",
       "tokens": 1874
     },
     {
-      "name": "change_activities",
-      "tokens": 1862
-    },
-    {
       "name": "change_state",
-      "tokens": 1739
-    },
-    {
-      "name": "read_workspace",
-      "tokens": 1681
+      "tokens": 1873
     },
     {
       "name": "read_details",
-      "tokens": 1507
+      "tokens": 1713
     },
     {
       "name": "send_outbound",
-      "tokens": 1309
+      "tokens": 1453
+    },
+    {
+      "name": "change_reports",
+      "tokens": 1255
     },
     {
       "name": "preview_import",
@@ -125,7 +129,19 @@
     },
     {
       "name": "read_forecast",
-      "tokens": 880
+      "tokens": 901
+    },
+    {
+      "name": "change_capture",
+      "tokens": 865
+    },
+    {
+      "name": "change_attention",
+      "tokens": 807
+    },
+    {
+      "name": "change_compliance",
+      "tokens": 799
     },
     {
       "name": "bulk_update_records",
@@ -136,28 +152,24 @@
       "tokens": 794
     },
     {
-      "name": "change_attention",
-      "tokens": 781
-    },
-    {
       "name": "read_lists",
-      "tokens": 773
-    },
-    {
-      "name": "change_reports",
-      "tokens": 717
+      "tokens": 788
     },
     {
       "name": "change_settings",
-      "tokens": 712
-    },
-    {
-      "name": "change_access",
-      "tokens": 656
+      "tokens": 770
     },
     {
       "name": "change_offers",
-      "tokens": 628
+      "tokens": 741
+    },
+    {
+      "name": "change_access",
+      "tokens": 669
+    },
+    {
+      "name": "update_record",
+      "tokens": 626
     },
     {
       "name": "change_record_parts",
@@ -170,10 +182,6 @@
     {
       "name": "resolve_duplicates",
       "tokens": 618
-    },
-    {
-      "name": "update_record",
-      "tokens": 611
     },
     {
       "name": "change_tags",
@@ -202,6 +210,10 @@
     {
       "name": "schedule_meeting",
       "tokens": 409
+    },
+    {
+      "name": "run_research",
+      "tokens": 408
     },
     {
       "name": "list_approvals",
@@ -236,24 +248,20 @@
       "tokens": 324
     },
     {
-      "name": "run_research",
-      "tokens": 312
+      "name": "read_project",
+      "tokens": 307
     },
     {
       "name": "archive_record",
       "tokens": 300
     },
     {
-      "name": "read_project",
-      "tokens": 292
-    },
-    {
       "name": "commit_import",
-      "tokens": 279
+      "tokens": 275
     },
     {
       "name": "read_import",
-      "tokens": 220
+      "tokens": 235
     },
     {
       "name": "read_approval",

@@ -164,7 +164,9 @@ func (s *Sink) admitOneParty(ctx context.Context, activity ids.ActivityID, sourc
 		return nil
 	}
 	cp := decision.subject
-	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{Admission: s.partyAdmissionGuard(activity, source, party), Email: cp.Email, DisplayName: cp.DisplayName, Domain: cp.Domain, OwnerID: decision.owner, ActivityID: activity.UUID, Source: captureSource(rec), CapturedBy: decision.capturedBy, SuppressCompany: decision.suppressCompany, Replied: decision.replied})
+	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{HoldAuthority: func(ctx context.Context, tx pgx.Tx) error {
+		return s.holdPartyAuthorityTx(ctx, tx, source.User)
+	}, Admission: s.partyAdmissionGuard(activity, source, party), Email: cp.Email, DisplayName: cp.DisplayName, Domain: cp.Domain, OwnerID: decision.owner, ActivityID: activity.UUID, Source: captureSource(rec), CapturedBy: decision.capturedBy, SuppressCompany: decision.suppressCompany, Replied: decision.replied})
 	if err != nil {
 		return fmt.Errorf("admit a captured participant: %w", err)
 	}

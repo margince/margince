@@ -79,12 +79,12 @@ func (s *salesAssessments) Assess(ctx context.Context, selection crmcontracts.Re
 }
 
 func (s *salesAssessments) AssessView(ctx context.Context, selection crmcontracts.ReportingSelection, refresh bool, view *crmcontracts.SalesAssessmentView, receipt *reporting.EvidenceExpectation) (crmcontracts.SalesAssessment, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.SalesAssessment{}, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return crmcontracts.SalesAssessment{}, auth.RequireHuman(ctx)
+		return crmcontracts.SalesAssessment{}, auth.RequireHumanOrItsAgent(ctx)
 	}
 	evaluation, in, err := s.prepareAssessment(ctx, selection, view, receipt, actor.UserID)
 	if err != nil {

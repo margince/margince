@@ -118,12 +118,10 @@ func (s *Store) RecordContext(
 	if err := httperr.RequireBodyID(fieldSubjectID, in.SubjectID.UUID); err != nil {
 		return Review{}, err
 	}
-	// A HUMAN, not merely a principal auth.RequireHuman admits. That check
-	// lets connectors through, and a connector runs with the granting human's
-	// own grants — so it would hold whatever this is gated on and could assert,
-	// in a named employee's name, that a phone call happened. This is a
-	// statement about what somebody remembers.
-	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
+	// A user or their agent, never a connector. It runs with the granting user's
+	// grants and could assert, in an employee's name, that a phone call happened.
+	// The evidence row names an agent as its author.
+	if err := requireAUserOrTheirAgent(ctx); err != nil {
 		return Review{}, err
 	}
 	review, err := s.ReviewForReader(ctx, reviewID)
@@ -191,12 +189,15 @@ func (s *Store) RecordContext(
 		}
 	}
 	// A request stated against a refused quote is a request for that quote.
+	// One stated against a message about a deal is about that deal. So the
+	// rep confirms once and the next message about the deal reuses it.
 	if _, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
 		Kind:       in.Kind,
 		Note:       in.Note,
 		OccurredAt: in.OccurredAt,
 		AsksForQuote: in.Kind == KindRequestedBySubject &&
 			refusal.claim() == commsauthz.CategoryPrecontractQuote,
+		AboutDeal: refusal.dealID(),
 	}); err != nil {
 		return Review{}, err
 	}
@@ -209,14 +210,15 @@ func (s *Store) RecordContext(
 
 // requestAnswersClaim reports whether the claim's validator reads this
 // statement as a request with no age limit (requestOnRecord). That holds for a
-// request the subject made, answering a reply, a follow-up or a quote.
+// request the subject made, answering a reply, a follow-up, a quote or a deal
+// follow-up.
 func requestAnswersClaim(kind string, claim commsauthz.Category) bool {
 	if kind != KindRequestedBySubject {
 		return false
 	}
 	switch claim {
 	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup,
-		commsauthz.CategoryPrecontractQuote:
+		commsauthz.CategoryPrecontractQuote, commsauthz.CategoryActiveDealFollowup:
 		return true
 	default:
 		return false

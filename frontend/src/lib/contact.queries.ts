@@ -22,6 +22,18 @@ export function contactQuery(contactId: string | undefined) {
   });
 }
 
+export function contact360Query(contactId: string) {
+  return queryOptions({
+    queryKey: ["contact360", contactId],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/contacts/{id}/360", {
+          params: { path: { id: contactId } },
+        }),
+      ),
+  });
+}
+
 // A 360 refused while the row is re-read may be an archive the row will report.
 // So the contact page waits for the row before it calls itself unopened.
 export function contactPageState(

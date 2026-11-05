@@ -33,13 +33,13 @@ export function TaskNextStepsPending() {
   );
 }
 
-/** Call, for a task read out of a call to a contact with a number to dial. */
+/** Call the task's contact when they have a number to dial. */
 export function TaskCallAction({
   task,
   pageContact,
 }: Readonly<{ task: Activity; pageContact?: Contact }>) {
-  const { contact, fromCall } = useTaskContact(task, pageContact);
-  return <CallVerb contact={contact} fromCall={fromCall} />;
+  const { contact } = useTaskContact(task, pageContact);
+  return <CallVerb contact={contact} />;
 }
 
 /**
@@ -55,7 +55,7 @@ export function TaskNextSteps({
   className,
 }: Readonly<{ task: Activity; offerOpen?: boolean; className?: string }>) {
   const t = useT();
-  const { contact, fromCall, pending } = useTaskContact(task);
+  const { contact, pending } = useTaskContact(task);
   const target = task.email_target;
   const intent = intentAbout(t("task.next.draftIntent"), task.subject);
   let steps: ReactNode;
@@ -68,7 +68,6 @@ export function TaskNextSteps({
     steps = (
       <ContactSteps
         contact={contact}
-        fromCall={fromCall}
         intent={intent}
         offerOpen={offerOpen}
         refusal={refusalOf(target, t)}
@@ -84,13 +83,11 @@ export function TaskNextSteps({
 
 function ContactSteps({
   contact,
-  fromCall,
   intent,
   offerOpen,
   refusal,
 }: Readonly<{
   contact: Contact;
-  fromCall: boolean;
   intent: string;
   offerOpen: boolean;
   refusal: string | undefined;
@@ -99,7 +96,7 @@ function ContactSteps({
   const reasonId = useId();
   return (
     <>
-      <CallVerb contact={contact} fromCall={fromCall} />
+      <CallVerb contact={contact} />
       <EmailVerb
         contact={contact}
         intent={intent}
@@ -182,12 +179,9 @@ function refusalOf(target: EmailTarget, t: Translator): string | undefined {
       return undefined;
   }
 }
-function CallVerb({
-  contact,
-  fromCall,
-}: Readonly<{ contact: Contact | undefined; fromCall: boolean }>) {
+function CallVerb({ contact }: Readonly<{ contact: Contact | undefined }>) {
   const t = useT();
-  if (!contact || !fromCall || contact.archived_at) {
+  if (!contact || contact.archived_at) {
     return null;
   }
   return (

@@ -25,8 +25,8 @@ import (
 )
 
 // afterFirstAuthorization runs once, right after the fan-out has authorized
-// the owner and before anything is enqueued or sent: the window in which an
-// owner can be deactivated or replaced.
+// the owner and before anything is enqueued or sent. That is the window in
+// which an owner can be deactivated or replaced.
 type afterFirstAuthorization struct {
 	authz.Resolver
 	once sync.Once

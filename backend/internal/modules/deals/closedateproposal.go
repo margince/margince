@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -41,7 +43,12 @@ const CloseDateCorrectionKind = "close_date_correction"
 // a date the machine had already computed — expired into silence when nobody
 // answered it, leaving the deal on a guess with nothing saying so.
 type CorrectionPolicy interface {
-	CorrectsWithoutAsking(ctx context.Context, owner ids.UUID) (bool, error)
+	// CorrectsWithoutAsking reads in tx whether owner has left close-date
+	// corrections to the sweep.
+	CorrectsWithoutAsking(ctx context.Context, tx pgx.Tx, owner ids.UUID) (bool, error)
+	// ActForOwner binds the owner's agent, the principal a correction on the
+	// owner's deal writes as.
+	ActForOwner(owner ids.UUID) OwnerAuthorityTx
 	// LikelyThreshold is the probability from which a deal counts in the
 	// Likely forecast, read once per page of the pass.
 	LikelyThreshold(ctx context.Context) (int, error)

@@ -65,12 +65,12 @@ export function TeamMembersModal({
   const qc = useQueryClient();
   const titleId = useId();
   const list = useRef<HTMLUListElement | null>(null);
-  // Where focus goes once a write has landed and the list reflects it: the row
-  // now in a removed row's place, or the title (-1) when the control it was on
-  // is gone. Pressed holds the press's place until the write succeeds; a
+  // Where focus goes once a write has landed and the list reflects it. That is
+  // the row now in a removed row's place, or the title (-1) when its control
+  // is gone. Pressed holds the press's place until the write succeeds. A
   // search typed meanwhile moves no focus.
   const pressed = useRef<number | null>(null);
-  // A ref, not state: the roster refetch after the write is the render that
+  // A ref, not state. The roster refetch after the write is the render that
   // moves focus, so holding the target needs no render of its own.
   const refocus = useRef<{
     at: number;

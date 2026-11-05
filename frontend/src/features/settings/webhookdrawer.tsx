@@ -131,8 +131,8 @@ async function saveSubscription({
 }
 
 // Who the subscription runs under. Deliveries stop while the owner is
-// inactive, so the current owner stays choosable by name, marked as gone, and
-// the colleagues who may own records are offered beside them.
+// inactive, so the current owner stays choosable by name, marked as gone. The
+// colleagues who may own records are offered beside them.
 function WebhookOwnerField({
   subscription,
   value,

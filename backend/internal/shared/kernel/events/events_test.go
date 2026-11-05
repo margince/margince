@@ -338,6 +338,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// verdict rides there, including the `expired` one the sweep writes
 		// when nobody answers a card.
 		"cg:approval-notice-retract": {"gw:events:crm:approval"},
+		"cg:scheduled-send-stop":     {"gw:events:crm:contact"},
 		// Telling the seats that could decide a staged proposal that it is
 		// waiting on them. The same stream as the ledger above and a group of
 		// its own: that one counts what has already happened to a card, this

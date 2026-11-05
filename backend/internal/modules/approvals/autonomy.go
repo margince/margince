@@ -230,11 +230,15 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 }
 
 // AutoApplyModeTx is one rep's mode for a kind, read in the caller's
-// transaction. A pass that acts for the rep asks it under the lock it writes
-// under, so a switch turned off in between holds.
+// transaction. It holds the rep's policy until that transaction ends, so a
+// switch turned off after the read waits for the write it would have stopped.
+// Take it after the authority read and before the transaction locks a record.
 func AutoApplyModeTx(ctx context.Context, tx pgx.Tx, rep ids.UUID, kind string) (AutonomyMode, error) {
 	if !AutoApplyKinds[kind] {
 		return ModeManual, nil
+	}
+	if err := shareLockPersonalPolicy(ctx, tx, rep, kind); err != nil {
+		return ModeManual, fmt.Errorf("crmapprovals: holding the autonomy mode: %w", err)
 	}
 	var mode string
 	err := tx.QueryRow(ctx,

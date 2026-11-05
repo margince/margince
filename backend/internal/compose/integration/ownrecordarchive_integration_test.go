@@ -18,7 +18,7 @@ import (
 )
 
 // ownRecordArchivePerms is the rep's seeded shape on contacts and companies:
-// write without delete, team scope, so a teammate's record is writable and a
+// write without delete, team scope. So a teammate's record is writable, and a
 // refusal below comes from the archive rule.
 func ownRecordArchivePerms() principal.Permissions {
 	perms := ownArchivePerms
