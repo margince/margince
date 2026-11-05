@@ -3091,7 +3091,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 1713,
+      "tokens": 1743,
       "agents": [],
       "required_by_cases": [
         "case72_read_the_dossier",

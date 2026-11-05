@@ -166,6 +166,7 @@ var routeVerbsGerman = map[string]string{
 	"set_weekly_plan_commitment_state":   "Vorhaben als erledigt, offen oder verworfen markieren",
 	"set_weekly_plan_contract":           "Risiken der Woche festhalten",
 	"settle_conversation_claim":          "Zusage als eingehalten oder hinfällig erfassen",
+	"share_company_contacts":             "Kontakte des Unternehmens teilen",
 	"share_record":                       "Datensatz mit Kollegen oder Team teilen",
 	"snooze_brief_item":                  "Punkt im Morgenbericht zurückstellen",
 	"start_weekly_plan":                  "Wochenplan beginnen",

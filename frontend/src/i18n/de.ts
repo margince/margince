@@ -7170,6 +7170,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.addFollowUp": "Folgeaufgabe hinzufügen",
   "log.followUpSubject": "Nächster Schritt",
   "log.addTask": "Aufgabe hinzufügen",
+  "log.dealFiling": "Einem offenen Deal zuordnen",
+  "log.dealChoice":
+    "Wähle einen offenen Deal, auf den du Zugriff hast, oder keinen Deal.",
+  "log.dealNone": "Kein Deal",
+  "log.dealAutomatic": "Auch beim Deal:",
+  "log.dealUnavailable":
+    "Offene Deals konnten nicht geprüft werden. Versuche es erneut.",
+  "log.dealLoading": "Offene Deals werden geprüft",
   "log.kind": "Typ",
   "log.kindNote": "Notiz",
   "log.kindTask": "Aufgabe",
@@ -18799,7 +18807,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "du hast die letzte Änderung rückgängig gemacht, darum wartet Margince auf Neues",
   "changes.check.why.already_right": "stimmt schon",
   "changes.check.why.accepted_offer": "das angenommene Angebot legt es fest",
-  "changes.check.why.priced_by_products": "die Produkte des Deals legen es fest",
+  "changes.check.why.priced_by_products":
+    "die Produkte des Deals legen es fest",
   "changes.check.why.no_rate": "kein Wechselkurs für die Währung",
   "changes.check.why.no_owner": "das zuständige Mitglied ist gegangen",
   "changes.check.why.stage_rules":

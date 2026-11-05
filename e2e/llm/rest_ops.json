@@ -58,6 +58,7 @@
     "DELETE /v1/worklist/pins": "unpin_worklist_row",
     "GET /v1/acquisition-sources": "read_view",
     "GET /v1/activities": "list_records",
+    "GET /v1/activities/deal-filing": "get_activity_deal_filing",
     "GET /v1/activities/follow-up-settings": "read_view",
     "GET /v1/activities/latest-inbound": "read_view",
     "GET /v1/activities/{id}": "read_record",
