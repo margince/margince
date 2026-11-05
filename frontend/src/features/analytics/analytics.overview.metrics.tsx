@@ -207,7 +207,7 @@ function ForecastOverviewReading({
           ),
         })
       : undefined;
-  // A landing exactly on target has no gap to show, as on the trajectory.
+  // A landing on target has no gap to show, as on the trajectory.
   const shownGap = gap == null || gap === 0 ? undefined : gap;
   // Without a gap the first basis line is the visible detail, and only the
   // rest stays behind the receipt.

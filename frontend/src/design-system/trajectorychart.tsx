@@ -67,8 +67,8 @@ export function TrajectoryChart({
   const [active, setActive] = useState<string | null>(null);
   useEffect(() => {
     if (!plot || typeof ResizeObserver === "undefined") return;
-    // The plot's own width, unclamped: the marks are placed in pixels over
-    // the drawing, so the drawing must be drawn at the width it shows at.
+    // The plot's own width, unclamped. The marks sit in pixels over the
+    // drawing, so it is drawn at the width it shows at.
     const measure = () =>
       setWidth(Math.max(LEFT + RIGHT + 1, plot.clientWidth));
     measure();
