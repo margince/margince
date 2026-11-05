@@ -5,6 +5,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -27,7 +28,7 @@ func sendingEntityTx(ctx context.Context, tx pgx.Tx, sender ids.UUID) (ids.UUID,
 		return ids.UUID{}, fmt.Errorf("consent: reading the sending legal entity: %w", err)
 	}
 	if entity == nil {
-		return ids.UUID{}, fmt.Errorf("consent: this installation has no default legal entity")
+		return ids.UUID{}, errors.New("consent: this installation has no default legal entity")
 	}
 	return *entity, nil
 }
