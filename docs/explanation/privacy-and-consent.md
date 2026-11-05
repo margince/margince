@@ -577,28 +577,22 @@ version the build sends.
 
 ## Mail from the contact
 
-Mail from a contact shows that they gave their own details. For `bulk_mail_attested`,
-`inbound_sender_authenticated` must also be true.
+Mail from a contact shows that they gave their own details; for `bulk_mail_attested`,
+`inbound_sender_authenticated` must also be true. Before closing old cases, the data task reads
+the stored mail with capture's parser and checks that proof. Mail with no proof stays unknown.
 
-Before closing old cases, the data task reads the stored mail with capture's parser and checks
-the same proof. Mail with no proof keeps its unknown source.
+An unknown source needs review. It has no legal deadline and no send route. A missing mail, a
+reply from our team, or a capture date cannot prove where the details came from. A source with a
+notice duty keeps that duty when its date is unknown. The capture date gives the latest possible
+deadline; the notice may already be due.
 
-An unknown source needs review. It has no legal deadline and no send route. A missing mail,
-a reply from our team, or a capture date cannot prove where the details came from.
-
-A source with a notice duty keeps that duty when its date is unknown. The capture date
-gives the latest possible deadline; the notice may already be due.
-
-A user with privacy access answers how the details came in and gives the proof. The question
-opens in **Settings → Privacy** and in a drawer on the contact page. Each answer maps to one
-existing source kind.
-
-The answer changes only the notice duty and the disclosure text. Send permission reads the
-original source record, so a confirmed source never lets a send through.
-
-The contact page shows the review under the same access check. If the contact gave the details,
-no separate notice is needed. A date is optional: a known past date is used as given, and a
-missing date uses the original capture date as a bound. The clock never starts again at review.
+A user with privacy access answers how the details came in, with proof, in **Settings →
+Privacy** or a drawer on the contact page, which shows the review under the same access check.
+Each answer maps to one existing source kind. It changes only the notice duty and the disclosure
+text: send permission reads the original source record, so a confirmed source never lets a send
+through. If the contact gave the details, no separate notice is needed. A date is optional: a
+known past date is used as given, and a missing date uses the original capture date as a bound.
+The clock never starts again at review.
 
 A data task moves live cases with an unknown source to review. It keeps their audit history,
 finished decisions and mail already on its way. If a send fails, the source is checked again.
