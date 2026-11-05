@@ -294,6 +294,9 @@ var queryEnumTable = map[string][]queryEnum{
 // queryMinimumTable maps "METHOD /v1/path" to the integer query parameters
 // the contract gives a minimum, with that minimum.
 var queryMinimumTable = map[string][]queryMinimum{
+	"DELETE /v1/deals/{id}/lines/{lineId}": {
+		{Name: "expected_revision", Minimum: 0},
+	},
 	"GET /v1/activities": {
 		{Name: "limit", Minimum: 1},
 	},

@@ -184,6 +184,9 @@ func (s *Store) AddOfferLineItem(ctx context.Context, offerID ids.OfferID, in Of
 		if err := ensureDraft(current); err != nil {
 			return err
 		}
+		if err := ensureOfferLinesTyped(current); err != nil {
+			return err
+		}
 		basis := s.draftTaxBasis(ctx, tx, legalEntityIDOf(current))
 		if err := insertOfferLine(ctx, tx, offerID, current.Currency, languageOf(current.Language), basis, in); err != nil {
 			return err
@@ -254,6 +257,9 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 			return err
 		}
 		if err := ensureDraft(current); err != nil {
+			return err
+		}
+		if err := ensureOfferLinesTyped(current); err != nil {
 			return err
 		}
 
@@ -414,6 +420,9 @@ func (s *Store) AcceptOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		if err := ensureDraft(current); err != nil {
 			return err
 		}
+		if err := ensureOfferLinesTyped(current); err != nil {
+			return err
+		}
 		tag, err := tx.Exec(ctx,
 			`UPDATE offer_line_item SET proposal_state = $3 WHERE id = $1 AND offer_id = $2 AND proposal_state = $4`,
 			lineID, offerID, ProposalAccepted, ProposalStaged)
@@ -466,6 +475,9 @@ func (s *Store) RemoveOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 			return err
 		}
 		if err := ensureDraft(current); err != nil {
+			return err
+		}
+		if err := ensureOfferLinesTyped(current); err != nil {
 			return err
 		}
 		tag, err := tx.Exec(ctx,

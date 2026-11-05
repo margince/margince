@@ -72,7 +72,10 @@ type CreateOfferInput struct {
 	// issuing entity's, else the template's.
 	Language  *string
 	LineItems []OfferLineInputRow
-	Source    string
+	// FromDealRevision copies the deal's lines at that commercial revision
+	// instead of LineItems; a deal priced from its lines requires it.
+	FromDealRevision *int64
+	Source           string
 }
 
 func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOfferInput) (crmcontracts.Offer, error) {
@@ -111,6 +114,10 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	if err != nil {
 		return crmcontracts.Offer{}, err
 	}
+	in, sources, fromRevision, err := admitOfferLines(ctx, tx, dealID, in)
+	if err != nil {
+		return crmcontracts.Offer{}, err
+	}
 
 	number, err := nextOfferNumber(ctx, tx, wsID)
 	if err != nil {
@@ -121,13 +128,16 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 		                    buyer_company_id, valid_until, intro_text, terms_text, template_id, source, captured_by,
-		                    legal_entity_id, language)
-		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		                    legal_entity_id, language, source_commercial_revision)
+		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 		id, dealID, number, in.Currency, in.BuyerCompanyID, in.ValidUntil, in.IntroText, in.TermsText,
-		in.TemplateID, in.Source, by, entity, in.Language); err != nil {
+		in.TemplateID, in.Source, by, entity, in.Language, fromRevision); err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("insert offer: %w", err)
 	}
 	if err := insertOfferLines(ctx, tx, id, in.Currency, languageOf(in.Language), basis, in.LineItems); err != nil {
+		return crmcontracts.Offer{}, err
+	}
+	if err := bindOfferLinesToDeal(ctx, tx, id, sources); err != nil {
 		return crmcontracts.Offer{}, err
 	}
 	if _, err := recomputeOfferTotals(ctx, tx, id); err != nil {
@@ -419,7 +429,10 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		// Refused before anything is built. The patch is a statement of what
 		// the edit changes, and a currency this draft may not take is not a
 		// field to record — it is a request to turn down.
-		if in.Currency != nil {
+		if in.Currency != nil && *in.Currency != current.Currency {
+			if err := ensureOfferLinesTyped(current); err != nil {
+				return err
+			}
 			if err := refuseRepricingByCurrency(ctx, tx, current, *in.Currency); err != nil {
 				return err
 			}

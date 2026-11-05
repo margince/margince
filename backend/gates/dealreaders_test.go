@@ -205,6 +205,8 @@ var calleeGatedDealReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/offer_dealsync.go:syncDealAmountFromOffer":     "reads the deal's current amount and status so an accepted offer's figures can be synced onto it without overwriting a closed deal. Inside the offer write, past its gate",
 	"internal/modules/deals/stageevidencewriters.go:criteriaOfKind":        "the evidence criteria the stage a deal sits in demands, read inside the evidence write past its gate",
 	"internal/modules/deals/changeacceptance.go:lockDealForReversal":       "takes the deal's row lock before an acceptance. It selects `id` only and its caller asks the deal object gate",
+	"internal/modules/deals/deallineread.go:readDealCommercialHead":        "the deal's commercial mode, revision, status and money, read by the line writes, the offer writes and the money refusal in the deal patch seams, each past auth.Require on the deal or the offer. Its one reader, GetDealLines, asks auth.Require(ctx, \"deal\", read) and auth.EnsureVisible first",
+	"internal/modules/deals/deallineread.go:dealAmountReadable":            "only the amount mask's yes or no for one deal leaves the statement. Its callers ask the deal or offer object gate first",
 })
 
 // ruledDealReads: a DISCLOSING read the product has ruled needs no deal grant.

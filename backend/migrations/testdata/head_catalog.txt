@@ -3837,7 +3837,9 @@ public.deal.arr_source_offer_id uuid gen=- def=-
 public.deal.captured_by text NOT NULL gen=- def=-
 public.deal.close_date_provisional boolean NOT NULL gen=- def=false
 public.deal.closed_at timestamp with time zone gen=- def=-
+public.deal.commercial_mode text NOT NULL gen=- def='estimate'::text
 public.deal.commercial_motion text gen=- def=-
+public.deal.commercial_revision bigint NOT NULL gen=- def=0
 public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.currency currency_code gen=- def=-
@@ -3847,7 +3849,9 @@ public.deal.deal_amount_minor_js_safe CHECK (((amount_minor >= '-900719925474099
 public.deal.deal_arr_source_same_deal FOREIGN KEY (id, arr_source_offer_id) REFERENCES offer(deal_id, id) ON DELETE SET NULL
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
 public.deal.deal_closed_fx CHECK (((status = 'open'::text) OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))
+public.deal.deal_commercial_mode_check CHECK ((commercial_mode = ANY (ARRAY['estimate'::text, 'lines'::text, 'legacy'::text])))
 public.deal.deal_commercial_motion_check CHECK (((commercial_motion IS NULL) OR (commercial_motion = ANY (ARRAY['new_business'::text, 'renewal'::text, 'upsell'::text, 'cross_sell'::text, 'expansion'::text, 'existing_business'::text]))))
+public.deal.deal_commercial_revision_js_safe CHECK (((commercial_revision >= 0) AND (commercial_revision <= '9007199254740991'::bigint)))
 public.deal.deal_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL (company_id)
 public.deal.deal_description_bounded CHECK (((description IS NULL) OR (length(description) <= 20000)))
 public.deal.deal_expected_arr_minor_js_safe CHECK (((expected_arr_minor >= '-9007199254740991'::bigint) AND (expected_arr_minor <= '9007199254740991'::bigint)))
@@ -4006,6 +4010,53 @@ public.deal_document_hide.deal_id uuid NOT NULL gen=- def=-
 public.deal_document_hide.hidden_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_document_hide.hidden_by text NOT NULL gen=- def=-
 public.deal_document_hide_pkey CREATE UNIQUE INDEX deal_document_hide_pkey ON public.deal_document_hide USING btree (deal_id, attachment_id)
+public.deal_line_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_line_item.billing_interval_months integer gen=- def=-
+public.deal_line_item.billing_model text gen=- def=-
+public.deal_line_item.captured_by text NOT NULL gen=- def=-
+public.deal_line_item.catalog_name text gen=- def=-
+public.deal_line_item.component_kind text gen=- def=-
+public.deal_line_item.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_line_item.currency currency_code NOT NULL gen=- def=-
+public.deal_line_item.deal_id uuid NOT NULL gen=- def=-
+public.deal_line_item.deal_line_item_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12]))))
+public.deal_line_item.deal_line_item_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text]))))
+public.deal_line_item.deal_line_item_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((billing_model = 'one_time'::text) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((billing_model = 'recurring'::text) AND (billing_interval_months IS NOT NULL))))
+public.deal_line_item.deal_line_item_bounded CHECK (((length(unit) <= 100) AND ((catalog_name IS NULL) OR (length(catalog_name) <= 500)) AND ((sku IS NULL) OR (length(sku) <= 200))))
+public.deal_line_item.deal_line_item_component_kind_check CHECK (((component_kind IS NULL) OR (component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text]))))
+public.deal_line_item.deal_line_item_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_line_item.deal_line_item_description_present CHECK (((btrim(description) <> ''::text) AND (length(description) <= 2000)))
+public.deal_line_item.deal_line_item_discount_pct_check CHECK (((discount_pct >= (0)::numeric) AND (discount_pct <= (100)::numeric)))
+public.deal_line_item.deal_line_item_interval_count_check CHECK (((interval_count IS NULL) OR (interval_count > 0)))
+public.deal_line_item.deal_line_item_one_tax_source CHECK (((tax_rate IS NULL) <> (tax_category IS NULL)))
+public.deal_line_item.deal_line_item_pkey PRIMARY KEY (id)
+public.deal_line_item.deal_line_item_position_check CHECK (("position" >= 1))
+public.deal_line_item.deal_line_item_position_unique UNIQUE (deal_id, "position")
+public.deal_line_item.deal_line_item_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
+public.deal_line_item.deal_line_item_quantity_check CHECK (((quantity IS NULL) OR (quantity > (0)::numeric)))
+public.deal_line_item.deal_line_item_tax_category_check CHECK (((tax_category IS NULL) OR (tax_category = ANY (ARRAY['standard'::text, 'reduced'::text, 'exempt'::text]))))
+public.deal_line_item.deal_line_item_tax_rate_check CHECK (((tax_rate IS NULL) OR (tax_rate >= (0)::numeric)))
+public.deal_line_item.deal_line_item_unit_price_minor_check CHECK (((unit_price_minor IS NULL) OR (unit_price_minor >= 0)))
+public.deal_line_item.deal_line_item_unit_price_minor_js_safe CHECK (((unit_price_minor >= '-9007199254740991'::bigint) AND (unit_price_minor <= '9007199254740991'::bigint)))
+public.deal_line_item.deal_line_item_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.deal_line_item.description text NOT NULL gen=- def=-
+public.deal_line_item.discount_pct numeric(5,2) NOT NULL gen=- def=0
+public.deal_line_item.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_line_item.interval_count integer gen=- def=-
+public.deal_line_item.position integer NOT NULL gen=- def=-
+public.deal_line_item.product_id uuid gen=- def=-
+public.deal_line_item.quantity numeric(14,3) gen=- def=-
+public.deal_line_item.sku text gen=- def=-
+public.deal_line_item.tax_category text gen=- def=-
+public.deal_line_item.tax_rate numeric(5,2) gen=- def=-
+public.deal_line_item.trg_deal_line_item_updated CREATE TRIGGER trg_deal_line_item_updated BEFORE UPDATE ON public.deal_line_item FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.deal_line_item.unit text NOT NULL gen=- def='piece'::text
+public.deal_line_item.unit_price_minor bigint gen=- def=-
+public.deal_line_item.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_line_item.version bigint NOT NULL gen=- def=1
+public.deal_line_item_pkey CREATE UNIQUE INDEX deal_line_item_pkey ON public.deal_line_item USING btree (id)
+public.deal_line_item_position_unique CREATE UNIQUE INDEX deal_line_item_position_unique ON public.deal_line_item USING btree (deal_id, "position")
+public.deal_line_item_product_idx CREATE INDEX deal_line_item_product_idx ON public.deal_line_item USING btree (product_id) WHERE (product_id IS NOT NULL)
 public.deal_loss_reason acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_loss_reason.active boolean NOT NULL gen=- def=true
 public.deal_loss_reason.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -4057,19 +4108,25 @@ public.deal_move_dismissal_pkey CREATE UNIQUE INDEX deal_move_dismissal_pkey ON 
 public.deal_pkey CREATE UNIQUE INDEX deal_pkey ON public.deal USING btree (id)
 public.deal_product acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_product.amount_minor bigint gen=- def=-
+public.deal_product.commercial_revision bigint gen=- def=-
 public.deal_product.component_kind text gen=- def=-
 public.deal_product.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_product.currency currency_code gen=- def=-
 public.deal_product.deal_id uuid NOT NULL gen=- def=-
-public.deal_product.deal_product_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
+public.deal_product.deal_product_amount_currency_pair CHECK ((((amount_minor IS NULL) OR (currency IS NOT NULL)) AND ((known_amount_minor IS NULL) OR (currency IS NOT NULL)) AND ((currency IS NULL) OR (amount_minor IS NOT NULL) OR (known_amount_minor IS NOT NULL))))
 public.deal_product.deal_product_amount_minor_check CHECK (((amount_minor IS NULL) OR (amount_minor >= 0)))
 public.deal_product.deal_product_amount_minor_exact CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
+public.deal_product.deal_product_commercial_revision_js_safe CHECK (((commercial_revision >= 0) AND (commercial_revision <= '9007199254740991'::bigint)))
 public.deal_product.deal_product_component_kind_check CHECK ((component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text])))
 public.deal_product.deal_product_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_product.deal_product_known_amount_minor_check CHECK (((known_amount_minor IS NULL) OR (known_amount_minor >= 0)))
+public.deal_product.deal_product_known_amount_minor_exact CHECK (((known_amount_minor >= '-9007199254740991'::bigint) AND (known_amount_minor <= '9007199254740991'::bigint)))
+public.deal_product.deal_product_line_shape CHECK (((source = 'line'::text) = (commercial_revision IS NOT NULL)))
 public.deal_product.deal_product_offer_line_item_id_fkey FOREIGN KEY (offer_line_item_id) REFERENCES offer_line_item(id) ON DELETE SET NULL
 public.deal_product.deal_product_pkey PRIMARY KEY (deal_id, product_id)
 public.deal_product.deal_product_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
-public.deal_product.deal_product_source_check CHECK ((source = ANY (ARRAY['offer'::text, 'manual'::text])))
+public.deal_product.deal_product_source_check CHECK ((source = ANY (ARRAY['offer'::text, 'manual'::text, 'line'::text])))
+public.deal_product.known_amount_minor bigint gen=- def=-
 public.deal_product.offer_line_item_id uuid gen=- def=-
 public.deal_product.product_id uuid NOT NULL gen=- def=-
 public.deal_product.source text NOT NULL gen=- def=-
@@ -6540,6 +6597,7 @@ public.offer.offer_number_rev_unique UNIQUE (offer_number, revision)
 public.offer.offer_number_shape CHECK ((offer_number ~ '^A-[0-9]+$'::text))
 public.offer.offer_pkey PRIMARY KEY (id)
 public.offer.offer_revision_check CHECK ((revision >= 1))
+public.offer.offer_source_commercial_revision_js_safe CHECK (((source_commercial_revision >= 0) AND (source_commercial_revision <= '9007199254740991'::bigint)))
 public.offer.offer_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'sent'::text, 'accepted'::text, 'rejected'::text, 'expired'::text, 'superseded'::text])))
 public.offer.offer_tax_minor_js_safe CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))
 public.offer.offer_template_id_fkey FOREIGN KEY (template_id) REFERENCES offer_template(id) ON DELETE SET NULL (template_id)
@@ -6547,6 +6605,7 @@ public.offer.offer_version_js_safe CHECK (((version >= '-9007199254740991'::bigi
 public.offer.pdf_asset_ref text gen=- def=-
 public.offer.revision integer NOT NULL gen=- def=1
 public.offer.source text NOT NULL gen=- def=-
+public.offer.source_commercial_revision bigint gen=- def=-
 public.offer.status text NOT NULL gen=- def='draft'::text
 public.offer.tax_minor bigint NOT NULL gen=- def=0
 public.offer.template_id uuid gen=- def=-
@@ -6588,6 +6647,7 @@ public.offer_line_item.price_grounded boolean NOT NULL gen=- def=true
 public.offer_line_item.product_id uuid gen=- def=-
 public.offer_line_item.proposal_state text NOT NULL gen=- def='accepted'::text
 public.offer_line_item.quantity numeric(14,3) NOT NULL gen=- def=-
+public.offer_line_item.source_deal_line_id uuid gen=- def=-
 public.offer_line_item.tax_category text gen=- def=-
 public.offer_line_item.tax_rate numeric(5,2) NOT NULL gen=- def=0
 public.offer_line_item.trg_oli_updated CREATE TRIGGER trg_oli_updated BEFORE UPDATE ON public.offer_line_item FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()

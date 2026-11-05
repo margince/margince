@@ -52,6 +52,8 @@ const (
 	VerdictDroppedSwitch   = "dropped:switch_off"
 	VerdictDroppedHuman    = "dropped:human_edit"
 	VerdictDroppedNoChange = "dropped:unchanged"
+	// VerdictDroppedLines is an amount for a deal whose lines state its value.
+	VerdictDroppedLines = "dropped:priced_by_lines"
 	// VerdictDroppedMoved is a deal whose evidence moved between the read and
 	// the write. Nothing applies, and the deal is read again.
 	VerdictDroppedMoved = "dropped:evidence_moved"
@@ -272,6 +274,12 @@ func applyVerdictChange(
 	}
 	if patch.Empty() {
 		return VerdictDroppedNoChange, nil
+	}
+	var owned *LineOwnedValueError
+	if err := refuseTypedMoneyOnLines(ctx, tx, in.DealID, patch); errors.As(err, &owned) {
+		return VerdictDroppedLines, nil
+	} else if err != nil {
+		return "", err
 	}
 	evidence := map[string]any{CorrectionKindEvidenceKey: change.Correction, "basis_owner": in.Owner.String()}
 	maps.Copy(evidence, change.Evidence)

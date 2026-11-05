@@ -1353,6 +1353,22 @@
     },
     {
       "tool": "change_offers",
+      "action": "add_deal_line",
+      "verb": "add_deal_line",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_offers",
       "action": "add_room_document",
       "verb": "add_deal_room_document",
       "allowed_for": [],
@@ -1463,6 +1479,22 @@
     },
     {
       "tool": "change_offers",
+      "action": "refresh_offer_from_deal",
+      "verb": "refresh_offer_from_deal",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_offers",
       "action": "regenerate_offer",
       "verb": "regenerate_offer",
       "allowed_for": [],
@@ -1490,6 +1522,21 @@
         "management",
         "manager",
         "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_offers",
+      "action": "remove_deal_line",
+      "verb": "remove_deal_line",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
         "rep"
       ]
     },
@@ -1670,6 +1717,22 @@
     },
     {
       "tool": "change_offers",
+      "action": "update_deal_line",
+      "verb": "update_deal_line",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_offers",
       "action": "update_room",
       "verb": "update_deal_room",
       "allowed_for": [],
@@ -1704,6 +1767,22 @@
       "tool": "change_offers",
       "action": "update_room_participant",
       "verb": "update_deal_room_participant",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_offers",
+      "action": "use_deal_estimate",
+      "verb": "use_deal_estimate",
       "allowed_for": [],
       "refused_for": [
         "read_only"
@@ -3529,6 +3608,21 @@
         "read_only",
         "rep"
       ]
+    },
+    {
+      "tool": "read_details",
+      "action": "deal_lines",
+      "verb": "read_deal_lines",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",

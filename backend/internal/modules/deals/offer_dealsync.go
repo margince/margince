@@ -65,11 +65,17 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	var amountBefore *int64
 	var arrBefore *int64
 	var currencyBefore *string
+	var mode string
 	if err := tx.QueryRow(ctx,
-		`SELECT status, closed_at, amount_minor, expected_arr_minor, currency
+		`SELECT status, closed_at, amount_minor, expected_arr_minor, currency, commercial_mode
 		   FROM deal WHERE id = $1`,
-		dealID).Scan(&status, &closedAt, &amountBefore, &arrBefore, &currencyBefore); err != nil {
+		dealID).Scan(&status, &closedAt, &amountBefore, &arrBefore, &currencyBefore, &mode); err != nil {
 		return nil, fmt.Errorf("read deal for amount sync: %w", err)
+	}
+	if mode == modeLines {
+		// The deal's lines state its value; accepting an offer records the
+		// acceptance and leaves the deal's figures to its lines.
+		return nil, nil
 	}
 
 	// What the offer says about recurring value, if anything.

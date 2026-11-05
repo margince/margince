@@ -102,6 +102,7 @@
       "field": "action",
       "actions": {
         "accept_offer": "accept_offer",
+        "add_deal_line": "add_deal_line",
         "add_room_document": "add_deal_room_document",
         "archive_contract": "archive_contract",
         "archive_room": "archive_deal_room",
@@ -109,8 +110,10 @@
         "close_room": "close_deal_room",
         "pause_room": "pause_deal_room",
         "record_contract": "create_contract",
+        "refresh_offer_from_deal": "refresh_offer_from_deal",
         "regenerate_offer": "regenerate_offer",
         "reject_offer": "reject_offer",
+        "remove_deal_line": "remove_deal_line",
         "remove_room_document": "remove_deal_room_document",
         "render_offer": "render_offer",
         "renew_contract": "renew_contract",
@@ -122,9 +125,11 @@
         "set_deal_products": "replace_deal_products",
         "set_room_expiry": "set_deal_room_expiry",
         "update_contract": "update_contract",
+        "update_deal_line": "update_deal_line",
         "update_room": "update_deal_room",
         "update_room_document": "update_deal_room_document",
-        "update_room_participant": "update_deal_room_participant"
+        "update_room_participant": "update_deal_room_participant",
+        "use_deal_estimate": "use_deal_estimate"
       }
     },
     "change_relationships": {
@@ -297,6 +302,7 @@
         "contact_profile_fields": "get_contact_profile_fields",
         "contract": "get_contract",
         "deal_legal_reviews": "list_deal_legal_reviews",
+        "deal_lines": "read_deal_lines",
         "deal_margince_changes": "list_deal_margince_changes",
         "deal_products": "list_deal_products",
         "deal_room_brief": "get_deal_room_brief",
