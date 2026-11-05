@@ -99,7 +99,8 @@ func TestAccountCoincidenceDoesNotProveAMeetingFollowUp(t *testing.T) {
 	read := func(end time.Time, want int) {
 		t.Helper()
 		err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
-			count, linked, err := countWeekMeetings(e.repCtx, tx, e.Rep1, meeting.OccurredAt.Add(-time.Hour), end)
+			count, linked, err := countWeekMeetings(e.repCtx, tx, e.Rep1, afterEveryTransition,
+				meeting.OccurredAt.Add(-time.Hour), end)
 			if err == nil && (count != 1 || linked != want) {
 				t.Errorf("held=%d linked=%d, want 1 and %d", count, linked, want)
 			}
