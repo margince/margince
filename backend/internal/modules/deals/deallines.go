@@ -152,7 +152,7 @@ func (s *Store) AddDealLine(ctx context.Context, dealID ids.DealID, in AddDealLi
 		if err := insertDealLine(ctx, tx, dealID, line); err != nil {
 			return err
 		}
-		if err := s.settleDealLines(ctx, tx, open, map[string]any{"line_added": line.ID}); err != nil {
+		if err := s.settleDealLines(ctx, tx, open, lineChange{Kind: "added", After: &line}); err != nil {
 			return err
 		}
 		out, err = s.dealCommercialForCaller(ctx, tx, dealID)
@@ -187,7 +187,7 @@ func (s *Store) UpdateDealLine(ctx context.Context, dealID ids.DealID, lineID id
 		if err := updateDealLineRow(ctx, tx, next); err != nil {
 			return err
 		}
-		if err := s.settleDealLines(ctx, tx, open, map[string]any{"line_changed": lineID}); err != nil {
+		if err := s.settleDealLines(ctx, tx, open, lineChange{Kind: "changed", Before: &current, After: &next}); err != nil {
 			return err
 		}
 		out, err = s.dealCommercialForCaller(ctx, tx, dealID)
@@ -208,13 +208,14 @@ func (s *Store) RemoveDealLine(ctx context.Context, dealID ids.DealID, lineID id
 		if err != nil {
 			return err
 		}
-		if _, ok := open.line(lineID); !ok {
+		removed, ok := open.line(lineID)
+		if !ok {
 			return apperrors.ErrNotFound
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM deal_line_item WHERE id = $1 AND deal_id = $2`, lineID, dealID); err != nil {
 			return fmt.Errorf("delete deal line: %w", err)
 		}
-		if err := s.settleDealLines(ctx, tx, open, map[string]any{"line_removed": lineID}); err != nil {
+		if err := s.settleDealLines(ctx, tx, open, lineChange{Kind: "removed", Before: &removed}); err != nil {
 			return err
 		}
 		out, err = s.dealCommercialForCaller(ctx, tx, dealID)

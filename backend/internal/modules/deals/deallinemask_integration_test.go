@@ -13,9 +13,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -144,4 +147,36 @@ func TestAnAmountVerdictLeavesALinesDealAlone(t *testing.T) {
 		t.Fatalf("the amount verdict came out %v, want %s", result.Outcomes, VerdictDroppedLines)
 	}
 	wantDealAmount(t, e, dealID, 20_000)
+}
+
+// An offer made from the deal states the deal's amount, line by line. A reader
+// masked from the amount reads its header only, through the single read and
+// through the deal's offer list.
+func TestAMaskedReaderGetsNoNumberOfAnOffer(t *testing.T) {
+	e := setupReviewEnv(t)
+	dealID, _, _ := twoStagePipeline(t, e.configEnv)
+	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
+	addProductLine(t, e, dealID, 0, bananas, "100")
+	offer, err := e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{Currency: "EUR", Source: "manual", FromDealRevision: new(int64(1))})
+	if err != nil {
+		t.Fatalf("creating the offer from the deal: %v", err)
+	}
+	single, err := e.store.GetOffer(e.maskedSeller(), ids.From[ids.OfferKind](ids.UUID(offer.Id)), storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("the masked single read: %v", err)
+	}
+	listed, _, err := e.store.ListDealOffers(e.maskedSeller(), dealID, ListDealOffersInput{})
+	if err != nil || len(listed) != 1 {
+		t.Fatalf("the masked list read %d offers (%v)", len(listed), err)
+	}
+	for name, read := range map[string]crmcontracts.Offer{"single": single, "list": listed[0]} {
+		if read.MoneyWithheld == nil || !*read.MoneyWithheld || read.NetMinor != nil || read.GrossMinor != nil ||
+			read.TaxMinor != nil || read.ArrMinor != nil || read.NetTcvMinor != nil || len(*read.LineItems) != 0 {
+			t.Fatalf("the masked %s read carries money: %+v", name, read)
+		}
+	}
+	open, err := e.store.GetOffer(e.productCtx(), ids.From[ids.OfferKind](ids.UUID(offer.Id)), storekit.LiveOnly)
+	if err != nil || open.NetMinor == nil || *open.NetMinor != 20_000 || open.MoneyWithheld != nil {
+		t.Fatalf("a reader of the amount lost the offer's money: %+v (%v)", open, err)
+	}
 }

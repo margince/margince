@@ -4212,11 +4212,15 @@ export const en = {
     "The deal’s value is the net of these lines, without tax. An offer copies them later.",
   "deal.lines.replacesEstimate":
     "Saving replaces the typed value of {amount}. The old value stays in the history.",
+  "deal.lines.partlySaved":
+    "{saved} of {total} changes were saved. The next one failed: {reason}",
   "deal.lines.addProduct": "Add a product",
   "deal.lines.customItem": "Custom item",
   "deal.lines.addCustom": "Add item",
   "deal.offerNeedsCompleteLines":
     "Give every product a quantity and a price first. An offer copies the deal’s products.",
+  "offer.moneyWithheld":
+    "Your role does not show this deal’s value, so the offer’s prices are hidden.",
   "offer.fromDeal.title": "Made from the deal’s products",
   "offer.fromDeal.stale": "The deal changed since this offer was created",
   "offer.fromDeal.body":

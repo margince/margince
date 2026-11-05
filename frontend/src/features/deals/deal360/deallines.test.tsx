@@ -147,4 +147,101 @@ describe("a deal priced from its lines", () => {
       billing_model: "one_time",
     });
   });
+
+  it("sends a negotiated price and a new name for a product picked from the catalogue", async () => {
+    const posted: unknown[] = [];
+    show(ESTIMATE, posted);
+    installFetchStub({
+      [`GET /deals/${DEAL}/products`]: () => jsonResponse({ data: [] }),
+      [`GET /deals/${DEAL}/lines`]: () => jsonResponse(ESTIMATE),
+      "GET /products": () =>
+        jsonResponse({
+          data: [{ id: "p-banana", name: "Bananas" }],
+          next_cursor: null,
+          has_more: false,
+        }),
+      [`POST /deals/${DEAL}/lines`]: (body) => {
+        posted.push(body);
+        return jsonResponse(BANANAS);
+      },
+    });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Price from products" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.type(
+      within(dialog).getByRole("searchbox", { name: "Add a product" }),
+      "Ban",
+    );
+    await user.click(
+      await within(dialog).findByRole("button", { name: /Bananas/ }),
+    );
+    const description = within(dialog).getByRole("textbox", {
+      name: "Description",
+    });
+    await user.clear(description);
+    await user.type(description, "Ripe bananas");
+    await user.type(
+      within(dialog).getByRole("spinbutton", { name: "Selling price" }),
+      "1.80",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Save products" }),
+    );
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      product_id: "p-banana",
+      description: "Ripe bananas",
+      unit_price_minor: 180,
+    });
+  });
+
+  it("says which changes saved when one in the middle fails, and keeps the dialog open", async () => {
+    const patched: unknown[] = [];
+    installFetchStub({
+      [`GET /deals/${DEAL}/products`]: () => jsonResponse({ data: [] }),
+      [`GET /deals/${DEAL}/lines`]: () => jsonResponse(BANANAS),
+      [`PATCH /deals/${DEAL}/lines/l-1`]: (body) => {
+        patched.push(body);
+        return jsonResponse({ ...BANANAS, commercial_revision: 2 });
+      },
+      [`POST /deals/${DEAL}/lines`]: () =>
+        jsonResponse(
+          {
+            type: "about:blank",
+            title: "Validation failed",
+            status: 422,
+            detail: "description is required",
+          },
+          422,
+        ),
+    });
+    renderWithQueryClient(
+      <DealProductsCard dealId={DEAL} currency="EUR" typedAmount={null} />,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Edit products" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const quantity = within(dialog).getByRole("spinbutton", {
+      name: "Quantity",
+    });
+    await user.clear(quantity);
+    await user.type(quantity, "150");
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Custom item" }),
+      "Ripening",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "Save products" }),
+    );
+    expect(
+      await within(dialog).findByText(/1 of 2 changes were saved/),
+    ).toBeTruthy();
+    expect(patched).toHaveLength(1);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
 });

@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The deal columns a line write moves besides the money.
@@ -24,7 +25,7 @@ const (
 // transaction. The deal row goes through the patch seam, so its forecast move
 // is recorded. Then come the product split, the audit row and deal.updated. A
 // failure anywhere rolls the line write back with it.
-func (s *Store) settleDealLines(ctx context.Context, tx pgx.Tx, open openedDealLines, evidence map[string]any) error {
+func (s *Store) settleDealLines(ctx context.Context, tx pgx.Tx, open openedDealLines, change lineChange) error {
 	lines, err := readDealLineRows(ctx, tx, open.DealID)
 	if err != nil {
 		return err
@@ -54,7 +55,7 @@ func (s *Store) settleDealLines(ctx context.Context, tx pgx.Tx, open openedDealL
 	if err != nil {
 		return err
 	}
-	return recordDealLineWrite(ctx, tx, open, p, productMove{Before: before, After: products}, evidence)
+	return recordDealLineWrite(ctx, tx, open, p, productMove{Before: before, After: products}, change.evidence(), change.event())
 }
 
 // setLineMoney writes the deal's amount, recurring value and currency from
@@ -100,7 +101,8 @@ func (s *Store) leaveLinesMode(ctx context.Context, tx pgx.Tx, open openedDealLi
 	if err := applyDealLineValueLocked(ctx, tx, p, open.Lock); err != nil {
 		return fmt.Errorf("return the deal to an estimate: %w", err)
 	}
-	return recordDealLineWrite(ctx, tx, open, p, productMove{}, map[string]any{"use_estimate": true})
+	estimate := map[string]any{"use_estimate": true}
+	return recordDealLineWrite(ctx, tx, open, p, productMove{}, estimate, estimate)
 }
 
 // projectDealLineProducts rewrites the deal's product split from its lines:
@@ -144,14 +146,60 @@ func projectDealLineProducts(ctx context.Context, tx pgx.Tx, open openedDealLine
 		if sum.complete {
 			amount = &sum.known
 		}
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO deal_product (deal_id, product_id, source, amount_minor, known_amount_minor, currency, component_kind, commercial_revision)
-			 VALUES ($1, $2, 'line', $3, $4, $5, $6, $7)`,
-			open.DealID, key, amount, sum.known, sum.currency, sum.kind, revision); err != nil {
+		cols, holders, args := columnValues(
+			columnValue{"deal_id", open.DealID}, columnValue{"product_id", key}, columnValue{"source", "line"},
+			columnValue{"amount_minor", amount}, columnValue{"known_amount_minor", sum.known},
+			columnValue{"currency", sum.currency}, columnValue{"component_kind", sum.kind},
+			columnValue{"commercial_revision", revision})
+		if _, err := tx.Exec(ctx, `INSERT INTO deal_product (`+cols+`) VALUES (`+holders+`)`, args...); err != nil {
 			return nil, fmt.Errorf("write a line product: %w", err)
 		}
 	}
 	return readDealProducts(ctx, tx, open.DealID)
+}
+
+// lineChange is the line a write added, changed or removed, as it stood on
+// either side. The audit keeps both images; the event names only the line.
+type lineChange struct {
+	Kind          string
+	Before, After *dealLineRow
+}
+
+func (c lineChange) id() ids.UUID {
+	if c.After != nil {
+		return c.After.ID
+	}
+	return c.Before.ID
+}
+
+// evidence is what the audit row records about the line itself.
+//
+//craft:ignore naked-any the evidence is the jsonb object the audit seam stores
+func (c lineChange) evidence() map[string]any {
+	evidence := lineFieldEvidence(c.id(), dealLineImage(c.Before), dealLineImage(c.After))
+	evidence["line_change"] = c.Kind
+	return evidence
+}
+
+//craft:ignore naked-any an event's changed fields are a free-form object
+func (c lineChange) event() map[string]any {
+	return map[string]any{"line_change": c.Kind, lineIDKey: c.id()}
+}
+
+// dealLineImage is one line's fields as the audit records them, nil for a
+// line that is not there.
+//
+//craft:ignore naked-any an audit image carries whatever SQL types its columns hold
+func dealLineImage(line *dealLineRow) map[string]any {
+	if line == nil {
+		return nil
+	}
+	return map[string]any{
+		"product_id": line.ProductID, descriptionColumn: line.Description, "unit": line.Unit,
+		"quantity": line.Quantity, "unit_price_minor": line.UnitPriceMinor, "currency": line.Currency,
+		"discount_pct": line.DiscountPct, "tax_rate": line.TaxRate, taxCategoryField: line.TaxCategory,
+		"billing_model": line.BillingModel, billingIntervalColumn: line.IntervalMonths, intervalCountField: line.IntervalCount,
+	}
 }
 
 // productMove is the deal's product split before and after a line write.
@@ -160,7 +208,7 @@ type productMove struct{ Before, After []crmcontracts.DealProduct }
 // recordDealLineWrite audits the deal's move and publishes it as one
 // deal.updated. The event carries the commercial revision on every write, so
 // a subscriber can tell an equal-total edit from no edit.
-func recordDealLineWrite(ctx context.Context, tx pgx.Tx, open openedDealLines, p *storekit.Patch, products productMove, evidence map[string]any) error {
+func recordDealLineWrite(ctx context.Context, tx pgx.Tx, open openedDealLines, p *storekit.Patch, products productMove, evidence, event map[string]any) error {
 	before, after := maps.Clone(p.Before()), maps.Clone(p.After())
 	if products.Before != nil || products.After != nil {
 		before["products"], after["products"] = allocationImage(products.Before), allocationImage(products.After)
@@ -170,7 +218,7 @@ func recordDealLineWrite(ctx context.Context, tx pgx.Tx, open openedDealLines, p
 		return fmt.Errorf("audit the deal's lines: %w", err)
 	}
 	changed := maps.Clone(after)
-	maps.Copy(changed, evidence)
+	maps.Copy(changed, event)
 	updated := crmcontracts.PublicEventDealUpdated{ChangedFields: changed}
 	updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
 	if err := storekit.EmitEvent(ctx, tx, auditID, open.DealID.UUID, updated); err != nil {

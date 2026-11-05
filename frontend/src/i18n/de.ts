@@ -4243,11 +4243,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Wert des Deals ist der Nettobetrag dieser Positionen, ohne Steuer. Ein Angebot übernimmt sie später.",
   "deal.lines.replacesEstimate":
     "Speichern ersetzt den eingegebenen Wert von {amount}. Der alte Wert bleibt im Verlauf.",
+  "deal.lines.partlySaved":
+    "{saved} von {total} Änderungen wurden gespeichert. Die nächste schlug fehl: {reason}",
   "deal.lines.addProduct": "Produkt hinzufügen",
   "deal.lines.customItem": "Eigene Position",
   "deal.lines.addCustom": "Position hinzufügen",
   "deal.offerNeedsCompleteLines":
     "Gib zuerst jedem Produkt eine Menge und einen Preis. Ein Angebot übernimmt die Produkte des Deals.",
+  "offer.moneyWithheld":
+    "Deine Rolle zeigt den Wert dieses Deals nicht, daher sind die Preise des Angebots ausgeblendet.",
   "offer.fromDeal.title": "Aus den Produkten des Deals erstellt",
   "offer.fromDeal.stale": "Der Deal hat sich seit diesem Angebot geändert",
   "offer.fromDeal.body":

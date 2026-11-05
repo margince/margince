@@ -125,13 +125,15 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	}
 
 	id := ids.New[ids.OfferKind]()
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
-		                    buyer_company_id, valid_until, intro_text, terms_text, template_id, source, captured_by,
-		                    legal_entity_id, language, source_commercial_revision)
-		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-		id, dealID, number, in.Currency, in.BuyerCompanyID, in.ValidUntil, in.IntroText, in.TermsText,
-		in.TemplateID, in.Source, by, entity, in.Language, fromRevision); err != nil {
+	cols, holders, args := columnValues(
+		columnValue{"id", id}, columnValue{"deal_id", dealID}, columnValue{"offer_number", number},
+		columnValue{"revision", 1}, columnValue{"status", "draft"}, columnValue{"currency", in.Currency},
+		columnValue{"buyer_company_id", in.BuyerCompanyID}, columnValue{"valid_until", in.ValidUntil},
+		columnValue{"intro_text", in.IntroText}, columnValue{"terms_text", in.TermsText},
+		columnValue{"template_id", in.TemplateID}, columnValue{"source", in.Source}, columnValue{"captured_by", by},
+		columnValue{"legal_entity_id", entity}, columnValue{"language", in.Language},
+		columnValue{"source_commercial_revision", fromRevision})
+	if _, err := tx.Exec(ctx, `INSERT INTO offer (`+cols+`) VALUES (`+holders+`)`, args...); err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("insert offer: %w", err)
 	}
 	if err := insertOfferLines(ctx, tx, id, in.Currency, languageOf(in.Language), basis, in.LineItems); err != nil {

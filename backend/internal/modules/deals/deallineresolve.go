@@ -159,27 +159,26 @@ func insertDealLine(ctx context.Context, tx pgx.Tx, dealID ids.DealID, line deal
 	if err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO deal_line_item (id, deal_id, position, product_id, catalog_name, sku, description, unit,
-		                             quantity, unit_price_minor, currency, discount_pct, tax_rate, tax_category,
-		                             billing_model, billing_interval_months, interval_count, component_kind, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-		line.ID, dealID, line.Position, line.ProductID, line.CatalogName, line.SKU, line.Description, line.Unit,
-		line.Quantity, line.UnitPriceMinor, line.Currency, line.DiscountPct, line.TaxRate, line.TaxCategory,
-		line.BillingModel, line.IntervalMonths, line.IntervalCount, line.ComponentKind, by); err != nil {
+	cols, holders, args := columnValues(append(dealLineValues(line),
+		columnValue{"id", line.ID}, columnValue{"deal_id", dealID}, columnValue{"position", line.Position},
+		columnValue{"product_id", line.ProductID}, columnValue{"catalog_name", line.CatalogName},
+		columnValue{"sku", line.SKU}, columnValue{"currency", line.Currency},
+		columnValue{"component_kind", line.ComponentKind}, columnValue{"captured_by", by})...)
+	if _, err := tx.Exec(ctx, `INSERT INTO deal_line_item (`+cols+`) VALUES (`+holders+`)`, args...); err != nil {
 		return fmt.Errorf("insert deal line: %w", err)
 	}
 	return nil
 }
 
 func updateDealLineRow(ctx context.Context, tx pgx.Tx, line dealLineRow) error {
+	args := []any{line.ID, line.Version}
+	sets := make([]string, 0, 10)
+	for _, pair := range dealLineValues(line) {
+		args = append(args, pair.value)
+		sets = append(sets, storekit.SQLf("%s = $%d", pair.column, len(args)))
+	}
 	tag, err := tx.Exec(ctx,
-		`UPDATE deal_line_item SET description = $2, unit = $3, quantity = $4, unit_price_minor = $5,
-		        discount_pct = $6, tax_rate = $7, tax_category = $8, billing_model = $9,
-		        billing_interval_months = $10, interval_count = $11
-		  WHERE id = $1 AND version = $12`,
-		line.ID, line.Description, line.Unit, line.Quantity, line.UnitPriceMinor, line.DiscountPct, line.TaxRate,
-		line.TaxCategory, line.BillingModel, line.IntervalMonths, line.IntervalCount, line.Version)
+		`UPDATE deal_line_item SET `+strings.Join(sets, ", ")+` WHERE id = $1 AND version = $2`, args...)
 	if err != nil {
 		return fmt.Errorf("update deal line: %w", err)
 	}
@@ -187,6 +186,34 @@ func updateDealLineRow(ctx context.Context, tx pgx.Tx, line dealLineRow) error {
 		return &apperrors.VersionSkewError{Message: "The line changed while it was saved. Reload the deal's products and apply your change again."}
 	}
 	return nil
+}
+
+// columnValue is one column a statement writes and the value it takes, kept
+// together so a placeholder can never drift from its column.
+type columnValue struct {
+	column string
+	value  any
+}
+
+// columnValues renders an INSERT's column list and placeholders from pairs.
+func columnValues(pairs ...columnValue) (cols, holders string, args []any) {
+	names := make([]string, 0, len(pairs))
+	args = make([]any, 0, len(pairs))
+	for _, pair := range pairs {
+		names = append(names, pair.column)
+		args = append(args, pair.value)
+	}
+	return strings.Join(names, ", "), storekit.Placeholders(args), args
+}
+
+// dealLineValues are the columns a seller can change on a line.
+func dealLineValues(line dealLineRow) []columnValue {
+	return []columnValue{
+		{descriptionColumn, line.Description}, {"unit", line.Unit}, {"quantity", line.Quantity},
+		{"unit_price_minor", line.UnitPriceMinor}, {"discount_pct", line.DiscountPct}, {"tax_rate", line.TaxRate},
+		{taxCategoryField, line.TaxCategory}, {"billing_model", line.BillingModel},
+		{billingIntervalColumn, line.IntervalMonths}, {intervalCountField, line.IntervalCount},
+	}
 }
 
 // sameDealLine answers whether an edit left the line as it was, comparing

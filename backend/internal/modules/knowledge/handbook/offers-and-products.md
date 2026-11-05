@@ -11,9 +11,12 @@ To price a deal from its products in Margince, open the deal and click **Price f
 1. Pick a product under **Add a product**, or type a **Custom item** and click **Add item**.
 2. Fill **Quantity** and **Selling price** on each line, and say whether it is paid once or repeats.
 3. Click **Save products**.
-The deal's value is then the net of its lines, without tax: 100 bananas at €2 make a deal worth €200. A line that repeats counts once for each period agreed. Once a deal has lines, **Edit products** on the same card changes them.
+
+The deal's value is then the net of its lines, without tax: 100 pieces at €2 make a deal worth €200. A line that repeats counts once for each period agreed. Once a deal has lines, **Edit products** on the same card changes them.
+
 If the deal held a value somebody typed, the editor says: "Saving replaces the typed value of …". The old value stays in the deal's history and is not added to the lines.
-While a line has no quantity or price, the card says "Pricing incomplete", with the part known so far. The deal then has no value, not zero, and cannot be won until every line is complete.
+
+While a line has no quantity or price, the card says "Pricing incomplete", with the part that has a price so far. The deal then has no value, not zero, and cannot be won until every line is complete.
 A deal priced from its products refuses a typed value and a hand-set product list. Change its lines instead.
 Also called: line items on a deal, deal products, quote lines before the quote.
 
@@ -28,7 +31,9 @@ Also called: quote, quotation, proposal, estimate.
 
 ### How do I make an offer from the deal's products?
 On a deal priced from its products, **New offer** copies the deal's lines into a new draft. You do not type them again. Each product takes its name in the offer's language. The offer says "Made from the deal's products", and its lines change only through the deal.
+
 When the deal changes later, the offer says "The deal changed since this offer was created". A draft then shows **Refresh from deal**, which takes the deal's lines again and keeps the header. A sent offer stays as it was: use **Regenerate revision** for the new terms.
+
 **Accept** on such an offer records the buyer's answer and leaves the deal's value to its lines.
 The deal's value has no tax. The offer works out its tax on the day you send it, so the two can show a different gross.
 

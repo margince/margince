@@ -258,3 +258,55 @@ func TestRemovingTheLastLineLeavesTheDealUnpriced(t *testing.T) {
 		t.Fatalf("the emptied deal carries amount %d", *deal.AmountMinor)
 	}
 }
+
+// lineEvidence reads the newest audit row's evidence for the deal.
+func lineEvidence(t *testing.T, e *reviewEnv, dealID ids.DealID) map[string]any {
+	t.Helper()
+	var evidence map[string]any
+	if err := e.owner.QueryRow(t.Context(),
+		`SELECT evidence FROM audit_log WHERE entity_type = 'deal' AND entity_id = $1 ORDER BY occurred_at DESC, id DESC LIMIT 1`,
+		dealID).Scan(&evidence); err != nil {
+		t.Fatalf("reading the audit evidence: %v", err)
+	}
+	return evidence
+}
+
+// lineEvidenceField is one text field of a line image in the evidence.
+func lineEvidenceField(evidence map[string]any, side, field string) string {
+	image, _ := evidence[side].(map[string]any)
+	text, _ := image[field].(string)
+	return text
+}
+
+// Every line write records the line as it stood on either side, so a change
+// that moves no total still says what changed.
+func TestALineWriteAuditsTheLineOnBothSides(t *testing.T) {
+	e := setupReviewEnv(t)
+	dealID, _, _ := twoStagePipeline(t, e.configEnv)
+	state, err := e.store.AddDealLine(e.productCtx(), dealID, AddDealLineInput{
+		Currency: new("EUR"), Description: new("Ripening"), Quantity: new("2"), UnitPriceMinor: new(int64(300)), BillingModel: new(BillingOneTime),
+	})
+	if err != nil {
+		t.Fatalf("adding the line: %v", err)
+	}
+	added := lineEvidence(t, e, dealID)
+	if added["line_change"] != "added" || added["line_before"] != nil || lineEvidenceField(added, "line_after", "description") != "Ripening" {
+		t.Fatalf("the add audited %v", added)
+	}
+	lineID := ids.UUID(state.Lines[0].Id)
+	state, err = e.store.UpdateDealLine(e.productCtx(), dealID, lineID, UpdateDealLineInput{ExpectedRevision: 1, Description: new("Ripening service")})
+	if err != nil {
+		t.Fatalf("renaming the line: %v", err)
+	}
+	renamed := lineEvidence(t, e, dealID)
+	if lineEvidenceField(renamed, "line_before", "description") != "Ripening" || lineEvidenceField(renamed, "line_after", "description") != "Ripening service" {
+		t.Fatalf("the rename audited %v", renamed)
+	}
+	if _, err := e.store.RemoveDealLine(e.productCtx(), dealID, lineID, state.CommercialRevision); err != nil {
+		t.Fatalf("removing the line: %v", err)
+	}
+	removed := lineEvidence(t, e, dealID)
+	if removed["line_change"] != "removed" || removed["line_after"] != nil || lineEvidenceField(removed, "line_before", "description") != "Ripening service" {
+		t.Fatalf("the removal audited %v", removed)
+	}
+}

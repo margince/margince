@@ -102,7 +102,10 @@ func (s *Store) ListDealOffers(ctx context.Context, dealID ids.DealID, in ListDe
 		if err := withholdUnreadableBuyer(ctx, tx, offers); err != nil {
 			return err
 		}
-		return attachOfferLines(ctx, tx, offers)
+		if err := attachOfferLines(ctx, tx, offers); err != nil {
+			return err
+		}
+		return withholdOfferMoney(ctx, tx, offers)
 	})
 	if offers == nil {
 		offers = []crmcontracts.Offer{}
@@ -269,7 +272,11 @@ func readOfferWithLines(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived
 	}
 	offer.ArrMinor = &recurring.ArrMinor
 	offer.NetTcvMinor = &recurring.NetTcvMinor
-	return offer, nil
+	one := []crmcontracts.Offer{offer}
+	if err := withholdOfferMoney(ctx, tx, one); err != nil {
+		return crmcontracts.Offer{}, err
+	}
+	return one[0], nil
 }
 
 // recurringInputsOf turns the read lines back into what the recurring engine

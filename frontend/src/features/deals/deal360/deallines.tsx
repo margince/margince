@@ -15,7 +15,7 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../../design-system/recordpicker";
-import { formatMoneyOrAbsent } from "../../../format/format";
+import { formatMoneyOrAbsent, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
@@ -58,6 +58,8 @@ type DraftLine = {
   quantity: string;
   priceMinor: number | null;
   billing: LineBilling;
+  // The product's name as the picker named it, for a line not saved yet.
+  catalogName?: string;
 };
 
 function billingOfLine(line: DealLine): LineBilling {
@@ -113,64 +115,98 @@ function changedFields(saved: DealLine, draft: DraftLine) {
   return Object.keys(body).length > 0 ? body : null;
 }
 
-/**
- * Saves the draft against the server one change at a time. Each answer
- * carries the next revision, so a colleague's edit in between stops the save
- * with a reload message instead of being overwritten.
- */
-async function saveDraft(
+/** Where a save stopped: the server's state after the last change it took. */
+type SaveOutcome = {
+  state: DealCommercial;
+  saved: number;
+  total: number;
+  error?: unknown;
+};
+
+type SaveStep = (state: DealCommercial) => Promise<DealCommercial>;
+
+function newLineBody(row: DraftLine, state: DealCommercial, replace: boolean) {
+  // A product line sends only what the seller changed from the catalogue.
+  const renamed = row.productId && row.description.trim() !== row.catalogName;
+  return {
+    expected_revision: state.commercial_revision,
+    replace_estimate: replace || undefined,
+    currency: state.currency ?? undefined,
+    product_id: row.productId,
+    description: !row.productId || renamed ? row.description.trim() : undefined,
+    quantity: quantityOf(row.quantity),
+    unit_price_minor:
+      row.priceMinor === null && row.productId ? undefined : row.priceMinor,
+    ...lineBillingBody(row.billing),
+  };
+}
+
+function saveSteps(
   dealId: string,
   start: DealCommercial,
   draft: readonly DraftLine[],
   replaceEstimate: boolean,
   t: (key: MessageKey) => string,
-): Promise<DealCommercial> {
-  let state = start;
+): SaveStep[] {
   const kept = new Set(draft.flatMap((row) => (row.id ? [row.id] : [])));
-  for (const line of start.lines.filter((row) => !kept.has(row.id))) {
-    state = unwrap(
-      await api.DELETE("/deals/{id}/lines/{lineId}", {
-        params: {
-          path: { id: dealId, lineId: line.id },
-          query: { expected_revision: state.commercial_revision },
-        },
-      }),
-      t,
+  const steps: SaveStep[] = start.lines
+    .filter((row) => !kept.has(row.id))
+    .map(
+      (line) => async (state) =>
+        unwrap(
+          await api.DELETE("/deals/{id}/lines/{lineId}", {
+            params: {
+              path: { id: dealId, lineId: line.id },
+              query: { expected_revision: state.commercial_revision },
+            },
+          }),
+          t,
+        ),
     );
-  }
   for (const row of draft) {
     const saved = start.lines.find((line) => line.id === row.id);
-    if (saved) {
-      const body = changedFields(saved, row);
-      if (body) {
-        state = unwrap(
+    const body = saved ? changedFields(saved, row) : null;
+    if (saved && body) {
+      steps.push(async (state) =>
+        unwrap(
           await api.PATCH("/deals/{id}/lines/{lineId}", {
             params: { path: { id: dealId, lineId: saved.id } },
             body: { ...body, expected_revision: state.commercial_revision },
           }),
           t,
-        );
-      }
-      continue;
+        ),
+      );
     }
-    state = unwrap(
-      await api.POST("/deals/{id}/lines", {
-        params: { path: { id: dealId } },
-        body: {
-          expected_revision: state.commercial_revision,
-          replace_estimate: replaceEstimate || undefined,
-          currency: state.currency ?? undefined,
-          product_id: row.productId,
-          description: row.productId ? undefined : row.description.trim(),
-          quantity: quantityOf(row.quantity),
-          unit_price_minor: row.productId ? undefined : row.priceMinor,
-          ...lineBillingBody(row.billing),
-        },
-      }),
-      t,
-    );
+    if (!saved) {
+      steps.push(async (state) =>
+        unwrap(
+          await api.POST("/deals/{id}/lines", {
+            params: { path: { id: dealId } },
+            body: newLineBody(row, state, replaceEstimate),
+          }),
+          t,
+        ),
+      );
+    }
   }
-  return state;
+  return steps;
+}
+
+/**
+ * Saves the draft one change at a time. Each change commits on its own and
+ * answers the next revision. A failure stops the save, which then reports how
+ * far it got and the server's state at that point.
+ */
+async function saveDraft(steps: readonly SaveStep[], start: DealCommercial) {
+  let state = start;
+  for (const [index, step] of steps.entries()) {
+    try {
+      state = await step(state);
+    } catch (error) {
+      return { state, saved: index, total: steps.length, error } as SaveOutcome;
+    }
+  }
+  return { state, saved: steps.length, total: steps.length } as SaveOutcome;
 }
 
 const MISSING_LABEL: Record<DealCommercial["missing"][number], MessageKey> = {
@@ -303,6 +339,7 @@ export function DealLinesEditor({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const client = useQueryClient();
   const [draft, setDraft] = useState<DraftLine[]>(() =>
     state.lines.map(draftOf),
@@ -310,21 +347,33 @@ export function DealLinesEditor({
   const [custom, setCustom] = useState("");
   const [currency, setCurrency] = useState(state.currency ?? "");
   const replaces = state.mode !== "lines" && typedAmount !== null;
+  const [partial, setPartial] = useState<string | null>(null);
   const save = useMutation({
-    mutationFn: () =>
-      saveDraft(
-        dealId,
-        { ...state, currency: state.currency ?? (currency || null) },
-        draft,
-        replaces,
-        t,
-      ),
-    onSuccess: (saved) => {
-      client.setQueryData(dealLinesKey(dealId), saved);
+    mutationFn: () => {
+      const start = {
+        ...state,
+        currency: state.currency ?? (currency || null),
+      };
+      return saveDraft(saveSteps(dealId, start, draft, replaces, t), start);
+    },
+    onSuccess: (outcome) => {
+      client.setQueryData(dealLinesKey(dealId), outcome.state);
       void client.invalidateQueries({ queryKey: ["deal", dealId] });
       void client.invalidateQueries({ queryKey: ["deal-products", dealId] });
       void client.invalidateQueries({ queryKey: REPORTING_EVALUATION_KEY });
-      onClose();
+      if (outcome.error === undefined) {
+        onClose();
+        return;
+      }
+      // What did save stays saved; the editor starts again from it.
+      setDraft(outcome.state.lines.map(draftOf));
+      setPartial(
+        t("deal.lines.partlySaved", {
+          saved: formatNumber(outcome.saved, locale),
+          total: formatNumber(outcome.total, locale),
+          reason: problemMessageOf(outcome.error, t),
+        }),
+      );
     },
   });
   const update = (key: string, next: DraftLine) =>
@@ -338,6 +387,7 @@ export function DealLinesEditor({
         key: `new-${rows.length}-${candidate.id}`,
         productId: candidate.id,
         description: candidate.name,
+        catalogName: candidate.name,
         quantity: "",
         priceMinor: null,
         billing: EMPTY_LINE_BILLING,
@@ -367,7 +417,7 @@ export function DealLinesEditor({
       title={t("deal.lines.editTitle")}
       confirmLabel={t("deal.lines.save")}
       pending={save.isPending}
-      error={save.error ? problemMessageOf(save.error, t) : null}
+      error={save.error ? problemMessageOf(save.error, t) : partial}
       onConfirm={() => save.mutate()}
     >
       <p className="t-body">{t("deal.lines.intro")}</p>

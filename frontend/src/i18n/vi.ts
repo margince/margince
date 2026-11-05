@@ -4136,11 +4136,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Giá trị giao dịch là tổng ròng của các mục này, chưa gồm thuế. Báo giá sẽ sao chép chúng sau.",
   "deal.lines.replacesEstimate":
     "Khi lưu, giá trị đã nhập {amount} sẽ được thay thế. Giá trị cũ vẫn còn trong lịch sử.",
+  "deal.lines.partlySaved":
+    "Đã lưu {saved} trên {total} thay đổi. Thay đổi tiếp theo không thành công: {reason}",
   "deal.lines.addProduct": "Thêm sản phẩm",
   "deal.lines.customItem": "Mục riêng",
   "deal.lines.addCustom": "Thêm mục",
   "deal.offerNeedsCompleteLines":
     "Trước hết hãy nhập số lượng và giá cho mọi sản phẩm. Báo giá sao chép sản phẩm của giao dịch.",
+  "offer.moneyWithheld":
+    "Vai trò của bạn không hiển thị giá trị của giao dịch này, nên giá trong báo giá bị ẩn.",
   "offer.fromDeal.title": "Tạo từ sản phẩm của giao dịch",
   "offer.fromDeal.stale": "Giao dịch đã thay đổi kể từ khi tạo báo giá này",
   "offer.fromDeal.body":

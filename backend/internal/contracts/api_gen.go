@@ -52950,7 +52950,10 @@ type Offer struct {
 	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
 	LineItems     *[]OfferLineItem    `json:"line_items,omitempty"`
 
-	// NetMinor Σ line nets; derived, never client-set.
+	// MoneyWithheld True for a reader the deal's amount is masked from. Such a reader gets no totals, no lines, no exchange rate and no PDF: the offer states the deal's amount by another name.
+	MoneyWithheld *bool `json:"money_withheld,omitempty"`
+
+	// NetMinor Σ line nets; derived, never client-set. Absent when money_withheld.
 	NetMinor *int64 `json:"net_minor,omitempty"`
 
 	// NetTcvMinor The total the buyer commits to: one-off lines in full, plus each recurring line's per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.
@@ -84110,6 +84113,14 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 		delete(object, "line_items")
 	}
 
+	if raw, found := object["money_withheld"]; found {
+		err = json.Unmarshal(raw, &a.MoneyWithheld)
+		if err != nil {
+			return fmt.Errorf("error reading 'money_withheld': %w", err)
+		}
+		delete(object, "money_withheld")
+	}
+
 	if raw, found := object["net_minor"]; found {
 		err = json.Unmarshal(raw, &a.NetMinor)
 		if err != nil {
@@ -84331,9 +84342,11 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	object["gross_minor"], err = json.Marshal(a.GrossMinor)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'gross_minor': %w", err)
+	if a.GrossMinor != nil {
+		object["gross_minor"], err = json.Marshal(a.GrossMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'gross_minor': %w", err)
+		}
 	}
 
 	object["id"], err = json.Marshal(a.Id)
@@ -84376,9 +84389,18 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	object["net_minor"], err = json.Marshal(a.NetMinor)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'net_minor': %w", err)
+	if a.MoneyWithheld != nil {
+		object["money_withheld"], err = json.Marshal(a.MoneyWithheld)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'money_withheld': %w", err)
+		}
+	}
+
+	if a.NetMinor != nil {
+		object["net_minor"], err = json.Marshal(a.NetMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'net_minor': %w", err)
+		}
 	}
 
 	if a.NetTcvMinor != nil {
@@ -84422,9 +84444,11 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'status': %w", err)
 	}
 
-	object["tax_minor"], err = json.Marshal(a.TaxMinor)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'tax_minor': %w", err)
+	if a.TaxMinor != nil {
+		object["tax_minor"], err = json.Marshal(a.TaxMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tax_minor': %w", err)
+		}
 	}
 
 	if a.TemplateId != nil {

@@ -51660,19 +51660,19 @@ export interface components {
             terms_text?: string | null;
             /**
              * Format: int64
-             * @description Σ line nets; derived, never client-set.
+             * @description Σ line nets; derived, never client-set. Absent when money_withheld.
              */
-            readonly net_minor: number;
+            readonly net_minor?: number;
             /**
              * Format: int64
              * @description Σ line taxes; derived, never client-set.
              */
-            readonly tax_minor: number;
+            readonly tax_minor?: number;
             /**
              * Format: int64
              * @description net + tax; derived, never client-set.
              */
-            readonly gross_minor: number;
+            readonly gross_minor?: number;
             /**
              * Format: int64
              * @description The annualized NET value of this offer's recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.
@@ -51713,6 +51713,8 @@ export interface components {
                 }[];
             } | null;
             readonly line_items: components["schemas"]["OfferLineItem"][];
+            /** @description True for a reader the deal's amount is masked from. Such a reader gets no totals, no lines, no exchange rate and no PDF: the offer states the deal's amount by another name. */
+            readonly money_withheld?: boolean;
             /**
              * Format: int64
              * @description The deal's `commercial_revision` the lines were copied from. Such an offer's lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.

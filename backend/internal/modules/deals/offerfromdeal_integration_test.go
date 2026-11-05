@@ -135,3 +135,39 @@ func TestADealWithoutLinesKeepsItsOfferBehaviour(t *testing.T) {
 	acceptOfferOf(t, e, offer)
 	wantDealAmount(t, e, dealID, 23_800)
 }
+
+// The approval preview of an offer from the deal shows the lines and totals
+// the create then writes: recurring, taxed and several lines alike.
+func TestThePreviewOfAnOfferFromTheDealIsTheOfferCreated(t *testing.T) {
+	e := setupReviewEnv(t)
+	dealID, _, _ := twoStagePipeline(t, e.configEnv)
+	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
+	addProductLine(t, e, dealID, 0, bananas, "100")
+	months, count := 1, 12
+	if _, err := e.store.AddDealLine(e.productCtx(), dealID, AddDealLineInput{
+		ExpectedRevision: 1, Description: new("Cold storage"), Quantity: new("1"), UnitPriceMinor: new(int64(5_000)),
+		TaxRate: new("19"), BillingModel: new(BillingRecurring), IntervalMonths: &months, IntervalCount: &count,
+	}); err != nil {
+		t.Fatalf("adding the recurring line: %v", err)
+	}
+	input := CreateOfferInput{Currency: "EUR", Source: "manual", FromDealRevision: new(int64(2))}
+	plan, err := e.store.PreviewOfferCreation(e.productCtx(), dealID, input)
+	if err != nil {
+		t.Fatalf("previewing: %v", err)
+	}
+	if n := offerCount(t, e, dealID); n != 0 {
+		t.Fatalf("the preview wrote %d offers", n)
+	}
+	created, err := e.store.CreateOffer(e.productCtx(), dealID, input)
+	if err != nil {
+		t.Fatalf("creating: %v", err)
+	}
+	if len(plan.Lines) != 2 || len(*created.LineItems) != 2 ||
+		plan.Totals.NetMinor != *created.NetMinor || plan.Totals.TaxMinor != *created.TaxMinor || plan.Totals.GrossMinor != *created.GrossMinor ||
+		plan.Recurring.ArrMinor != *created.ArrMinor || plan.Recurring.NetTcvMinor != *created.NetTcvMinor {
+		t.Fatalf("the preview %+v differs from the created offer %+v", plan, created)
+	}
+	if plan.Totals.TaxMinor == 0 || plan.Recurring.ArrMinor != 60_000 {
+		t.Fatalf("the preview lost the tax or the recurring line: %+v", plan)
+	}
+}

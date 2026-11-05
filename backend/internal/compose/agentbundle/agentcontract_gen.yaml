@@ -39271,7 +39271,7 @@ components:
     Offer:
       type: object
       description: A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
-      required: [id, deal_id, offer_number, revision, status, currency, net_minor, tax_minor, gross_minor, line_items, source, captured_by, created_at, updated_at]
+      required: [id, deal_id, offer_number, revision, status, currency, line_items, source, captured_by, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         deal_id: {type: string, format: uuid}
@@ -39311,7 +39311,7 @@ components:
         valid_until: {type: [string, 'null'], format: date}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
-        net_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line nets; derived, never client-set.'}
+        net_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line nets; derived, never client-set. Absent when money_withheld.'}
         tax_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line taxes; derived, never client-set.'}
         gross_minor: {type: integer, format: int64, readOnly: true, description: 'net + tax; derived, never client-set.'}
         arr_minor: {type: integer, format: int64, readOnly: true, description: 'The annualized NET value of this offer''s recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.'}
@@ -39341,6 +39341,7 @@ components:
           type: array
           readOnly: true
           items: {$ref: '#/components/schemas/OfferLineItem'}
+        money_withheld: {type: boolean, readOnly: true, description: 'True for a reader the deal''s amount is masked from. Such a reader gets no totals, no lines, no exchange rate and no PDF: the offer states the deal''s amount by another name.'}
         source_commercial_revision: {type: [integer, 'null'], format: int64, readOnly: true, description: 'The deal''s `commercial_revision` the lines were copied from. Such an offer''s lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: Server-stamped from the authenticated principal; never client-supplied.}
