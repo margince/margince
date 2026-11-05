@@ -23225,8 +23225,9 @@ export interface paths {
          *     `edits`. Only valid on a deal-scoped attachment (`entity_type == "deal"`) — 422
          *     `unsupported_entity_type` otherwise. `field_keys` is checked against the closed
          *     allowlist of deal-writable fields before any write lands — a key outside that
-         *     allowlist 422s the whole request (no partial acceptance). Requires deal UPDATE
-         *     authority on the target deal (object RBAC + row-scope visibility).
+         *     allowlist 422s the whole request (no partial acceptance). An `extraction_id` naming
+         *     a reading not read for deal facts 422s with `not_deal_facts` on `extraction_id`.
+         *     Requires deal UPDATE authority on the target deal (object RBAC + row-scope visibility).
          */
         post: operations["acceptAttachmentExtraction"];
         delete?: never;
@@ -40333,7 +40334,7 @@ export interface components {
              *     by someone else between the display and the click decide what gets written,
              *     which is precisely the divergence storing the fields exists to prevent
              *     (RD-AC-N-5). A reading belonging to another attachment, or one that never
-             *     existed, is a 404.
+             *     existed, is a 404. A reading not read for deal facts is a 422 `not_deal_facts`.
              */
             extraction_id: string;
             /** @description Field names to accept onto the deal; each is checked against the deal-update allowlist. */
@@ -52623,12 +52624,12 @@ export interface components {
             readonly net_minor: number;
             /**
              * Format: int64
-             * @description Σ line taxes; derived, never client-set.
+             * @description Σ line taxes; derived, never client-set. Zero when money_withheld.
              */
             readonly tax_minor: number;
             /**
              * Format: int64
-             * @description net + tax; derived, never client-set.
+             * @description net + tax; derived, never client-set. Zero when money_withheld.
              */
             readonly gross_minor: number;
             /**
@@ -52671,7 +52672,7 @@ export interface components {
                 }[];
             } | null;
             readonly line_items: components["schemas"]["OfferLineItem"][];
-            /** @description True for a reader the deal's amount is masked from. Such a reader gets no totals, no lines, no exchange rate and no PDF: the offer states the deal's amount by another name. */
+            /** @description True for a reader the deal's amount is masked from. Such a reader gets zero totals, no lines, no exchange rate and no PDF: the offer states the deal's amount by another name. */
             readonly money_withheld?: boolean;
             /**
              * Format: int64
@@ -93249,7 +93250,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The attachment is not deal-scoped, or field_keys names a field outside the deal-update allowlist. */
+            /** @description The attachment is not deal-scoped, field_keys names a field outside the deal-update allowlist, or extraction_id names a reading not read for deal facts. */
             422: {
                 headers: {
                     [name: string]: unknown;

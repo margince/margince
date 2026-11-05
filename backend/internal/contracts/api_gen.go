@@ -30124,7 +30124,7 @@ type AcceptExtractionRequest struct {
 	// by someone else between the display and the click decide what gets written,
 	// which is precisely the divergence storing the fields exists to prevent
 	// (RD-AC-N-5). A reading belonging to another attachment, or one that never
-	// existed, is a 404.
+	// existed, is a 404. A reading not read for deal facts is a 422 `not_deal_facts`.
 	ExtractionId openapi_types.UUID `json:"extraction_id"`
 
 	// FieldKeys Field names to accept onto the deal; each is checked against the deal-update allowlist.
@@ -53851,7 +53851,7 @@ type Offer struct {
 	// FxRateToBase Native→base, frozen at send (RT-PR-C2). Decimal-as-string to avoid float rounding.
 	FxRateToBase *string `json:"fx_rate_to_base,omitempty"`
 
-	// GrossMinor net + tax; derived, never client-set.
+	// GrossMinor net + tax; derived, never client-set. Zero when money_withheld.
 	GrossMinor *int64             `json:"gross_minor,omitempty"`
 	Id         openapi_types.UUID `json:"id"`
 	IntroText  *string            `json:"intro_text,omitempty"`
@@ -53877,7 +53877,7 @@ type Offer struct {
 	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
 	LineItems     *[]OfferLineItem    `json:"line_items,omitempty"`
 
-	// MoneyWithheld True for a reader the deal's amount is masked from. Such a reader gets no totals, no lines, no exchange rate and no PDF: the offer states the deal's amount by another name.
+	// MoneyWithheld True for a reader the deal's amount is masked from. Such a reader gets zero totals, no lines, no exchange rate and no PDF: the offer states the deal's amount by another name.
 	MoneyWithheld *bool `json:"money_withheld,omitempty"`
 
 	// NetMinor Σ line nets; derived, never client-set. Zero when money_withheld.
@@ -53900,7 +53900,7 @@ type Offer struct {
 	SourceCommercialRevision *int64      `json:"source_commercial_revision,omitempty"`
 	Status                   OfferStatus `json:"status"`
 
-	// TaxMinor Σ line taxes; derived, never client-set.
+	// TaxMinor Σ line taxes; derived, never client-set. Zero when money_withheld.
 	TaxMinor *int64 `json:"tax_minor,omitempty"`
 
 	// TemplateId The offer_template used for locale/layout at render time; unset falls back to the workspace's default template for the offer's locale.

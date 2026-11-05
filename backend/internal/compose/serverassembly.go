@@ -182,6 +182,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.wireOnboardingSurface(pool)
 	s.wireSystemOfRecordReads(pool)
 	s.wireBulkSurface(pool)
+	s.companyContactShareHandlers = companyContactShareHandlers{db: InstallationDB(pool), grants: identity.NewService(pool)}
 	s.wireHandoverSurface()
 }
 
@@ -231,12 +232,15 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	// number, and moving it to installation settings is a migration plus a
 	// reader, which is its own change.
 	s.analyticsQueryHandlers = newAnalyticsQueryHandlers(
-		InstallationDB(pool), analyticsquery.DefaultFloor, newAttentionNames(InstallationDB(pool)))
+		InstallationDB(pool), analyticsquery.DefaultFloor, newAttentionNames(InstallationDB(pool)),
+	)
 	s.reportMetrics = reportingService
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
-		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
+	)
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
-		InstallationDB(pool), func() time.Time { return time.Now().UTC() }).withTargets(reportingService)
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
+	).withTargets(reportingService)
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
 		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
 		newForecastStoreFor(pool),

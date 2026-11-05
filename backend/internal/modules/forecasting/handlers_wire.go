@@ -5,7 +5,6 @@ package forecasting
 
 import (
 	"net/http"
-	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -100,11 +99,7 @@ func derefString(s *string) string {
 func (h Handlers) GetForecastMovement(
 	w http.ResponseWriter, r *http.Request, params crmcontracts.GetForecastMovementParams,
 ) {
-	reading := ReadingOpen
-	if params.Reading != nil {
-		// The deprecated qualified readings answer as the reading each was built on.
-		reading = Reading(strings.TrimPrefix(string(*params.Reading), "qualified_"))
-	}
+	reading := movementReading(params.Reading)
 	out, err := h.store.Movement(r.Context(), reading,
 		ids.UUID(params.From), ids.UUID(params.To))
 	if err != nil {
@@ -112,6 +107,23 @@ func (h Handlers) GetForecastMovement(
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, movementToWire(reading, out))
+}
+
+// movementReading is the reading a request asks for. Each deprecated qualified
+// reading answers as the reading it was built on, and any other value goes to
+// the store as sent.
+func movementReading(sent *crmcontracts.GetForecastMovementParamsReading) Reading {
+	if sent == nil {
+		return ReadingOpen
+	}
+	switch *sent {
+	case crmcontracts.GetForecastMovementParamsReadingQualifiedEvidence:
+		return ReadingEvidence
+	case crmcontracts.GetForecastMovementParamsReadingQualifiedWeighted:
+		return ReadingWeighted
+	default:
+		return Reading(*sent)
+	}
 }
 
 func movementToWire(reading Reading, in Movement) crmcontracts.ForecastMovement {

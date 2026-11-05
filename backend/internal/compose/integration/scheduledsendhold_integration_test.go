@@ -69,6 +69,7 @@ func TestAStopHoldsQueuedMarketingAtOnce(t *testing.T) {
 		EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: clocktest.Now(t).UTC(),
 		Entity:  kevents.EntityRef{Type: "contact", ID: uuidOf(t, p.contactID)},
 		Payload: []byte(`{"kind":"objection","decided_by_level":"subject"}`),
+		Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 	}
 	for range 2 {
 		if err := stop.HandleEvent(context.Background(), env); err != nil {
@@ -88,6 +89,25 @@ func TestAStopHoldsQueuedMarketingAtOnce(t *testing.T) {
 	if n := p.cardsFor(t, marketing); n != 1 {
 		t.Fatalf("a stop delivered twice raised %d cards, want 1", n)
 	}
+	if n := p.eventsOnTraceOf(t, env); n == 0 {
+		t.Fatal("the hold wrote no event on the stop's trace, so it cannot be followed back to the stop")
+	}
+}
+
+// eventsOnTraceOf counts the events caused by env that kept its correlation id.
+func (p *preflightEnv) eventsOnTraceOf(t *testing.T, env kevents.Envelope) int {
+	t.Helper()
+	var n int
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT count(*) FROM event_outbox
+			 WHERE envelope->'trace'->>'correlation_id' = $1
+			   AND envelope->'trace'->>'causation_id' = $2`,
+			env.Trace.CorrelationID.String(), env.EventID.String()).Scan(&n)
+	}); err != nil {
+		t.Fatalf("reading the stop's trace: %v", err)
+	}
+	return n
 }
 
 // cardsFor counts the approval rows raised for one held message.
@@ -122,6 +142,7 @@ func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 			EventID: ids.NewV7(), Type: "consent.changed", Version: 1, OccurredAt: clocktest.Now(t).UTC(),
 			Entity:  kevents.EntityRef{Type: entityType, ID: uuidOf(t, p.contactID)},
 			Payload: []byte(`{"purpose_id":"` + ids.NewV7().String() + `","purpose":"newsletter","new_state":"withdrawn"}`),
+			Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 		}
 	}
 	if err := stop.HandleEvent(context.Background(), changed("lead")); err != nil {
@@ -182,6 +203,7 @@ func TestAStopDoesNotReachAnAddressTheContactNoLongerHolds(t *testing.T) {
 			EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: clocktest.Now(t).UTC(),
 			Entity:  kevents.EntityRef{Type: "contact", ID: uuidOf(t, contact)},
 			Payload: []byte(`{"kind":"objection","decided_by_level":"subject"}`),
+			Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 		}
 	}
 	if err := stop.HandleEvent(context.Background(), suppressed(p.contactID)); err != nil {

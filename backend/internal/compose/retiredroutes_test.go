@@ -20,7 +20,7 @@ func TestARetiredRouteAnswersANamedRefusal(t *testing.T) {
 }
 
 func TestARetiredForwardMeasureSavesAsTheMeasureItWasBuiltOn(t *testing.T) {
-	for sent, want := range map[string]string{"qualified_likely": "likely", "qualified_weighted": "weighted", "manager_call": "manager_call"} {
+	for sent, want := range map[string]string{"qualified_likely": "likely", "qualified_weighted": "weighted", "manager_call": "manager_call", "qualified_manager_call": "qualified_manager_call"} {
 		measure := crmcontracts.UpdateInstallationSettingsRequestForecastForwardMeasure(sent)
 		if got := savedForwardMeasure(&measure); got == nil || *got != want {
 			t.Errorf("%s saved as %v, want %s", sent, got, want)

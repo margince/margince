@@ -331,8 +331,8 @@ func TestADateTimeArgumentNoZoneCanRenderIsRefusedByName(t *testing.T) {
 	}
 	err := decodeArgs(json.RawMessage(`{"due_at":"9999-12-31T23:59:59Z"}`), &args)
 	bad, ok := errors.AsType[*BadArgsError](err)
-	if !ok || bad.Field != "due_at" {
-		t.Fatalf("decodeArgs → %v, want a BadArgsError naming due_at", err)
+	if !ok || bad.Field != "due_at" || bad.Code != "out_of_range" {
+		t.Fatalf("decodeArgs → %v, want a BadArgsError naming due_at as out_of_range", err)
 	}
 }
 
@@ -344,7 +344,7 @@ func TestARepeatedItemInAUniqueListIsRefusedByName(t *testing.T) {
 	}
 	err := decodeArgs(json.RawMessage(`{"scopes":["read","read"]}`), &args)
 	bad, ok := errors.AsType[*BadArgsError](err)
-	if !ok || bad.Field != "scopes" {
-		t.Fatalf("decodeArgs → %v, want a BadArgsError naming scopes", err)
+	if !ok || bad.Field != "scopes" || bad.Code != "duplicate" {
+		t.Fatalf("decodeArgs → %v, want a BadArgsError naming scopes as duplicate", err)
 	}
 }

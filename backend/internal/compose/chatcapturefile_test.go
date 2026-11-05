@@ -31,7 +31,7 @@ func TestOnlyTheReadingsOwnTextIsTheReaders(t *testing.T) {
 	}}
 	for body, want := range map[string]bool{
 		"Lena: Thursday?":   true,
-		" Lena: Thursday? ": true,
+		" Lena: Thursday? ": false,
 		"Lena: Friday?":     false,
 		"":                  false,
 	} {
