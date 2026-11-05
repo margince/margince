@@ -78,7 +78,7 @@ Two sections appear only for some seats. **My outcomes** is for a seat that sees
 
 Analytics opens on **Overview**. The opening view follows your work and the view you last chose.
 
-**Sales review** opens with one card of readings: sales won first and largest, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. Sales won carries its target when a matching target is available. The forecast’s label names its basis, such as **Manager’s call**, **Won + Likely deals** or **Won + weighted open deals**. A manager call shows its date.
+**Sales review** opens with one card of readings: sales won first and largest, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. Sales won carries its target when a matching target is available. When its basis is recorded, the forecast’s label names it, such as **Manager’s call**, **Won + Likely deals** or **Won + weighted open deals**. A manager call shows its date.
 
 The modelled range is separate from that forecast. A chart under the readings shows sales won so far, with the target as a line across when there is one. While the period is still running and the forecast can be shown, the chart carries it on to the period's end as a broken line. With it, the modelled range shows as a band that opens from today to its low and high ends, when both are set.
 
