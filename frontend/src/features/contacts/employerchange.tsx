@@ -3,6 +3,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
+import { api } from "../../api/client";
 import { Button, Checkbox, Field, Modal } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { EditableValue } from "../../design-system/editablevalue";
@@ -13,6 +14,7 @@ import {
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
 import { useT } from "../../i18n";
+import { unwrap } from "../../lib/problem";
 import { useAddEmployment } from "./addemploymentmodal";
 import {
   type Employment,
@@ -76,7 +78,6 @@ export function EmployerValue({
           onClose={() => setChanging((prior) => ({ ...prior, open: false }))}
           contactId={contactId}
           employer={employer}
-          employments={employments}
           actions={actions}
         />
       )}
@@ -85,6 +86,8 @@ export function EmployerValue({
 }
 
 type Fate = "left" | "wrong";
+// What Save sends: the company to move to (none clears), and the old job's fate.
+type Answer = Readonly<{ target: RecordPickerCandidate | null; fate: Fate }>;
 
 /**
  * Moves the contact's current employer to another company, or to none. The
@@ -96,14 +99,12 @@ export function ChangeEmployerModal({
   onClose,
   contactId,
   employer,
-  employments,
   actions,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   contactId: string;
   employer: Employment;
-  employments: readonly Employment[];
   actions: EmploymentActions;
 }>) {
   const t = useT();
@@ -114,11 +115,11 @@ export function ChangeEmployerModal({
   const [fate, setFate] = useState<Fate>("left");
   const moving = none || (picked !== null && picked.id !== employer.company_id);
   const change = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (answer: Answer) => {
       // The reader's answer: a company named here is their primary employer.
-      const named = !none && picked !== null;
-      if (named) {
-        await promote(picked, named, contactId, employer, employments, actions);
+      const named = answer.target !== null;
+      if (answer.target !== null) {
+        await promote(answer.target, named, contactId, employer, actions);
       }
       // A promotion demotes the old job in its own transaction, so the image
       // this end compares against is the demoted one.
@@ -126,7 +127,7 @@ export function ChangeEmployerModal({
         ...employer,
         is_current_primary: employer.is_current_primary && !named,
       };
-      if (fate === "wrong") {
+      if (answer.fate === "wrong") {
         await actions.remove.mutateAsync(employer.relationship_id);
       } else {
         await actions.end.mutateAsync(old);
@@ -194,7 +195,7 @@ export function ChangeEmployerModal({
           variant="primary"
           disabled={!moving}
           pending={change.isPending}
-          onClick={() => change.mutate()}
+          onClick={() => change.mutate({ target: none ? null : picked, fate })}
         >
           {t("record.save")}
         </Button>
@@ -214,14 +215,10 @@ async function promote(
   primary: boolean,
   contactId: string,
   employer: Employment,
-  employments: readonly Employment[],
   actions: EmploymentActions,
 ): Promise<void> {
-  const held = employments.find(
-    (row) =>
-      row.company_id === company.id &&
-      row.relationship_id !== employer.relationship_id &&
-      stillHeld(row),
+  const held = (await employmentsAt(contactId, company.id)).find(
+    (row) => row.relationship_id !== employer.relationship_id && stillHeld(row),
   );
   if (held) {
     await actions.update.mutateAsync({
@@ -237,4 +234,36 @@ async function promote(
     is_current_primary: primary,
     source: "manual",
   });
+}
+
+// Every employment at one company, read from its owner rather than the page's
+// summary, which holds only the first 25 roles.
+async function employmentsAt(
+  contactId: string,
+  companyId: string,
+): Promise<Employment[]> {
+  const data = unwrap(
+    await api.GET("/relationships", {
+      params: {
+        query: {
+          contact_id: contactId,
+          company_id: companyId,
+          kind: "employment",
+          limit: 200,
+        },
+      },
+    }),
+  );
+  return data.data.map((row) => ({
+    relationship_id: row.id,
+    company_id: companyId,
+    role: row.role,
+    is_current_primary: row.is_current_primary,
+    employment_status: row.employment_status,
+    started_precision: row.started_precision,
+    ended_precision: row.ended_precision,
+    started_at: row.started_at,
+    ended_at: row.ended_at,
+    version: row.version,
+  }));
 }

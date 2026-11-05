@@ -54,7 +54,8 @@ function json(body: unknown): Response {
 
 const sent: Array<{ method: string; path: string; body?: unknown }> = [];
 
-function mount(view: Contact360) {
+// `beyondPage` are roles the 360 summary cut off, which only the list read finds.
+function mount(view: Contact360, beyondPage: Employment[] = []) {
   sent.length = 0;
   vi.stubGlobal(
     "fetch",
@@ -76,13 +77,19 @@ function mount(view: Contact360) {
       // Every employment write pins If-Match, and the version comes from here.
       if (url.pathname.endsWith("/relationships") && method === "GET") {
         return json({
-          data: (view.employments?.data ?? []).map((employment) => ({
-            ...employment,
-            id: employment.relationship_id,
-            started_at: employment.started_at?.slice(0, 10),
-            ended_at: employment.ended_at?.slice(0, 10),
-            version: 3,
-          })),
+          data: [...(view.employments?.data ?? []), ...beyondPage]
+            .filter(
+              (employment) =>
+                !url.searchParams.has("company_id") ||
+                employment.company_id === url.searchParams.get("company_id"),
+            )
+            .map((employment) => ({
+              ...employment,
+              id: employment.relationship_id,
+              started_at: employment.started_at?.slice(0, 10),
+              ended_at: employment.ended_at?.slice(0, 10),
+              version: 3,
+            })),
           page,
         });
       }
@@ -191,7 +198,7 @@ describe("the About column's employer", () => {
     });
   });
 
-  it("makes a job the contact already holds the primary one instead of adding a second", async () => {
+  it("makes a job held beyond the first page the primary one instead of adding a second", async () => {
     const other: Employment = {
       relationship_id: "rel-2",
       company_id: "o-9",
@@ -199,7 +206,7 @@ describe("the About column's employer", () => {
       is_current_primary: false,
       ended_at: null,
     };
-    mount(viewWith([brandt, other]));
+    mount(viewWith([brandt]), [other]);
     const user = driver();
     await user.click(
       await screen.findByRole("button", { name: "Change Employer" }),
@@ -209,12 +216,18 @@ describe("the About column's employer", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(writes()).toHaveLength(2));
-    expect(writes()[0]).toEqual({
-      method: "PATCH",
-      path: "/v1/relationships/rel-2",
-      body: { is_current_primary: true },
-    });
-    expect(writes().some((request) => request.method === "POST")).toBe(false);
+    expect(writes()).toEqual([
+      {
+        method: "PATCH",
+        path: "/v1/relationships/rel-2",
+        body: { is_current_primary: true },
+      },
+      {
+        method: "PATCH",
+        path: "/v1/relationships/rel-1",
+        body: { ended_at: "2026-08-18" },
+      },
+    ]);
   });
 
   it("asks nothing and saves nothing until the employer changes", async () => {

@@ -17035,7 +17035,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.employer.fateQuestion": "Was ist mit {company}?",
   "contact.employer.fateLeft": "Hat {company} verlassen",
   "contact.employer.fateLeftHint":
-    "Bleibt als früherer Arbeitgeber erhalten, beendet zum heutigen Tag.",
+    "Die Anstellung bleibt als frühere Anstellung erhalten und endet heute.",
   "contact.employer.fateWrong": "{company} war nie der Arbeitgeber",
   "contact.employer.fateWrongHint":
     "Die Verknüpfung und ihr Verlauf werden gelöscht. {company} selbst bleibt erhalten.",

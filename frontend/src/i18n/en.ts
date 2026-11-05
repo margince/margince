@@ -16890,7 +16890,7 @@ export const en = {
   "contact.employer.fateQuestion": "What about {company}?",
   "contact.employer.fateLeft": "They left {company}",
   "contact.employer.fateLeftHint":
-    "It stays on their record as a former employer, ended today.",
+    "It stays on their record as a former employer, and the job ends today.",
   "contact.employer.fateWrong": "{company} was never their employer",
   "contact.employer.fateWrongHint":
     "The link and its history are deleted. {company} itself stays.",
