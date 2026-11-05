@@ -252,12 +252,7 @@ Problems with single records are shown in the review of the Forecast section.
 
 ## Forecast
 
-The **Forecast** section of Analytics answers one question (where will this
-period land?) and keeps three kinds of claim apart.
-
-The forecast, the checks before the call, the deals and the charts sit on one
-sheet. **Where the period lands** and **Data and evidence checked** sit beside
-it.
+The **Forecast** section of Analytics answers one question (where will this period land?) and keeps three kinds of claim apart. The forecast, the checks before the call, the deals and the charts sit on one sheet, with **Where the period lands** and **Data and evidence checked** beside it.
 
 | Reading | What kind of claim it is |
 |---|---|
