@@ -109,8 +109,8 @@ export function ListSurface({
    */
   count?: ReactNode;
   /**
-   * The count's line stays as it last settled while it may be refilled: a count
-   * is loading, or a narrowed list has no rows yet.
+   * The count line keeps its height, blank, while a count may be refilled: a
+   * count is loading, or a narrowed list has no rows yet.
    */
   holdCount?: boolean;
   /** The one primary action for this surface, e.g. "New contact". */

@@ -15,13 +15,10 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf } from "../lib/problem";
-import { useFoldedViewport } from "../lib/viewport";
 import { useActiveOptionVisible } from "./anchoredpopup";
-import { Button, type ButtonVariant, SearchField } from "./atoms";
+import { type ButtonVariant, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
-import { Heading } from "./heading";
-import { Modal } from "./modal";
-import { Popover } from "./popover";
+import { PopoverSheet } from "./popover";
 import { type CandidateSearch, useCandidateSearch } from "./recordpicker";
 import {
   type ListKey,
@@ -134,78 +131,6 @@ export function ListPopover({
         done={() => setOpen(false)}
       />
     </PopoverSheet>
-  );
-}
-
-/** A non-modal `Popover`, or below the fold a drawer `Modal` headed by `title`.
- * There a panel anchored to a small trigger leaves no room for the keyboard. */
-export function PopoverSheet({
-  label,
-  title,
-  variant,
-  className,
-  reasonId,
-  align,
-  panelClassName,
-  open,
-  onOpenChange,
-  children,
-}: Readonly<{
-  label: ReactNode;
-  title: string;
-  variant: ButtonVariant;
-  className?: string;
-  reasonId?: string;
-  align?: "start" | "end";
-  panelClassName: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  children: ReactNode;
-}>) {
-  // Modal's own fold, so no width draws a panel the sheet would also draw.
-  const phone = useFoldedViewport();
-  const titleId = useId();
-  if (!phone) {
-    return (
-      <Popover
-        label={label}
-        variant={variant}
-        className={className}
-        reasonId={reasonId}
-        align={align}
-        open={open}
-        onOpenChange={onOpenChange}
-        dialog
-        panelClassName={panelClassName}
-      >
-        {children}
-      </Popover>
-    );
-  }
-  return (
-    <>
-      <Button
-        variant={variant}
-        className={className}
-        reasonId={reasonId}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => onOpenChange(true)}
-      >
-        {label}
-      </Button>
-      <Modal
-        intent="drawer"
-        open={open}
-        onClose={() => onOpenChange(false)}
-        labelledBy={titleId}
-      >
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {title}
-        </Heading>
-        {children}
-      </Modal>
-    </>
   );
 }
 

@@ -3,14 +3,14 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ListQuery } from "./listquery";
 import {
   emptyPage,
   ListTableHarness,
   openFilterValues,
   type Row,
   render,
-} from "./listquery.testkit";
+} from "../testing/listquery.testkit";
+import type { ListQuery } from "./listquery";
 
 afterEach(() => {
   cleanup();

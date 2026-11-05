@@ -4,6 +4,7 @@
 import { Bookmark } from "lucide-react";
 import {
   isNarrowed,
+  type ListOpening,
   type ListQuery,
   type SavedViewTab,
 } from "../../components/listquery";
@@ -215,16 +216,19 @@ export function SavedViewsFailure({
   );
 }
 
-/** Save view only for a narrowed list, since the default is the All tab. */
+/** Save view only once the reader has narrowed the list from how it opens. */
 export function SaveViewAction({
   resource,
-  query,
-}: Readonly<{ resource: ViewResource; query: ListQuery }>) {
+  state,
+}: Readonly<{
+  resource: ViewResource;
+  state: ListOpening & Readonly<{ query: ListQuery }>;
+}>) {
   const views = useSavedViews(resource);
   return (
     <>
-      {isNarrowed(query) && (
-        <SaveViewButton resource={resource} query={query} />
+      {isNarrowed(state.query, state) && (
+        <SaveViewButton resource={resource} query={state.query} />
       )}
       {/* Beside Save, because it is the same set of the reader's own views:
           a tab can be pressed but not named or removed, so this is the only

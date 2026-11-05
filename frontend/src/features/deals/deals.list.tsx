@@ -376,7 +376,7 @@ export function DealsScreen({
   const saveView = view === "table" && (
     <SaveViewAction
       resource="deals"
-      query={savableDealQuery(dealsListState.query, pipelineId)}
+      state={{ query: savableDealQuery(dealsListState.query, pipelineId) }}
     />
   );
   const listState: ListState<Deal> = refusal

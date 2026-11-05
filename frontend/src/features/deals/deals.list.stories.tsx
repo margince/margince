@@ -100,15 +100,22 @@ const sales = {
   stages: boardStages,
 };
 
+// A stage belongs to one pipeline, so Renewals has its own, as the server sends.
 const renewals = {
   id: "pl2",
   name: "Renewals",
   is_default: false,
   position: 1,
-  stages: boardStages,
+  stages: boardStages.map((stage) => ({
+    ...stage,
+    id: `r-${stage.id}`,
+    pipeline_id: "pl2",
+  })),
 };
 
 function installBoardStub(pipelines: readonly (typeof sales)[] = [sales]) {
+  // A story before this one may have left the table in the address.
+  window.location.hash = "#/deals";
   installFetchStub({
     "GET /pipelines": () =>
       jsonResponse({ data: pipelines, page: { next_cursor: null } }),

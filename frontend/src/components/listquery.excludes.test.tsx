@@ -14,13 +14,13 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListChip } from "../design-system/listsurface";
 import { LocaleProvider } from "../i18n";
+import { openFilterValues } from "../testing/listquery.testkit";
 import {
   type ListPage,
   type ListQuery,
   ListTable,
   useListQuery,
 } from "./listquery";
-import { openFilterValues } from "./listquery.testkit";
 
 // The server refuses owner_id, owner_team_id and unassigned together, so the
 // Owner and Team dials each clear the other's parameter when one is picked.

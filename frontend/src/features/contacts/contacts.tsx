@@ -205,7 +205,7 @@ function ContactsList() {
           lastActivityColumn<Contact>(t, locale, readerZone),
           createdColumn<Contact>(t, locale, readerZone),
         ]}
-        saveView={<SaveViewAction resource="contacts" query={state.query} />}
+        saveView={<SaveViewAction resource="contacts" state={state} />}
         notice={<SavedViewsFailure resource="contacts" />}
         rowKey={(contact) => contact.id}
         rowRoute={(contact) => ({ screen: "contacts", id: contact.id })}

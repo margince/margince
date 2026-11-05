@@ -99,7 +99,7 @@ export const NamingAView: Story = {
   // The naming dialog, opened.
   render: () => {
     routes();
-    return <SaveViewAction resource="contacts" query={NARROWED} />;
+    return <SaveViewAction resource="contacts" state={{ query: NARROWED }} />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -114,7 +114,7 @@ export const NothingWorthSaving: Story = {
   // to rename or delete.
   render: () => {
     routes();
-    return <SaveViewAction resource="contacts" query={UNNARROWED} />;
+    return <SaveViewAction resource="contacts" state={{ query: UNNARROWED }} />;
   },
 };
 
@@ -126,7 +126,7 @@ export const ManagingViews: Story = {
       "PATCH /views/v-1": () => jsonResponse(VIEWS.data[0]),
       "DELETE /views/v-1": () => jsonResponse(VIEWS.data[0]),
     });
-    return <SaveViewAction resource="contacts" query={UNNARROWED} />;
+    return <SaveViewAction resource="contacts" state={{ query: UNNARROWED }} />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -150,7 +150,9 @@ export const TheRailFailedToLoad: Story = {
     return (
       <ListSurface
         search={{ value: "", onChange: () => undefined }}
-        saveView={<SaveViewAction resource="contacts" query={NARROWED} />}
+        saveView={
+          <SaveViewAction resource="contacts" state={{ query: NARROWED }} />
+        }
         notice={<SavedViewsFailure resource="contacts" />}
       >
         <p>Rows</p>

@@ -176,7 +176,8 @@ export function Toolbar({
                 onPick={(value, label) => {
                   applyFilter(chip.key, value, label);
                   setOpenMenu(null);
-                  focusApplied(index);
+                  // The any option takes the filter, and this row, away.
+                  focusApplied(...(value ? [index] : [index + 1, index - 1]));
                 }}
                 onDelete={() => {
                   deleteFilter(chip.key);

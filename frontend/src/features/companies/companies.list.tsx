@@ -304,7 +304,7 @@ export function CompaniesScreen() {
           lastActivityColumn<Company>(t, locale, readerZone),
           createdColumn<Company>(t, locale, readerZone),
         ]}
-        saveView={<SaveViewAction resource="companies" query={state.query} />}
+        saveView={<SaveViewAction resource="companies" state={state} />}
         notice={<SavedViewsFailure resource="companies" />}
         rowKey={(company) => company.id}
         rowRoute={(company) => ({ screen: "companies", id: company.id })}

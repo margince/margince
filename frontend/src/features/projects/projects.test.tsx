@@ -13,9 +13,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { openFilterValues } from "../../components/listquery.testkit";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse } from "../../testing/company.fixtures";
+import { openFilterValues } from "../../testing/listquery.testkit";
 import { COMPANY, project } from "../../testing/projects.fixtures";
 import { ProjectsScreen } from "./projects";
 import { projectsBackend } from "./projects.testing";

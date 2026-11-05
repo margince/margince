@@ -15,8 +15,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { SEARCH_DEBOUNCE_MS } from "../../components/listquery";
-import { showLayout } from "../../components/listquery.testkit";
 import { LocaleProvider } from "../../i18n";
+import { showLayout } from "../../testing/listquery.testkit";
 import { openView, toggleArchived } from "../../testing/listview.testkit";
 import { DealsScreen } from "./deals";
 

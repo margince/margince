@@ -170,6 +170,11 @@ export const ChangedRows: Story = {
   },
 };
 
+export const ChangedRowsDark: Story = {
+  ...ChangedRows,
+  globals: { theme: "dark" },
+};
+
 export const PhoneSheetChanged: Story = {
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },

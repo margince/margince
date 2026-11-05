@@ -8,7 +8,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { openView, openViewStep } from "../testing/listview.testkit";
 import { type ListChip, ListTable } from "./listtable";
@@ -36,6 +36,7 @@ describe("the Filters step", () => {
   ];
 
   it("narrows the attribute list as you type", async () => {
+    const user = userEvent.setup();
     render(
       <ListTable
         rows={[]}
@@ -45,11 +46,11 @@ describe("the Filters step", () => {
         chips={chips}
       />,
     );
-    await openViewStep(userEvent, "Filters");
+    await openViewStep(user, "Filters");
     expect(screen.getByRole("button", { name: "Status" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Priority" })).toBeTruthy();
 
-    await userEvent.type(screen.getByLabelText("Search attributes"), "sta");
+    await user.type(screen.getByLabelText("Search attributes"), "sta");
     expect(screen.getByRole("button", { name: "Status" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Priority" })).toBeNull();
   });
@@ -57,6 +58,7 @@ describe("the Filters step", () => {
   // Picking an attribute detaches the pressed button before the document's
   // click listener runs, and a detached node has no ancestors to be inside.
   it("stays open when a click's own target has left the document", async () => {
+    const user = userEvent.setup();
     render(
       <ListTable
         rows={[]}
@@ -66,7 +68,7 @@ describe("the Filters step", () => {
         chips={chips}
       />,
     );
-    await openViewStep(userEvent, "Filters");
+    await openViewStep(user, "Filters");
 
     // Reproduce the real sequence: a node inside the document is clicked, and
     // the click's own handling removes it before the document-level listener
@@ -84,6 +86,7 @@ describe("the Filters step", () => {
   });
 
   it("picking an attribute then a value applies the filter", async () => {
+    const user = userEvent.setup();
     const onChipChange = vi.fn();
     render(
       <ListTable
@@ -95,13 +98,14 @@ describe("the Filters step", () => {
         onChipChange={onChipChange}
       />,
     );
-    await openViewStep(userEvent, "Filters");
-    await userEvent.click(screen.getByRole("button", { name: "Status" }));
-    await userEvent.click(screen.getByRole("radio", { name: "New" }));
+    await openViewStep(user, "Filters");
+    await user.click(screen.getByRole("button", { name: "Status" }));
+    await user.click(screen.getByRole("radio", { name: "New" }));
     expect(onChipChange).toHaveBeenCalledWith("status", "new");
   });
 
   it("an applied filter reads as attribute/condition/value row, and Delete filter clears it", async () => {
+    const user = userEvent.setup();
     const onChipChange = vi.fn();
     const { container } = render(
       <ListTable
@@ -122,18 +126,17 @@ describe("the Filters step", () => {
     expect(row?.querySelector(".lt-frow-seg:not(.lt-frow-value)")).toBeTruthy();
     expect(row?.querySelector(".lt-frow-value")?.textContent).toBe("New");
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", {
         name: "More actions for the Status filter",
       }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Delete filter" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete filter" }));
     expect(onChipChange).toHaveBeenCalledWith("status", "");
   });
 
   it("the condition menu offers exactly one condition", async () => {
+    const user = userEvent.setup();
     const { container } = render(
       <ListTable
         rows={[]}
@@ -153,7 +156,7 @@ describe("the Filters step", () => {
     if (!trigger) {
       throw new Error("the condition trigger did not render");
     }
-    await userEvent.click(trigger);
+    await user.click(trigger);
     const condition = within(
       screen.getByRole("group", { name: "Condition" }),
     ).getByRole("radio", { name: "is" });
@@ -161,6 +164,7 @@ describe("the Filters step", () => {
   });
 
   it("offers every attribute, an applied one with its value", async () => {
+    const user = userEvent.setup();
     render(
       <ListTable
         rows={[]}
@@ -171,15 +175,15 @@ describe("the Filters step", () => {
         chosen={{ status: "new" }}
       />,
     );
-    const panel = await openView(userEvent);
+    const panel = await openView(user);
     expect(
       within(panel).getByRole("button", {
         name: "Filters, Status, changed",
       }),
     ).toBeInTheDocument();
-    const step = within(await openViewStep(userEvent, "Filters"));
+    const step = within(await openViewStep(user, "Filters"));
     expect(
-      step.getByRole("button", { name: /^Status, .+, changed$/ }),
+      step.getByRole("button", { name: "Status, New, changed" }),
     ).toBeTruthy();
     expect(step.getByRole("button", { name: "Priority" })).toBeInTheDocument();
   });
@@ -200,12 +204,13 @@ describe("a chip with an async search source", () => {
     ];
   }
 
-  async function openCompanyValueStep() {
-    await openViewStep(userEvent, "Filters");
-    await userEvent.click(screen.getByRole("button", { name: "Company" }));
+  async function openCompanyValueStep(user: UserEvent) {
+    await openViewStep(user, "Filters");
+    await user.click(screen.getByRole("button", { name: "Company" }));
   }
 
   it("queries on debounce and renders the results", async () => {
+    const user = userEvent.setup();
     const search = vi.fn().mockResolvedValue([{ value: "o1", label: "Acme" }]);
     render(
       <ListTable
@@ -216,7 +221,7 @@ describe("a chip with an async search source", () => {
         chips={chipWithSearch(search)}
       />,
     );
-    await openCompanyValueStep();
+    await openCompanyValueStep(user);
     expect(screen.getByText("Type to search")).toBeTruthy();
 
     vi.useFakeTimers();
@@ -236,6 +241,7 @@ describe("a chip with an async search source", () => {
   });
 
   it("keeps the previous results on screen while the next query is in flight", async () => {
+    const user = userEvent.setup();
     let resolveSecond:
       | ((value: readonly { value: string; label: string }[]) => void)
       | undefined;
@@ -259,7 +265,7 @@ describe("a chip with an async search source", () => {
         chips={chipWithSearch(search)}
       />,
     );
-    await openCompanyValueStep();
+    await openCompanyValueStep(user);
     const input = screen.getByLabelText("Search Company values");
 
     vi.useFakeTimers();
@@ -294,6 +300,7 @@ describe("a chip with an async search source", () => {
   });
 
   it("shows a failure when the search rejects", async () => {
+    const user = userEvent.setup();
     const search = vi.fn().mockRejectedValue(new Error("search down"));
     render(
       <ListTable
@@ -304,7 +311,7 @@ describe("a chip with an async search source", () => {
         chips={chipWithSearch(search)}
       />,
     );
-    await openCompanyValueStep();
+    await openCompanyValueStep(user);
 
     vi.useFakeTimers();
     try {

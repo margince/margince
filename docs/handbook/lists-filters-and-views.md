@@ -6,11 +6,11 @@ The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals
 
 ## How a list screen looks
 
-Every Margince list screen has the same three rows. The header row holds the view tabs (such as **All** and **Mine**), the count ("1 to 25 of 200 contacts") and the create button. On a phone drag the tabs left or right. The toolbar row holds the **Search** box and one **View** button. The rows sit under it, with **Previous**, **Next** and **Rows per page** at the bottom. Click a row to open the record.
+Every Margince list screen has the same three rows. The header row holds the view tabs (such as **All** and **Mine**), the count ("1 to 25 of 200 contacts") and the create button. On a phone drag the tabs left or right. The toolbar row holds the **Search** box and one **View** button. The rows sit under it, with **Previous**, **Next** and **Rows per page** at the bottom, except on a board, where each column loads more itself. Click a row to open the record.
 
 **View** opens a panel: a small window on a computer, a full screen on a phone. On **Deals** and **Leads** the **Table** / **Board** switch is at the top. Then comes one row for each setting: **Pipeline** (Deals, with several pipelines), **Filters**, **Sort** and **Columns**. Each row shows its value now, and a dot when it differs from how the list opens (never for **Default order**). Press a row to open its step, and press the step's name at the top to go back. Next come **Show archived** and **Compact**, which are On or Off.
 
-**Save view** and **Manage views** are at the bottom. Every change applies at once and stays in the address.
+**Save view** and **Manage views** are at the bottom. Each change applies at once. The address keeps the search, **Table** or **Board**, **Pipeline**, the filters, the sort and **Show archived**, so a copied link opens the same list. **Columns** and **Compact** stay out of the address.
 
 The button shows how many filters apply, such as "2 filters". It shows a dot when the list no longer matches the view tab you picked. Filters you applied show as chips in one row under the search. Press a chip to change it, or press its **⋮** button and choose **Delete filter**. You add a filter in **View** → **Filters**, which lists every filter. A filter already applied opens on its value and ends with **Delete filter**.
 
@@ -21,19 +21,18 @@ What each list offers:
 | **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type, Partner kinds, Relationship stage and Stage meaning (if you may see partners) | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
-| **Deals** | no search box | Owner, Team, Stage, Company, Tags, Stalled only, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Deals** | name or description | Owner, Team, Stage, Company, Tags, Stalled only, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
 
 **Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. **Source** and **Partner** on Deals show only when there is something to pick.
 
 ## Searching and filtering a list
 ### How do I search a list?
-To search a list in Margince, open the list in the sidebar (**Contacts**, **Companies**, **Leads** or **Projects**). Type in the **Search** box at the left of the toolbar.
+To search a list in Margince, open the list in the sidebar (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**). Type in the **Search** box at the left of the toolbar.
 1. Type part of a name. The list gets shorter as you type.
 2. Or type a whole email address (Contacts, Leads), domain (Companies), LinkedIn URL (Leads) or project key (Projects).
 3. Clear the box to see everything again.
 
-**Deals** has no search box: find a deal with the command palette (`⌘K` or `Ctrl+K`), or filter by **Company** or **Stage**.
 Also called: find a contact, look up a customer, search the table.
 
 ### How do I find a contact by email address?
@@ -174,7 +173,7 @@ A view in Margince is a tab in a list's header row that sets the list's filters 
 
 ### How do I save a view?
 To save a view of a list in Margince, set the list up as you want it. Press **View**, then **Save view** at the bottom of the panel. Give it a **Name** and press **Save**.
-1. Search, filter, sort or press **Show archived**. **Save view** shows once any of these is set.
+1. Search, filter, sort or press **Show archived**. **Save view** shows once one of these differs from how the list opened.
 2. Press **View** → **Save view** and, in **Save this view**, type a **Name**.
 3. Press **Save**. The view becomes a new tab next to the others.
 On **Deals**, **Save view** is on the **Table** only, and the view also keeps the pipeline.

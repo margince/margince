@@ -492,7 +492,7 @@ function LeadsWorkbench({
             }}
           />
         }
-        saveView={<SaveViewAction resource="leads" query={state.query} />}
+        saveView={<SaveViewAction resource="leads" state={state} />}
         notice={<SavedViewsFailure resource="leads" />}
       />
     </>

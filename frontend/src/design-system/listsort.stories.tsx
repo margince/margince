@@ -75,6 +75,11 @@ export const NewestFirst: Story = {
   },
 };
 
+export const NewestFirstDark: Story = {
+  ...NewestFirst,
+  globals: { theme: "dark" },
+};
+
 export const ServerOrder: Story = {
   args: { initial: "" },
   play: async ({ canvasElement }) => {

@@ -1,14 +1,11 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  openFilterValues,
-  showLayout,
-} from "../../components/listquery.testkit";
 import { useMe } from "../../lib/session";
+import { openFilterValues, showLayout } from "../../testing/listquery.testkit";
 import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { DealsScreen } from "./deals";
@@ -308,8 +305,8 @@ describe("DealsScreen range dials the reader cannot use", () => {
     return useMe().data ? children : null;
   }
 
-  function openFilterMenu() {
-    return openViewStep(userEvent, "Filters");
+  function openFilterMenu(user: UserEvent) {
+    return openViewStep(user, "Filters");
   }
 
   const ADDRESS = "#/deals?value=..5000000&country=DE";
@@ -350,6 +347,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
   });
 
   it("names a country the role refuses, and asks for no wider list", async () => {
+    const user = userEvent.setup();
     const urls: string[] = [];
     window.location.hash = ADDRESS;
     vi.stubGlobal(
@@ -376,9 +374,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
     expect(dealLists()).toEqual([]);
     expect(screen.queryByText("Fleet retrofit")).toBeNull();
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Remove Country" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Remove Country" }));
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
     expect(dealLists().length).toBeGreaterThan(0);
     expect(dealLists().some((url) => url.includes("country="))).toBe(false);
@@ -438,6 +434,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
   // The role's refusal is known before any deal loads, so the menu never
   // offers a dial it then takes back.
   it("never offers a dial the role is refused, while the list is still loading", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backend({
@@ -452,7 +449,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
         <DealsScreen />
       </SignedIn>,
     );
-    const menu = await openFilterMenu();
+    const menu = await openFilterMenu(user);
     expect(within(menu).queryByRole("button", { name: "Value" })).toBeNull();
     expect(within(menu).queryByRole("button", { name: "Currency" })).toBeNull();
     expect(within(menu).getByRole("button", { name: "Country" })).toBeTruthy();
@@ -461,6 +458,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
   // A private company masks company_id on its own deal only. The list still
   // narrows by country, so the dial stays.
   it("keeps the country dial when one loaded deal's company is masked", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backend({
@@ -475,7 +473,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
       </SignedIn>,
     );
     await screen.findByText("Fleet retrofit");
-    const menu = await openFilterMenu();
+    const menu = await openFilterMenu(user);
     expect(within(menu).getByRole("button", { name: "Country" })).toBeTruthy();
   });
 
@@ -530,6 +528,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
   });
 
   it("offers no company dial and asks for no companies without company.read", async () => {
+    const user = userEvent.setup();
     const urls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -546,7 +545,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
       </SignedIn>,
     );
     await screen.findByText("Fleet retrofit");
-    const menu = await openFilterMenu();
+    const menu = await openFilterMenu(user);
     expect(within(menu).queryByRole("button", { name: "Company" })).toBeNull();
     expect(
       urls.filter((url) => /\/(companies|partners)(\?|$)/.test(url)),

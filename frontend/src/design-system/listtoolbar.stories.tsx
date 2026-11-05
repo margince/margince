@@ -122,6 +122,11 @@ export const FiltersStep: Story = {
   },
 };
 
+export const FiltersStepDark: Story = {
+  ...FiltersStep,
+  globals: { theme: "dark" },
+};
+
 export const FiltersPhone: Story = {
   tags: ["uat-phone"],
   globals: { viewport: { value: "phone" } },

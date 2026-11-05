@@ -1498,8 +1498,9 @@ span.error-line {
    inside a field built entirely from these tokens, so it reads as the hole in
    the surface that `<select>` reads as, and it appears the moment the field has
    focus and content: in the ⌘K palette, that is always.
-   Nothing is lost by removing it. The palette clears its box on Escape and on
-   every reopen, and the results field is a form a reader retypes into. */
+   No search field in the app draws one, so a list's search matches the rest.
+   The palette clears its box on every reopen, and Escape clears a search field
+   in Chromium and Firefox; in Safari a reader selects the text and deletes it. */
 .input[type="search"]::-webkit-search-cancel-button,
 .input[type="search"]::-webkit-search-decoration,
 .lt-search-input::-webkit-search-cancel-button,

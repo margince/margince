@@ -4,7 +4,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { openFilterValues } from "../../components/listquery.testkit";
+import { openFilterValues } from "../../testing/listquery.testkit";
 import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadsScreen } from "./leads";
@@ -101,6 +101,7 @@ describe("the lead list's company dials", () => {
   });
 
   it("names a refused dial an old link carries, and asks for no list until it is removed", async () => {
+    const user = userEvent.setup();
     window.location.hash = "#/leads?industry=software";
     const { urls } = serve({ refused: COMPANY_DIALS });
     render(<LeadsScreen />);
@@ -111,9 +112,7 @@ describe("the lead list's company dials", () => {
     ).toBeTruthy();
     expect(leadListQueries(urls)).toEqual([]);
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Remove Industry" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Remove Industry" }));
     expect(await screen.findByText("Jonas Petersen")).toBeTruthy();
     expect(leadListQueries(urls).some((query) => query.has("industry"))).toBe(
       false,

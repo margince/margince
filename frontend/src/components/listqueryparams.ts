@@ -22,16 +22,27 @@ export type ListQuery = {
   perPage: number;
 };
 
+/** The order and filters a screen opens its list on. */
+export type ListOpening = Readonly<{
+  initialSort?: string;
+  initialFilters?: Readonly<Record<string, string>>;
+}>;
+
 /**
- * Whether the reader has narrowed the list: what Save view offers to keep.
- * The page size is how much shows, not which rows.
+ * Whether the reader has narrowed the list from how it opens: what Save view
+ * offers to keep. The page size is how much shows, not which rows.
  */
-export function isNarrowed(query: ListQuery): boolean {
+export function isNarrowed(
+  query: ListQuery,
+  opening: ListOpening = {},
+): boolean {
+  const opened = opening.initialFilters ?? {};
+  const keys = new Set([...Object.keys(query.filters), ...Object.keys(opened)]);
   return (
     Boolean(query.q) ||
-    Boolean(query.sort) ||
+    query.sort !== (opening.initialSort ?? "") ||
     query.includeArchived ||
-    Object.values(query.filters).some(Boolean)
+    [...keys].some((key) => (query.filters[key] ?? "") !== (opened[key] ?? ""))
   );
 }
 

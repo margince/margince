@@ -11,11 +11,11 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { showLayout } from "../../components/listquery.testkit";
 import { pickOption } from "../../design-system/select-testing";
 import { formatMoneyCompact } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { showLayout } from "../../testing/listquery.testkit";
 import { openView } from "../../testing/listview.testkit";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import { DealsScreen } from "./deals";
@@ -581,6 +581,7 @@ describe("DealsScreen", () => {
   });
 
   it("a terminal-stage advance opens the 🟡 confirm and posts only after confirming", async () => {
+    const user = userEvent.setup();
     const advances: [unknown, string | null][] = [];
     vi.stubGlobal(
       "fetch",
@@ -604,7 +605,7 @@ describe("DealsScreen", () => {
 
     await askedToClose("Won");
     expect(advances).toHaveLength(0); // nothing posted yet: confirm-first
-    await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
     await waitFor(() => expect(advances).toHaveLength(1));
     expect(advances[0]).toEqual([{ to_stage_id: "s3", status: "won" }, "4"]);
   });

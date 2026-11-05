@@ -8,12 +8,12 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { openFilterValues } from "../../components/listquery.testkit";
 import { toggleOptions } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { openFilterValues } from "../../testing/listquery.testkit";
 import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { PartnersScreen, PartnerTab } from "./partners";
@@ -271,6 +271,7 @@ describe("PartnerTab — a seat without the company grant", () => {
 
 describe("PartnerTab — existing partner", () => {
   it("shows its fields and edits with If-Match", async () => {
+    const user = userEvent.setup();
     let putHeader: string | null = null;
     let putBody: unknown = null;
     stubFetch(async (url, method, request) => {
@@ -292,12 +293,12 @@ describe("PartnerTab — existing partner", () => {
     );
     expect(screen.getByText("Hosting, Referral")).toBeTruthy();
     expect(screen.getByText("Live")).toBeTruthy();
-    await userEvent.click(screen.getByTestId("edit-partner"));
+    await user.click(screen.getByTestId("edit-partner"));
 
     const nextStep = await screen.findByLabelText("Next step");
-    await userEvent.clear(nextStep);
-    await userEvent.type(nextStep, "Book QBR");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await user.clear(nextStep);
+    await user.type(nextStep, "Book QBR");
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(putBody).toBeTruthy());
     expect(putHeader).toBe("3");
@@ -378,13 +379,14 @@ describe("PartnerTab — the margin tier", () => {
 
 // A column's checkbox carries its header's text, so a value is picked from
 // inside the step that lists it.
-async function pickFilter(attribute: string, value: string) {
-  const values = await openFilterValues(userEvent, attribute);
-  await userEvent.click(within(values).getByRole("radio", { name: value }));
+async function pickFilter(user: UserEvent, attribute: string, value: string) {
+  const values = await openFilterValues(user, attribute);
+  await user.click(within(values).getByRole("radio", { name: value }));
 }
 
 describe("PartnersScreen", () => {
   it("lists partners and sends the kind filter", async () => {
+    const user = userEvent.setup();
     const { urls } = stubFetch(async () =>
       jsonResponse({
         data: [partner],
@@ -397,7 +399,7 @@ describe("PartnersScreen", () => {
     expect(screen.getByText("Live")).toBeTruthy();
     expect(screen.getByText("Referral")).toBeTruthy();
 
-    await pickFilter("Partner kinds", "Referral");
+    await pickFilter(user, "Partner kinds", "Referral");
 
     await waitFor(() =>
       expect(urls.some((url) => url.includes("partner_kind=referral"))).toBe(
@@ -407,6 +409,7 @@ describe("PartnersScreen", () => {
   });
 
   it("renders no search box (GET /partners has no q param) but keeps the kind/stage/cert filters", async () => {
+    const user = userEvent.setup();
     stubFetch(async () =>
       jsonResponse({
         data: [partner],
@@ -418,11 +421,11 @@ describe("PartnersScreen", () => {
     await waitFor(() => expect(screen.getByText("o-1")).toBeTruthy());
 
     expect(screen.queryByPlaceholderText("Search")).toBeNull();
-    const panel = await openView(userEvent);
+    const panel = await openView(user);
     expect(
       within(panel).queryByRole("button", { name: "Show archived" }),
     ).toBeNull();
-    const menu = await openViewStep(userEvent, "Filters");
+    const menu = await openViewStep(user, "Filters");
     for (const name of [
       "Partner kinds",
       "Stage meaning",
@@ -436,6 +439,7 @@ describe("PartnersScreen", () => {
   });
 
   it("navigates to the company's 360 on row click", async () => {
+    const user = userEvent.setup();
     stubFetch(async () =>
       jsonResponse({
         data: [partner],
@@ -445,7 +449,7 @@ describe("PartnersScreen", () => {
     render(<PartnersScreen />);
 
     await waitFor(() => expect(screen.getByText("o-1")).toBeTruthy());
-    await userEvent.click(screen.getByText("o-1"));
+    await user.click(screen.getByText("o-1"));
 
     expect(window.location.hash).toBe("#/companies/o-1");
   });

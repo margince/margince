@@ -30,6 +30,7 @@ function MountReporter({ onMount }: Readonly<{ onMount: () => void }>) {
 
 describe("views", () => {
   it("switching a view reports its index and applies its sort and filters", async () => {
+    const user = userEvent.setup();
     const chips: readonly ListChip[] = [
       {
         key: "status",
@@ -61,7 +62,7 @@ describe("views", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "New leads" }));
+    await user.click(screen.getByRole("button", { name: "New leads" }));
     expect(onViewChange).toHaveBeenCalledWith(1);
     expect(sortOnChange).toHaveBeenCalledWith("name");
     expect(onChipChange).toHaveBeenCalledWith("status", "new");

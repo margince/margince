@@ -354,7 +354,7 @@ it("keeps the whole count sentence, read before the header's verbs", () => {
 
 // Whether the line is drawn follows the count's state. Its height while
 // pending is measured in a browser (List surface, Count holds its line).
-it("draws the count line as it last settled while a count is pending", () => {
+it("keeps the count line, blank, while a count is pending", () => {
   const surface = (count: ReactNode, pending: boolean) => (
     <LocaleProvider initial="en">
       <ListSurface views={[{ label: "All" }]} count={count} holdCount={pending}>
@@ -546,6 +546,18 @@ it("keeps focus on a chip's value after a pick from its menu", async () => {
 
   const changed = screen.getByRole("group", { name: "Status: Won" });
   expect(within(changed).getByRole("button", { name: "Won" })).toHaveFocus();
+});
+
+it("hands focus to the next chip when a chip's any option takes it off", async () => {
+  const user = userEvent.setup();
+  render(<Surface initialFilters={{ status: "open", owner: "u1" }} />);
+  const applied = screen.getByRole("group", { name: "Status: Open" });
+  await user.click(within(applied).getByRole("button", { name: "Open" }));
+  await user.click(screen.getByRole("radio", { name: "Any status" }));
+
+  expect(screen.queryByRole("group", { name: /^Status:/ })).toBeNull();
+  const owner = screen.getByRole("group", { name: "Owner: Ada" });
+  expect(within(owner).getByRole("button", { name: "Ada" })).toHaveFocus();
 });
 
 it("hands focus to the next chip after a delete, and to View once none is left", async () => {

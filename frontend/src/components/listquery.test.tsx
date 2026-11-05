@@ -10,6 +10,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import {
+  emptyPage,
+  ListTableHarness,
+  openFilterValues,
+  type Row,
+  render,
+} from "../testing/listquery.testkit";
+import {
   LIST_PAGE_SIZES,
   type ListPage,
   type ListQuery,
@@ -17,13 +24,6 @@ import {
   listFetchLimit,
   useListQuery,
 } from "./listquery";
-import {
-  emptyPage,
-  ListTableHarness,
-  openFilterValues,
-  type Row,
-  render,
-} from "./listquery.testkit";
 
 // The shared list foundation (P-14): keyset pagination via useListQuery, and
 // ListTable binding that query to the design-system list surface. The
@@ -116,6 +116,7 @@ function TwoListHarness({
 
 describe("useListQuery", () => {
   it("accumulates rows across pages and tracks has_more", async () => {
+    const user = userEvent.setup();
     const fetchPage = vi.fn(
       async (_query: ListQuery, cursor: string | null) => {
         if (cursor === null) {
@@ -136,7 +137,7 @@ describe("useListQuery", () => {
     expect(screen.getByTestId("has-more").textContent).toBe("true");
     expect(screen.queryByText("b")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "more" }));
+    await user.click(screen.getByRole("button", { name: "more" }));
 
     await screen.findByText("b");
     expect(screen.getByText("a")).toBeTruthy();

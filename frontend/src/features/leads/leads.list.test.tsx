@@ -8,9 +8,9 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { openFilterValues } from "../../components/listquery.testkit";
+import { openFilterValues } from "../../testing/listquery.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, LeadsScreen } from "./leads";
 import {
@@ -37,9 +37,9 @@ afterEach(() => {
 
 // A column shares its header text with the filter attribute's label, so the
 // value is picked from inside the step that lists it.
-async function pickFilter(attribute: string, value: string) {
-  const values = await openFilterValues(userEvent, attribute);
-  await userEvent.click(within(values).getByRole("radio", { name: value }));
+async function pickFilter(user: UserEvent, attribute: string, value: string) {
+  const values = await openFilterValues(user, attribute);
+  await user.click(within(values).getByRole("radio", { name: value }));
 }
 
 describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => {
@@ -66,11 +66,12 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
   });
 
   it("sends status=contacted when the status filter is set", async () => {
+    const user = userEvent.setup();
     const { urls } = stubFetch(async () => emptyPage());
     render(<LeadsScreen />);
     await waitFor(() => expect(urls.length).toBeGreaterThan(0));
 
-    await pickFilter("Status", "Contacted");
+    await pickFilter(user, "Status", "Contacted");
 
     await waitFor(() =>
       expect(urls.some((url) => url.includes("status=contacted"))).toBe(true),
@@ -80,6 +81,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
   it("an overdue lead wears the badge, and the Overdue view asks for sla_state=breached", async () => {
     // The badge is the first-response clock as the list shows it. A lead within
     // target carries no badge, so the list stays quiet until something needs a hand.
+    const user = userEvent.setup();
     const { urls } = stubFetch(async () =>
       jsonResponse({
         data: [
@@ -103,7 +105,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     expect(screen.getAllByText("Overdue").length).toBeGreaterThan(0);
     expect(screen.queryByText("On time")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Overdue" }));
+    await user.click(screen.getByRole("button", { name: "Overdue" }));
     await waitFor(() =>
       expect(urls.some((url) => url.includes("sla_state=breached"))).toBe(true),
     );
@@ -131,6 +133,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     // still carries the version the list holds. A single shared version would
     // conflict on every row but the one it came from. A row that moved under
     // the reader is reported by name rather than swallowed.
+    const user = userEvent.setup();
     let sent: { owner_id?: string; leads?: unknown } | null = null;
     let patchCount = 0;
     stubFetch(async (url, method, request) => {
@@ -163,19 +166,17 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     });
     render(<LeadsScreen />);
     await waitFor(() => expect(screen.getByText("Otto Fischer")).toBeTruthy());
-    await userEvent.click(
+    await user.click(
       screen.getByRole("checkbox", { name: "Select Jonas Petersen" }),
     );
-    await userEvent.click(
+    await user.click(
       screen.getByRole("checkbox", { name: "Select Otto Fischer" }),
     );
     expect(screen.getByText("2 selected")).toBeTruthy();
 
-    await userEvent.click(screen.getByLabelText("New owner"));
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Lena F." }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Assign" }));
+    await user.click(screen.getByLabelText("New owner"));
+    await user.click(await screen.findByRole("option", { name: "Lena F." }));
+    await user.click(screen.getByRole("button", { name: "Assign" }));
 
     await waitFor(() => expect(sent).not.toBeNull());
     expect(sent).toEqual({
@@ -198,6 +199,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     // destination the server refused before touching any lead produces no
     // outcomes at all. Without its own sentence, the reader presses Assign
     // and watches nothing happen.
+    const user = userEvent.setup();
     stubFetch(async (url, _method, _request) => {
       if (url.includes("/users")) {
         return jsonResponse({
@@ -229,14 +231,12 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     await waitFor(() =>
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
-    await userEvent.click(
+    await user.click(
       screen.getByRole("checkbox", { name: "Select Jonas Petersen" }),
     );
-    await userEvent.click(screen.getByLabelText("New owner"));
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Lena F." }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Assign" }));
+    await user.click(screen.getByLabelText("New owner"));
+    await user.click(await screen.findByRole("option", { name: "Lena F." }));
+    await user.click(screen.getByRole("button", { name: "Assign" }));
 
     expect(
       await screen.findByText(/active colleague you may assign work to/),
@@ -247,6 +247,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     // The queue's whole point is the lead nobody has answered yet. What makes
     // one urgent is how long it has waited, so this view sorts against the
     // others, ascending by arrival.
+    const user = userEvent.setup();
     const { urls } = stubFetch(async () =>
       jsonResponse({
         data: [lead],
@@ -257,7 +258,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     await waitFor(() =>
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Unassigned" }));
+    await user.click(screen.getByRole("button", { name: "Unassigned" }));
 
     // Both dials in the same request, and not the New & unassigned view's
     // request, which also asks unassigned=true and also sorts by arrival. An
@@ -279,6 +280,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     // Status is lifecycle and ownership is ownership: a New lead may already
     // have an owner, and an older Contacted one may have none. The view that
     // answers "new work nobody has picked up" has to say both.
+    const user = userEvent.setup();
     const { urls } = stubFetch(async () =>
       jsonResponse({
         data: [lead],
@@ -289,7 +291,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     await waitFor(() =>
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "New and unassigned" }),
     );
 
@@ -304,6 +306,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
   });
 
   it("fetches the next cursor page when the pager steps past the loaded page", async () => {
+    const user = userEvent.setup();
     const { urls } = stubFetch(async (url) => {
       if (url.includes("cursor=c1")) {
         return jsonResponse({
@@ -323,7 +326,7 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
 
     const next = screen.getByRole("button", { name: "Next" });
     expect((next as HTMLButtonElement).disabled).toBe(false);
-    await userEvent.click(next);
+    await user.click(next);
 
     await waitFor(() => expect(screen.getByText("Otto Fischer")).toBeTruthy());
     expect(urls.some((url) => url.includes("cursor=c1"))).toBe(true);
@@ -439,6 +442,7 @@ describe("LeadsScreen — rich create (P-15)", () => {
   });
 
   it("finds an exact email duplicate before POST and links to it", async () => {
+    const user = userEvent.setup();
     let postCount = 0;
     stubFetch(async (url, method) => {
       if (method === "POST" && url.includes("/leads")) {
@@ -459,17 +463,14 @@ describe("LeadsScreen — rich create (P-15)", () => {
       return emptyPage();
     });
     render(<LeadsScreen />);
-    await userEvent.click(await screen.findByTestId("new-record"));
-    await userEvent.type(screen.getByLabelText("Full name *"), "Duplicate");
-    await userEvent.type(
-      screen.getByLabelText("Email"),
-      "duplicate@example.test",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Full name *"), "Duplicate");
+    await user.type(screen.getByLabelText("Email"), "duplicate@example.test");
+    await user.click(screen.getByRole("button", { name: "Create" }));
 
     expect(await screen.findByText("View existing record")).toBeTruthy();
     expect(postCount).toBe(0);
-    await userEvent.click(screen.getByText("View existing record"));
+    await user.click(screen.getByText("View existing record"));
     expect(window.location.hash).toBe("#/leads/existing-lead");
   });
 
@@ -537,6 +538,7 @@ describe("LeadsScreen — archived marking (P-3)", () => {
 
 describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
   it("opens on my queue and sends the origin filter to the server", async () => {
+    const user = userEvent.setup();
     const { urls } = stubFetchWithMe(async (url) => {
       if (url.includes("/leads")) {
         return jsonResponse({
@@ -558,7 +560,7 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
     expect(leadReads.length).toBeGreaterThan(0);
     expect(leadReads.every((url) => url.includes("owner_id=u-9"))).toBe(true);
 
-    await pickFilter("Origin", "Website");
+    await pickFilter(user, "Origin", "Website");
     await waitFor(() =>
       expect(
         urls.some(
@@ -612,6 +614,7 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
 
 describe("LeadsScreen — Back from a lead", () => {
   it("returns to All when the rep left the list on All", async () => {
+    const user = userEvent.setup();
     const { urls } = stubFetchWithMe(async (url) => {
       if (url.includes("/leads")) {
         return jsonResponse({
@@ -626,7 +629,7 @@ describe("LeadsScreen — Back from a lead", () => {
     });
     const first = render(<LeadsScreen />);
     await screen.findByText("Jonas Petersen");
-    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    await user.click(screen.getByRole("button", { name: "All" }));
     await waitFor(() => expect(window.location.hash).toContain("owner_id=all"));
 
     // Opening a lead unmounts the list; Back mounts it again on that address.
@@ -644,6 +647,7 @@ describe("LeadsScreen — Back from a lead", () => {
 
 describe("LeadsScreen — dedupe view-existing link (P-16)", () => {
   it("renders a link to the collided record on a duplicate_email 409", async () => {
+    const user = userEvent.setup();
     stubFetch(async (url, method) => {
       if (method === "POST" && url.includes("/leads")) {
         return jsonResponse(
@@ -660,15 +664,15 @@ describe("LeadsScreen — dedupe view-existing link (P-16)", () => {
       return emptyPage();
     });
     render(<LeadsScreen />);
-    await userEvent.click(await screen.findByTestId("new-record"));
-    await userEvent.type(screen.getByLabelText("Full name *"), "Dup Lead");
-    await userEvent.type(screen.getByLabelText("Email"), "dup@example.test");
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Full name *"), "Dup Lead");
+    await user.type(screen.getByLabelText("Email"), "dup@example.test");
+    await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() =>
       expect(screen.getByText("View existing record")).toBeTruthy(),
     );
-    await userEvent.click(screen.getByText("View existing record"));
+    await user.click(screen.getByText("View existing record"));
     expect(window.location.hash).toBe("#/leads/01X");
   });
 });

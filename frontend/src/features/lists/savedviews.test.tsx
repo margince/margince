@@ -240,7 +240,7 @@ describe("saved views", () => {
         });
       }),
     );
-    wrap(<SaveViewAction resource="companies" query={narrowed} />);
+    wrap(<SaveViewAction resource="companies" state={{ query: narrowed }} />);
 
     await user.click(screen.getByRole("button", { name: "Save view" }));
     await user.type(screen.getByRole("textbox", { name: "Name" }), "Customers");
@@ -353,15 +353,44 @@ describe("saved views", () => {
     wrap(
       <SaveViewAction
         resource="companies"
-        query={{
-          q: "",
-          sort: "",
-          includeArchived: false,
-          filters: {},
-          perPage: 25,
+        state={{
+          query: {
+            q: "",
+            sort: "",
+            includeArchived: false,
+            filters: {},
+            perPage: 25,
+          },
         }}
       />,
     );
     expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
+  });
+
+  it("does not offer to save the order and filters the list opened with", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ data: [] })),
+    );
+    const opening = {
+      initialSort: narrowed.sort,
+      initialFilters: narrowed.filters,
+    };
+    const opened = wrap(
+      <SaveViewAction
+        resource="companies"
+        state={{ ...opening, query: narrowed }}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
+
+    opened.unmount();
+    wrap(
+      <SaveViewAction
+        resource="companies"
+        state={{ ...opening, query: { ...narrowed, sort: "-created_at" } }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Save view" })).toBeTruthy();
   });
 });

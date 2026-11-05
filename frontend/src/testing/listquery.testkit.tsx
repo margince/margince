@@ -7,10 +7,6 @@ import {
 } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import type { ListChip } from "../design-system/listsurface";
-import { LocaleProvider } from "../i18n";
-import { filtersStepName } from "../testing/listview.names";
-import { openView, openViewStep, walkBack } from "../testing/listview.testkit";
 import {
   type FilterSpec,
   type ListPage,
@@ -20,7 +16,11 @@ import {
   type SavedViewTab,
   useListQuery,
   type ViewSpec,
-} from "./listquery";
+} from "../components/listquery";
+import type { ListChip } from "../design-system/listsurface";
+import { LocaleProvider } from "../i18n";
+import { filtersStepName, labelled } from "./listview.names";
+import { openView, openViewStep, walkBack } from "./listview.testkit";
 
 export function render(ui: ReactNode): RenderResult {
   const client = new QueryClient({
@@ -106,7 +106,9 @@ export async function openFilterValues(
   scope?: HTMLElement,
 ): Promise<HTMLElement> {
   const step = await openViewStep(user, filtersStepName(), scope);
-  await user.click(within(step).getByRole("button", { name: attribute }));
+  await user.click(
+    within(step).getByRole("button", { name: labelled(attribute) }),
+  );
   return screen.findByRole("group", { name: attribute });
 }
 

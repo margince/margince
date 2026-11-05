@@ -20,7 +20,7 @@ import { useLocale, usePlural, useT } from "../i18n";
 import { OptionCount } from "./atoms";
 import { coveredByDialog } from "./dialogfocus";
 import { MenuHead } from "./listmenu";
-import { PopoverSheet } from "./listpopover";
+import { PopoverSheet } from "./popover";
 
 export type ViewRow = Readonly<{
   key: string;

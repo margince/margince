@@ -18,6 +18,7 @@ afterEach(cleanup);
 
 describe("sorting", () => {
   it("clicking a sortable header requests that field, ascending first", async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(
       <ListTable
@@ -28,11 +29,12 @@ describe("sorting", () => {
         sort={{ value: "", onChange }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Sort by Name" }));
+    await user.click(screen.getByRole("button", { name: "Sort by Name" }));
     expect(onChange).toHaveBeenCalledWith("name");
   });
 
   it("clicking the already-sorted header again sends the descending field", async () => {
+    const user = userEvent.setup();
     function Harness() {
       const [value, setValue] = useState("name");
       return (
@@ -46,7 +48,7 @@ describe("sorting", () => {
       );
     }
     render(<Harness />);
-    await userEvent.click(screen.getByRole("button", { name: "Sort by Name" }));
+    await user.click(screen.getByRole("button", { name: "Sort by Name" }));
     expect(
       screen
         .getByRole("columnheader", { name: /Name/ })
@@ -55,6 +57,7 @@ describe("sorting", () => {
   });
 
   it("a numeric column's first click sorts descending", async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(
       <ListTable
@@ -65,9 +68,7 @@ describe("sorting", () => {
         sort={{ value: "", onChange }}
       />,
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Sort by Value" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Sort by Value" }));
     expect(onChange).toHaveBeenCalledWith("-value");
   });
 
@@ -105,6 +106,7 @@ describe("the Sort step", () => {
   }
 
   it("offers every orderable column and nothing else", async () => {
+    const user = userEvent.setup();
     render(
       <ListTable
         rows={testRows(1)}
@@ -114,7 +116,7 @@ describe("the Sort step", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    await openViewStep(userEvent, "Sort");
+    await openViewStep(user, "Sort");
     const menu = sortMenu();
     expect(menu.getByRole("radio", { name: "Name" })).toBeTruthy();
     expect(menu.getByRole("radio", { name: "Value" })).toBeTruthy();
@@ -125,6 +127,7 @@ describe("the Sort step", () => {
   });
 
   it("still offers a column the reader has hidden", async () => {
+    const user = userEvent.setup();
     render(
       <ListTable
         rows={testRows(1)}
@@ -134,17 +137,16 @@ describe("the Sort step", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    const shown = await openViewStep(userEvent, "Columns");
-    await userEvent.click(
-      within(shown).getByRole("checkbox", { name: "Value" }),
-    );
+    const shown = await openViewStep(user, "Columns");
+    await user.click(within(shown).getByRole("checkbox", { name: "Value" }));
     expect(screen.queryByRole("columnheader", { name: "Value" })).toBeNull();
 
-    await openViewStep(userEvent, "Sort");
+    await openViewStep(user, "Sort");
     expect(sortMenu().getByRole("radio", { name: "Value" })).toBeTruthy();
   });
 
   it("presses the same direction a header press would", async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(
       <ListTable
@@ -155,15 +157,16 @@ describe("the Sort step", () => {
         sort={{ value: "", onChange }}
       />,
     );
-    await openViewStep(userEvent, "Sort");
-    await userEvent.click(sortMenu().getByRole("radio", { name: "Name" }));
+    await openViewStep(user, "Sort");
+    await user.click(sortMenu().getByRole("radio", { name: "Name" }));
     expect(onChange).toHaveBeenCalledWith("name");
 
-    await userEvent.click(sortMenu().getByRole("radio", { name: "Value" }));
+    await user.click(sortMenu().getByRole("radio", { name: "Value" }));
     expect(onChange).toHaveBeenLastCalledWith("-value");
   });
 
   it("flips the direction of the attribute already sorted, and says which way", async () => {
+    const user = userEvent.setup();
     function Harness() {
       const [value, setValue] = useState("name");
       return (
@@ -177,12 +180,12 @@ describe("the Sort step", () => {
       );
     }
     render(<Harness />);
-    await openViewStep(userEvent, "Sort");
+    await openViewStep(user, "Sort");
     const entry = sortMenu().getByRole("radio", { name: /^Name/ });
     expect(entry).toBeChecked();
     expect(entry.closest("label")?.textContent).toContain("ascending");
 
-    await userEvent.click(entry);
+    await user.click(entry);
     expect(
       sortMenu().getByRole("radio", { name: /^Name/ }).closest("label")
         ?.textContent,
@@ -192,6 +195,7 @@ describe("the Sort step", () => {
   // A sort also arrives from a saved view, a header or an address, so the row
   // names it without being opened.
   it("names the order in force on its row", async () => {
+    const user = userEvent.setup();
     const { rerender } = render(
       <ListTable
         rows={testRows(1)}
@@ -201,7 +205,7 @@ describe("the Sort step", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    const panel = within(await openView(userEvent));
+    const panel = within(await openView(user));
     expect(
       panel.getByRole("button", { name: "Sort, Default order" }),
     ).toBeInTheDocument();
@@ -228,6 +232,7 @@ describe("the Sort step", () => {
   // a reader adds to, and five of them over five orderings promised a
   // combination this list cannot be in.
   it("marks the order in force without offering a set to build", async () => {
+    const user = userEvent.setup();
     render(
       <ListTable
         rows={testRows(1)}
@@ -237,7 +242,7 @@ describe("the Sort step", () => {
         sort={{ value: "name", onChange: () => {} }}
       />,
     );
-    await openViewStep(userEvent, "Sort");
+    await openViewStep(user, "Sort");
     const menu = sortMenu();
 
     expect(menu.getByRole("radio", { name: /^Name/ })).toBeChecked();
@@ -246,6 +251,7 @@ describe("the Sort step", () => {
   });
 
   it("offers the server's own order, which is a state a saved view can ask for", async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(
       <ListTable
@@ -256,14 +262,15 @@ describe("the Sort step", () => {
         sort={{ value: "name", onChange }}
       />,
     );
-    await openViewStep(userEvent, "Sort");
+    await openViewStep(user, "Sort");
     const fallback = sortMenu().getByRole("radio", { name: "Default order" });
     expect(fallback).not.toBeChecked();
-    await userEvent.click(fallback);
+    await user.click(fallback);
     expect(onChange).toHaveBeenCalledWith("");
   });
 
   it("is not drawn for a list the server cannot order", async () => {
+    const user = userEvent.setup();
     render(
       <ListTable
         rows={testRows(1)}
@@ -273,11 +280,12 @@ describe("the Sort step", () => {
         sort={{ value: "", onChange: () => {} }}
       />,
     );
-    const panel = within(await openView(userEvent));
+    const panel = within(await openView(user));
     expect(panel.queryByRole("button", { name: /^Sort,/ })).toBeNull();
   });
 
   it("is not drawn without a sort control at all", async () => {
+    const user = userEvent.setup();
     render(
       <ListTable
         rows={testRows(1)}
@@ -286,7 +294,7 @@ describe("the Sort step", () => {
         unit="rows"
       />,
     );
-    const panel = within(await openView(userEvent));
+    const panel = within(await openView(user));
     expect(panel.queryByRole("button", { name: /^Sort,/ })).toBeNull();
   });
 });
@@ -305,6 +313,7 @@ describe("filter chips", () => {
   ];
 
   it("picking a chip option calls onChipChange with the value, and Delete filter clears it", async () => {
+    const user = userEvent.setup();
     const onChipChange = vi.fn();
     const { rerender } = render(
       <ListTable
@@ -317,9 +326,9 @@ describe("filter chips", () => {
       />,
     );
 
-    await openViewStep(userEvent, "Filters");
-    await userEvent.click(screen.getByRole("button", { name: "Status" }));
-    await userEvent.click(screen.getByRole("radio", { name: "New" }));
+    await openViewStep(user, "Filters");
+    await user.click(screen.getByRole("button", { name: "Status" }));
+    await user.click(screen.getByRole("radio", { name: "New" }));
     expect(onChipChange).toHaveBeenCalledWith("status", "new");
 
     rerender(
@@ -335,14 +344,12 @@ describe("filter chips", () => {
         />
       </LocaleProvider>,
     );
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", {
         name: "More actions for the Status filter",
       }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Delete filter" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete filter" }));
     expect(onChipChange).toHaveBeenCalledWith("status", "");
   });
 });

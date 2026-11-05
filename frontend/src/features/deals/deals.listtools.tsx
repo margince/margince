@@ -100,7 +100,8 @@ export function dealFilterChips(
   ];
 }
 
-// One pipeline is no choice, so it gets no row; the count line still names it.
+// One pipeline is no choice, so it gets no row. The count line names it while
+// rows show.
 export function dealViewDials({
   view,
   setView,

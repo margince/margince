@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { screen, within } from "@testing-library/react";
-import type { UserEvent } from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { catalogs, type Locale } from "../i18n";
 import { labelled, viewMenuName } from "./listview.names";
 
@@ -12,8 +12,15 @@ const DEEPEST_STEP = 4;
 // A list's dials are all behind its View button. A test reaches a dial the
 // way a reader does: View, then the dial's row, then the step it opens.
 
-/** A `userEvent.setup()` instance, or `userEvent` itself. */
+/** The test's one `userEvent.setup()` instance (frontend/AGENTS.md). */
 type Presser = Pick<UserEvent, "click">;
+
+// The module's own `click` starts a new input session on every call.
+function oneSession(user: Presser): void {
+  if (user === userEvent) {
+    throw new Error("pass the test's userEvent.setup(), not userEvent");
+  }
+}
 
 /** The View button, by its visible word; its count and dot follow a comma. */
 export function viewButton(
@@ -29,6 +36,7 @@ export async function openView(
   scope: HTMLElement = document.body,
   locale: Locale = "en",
 ): Promise<HTMLElement> {
+  oneSession(user);
   const trigger = await viewButton(scope, locale);
   if (trigger.getAttribute("aria-expanded") !== "true") {
     await user.click(trigger);
@@ -45,17 +53,20 @@ export async function walkBack<T>(
   user: Presser,
   until: () => T | null = () => null,
 ): Promise<T | null> {
-  for (let presses = 0; presses <= DEEPEST_STEP; presses++) {
+  oneSession(user);
+  for (let presses = 0; ; presses++) {
     const found = until();
     const back = panel.querySelector<HTMLElement>(".lt-mback");
     if (found !== null || back === null) {
       return found;
     }
+    if (presses === DEEPEST_STEP) {
+      throw new Error(
+        `the View panel still had a Back after ${DEEPEST_STEP} presses`,
+      );
+    }
     await user.click(back);
   }
-  throw new Error(
-    `the View panel still had a Back after ${DEEPEST_STEP} presses`,
-  );
 }
 
 /**

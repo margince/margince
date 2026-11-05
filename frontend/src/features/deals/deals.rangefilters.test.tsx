@@ -4,12 +4,12 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { openFilterValues } from "../../components/listquery.testkit";
 import { ListSurface } from "../../design-system/listsurface";
 import { type Locale, LocaleProvider, useLocale, useT } from "../../i18n";
 import { de } from "../../i18n/de";
 import { useCompanyZone } from "../../lib/companyzone";
 import { withheldDealDials } from "../../lib/dealranges";
+import { openFilterValues } from "../../testing/listquery.testkit";
 import { openViewStep } from "../../testing/listview.testkit";
 import { dealRangeChips } from "./deals.rangefilters";
 
