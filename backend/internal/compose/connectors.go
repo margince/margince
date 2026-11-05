@@ -105,6 +105,7 @@ type connectorHandlers struct {
 	// extOAuthGrants opens one unit's OAuth grants; nil reads them through the
 	// process's extension runtime binding, as the unit's Runtime does.
 	extOAuthGrants func(unit string) extOAuthGrants
+	picture        connectPicture
 }
 
 // wired reports whether the Gmail OAuth app is composed for this role.
@@ -341,6 +342,7 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		land(outcomeError)
 		return
 	}
+	h.offerConnectPicture(runCtx, st.User, consent, auth)
 	h.chainAfterConnect(runCtx, w, r, st, consent)
 }
 

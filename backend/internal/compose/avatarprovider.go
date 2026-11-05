@@ -27,13 +27,14 @@ import (
 // token names: the fetch would reach wherever a claim pointed it.
 const googlePictureHostSuffix = ".googleusercontent.com"
 
-// installAvatarPictures binds the picture routes and the sign-in's fill to the options' object
-// store. Without one the routes answer 501 and a sign-in fills nothing.
+// installAvatarPictures binds the picture routes, and the sign-in's and Google connect's fill,
+// to the options' object store. Without one the routes answer 501 and nothing fills.
 func installAvatarPictures(s *Server, pool *pgxpool.Pool, log *slog.Logger) {
 	pictures := newAvatarPictures(InstallationDB(pool), s.blob, webread.New(), log)
 	s.avatarHandlers = avatarHandlers{pictures: pictures}
 	if s.blob != nil {
 		s.authHandlers = s.WithProviderPictureFill(pictures.FillFromPictureURL)
+		s.connectorHandlers.picture = newConnectPicture(pictures.users, pictures.FillFromPictureURL)
 	}
 }
 

@@ -108,12 +108,12 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		Provider:     connectorName,
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
-		Scopes:       ConsentScopes(),
+		Scopes:       append(ConsentScopes(), googleconn.ProfileScope),
 		AuthURL:      cfg.AuthURL,
 		TokenURL:     cfg.TokenURL,
 		// Google needs offline access + a forced consent prompt to return a
-		// refresh token. No include_granted_scopes: keep this credential scoped
-		// to the calendar alone.
+		// refresh token. No include_granted_scopes: keep the mail scopes out of
+		// this credential.
 		AuthParams: map[string]string{
 			"access_type": "offline",
 			"prompt":      "consent",

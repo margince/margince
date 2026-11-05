@@ -50,7 +50,7 @@ func (o *recordingOAuth) AuthCodeURL(state, _ string) string { return "https://a
 
 func (o *recordingOAuth) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
 	o.exchanges++
-	return oauthflow.TokenGrant{RefreshToken: "refresh", Scopes: o.granted}, nil
+	return oauthflow.TokenGrant{RefreshToken: "refresh", Scopes: o.granted, AccessToken: "access"}, nil
 }
 
 func (o *recordingOAuth) AccessToken(context.Context, string) (string, error) { return "access", nil }
