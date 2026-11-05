@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/compose/connectors_picture.go -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings: **Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**, **Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
@@ -124,7 +124,7 @@ Also called: my name, profile name, rename myself.
 To change your profile picture in Margince, open Settings → **Account** and choose **Upload picture** in the **Profile picture** row. Pick a PNG, JPEG or WebP file of up to 5 MB. Margince cuts the middle square out of it, and colleagues see it next to your name.
 Also called: photo, avatar, profile photo.
 
-Colleagues see a picture you uploaded first. Without one, they see the picture of the Google account you sign in with, the newest one at each sign-in. Without either, they see the first letters of your name. **Remove picture** takes the picture off for good, even after a later sign-in with Google. Only a new upload brings a picture back.
+Colleagues see a picture you uploaded first. Without one, they see the picture of the Google account you sign in with. It updates at each sign-in, and each time you connect that same account for mail or calendar. Without either, they see the first letters of your name. **Remove picture** takes the picture off for good, even after a later sign-in with Google. Only a new upload brings a picture back.
 
 ### How do I add an email signature?
 <!-- opens: settings/account -->
