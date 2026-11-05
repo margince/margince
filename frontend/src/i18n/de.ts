@@ -4517,6 +4517,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.note": "Notiz",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript erstellen",
+  "approval.kind.stage_progression": "Deal-Phase voranbringen",
   "approval.kind.commitment_task": "Aufgabenzusage",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
   "approval.kind.disqualify_lead": "Lead disqualifizieren",

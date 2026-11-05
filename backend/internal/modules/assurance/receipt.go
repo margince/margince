@@ -21,7 +21,8 @@ import (
 // eligible ones included, replacing each deal's previous receipt.
 //
 // A deal with no assessment gets an unknown receipt rather than none. Its
-// fingerprint is then stored, so the freshness check sees its evidence move.
+// fingerprint stays empty and matches no computed one, so the freshness check
+// reads any change to its activities as moved.
 //
 // The run's own audit row covers these, as it covers the findings. A receipt
 // per deal in the audit log would bury the night's one verdict.

@@ -4483,6 +4483,7 @@ export const en = {
   "approval.field.lost_reason": "Why it was lost",
   "approval.field.note": "Note",
   "approval.kind.transcript_proposal": "Add next step from transcript",
+  "approval.kind.stage_progression": "Advance deal stage",
   "approval.kind.commitment_task": "Task commitment",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
   "approval.kind.disqualify_lead": "Disqualify lead",

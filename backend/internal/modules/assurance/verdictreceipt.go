@@ -23,7 +23,8 @@ import (
 type DealVerdict struct {
 	DealID ids.UUID
 	// Fingerprint is the deal's viability fingerprint now. It is stored only
-	// when the deal has no receipt yet, so the input check reads it as moved.
+	// when the deal has no receipt yet, so the freshness check reads the deal
+	// as unchanged until its evidence moves.
 	Fingerprint   string
 	InputChecksum string
 	BasisDigest   string
