@@ -5728,6 +5728,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.invalid": "Gib eine ganze Zahl von 0 bis 100 ein.",
   "deal.winProbability.source.stage": "aus der Phase",
   "deal.winProbability.source.human": "von Hand gesetzt",
+  "deal.winProbability.source.you": "von dir gesetzt",
+  "deal.winProbability.source.colleague": "von {name} gesetzt",
   "deal.winProbability.source.margince": "von Margince gesenkt",
   "deal.winProbability.stageValue": "Phase {percent}",
   "deal.winProbability.setByStage":

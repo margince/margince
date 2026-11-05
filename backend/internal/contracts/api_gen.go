@@ -43166,6 +43166,12 @@ type Deal struct {
 	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
 	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
+	// WinProbabilitySetByName The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
+	WinProbabilitySetByName *string `json:"win_probability_set_by_name,omitempty"`
+
+	// WinProbabilitySetByUserId The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
+	WinProbabilitySetByUserId *openapi_types.UUID `json:"win_probability_set_by_user_id,omitempty"`
+
 	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
 	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
 
@@ -43325,6 +43331,12 @@ type DealAdvanced struct {
 
 	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
 	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
+
+	// WinProbabilitySetByName The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
+	WinProbabilitySetByName *string `json:"win_probability_set_by_name,omitempty"`
+
+	// WinProbabilitySetByUserId The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
+	WinProbabilitySetByUserId *openapi_types.UUID `json:"win_probability_set_by_user_id,omitempty"`
 
 	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
 	WinProbabilitySource *DealAdvancedWinProbabilitySource `json:"win_probability_source,omitempty"`
@@ -80332,6 +80344,22 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "win_probability")
 	}
 
+	if raw, found := object["win_probability_set_by_name"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySetByName)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_set_by_name': %w", err)
+		}
+		delete(object, "win_probability_set_by_name")
+	}
+
+	if raw, found := object["win_probability_set_by_user_id"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySetByUserId)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_set_by_user_id': %w", err)
+		}
+		delete(object, "win_probability_set_by_user_id")
+	}
+
 	if raw, found := object["win_probability_source"]; found {
 		err = json.Unmarshal(raw, &a.WinProbabilitySource)
 		if err != nil {
@@ -80691,6 +80719,20 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["win_probability"], err = json.Marshal(a.WinProbability)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySetByName != nil {
+		object["win_probability_set_by_name"], err = json.Marshal(a.WinProbabilitySetByName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_set_by_name': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySetByUserId != nil {
+		object["win_probability_set_by_user_id"], err = json.Marshal(a.WinProbabilitySetByUserId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_set_by_user_id': %w", err)
 		}
 	}
 
@@ -81140,6 +81182,22 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 		delete(object, "win_probability")
 	}
 
+	if raw, found := object["win_probability_set_by_name"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySetByName)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_set_by_name': %w", err)
+		}
+		delete(object, "win_probability_set_by_name")
+	}
+
+	if raw, found := object["win_probability_set_by_user_id"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySetByUserId)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_set_by_user_id': %w", err)
+		}
+		delete(object, "win_probability_set_by_user_id")
+	}
+
 	if raw, found := object["win_probability_source"]; found {
 		err = json.Unmarshal(raw, &a.WinProbabilitySource)
 		if err != nil {
@@ -81506,6 +81564,20 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["win_probability"], err = json.Marshal(a.WinProbability)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySetByName != nil {
+		object["win_probability_set_by_name"], err = json.Marshal(a.WinProbabilitySetByName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_set_by_name': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySetByUserId != nil {
+		object["win_probability_set_by_user_id"], err = json.Marshal(a.WinProbabilitySetByUserId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_set_by_user_id': %w", err)
 		}
 	}
 

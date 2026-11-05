@@ -274,8 +274,8 @@ that names none reads "Not set".
 ## Win probability
 
 A deal's **Probability**, from 0 to 100%, starts as its stage's. Set the deal's
-own when you edit it; it then reads "set by hand", with the stage's value beside
-it. Empty the field to use the stage's again. A stage move sets it back to the
+own when you edit it; it then reads "set by you", with the stage's value beside
+it. A colleague's reads "set by" and their name. Empty the field to use the stage's again. A stage move sets it back to the
 new stage's and says so: "Probability set to 75% by the stage Negotiating". A
 won deal is at 100%, a lost one at 0%. The forecast weights each open deal by
 it, and one at 90% or more (the **Likely threshold** setting) with a confirmed
