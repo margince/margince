@@ -36,6 +36,7 @@ import { WorklistMayBeDone } from "./worklist.maybedone";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
+import { isPinned } from "./worklist.pinmark";
 import type { WorklistItem } from "./worklist.queries";
 import { noticeDetail, sharedResponsibility } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
@@ -197,10 +198,11 @@ export function WorklistRow({
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   const responsibility = sharedResponsibility(item, locale, t);
-  // Whether the day put a state on this row: overdue, or a meeting the reader
-  // has not confirmed ready. They ride on the title line, which is why it is
-  // drawn on a row that has no title of its own to draw.
-  const badged = item.overdue === true || isUnprepared(item);
+  const pinned = allowPin && isPinned(item);
+  // Whether the title line has a mark to show: overdue, a meeting the reader
+  // has not confirmed ready, or the reader's pin. They ride on the title line,
+  // which is why it is drawn on a row that has no title of its own to draw.
+  const badged = item.overdue === true || isUnprepared(item) || pinned;
   // One brief write per row, shared by Act and the two set-asides. The hook
   // registers a mutation and reads nothing, so every row may call it. Two
   // writes would carry two settled flags, and one item could be answered twice.
@@ -221,6 +223,7 @@ export function WorklistRow({
     about,
     host,
     touch,
+    pinned,
   });
   const named = conditionOf(item, t);
   return (

@@ -132,6 +132,9 @@ func readCompanyRow(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived s
 		func(o *crmcontracts.Company, may bool) { o.Writable = &may }); err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if err := stampCompaniesArchivable(ctx, tx, companies); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	if err := attachCompanyDomains(ctx, tx, companies); err != nil {
 		return crmcontracts.Company{}, err
 	}

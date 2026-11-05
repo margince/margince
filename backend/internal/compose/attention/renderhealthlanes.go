@@ -55,6 +55,22 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 	return item
 }
 
+// bookingItem carries no subject and no verbs: the host fixes the page on the
+// booking settings screen. The cause names the blocker, so a page that moves
+// from one blocker to another is a new card and one host never gets two.
+func bookingItem(concern BookingConcern) crmcontracts.AttentionItem {
+	kind := concern.Blocker
+	item := crmcontracts.AttentionItem{
+		Id:      concern.PageID.String(),
+		Source:  crmcontracts.AttentionItemSource("booking_health"),
+		Kind:    &kind,
+		Actions: []crmcontracts.AttentionItemActions{},
+	}
+	cause := "booking_health:" + kind
+	item.CauseRef = &cause
+	return item
+}
+
 func captureMedium(calendar bool) crmcontracts.AttentionConnectionFactsMedium {
 	if calendar {
 		return crmcontracts.AttentionConnectionFactsMediumCalendar
@@ -232,6 +248,10 @@ func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 	if run.Reason != "" {
 		reason := run.Reason
 		item.Detail = &reason
+	}
+	if run.ReasonCode != "" {
+		code := run.ReasonCode
+		item.RunReasonCode = &code
 	}
 	return item
 }

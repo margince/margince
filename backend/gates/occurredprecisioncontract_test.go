@@ -55,6 +55,7 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml MarginceChangeBundle.latest_at":            "when Margince last changed the deal, the correction row's own write instant, not an activity time",
 	"api/crm.yaml ReportingForecastBasis.call_at":            "when a manager submitted a forecast call, the call row's exact write instant",
 	"api/crm.yaml AssessNoticeSource.obtained_at":            "The privacy user enters a source date; this does not copy a captured activity timestamp.",
 	"api/crm.yaml NoticeCase.source_obtained_at":             "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",
@@ -174,8 +175,8 @@ const (
 var instantTimeNames = gatekit.Waive(map[string]string{
 	"expected_updated_at": rowStamp,
 	"created_at":          rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
-	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp, "suspended_at": rowStamp,
-	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "enabled_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
+	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp,
+	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
 	"captured_at": rowStamp, "recorded_at": rowStamp, "set_at": rowStamp, "changed_at": rowStamp,
 	"corrected_at": rowStamp, "effective_at": rowStamp, "latest_captured_at": rowStamp, "value_captured_at": rowStamp,
 

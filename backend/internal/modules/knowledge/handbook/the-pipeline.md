@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals backend/internal/modules/deals/deal_advance.go backend/internal/modules/deals/lossreason.go backend/internal/modules/deals/pipeline.go backend/internal/modules/deals/stages.go backend/internal/modules/deals/stageprogression.go backend/internal/modules/deals/closedatesweep.go backend/internal/modules/deals/health.go -->
+<!-- describes: frontend/src/features/deals backend/internal/modules/deals/deal_advance.go backend/internal/modules/deals/lossreason.go backend/internal/modules/deals/pipeline.go backend/internal/modules/deals/stages.go backend/internal/modules/deals/stagemoveverdict.go backend/internal/modules/deals/closedatesweep.go backend/internal/modules/deals/health.go -->
 # The pipeline: how a deal moves
 
 The pipeline in Margince is the ladder of stages every deal moves through. Deals
@@ -307,46 +307,15 @@ The deal reports are **Open deals by stage**, **Forecast by probability**, **Ope
 deals per company**, and the sales and time-in-stage reports in **Performance**. They
 live under **Analytics**; see [Analytics and forecasting](analytics.md).
 
-## Stage automation: the evidence before trusting a move
+## Stage moves Margince makes
 
-Stage automation in Margince means the product suggests stage moves, and a stage
-move may later move deals by itself. Before you trust it to, there is a record of
-how its ideas really went, at **Settings → Stage automation** (in the Sales
-group).
+Margince may move an open deal to a later stage when the customer's own words meet what the stage asks for. It tells you after, and you can undo the move. See [Deals the customer supports](deals-the-customer-supports.md#when-the-deal-reached-a-later-stage). Also called: stage automation, automatic stage moves.
 
-The report itself is read-only. Under it sit the rules that decide what each
-stage move may do, and changing one of those needs permission to edit
-pipelines. Without it, the page shows "Read-only settings" at the top.
+## Deals Margince opens and reopens
 
-Under **Transition rules**, turning a stage move on does not start moving deals.
-Margince keeps asking until the record is good enough. Then it moves deals by
-itself and tells you after. A stage move that Margince has stopped shows
-**Resume**, which still has to reach the same bar.
+A customer may ask for an offer at a company with no open deal. Margince then opens a deal for the company's owner at the first stage. When the company's last closed deal was lost, Margince reopens that deal instead, for its owner. It counts only messages that reached Margince after the deal was lost.
 
-It reports three counts for each pipeline and stage move, over a number of
-days. It counts how many ideas someone **Reviewed**, how many are **Still
-open**, and how many **Expired**. An expired idea is one nobody answered in time; it does
-not count as a no.
-
-The reviewed ones are split into **Accepted** (as proposed), **Edited**
-(accepted after edits), **Rejected**, and **Undone or corrected**. That last
-one is a move that was undone, or whose evidence they marked wrong. Those four
-are shown as a share of what was reviewed.
-
-It also reports **Days observed**, from the first reviewed idea to the last. It
-says why that counts: "A good rate from one afternoon is not a track record."
-
-The **Track record** table shows **Reviewed**, **Accepted** and **Undone or corrected**.
-A stage move's details show **Edited**, **Rejected**, **Still open**, **Expired** and **Days observed**.
-They also show how often each kind of evidence, such as a signed document, was accepted as proposed.
-**What the figures mean**, under the table, explains every figure in the table and in the details.
-
-### How do I set up stage automation?
-To let Margince move deals between stages by itself, open **Settings** → **Stage automation** (in the **Sales** group). Switch a stage move on under **Transition rules**.
-1. Pick the pipeline and read each stage move's record. Check **Reviewed**, **Accepted** and **Undone or corrected** in **Track record**, then **Rejected** and **Days observed** in its details.
-2. Under **Transition rules**, turn on the stage move you trust.
-
-Nothing moves at once. Margince keeps suggesting moves for you to check until the record is good enough, then moves deals and tells you after. Changing a rule needs permission to edit pipelines. Also called: automatic stage moves, pipeline automation.
+Both show on **Home** with **Undo**. Undo of a reopen closes the deal as lost again, with its earlier reason. See [Deals the customer supports](deals-the-customer-supports.md#when-a-lost-deals-customer-comes-back). Also called: revive a lost deal, automatic new deal.
 
 ## Badges on a deal card
 

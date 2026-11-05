@@ -27,6 +27,7 @@ export const reachNames = {
   dsr: "brief.coverage.source.dsr",
   notice_case: "brief.coverage.source.notice_case",
   capture_health: "brief.coverage.source.capture_health",
+  booking_health: "brief.coverage.source.booking_health",
   ai_work_health: "brief.coverage.source.ai_work_health",
   bounce: "brief.coverage.source.bounce",
   undelivered: "brief.coverage.source.undelivered",

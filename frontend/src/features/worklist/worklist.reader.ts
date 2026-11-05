@@ -10,6 +10,7 @@ import {
   HUMAN_ACTOR_PREFIX,
   isAuditActorType,
 } from "../../lib/auditactor";
+import { runReasonWords } from "../../lib/automationrun";
 import type { Viewer } from "../../lib/worklistcopy";
 import {
   domainQuestionHeading,
@@ -17,11 +18,25 @@ import {
 } from "./worklist.domaincopy";
 import type { WorklistItem } from "./worklist.queries";
 
+/**
+ * A row's supporting line where the server sent a code for it: a failed
+ * automation's reason in the reader's language, since `detail` is English.
+ */
+export function codedDetail(
+  item: WorklistItem,
+  t: Translator,
+): string | undefined {
+  return item.source === "automation_run" && item.run_reason_code
+    ? runReasonWords(item.run_reason_code, t)
+    : item.detail;
+}
+
 export function noticeDetail(
   item: WorklistItem,
   viewer: Viewer | undefined,
   t: Translator,
 ): string | undefined {
+  if (item.source === "automation_run") return codedDetail(item, t);
   if (item.summary_parts) {
     return (
       summaryFieldsLine(item.summary_parts, summaryWords(t)) ?? item.detail

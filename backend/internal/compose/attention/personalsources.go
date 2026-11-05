@@ -38,6 +38,7 @@ var sourceAnswersForTheActorOnly = map[crmcontracts.WorklistItemSource]bool{
 	"ai_work_health": true,
 	"bounce":         true,
 	crmcontracts.WorklistItemSource(sourceCaptureHealth):  true,
+	crmcontracts.WorklistItemSource(sourceBookingHealth):  true,
 	crmcontracts.WorklistItemSource(sourceDomainQuestion): true,
 	"failed_approval":                             true,
 	"introduction_request":                        true,
