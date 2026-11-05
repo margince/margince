@@ -213,6 +213,20 @@ async function openTheLine() {
   return screen.findByRole("dialog");
 }
 
+describe("a done line's opener", () => {
+  it("marks its label as data and aligns it to the start", async () => {
+    stubOpenedLine();
+    renderMagic();
+
+    const opener = await screen.findByRole("button", {
+      name: "GEM and 1 more",
+    });
+
+    expect(opener.classList).toContain("btn-valuelabel");
+    expect(opener.classList).toContain("btn-align-start");
+  });
+});
+
 describe("a grouped record with a reviewed change", () => {
   it("keeps the review verbs its receipt offers on its own", async () => {
     stubOpenedLine(reviewedRecords(), () =>

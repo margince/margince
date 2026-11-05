@@ -192,3 +192,21 @@ export const EveryAxis: Story = {
     </div>
   ),
 };
+
+export const DataLabelAlignment: Story = {
+  render: () => (
+    <div style={{ ...stack, maxInlineSize: "16rem" }}>
+      {(["center", "start"] as const).map((align) => (
+        <div key={align} style={stack}>
+          <span className="t-label">align="{align}"</span>
+          <p className="t-body" style={{ margin: 0 }}>
+            Read from{" "}
+            <Button variant="link" align={align} className="btn-valuelabel">
+              Quarterly renewal for Thraud Logistics Holdings, Montreal office
+            </Button>
+          </p>
+        </div>
+      ))}
+    </div>
+  ),
+};
