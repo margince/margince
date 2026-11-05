@@ -17,7 +17,8 @@
 #      file is not a hint at all;
 #   4. the shard split holds every test once and spreads slow tests apart;
 #   5. a package too heavy for one process splits into parts that hold every
-#      test once, none empty, balanced by weight.
+#      test once, none empty, balanced by weight;
+#   6. the wall-clock report reads the critical part's own seconds.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -280,6 +281,17 @@ expect_order "40, 30 and 30 s under a 50 s part size run as three parts, one tes
 ^(TestY)$
 ^(TestZ)$' \
   "$(split_parts "$work/triodisc" "$work/triotime" 50 | cut -d'|' -f3- | LC_ALL=C sort)"
+
+# 6. The wall-clock report prices the process that ended last by its own
+# seconds. Two parts of one package share its name; only the slot tells them
+# apart.
+printf './a|10|50|3\n./big|5|400|7\n./big|5|200|8\n' > "$work/wallclock"
+printf './big|380.0|40|7\n./big|20.0|5|8\n./a|30.0|9|3\n' > "$work/parttiming"
+expect_order "the critical part is joined to its own seconds, not its sibling's" \
+  './big|5|400|380.0' "$(critical_part "$work/wallclock" "$work/parttiming")"
+printf './big|20.0|5|8\n' > "$work/othertiming"
+expect_order "a critical part whose log recorded no seconds reports none" \
+  './big|5|400|' "$(critical_part "$work/wallclock" "$work/othertiming")"
 
 # The committed shard timing has to be readable by assign_shard: four fields,
 # a number last. A line it cannot read silently weighs its test at the mean.

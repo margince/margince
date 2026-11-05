@@ -538,7 +538,7 @@ run_one() {
   # result — a package's verdict is the EXIT line inside the log above, which the
   # reconciliation at the end reads.
   local ended=$(( $(date +%s) - LANE_T0 ))
-  printf '%s\n' "${rel}|${began}|${ended}" >> "$WALLCLOCK" || :
+  printf '%s\n' "${rel}|${began}|${ended}|${idx}" >> "$WALLCLOCK" || :
 }
 export -f run_one owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin bucket_for
 # The workers run in re-exec'd shells, so a variable run_one reads must be
@@ -617,10 +617,11 @@ for base in $(cd "$OUTDIR" && ls -1 -- *.log 2>/dev/null | sort -n); do
   # The duration field is matched, not the line end: a covered shard appends
   # "coverage: NN.N% of statements" after it, and anchoring on s$ would have
   # priced every CI package at nothing — shard mode always sets COVERDIR.
-  awk -v rel="$rel" '
+  # The slot ends the row: parts of one package share its name.
+  awk -v rel="$rel" -v slot="$idx" '
     /^(ok|FAIL)[ \t]+[^ \t]+[ \t]+[0-9.]+s([ \t]|$)/ { secs = $3; sub(/s$/, "", secs) }
     /^--- (PASS|FAIL|SKIP): / { n++ }
-    END { if (secs != "") printf "%s|%s|%d\n", rel, secs, n + 0 }
+    END { if (secs != "") printf "%s|%s|%d|%s\n", rel, secs, n + 0, slot }
   ' "$log" >> "$TIMING" || true
 done
 
@@ -668,20 +669,14 @@ if [[ -s "$WALLCLOCK" ]] && [[ -s "$TIMING" ]]; then
   # Elapsed is computed here rather than in awk: systime() is a GNU extension and
   # this lane runs on BSD awk too.
   LANE_ELAPSED=$(( $(date +%s) - LANE_T0 ))
-  LC_ALL=C sort -t'|' -k3 -rn "$WALLCLOCK" | head -1 | awk -F"|" -v elapsed="$LANE_ELAPSED" -v fanout="$FANOUT_T0" -v timing="$TIMING" '
+  critical_part "$WALLCLOCK" "$TIMING" | awk -F"|" -v elapsed="$LANE_ELAPSED" -v fanout="$FANOUT_T0" '
     {
-      last = $1; began = $2; ended = $3
-      # The critical package'"'"'s own test seconds, so its slot time can be split
-      # into tests and provisioning. Tracked as FOUND rather than defaulted to
-      # zero: a package whose log carries no go-test duration (a build failure
-      # prints "FAIL pkg [build failed]", with no seconds) has a slot time here
-      # and no row there, and an absent duration read as 0.0 would report the
-      # entire slot as provisioning — inventing a number instead of admitting it
-      # is missing.
-      while ((getline line < timing) > 0) {
-        split(line, f, "|")
-        if (f[1] == last) { tests = f[2]; found = 1 }
-      }
+      last = $1; began = $2; ended = $3; tests = $4
+      # Tracked as FOUND rather than defaulted to zero: a package whose log
+      # carries no go-test duration (a build failure prints "FAIL pkg [build
+      # failed]", with no seconds) would otherwise report its entire slot as
+      # provisioning — inventing a number instead of admitting it is missing.
+      found = (tests != "")
       printf "test-integration-parallel: wall clock — %ds total\n", elapsed
       printf "  %ds  before any package could start (template, constraint scan, test enumeration)\n", fanout
       printf "  %ds  then %s waited for a slot\n", began - fanout, last

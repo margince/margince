@@ -180,3 +180,23 @@ split_parts() {
       ' \
     | LC_ALL=C sort
 }
+
+# critical_part WALLCLOCK TIMING — print `package|began|ended|test seconds` for
+# the process that ended last, the seconds empty when its log recorded none.
+#
+# WALLCLOCK lines are `package|began|ended|slot`, TIMING lines
+# `package|seconds|tests|slot`. They are joined on the slot, never on the
+# package: the parts of a split package share its name, and another part's
+# seconds would price this part's provisioning wrong, even below zero.
+critical_part() {
+  local wallclock="$1" timing="$2"
+  LC_ALL=C sort -t'|' -k3,3 -rn "$wallclock" | awk -F'|' -v timing="$timing" '
+    NR == 1 {
+      while ((getline line < timing) > 0) {
+        split(line, f, "|")
+        if (f[4] == $4) tests = f[2]
+      }
+      print $1 "|" $2 "|" $3 "|" tests
+    }
+  '
+}
