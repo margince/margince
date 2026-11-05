@@ -16,7 +16,7 @@ require (
 
 replace (
 	github.com/margince/margince/backend => ../backend
-	github.com/margince/margince/composition => ../build/composition/backend
+	github.com/margince/margince/composition => ../composition
 	github.com/margince/margince/extensions/de => ../extensions/de
 	github.com/margince/margince/extensions/finance-demo => ../extensions/finance-demo
 	github.com/margince/margince/extensions/openchannel => ../extensions/openchannel

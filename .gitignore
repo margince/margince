@@ -10,9 +10,10 @@ coverage-extensions.out
 .build/
 .DS_Store
 
-# ADR-0120 stable extension tier: build/composition/ is the ONE ignored
-# root for installation-dependent generated output (digest-gated by its
-# composition.json, never committed — anchored to the composition root so
+# ADR-0120 stable extension tier: build/composition/ is the digest-gated
+# root for installation-dependent generated output (gated by its
+# composition.json, never committed; its siblings build/composition-frontend/
+# and build/extensions/ below hold the rest — anchored to the composition root so
 # an unrelated future /build asset is never silently hidden), and
 # extensions/ is the installation-owned enabled set. The vanilla tree
 # ships the placeholder, the approval lock, and the FIRST-PARTY units
@@ -32,6 +33,8 @@ coverage-extensions.out
 # The versioned extensions an instance requires, copied out of the module cache
 # by gen-composition.
 /build/extensions/
+# The composed workspace members `make test-extensions` reads, one per line.
+/build/test-extensions.members
 
 /extensions/*
 !/extensions/.gitkeep

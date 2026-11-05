@@ -1171,7 +1171,8 @@ Check the floors, not only that `New()` returns. A test with no check proves not
 
 ## Compose and check
 
-Add the unit to `instance/go.mod`, then run `make composition` again and run the gates:
+Add the unit to `instance/go.mod`, then run `make composition` again and run the gates. Do not run `go mod tidy`
+on `instance/`: it marks the unit `// indirect`, and `make composition` skips it then:
 
 ```text
 require github.com/margince/margince/extensions/<name> v0.0.0
@@ -1237,7 +1238,8 @@ the gates are green.
 
 ## Remove a unit
 
-Remove its `require` and `replace` from `instance/go.mod`, then its folder:
+Remove its `require` and `replace` from `instance/go.mod` and its `!/extensions/<name>` line from `.gitignore`, then
+its folder:
 
 ```bash
 git rm -r extensions/<name>

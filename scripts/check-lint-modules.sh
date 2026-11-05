@@ -72,10 +72,7 @@ fi
 # agree on these two.
 modules="$(git ls-files '*go.mod' \
   | sed -e 's#/go\.mod$##' -e 's#^go\.mod$#.#' \
-  | grep -v '^backend$' \
-  | grep -v '^\.$' \
-  | grep -v '^instance$' \
-  | grep -v '^fixtures/' \
+  | awk '$0 != "backend" && $0 != "." && $0 != "instance" && $0 !~ /^fixtures\// { print }' \
   | sort)"
 if [[ -z "$modules" ]]; then
   echo "FAIL: lint-modules — found no modules to lint; this gate cannot pass by scanning nothing"

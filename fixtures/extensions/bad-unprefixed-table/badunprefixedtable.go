@@ -13,8 +13,8 @@
 // see extmigrations_fixture_test.go.
 //
 // It is a fixture rather than a temp-dir string so a human can point the
-// generator at it. Requiring it in instance/go.mod and running
-// `make composition` reproduces the refusal by hand. Nothing requires it in CI
+// generator at it. Add its require and local replace to instance/go.mod, then
+// run `make composition` to reproduce the refusal by hand. Nothing requires it in CI
 // (the extension lane requires crm-hello only), so the vanilla composed set never
 // sees it.
 package badunprefixedtable

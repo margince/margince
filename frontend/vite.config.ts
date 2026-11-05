@@ -19,12 +19,18 @@ import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 // directory, exactly as GOWORK names the generated workspace for the Go lane.
 const frontendRoot = fileURLToPath(new URL(".", import.meta.url));
 // One link per enabled unit's screen, written by gen-composition, wherever the
-// unit lives: extensions/, or a module an installation imports.
+// unit lives: extensions/, or a module an installation imports. Only the
+// composed lane imports a screen. A stale link is skipped, so it cannot break
+// the config.
 const unitScreensDir = join(frontendRoot, "..", "build", "composition-frontend", "units");
-const unitScreenDirs = existsSync(unitScreensDir)
-  ? readdirSync(unitScreensDir).map((unit) => realpathSync(join(unitScreensDir, unit)))
-  : [];
 const composedComposition = process.env.MARGINCE_COMPOSITION_FRONTEND;
+const unitScreenDirs =
+  composedComposition && existsSync(unitScreensDir)
+    ? readdirSync(unitScreensDir).flatMap((unit) => {
+        const link = join(unitScreensDir, unit);
+        return existsSync(link) ? [realpathSync(link)] : [];
+      })
+    : [];
 const compositionDir = composedComposition
   ? resolve(composedComposition)
   : join(frontendRoot, "src", "composition");

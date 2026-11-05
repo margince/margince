@@ -65,8 +65,17 @@ Build the binaries in the composed workspace, as this repository's own lanes do:
 
 ```sh
 cd .margince/core/backend
-GOWORK=$PWD/../build/composition/go.work go build ./cmd/api ./cmd/worker ./cmd/migrate
+GOWORK=$PWD/../build/composition/go.work go build -o bin/ ./cmd/api ./cmd/worker ./cmd/migrate
 ```
 
-The web app is in `.margince/core/frontend`, composed with the units' screens. Install the root workspace, then
-`build/composition-frontend/workspace`, then run the `*:composed` scripts in `frontend/`.
+Build the web app in the same tree. The last step names the composed registry, so the web app shows the units'
+screens:
+
+```sh
+cd .margince/core
+pnpm install --frozen-lockfile
+(cd build/composition-frontend/workspace && pnpm install --no-frozen-lockfile)
+cd frontend
+pnpm gen:composed-types && pnpm gen:events:composed
+MARGINCE_COMPOSITION_FRONTEND=$PWD/../build/composition/frontend pnpm build:composed
+```

@@ -297,3 +297,16 @@ replace example.test/tasks => ./tasks
 		t.Errorf("tasks = %+v, want the folder the every-version replace names", u)
 	}
 }
+
+func TestAForkMayDeclareItsOwnModulePath(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{
+		"instance/go.mod": "module i\n\nrequire example.test/acme/crm v1.2.0\n\n" +
+			"replace example.test/acme/crm v1.2.0 => example.test/acme/crm-fork v1.2.1\n",
+		"build/extensions/crm/go.mod": "module example.test/acme/crm-fork\n",
+		"build/extensions/crm/crm.go": "package crm\n",
+	})
+	if _, err := scanExtensions(root); err != nil && strings.Contains(err.Error(), "declares module") {
+		t.Fatalf("err = %v, want the fork's own path accepted, as Go accepts it", err)
+	}
+}

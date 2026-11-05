@@ -89,7 +89,7 @@ func instanceUnits(root string) ([]unitSource, error) {
 	seen := map[string]string{}
 	var units []unitSource
 	for _, r := range mod.Require {
-		if r.Indirect || r.Mod.Path == backendModule || r.Mod.Path == compositionModule {
+		if r.Indirect || isCoreModule(r.Mod.Path) {
 			continue
 		}
 		name := unitNameFromModulePath(r.Mod.Path)

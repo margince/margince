@@ -82,3 +82,37 @@ func writeInstanceGoMod(t *testing.T, body string) string {
 	}
 	return path
 }
+
+func TestATreeThatWouldHoldTheInstanceIsRefused(t *testing.T) {
+	t.Parallel()
+	instance := filepath.FromSlash("/work/acme")
+	for _, tree := range []string{"/work/acme", "/work", "/"} {
+		if err := checkTreeDir(instance, filepath.FromSlash(tree)); err == nil {
+			t.Errorf("-tree %s was accepted; composing would delete the instance", tree)
+		}
+	}
+	for _, tree := range []string{"/work/acme/build/core", "/work/acme/.margince/core", "/work/core", "/tmp/core"} {
+		if err := checkTreeDir(instance, filepath.FromSlash(tree)); err != nil {
+			t.Errorf("-tree %s was refused: %v", tree, err)
+		}
+	}
+}
+
+func TestCoreModulesAreNeverExtensions(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{
+		"instance/go.mod": "module i\n\nrequire (\n" +
+			"\tgithub.com/margince/margince " + testCoreVersion + "\n" +
+			"\tgithub.com/margince/margince/backend " + testCoreVersion + "\n" +
+			"\tgithub.com/margince/margince/backend/tools " + testCoreVersion + "\n" +
+			"\texample.test/notes v0.0.0\n)\n\nreplace example.test/notes => ./notes\n",
+	})
+	units, err := instanceUnits(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(units) != 1 || units[0].name != "notes" {
+		t.Fatalf("units = %+v, want only notes: core's own modules required directly are not extensions", units)
+	}
+}

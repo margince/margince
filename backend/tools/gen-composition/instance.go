@@ -39,6 +39,40 @@ const (
 	treeMarkerFile = ".margince-core"
 )
 
+// isCoreModule reports whether path is one of core's own modules, which an
+// instance requires but never composes as an extension.
+func isCoreModule(path string) bool {
+	switch path {
+	case coreRootModule, backendModule, coreToolsModule, compositionModule:
+		return true
+	}
+	return false
+}
+
+// replacementPath is the module path a versioned replace points the unit at,
+// or "" when none does. Go accepts a replacement whose go.mod declares that
+// path, such as a fork.
+func (u unitSource) replacementPath() string {
+	path, _, _ := strings.Cut(u.download, "@")
+	if path == u.modulePath {
+		return ""
+	}
+	return path
+}
+
+// checkTreeDir refuses a tree the next run would delete along with the
+// instance: the instance itself, or any folder that holds it.
+func checkTreeDir(instanceDir, treeDir string) error {
+	rel, err := filepath.Rel(treeDir, instanceDir)
+	if err != nil {
+		return err
+	}
+	if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))) {
+		return fmt.Errorf("-tree %s would hold the instance %s, and composing deletes the tree first; pick a folder inside or beside it", treeDir, instanceDir)
+	}
+	return nil
+}
+
 // compositionRoot is the tree to compose: -root, or with -instance the core
 // tree that instance requires.
 func compositionRoot(rootPath, instancePath, treePath string) (string, error) {
@@ -77,6 +111,10 @@ func prepareInstanceTree(instanceDir, treeDir string) (string, error) {
 	if !filepath.IsAbs(treeDir) {
 		treeDir = filepath.Join(instanceDir, treeDir)
 	}
+	treeDir = filepath.Clean(treeDir)
+	if err := checkTreeDir(instanceDir, treeDir); err != nil {
+		return "", err
+	}
 	instanceGoModOverride = goModPath
 
 	// Inside the instance's module, so its go.sum checks every download.
@@ -95,7 +133,7 @@ func prepareInstanceTree(instanceDir, treeDir string) (string, error) {
 	if current, _ := os.ReadFile(filepath.Join(treeDir, treeMarkerFile)); strings.TrimSpace(string(current)) == commit { // #nosec G304 -- the marker this function writes
 		return realAbs(treeDir)
 	}
-	stub, err := downloadModules(os.TempDir(), []string{compositionModule + "@" + commit})
+	stub, err := downloadModules(instanceDir, []string{compositionModule + "@" + commit})
 	if err != nil {
 		return "", err
 	}

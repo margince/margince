@@ -69,7 +69,7 @@ func scanExtensions(root string) ([]extensionUnit, error) {
 		}
 		// A downloaded go.mod may name any module. Composed under another path,
 		// it would stand in for that module everywhere, core's imports included.
-		if src.fetched && unit.ModulePath != src.modulePath {
+		if src.fetched && unit.ModulePath != src.modulePath && unit.ModulePath != src.replacementPath() {
 			return nil, fmt.Errorf("%s@%s declares module %q in its go.mod; refused, since it would replace that module in the whole build", src.modulePath, src.version, unit.ModulePath)
 		}
 		units = append(units, unit)

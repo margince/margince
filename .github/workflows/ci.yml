@@ -256,6 +256,8 @@ jobs:
               # or edits a fragment skips this job entirely, which is a lane
               # skipping generation and passing silently: exactly the failure
               # mode the composed lane exists to catch.
+              - 'go.mod'
+              - 'go.work'
               - 'instance/**'
               - 'extensions/**'
               - 'fixtures/**'
