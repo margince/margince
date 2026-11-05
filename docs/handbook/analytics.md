@@ -161,7 +161,7 @@ report cards.
 ## Deals
 
 The **Pipeline** section of Analytics holds the pipeline reports, under totals
-for the whole open pipeline.
+for the whole open pipeline. **Forecast by probability** sits beside the tables.
 
 **Open deals by stage**: one row per stage, in pipeline order. It shows the
 stage, how many deals, and the value without and with weighting. Every figure

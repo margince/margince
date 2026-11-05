@@ -13,6 +13,10 @@
   gap: var(--gapCards);
   min-width: 0;
 }
+/* With nothing for the rail the column takes the page. */
+.analytics-board:not(:has(> .analytics-board-rail)) {
+  grid-template-columns: minmax(0, 1fr);
+}
 @media (max-width: 1100px) {
   .analytics-board {
     grid-template-columns: minmax(0, 1fr);

@@ -24,6 +24,7 @@ import { navigate } from "../../lib/router";
 import { replaceDial } from "../../lib/urlstate";
 import type { Stage } from "./analytics.cells";
 import {
+  type AnalyticsScope,
   type AnalyticsSelection,
   scopeKey,
   useAnalyticsContext,
@@ -60,7 +61,13 @@ import "./analytics.css";
 // and then summed, so neither screen re-derives one from the raw total. All
 // three bodies render into ONE panel whose action band carries the explain
 // toggle: the segment changes what the panel holds, not what the page is.
-import { ReportCard, SECTION_REPORTS, useReportRun } from "./analytics.reports";
+import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
+import {
+  type CardKey,
+  ReportCard,
+  SECTION_REPORTS,
+  useReportRun,
+} from "./analytics.reports";
 
 export { buildStageAggregates, ForecastTile } from "./analytics.pipeline";
 
@@ -385,14 +392,11 @@ function SectionBody({
           {section === "delivery" && (
             <p className="sub">{t("analytics.deliveryCoversAll")}</p>
           )}
-          {SECTION_REPORTS[section].map((report) => (
-            <ReportCard
-              key={report}
-              report={report}
-              stages={stages}
-              locale={locale}
-            />
-          ))}
+          <ReportBoard
+            reports={SECTION_REPORTS[section]}
+            stages={stages}
+            locale={locale}
+          />
         </>
       );
   }
@@ -439,6 +443,53 @@ type ContextQuery = Readonly<{
   refetch: () => unknown;
 }>;
 
+// A section's report cards as one sheet, with the one that reads as a short
+// list in the rail beside the tables.
+function ReportBoard({
+  reports,
+  stages,
+  locale,
+  scope,
+}: Readonly<{
+  reports: readonly CardKey[];
+  stages: readonly Stage[];
+  locale: Locale;
+  scope?: AnalyticsScope;
+}>) {
+  const t = useT();
+  if (reports.length === 0) return null;
+  // Keyed by scope too, so an open explanation never outlives the records it
+  // explains.
+  const card = (report: CardKey) => (
+    <ReportCard
+      key={scope ? `${report}:${scopeKey(scope)}` : report}
+      report={report}
+      stages={stages}
+      locale={locale}
+      scope={scope}
+      section
+    />
+  );
+  const railed = reports.filter((report) => RAIL_REPORTS.has(report));
+  return (
+    <AnalyticsBoard
+      railLabel={t("analytics.board.rail")}
+      main={
+        <AnalyticsSheet>
+          {reports
+            .filter((report) => !RAIL_REPORTS.has(report))
+            .map((report) => card(report))}
+        </AnalyticsSheet>
+      }
+      rail={railed.length > 0 ? railed.map((report) => card(report)) : null}
+    />
+  );
+}
+
+// The probability bands read as a short list beside the pipeline's tables.
+// Wider tables stay on the sheet, where every column fits.
+const RAIL_REPORTS: ReadonlySet<CardKey> = new Set(["forecast"]);
+
 // Deals follow the picker so Pipeline and Performance count one set of
 // records; Delivery does not, because a project is read company-wide. The
 // picker needs forecast access, so a deal reader refused it (403) keeps the
@@ -480,20 +531,17 @@ function PipelineSection({
   return (
     <>
       {scope && (
-        <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
+        <FilterBar label={t("analytics.filters")} quiet labels="inside">
+          {scopeControl}
+        </FilterBar>
       )}
       {emptyNotice(first.data?.scope_holds_deals)}
-      {SECTION_REPORTS.pipeline.map((report) => (
-        <ReportCard
-          // Keyed by scope too, so an open explanation never outlives the
-          // records it explains.
-          key={scope ? `${report}:${scopeKey(scope)}` : report}
-          report={report}
-          stages={stages}
-          locale={locale}
-          scope={scope}
-        />
-      ))}
+      <ReportBoard
+        reports={SECTION_REPORTS.pipeline}
+        stages={stages}
+        locale={locale}
+        scope={scope}
+      />
     </>
   );
 }
