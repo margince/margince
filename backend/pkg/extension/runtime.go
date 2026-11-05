@@ -173,11 +173,13 @@ type Runtime interface {
 	// OAuthApps. It does not revoke the grant at the vendor.
 	OAuthDisconnect(ctx context.Context, provider OAuthProvider) error
 
-	// Deals, Authority and Directory are system reads for a job tick or a bus
-	// delivery, and answer ErrAttendedRead anywhere else. See systemread.go.
+	// Deals, Authority, Directory and Activities are system reads for a job tick
+	// or a bus delivery, and answer ErrAttendedRead anywhere else. See
+	// systemread.go.
 	Deals() Deals
 	Authority() Authority
 	Directory() Directory
+	Activities() Activities
 }
 
 // CallerType is which kind of principal an invocation is running as. It mirrors

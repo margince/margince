@@ -181,8 +181,8 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 
 `rt` is the **only** way a unit reaches the core. The core makes a new one for each call, and it stops
 working the moment the handler returns (`extension.ErrRuntimeExpired`). Today it gives `rt.Secrets()`,
-`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`. A handler with nobody behind it also gets four system
-reads: `rt.Deals().Get()`, `rt.Deals().Responsible()`, `rt.Authority().CanRead()` and `rt.Directory().Emails()`
+`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`. A handler with nobody behind it also gets five system
+reads: `rt.Deals().Get()`, `rt.Deals().Responsible()`, `rt.Authority().CanRead()`, `rt.Directory().Emails()` and `rt.Activities().Mail()`
 (see [Read deals and colleagues from a handler](#read-deals-and-colleagues-from-a-handler)).
 
 What the surface will serve, and what it will not:
@@ -1023,11 +1023,11 @@ plan for:
 ### Read deals and colleagues from a handler
 
 Your SQL may touch only your own tables. So a handler reads a core deal, and the colleagues on it, through
-four system reads. No user's rights limit what they read. That is why they answer on a job tick or a bus
+five system reads. No user's rights limit what they read. That is why they answer on a job tick or a bus
 delivery, where no user gets the answer.
 
-In all other places `Deals().Get`, `Deals().Responsible` and
-`Directory().Emails` answer `extension.ErrAttendedRead`. Those places are a tool call, a route, the inbound
+In all other places `Deals().Get`, `Deals().Responsible`,
+`Directory().Emails` and `Activities().Mail` answer `extension.ErrAttendedRead`. Those places are a tool call, a route, the inbound
 edge, a finance source's read and a transport's send. There the answer, or an error that quotes it, could reach a user whose
 own rights hide it.
 
@@ -1044,6 +1044,7 @@ SystemReads: []extension.SystemRead{
 	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
 	extension.SystemReadAuthority, // Authority().CanRead and CanWrite
 	extension.SystemReadDirectory, // Directory().Emails
+	extension.SystemReadActivities, // Activities().Mail
 },
 ```
 
@@ -1056,6 +1057,7 @@ subscription that reads the deal its event names.
 deal, err := rt.Deals().Get(ctx, d.Entity.ID)            // extension.ErrNotFound once the deal is gone
 team, err := rt.Deals().Responsible(ctx, d.Entity.ID)    // owner first, then by email
 emails, err := rt.Directory().Emails(ctx, ids)           // active human members only
+mail, err := rt.Activities().Mail(ctx, d.Entity.ID, extension.MailQuery{}) // the deal's shared emails, newest first
 ```
 
 - **`Get` reads a `DealSummary`.** It holds the name, the stage's name, the status, the value and currency,
@@ -1066,6 +1068,14 @@ emails, err := rt.Directory().Emails(ctx, ids)           // active human members
   teams on it. It leaves out agents, members who cannot sign in, users taken off the deal, and archived teams. It stops at
   `extension.MaxResponsible` colleagues.
 - **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
+- **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
+  `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
+  deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and
+  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It gives pages,
+  newest first, of at most `extension.MaxReadPage`.
+- **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply
+  yet" is a reminder for a colleague to check, not a fact. Never act on it alone, for example by sending a
+  message.
 
 ### Ask what a colleague may do: `CanRead` and `CanWrite`
 
