@@ -15,7 +15,7 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import { DealFiles } from "./dealfiles";
 
 // The deal's Files area as a rep meets it: a captured file says which message
@@ -249,9 +249,9 @@ it("dates a file from a mail logged by its day on that day, in any record zone",
   }
   stubApi([mail]);
   render(
-    <RecordZoneProvider zone="Pacific/Kiritimati">
+    <CompanyZoneProvider zone="Pacific/Kiritimati">
       <DealFiles deal={dealOf()} />
-    </RecordZoneProvider>,
+    </CompanyZoneProvider>,
   );
 
   expect((await screen.findAllByText("21 Aug 2026")).length).toBeGreaterThan(0);

@@ -127,7 +127,7 @@ func assertCallLanding(t *testing.T, who string, landing *crmcontracts.ForecastL
 
 func assertFallbackLanding(t *testing.T, who string, landing *crmcontracts.ForecastLanding) {
 	t.Helper()
-	if landing == nil || landing.Measure != "commit_evidence" || landing.Caveat == nil || *landing.Caveat != "call_absent" || landing.AmountMinor == sharedCallMinor {
+	if landing == nil || landing.Measure != "likely" || landing.Caveat == nil || *landing.Caveat != "call_absent" || landing.AmountMinor == sharedCallMinor {
 		t.Fatalf("%s: landing %+v, want the records' projection with call_absent and no call", who, landing)
 	}
 }

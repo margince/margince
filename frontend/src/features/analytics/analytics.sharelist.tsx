@@ -18,10 +18,10 @@ import {
 } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useAnalyticsContext } from "./analytics.context";
 
 // The forecast links a reader has issued and that still open, listed so any of
@@ -211,7 +211,7 @@ function OpenShareRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const metaId = useId();
   const populationId = useId();
   return (

@@ -49,6 +49,9 @@ type CorrectionReceipt struct {
 	ActorType  string
 	ActorID    string
 	OnBehalfOf *ids.UUID
+	// Correction is which correction this was: a close-date tier or a close
+	// as lost.
+	Correction string
 }
 
 // RecentCorrectionsOwnedBy reads what the sweep changed on THIS reader's deals
@@ -76,6 +79,7 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		sincePos := arg(since)
+		closeLostPos := arg(CloseLostCorrection)
 		ownerPos := arg(actor.UserID)
 		limitPos := arg(limit)
 		// The reader's own row scope, ON TOP of the owner narrowing above.
@@ -114,13 +118,15 @@ func (s *Store) RecentCorrectionsOwnedBy(
 			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date',
  CASE WHEN nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
  THEN a.evidence ELSE '{}'::jsonb END,
-			       a.actor_type, a.actor_id, a.on_behalf_of
+			       a.actor_type, a.actor_id, a.on_behalf_of, c.correction
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
-			 WHERE c.applied_at >= $%d
+			 -- A close as lost stays until its owner accepts or undoes it.
+			 WHERE (c.applied_at >= $%d
+			        OR (c.correction = $%d AND c.accepted_at IS NULL AND c.reversed_at IS NULL))
 			   AND d.owner_id = $%d
-			   AND d.archived_at IS NULL`, sincePos, ownerPos)
+			   AND d.archived_at IS NULL`, sincePos, closeLostPos, ownerPos)
 		if scope != "" {
 			query += storekit.SQLf(" AND %s", scope)
 		}
@@ -136,7 +142,7 @@ func (s *Store) RecentCorrectionsOwnedBy(
 			if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
 				&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
 				&row.Version, &row.BeforeClose, &row.AfterClose, &evidence,
-				&row.ActorType, &row.ActorID, &row.OnBehalfOf); err != nil {
+				&row.ActorType, &row.ActorID, &row.OnBehalfOf, &row.Correction); err != nil {
 				return err
 			}
 			row.EstimateBasis = correctionEstimateBasis(evidence)

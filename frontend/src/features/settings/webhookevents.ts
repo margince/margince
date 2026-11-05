@@ -38,6 +38,7 @@ const PREFIX_GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
       "user_display_name",
       "user_greeting_name",
       "user_locale",
+      "user_timezone",
       "email_signature",
       "linkedin_account",
       "linkedin_network",

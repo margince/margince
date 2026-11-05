@@ -1,0 +1,28 @@
+# CASE 74 — Attaching and reading a file back are two calls. Naming the id on list_documents answers the bytes.
+name: case74_read_the_file_back
+criteria: [1]
+writes: true
+
+prompt: |
+  Save a text file called handover.txt on Nordholz Anlagenbau GmbH. Its only line is: Schlüssel liegt beim Pförtner. Then open the stored file again and tell me its name and size in bytes.
+
+must_call:
+  - attach_document
+  - list_documents
+
+must_call_matching:
+  - 'list_documents~"id"'
+
+may_call:
+  - find_records
+  - search_records
+  - list_records
+  - read_record
+  - read_workspace
+  - whoami
+
+must_mention:
+  - 'handover\.txt'
+
+runs: 3
+pass_at: 2

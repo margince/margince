@@ -234,11 +234,12 @@ deal() {
   printf '%s' "$id"
 }
 
-# commit_deal <id> — puts the deal in the commit category, once.
+# commit_deal <id> — sets the deal's own probability to 95%, so it counts as
+# Likely, once.
 commit_deal() {
   expect "200" "GET /deals/$1" "$(api GET "/deals/$1")"
-  [[ "$(jq -r '.forecast_category // ""' "$workdir/body")" = "commit" ]] && return
-  expect "200" "PATCH /deals/$1" "$(api PATCH "/deals/$1" '{"forecast_category":"commit"}' "$(jq -r '.version' "$workdir/body")")"
+  [[ "$(jq -r '.win_probability_source // ""' "$workdir/body")" = "human" ]] && return
+  expect "200" "PATCH /deals/$1" "$(api PATCH "/deals/$1" '{"win_probability":95}' "$(jq -r '.version' "$workdir/body")")"
 }
 
 # close_in <id> <days> — keeps an open deal's close date N days ahead of today.

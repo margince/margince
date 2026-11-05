@@ -13,10 +13,10 @@ import { OffsiteLink } from "../../design-system/offsitelink";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { downloadBytes } from "../../lib/download";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   AI_PLANS,
   AI_TOOL_NAMES,
@@ -175,6 +175,7 @@ function AdminRow({
   mcpUrl: string;
   line: MessageKey;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const download = () => {
@@ -183,7 +184,7 @@ function AdminRow({
       path,
       mcpUrl,
       t,
-      checkedOn: formatDate(STEPS_CHECKED_ON, locale, viewerZone()),
+      checkedOn: formatDate(STEPS_CHECKED_ON, locale, readerZone),
     });
     downloadBytes(
       guide.markdown,

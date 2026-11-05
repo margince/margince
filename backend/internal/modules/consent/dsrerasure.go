@@ -14,6 +14,7 @@ package consent
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -50,6 +51,11 @@ import (
 func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInput, erase EraseFunc) (dsrRow, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionUpdate); err != nil {
 		return dsrRow{}, err
+	}
+	// An erasure destroys data for good, so a human closes it. An agent may open
+	// and work the request, and closes every other kind.
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
+		return dsrRow{}, fmt.Errorf("an erasure is closed by a human in the app: %w", apperrors.ErrPermissionDenied)
 	}
 	// ids.Parse proves syntax only; a subject_ref that fails even that names
 	// no contact at all. Both doors — unparseable, and syntactically valid but

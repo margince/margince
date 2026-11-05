@@ -47,8 +47,9 @@ var clearableMapsByRecordType = map[string]string{
 	// and a census that read only that map would report a store clearing fewer
 	// fields than it does — under-recognition, the one way this gate must not
 	// break. Both declarations serve the deal, and the walk unions them.
-	"dealClearPairs":          "deal",
-	"clearableProjectColumns": "project",
+	"dealClearPairs":           "deal",
+	"clearableProjectColumns":  "project",
+	"clearableActivityColumns": "activity",
 }
 
 // storeClearableFields walks the module sources for the clearable-column maps

@@ -169,3 +169,24 @@ func TestABriefTakesNoTouchStillAheadAsAnAttendeesLastTouch(t *testing.T) {
 		t.Errorf("attendee = %q, want the call an hour ago", line)
 	}
 }
+
+// A call that reached nobody is no conversation: a voicemail is not the
+// attendee's last touch, and a reached call is.
+func TestABriefTakesNoUnreachedCallAsAnAttendeesLastTouch(t *testing.T) {
+	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
+	room := newBriefRoom(t, "UTC", now, now.Add(7*24*time.Hour))
+	voicemail := room.log(t, "call", now.Add(-time.Hour), activities.PrecisionInstant)
+	if _, err := OwnerConn(t).Exec(t.Context(), `UPDATE activity SET call_outcome = 'voicemail' WHERE id = $1`, voicemail); err != nil {
+		t.Fatal(err)
+	}
+	if line := room.attendeeLine(t); !strings.Contains(line, "first time you are meeting them") {
+		t.Errorf("attendee = %q, but the only call left a voicemail", line)
+	}
+	reached := room.log(t, "call", now.Add(-2*time.Hour), activities.PrecisionInstant)
+	if _, err := OwnerConn(t).Exec(t.Context(), `UPDATE activity SET call_outcome = 'reached' WHERE id = $1`, reached); err != nil {
+		t.Fatal(err)
+	}
+	if line := room.attendeeLine(t); !strings.Contains(line, "last spoke today") {
+		t.Errorf("attendee = %q, want the reached call", line)
+	}
+}

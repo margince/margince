@@ -7,7 +7,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { DecisionApproval } from "../../design-system/decisioncard";
 import { formatDateTime } from "../../format/format";
 import { LocaleProvider, translate } from "../../i18n";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { messageApproval } from "../../testing/message-approval";
 import { SourceHost } from "../../testing/sourcehost";
 import { ApprovalEvidence } from "./approvalevidence";
@@ -66,11 +66,11 @@ function show(
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={RECORD_ZONE}>
+        <ViewerZoneProvider zone={RECORD_ZONE}>
           <SourceHost>
             <ApprovalEvidence approval={approval} />
           </SourceHost>
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );

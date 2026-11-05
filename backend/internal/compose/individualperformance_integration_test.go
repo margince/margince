@@ -176,7 +176,7 @@ func TestIndividualPerformanceOffRefusesATypedQueryByOwner(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 7 {
-		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount)
 	}
 	e.addMembers(t, e.Team2, "third@forecast.test")
 	byOwner := analyticsquery.Query{
@@ -410,9 +410,11 @@ func TestIndividualPerformanceOffWithholdsATwoMemberCompanysTarget(t *testing.T)
 		t.Fatal(err)
 	}
 	reportingTeammate(t, e)
+	e.addMembers(t, e.Team1, "third@forecast.test")
+	e.addMembers(t, e.Team2, "fourth@forecast.test")
 	e.showIndividualPerformance(t, false)
 	if !listsTarget(admin, t, service, target) {
-		t.Fatal("with the switch off a company of three members does not show its target")
+		t.Fatal("with the switch off a company of five members, which either team leaves two of, does not show its target")
 	}
 	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET archived_at = now()
 		WHERE NOT is_agent AND id <> ALL($1)`, []ids.UUID{e.Rep1, e.Rep3}); err != nil {

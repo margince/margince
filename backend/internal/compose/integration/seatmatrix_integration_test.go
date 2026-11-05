@@ -336,10 +336,15 @@ func seededRoles(t *testing.T, e *apptest.AppEnv) []seededRole {
 // the request that follows is answered by that role's grants alone.
 func assignSoleRole(t *testing.T, e *apptest.AppEnv, key string) {
 	t.Helper()
+	assignRoleTo(t, e, "seat@fable.test", key)
+}
+
+func assignRoleTo(t *testing.T, e *apptest.AppEnv, email, key string) {
+	t.Helper()
 	if _, err := e.Owner.Exec(t.Context(), `
 		UPDATE role_assignment SET role_id = (SELECT id FROM role WHERE key = $1 AND is_system)
 		WHERE user_id = (SELECT id FROM app_user WHERE email = $2)`,
-		key, "seat@fable.test"); err != nil {
+		key, email); err != nil {
 		t.Fatalf("assigning role %q: %v", key, err)
 	}
 }

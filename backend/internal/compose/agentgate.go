@@ -52,11 +52,11 @@ func gatedBodyLimit(spec mcp.ToolSpec) int64 {
 	return max(maxGatedBody, spec.MaxArgsBytes)
 }
 
-func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, imports agents.Imports, tags agents.Tags, invitations agents.InvitationRoster, gate *auth.Gate) func(http.Handler) http.Handler {
+func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, imports agents.Imports, tags agents.Tags, leadReasons agents.DisqualifyReasons, invitations agents.InvitationRoster, gate *auth.Gate) func(http.Handler) http.Handler {
 	// ONE set of read-side dependencies for both questions this door asks of a
 	// command: what tier it runs at, and what an approval of it would bind to.
 	// They were two structs while the tier had its own table to feed.
-	deps := restCommandDeps{records: records, invitations: invitations, stages: stages, channels: channelKinds{}, imports: imports, tags: tags, language: reg.BaseLanguage()}
+	deps := restCommandDeps{records: records, invitations: invitations, stages: stages, channels: channelKinds{}, imports: imports, tags: tags, leadReasons: leadReasons, language: reg.BaseLanguage()}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()

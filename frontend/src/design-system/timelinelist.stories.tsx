@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider, useLocale, useT } from "../i18n";
 import { StoryProviders } from "../testing/story-utils";
 import { activityTimeline } from "./activitytimeline";
@@ -272,7 +272,7 @@ function Chronology({
     <StoryProviders>
       {about && <Avatar name={about.full_name} identity={about.id} size="md" />}
       <GroupedTimelineList
-        zone={viewerZone()}
+        zone={browserZone()}
         groups={groupChronology(entries)}
       />
     </StoryProviders>
@@ -435,7 +435,7 @@ export const CommitmentsToReview: Story = {
   render: () => (
     <ul className="timeline">
       <ThreadRow
-        zone={viewerZone()}
+        zone={browserZone()}
         group={{
           id: "review-thread",
           kind: "thread",

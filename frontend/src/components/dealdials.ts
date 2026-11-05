@@ -2,15 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { operations } from "../api/schema";
-import { dealStatusFilter, forecastCategoryFilter } from "../format/dealstatus";
+import { dealStatusFilter } from "../format/dealstatus";
 import { useT } from "../i18n";
 import {
   admitCloseDay,
   admitCountry,
   admitCurrency,
   admitValueRange,
+  admitWinProbability,
   CLOSE_DAY_DIAL,
   VALUE_DIAL,
+  WIN_PROBABILITY_DIAL,
 } from "../lib/dealranges";
 
 export {
@@ -18,7 +20,6 @@ export {
   DEAL_STATUS_VALUES,
   dealStatusFilter,
   dealStatusLabel,
-  forecastCategoryFilter,
 } from "../format/dealstatus";
 
 import { useEntityName } from "./entityref.queries";
@@ -37,10 +38,10 @@ const ENUM_DIALS: Readonly<
   Record<string, (value: string | undefined) => string | undefined>
 > = {
   status: dealStatusFilter,
-  forecast_category: forecastCategoryFilter,
   // The range dials hold a shape rather than a word; a broken one goes the same way.
   [CLOSE_DAY_DIAL]: admitCloseDay,
   [VALUE_DIAL]: admitValueRange,
+  [WIN_PROBABILITY_DIAL]: admitWinProbability,
   currency: admitCurrency,
   country: admitCountry,
 };

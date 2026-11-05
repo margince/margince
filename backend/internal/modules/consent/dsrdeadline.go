@@ -5,9 +5,10 @@ package consent
 
 // When a data-subject request must be answered, and which rule says so.
 //
-// The installation's selected jurisdiction decides. Its pack may declare a
-// deadline per request kind. A kind it leaves out gets the GDPR month
-// (Art. 12(3)), and so does an installation with no jurisdiction selected.
+// A deadline is data protection, so the country of the controller decides: the
+// installation's default legal entity, which is who a request reaches. Its pack
+// may declare a deadline per request kind. A kind it leaves out gets the GDPR
+// month (Art. 12(3)), and so does an installation with no country selected.
 
 import (
 	"context"
@@ -29,7 +30,7 @@ type requestDeadlineFunc func(ctx context.Context, tx pgx.Tx, kind string, recei
 // country read is returned, never treated as "no jurisdiction": the GDPR month
 // can be later than the selected pack's deadline.
 func (s *Store) requestDeadlineTx(ctx context.Context, tx pgx.Tx, kind string, received time.Time) (time.Time, string, error) {
-	code, err := s.installationCountry(ctx, tx)
+	code, err := s.defaultEntityCountry(ctx, tx)
 	if err != nil {
 		return time.Time{}, "", fmt.Errorf("consent: reading the jurisdiction a request deadline comes from: %w", err)
 	}

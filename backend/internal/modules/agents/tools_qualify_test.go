@@ -49,9 +49,9 @@ func (f *fakeSoR) Create(_ context.Context, in datasource.CreateInput) (datasour
 	return f.createRef, nil
 }
 
-func (f *fakeSoR) AdvanceDeal(_ context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (f *fakeSoR) AdvanceDeal(_ context.Context, in datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	f.advances = append(f.advances, in)
-	return datasource.EntityRef{Type: datasource.EntityDeal, ID: in.DealID}, nil
+	return datasource.AdvanceDealResult{Ref: datasource.EntityRef{Type: datasource.EntityDeal, ID: in.DealID}}, nil
 }
 
 func leadFixture(t *testing.T, id ids.UUID, fields string, version int64) *fakeSoR {

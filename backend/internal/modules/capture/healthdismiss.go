@@ -19,7 +19,7 @@ import (
 // It uses the audit-only connection lifecycle because the event catalog has no connection entity.
 func (r *Registry) DismissSilence(ctx context.Context, provider string, since time.Time) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return ConnectionView{}, apperrors.ErrPermissionDenied
 	}
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {

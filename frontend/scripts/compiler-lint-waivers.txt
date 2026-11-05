@@ -17,7 +17,6 @@
 1 react-hooks/refs src/components/listquery.tsx
 1 react-hooks/set-state-in-effect src/components/unsaved.tsx
 2 react-hooks/set-state-in-effect src/lib/scrollmemory.ts
-1 react-hooks/set-state-in-effect src/app/shellrail.tsx
 1 react-hooks/set-state-in-effect src/lib/viewport.ts
 1 react-hooks/set-state-in-effect src/design-system/airuntimechip.tsx
 1 react-hooks/set-state-in-effect src/design-system/anchoredpopup.ts
@@ -108,7 +107,7 @@
 1 react-hooks/set-state-in-effect src/features/records/recordaccess.tsx
 1 react-hooks/refs src/components/recordteamassign.tsx
 1 react-hooks/set-state-in-effect src/components/recordteamassign.tsx
-1 react-hooks/set-state-in-effect src/features/records/relationships.tsx
+1 react-hooks/set-state-in-effect src/components/relationships.tsx
 3 react-hooks/refs src/components/tagspanel.tsx
 1 react-hooks/set-state-in-effect src/features/ai/vertex-model-probe.ts
 1 react-hooks/refs src/features/voice-knowledge/voice-samples.tsx

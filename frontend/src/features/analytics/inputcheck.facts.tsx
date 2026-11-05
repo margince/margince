@@ -1,10 +1,10 @@
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
-import { formatDate, formatMoneyOrAbsent } from "../../format/format";
+import { formatAnalyticsMoneyOrAbsent, formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { isEntityKind } from "../../lib/entity";
-import { useRecordZone } from "../../lib/recordzone";
 
 type InputCheck = components["schemas"]["InputCheck"];
 
@@ -60,7 +60,7 @@ export function checkLabel(
 export function CheckFacts({ check }: Readonly<{ check: InputCheck }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   return (
     <FieldGrid>
       <FieldRow label={t("review.colFinding")}>
@@ -73,7 +73,7 @@ export function CheckFacts({ check }: Readonly<{ check: InputCheck }>) {
       )}
       <FieldRow label={t("review.colAtStake")}>
         <span className="t-num">
-          {formatMoneyOrAbsent(
+          {formatAnalyticsMoneyOrAbsent(
             check.affected_minor ?? null,
             check.currency ?? "",
             locale,

@@ -33,12 +33,12 @@ import {
   quarterSales,
 } from "./analytics.overview.scenariodata";
 import {
-  installOverviewServer,
   isSetup,
   OVERVIEW_SCENARIOS,
   type OverviewView,
   overviewAddress,
 } from "./analytics.overview.scenarios.fixtures";
+import { installOverviewServer } from "./analytics.overview.server.fixtures";
 import { EvidenceRecords } from "./reporting.evidencerecords";
 import {
   useReportingCatalog,

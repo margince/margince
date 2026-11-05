@@ -68,7 +68,12 @@ const RAIL_ROUTES: RouteMap = {
       scope_kind: "owner",
       open_minor: 42_000_000,
       weighted_minor: 16_800_000,
-      best_case_minor: 24_000_000,
+      likely_threshold: 90,
+      by_source: {
+        stage: { open_minor: 42_000_000, weighted_minor: 16_800_000 },
+        human: { open_minor: 0, weighted_minor: 0 },
+        margince: { open_minor: 0, weighted_minor: 0 },
+      },
       evidence_minor: 12_000_000,
       eligible_count: 12,
       priced_count: 11,

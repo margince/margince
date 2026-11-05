@@ -14,7 +14,7 @@ import { formatDateAbbrev } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { useCan } from "../../../lib/capability";
 import { unwrap } from "../../../lib/problem";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 
 type DealViability = components["schemas"]["DealViability"];
 
@@ -60,7 +60,7 @@ export function DealViabilityView({
 }: Readonly<{ viability: DealViability }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const review = data.review;
   return (
     <OverviewCard title={t("deals.viability.title")}>

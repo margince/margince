@@ -379,6 +379,9 @@ type QualifyLeadResult struct {
 // and the note it left if it left one.
 type ProgressDealResult struct {
 	Deal wireRecord `json:"deal"`
+	// ProbabilityNote says the probability the move set from the new stage,
+	// absent when the move changed no stage.
+	ProbabilityNote string `json:"probability_note,omitempty"`
 	// NoteActivityID is absent when the call carried no note. It is a pointer
 	// rather than a zero uuid because "no note was asked for" and "a note whose
 	// id is all zeroes" are different claims, and only one of them is true.

@@ -114,6 +114,8 @@ export function errorClassKey(cls: string | null | undefined): MessageKey {
       return "connectors.errAuth";
     case "history_gone":
       return "connectors.errHistoryGone";
+    case "forbidden":
+      return "connectors.errForbidden";
     case "internal":
       return "connectors.errInternal";
     default:

@@ -396,7 +396,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		return crmcontracts.Deal{}, fmt.Errorf("insert deal: %w", err)
 	}
 
-	if err := s.recordStageHistory(ctx, tx, stageHistoryInput{
+	if _, err := s.recordStageHistory(ctx, tx, stageHistoryInput{
 		DealID: id, ToStageID: in.StageID, ChangedBy: born.by, OwnerID: uuidOfFilter(in.OwnerID), PipelineID: in.PipelineID.UUID,
 		Amount: in.AmountMinor, Currency: in.Currency,
 	}); err != nil {
