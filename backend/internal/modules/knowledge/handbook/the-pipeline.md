@@ -311,6 +311,12 @@ live under **Analytics**; see [Analytics and forecasting](analytics.md).
 
 Margince may move an open deal to a later stage when the customer's own words meet what the stage asks for. It tells you after, and you can undo the move. See [Deals the customer supports](deals-the-customer-supports.md#when-the-deal-reached-a-later-stage). Also called: stage automation, automatic stage moves.
 
+## Deals Margince opens and reopens
+
+A customer may ask for an offer at a company with no open deal. Margince then opens a deal for the company's owner at the first stage. When the company's last closed deal was lost, Margince reopens that deal instead, for its owner. It counts only messages that reached Margince after the deal was lost.
+
+Both show on **Home** with **Undo**. Undo of a reopen closes the deal as lost again, with its earlier reason. See [Deals the customer supports](deals-the-customer-supports.md#when-a-lost-deals-customer-comes-back). Also called: revive a lost deal, automatic new deal.
+
 ## Badges on a deal card
 
 A deal card on the board can carry four badges:

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -98,7 +98,7 @@ since. After an Undo, Margince does not make that change on the deal again.
 That lasts until a new message, offer or stage move arrives on the deal.
 
 The switches are **Close dates**, **Deal amounts**, **Win probabilities**,
-**Stage moves** and **New deals** among the automatic changes. Margince checks the switch again
+**Stage moves**, **New deals** and **Reopened deals** among the automatic changes. Margince checks the switch again
 just before it writes.
 
 ## When the deal reached a later stage
@@ -123,3 +123,34 @@ the deal, Undo asks first.
 
 A company with no owner gets a suggestion instead, as does one whose owner
 switched **New deals** off or left.
+
+A company whose last closed deal was lost never gets a second deal beside it.
+Margince reopens the lost deal instead, as below.
+
+## When a lost deal's customer comes back
+
+When a customer asks for an offer again after their deal was lost, Margince
+reopens the lost deal for its owner. It takes the last closed deal of the
+company, and only when that deal was lost. The deal goes back to the first open
+stage of its pipeline, never to won. Margince counts only messages, meetings and
+documents that reached it after the deal was lost.
+
+Margince reopens a deal only when all of these hold:
+
+- The company has no open deal.
+- The deal has an owner who still works in the workspace, with **Reopened
+  deals** switched on.
+- The deal is not on legal hold.
+- Everyone in the workspace may still read the evidence.
+
+The reopen shows on the owner's **Home**, in the morning mail and on the deal,
+with the reason and **Undo**. Only the owner reads the reason. The deal's
+timeline gets a note about the reopen.
+
+**Undo** closes the deal as lost again, with the reason and the close date it
+had. Undo is refused when someone moved the deal to another stage since. After
+an Undo, Margince reopens the deal only for evidence that arrived after it.
+
+With no owner, an owner who left, or the switch off, the suggestion stays for a
+person to decide. Evidence that reached Margince before the deal was lost is
+not used.
