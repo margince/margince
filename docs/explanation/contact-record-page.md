@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/features/contacts/contactcaseentry.tsx frontend/src/design-system/timelineentry.tsx -->
+<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactsourcereview.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/features/contacts/contactcaseentry.tsx frontend/src/design-system/timelineentry.tsx -->
 # The contact record page
 
 The Overview tab puts recorded context and real work first. A new contact must not look like an old relationship that is now silent.
@@ -77,6 +77,15 @@ before transport direction.
 The Reach figure counts colleagues with recorded messages in both directions during the last
 90 days. Receiving the same message in several mailboxes does not show a reply.
 
-An unknown source appears as **Review source**, with no duty or legal deadline claimed. Only
-readers with privacy access see it. The review opens the case in Settings → Privacy, where the
-source and any known date can be confirmed.
+An unknown source appears in the left column under **Source**, with no duty or legal deadline
+claimed. Only readers with privacy access see it. A reader who may change privacy cases presses
+**Review source**, and a drawer opens over the contact. Other readers see who confirms the source,
+and no button.
+
+The drawer says why the source is asked and what is on record. Then it asks "How did you receive
+their contact details?". Each answer maps to one existing source kind. The answer for a meeting keeps
+the privacy notice duty open, even if they agreed to be contacted. **Another source** opens the
+seven other kinds, including the one that says the notice was given at the meeting.
+
+**Not sure** saves nothing, and the review stays open. Saving sends no mail and does not change
+whether the contact may be emailed.

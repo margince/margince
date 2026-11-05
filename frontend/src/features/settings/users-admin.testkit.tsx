@@ -119,8 +119,18 @@ export const HANDOVER_OWNED = {
   company: 0,
   deal: 16,
   project: 0,
+  task: 0,
+  webhook: 2,
 };
-const NOTHING_OWNED = { lead: 0, contact: 0, company: 0, deal: 0, project: 0 };
+const NOTHING_OWNED = {
+  lead: 0,
+  contact: 0,
+  company: 0,
+  deal: 0,
+  project: 0,
+  task: 0,
+  webhook: 0,
+};
 
 export const TEAMS = [
   { id: "t-dach", name: "DACH Sales" },

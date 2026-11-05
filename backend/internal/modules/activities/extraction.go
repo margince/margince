@@ -34,13 +34,41 @@ import (
 // between nobody asking and a reading that got nothing. Valid for ANY
 // entity_type: a non-deal attachment reads fine, since accepting fields onto a
 // deal (not this op) is what is deal-only.
-func (h Handlers) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	read, err := h.store.LatestExtractionRead(r.Context(), ids.UUID(id))
+func (h Handlers) GetAttachmentExtraction(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetAttachmentExtractionParams,
+) {
+	question := ExtractionQuestionDealFacts
+	if params.Question != nil {
+		question = string(*params.Question)
+	}
+	read, err := h.store.LatestExtractionRead(r.Context(), ids.UUID(id), question)
+	h.writeExtraction(w, r, read, err)
+}
+
+// GetAttachmentExtractionReading reports one named reading, so a screen that
+// started a reading polls that reading and not whichever is newest.
+func (h Handlers) GetAttachmentExtractionReading(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, extractionID openapi_types.UUID,
+) {
+	read, err := h.store.GetExtractionRead(r.Context(), ids.UUID(id), ids.UUID(extractionID))
+	h.writeExtraction(w, r, read, err)
+}
+
+func (h Handlers) writeExtraction(w http.ResponseWriter, r *http.Request, read ExtractionRead, err error) {
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, extractionReport(read, time.Now()))
+	other, err := h.store.OtherChatCounterparty(r.Context(), read)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	report := extractionReport(read, time.Now())
+	if other != "" {
+		report.OtherCounterparty = &other
+	}
+	httperr.WriteJSON(w, http.StatusOK, report)
 }
 
 // extractionReport maps the run record onto the contract's wire shape,
@@ -52,6 +80,7 @@ func (h Handlers) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request
 func extractionReport(read ExtractionRead, now time.Time) crmcontracts.AttachmentExtraction {
 	out := crmcontracts.AttachmentExtraction{
 		Id:           openapi_types.UUID(read.ID),
+		Question:     crmcontracts.AttachmentExtractionQuestion(read.Question),
 		Status:       crmcontracts.AttachmentExtractionStatus(read.Status),
 		Stalled:      read.Abandoned(now),
 		StatusDetail: read.StatusDetail,

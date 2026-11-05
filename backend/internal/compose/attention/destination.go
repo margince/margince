@@ -103,6 +103,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 
 	// The product reporting on itself. An administrator restores these.
 	crmcontracts.WorklistItemSourceCaptureHealth: destinationSystemHealth,
+	crmcontracts.WorklistItemSourceBookingHealth: destinationSystemHealth,
 	crmcontracts.WorklistItemSourceAiWorkHealth:  destinationSystemHealth,
 	crmcontracts.WorklistItemSourceAutomationRun: destinationSystemHealth,
 }

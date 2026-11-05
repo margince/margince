@@ -8,8 +8,8 @@ import { sectionState } from "../../design-system/surfacestate";
 import { calendarDaysUntil } from "../../format/daysuntil";
 import { formatNumber } from "../../format/format";
 import { formatDueCompact } from "../../format/format.dates";
+import { calendarLateness } from "../../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
-import { daysLate } from "./companynextbar";
 import "./companytabs.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import "./company360.css";
@@ -169,7 +169,7 @@ function TaskCell({ step, cells }: Readonly<{ step: NextStep; cells: Cells }>) {
   );
 }
 
-// Where a task stands on the 360's own day: late by whole days, due in so
+// Where a task stands on the 360's own day: late by calendar days, due in so
 // many days, or undated. Counted from `as_of`, never the browser clock.
 function TaskStanding({
   step,
@@ -179,11 +179,11 @@ function TaskStanding({
   if (!step.due_at) {
     return <Badge>{t("co.next.undated")}</Badge>;
   }
-  const late = daysLate(step, asOf, zone);
   if (step.overdue) {
+    const late = calendarLateness(step.due_at, asOf, zone).days;
     return (
       <Badge tone="danger">
-        {late === undefined
+        {late === 0
           ? t("co.next.overdue")
           : plural("co.next.daysLate", late, {
               days: formatNumber(late, locale),

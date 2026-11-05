@@ -381,7 +381,6 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	startPartnerActivation(ctx, pool, rdb, background, logger, stdout)
 
 	startIntroAdvance(ctx, pool, rdb, background, logger, stdout)
-	startStageProgressionOutcome(ctx, pool, rdb, background, logger, stdout)
 	startApprovalNoticeRetract(ctx, pool, rdb, background, logger, stdout)
 	startNoticeCaseOpen(ctx, pool, rdb, background, logger, stdout)
 

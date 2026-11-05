@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 2,
     "never_driven": 11,
     "permitted_but_never_required": 2,
-    "tokens_served_but_never_driven": 5643,
+    "tokens_served_but_never_driven": 5636,
     "use_case_cases": 45,
     "acceptance_criteria_named": 84,
     "tools_added_by_shipped_units": 0,
@@ -2111,7 +2111,7 @@
   "tools": [
     {
       "name": "read_view",
-      "tokens": 1004,
+      "tokens": 984,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -2123,7 +2123,7 @@
     },
     {
       "name": "change_reports",
-      "tokens": 710,
+      "tokens": 717,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -2135,7 +2135,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 706,
+      "tokens": 712,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -2353,7 +2353,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 2311,
+      "tokens": 2318,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us",
@@ -2458,7 +2458,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 1856,
+      "tokens": 1862,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -2493,7 +2493,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 1762,
+      "tokens": 1739,
       "agents": [],
       "required_by_cases": [
         "case40_sort_the_queue",
@@ -2572,7 +2572,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 1453,
+      "tokens": 1507,
       "agents": [],
       "required_by_cases": [
         "case72_read_the_dossier",
@@ -2918,7 +2918,7 @@
     },
     {
       "name": "resolve_duplicates",
-      "tokens": 613,
+      "tokens": 618,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company",

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { translate, translatePlural } from "../../i18n";
 import {
-  daysLate,
+  nextBarLateness,
   nextBarTask,
   otherTasks,
   promisedTask,
@@ -77,13 +78,45 @@ describe("the Next bar's task", () => {
   });
 });
 
-describe("daysLate", () => {
-  it("counts whole days past the due date at as_of", () => {
-    expect(daysLate(PROMISE, "2026-08-13T09:00:00Z", "UTC")).toBe(19);
+const words = {
+  t: (key: Parameters<typeof translate>[1]) => translate("en", key),
+  plural: (
+    base: Parameters<typeof translatePlural>[1],
+    count: number,
+    params?: Record<string, string>,
+  ) => translatePlural("en", base, count, params),
+  locale: "en" as const,
+};
+
+describe("nextBarLateness", () => {
+  it("counts the calendar days the drawn task is past its date at as_of", () => {
+    const drawn = view({ moment: moment("overdue_promise", "t-promise") });
+    expect(nextBarLateness(drawn, "UTC", words)).toEqual({
+      badge: "19 days late",
+      sentence: "Due 19 days ago and still open.",
+    });
   });
 
   it("says nothing for a task that is not overdue", () => {
-    expect(daysLate(OTHER, "2026-08-13T09:00:00Z", "UTC")).toBeUndefined();
+    const drawn = view({ moment: moment("nothing_needed", "t-promise") });
+    expect(nextBarLateness(drawn, "UTC", words)).toBeUndefined();
+  });
+
+  it("counts midnights in the reader's zone, not elapsed 24-hour spans", () => {
+    // Due 23:00 Berlin on the 11th, read at 10:00 Berlin on the 13th: 35 hours.
+    const late = { ...PROMISE, due_at: "2026-08-11T21:00:00Z" };
+    const drawn = view({
+      as_of: "2026-08-13T08:00:00Z",
+      moment: moment("overdue_promise", "t-promise"),
+      next_steps: {
+        data: [late],
+        page: { has_more: false, next_cursor: null },
+      },
+    });
+    expect(nextBarLateness(drawn, "Europe/Berlin", words)).toEqual({
+      badge: "2 days late",
+      sentence: "Due 2 days ago and still open.",
+    });
   });
 });
 

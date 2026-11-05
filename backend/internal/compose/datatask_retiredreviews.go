@@ -23,7 +23,7 @@ import (
 func retiredReviewsDataTask(pool *pgxpool.Pool) datatask.Task {
 	return datatask.Task{
 		ID: "core/1793803167_close_retired_customer_reviews", Version: 1,
-		Title: "Closing the retired customer-support reviews", Requires: []string{"core/1793803166"},
+		Title: "Closing the retired customer-support reviews", Requires: []string{"core/1793810030"},
 		Steps: []datatask.Step{{
 			Name: "close_retired_customer_reviews", Limit: 50, MinLimit: 5,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

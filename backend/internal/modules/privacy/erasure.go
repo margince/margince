@@ -204,7 +204,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err != nil {
 			return err
 		}
-		erased, err = certifyErasure(ctx, tx, subject, reason, identities, e.uncountedArms(), contactErasureCounts{
+		erased, err = certifyErasure(ctx, tx, subject, reason, identities, tx.uncounted(), contactErasureCounts{
 			emailsSuppressed: len(emails), rawRowsPurged: rawPurged, aiPayloadsPurged: aiPayloadsPurged,
 			activitiesRedacted: len(activitiesRedacted), activitiesRestricted: len(activitiesHeld),
 		})
@@ -338,7 +338,23 @@ func anonymizeSubjectRows(
 	if err != nil {
 		return nil, err
 	}
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`
+	// Only a row that still holds something is written: an already-anonymised
+	// contact is left as it is, so an erasure that finds nothing counts no
+	// update and its request can answer nothing_held. Asked first rather than
+	// in the UPDATE's WHERE, so the write itself stays the absolute one.
+	var holds bool
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT full_name IS DISTINCT FROM $2 OR first_name IS NOT NULL OR last_name IS NOT NULL
+		       OR title IS NOT NULL OR photo_object_key IS NOT NULL OR photo_origin IS NOT NULL
+		       OR address_line1 IS NOT NULL OR address_line2 IS NOT NULL OR address_city IS NOT NULL
+		       OR address_region IS NOT NULL OR address_postal_code IS NOT NULL
+		       OR address_country IS NOT NULL OR source_author_name IS NOT NULL
+		       OR archived_at IS NULL%s
+		  FROM contact WHERE id = $1`, anyColumnHeld(contactCustom)), contactID, erasedName).Scan(&holds); err != nil {
+		return nil, err
+	}
+	if holds {
+		if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE contact SET first_name = NULL, last_name = NULL, full_name = $2,
 		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
@@ -346,7 +362,8 @@ func anonymizeSubjectRows(
 		  source_author_name = NULL,
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), contactID, erasedName); err != nil {
-		return nil, err
+			return nil, err
+		}
 	}
 	// BEFORE the identifier rows go, and for the same reason the provider
 	// purge is: a Deal Room seat holds no contact id and is resolved by
