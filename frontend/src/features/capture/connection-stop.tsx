@@ -49,6 +49,8 @@ export type PendingStop = Readonly<{
   afterwards: ConnectAccountInput | null;
 }>;
 
+type StopTarget = Readonly<{ service: Service; provider: Provider }>;
+
 export function servicesOf(account: ConnectionAccount): Service[] {
   const services: Service[] = [];
   if (account.mail) services.push("mail");
@@ -79,9 +81,14 @@ export function StopConfirm({
     held.includes(service),
   );
   const whole = services.length > 0 && services.length === held.length;
-  // A disconnect that is running keeps naming what it stops, even once the
-  // account no longer holds it.
-  const named = services.length > 0 ? services : (stop?.services ?? []);
+  // A disconnect that has started names what the user confirmed, even once the
+  // account no longer holds some of it. A failed one can be tried again, so it
+  // names what is still held.
+  const confirmed =
+    disconnect.isPending || disconnect.isSuccess
+      ? disconnect.variables
+      : undefined;
+  const named = confirmed?.map((target) => target.service) ?? services;
   // The account can lose a service while the confirm is open. With nothing left
   // to stop, the stop is over, and a follow-up connect still has to run. A
   // disconnect that is running or succeeded ends the stop itself, and only once.
@@ -103,11 +110,10 @@ export function StopConfirm({
       reset();
     }
   }, [stop, reset]);
-  const providers = services
-    .map((service) =>
-      service === "mail" ? account.mail?.provider : account.calendar?.provider,
-    )
-    .filter((provider): provider is Provider => provider !== undefined);
+  const targets = services.flatMap((service): StopTarget[] => {
+    const connection = service === "mail" ? account.mail : account.calendar;
+    return connection ? [{ service, provider: connection.provider }] : [];
+  });
   return (
     <ConfirmModal
       open={stop !== null && !nothingLeft}
@@ -127,7 +133,7 @@ export function StopConfirm({
       pending={disconnect.isPending}
       error={disconnect.isError ? problemMessageOf(disconnect.error, t) : null}
       onConfirm={() =>
-        disconnect.mutate(providers, {
+        disconnect.mutate(targets, {
           onSuccess: () => onStopped(stop?.afterwards ?? null),
         })
       }
@@ -147,8 +153,8 @@ export function StopConfirm({
 function useDisconnectServices() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (providers: readonly Provider[]) => {
-      for (const provider of providers) {
+    mutationFn: async (targets: readonly StopTarget[]) => {
+      for (const { provider } of targets) {
         const { error } = await api.POST("/connectors/{provider}/disconnect", {
           params: { path: { provider } },
         });

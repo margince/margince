@@ -5,9 +5,11 @@
 
 Each milestone is a month, named `YYYY-MM` and due on its last day, such as `2026-11`. To plan an
 issue, set the milestone of the month the work should land in. A milestone names no release: a
-release is what `main` holds on the day it is tagged. At the end of a month, move its open issues to
-the next one, then close it. Agreed work that is not for this month goes in the next month's
-milestone. No label parks work for later.
+release is what `main` holds on the day it is tagged. At the end of a month, review its open issues.
+Move planned work to the next month, then close the old milestone.
+
+Work with no planned month carries `status: backlog` and has no milestone.
+Remove that label when setting a monthly milestone. Keep its `priority:` label.
 
 ## Clear the blockers
 
