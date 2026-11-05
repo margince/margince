@@ -403,8 +403,8 @@ func TestSdrSummaryCountsAtTheInstantItIsAskedFor(t *testing.T) {
 	}
 }
 
-// A returned row names the reason of the round it is in, so a later recycle
-// does not rewrite what the seat was told at an earlier instant.
+// A returned row names the reason of the round it is in. A later recycle does
+// not rewrite what the seat was told at an earlier instant.
 func TestAReturnedHandoffNamesTheReasonOfItsRoundAtAsOf(t *testing.T) {
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	rows, err := f.e.Pool.Query(context.Background(), `SELECT id,label FROM sdr_handoff_reason WHERE applies_to='recycled' AND active ORDER BY sort_order LIMIT 2`)
