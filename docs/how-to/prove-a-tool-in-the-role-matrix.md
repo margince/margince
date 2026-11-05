@@ -9,7 +9,7 @@ Use this page when a new or changed MCP tool or router action turns one of three
 - `TestTheMCPParityCatalogIsPublished` in `backend/gates/`. It draws
   [mcp-tool-roles.md](../reference/mcp-tool-roles.md) in the catalog's groups, and fails where the two files the
   sweep writes disagree about the `rep` role.
-- The role sweep in `backend/internal/compose/integration/toolrolematrix_integration_test.go`. It calls every
+- The role sweep in `backend/internal/compose/integration/toolrole/`, a test binary of its own. It calls every
   tool and action as each seeded role and writes [mcp-tool-roles.json](../reference/mcp-tool-roles.json) and
   `toolchecks.json`.
 
@@ -55,7 +55,7 @@ in `platform/auth` recorded refusing that role in that call.
 
    ```sh
    UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/extensionrole
-   UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished
+   UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/toolrole RUN=TestTheToolRoleMatrixIsPublished
    go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity
    ```
 
