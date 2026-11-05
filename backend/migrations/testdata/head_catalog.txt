@@ -1205,6 +1205,7 @@ public.app_user.service_extension text gen=- def=-
 public.app_user.status text NOT NULL gen=- def='active'::text
 public.app_user.timezone text gen=- def=-
 public.app_user.timezone_chosen boolean NOT NULL gen=- def=false
+public.app_user.timezone_set_by text gen=- def=-
 public.app_user.trg_app_user_updated CREATE TRIGGER trg_app_user_updated BEFORE UPDATE ON public.app_user FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.app_user.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.weekly_delivery text gen=- def=-
@@ -1640,8 +1641,9 @@ public.automation.archived_at timestamp with time zone gen=- def=-
 public.automation.automation_origin_check CHECK ((origin = ANY (ARRAY['catalog'::text, 'agent_authored'::text])))
 public.automation.automation_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.automation.automation_owner_id_retirement_guard CREATE TRIGGER automation_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.automation FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.enabled AND (new.archived_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
-public.automation.automation_paused_reason_check CHECK ((paused_reason = ANY (ARRAY['list_archived'::text, 'list_invalid'::text, 'list_unavailable'::text, 'burst'::text])))
+public.automation.automation_paused_reason_check CHECK ((paused_reason = ANY (ARRAY['list_archived'::text, 'list_invalid'::text, 'list_unavailable'::text, 'burst'::text, 'passport_revoked'::text])))
 public.automation.automation_pkey PRIMARY KEY (id)
+public.automation.automation_setter_passport_id_fkey FOREIGN KEY (setter_passport_id) REFERENCES passport(id) ON DELETE SET NULL
 public.automation.automation_tier_check CHECK ((tier = ANY (ARRAY['auto_execute'::text, 'confirmation_required'::text])))
 public.automation.automation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.automation.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1653,6 +1655,7 @@ public.automation.origin text NOT NULL gen=- def='catalog'::text
 public.automation.owner_id uuid gen=- def=-
 public.automation.params jsonb NOT NULL gen=- def='{}'::jsonb
 public.automation.paused_reason text gen=- def=-
+public.automation.setter_passport_id uuid gen=- def=-
 public.automation.tier text NOT NULL gen=- def='confirmation_required'::text
 public.automation.trigger jsonb NOT NULL gen=- def=-
 public.automation.updated_at timestamp with time zone gen=- def=-

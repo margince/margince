@@ -69,7 +69,7 @@ var createRecordCopy = toolCopy{
 		"rather than dropped. A CONTACT created here is visible to everyone in the workspace, " +
 		"the same as one a human types in." + pastDayNeedsATime + meetingStatusRule,
 	Instead: "Record a signed contract with change_offers action record_contract, never as a deal. " +
-		"Search first when the record might already exist — a second copy of a contact or " +
+		"A vCard file goes through change_capture. Search first when the record might already exist — a second copy of a contact or " +
 		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
 		"a name, with a different email, phone or employer, is not proof of a duplicate. When the " +
 		"search finds a contact with the same name at the same employer, ask the human whether " +

@@ -224,7 +224,7 @@ func ownerOnly(ctx context.Context, p VoiceProfile) error {
 	return nil
 }
 
-// CreateProfile opens the admitted human's one personal profile in the
+// CreateProfile opens the admitted user's one personal profile in the
 // collecting state. Team/workspace scopes remain latent storage capability;
 // the V1 wire cannot create or browse them.
 func (s *VoiceStore) CreateProfile(ctx context.Context, in CreateVoiceProfileInput) (VoiceProfile, error) {
@@ -232,7 +232,7 @@ func (s *VoiceStore) CreateProfile(ctx context.Context, in CreateVoiceProfileInp
 		return VoiceProfile{}, err
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() || actor.Type != principal.PrincipalHuman {
+	if !ok || actor.UserID.IsZero() || !actor.HumanOrItsAgent() {
 		return VoiceProfile{}, apperrors.ErrPermissionDenied
 	}
 	var p VoiceProfile
