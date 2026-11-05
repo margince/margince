@@ -10,6 +10,8 @@
 # depends on the real tree's state or on another case.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$(pwd)/scripts/lib-git-fixture.sh"
 
 GATE_SRC="$(pwd)/scripts/check-comment-budget.sh"
 # The gate splices two awk sources; a fixture that copied only the script would
