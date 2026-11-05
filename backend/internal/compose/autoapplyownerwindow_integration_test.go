@@ -275,6 +275,9 @@ func TestAChangeToTheOwnerWaitsForAnAutomaticApplyInFlight(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := setupCloseDate(t)
+			if err := e.setSwitch(context.Background(), true); err != nil {
+				t.Fatal(err)
+			}
 			var waited bool
 			policy := &observedPolicy{afterHold: func(holds int) {
 				if holds == 2 {
@@ -295,11 +298,16 @@ func TestAChangeToTheOwnerWaitsForAnAutomaticApplyInFlight(t *testing.T) {
 // switchesOff is Rep1 turning close-date corrections off through the real
 // writer, which takes the policy lock exclusively.
 func switchesOff(e *closeDateEnv) func(ctx context.Context) error {
-	return func(ctx context.Context) error {
-		rep := principal.WithWorkspaceID(ctx, e.WS)
-		rep = principal.WithActor(rep, principal.Principal{Type: principal.PrincipalHuman,
-			ID: principal.HumanIDPrefix + e.Rep1.String(), UserID: e.Rep1})
-		_, err := approvals.NewService(e.DB()).SetAutoApply(rep, deals.CloseDateCorrectionKind, false)
-		return err
-	}
+	return func(ctx context.Context) error { return e.setSwitch(ctx, false) }
+}
+
+// setSwitch stores Rep1's close-date switch. Stored on before a test, the
+// later switch-off updates the row and checks no key, so only the policy
+// lock can make it wait.
+func (e *closeDateEnv) setSwitch(ctx context.Context, on bool) error {
+	rep := principal.WithWorkspaceID(ctx, e.WS)
+	rep = principal.WithActor(rep, principal.Principal{Type: principal.PrincipalHuman,
+		ID: principal.HumanIDPrefix + e.Rep1.String(), UserID: e.Rep1})
+	_, err := approvals.NewService(e.DB()).SetAutoApply(rep, deals.CloseDateCorrectionKind, on)
+	return err
 }

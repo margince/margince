@@ -58,7 +58,7 @@ func policyActorFor(ctx context.Context, id ids.ApprovalID) (underPolicy, bool) 
 }
 
 // bindUnderPolicy binds the owner's agent as of tx for the automatic apply of
-// approval id, in the lock order every authorized write keeps: the
+// approval id. It keeps the lock order every authorized write keeps: the
 // authorization read, then the owner's policy, then the record. The bind waits
 // for authorization changes, and removing a member locks that member's
 // records, so nothing here may follow a record lock.

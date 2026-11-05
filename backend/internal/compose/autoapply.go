@@ -143,8 +143,8 @@ func (a autoApplier) ownerNow(decision autoApplyDecision) approvals.PolicyActor 
 	return ownerPolicy{bind: ownersAgentTx(a.users, decision.owner, autoApplyActorID), decision: decision}
 }
 
-// ownerPolicy binds the owner's agent as of a transaction, and holds the
-// record so its owner stays the one the apply acts for until the write.
+// ownerPolicy binds the owner's agent as of a transaction. It holds the record,
+// so the owner stays the one the apply acts for until the write.
 type ownerPolicy struct {
 	bind     deals.OwnerAuthorityTx
 	decision autoApplyDecision

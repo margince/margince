@@ -151,9 +151,12 @@ func (p *switchedOffAfterTheWriteReads) CorrectsWithoutAsking(ctx context.Contex
 }
 
 // A switch turned off after the sweep's write read the mode waits for that
-// write, rather than committing under a write that already decided to run.
+// write. It cannot commit under a write that already decided to run.
 func TestASwitchTurnedOffWaitsForTheSweepsWriteInFlight(t *testing.T) {
 	e := setupCloseDate(t)
+	if err := e.setSwitch(context.Background(), true); err != nil {
+		t.Fatal(err)
+	}
 	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
 	policy := &switchedOffAfterTheWriteReads{closeDatePolicy: closeDatePolicy{owner: owner}, e: e, t: t}
 	e.corrector = deals.NewCloseDateCorrector(e.DB(), policy,
