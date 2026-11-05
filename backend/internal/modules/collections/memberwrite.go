@@ -188,7 +188,7 @@ func admitMemberChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, change
 	// Naming a record reads it: a caller refused the record type is answered
 	// as for a record they cannot see, so the refusal says nothing about it.
 	if !auth.Allows(ctx, change.EntityType, principal.ActionRead) {
-		return apperrors.ErrNotFound
+		return auth.HideRow(ctx, change.EntityType)
 	}
 	return auth.EnsureLinkTarget(ctx, tx, change.EntityType, change.EntityID)
 }

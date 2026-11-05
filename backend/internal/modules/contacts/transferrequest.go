@@ -71,6 +71,9 @@ func TransferRequestableTx(ctx context.Context, tx pgx.Tx, recordType string, id
 	if err := auth.EnsureVisibleLive(ctx, tx, recordType, id); err != nil {
 		return TransferableRecord{}, err
 	}
+	if err := auth.RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, errTransferAlreadyYours); err != nil {
+		return TransferableRecord{}, err
+	}
 	var owner *ids.UUID
 	var out TransferableRecord
 	err := tx.QueryRow(ctx, readOwner, id).Scan(&owner, &out.Label)
@@ -103,9 +106,6 @@ func requireTransferAsker(ctx context.Context, recordType string) error {
 	}
 	if !p.SeatType.CanMutate() {
 		return fmt.Errorf("a read seat does not take on records: %w", apperrors.ErrPermissionDenied)
-	}
-	if err := auth.RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, errTransferAlreadyYours); err != nil {
-		return err
 	}
 	if recordType == entityCompany {
 		if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
