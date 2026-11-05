@@ -3276,6 +3276,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.addStakeholder": "Stakeholder hinzufügen",
   "rel.dealStakeholders": "Stakeholder",
   "rel.dealStakeholdersEmpty": "Keine Stakeholder zu diesem Deal",
+  "rel.employerUnavailable":
+    "Die Arbeitgeberdaten sind nicht verfügbar. Tippe, um alle offenen Deals zu durchsuchen.",
   "rel.kind": "Typ",
   "rel.saveDone": "Beziehung gespeichert",
   "rel.role": "Rolle",
