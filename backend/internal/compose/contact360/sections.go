@@ -214,7 +214,7 @@ func (s *Service) dealRolesSection(ctx context.Context, tx pgx.Tx, contactID ids
 		dealScope = scopeAll
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT r.id, r.deal_id, r.role, d.name, s.name
+		SELECT r.id, r.deal_id, r.role, d.name, s.name, d.status
 		FROM relationship r
 		JOIN deal d ON d.id = r.deal_id AND d.archived_at IS NULL
 		LEFT JOIN stage s ON s.id = d.stage_id
@@ -231,9 +231,11 @@ func (s *Service) dealRolesSection(ctx context.Context, tx pgx.Tx, contactID ids
 		var dr crmcontracts.Contact360DealRole
 		var relID, dealID ids.UUID
 		var role *string
-		if err := rows.Scan(&relID, &dealID, &role, &dr.DealTitle, &dr.DealStage); err != nil {
+		var status crmcontracts.Contact360DealRoleDealStatus
+		if err := rows.Scan(&relID, &dealID, &role, &dr.DealTitle, &dr.DealStage, &status); err != nil {
 			return err
 		}
+		dr.DealStatus = &status
 		dr.RelationshipId = openapi_types.UUID(relID)
 		dr.DealId = openapi_types.UUID(dealID)
 		if role != nil {

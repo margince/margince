@@ -7462,6 +7462,27 @@ func (e Contact360SectionsOmitted) Valid() bool {
 	}
 }
 
+// Defines values for Contact360DealRoleDealStatus.
+const (
+	Contact360DealRoleDealStatusLost Contact360DealRoleDealStatus = "lost"
+	Contact360DealRoleDealStatusOpen Contact360DealRoleDealStatus = "open"
+	Contact360DealRoleDealStatusWon  Contact360DealRoleDealStatus = "won"
+)
+
+// Valid indicates whether the value is a known member of the Contact360DealRoleDealStatus enum.
+func (e Contact360DealRoleDealStatus) Valid() bool {
+	switch e {
+	case Contact360DealRoleDealStatusLost:
+		return true
+	case Contact360DealRoleDealStatusOpen:
+		return true
+	case Contact360DealRoleDealStatusWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Contact360EmploymentEmploymentStatus.
 const (
 	Contact360EmploymentEmploymentStatusCurrent Contact360EmploymentEmploymentStatus = "current"
@@ -40798,14 +40819,20 @@ type Contact360CommitteeMember struct {
 
 // Contact360DealRole One stakeholder seat this contact holds on a deal.
 type Contact360DealRole struct {
-	DealId         openapi_types.UUID `json:"deal_id"`
-	DealStage      *string            `json:"deal_stage,omitempty"`
-	DealTitle      *string            `json:"deal_title,omitempty"`
-	RelationshipId openapi_types.UUID `json:"relationship_id"`
+	DealId    openapi_types.UUID `json:"deal_id"`
+	DealStage *string            `json:"deal_stage,omitempty"`
+
+	// DealStatus The deal's status, so a reader can tell an open opportunity from one that has closed.
+	DealStatus     *Contact360DealRoleDealStatus `json:"deal_status,omitempty"`
+	DealTitle      *string                       `json:"deal_title,omitempty"`
+	RelationshipId openapi_types.UUID            `json:"relationship_id"`
 
 	// Role The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title.
 	Role string `json:"role"`
 }
+
+// Contact360DealRoleDealStatus The deal's status, so a reader can tell an open opportunity from one that has closed.
+type Contact360DealRoleDealStatus string
 
 // Contact360Employment One employment edge, current primary first.
 type Contact360Employment struct {

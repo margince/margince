@@ -7430,6 +7430,9 @@ export const en = {
   "compose.relatedTo": "Related to",
   "compose.relatedToNone": "Nothing specific",
   "compose.relatedDeal": "Deal: {name}",
+  "compose.aboutDeal": "Deal this follow-up is about",
+  "compose.aboutDealNone": "No deal",
+  "compose.aboutDealKept": "The deal it was filed under",
   "compose.draftNeedsRecipient":
     "To draft with AI, add a contact from this company to To.",
   "compose.project": "Project",
@@ -7700,6 +7703,7 @@ export const en = {
   "compose.missingSubject": "Enter a subject.",
   "compose.missingBody": "Enter a message before sending.",
   "compose.missingWhy": "Select the reason for contact.",
+  "compose.missingDeal": "Choose the deal this follow-up is about.",
   "compose.actionFailed": "The request failed. Retry.",
 
   "tasks.complete": "Done",

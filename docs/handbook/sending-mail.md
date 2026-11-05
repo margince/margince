@@ -173,7 +173,8 @@ The answers are:
 - Their customer relationship
 - Marketing
 
-Margince does not ask for a reason when you reply to their own message.
+Margince does not ask for a reason when you reply to their own message. On a contact's page,
+**Active deal** adds **Deal this follow-up is about**: pick their open deal before **Send**.
 
 The consent check reads the reason, and it runs *before* you send. Beside
 **Send** the composer shows **Recipients checked** once the check allows it and
@@ -194,7 +195,7 @@ security notice.
 
 ### Why can't I send an email to this contact?
 When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
-- **This message needs one more detail**: for "Choose the deal for this follow-up.", file the message under the deal it follows up on.
+- **This message needs one more detail**: for "Choose the deal for this follow-up.", pick the deal in **Deal this follow-up is about**, or write from the deal's page.
 - **Consent needed for this message**: there is no consent for this kind of message. Press **Overrule with a reason** where it is offered.
 - **No recorded reason to contact this recipient**: pick why you may write from the list beside the refusal. When **Reason for contact** already names it, press **Record this reason**. It is recorded at once under your name for this kind of message, and it is not consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
 - **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail.

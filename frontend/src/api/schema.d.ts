@@ -32899,6 +32899,11 @@ export interface components {
             deal_id: string;
             deal_title?: string | null;
             deal_stage?: string | null;
+            /**
+             * @description The deal's status, so a reader can tell an open opportunity from one that has closed.
+             * @enum {string}
+             */
+            deal_status?: "open" | "won" | "lost";
             /** @description The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title. */
             role: string;
         };

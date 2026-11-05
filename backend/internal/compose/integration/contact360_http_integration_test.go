@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -236,4 +237,70 @@ func TestAMomentDoesNotClaimAbsenceForASectionTheReaderCouldNotSee(t *testing.T)
 				claim, len(page.SectionsOmitted), page.Moment.WhyNow)
 		}
 	}
+}
+
+// A deal seat says whether its deal is still open, so the composer can offer
+// only an open deal as the one a follow-up is about.
+func TestADealSeatSaysWhetherItsDealIsOpen(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	live := e.SeedDeal(t, "Still talking", pipeline, open, &e.Rep1)
+	closed := e.SeedDeal(t, "Went elsewhere", pipeline, open, &e.Rep1)
+	reason, reasonCode := "Went with a competitor", "competitor"
+	if _, err := e.Deals.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](closed), deals.AdvanceDealInput{
+		ToStageID: lostStageOf(t, e), LostReason: &reason, LostReasonCode: &reasonCode,
+	}); err != nil {
+		t.Fatalf("losing the deal: %v", err)
+	}
+	for _, deal := range []ids.UUID{live, closed} {
+		if _, err := owner.Exec(context.Background(),
+			`INSERT INTO relationship (kind, contact_id, deal_id, source, captured_by)
+			 VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x')`, mine, deal); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	code, body := call(e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms), http.MethodGet,
+		"/v1/contacts/"+mine.String()+"/360", func(w http.ResponseWriter, r *http.Request) {
+			contactHandlers(e).GetContact360(w, r, crmcontracts.Id(mine), crmcontracts.GetContact360Params{})
+		})
+	if code != http.StatusOK {
+		t.Fatalf("360 → %d, want 200", code)
+	}
+	var page crmcontracts.Contact360
+	if err := json.Unmarshal(body, &page); err != nil {
+		t.Fatalf("the composite did not parse: %v", err)
+	}
+	if page.DealRoles == nil {
+		t.Fatal("deal_roles is absent for a reader with the deal grant")
+	}
+	want := map[ids.UUID]crmcontracts.Contact360DealRoleDealStatus{
+		live: crmcontracts.Contact360DealRoleDealStatusOpen, closed: crmcontracts.Contact360DealRoleDealStatusLost,
+	}
+	for _, seat := range page.DealRoles.Data {
+		if seat.DealStatus == nil || *seat.DealStatus != want[ids.UUID(seat.DealId)] {
+			t.Errorf("deal %s: status %v, want %q", seat.DealId, seat.DealStatus, want[ids.UUID(seat.DealId)])
+		}
+	}
+	if len(page.DealRoles.Data) != len(want) {
+		t.Errorf("deal_roles has %d seats, want %d", len(page.DealRoles.Data), len(want))
+	}
+}
+
+// lostStageOf is the default pipeline's lost stage.
+func lostStageOf(t *testing.T, e *Env) ids.StageID {
+	t.Helper()
+	p, err := e.Deals.DefaultPipeline(e.Admin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, st := range *p.Stages {
+		if st.Semantic == "lost" {
+			return ids.From[ids.StageKind](ids.UUID(st.Id))
+		}
+	}
+	t.Fatal("the default pipeline has no lost stage")
+	return ids.StageID{}
 }

@@ -16,6 +16,7 @@ import {
   useCarriageBlocks,
 } from "./composeattachments";
 import { ComposeBlockers } from "./composeblockers";
+import { useDealChoice } from "./composedeal";
 import { type ComposeDock, ComposeDockContext } from "./composedockcontext";
 import { useComposeFields } from "./composefields";
 import { useAccountRecipient, useComposeRecords } from "./composefiling";
@@ -24,7 +25,7 @@ import type { RelinkKind } from "./composerelink";
 import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
 
 import { ScheduleDialog } from "./composeschedule";
-import { sendWording, useComposeSend } from "./composesend";
+import { groundingOf, sendWording, useComposeSend } from "./composesend";
 import {
   useAnswerTarget,
   useConversationSwitch,
@@ -215,7 +216,8 @@ export function ComposeWindow({
   const [markRow, setMarkRow] = useState<HTMLDivElement | null>(null);
   // The account-started path is keyed on the resolved anchor: a record with
   // earlier mail answers it rather than asking for a recipient.
-  const groundable = !answering && entityType === "company" && !isChannelReply;
+  const newMessage = !answering && !isChannelReply;
+  const groundable = newMessage && entityType === "company";
   const accountCompanyId = groundable ? entityId : undefined;
   const account = useAccountRecipient(accountCompanyId, fields.to, {
     contactId,
@@ -281,6 +283,14 @@ export function ComposeWindow({
     onRestore: restoreFields,
     onClose,
   });
+  const dealChoice = useDealChoice({
+    open,
+    entityType,
+    entityId,
+    replying: !newMessage,
+    context: fields.context,
+    dealId: fields.account.dealId,
+  });
   const send = useComposeSend({
     open,
     isChannelReply,
@@ -292,14 +302,15 @@ export function ComposeWindow({
     files: attached.files,
     carriageBlocked: carriageBlocks.length > 0,
     anchorActivity: thread.anchorActivity,
-    grounding: groundable
-      ? {
-          ...fields.account.grounding,
-          recipientId: account.recipientId,
-          projectId,
-        }
-      : null,
+    grounding: groundingOf({
+      entityType,
+      replying: !newMessage,
+      recipientId: account.recipientId,
+      dealId: fields.account.dealId,
+      projectId,
+    }),
     projectId,
+    needsDeal: dealChoice.needsChoice,
     savedDraft,
     onSent,
     onClose,
@@ -449,6 +460,7 @@ export function ComposeWindow({
               fields={fields}
               send={send}
               anchorActivity={thread.anchorActivity}
+              dealChoice={dealChoice}
               contactOf={records.contactOf}
               bodyKey={wording.body}
               permission={(override, picksReason) => (

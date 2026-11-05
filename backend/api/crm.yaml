@@ -46484,6 +46484,10 @@ components:
         deal_id: { type: string, format: uuid }
         deal_title: { type: [string, 'null'] }
         deal_stage: { type: [string, 'null'] }
+        deal_status:
+          type: string
+          enum: [open, won, lost]
+          description: "The deal's status, so a reader can tell an open opportunity from one that has closed."
         role:
           type: string
           description: "The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title."

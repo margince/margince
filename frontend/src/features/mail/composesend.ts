@@ -97,6 +97,34 @@ export function composedLinks(
   return links;
 }
 
+/**
+ * What a new message is about, from whichever page it was opened on: the deal
+ * and project the rep chose, and on the account path the contact the draft is
+ * for, which only that path picks. A reply has none of its own, because its thread already files it.
+ *
+ * A chosen deal travels only from a composer that shows it: the account's
+ * filing pick and the contact's deal pick. Elsewhere a deal kept by a draft
+ * would file the message under a record nobody on screen named.
+ */
+export function groundingOf(where: {
+  entityType: RelinkKind;
+  replying: boolean;
+  recipientId: string;
+  dealId: string;
+  projectId: string;
+}): Grounding | null {
+  if (where.replying) {
+    return null;
+  }
+  const account = where.entityType === "company";
+  const showsDeal = account || where.entityType === "contact";
+  return {
+    recipientId: account ? where.recipientId : "",
+    dealId: showsDeal ? where.dealId : "",
+    projectId: where.projectId,
+  };
+}
+
 type SendRequest = {
   activityId?: string;
   isChannelReply: boolean;
@@ -157,7 +185,7 @@ async function sendFrom(args: SendRequest) {
 
 // What the send is waiting for, in reading order. A pressed Send names each
 // field on the field, so the button never refuses by going grey.
-export type MissingField = "to" | "subject" | "body" | "context";
+export type MissingField = "to" | "subject" | "body" | "context" | "deal";
 
 export function missingToSend(
   isChannelReply: boolean,
@@ -169,6 +197,8 @@ export function missingToSend(
     // False where the anchor answers what the message is. A reply derives
     // its category from the thread.
     asksContext: boolean;
+    // An Active deal claim with a deal to choose and none chosen.
+    needsDeal?: boolean;
   },
 ): readonly MissingField[] {
   const missing: MissingField[] = [];
@@ -184,6 +214,9 @@ export function missingToSend(
   }
   if (fields.asksContext && fields.context === "") {
     missing.push("context");
+  }
+  if (fields.needsDeal) {
+    missing.push("deal");
   }
   return missing;
 }
@@ -280,6 +313,7 @@ export function useComposeSend({
   anchorActivity,
   grounding,
   projectId,
+  needsDeal,
   savedDraft,
   onSent,
   onClose,
@@ -294,9 +328,10 @@ export function useComposeSend({
   files: readonly ChosenFile[];
   carriageBlocked: boolean;
   anchorActivity: Activity | undefined;
-  /** The account path's choices; null on an anchored send. */
+  /** What a new message is about; null on an anchored send. */
   grounding: Grounding | null;
   projectId: string;
+  needsDeal: boolean;
   savedDraft: ReturnType<typeof useSavedDraft>;
   onSent?: () => void;
   onClose: () => void;
@@ -372,6 +407,7 @@ export function useComposeSend({
     body: fields.body,
     context: fields.context,
     asksContext: asksWhy(anchorActivity),
+    needsDeal,
   });
   // Spelled once for the send and for the question asked ahead of it.
   const links = composedLinks(
