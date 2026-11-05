@@ -36502,7 +36502,6 @@ components:
       description: Whether the qualified forecast applies the viability reviews.
       required: [state]
       properties:
-        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         state:
           type: string
           enum: [not_enrolled, observing, enforcing]

@@ -24627,7 +24627,6 @@ export interface components {
         };
         /** @description Whether the qualified forecast applies the viability reviews. */
         ForecastAssuranceEnforcement: {
-            readonly locks?: components["schemas"]["SettingLocks"];
             /** @enum {string} */
             state: "not_enrolled" | "observing" | "enforcing";
             preview?: components["schemas"]["ForecastEnforcementPreview"];
