@@ -4,6 +4,7 @@
 package activities
 
 import (
+	"errors"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -47,7 +48,7 @@ func (h Handlers) SaveMailDraft(w http.ResponseWriter, r *http.Request, _ crmcon
 		ID:   ids.UUID(req.AnchorId),
 	}, content, version)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		writeStoreErr(w, r, ownDraftAsConflict(err))
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, mailDraftResponse(draft))
@@ -76,10 +77,19 @@ func mailDraftContentFrom(req crmcontracts.MailDraftInput) (MailDraftContent, er
 // DiscardMailDraft deletes one of the caller's drafts.
 func (h Handlers) DiscardMailDraft(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if err := h.store.DiscardMailDraft(r.Context(), ids.UUID(id)); err != nil {
-		writeStoreErr(w, r, err)
+		writeStoreErr(w, r, ownDraftAsConflict(err))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ownDraftAsConflict answers an agent that reached a draft its human saved. Nothing
+// it can send changes that, so it is told to leave the draft to them.
+func ownDraftAsConflict(err error) error {
+	if !errors.Is(err, ErrOwnDraftWaiting) {
+		return err
+	}
+	return &httperr.DetailedError{Status: http.StatusConflict, Code: "own_draft_waiting", Detail: err.Error() + "; leave it to them"}
 }
 
 func mailDraftResponse(d MailDraft) crmcontracts.MailDraft {

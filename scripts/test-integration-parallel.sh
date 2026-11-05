@@ -498,6 +498,8 @@ run_one() {
     cover_post=(-args -test.gocoverdir="$COVERDIR/$idx")
   fi
   [[ -n "$runre" ]] && run_args=(-run "$runre")
+  # -vet=off: `make lint` vets tagged code with a superset of these analyzers, and
+  # gates/lintbuildtagreach_test.go holds that. A slot would only repeat it.
   {
     echo "=== integration $d $rel (db=$db bucket=$bucket redis-db=$redis_db${runre:+ sliced}) ==="
     make_clone "$db"
@@ -509,7 +511,7 @@ run_one() {
            MARGINCE_TEST_APP_DSN="$(app_clone_dsn "$db")" \
            MARGINCE_TEST_BLOBSTORE_BUCKET="$bucket" \
            MARGINCE_TEST_REDIS_DB="$redis_db" \
-        go test -p 1 -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" \
+        go test -p 1 -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" \
           "${cover_pre[@]+"${cover_pre[@]}"}" "${run_args[@]+"${run_args[@]}"}" \
           "$rel" "${cover_post[@]+"${cover_post[@]}"}" ) || st=$?
     if ! drop_clone "$db"; then
@@ -536,6 +538,21 @@ export -f run_one owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin b
 # exported and not merely set. REDIS_DBS is the only one: unexported it expands
 # to empty, and `% ` is a division by zero rather than a wrong db.
 export REDIS_DBS
+
+# Compile this run's tests in one build before fanning out. `go build` above stops
+# short of test code. Each slot would otherwise compile its own while the first
+# packages run their tests on the same cores.
+#
+# Same flags as the `go test` in run_one, or that run recompiles. A package that
+# does not compile fails again in its own slot, which reports it per package.
+test_build_started=$SECONDS
+test_packages=()
+while IFS='|' read -r _ rel; do test_packages+=("$rel"); done < "$WORK"
+if ( cd "$ROOT/backend" && go test -vet=off -exec=true "${prebuild_flags[@]}" "${test_packages[@]+"${test_packages[@]}"}" ) > /dev/null 2>&1; then
+  echo "test-integration-parallel: compiled the tests once ($(( SECONDS - test_build_started ))s)"
+else
+  echo "test-integration-parallel: a test package does not compile; its slot prints the error"
+fi
 
 # When the first package could START, which separates two very different costs
 # that both look like "before the tests ran": everything this script does before
