@@ -42,8 +42,8 @@ func newBulkEngine(db *database.DB, gate *auth.Gate) *bulkEngine {
 // to, so the change is admitted against the counter it is paid into.
 func (s *Server) wireBulkSurface(pool *pgxpool.Pool) {
 	s.bulkHandlers = bulkHandlers{
-		companyContactShareHandlers: companyContactShareHandlers{db: InstallationDB(pool), grants: identity.NewService(pool)},
-		engine:                      newBulkEngine(InstallationDB(pool), auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter))),
+		db: InstallationDB(pool), grants: identity.NewService(pool),
+		engine: newBulkEngine(InstallationDB(pool), auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter))),
 	}
 }
 

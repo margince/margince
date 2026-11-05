@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -85,7 +86,7 @@ func (p *preflightEnv) mailboxCtx(t *testing.T) context.Context {
 	})
 }
 
-// A mailing is not a person writing, so it pauses nothing.
+// A mailing is not someone writing, so it pauses nothing.
 //
 // Mutation: drop the pursuitPausedByReply call, and the plain reply is sent.
 // Compare the Date header instead of the arrival, and the backdated and the
@@ -125,7 +126,7 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 			p.connect(t, gmailReadonlyScope, gmailSendScope)
 			id := p.scheduleClaiming(t, tc.claim)
 
-			p.theyWrite(t, tc.mail(time.Now().UTC().Add(time.Second)))
+			p.theyWrite(t, tc.mail(clocktest.Now(t).UTC().Add(time.Second)))
 			p.makeDue(t, id)
 			p.fire(t, id)
 
@@ -158,7 +159,7 @@ func TestAScheduledReplyListensOnItsOwnThread(t *testing.T) {
 	}
 	id := p.scheduleClaiming(t, AnyMap{"communication_context": "active_deal_followup"})
 
-	after := time.Now().UTC().Add(time.Second)
+	after := clocktest.Now(t).UTC().Add(time.Second)
 	p.theyWrite(t, inbound{dated: after, arrived: after, authenticated: true})
 	p.makeDue(t, id)
 	p.fire(t, id)

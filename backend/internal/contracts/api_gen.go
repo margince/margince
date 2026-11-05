@@ -44628,6 +44628,9 @@ type DealProductInput struct {
 // DealProductListResponse defines model for DealProductListResponse.
 type DealProductListResponse struct {
 	Data []DealProduct `json:"data"`
+
+	// Tag Names this set of allocations. It changes whenever any of them is written; send it back as `expected_tag` to set the products by hand.
+	Tag string `json:"tag"`
 }
 
 // DealRevisionRequest defines model for DealRevisionRequest.
@@ -56816,7 +56819,9 @@ type ReplaceChannelTokenRequest struct {
 
 // ReplaceDealProductsRequest defines model for ReplaceDealProductsRequest.
 type ReplaceDealProductsRequest struct {
-	Products []DealProductInput `json:"products"`
+	// ExpectedTag The `tag` of the product set the caller read.
+	ExpectedTag string             `json:"expected_tag"`
+	Products    []DealProductInput `json:"products"`
 }
 
 // ReplyRecipient Who a reply to a message is addressed to: one contact, resolved from the

@@ -3881,6 +3881,8 @@ paths:
       summary: Set a deal's products by hand, replacing every allocation it had.
       description: |-
         A deal in `lines` mode takes its products from its lines and refuses a hand-set list (422 `deal_has_lines`).
+        `expected_tag` is the `tag` the caller last read; a set that changed since answers 409 `version_skew`.
+        The write does not change the deal's `version`.
 
         Needs the passport permission Change records.
 
@@ -3898,6 +3900,7 @@ paths:
               schema: {$ref: '#/components/schemas/DealProductListResponse'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/lines:
     parameters:
@@ -31843,9 +31846,10 @@ components:
       additionalProperties: false
     DealProductListResponse:
       type: object
-      required: [data]
+      required: [data, tag]
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/DealProduct'}}
+        tag: {type: string, description: 'Names this set of allocations. It changes whenever any of them is written; send it back as `expected_tag` to set the products by hand.'}
       additionalProperties: false
     DealProductInput:
       type: object
@@ -31856,8 +31860,9 @@ components:
       additionalProperties: false
     ReplaceDealProductsRequest:
       type: object
-      required: [products]
+      required: [expected_tag, products]
       properties:
+        expected_tag: {type: string, minLength: 1, description: 'The `tag` of the product set the caller read.'}
         products:
           type: array
           maxItems: 50

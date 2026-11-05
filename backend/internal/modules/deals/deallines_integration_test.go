@@ -197,8 +197,7 @@ func TestLinesOwnTheDealsValue(t *testing.T) {
 	}
 	quantity := "100"
 	_, err := e.store.AddDealLine(e.productCtx(), dealID, AddDealLineInput{ProductID: &bananas, Quantity: &quantity})
-	var present *EstimatePresentError
-	if !errors.As(err, &present) {
+	if _, ok := errors.AsType[*EstimatePresentError](err); !ok {
 		t.Fatalf("a line over the estimate answered %v, want estimate_present", err)
 	}
 	if _, err := e.store.AddDealLine(e.productCtx(), dealID, AddDealLineInput{ProductID: &bananas, Quantity: &quantity, ReplaceEstimate: true}); err != nil {
@@ -211,7 +210,7 @@ func TestLinesOwnTheDealsValue(t *testing.T) {
 	if !errors.As(err, &owned) {
 		t.Fatalf("a typed amount answered %v, want deal_has_lines", err)
 	}
-	_, err = e.store.ReplaceDealProducts(e.productCtx(), dealID, []crmcontracts.DealProductInput{{ProductId: openapi_types.UUID(bananas.UUID)}})
+	_, err = e.store.ReplaceDealProducts(e.productCtx(), dealID, readTag(t, e, dealID), []crmcontracts.DealProductInput{{ProductId: openapi_types.UUID(bananas.UUID)}})
 	if !errors.As(err, &owned) {
 		t.Fatalf("a hand-set product list answered %v, want deal_has_lines", err)
 	}
@@ -224,8 +223,7 @@ func TestAProductInAnotherCurrencyNeedsATypedPrice(t *testing.T) {
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	dollars := seedPricedProduct(t, e, "Imported bananas", 250, "USD")
 	_, err := e.store.AddDealLine(e.productCtx(), dealID, AddDealLineInput{Currency: new("EUR"), ProductID: &dollars, Quantity: new("1")})
-	var mismatch *ProductCurrencyMismatchError
-	if !errors.As(err, &mismatch) {
+	if _, ok := errors.AsType[*ProductCurrencyMismatchError](err); !ok {
 		t.Fatalf("a dollar product on a euro deal answered %v, want a currency mismatch", err)
 	}
 	if _, err := e.store.AddDealLine(e.productCtx(), dealID, AddDealLineInput{Currency: new("EUR"), ProductID: &dollars, Quantity: new("1"), UnitPriceMinor: new(int64(230))}); err != nil {

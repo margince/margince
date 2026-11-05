@@ -254,7 +254,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	// anything the power to destroy mail.
 	var purgeRemoved capture.MessagePurger
 	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger(), cfg.bookingVault); purger != nil {
-		purgeRemoved = purger.PurgeRemoved
+		purgeRemoved = purger.PurgeRemovedAdmitted
 	}
 	return capture.NewSink(InstallationDB(pool)).
 		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).

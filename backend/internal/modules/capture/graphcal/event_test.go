@@ -281,3 +281,34 @@ func TestMicrosoftICalUIDReachesTheNeutralEvent(t *testing.T) {
 		t.Fatalf("ID is %q, want Graph's own event id", ev.ID)
 	}
 }
+
+// A moved occurrence is known by its slot in the series, which Graph states as
+// originalStart. Without one the occurrence is known by its start.
+func TestAMovedOccurrenceIsKnownByItsOriginalStart(t *testing.T) {
+	moved := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
+	for name, tc := range map[string]struct {
+		originalStart string
+		want          time.Time
+	}{
+		"moved occurrence": {"2026-11-03T10:00:00Z", time.Date(2026, 11, 3, 10, 0, 0, 0, time.UTC)},
+		"one-off event":    {"", moved},
+	} {
+		t.Run(name, func(t *testing.T) {
+			raw := eventJSONWith(t, map[string]any{
+				"id": "graph-occ", "iCalUId": "series-7", "subject": "Weekly",
+				"start":         map[string]string{"dateTime": "2026-11-03T12:00:00.0000000", "timeZone": "UTC"},
+				"originalStart": tc.originalStart,
+				"organizer":     actorJSON("pat@counterparty.example"),
+				"attendees":     attendeesJSON(owner),
+			})
+			ev, err := decodeEvent(raw, owner)
+			if err != nil {
+				t.Fatalf("decodeEvent: %v", err)
+			}
+			rec := meetingmap.Classify(ev, owner).ToRecord(connectorName, raw)
+			if !rec.CrossDoorIdentity.Occurrence.Equal(tc.want) {
+				t.Fatalf("identity occurrence = %v, want %v", rec.CrossDoorIdentity.Occurrence, tc.want)
+			}
+		})
+	}
+}

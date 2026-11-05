@@ -51,8 +51,8 @@ func TestAnOwnerWhoLeavesBeforeTheSweepWritesKeepsTheirDate(t *testing.T) {
 			e := setupCloseDate(t)
 			owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
 			policy := &changedBeforeTheWrite{
-				closeDatePolicy: closeDatePolicy{owner: owner},
-				change:          func() { change(e, t) },
+				owner:  owner,
+				change: func() { change(e, t) },
 			}
 			e.corrector = deals.NewCloseDateCorrector(e.DB(), policy,
 				quietReviewReader{db: e.DB(), owner: owner}, slog.New(slog.NewTextHandler(os.Stderr, nil)),
@@ -76,6 +76,39 @@ func TestAnOwnerWhoLeavesBeforeTheSweepWritesKeepsTheirDate(t *testing.T) {
 				t.Errorf("the sweep recorded %q, want %q", got, want)
 			}
 		})
+	}
+}
+
+// A colleague who sets the close date after the sweep read the deal, and
+// before its write locks the row, keeps the date they set.
+func TestADateSetBeforeTheSweepWritesStands(t *testing.T) {
+	e := setupCloseDate(t)
+	id := e.seedSweepDeal(t, "Slipped but alive", e.early, nil, new(-12), 3)
+	human := today().AddDate(0, 0, 30)
+	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
+	policy := &changedBeforeTheWrite{
+		owner: owner,
+		change: func() {
+			if _, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](id),
+				deals.UpdateDealInput{ExpectedClose: &human}); err != nil {
+				t.Error(err)
+			}
+		},
+	}
+	e.corrector = deals.NewCloseDateCorrector(e.DB(), policy,
+		quietReviewReader{db: e.DB(), owner: owner}, slog.New(slog.NewTextHandler(os.Stderr, nil)),
+		installseam.Deals()).SetClock(func() time.Time { return e.day }).
+		WithBaseLanguage(installationLanguage(e.Pool))
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	if swept := e.readSwept(t, id); swept.expectedClose == nil || !swept.expectedClose.Equal(human) {
+		t.Errorf("date = %v, want the colleague's %s", swept.expectedClose, human.Format(time.DateOnly))
+	}
+	if got, want := e.sweptTier(t, id), `member outcome "checked", staged []`; got != want {
+		t.Errorf("the sweep recorded %q, want %q", got, want)
 	}
 }
 
@@ -112,7 +145,7 @@ func (p *bindsBeforeRecords) ActForOwner(owner ids.UUID) deals.OwnerAuthorityTx 
 func TestTheSweepBindsTheOwnerBeforeItLocksADeal(t *testing.T) {
 	e := setupCloseDate(t)
 	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
-	policy := &bindsBeforeRecords{closeDatePolicy: closeDatePolicy{owner: owner}}
+	policy := &bindsBeforeRecords{owner: owner}
 	e.corrector = deals.NewCloseDateCorrector(e.DB(), policy,
 		quietReviewReader{db: e.DB(), owner: owner}, slog.New(slog.NewTextHandler(os.Stderr, nil)),
 		installseam.Deals()).SetClock(func() time.Time { return e.day }).
@@ -158,7 +191,7 @@ func TestASwitchTurnedOffWaitsForTheSweepsWriteInFlight(t *testing.T) {
 		t.Fatal(err)
 	}
 	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
-	policy := &switchedOffAfterTheWriteReads{closeDatePolicy: closeDatePolicy{owner: owner}, e: e, t: t}
+	policy := &switchedOffAfterTheWriteReads{owner: owner, e: e, t: t}
 	e.corrector = deals.NewCloseDateCorrector(e.DB(), policy,
 		quietReviewReader{db: e.DB(), owner: owner}, slog.New(slog.NewTextHandler(os.Stderr, nil)),
 		installseam.Deals()).SetClock(func() time.Time { return e.day }).
