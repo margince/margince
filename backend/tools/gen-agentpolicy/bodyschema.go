@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // maxBodyDepth bounds how deep a body schema's $refs are followed. A deeper or
@@ -142,17 +144,17 @@ func answered(node any) any {
 }
 
 // withDisplays declares the `<name>_display` member the tool surface writes
-// beside each `<name>_minor` of an object that names its currency. It mirrors
-// withReadableAmounts in internal/modules/agents, so a closed answer admits it.
+// beside each `<name>_minor` of an object that names its currency. It reads the
+// rule the surface writes it by, so a closed answer admits it.
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
 func withDisplays(props map[string]any) {
-	if props["currency"] == nil && props["base_currency"] == nil {
+	if !slices.ContainsFunc(values.AmountCurrencyMembers(), func(member string) bool { return props[member] != nil }) {
 		return
 	}
 	for name := range props {
-		if base, isMinor := strings.CutSuffix(name, "_minor"); isMinor && base != "" && props[base+"_display"] == nil {
-			props[base+"_display"] = map[string]any{"type": "string"}
+		if display, isMinor := values.DisplayMemberOf(name); isMinor && props[display] == nil {
+			props[display] = map[string]any{"type": "string"}
 		}
 	}
 }
