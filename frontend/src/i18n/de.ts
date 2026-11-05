@@ -20509,7 +20509,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.shortfall": "Erwartete Lücke {amount}",
   "analytics.hero.surplus": "Erwarteter Überschuss {amount}",
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
-  "analytics.hero.ofTarget": "von {target} Ziel",
+  "analytics.hero.ofTarget": "Ziel von {target}",
   "analytics.hero.short": "{amount} unter Ziel",
   "analytics.hero.over": "{amount} über Ziel",
   "analytics.trajectory.label": "Gewonnener Umsatz im Zeitraum",

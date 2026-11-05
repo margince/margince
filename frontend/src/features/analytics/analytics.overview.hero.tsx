@@ -74,9 +74,9 @@ export function heroReceipt(
   charts: ReportingEvaluation | undefined,
 ): ReactNode {
   const forecast = metricOf(evaluation, "forecast_landing");
-  const comparison = forecast?.coverage.withheld
-    ? undefined
-    : forecast?.target_comparison;
+  // A withheld forecast hides the whole receipt, the period before included.
+  if (forecast?.coverage.withheld) return undefined;
+  const comparison = forecast?.target_comparison;
   const compared =
     comparison?.status === "compared" || comparison?.status === "target_reached"
       ? comparison
@@ -129,13 +129,14 @@ function TargetProgress({
               target: money(comparison.target),
             })}
       </p>
-      <p className="t-caption">
-        {comparison.status === "target_reached"
-          ? t("reporting.compare.reached")
-          : t("analytics.hero.remaining", {
-              amount: money(comparison.remaining),
-            })}
-      </p>
+      {/* A reached target is said once, on the line under the figure. */}
+      {comparison.status !== "target_reached" && (
+        <p className="t-caption">
+          {t("analytics.hero.remaining", {
+            amount: money(comparison.remaining),
+          })}
+        </p>
+      )}
     </>
   );
 }

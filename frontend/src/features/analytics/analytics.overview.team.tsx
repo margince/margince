@@ -303,7 +303,7 @@ function TeamBody({
       }
       rail={
         <>
-          {query.data && !query.isError && (
+          {query.data && !query.isError && !withheld && (
             <AssessmentPanel
               view="team"
               work={review.data?.members_withheld ? undefined : summary.data}

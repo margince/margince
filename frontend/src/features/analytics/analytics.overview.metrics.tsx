@@ -207,6 +207,14 @@ function ForecastOverviewReading({
           ),
         })
       : undefined;
+  // A landing exactly on target has no gap to show, as on the trajectory.
+  const shownGap = gap == null || gap === 0 ? undefined : gap;
+  // Without a gap the first basis line is the visible detail, and only the
+  // rest stays behind the receipt.
+  const shown = shownGap == null ? (calledAt ?? lines.beside) : undefined;
+  const folded = [calledAt, lines.beside].filter(
+    (line) => line && line !== shown,
+  );
   return (
     <StatCard
       narrow="stack"
@@ -215,22 +223,19 @@ function ForecastOverviewReading({
       )}
       tone={lines.warning ? "warning" : undefined}
       basis={
-        calledAt || lines.beside ? (
-          <>
-            {calledAt && <span>{calledAt}</span>}
-            {lines.beside && <span>{lines.beside}</span>}
-          </>
-        ) : undefined
+        folded.length > 0
+          ? folded.map((line) => <span key={line}>{line}</span>)
+          : undefined
       }
       value={readingValue(forecast, evaluation, t, locale)}
       href={forecast?.value != null ? href : undefined}
       opens="forecast"
       detail={
-        gap == null ? (
-          calledAt || lines.beside
+        shownGap == null ? (
+          shown
         ) : (
           <GapLine
-            gap={gap}
+            gap={shownGap}
             currency={evaluation.context.currency}
             money={money}
           />

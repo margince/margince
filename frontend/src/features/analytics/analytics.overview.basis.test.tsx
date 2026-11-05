@@ -56,10 +56,11 @@ const money = (value: number) =>
   reportingCompactAmount(value, "EUR", "EUR", "en");
 const short = (value: number) => formatMoneyCompact(value, "EUR", "en");
 // A figure's receipt opens on a press, and holds what the figure rests on.
-async function openReceipt(card: ReturnType<typeof within>) {
-  await userEvent
-    .setup({ delay: null })
-    .click(card.getByRole("button", { name: "Evidence" }));
+async function openReceipt(
+  user: ReturnType<typeof userEvent.setup>,
+  card: ReturnType<typeof within>,
+) {
+  await user.click(card.getByRole("button", { name: "Evidence" }));
 }
 
 it("keeps committed business and modelled outcomes in different labelled readings", async () => {
@@ -114,6 +115,7 @@ it.each([
 ] as const)(
   "labels $measure without adding the manager call to won sales",
   async ({ measure, amount, label }) => {
+    const user = userEvent.setup({ delay: null });
     openEvaluation(
       salesEvaluation({
         metrics: [
@@ -152,7 +154,7 @@ it.each([
     expect(
       (await card("Pipeline due this quarter")).getByText(money(11000)),
     ).toBeVisible();
-    await openReceipt(await card("Sales won"));
+    await openReceipt(user, await card("Sales won"));
     expect(
       await screen.findByText(`${money(10000)} still to win`),
     ).toBeVisible();
@@ -161,7 +163,7 @@ it.each([
       expect(
         call.getByText(`${short(20000 - amount)} short of target`),
       ).toBeVisible();
-      await openReceipt(call);
+      await openReceipt(user, call);
       expect(await screen.findByText("Called 30 Oct 2026")).toBeVisible();
     }
   },

@@ -204,6 +204,7 @@ export function ForecastAnswer({
           period={period}
           landingUnrecorded={landingUnrecorded}
           onOpenDeals={onOpenDeals}
+          density={density}
         />
       )}
     </>

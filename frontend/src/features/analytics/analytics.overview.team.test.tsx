@@ -506,6 +506,7 @@ describe("Team prospecting", () => {
     expect(
       screen.queryByRole("region", { name: "Where the team stands" }),
     ).toBeNull();
+    expect(screen.queryByText("Team prospecting outlook")).toBeNull();
   });
 });
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Badge, Button } from "./atoms";
 import { ReadingTable } from "./report-charts";
 import type { ChartReading } from "./report-charts.model";
@@ -60,21 +60,22 @@ export function TrajectoryChart({
   onSelect,
 }: TrajectoryChartProps) {
   const title = useId();
-  const plot = useRef<HTMLDivElement>(null);
+  // A callback ref, so the plot is measured whenever it mounts, also when the
+  // first points arrive after an empty render.
+  const [plot, setPlot] = useState<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(720);
   const [active, setActive] = useState<string | null>(null);
   useEffect(() => {
-    const node = plot.current;
-    if (!node || typeof ResizeObserver === "undefined") return;
+    if (!plot || typeof ResizeObserver === "undefined") return;
     // The plot's own width, unclamped: the marks are placed in pixels over
     // the drawing, so the drawing must be drawn at the width it shows at.
     const measure = () =>
-      setWidth(Math.max(LEFT + RIGHT + 1, node.clientWidth));
+      setWidth(Math.max(LEFT + RIGHT + 1, plot.clientWidth));
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(node);
+    observer.observe(plot);
     return () => observer.disconnect();
-  }, []);
+  }, [plot]);
   const now = points.at(-1);
   if (!now) return null;
   const top = niceTop(
@@ -96,13 +97,15 @@ export function TrajectoryChart({
   const nowX = x(now.at);
   const nowY = y(now.value);
   const narrow = width < 480;
+  // Near the period's end the label reads leftwards, inside the plot.
+  const late = now.at > 0.75;
   const selected = points.find((point) => point.key === active);
   return (
     <figure className="report-chart trajectory-chart" aria-labelledby={title}>
       <figcaption id={title} className="sr-only">
         {label}
       </figcaption>
-      <div className="trajectory-chart-plot" ref={plot}>
+      <div className="trajectory-chart-plot" ref={setPlot}>
         <svg viewBox={`0 0 ${width} ${HEIGHT}`} aria-hidden="true">
           <defs>
             <linearGradient id={`${title}-area`} x1="0" x2="0" y1="0" y2="1">
@@ -131,7 +134,7 @@ export function TrajectoryChart({
             </g>
           ))}
           {ticks.map((tick) => (
-            <g key={tick.label}>
+            <g key={tick.at}>
               <line
                 className="trajectory-chart-tick"
                 x1={x(tick.at)}
@@ -183,7 +186,12 @@ export function TrajectoryChart({
             y1={TOP - 6}
             y2={HEIGHT - BOTTOM}
           />
-          <text className="trajectory-chart-now-label" x={nowX + 8} y={TOP + 6}>
+          <text
+            className="trajectory-chart-now-label"
+            x={late ? nowX - 8 : nowX + 8}
+            y={TOP + 6}
+            textAnchor={late ? "end" : "start"}
+          >
             {nowLabel}
           </text>
           <FinishMarks
@@ -221,6 +229,7 @@ export function TrajectoryChart({
             onFocus={() => setActive(point.key)}
             onPointerEnter={() => setActive(point.key)}
             onPointerLeave={() => setActive(null)}
+            onBlur={() => setActive(null)}
             onClick={() => onSelect?.(point.key)}
             disabled={!onSelect}
           >
@@ -355,21 +364,30 @@ function niceTop(value: number): number {
   return (step ?? 10) * magnitude;
 }
 
-// A curve through every point (Catmull-Rom as cubic Béziers), so a weekly
-// running total reads as one movement rather than a row of corners.
+// A monotone curve through every point (Fritsch-Butland tangents), so a
+// running total reads as one movement and never dips below a week it reached.
 function smoothPath(points: readonly Pair[]): string {
-  const [first] = points;
+  const [first, ...rest] = points;
   if (!first) return "";
+  const secants = rest.map(([x1, y1], index) => {
+    const [x0, y0] = points[index] ?? first;
+    return x1 === x0 ? 0 : (y1 - y0) / (x1 - x0);
+  });
+  const tangents = points.map((_, index) => {
+    const before = secants[index - 1];
+    const after = secants[index];
+    if (before == null) return after ?? 0;
+    if (after == null) return before;
+    return before * after <= 0 ? 0 : (2 * before * after) / (before + after);
+  });
   let path = `M${first[0]},${first[1]}`;
-  for (let index = 1; index < points.length; index++) {
-    const p0 = points[index - 2] ?? points[index - 1] ?? first;
-    const p1 = points[index - 1] ?? first;
-    const p2 = points[index] ?? p1;
-    const p3 = points[index + 1] ?? p2;
-    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
-    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
-    path += ` C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p2[0]},${p2[1]}`;
-  }
+  rest.forEach(([x1, y1], index) => {
+    const [x0, y0] = points[index] ?? first;
+    const third = (x1 - x0) / 3;
+    const start = y0 + (tangents[index] ?? 0) * third;
+    const end = y1 - (tangents[index + 1] ?? 0) * third;
+    path += ` C${x0 + third},${start} ${x1 - third},${end} ${x1},${y1}`;
+  });
   return path;
 }
 

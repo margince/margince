@@ -2025,15 +2025,15 @@ span.error-line {
 }
 /* A lead plate heads an Analytics card: its first figure is the one the view
    leads with, and the rest stand a step under it (statstrip.tsx `lead`). */
-[data-lead] .stat-card-value {
+.stat-strip[data-lead] .stat-card-value {
   font: var(--fontHeadingMedium);
   font-variant-numeric: tabular-nums;
 }
-[data-lead] > :first-child .stat-card-value {
+.stat-strip[data-lead] > :first-child .stat-card-value {
   font: var(--fontDisplayFigure);
   font-variant-numeric: tabular-nums;
 }
-[data-lead] .stat-card-basis::before {
+.stat-strip[data-lead] .stat-card-basis::before {
   font: var(--fontHeadingXXSmall);
 }
 

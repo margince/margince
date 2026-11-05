@@ -76,10 +76,13 @@ export function BoardChart({
   evaluation,
   kind,
   onEvidence,
+  section = false,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   kind: ReportingChart["kind"];
   onEvidence: (reference: ReportingEvidenceRef) => void;
+  // A section of a sheet, with a flat head, rather than a panel of its own.
+  section?: boolean;
 }>) {
   const chart = chartOf(evaluation, kind);
   if (
@@ -92,7 +95,7 @@ export function BoardChart({
     <ChartPanel
       chart={chart}
       wide={false}
-      section
+      section={section}
       evaluation={evaluation}
       onEvidence={onEvidence}
     />
@@ -123,16 +126,19 @@ export function StockCharts({
             evaluation={read}
             kind="stage_distribution"
             onEvidence={(reference) => onEvidence(reference, read)}
+            section
           />
           <BoardChart
             evaluation={read}
             kind="owner_attainment"
             onEvidence={(reference) => onEvidence(reference, read)}
+            section
           />
           <BoardChart
             evaluation={read}
             kind="breakdown"
             onEvidence={(reference) => onEvidence(reference, read)}
+            section
           />
         </>
       )}

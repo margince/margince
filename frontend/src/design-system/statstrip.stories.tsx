@@ -454,13 +454,13 @@ export const PlateLead: Story = {
       <StatCard
         label="Won + Likely deals"
         value="€760,000"
-        detail="€40K short of target"
+        detail="€40,000 short of target"
         href="#forecast"
         opens="forecast"
       />
       <StatCard
         label="Modelled quarter finish"
-        value="€610K – €980K"
+        value="€610,000 – €980,000"
         detail="Central 80% of outcomes"
       />
       <StatCard

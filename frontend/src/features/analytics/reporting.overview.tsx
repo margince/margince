@@ -23,7 +23,11 @@ import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
 import { CustomReportDrawer } from "./reporting.custombuilder";
-import { valueBasisOf } from "./reporting.dimensions";
+import {
+  applyDimensions,
+  type Dimensions,
+  valueBasisOf,
+} from "./reporting.dimensions";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
@@ -168,45 +172,6 @@ export function useOverviewFilters(
     dimensions,
     setDimensions,
   };
-}
-
-/** The dials that narrow a report to a product or a market. */
-export type Dimensions = Pick<
-  ReportingSelection,
-  "product_id" | "initiative_id" | "country" | "industry" | "value_basis"
->;
-
-export function dimensionsOf(selection: ReportingSelection): Dimensions {
-  return {
-    product_id: selection.product_id,
-    initiative_id: selection.initiative_id,
-    country: selection.country,
-    industry: selection.industry,
-    value_basis: selection.value_basis,
-  };
-}
-
-function sameDimensions(a: Dimensions, b: Dimensions): boolean {
-  return (
-    a.product_id === b.product_id &&
-    a.initiative_id === b.initiative_id &&
-    a.country === b.country &&
-    a.industry === b.industry &&
-    (a.value_basis ?? "all") === (b.value_basis ?? "all")
-  );
-}
-
-/** Moves the dimension dials to `next` when the selection changed them. */
-export function applyDimensions(
-  filters: Pick<
-    ReturnType<typeof useOverviewFilters>,
-    "dimensions" | "setDimensions"
-  >,
-  next: ReportingSelection,
-): void {
-  const wanted = dimensionsOf(next);
-  if (!sameDimensions(filters.dimensions, wanted))
-    filters.setDimensions(wanted);
 }
 
 function OverviewBody({

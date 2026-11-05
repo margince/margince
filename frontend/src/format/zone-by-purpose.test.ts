@@ -144,6 +144,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins the acquisition calendar to prove that the submitted civil date converts to the intended UTC instant.",
   },
   {
+    file: "features/analytics/analytics.overview.trajectory.test.ts",
+    why: "Month ticks fall on the company's month starts. Only a zone whose local month starts on another UTC date tells that apart from UTC.",
+  },
+  {
     file: "features/analytics/reporting.questioncard.test.tsx",
     why: "A bound card shows the calendar its saved question keeps; that stored basis names a zone, and the note must print it as stored.",
   },

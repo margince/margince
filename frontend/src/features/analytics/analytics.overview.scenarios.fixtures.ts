@@ -24,6 +24,7 @@ import {
   returnedHandoffs,
   upcomingMeetings,
 } from "./analytics.overview.prospectingdata";
+import { quarterChecks } from "./analytics.overview.quarterchecks.fixtures";
 import {
   type overviewRoutes,
   twoPipelines,
@@ -37,7 +38,6 @@ import {
   frames,
   movementOn,
   prospectingOn,
-  quarterChecks,
   quarterSales,
   teamOn,
   teamReviewOn,

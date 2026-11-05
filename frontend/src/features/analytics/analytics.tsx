@@ -24,7 +24,6 @@ import { navigate } from "../../lib/router";
 import { replaceDial } from "../../lib/urlstate";
 import type { Stage } from "./analytics.cells";
 import {
-  type AnalyticsScope,
   type AnalyticsSelection,
   scopeKey,
   useAnalyticsContext,
@@ -53,6 +52,7 @@ import { ReportingTargets } from "./reporting.targets";
 import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
 
+import { ReportBoard } from "./analytics.reportboard";
 // Analytics: a picker over three reports — deals-by-stage (unweighted beside
 // weighted), forecast (category readings plus the server-derived "slipped"
 // bucket), and open deals per company. "Explain this number" opens the executed
@@ -61,13 +61,7 @@ import "./analytics.css";
 // and then summed, so neither screen re-derives one from the raw total. All
 // three bodies render into ONE panel whose action band carries the explain
 // toggle: the segment changes what the panel holds, not what the page is.
-import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
-import {
-  type CardKey,
-  ReportCard,
-  SECTION_REPORTS,
-  useReportRun,
-} from "./analytics.reports";
+import { SECTION_REPORTS, useReportRun } from "./analytics.reports";
 
 export { buildStageAggregates, ForecastTile } from "./analytics.pipeline";
 
@@ -442,53 +436,6 @@ type ContextQuery = Readonly<{
   error: unknown;
   refetch: () => unknown;
 }>;
-
-// A section's report cards as one sheet, with the one that reads as a short
-// list in the rail beside the tables.
-function ReportBoard({
-  reports,
-  stages,
-  locale,
-  scope,
-}: Readonly<{
-  reports: readonly CardKey[];
-  stages: readonly Stage[];
-  locale: Locale;
-  scope?: AnalyticsScope;
-}>) {
-  const t = useT();
-  if (reports.length === 0) return null;
-  // Keyed by scope too, so an open explanation never outlives the records it
-  // explains.
-  const card = (report: CardKey) => (
-    <ReportCard
-      key={scope ? `${report}:${scopeKey(scope)}` : report}
-      report={report}
-      stages={stages}
-      locale={locale}
-      scope={scope}
-      section
-    />
-  );
-  const railed = reports.filter((report) => RAIL_REPORTS.has(report));
-  return (
-    <AnalyticsBoard
-      railLabel={t("analytics.board.rail")}
-      main={
-        <AnalyticsSheet>
-          {reports
-            .filter((report) => !RAIL_REPORTS.has(report))
-            .map((report) => card(report))}
-        </AnalyticsSheet>
-      }
-      rail={railed.length > 0 ? railed.map((report) => card(report)) : null}
-    />
-  );
-}
-
-// The probability bands read as a short list beside the pipeline's tables.
-// Wider tables stay on the sheet, where every column fits.
-const RAIL_REPORTS: ReadonlySet<CardKey> = new Set(["forecast"]);
 
 // Deals follow the picker so Pipeline and Performance count one set of
 // records; Delivery does not, because a project is read company-wide. The

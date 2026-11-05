@@ -188,6 +188,8 @@ function BoardResults({
       />
       <TargetComparison evaluation={evaluation} onApply={onApplySelection} />
       {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
+      {/* On a sheet with no rail, what follows the summary stays on the sheet. */}
+      {inSheet && afterSummary}
       {sheet.length > 0 && (
         <div className="reporting-grid reporting-sheet-grid">
           {sheet.map((chart, index) => (

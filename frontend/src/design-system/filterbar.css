@@ -97,3 +97,21 @@
   background: none;
   box-shadow: none;
 }
+/* A shelled date or a search field gives its frame to the chip, so the chip
+   draws one box. A refused value still marks the chip's boundary. */
+.filter-bar[data-labels="inside"] .field .field-shell {
+  min-block-size: 0;
+  padding-inline-start: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.filter-bar[data-labels="inside"] .field .input-icon > .input {
+  min-block-size: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.filter-bar[data-labels="inside"] .field:has([aria-invalid="true"]) {
+  border-color: var(--danger);
+}

@@ -243,6 +243,20 @@ function outlookTitle(view: View, evaluation: ReportingEvaluation) {
   return "analytics.outlook.prospecting";
 }
 
+// The decision is kept only when every figure in it comes from a cell. The
+// check reads the model's own text, before amounts gain their currency sign.
+function proposedDecision(assessment: SalesAssessment, locale: Locale) {
+  const decision = assessment.next_decision;
+  if (!decision) return undefined;
+  const line = {
+    text: decision.text,
+    cells: assessment.cells.map((cell) => cell.id),
+  };
+  if (!readableQuantities(assessmentResidue(line, assessment, locale)))
+    return undefined;
+  return { ...decision, text: assessmentText(line, assessment, locale) };
+}
+
 function WrittenAssessment({
   assessment,
   evaluation,
@@ -263,33 +277,7 @@ function WrittenAssessment({
   const [reading, setReading] = useState(false);
   const [deciding, setDeciding] = useState(false);
   const canDecide = useCanWrite("activity", "create");
-  const proposed = assessment.next_decision
-    ? {
-        ...assessment.next_decision,
-        text: assessmentText(
-          {
-            text: assessment.next_decision.text,
-            cells: assessment.cells.map((cell) => cell.id),
-          },
-          assessment,
-          locale,
-        ),
-      }
-    : undefined;
-  const next =
-    proposed &&
-    readableQuantities(
-      assessmentResidue(
-        {
-          text: proposed.text,
-          cells: assessment.cells.map((cell) => cell.id),
-        },
-        assessment,
-        locale,
-      ),
-    )
-      ? proposed
-      : undefined;
+  const next = proposedDecision(assessment, locale);
   return (
     <>
       <Panel
@@ -358,11 +346,13 @@ function OutlookProse({
 }: Readonly<{ assessment: SalesAssessment }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [first = [], ...more] = assessmentParagraphs(assessment).map(
+  const [first = [], ...later] = assessmentParagraphs(assessment).map(
     (paragraph) =>
       paragraph.map((line) => assessmentText(line, assessment, locale)),
   );
   const [lead, ...rest] = first;
+  // A paragraph the model repeats is said once, so each keys itself.
+  const more = [...new Set(later.map((paragraph) => paragraph.join(" ")))];
   return (
     <div className="analytics-outlook-prose">
       {lead && <p className="analytics-outlook-lead">{lead}</p>}
@@ -370,7 +360,7 @@ function OutlookProse({
       {more.length > 0 && (
         <Disclosure summary={t("analytics.outlook.more")}>
           {more.map((paragraph) => (
-            <p key={paragraph.join(" ")}>{paragraph.join(" ")}</p>
+            <p key={paragraph}>{paragraph}</p>
           ))}
         </Disclosure>
       )}

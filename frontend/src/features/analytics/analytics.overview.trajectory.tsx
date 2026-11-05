@@ -34,7 +34,11 @@ export function QuarterTrajectory({
 }: Readonly<{
   evaluation: ReportingEvaluation;
   charts: ReportingEvaluation | undefined;
-  onEvidence: (reference: ReportingEvidenceRef) => void;
+  // The drawer reads the point off the chart read it came from.
+  onEvidence: (
+    reference: ReportingEvidenceRef,
+    from?: ReportingEvaluation,
+  ) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -74,7 +78,7 @@ export function QuarterTrajectory({
         const reference = trend.points.find(
           (point) => point.key === key,
         )?.evidence;
-        if (reference) onEvidence(reference);
+        if (reference) onEvidence(reference, charts);
       }}
     />
   );
@@ -94,14 +98,15 @@ function outlookMarks(
   const gap = visible?.target_comparison?.gap;
   const low = visible?.range_low_minor;
   const high = visible?.range_high_minor;
-  const marks: Pick<TrajectoryChartProps, "target"> = target
-    ? {
-        target: {
-          value: target,
-          label: t("analytics.trajectory.target", { amount: short(target) }),
-        },
-      }
-    : {};
+  const marks: Pick<TrajectoryChartProps, "target"> =
+    target != null
+      ? {
+          target: {
+            value: target,
+            label: t("analytics.trajectory.target", { amount: short(target) }),
+          },
+        }
+      : {};
   if (!running || visible?.value == null) return marks;
   return {
     ...marks,

@@ -5,12 +5,13 @@ import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 import { Button, Disclosure, TableScroll } from "./atoms";
 import "./report-charts.css";
 
-import type {
-  ChartProps,
-  ChartReading,
-  GroupedBarsProps,
+import type { ChartProps, GroupedBarsProps } from "./report-charts.model";
+import {
+  areaUnder,
+  chartX,
+  lineSegments,
+  readingScale,
 } from "./report-charts.model";
-import { readingScale } from "./report-charts.model";
 
 export type { ChartReading } from "./report-charts.model";
 
@@ -67,34 +68,6 @@ export function ReadingTable({
   );
 }
 
-function lineSegments(
-  readings: readonly ChartReading[],
-  field: "value" | "comparison",
-  width: number,
-  y: (value: number) => number,
-) {
-  const lines: string[] = [];
-  let points: string[] = [];
-  readings.forEach((reading, index) => {
-    const value = reading[field];
-    if (value == null) {
-      if (points.length) lines.push(points.join(" "));
-      points = [];
-    } else points.push(`${chartX(index, readings.length, width)},${y(value)}`);
-  });
-  if (points.length) lines.push(points.join(" "));
-  return lines;
-}
-
-// A line's points closed down to the baseline, for the fill beneath it.
-function areaUnder(points: string, baseline: number): string {
-  const xs = points.split(" ").map((point) => point.split(",")[0]);
-  return `${xs[0]},${baseline} ${points} ${xs.at(-1)},${baseline}`;
-}
-
-function chartX(index: number, count: number, width: number) {
-  return 56 + (index / Math.max(1, count - 1)) * (width - 76);
-}
 // The plot's height in viewBox units, mirrored by `.report-chart-line`.
 const LINE_HEIGHT = { default: 238, compact: 130 } as const;
 

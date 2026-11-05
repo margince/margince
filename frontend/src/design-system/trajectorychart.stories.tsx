@@ -71,12 +71,21 @@ export const QuarterShortOfTargetDark: Story = {
   globals: { theme: "dark" },
 };
 
+// At a phone's width the range keeps its band but drops its words.
+export const QuarterOnAPhone: Story = {
+  ...QuarterShortOfTarget,
+  globals: { viewport: { value: "phone" } },
+};
+
 // A closed period: the line runs to the end, with nothing projected.
 export const PeriodClosed: Story = {
   render: () => (
     <TrajectoryChart
       {...quarter}
-      points={quarter.points.map((point) => ({ ...point, at: point.at * 3 }))}
+      points={quarter.points.map((point) => ({
+        ...point,
+        at: point.at / 0.33,
+      }))}
       nowLabel="Through 31 Dec"
       projection={undefined}
       range={undefined}

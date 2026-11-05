@@ -52,7 +52,7 @@ it("places each reading on the period's own time axis, from 0 to 1", () => {
   expect(placed.every((point) => point.at >= 0 && point.at <= 1)).toBe(true);
 });
 
-it("draws nothing for a period that has not started", () => {
+it("draws nothing for a zero-length period", () => {
   expect(
     weeklyToToday(daily(3), { ...quarter, end_at: quarter.start_at }),
   ).toEqual([]);
@@ -66,5 +66,20 @@ it("ticks the first day of each month in the company's zone, in the reader's lan
     "Dezember",
   ]);
   expect(ticks[0]?.at).toBe(0);
+  expect(ticks[1]?.at).toBeCloseTo(31 / 92, 2);
+});
+
+it("reads month starts in the company's zone, not in UTC", () => {
+  // Auckland's 1 October begins on 30 September in UTC.
+  const auckland = {
+    start_at: "2026-09-30T11:00:00Z",
+    end_at: "2026-12-31T11:00:00Z",
+  };
+  const ticks = monthTicks(auckland, "Pacific/Auckland", "en");
+  expect(ticks.map((tick) => tick.label)).toEqual([
+    "October",
+    "November",
+    "December",
+  ]);
   expect(ticks[1]?.at).toBeCloseTo(31 / 92, 2);
 });
