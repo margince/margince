@@ -6,7 +6,8 @@
 package gates
 
 // CI splits the backend gate's fan-out over two jobs: deterministic-gates runs
-// `make check-backend CHECK_LEGS="…"` and backend-lint runs `make check-static`.
+// `make check-backend CHECK_LEGS="…"` and backend-lint runs `make check-static`,
+// whose matrix legs may each pass a STATIC_LEGS="…" share of it.
 // A leg that neither names still passes `ci`, because nothing ran it. This test
 // holds the two jobs to the full CHECK_LEGS list a local `make check` runs.
 
@@ -29,10 +30,21 @@ const (
 // ciLegsOverride is the CHECK_LEGS value a `make check-backend` step passes.
 var ciLegsOverride = regexp.MustCompile(`make check-backend\b[^\n]*\bCHECK_LEGS="([^"]*)"`)
 
+// staticLegsOverride is the STATIC_LEGS value a `make check-static` step passes,
+// literal or a matrix value.
+var staticLegsOverride = regexp.MustCompile(`make check-static\b[^\n]*\bSTATIC_LEGS="([^"]*)"`)
+
+var matrixRef = regexp.MustCompile(`^\$\{\{\s*matrix\.([a-z_-]+)\s*\}\}$`)
+
 type stepRuns struct {
 	Jobs map[string]struct {
-		Needs stringList     `yaml:"needs"`
-		Steps []workflowStep `yaml:"steps"`
+		Needs    stringList     `yaml:"needs"`
+		Steps    []workflowStep `yaml:"steps"`
+		Strategy struct {
+			Matrix struct {
+				Include []map[string]string `yaml:"include"`
+			} `yaml:"matrix"`
+		} `yaml:"strategy"`
 	} `yaml:"jobs"`
 }
 
@@ -55,7 +67,8 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 	if testLegs == nil {
 		testLegs = all
 	}
-	if !jobRuns(wf, staticLegsJob, "make check-static") {
+	staticRan, ok := staticLegsRunBy(t, wf, static)
+	if !ok {
 		t.Fatalf("job %q has no `make check-static` step, so nothing in CI runs the legs %v", staticLegsJob, static)
 	}
 
@@ -65,11 +78,11 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 		}
 	}
 
-	ran := append(slices.Clone(testLegs), static...)
+	ran := append(slices.Clone(testLegs), staticRan...)
 	for _, leg := range all {
 		if !slices.Contains(ran, leg) {
 			t.Errorf("CHECK_LEGS leg %q runs in a local `make check` but in neither %s (CHECK_LEGS=%q) nor %s (%v). "+
-				"Add it to one of them, or `ci` passes without it.", leg, testLegsJob, strings.Join(testLegs, " "), staticLegsJob, static)
+				"Add it to one of them, or `ci` passes without it.", leg, testLegsJob, strings.Join(testLegs, " "), staticLegsJob, staticRan)
 		}
 	}
 }
@@ -118,8 +131,32 @@ func legsPassedBy(wf stepRuns, job string) ([]string, bool) {
 	return nil, false
 }
 
-func jobRuns(wf stepRuns, job, command string) bool {
-	return slices.ContainsFunc(wf.Jobs[job].Steps, func(step workflowStep) bool {
-		return strings.Contains(step.Run, command)
-	})
+// staticLegsRunBy answers the legs backend-lint's `make check-static` step runs:
+// the Makefile's own list, a literal STATIC_LEGS, or the union of a matrix value
+// over every matrix entry.
+func staticLegsRunBy(t *testing.T, wf stepRuns, static []string) ([]string, bool) {
+	t.Helper()
+	job := wf.Jobs[staticLegsJob]
+	for _, step := range job.Steps {
+		if !strings.Contains(step.Run, "make check-static") {
+			continue
+		}
+		match := staticLegsOverride.FindStringSubmatch(step.Run)
+		if match == nil {
+			return static, true
+		}
+		key := matrixRef.FindStringSubmatch(match[1])
+		if key == nil {
+			return strings.Fields(match[1]), true
+		}
+		var ran []string
+		for _, entry := range job.Strategy.Matrix.Include {
+			ran = append(ran, strings.Fields(entry[key[1]])...)
+		}
+		if len(ran) == 0 {
+			t.Fatalf("job %q passes STATIC_LEGS from matrix.%s, but no matrix include entry sets it", staticLegsJob, key[1])
+		}
+		return ran, true
+	}
+	return nil, false
 }

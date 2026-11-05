@@ -490,15 +490,25 @@ jobs:
   # arch-lint), beside deterministic-gates rather than inside it. On one runner
   # the two halves took turns on four cores, and lint finished last.
   backend-lint:
-    name: backend-lint
+    name: backend-lint (${{ matrix.pass }})
     timeout-minutes: 30
     needs: [changes]
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # The two golangci passes each load the whole tree, so each gets a runner.
+    # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pass: baseline
+            legs: lint-base vet arch-lint
+          - pass: strict
+            legs: lint-strict
     # Setup mirrors deterministic-gates, which says why each step is there.
-    # Full history, because the strict lint diffs against origin/main.
+    # Full history, because the strict lint diffs against DIFF_BASE.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -536,7 +546,7 @@ jobs:
         run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Backend static gate (make check-static)
         working-directory: .
-        run: make check-static
+        run: make check-static STATIC_LEGS="${{ matrix.legs }}"
       # A test read outside its module that skips the tree digest merges green
       # and breaks cache-warm's save hours later. Here it fails the PR that
       # adds it. On this job because it finishes minutes before
@@ -544,7 +554,7 @@ jobs:
       # Skipped into develop: it guards main's cache-warm, and the develop into
       # main pull request runs it.
       - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() && needs.changes.outputs.full_lane == 'true' }}
+        if: ${{ !cancelled() && matrix.pass == 'baseline' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
         run: make test-input-census
 

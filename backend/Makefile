@@ -113,7 +113,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint lint-base lint-strict lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -146,7 +146,7 @@ help: ## List targets with their descriptions (the default goal)
 # CHECK_LEGS="$(TEST_LEGS)", and `backend-lint` runs `check-static`.
 # gates/checklegsplit_test.go fails if the two stop covering every leg.
 TEST_LEGS   := test test-extensions
-STATIC_LEGS := lint vet arch-lint
+STATIC_LEGS := lint-base lint-strict vet arch-lint
 CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
 
 check: ## The merge gate: everything a PR must pass
@@ -166,7 +166,7 @@ check: ## The merge gate: everything a PR must pass
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh report
 
 check-static: composition ## The static half of check (STATIC_LEGS), which CI runs as its own job
-	$(MAKE) -j3 $(STATIC_LEGS)
+	$(MAKE) -j4 $(STATIC_LEGS)
 
 # gen-composition runs pinned to the ROOT workspace: the tool lives in
 # the separate backend/tools module, so a caller-exported GOWORK (off, or
@@ -623,17 +623,24 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # issues — with that checkout's path, and therefore without the //nolint: and
 # path-anchored waivers that path carried. This lane is exposed to it exactly
 # as the module lane is, so it is guarded in the same place rather than twice.
-lint: composition ## golangci-lint: repo-wide baseline + new-code strict set
-	@test -n "$(GOLANGCI_LINT)" || { \
-		echo "lint: golangci-lint not found — run 'make tools' (installs $(GOLANGCI_LINT_VERSION) to $$($(GO) env GOPATH)/bin)"; \
-		exit 1; \
-	}
+lint: lint-base lint-strict ## golangci-lint: repo-wide baseline + new-code strict set
+
+# Two targets so CI can run the passes on two runners; each loads the whole tree.
+lint-base: composition lint-tool
 	$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run ./...
+
+lint-strict: composition lint-tool
 	@if git rev-parse --verify -q $(DIFF_BASE) >/dev/null; then \
 		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base=$(DIFF_BASE) ./...; \
 	else \
 		echo "SKIP strict lint: $(DIFF_BASE) not found — fetch it to arm the new-code gate"; \
 	fi
+
+lint-tool:
+	@test -n "$(GOLANGCI_LINT)" || { \
+		echo "lint: golangci-lint not found — run 'make tools' (installs $(GOLANGCI_LINT_VERSION) to $$($(GO) env GOPATH)/bin)"; \
+		exit 1; \
+	}
 
 # Gate-tool resolution: prefer the install from `make tools` (CI restores
 # it from cache), but only when its embedded module version (`go version
