@@ -72,6 +72,11 @@ var lateKinds = map[string]bool{
 	"custom_field": true, "picklist_field": true, "pipeline_order": true,
 	"voice_profile": true, "no_voice_profile": true, "onboarding_state": true, "ai_budget": true,
 	"voice_build": true, "voice_source": true, "voice_ready": true,
+	"data_task": true, "home_repair_review": true, "loss_mapping": true,
+	"enrichable_contact": true, "connected_provider": true, "enrichment_run": true,
+	"logo_site_read": true, "onboarding_with_read": true,
+	"idle_reindex":    true,
+	"voice_candidate": true, "voice_rolled_forward": true,
 }
 
 // installationKinds are the late kinds that make a call run alone. Each is what
@@ -82,6 +87,10 @@ var installationKinds = map[string]bool{
 	"custom_field": true, "picklist_field": true, "pipeline_order": true, "no_voice_profile": true,
 	"voice_profile": true, "ai_budget": true, "onboarding_state": true,
 	"voice_build": true, "voice_source": true, "voice_ready": true,
+	"enrichable_contact": true, "connected_provider": true, "enrichment_run": true,
+	"logo_site_read": true, "onboarding_with_read": true,
+	"idle_reindex":    true,
+	"voice_candidate": true, "voice_rolled_forward": true,
 }
 
 // toolRoleSeeders makes one record of each kind a call can take. An owner, when

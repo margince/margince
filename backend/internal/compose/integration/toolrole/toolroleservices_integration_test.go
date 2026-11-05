@@ -21,7 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/integrations"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -41,6 +43,7 @@ func init() {
 func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.TwoDoors {
 	t.Helper()
 	jobs, embeddings := apptest.InsertOnlyRunner(t), apptest.EmbedReindexRouter(t, "tool-role-embed")
+	sweepEmbedder = embeddings
 	models, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(ai.NewFakeClient()), ai.WithoutResultCache())
 	if err != nil {
 		t.Fatalf("starting the fake model path: %v", err)
@@ -51,6 +54,17 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	siteReads, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(ai.NewFakeClient().Script(siteReplies...)), ai.WithoutResultCache())
 	if err != nil {
 		t.Fatalf("starting the site read's fake model path: %v", err)
+	}
+	// The card photo's model reads one card from each photo the sweep sends.
+	cardReplies := slices.Repeat([]string{`{"cards":[{"full_name":"Role Sweep","title":"","company":"Sweep Co","emails":["card@sweep.test"],"phones":[],"url":"","address":"","confidence":0.9}]}`}, 64)
+	cardReads, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(ai.NewFakeClient().Script(cardReplies...)), ai.WithoutResultCache())
+	if err != nil {
+		t.Fatalf("starting the card photo's fake model path: %v", err)
+	}
+	sweepVoiceModel, err = compose.NewLocalModelPath(ai.FakeRoutingConfig(),
+		ai.WithFakeClient(ai.NewFakeClient().Script(slices.Repeat([]string{voiceInferenceReply}, 512)...)), ai.WithoutResultCache())
+	if err != nil {
+		t.Fatalf("starting the voice build's fake model path: %v", err)
 	}
 	providers, err := integrations.NewRegistry(integrations.NewOfflineProvider(0, func() time.Time { return clocktest.Now(t) }))
 	if err != nil {
@@ -69,7 +83,8 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	}
 	// The channel surface takes its vault from WithKeyvault, so it is composed first.
 	d := apptest.SetupTwoDoors(t, slug, append([]compose.Option{
-		compose.WithRouteChecksRecordedForTest(releases.note), compose.WithTrustedProxies(loopback), compose.WithChannelSurface(), compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
+		compose.WithBlobstore(sweepBlobs), compose.WithRouteChecksRecordedForTest(releases.note), compose.WithTrustedProxies(loopback),
+		compose.WithCardPhotoReader(cardReads.DocumentExtract), compose.WithVoiceBuildEnqueue(jobs), compose.WithChannelSurface(), compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
 			ClientID: "calendar-fixture", ClientSecret: "calendar-fixture",
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
 		}, compose.CaptureConfig{}), compose.WithCaptureBackfill(jobs),
@@ -86,6 +101,7 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	// Boot binds the embedding model an installation runs; the harness does not boot.
 	apptest.SeedRouterBinding(t, d.E, embeddings)
 	d.E.Vault = vault
+	seedDataTasks(t, d.E)
 	d.E.DescribeCompany(t)
 	apptest.EnableGoogleBookingPage(t, d.E)
 	sendCapableMailbox(t, d.E)
@@ -141,6 +157,17 @@ func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPCli
 	maps.Copy(released, args)
 	return client.Call(t, verb, released), nil
 }
+
+// sweepEmbedder is the embedding lane of the last sweep app, which a seed's
+// reindex worker embeds with.
+var sweepEmbedder search.Embedder
+
+// sweepVoiceModel is the model the last sweep app's voice builds are worked on.
+var sweepVoiceModel compose.ModelPath
+
+// sweepBlobs is the object store every sweep app keeps its files in, so a seed
+// can park what a worker would have stored.
+var sweepBlobs = blobstore.NewMemory()
 
 // releases keeps what the gates noted of each human's last request to a
 // route. Every sweep app records into it, and each role's human is its own.

@@ -15,6 +15,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
@@ -44,6 +45,33 @@ func ImportJobWorkersForTest(pool *pgxpool.Pool, cfg JobRunnerConfig) (ImportJob
 		return ImportJobWorkers{}, err
 	}
 	return workers, nil
+}
+
+// EmbedReindexWorkerForTest builds the reindex worker through
+// addEmbedReindexJobs, the registration the worker role makes.
+func EmbedReindexWorkerForTest(pool *pgxpool.Pool, embedder search.Embedder) (river.Worker[EmbedReindexArgs], error) {
+	reg := newJobRegistry()
+	addEmbedReindexJobs(reg, pool, embedder)
+	var worker river.Worker[EmbedReindexArgs]
+	return worker, governedInto(reg, &worker)
+}
+
+// FinanceSyncWorkerForTest builds the per-workspace finance sync worker
+// through addFinanceJobs, the registration the worker role makes.
+func FinanceSyncWorkerForTest(pool *pgxpool.Pool) (river.Worker[FinanceSyncArgs], error) {
+	reg := newJobRegistry()
+	addFinanceJobs(reg, pool, JobRunnerConfig{}, slog.New(slog.DiscardHandler))
+	var worker river.Worker[FinanceSyncArgs]
+	return worker, governedInto(reg, &worker)
+}
+
+// VoiceBuildWorkerForTest builds the voice build worker through
+// addModelLaneJobs, the registration the worker role makes, over path's lane.
+func VoiceBuildWorkerForTest(pool *pgxpool.Pool, path ModelPath) (river.Worker[VoiceBuildArgs], error) {
+	reg := newJobRegistry()
+	addModelLaneJobs(reg, pool, JobRunnerConfig{VoiceBrain: path.VoiceBuild}, slog.New(slog.DiscardHandler))
+	var worker river.Worker[VoiceBuildArgs]
+	return worker, governedInto(reg, &worker)
 }
 
 // WithImportJobWorkersForTest fills into with the import workers over the

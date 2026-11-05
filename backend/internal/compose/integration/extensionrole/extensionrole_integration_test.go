@@ -85,22 +85,22 @@ var (
 
 func TestTheExtensionVerbsRoleCellsArePublished(t *testing.T) {
 	registerOnce.Do(func() {
-		registerErr = compose.RegisterExtensions([]extension.Extension{{
-			Name: unitName, Version: "1.0.0", Description: "A synthetic unit, composed only for this suite's own test binary.",
-		}}, nil, nil)
+		registerErr = compose.RegisterExtensions([]extension.Extension{syntheticUnit()}, nil, nil)
 	})
 	if registerErr != nil {
 		t.Fatalf("registering the synthetic unit: %v", registerErr)
 	}
 	var mu sync.Mutex
 	recorded := map[string]auth.RecordedCall{}
-	e := apptest.SetupAppWithOptions(t, compose.WithMCPConnector(), compose.WithToolChecksRecordedForTest(func(verb string, call auth.RecordedCall) {
-		mu.Lock()
-		defer mu.Unlock()
-		recorded[verb] = call
-	}))
+	e := apptest.SetupAppWithOptions(t, compose.WithMCPConnector(), compose.WithFinanceSources(apptest.InsertOnlyRunner(t)),
+		compose.WithToolChecksRecordedForTest(func(verb string, call auth.RecordedCall) {
+			mu.Lock()
+			defer mu.Unlock()
+			recorded[verb] = call
+		}))
 	apptest.BootstrapWorkspaceSession(t, e, "Extension Role", adminEmail, "Admin")
-	client := apptest.NewMCPClient(e, apptest.MCPBearerToken(t, e, "extension role", "read"))
+	client := apptest.NewMCPClient(e, apptest.MCPBearerToken(t, e, "extension role", "read", "write"))
+	maps.Copy(unitArgs, seedUnitState(t, e))
 
 	got := measuredDoc{Note: measuredNote, Roles: systemRoles(t, e), Verbs: map[string]measuredVerb{}}
 	for _, verb := range slices.Sorted(maps.Keys(unitArgs)) {

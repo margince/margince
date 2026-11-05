@@ -315,7 +315,7 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 			return invited.ID
 		},
 		"enrichment_run": func() string {
-			s.call("PUT", "/v1/provider-connections/surfe", integration.AnyMap{"api_key": "role-sweep"}, nil, nil)
+			connectSurfe(s)
 			contact := consentedContact(s)
 			var run struct {
 				ID string `json:"id"`

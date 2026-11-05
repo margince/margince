@@ -134,6 +134,7 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 			"cache_read_per_mtok": "0.1", "cache_write_per_mtok": "1.25",
 		}}
 	},
+	"disconnect_provider": func(p *recordPool) map[string]any { return map[string]any{"provider": p.take("connected_provider")} },
 	"enrich_contact_from_provider": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("enrichable_contact"), "request_body": map[string]any{"provider": "surfe"}}
 	},
@@ -155,7 +156,6 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 	},
 	"get_ai_call":          byID("ai_call"),
 	"resend_member_invite": byID("invited_user"),
-	"start_search_reindex": func(*recordPool) map[string]any { return map[string]any{"request_body": map[string]any{"force": true}} },
 	"rename_custom_field": func(p *recordPool) map[string]any {
 		return versioned(p, "custom_field", map[string]any{"label": uniqueName()})
 	},
@@ -202,6 +202,11 @@ func versionOf(p *recordPool, id string) int {
 
 func idList(p *recordPool, kind string) []string {
 	return strings.Split(p.fact(p.take(kind), "ids"), ",")
+}
+
+// connectSurfe connects the offline enrichment provider, as an administrator does.
+func connectSurfe(s sweepSeed) {
+	s.call("PUT", "/v1/provider-connections/surfe", integration.AnyMap{"api_key": "role-sweep"}, nil, nil)
 }
 
 // sweepPNG is a one-pixel PNG.
@@ -257,9 +262,16 @@ func setupSeeders(s sweepSeed) map[string]func() string {
 		"unresolved_signal": func() string {
 			return versioned("/v1/signals", integration.AnyMap{"kind": "reengagement", "summary": "They wrote back", "source": "manual", "raw_ref": "Sweep Co"})
 		},
+		// An agent buys contact details only under the daily run limit an
+		// administrator set on the connection.
 		"enrichable_contact": func() string {
-			s.call("PUT", "/v1/provider-connections/surfe", integration.AnyMap{"api_key": "role-sweep"}, nil, nil)
+			connectSurfe(s)
+			s.call("PATCH", "/v1/provider-connections/surfe", integration.AnyMap{"configuration": integration.AnyMap{"daily_run_limit": 1000}}, nil, nil)
 			return consentedContact(s)
+		},
+		"connected_provider": func() string {
+			connectSurfe(s)
+			return "surfe"
 		},
 		// The wizard's state exists once a user saved a step of it.
 		"onboarding_state": func() string {

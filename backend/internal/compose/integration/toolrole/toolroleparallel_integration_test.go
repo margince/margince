@@ -120,6 +120,7 @@ var aloneVerbs = map[string]bool{
 	"update_contact_case_settings": true, "update_follow_up_settings": true, "update_lead_settings": true,
 	"update_legal_review_settings": true, "upload_company_logo": true, "upload_company_logo_icon": true,
 	"create_pipeline": true, "archive_pipeline": true, "restore_pipeline": true, "reorder_pipelines": true, "update_pipeline": true,
+	"disconnect_provider": true, "enrich_contact_from_provider": true, "control_data_task": true, "activate_home_repair": true, "apply_legacy_loss_reasons": true,
 	"create_custom_field": true, "update_custom_field_options": true, "start_search_reindex": true, "set_fx_rate": true, "set_ai_model_rate": true, "record_tax_rate": true,
 }
 

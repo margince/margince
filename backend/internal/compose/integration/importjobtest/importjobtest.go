@@ -96,6 +96,24 @@ func work(
 	t *testing.T, e *apptest.AppEnv, workers compose.ImportJobWorkers, job *rivertype.JobRow, within time.Duration,
 ) *rivertest.WorkResult {
 	t.Helper()
+	switch job.Kind {
+	case compose.ImportValidateArgs{}.Kind():
+		return WorkJob(t, e, workers.Validate, job, within)
+	case compose.ImportCommitArgs{}.Kind():
+		return WorkJob(t, e, workers.Commit, job, within)
+	case compose.ImportUndoArgs{}.Kind():
+		return WorkJob(t, e, workers.Undo, job, within)
+	}
+	t.Fatalf("%s is not an import kind", job.Kind)
+	return nil
+}
+
+// WorkJob runs one queued job through worker, in a transaction that commits
+// River's record of how it ended. A within above zero ends its context that soon.
+func WorkJob[T river.JobArgs](
+	t *testing.T, e *apptest.AppEnv, worker river.Worker[T], job *rivertype.JobRow, within time.Duration,
+) *rivertest.WorkResult {
+	t.Helper()
 	ctx := t.Context()
 	if within > 0 {
 		var cancel context.CancelFunc
@@ -107,17 +125,7 @@ func work(
 		t.Fatalf("opening the job's transaction: %v", err)
 	}
 	defer rollback(t, tx)
-	var result *rivertest.WorkResult
-	switch job.Kind {
-	case compose.ImportValidateArgs{}.Kind():
-		result, err = rivertest.NewWorker(t, riverpgxv5.New(e.Pool), riverConfig(), workers.Validate).WorkJob(ctx, t, tx, job)
-	case compose.ImportCommitArgs{}.Kind():
-		result, err = rivertest.NewWorker(t, riverpgxv5.New(e.Pool), riverConfig(), workers.Commit).WorkJob(ctx, t, tx, job)
-	case compose.ImportUndoArgs{}.Kind():
-		result, err = rivertest.NewWorker(t, riverpgxv5.New(e.Pool), riverConfig(), workers.Undo).WorkJob(ctx, t, tx, job)
-	default:
-		t.Fatalf("%s is not an import kind", job.Kind)
-	}
+	result, err := rivertest.NewWorker(t, riverpgxv5.New(e.Pool), riverConfig(), worker).WorkJob(ctx, t, tx, job)
 	if err != nil {
 		t.Fatalf("working %s job %d: %v", job.Kind, job.ID, err)
 	}

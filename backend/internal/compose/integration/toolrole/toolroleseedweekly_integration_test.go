@@ -6,6 +6,7 @@
 package toolrole
 
 import (
+	"bytes"
 	"context"
 	"strconv"
 	"strings"
@@ -30,7 +31,8 @@ func weeklySeeders(s sweepSeed) map[string]func() string {
 			s.assembleWeek(nil)
 			return ""
 		},
-		"finished_site_read": func() string { return finishedSiteRead(s) },
+		"finished_site_read": func() string { return finishedSiteRead(s, false) },
+		"logo_site_read":     func() string { return finishedSiteRead(s, true) },
 		"review_team": func() string {
 			team := s.post("/v1/teams", integration.AnyMap{"name": "Sweep " + ids.NewV7().String()})
 			admin := apptest.SessionUserID(s.t, s.e)
@@ -64,8 +66,9 @@ func (s sweepSeed) assembleWeek(teams []ids.UUID) context.Context {
 }
 
 // finishedSiteRead is a site read of the admin's company with a draft, as the
-// crawl job leaves it. It notes the version and hash a confirmation sends back.
-func finishedSiteRead(s sweepSeed) string {
+// crawl job leaves it. withLogo parks the logo it resolved. It notes the version
+// and hash a confirmation sends back.
+func finishedSiteRead(s sweepSeed, withLogo bool) string {
 	read := s.create["site_read"]()
 	admin := ids.MustParse(apptest.SessionUserID(s.t, s.e))
 	ws := apptest.InstallationWorkspaceUUID(context.Background(), s.t, s.e.Pool)
@@ -73,8 +76,12 @@ func finishedSiteRead(s sweepSeed) string {
 		Type: principal.PrincipalSystem, ID: "agent:deepread", UserID: admin, OnBehalfOf: admin,
 	}), ids.MustParse(read))
 	store := contacts.NewStore(compose.InstallationDB(s.e.Pool))
-	if _, err := store.BeginSiteRead(ctx, ids.MustParse(read), 10*time.Minute); err != nil {
+	claim, err := store.BeginSiteRead(ctx, ids.MustParse(read), 10*time.Minute)
+	if err != nil {
 		s.t.Fatalf("beginning the site read: %v", err)
+	}
+	if withLogo {
+		parkSiteReadLogo(ctx, s, store, read, claim)
 	}
 	// The draft reads what the company already says, so confirming it asks no
 	// one to choose between the read and a value someone typed.
@@ -104,4 +111,17 @@ func finishedSiteRead(s sweepSeed) string {
 	s.pool.note(read, "draft_version", strconv.Itoa(draft.DraftVersion))
 	s.pool.note(read, "proposal_hash", draft.ProposalHash)
 	return read
+}
+
+// parkSiteReadLogo stores a resolved mark and parks it on the read, as the
+// crawl worker does for a company that does not exist yet.
+func parkSiteReadLogo(ctx context.Context, s sweepSeed, store *contacts.Store, read string, claim contacts.SiteReadClaim) {
+	key := "site-read-logo/" + read + ".png"
+	png := sweepPNG()
+	if err := sweepBlobs.Put(ctx, key, bytes.NewReader(png), int64(len(png)), "image/png"); err != nil {
+		s.t.Fatalf("storing the site read's logo: %v", err)
+	}
+	if recorded, _, err := store.RecordSiteReadLogo(ctx, ids.MustParse(read), claim.ClaimedAt, contacts.LogoWide, key, "https://example.test/logo.png"); err != nil || !recorded {
+		s.t.Fatalf("parking the site read's logo: %v (recorded %v)", err, recorded)
+	}
 }
