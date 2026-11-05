@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // CurrentTaskClause requires automatic evidence addressed to the assignee or human adoption.
@@ -46,12 +47,15 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
 
 // humanOrImportedTaskSQL names the tasks that stay current by their own
 // lifecycle with no automatic family. One has no source_system: a human or an
-// agent created it by hand. The other is in an importer's reserved namespace.
+// agent created it by hand. One is in an importer's reserved namespace. The
+// last is a task an extension unit filed for a named colleague: the capture
+// door refuses an assignee who cannot hold work, so it is already addressed.
 // Any other source_system waits for its family in taskSourceFamilies, or for a
 // human to write or adopt the task.
 func humanOrImportedTaskSQL(alias string) string {
-	return fmt.Sprintf(`(coalesce(%[1]s.source_system, '') = '' OR starts_with(%[1]s.source_system, '%[2]s'))`,
-		alias, provenance.ReservedSourceSystemPrefix)
+	return fmt.Sprintf(`(coalesce(%[1]s.source_system, '') = ''
+ OR starts_with(%[1]s.source_system, '%[2]s') OR starts_with(%[1]s.source_system, '%[3]s'))`,
+		alias, provenance.ReservedSourceSystemPrefix, connector.ExtensionSourceSystemPrefix)
 }
 
 // taskCurrency is how an automatic task stays current work.

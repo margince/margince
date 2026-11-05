@@ -14,10 +14,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // A task is current by its source only when that source is named: no source,
-// an importer's namespace, or a declared automatic family. An unregistered
+// an importer's namespace, an extension unit's, or a declared automatic family. An unregistered
 // source_system is not current work until a human writes or adopts the task.
 func TestOnlyANamedTaskSourceIsCurrentWork(t *testing.T) {
 	e := setupLoad(t)
@@ -36,6 +37,7 @@ func TestOnlyANamedTaskSourceIsCurrentWork(t *testing.T) {
 		"no source":           {seed(nil), true},
 		"empty source":        {seed(text("")), true},
 		"imported":            {seed(text(provenance.ReservedSourceSystemPrefix + "csv")), true},
+		"extension unit":      {seed(text(connector.ExtensionSourceSystemPrefix + "deal-watch:flag")), true},
 		"declared automatic":  {seed(text(provenance.LeadSLATaskSource)), true},
 		"unregistered source": {seed(text("new-bot")), false},
 	}

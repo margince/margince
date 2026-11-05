@@ -441,7 +441,7 @@ func (r *callRuntime) sourceSystem(system string) string {
 // record ever carries while the ones that do arrive stay raw — a mismatch
 // nothing fails on, because a directory miss is a fallback rather than an error.
 func extSourceSystem(unit, system string) string {
-	return "ext:" + unit + ":" + system
+	return connector.ExtensionSourceSystemPrefix + unit + ":" + system
 }
 
 // declaredIngress resolves the source the record names against what the
