@@ -64,7 +64,7 @@ has the **Handlers→Store** CRUD shape: it owns the write shape in one transact
 |---|---|
 | `target_url` | **HTTPS only**: `http://` is refused at create, because a target in clear text is never safe to send to. Held in three places: the contract `pattern: ^https://`, the store's `strings.HasPrefix`, and a database `CHECK`. |
 | `event_types` | A part of the published catalog, **never empty** (`events.Types()`). An unknown type is a 422, so no rule is stored that could never deliver. Pipeline events with no entity (`capture.*`) are refused, because they name no subject to scope the fan-out by (§5). It is a true *set* (`uniqueItems`). |
-| `owner_id` | **Set by the server** from the signed-in principal (the human who acts, or the human an agent acts for), never a request field. A principal with no human identity cannot own integration config. The fan-out is scoped to this owner (§5). |
+| `owner_id` | **Set by the server** at create from the signed-in principal (the human who acts, or the human an agent acts for). A principal with no human identity cannot own integration config. The fan-out is scoped to this owner (§5). An update may name a new owner, checked by `auth.EnsureOwnerHandOn` like any owner change, and handing a member's work on moves their live subscriptions (`TransferSubscriptionOwnershipTx`). Both keep the signing secret. |
 | `state` | `active` / `paused`. Pausing stops delivery (and holds retries) without archiving. |
 | `signing_secret_ref` | The **sealed** secret (§2). Never the clear text, and never in anything a read returns. |
 | `custom_headers` | Up to 10 headers sent with every delivery, stored as `{name, sealed_value}` (§3.4). A read returns the names and `configured: true`, never a value or part of one. |
@@ -373,6 +373,7 @@ the rep owns must not receive an event about a deal they could never read in the
 3. **`enqueueForSubscriptions(visible)`**: create a `pending` delivery for each subscription that
    passed. Doing it twice adds nothing. Then make the first attempt for each one at once.
 
+An owner who has left sees nothing, so nothing is delivered, and the read says so (`owner_active`).
 In step 2, say a resolver or visibility check fails for one owner for a short time. That owner is
 logged and skipped for that pass, so the subscription fails closed. `HandleEvent` then **returns an
 error**, so the bus delivers again and checks the skipped owner again. Nothing is dropped without a

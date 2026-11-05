@@ -71,7 +71,7 @@ function Files({ data }: Readonly<{ data: Attachment[] }>) {
   return (
     <StoryProviders>
       <div style={{ maxWidth: 840 }}>
-        <ContactFilesTab contactId="p-1" />
+        <ContactFilesTab contactId="p-1" contactName="Dana Buyer" />
       </div>
     </StoryProviders>
   );
@@ -124,7 +124,7 @@ export const Paged: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 640 }}>
-          <ContactFilesTab contactId="p-1" />
+          <ContactFilesTab contactId="p-1" contactName="Dana Buyer" />
         </div>
       </StoryProviders>
     );
@@ -141,7 +141,7 @@ export const Failed: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 640 }}>
-          <ContactFilesTab contactId="p-1" />
+          <ContactFilesTab contactId="p-1" contactName="Dana Buyer" />
         </div>
       </StoryProviders>
     );

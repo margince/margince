@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 357 |
-| Columns | 4228 |
+| Columns | 4236 |
 | Foreign keys | 585 |
 | Owning areas | 38 |
 
@@ -175,7 +175,7 @@ erDiagram
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
-| [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 12 | 0 |
+| [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 18 | 0 |
 | [`assurance_exception`](assurance.md#assurance_exception) | assurance | 24 | 3 |
 | [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 6 | 0 |
 | [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |
@@ -184,13 +184,13 @@ erDiagram
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 9 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 13 | 0 |
 | [`attachment`](activities.md#attachment) | activities | 28 | 6 |
-| [`attachment_extraction`](activities.md#attachment_extraction) | activities | 12 | 0 |
+| [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 14 | 2 |
 | [`auth_token`](identity.md#auth_token) | identity | 10 | 0 |
 | [`automation`](automation.md#automation) | automation | 15 | 0 |
 | [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 6 | 0 |
 | [`booking_alias`](activities.md#booking_alias) | activities | 6 | 0 |
-| [`booking_page`](activities.md#booking_page) | activities | 6 | 1 |
+| [`booking_page`](activities.md#booking_page) | activities | 7 | 1 |
 | [`brief_item`](compose.md#brief_item) | compose | 15 | 0 |
 | [`brief_run`](compose.md#brief_run) | compose | 13 | 1 |
 | [`bulk_confirmation`](compose.md#bulk_confirmation) | compose | 7 | 0 |

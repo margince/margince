@@ -95,7 +95,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
-    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "confirm.done.body",
@@ -219,7 +218,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
-    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "common.permissionDenied",
@@ -236,6 +234,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "ob.manual.icpHint",
     "contact.intro.answerSuggestHelp",
     "contact.notYoursToChange",
+    "provider.profile.lookupNotYours",
     "project.notYoursToChange",
     "record.notYoursToChange",
     "retention.lawfulBasisHint",
@@ -441,6 +440,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "brief.weekly.sharedDefinitions",
     "company.rejectReasonHint",
     "contact.notYoursToChange",
+    "provider.profile.lookupNotYours",
     "deal.notYoursToChange",
     "history.field.lifted_by",
     "history.field.revoked_by",

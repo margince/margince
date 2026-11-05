@@ -165,11 +165,16 @@
  * `settingrow.css` holds the same cap for an empty state inside a row. Two
  * parents, one reading. */
 .panel-body > .empty {
-  padding: 0;
   text-align: left;
   /* The body is already a card: a second ground under one grey sentence, with
      the text flush to its edge, read as a plate that had lost its padding. */
   background: none;
+}
+/* The one-line state sits flush in the body. The instructional state is a card
+   of its own, with a title, a sentence and a verb: it keeps its padding, or its
+   text sits on its border. */
+.panel-body > .empty:not(.empty-instructional) {
+  padding: 0;
 }
 /* Except the plate, whose ground and dashed edge are what it says with. */
 .panel-body > .empty-plate {

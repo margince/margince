@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -356,9 +357,42 @@ func validateDSRUpdate(current dsrRow, in UpdateDSRInput) *ValidationError {
 	return &ValidationError{Field: fieldResolution, Reason: "a closed request keeps its answer"}
 }
 
-// erasedResolution is what an erasure leaves in place of the officer's prose,
-// which can quote the subject.
-const erasedResolution = "erased"
+// The answers an erasure is fulfilled with: a short fixed list, never prose. An
+// officer's text could name or quote the subject the erasure has just removed,
+// so the erasure answers for itself, from what it found.
+const (
+	// erasedResolution: the erasure removed or anonymised something. The
+	// privacy engine writes the same word on the subject's other cases it
+	// retires, held equal by a gate (dsrerasedsentinel_test.go).
+	erasedResolution = "erased"
+	// erasureAnswerNothingHeld: there was nothing left to erase, as after an
+	// earlier erasure of the same contact.
+	erasureAnswerNothingHeld = "nothing_held"
+)
+
+// erasureAnswers is the closed list an erasure's answer comes from.
+var erasureAnswers = []string{erasedResolution, erasureAnswerNothingHeld}
+
+// erasureAnswerFor is the answer one erasure's own account supports. Rows it
+// only inserted are its own records of the work, so they are not something it
+// found: nothing deleted, nothing updated and nothing destroyed outside the
+// database is nothing held.
+func erasureAnswerFor(acct erasureaccount.Account) string {
+	if len(acct.Uncounted) > 0 {
+		return erasedResolution
+	}
+	for key, n := range acct.Rows {
+		if n > 0 && (strings.HasSuffix(key, ".deleted") || strings.HasSuffix(key, ".updated")) {
+			return erasedResolution
+		}
+	}
+	return erasureAnswerNothingHeld
+}
+
+// isErasureAnswer reports whether a stored answer is one an erasure wrote.
+func isErasureAnswer(answer *string) bool {
+	return answer != nil && slices.Contains(erasureAnswers, *answer)
+}
 
 // resolutionChanged is what the audit row claims about the answer. A write that
 // leaves the stored text as it was, such as resending it, has not touched it.

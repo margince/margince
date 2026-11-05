@@ -142,7 +142,6 @@ export const SETTINGS_SECTIONS = {
     "legalReview.settingsTitle",
     "legalReview.settingsSwitch",
   ],
-  stageautomation: ["stageAutomation.record"],
   leads: [
     "leadOrigins.title",
     "leadReasons.title",

@@ -44,7 +44,7 @@ import (
 // members' counts be read at different instants, so a message answered mid-read
 // could be absent from both columns.
 func (s *Service) TeamBoard(ctx context.Context) (crmcontracts.TeamBoard, error) {
-	if err := requireLeadTier(ctx); err != nil {
+	if err := RequireLeadTier(ctx); err != nil {
 		return crmcontracts.TeamBoard{}, err
 	}
 	if s.teammates == nil {

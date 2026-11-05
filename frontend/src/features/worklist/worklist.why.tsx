@@ -15,6 +15,7 @@ import { reasonText } from "../../lib/worklistcopy";
 import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
+import { codedDetail } from "./worklist.reader";
 import { rowAnswer } from "./worklist.row.answer";
 
 export function WorklistWhy({
@@ -79,11 +80,12 @@ function whyFacts(
       value: reasons.join(" · "),
     });
   }
-  if (item.detail) {
+  const detail = codedDetail(item, t);
+  if (detail) {
     facts.push({
       key: "detail",
       term: t("worklist.why.detail"),
-      value: item.detail,
+      value: detail,
     });
   }
   if (item.consequence !== "none") {

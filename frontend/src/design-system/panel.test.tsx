@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { createPortal } from "react-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { selectorList, subjectsOf } from "../../scripts/lib/css-rules";
+import { EmptyState } from "./atoms";
 import {
   PANEL_TONES,
   Panel,
@@ -985,5 +986,40 @@ describe("the pane insets the state arm it has no body to wrap", () => {
       offences,
       "the pane insets its own un-wrappable state arm — panel.css says it once, for every panel in the product",
     ).toEqual([]);
+  });
+});
+
+// An instructional empty state in a panel body is a card of its own, with a
+// title, a sentence and a verb. The one-line empty state's flush rule must not
+// reach it, or its text sits on its border.
+describe("an instructional empty state in a panel body", () => {
+  it("keeps its instructional class", () => {
+    const { container } = render(
+      <PanelBody>
+        <EmptyState title="No data purchased">
+          A lookup buys details.
+        </EmptyState>
+      </PanelBody>,
+    );
+    expect(
+      container.querySelector(".panel-body > .empty.empty-instructional"),
+    ).not.toBeNull();
+  });
+
+  it("is left out of the rule that strips the one-line state's padding", () => {
+    const css = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "panel.css"),
+      "utf8",
+    );
+    const rules = cssRules(css);
+    const paddingOf = (selector: string) =>
+      rules
+        .filter((rule) => rule.selector === selector)
+        .map((rule) => declaredValue(rule.block, "padding"))
+        .find((value) => value !== undefined);
+    expect(paddingOf(".panel-body > .empty")).toBeUndefined();
+    expect(paddingOf(".panel-body > .empty:not(.empty-instructional)")).toBe(
+      "0",
+    );
   });
 });

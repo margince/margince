@@ -237,7 +237,10 @@ var defaults = map[string]Document{
 	// revisits this file, and inheriting "may read" is a smaller mistake than
 	// inheriting "may create and edit". The overrides below are the records
 	// they actually work. Those take writeNoDelete — create, read, same-day-correct, never
-	// delete — because archiving a commercial record is a manager's call.
+	// delete — because archiving someone else's commercial record is a manager's call.
+	// The owner of a contact, company or deal still archives it without delete
+	// (auth.ContactArchive, CompanyArchive, DealArchive), as the author of a
+	// hand-logged note or task does.
 	//
 	// The three departures from that rule each have a reason. `lead` is crud
 	// because disqualifying IS the delete and is routine rep work.

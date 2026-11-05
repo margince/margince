@@ -186,14 +186,25 @@ func TestASourceTheReaderMayNotOpenIsWithheld(t *testing.T) {
 // A truncated first page continues on the second, which carries every receipt
 // the first left out and none that landed after it was read.
 func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.Admin()
+	e := setupCloseDate(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	now := clocktest.Now(t)
-	pipeline, open := signedStage(t, e)
-	var svc *approvals.Service
-	for i := range 55 {
-		svc, _ = appliedStageReceiptIn(t, e, now, fmt.Sprintf("Paged project %02d", i), pipeline, open)
+	subject := "Renewal call"
+	message, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{Kind: "call", Subject: &subject, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
 	}
+	moved := today().AddDate(0, 0, 45)
+	applied := func(name string) ids.ApprovalID {
+		deal := e.seedSweepDeal(t, name, e.late, new(95), new(30), 1)
+		card := e.stageDateCard(ctx, t, deal, ids.UUID(message.Id), moved)
+		appliedUnderPolicy(ctx, t, e.svc, card, e.Rep1)
+		return card
+	}
+	for i := range 55 {
+		applied(fmt.Sprintf("Paged project %02d", i))
+	}
+	svc := e.svc
 	feed := newAttentionService(e.Pool, svc, func() time.Time { return now })
 	first, err := feed.HandledForYou(ctx, nil)
 	if err != nil {
@@ -203,7 +214,7 @@ func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
 		t.Fatalf("first page: %d receipts, truncated=%t, cursor=%v; want 50, truncated, a cursor",
 			len(first.Receipts), first.Truncated, first.NextCursor)
 	}
-	_, late := appliedStageReceiptIn(t, e, now, "Landed between pages", pipeline, open)
+	late := applied("Landed between pages")
 	second, err := feed.HandledForYou(ctx, first.NextCursor)
 	if err != nil {
 		t.Fatal(err)
@@ -225,8 +236,8 @@ func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
 		if receipt.Actor == nil {
 			t.Errorf("receipt %s names nobody", id)
 		}
-		if _, ok := changeOf(receipt, "stage_id"); !ok {
-			t.Errorf("stage receipt %s carries no stage change: %+v", id, receipt.Changes)
+		if _, ok := changeOf(receipt, "expected_close_date"); !ok {
+			t.Errorf("receipt %s carries no close-date change: %+v", id, receipt.Changes)
 		}
 	}
 	if _, err := feed.HandledForYou(ctx, new("not-a-cursor")); err == nil {
