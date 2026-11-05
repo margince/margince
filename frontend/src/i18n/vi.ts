@@ -5346,8 +5346,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền thay đổi lead này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
   "lead.boardCountsUnavailable":
     "Không thể tải số lượng Đủ điều kiện và Đã loại.",
+  "lead.boardCountsNoSearch":
+    "Số lượng không thể áp dụng tìm kiếm nên không hiển thị.",
+  "lead.boardCountsNoTagFilter":
+    "Không hiển thị số lượng khi đang dùng bộ lọc thẻ.",
+  "lead.boardCountsNoTeamFilter":
+    "Số lượng không thể lọc theo nhóm hay theo lead chưa giao nên không hiển thị.",
+  "lead.boardCountsNoScoreFilter":
+    "Không hiển thị số lượng khi đang dùng bộ lọc điểm.",
+  "lead.boardCountsNoResponseFilter":
+    "Không hiển thị số lượng khi đang dùng bộ lọc phản hồi.",
+  "lead.boardCountsNoCompanyFilter":
+    "Số lượng không thể lọc theo ngành, quốc gia hay quy mô công ty nên không hiển thị.",
+  "lead.boardCountsNoOtherFilter":
+    "Số lượng không thể áp dụng mọi bộ lọc của danh sách này nên không hiển thị.",
+  "lead.boardCountsNoConnectorSource":
+    "Số lượng không thể lọc theo mọi lead từ một trình kết nối nên không hiển thị.",
+  "lead.boardCountsOwnerNotMeasurable":
+    "Không hiển thị số lượng lead của người chịu trách nhiệm này. Chỉ quản trị viên cấp được quyền xem số liệu này.",
   "lead.boardTerminalRowsUnavailable":
     "Không thể tải các lead này. Số lượng ở trên vẫn đúng.",
+  "lead.boardTerminalRowsUnavailableNoCount": "Không thể tải các lead này.",
   "lead.boardTerminalOnly":
     "Không có lead đang mở ở đây. Các lead được tính trong Đủ điều kiện và Đã loại.",
 
@@ -5980,7 +5999,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.totalsOwnerNotMeasurable":
-    "Chỉ hiển thị deal đã tải. Tổng của người chịu trách nhiệm này nằm ngoài phạm vi số liệu bạn được xem.",
+    "Chỉ hiển thị deal đã tải. Chỉ quản trị viên cấp được quyền xem tổng của người chịu trách nhiệm này.",
   "deals.totalsNoTagFilter":
     "Chỉ hiển thị deal đã tải. Không hiển thị tổng khi đang dùng bộ lọc thẻ.",
   "deals.totalsNoSearch":

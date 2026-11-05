@@ -5437,8 +5437,24 @@ export const en = {
     "You cannot change this lead. Ask its owner to share it, or an administrator for edit access.",
   "lead.boardCountsUnavailable":
     "Qualified and Disqualified counts did not load.",
+  "lead.boardCountsNoSearch":
+    "The counts cannot apply a search, so none is shown.",
+  "lead.boardCountsNoTagFilter": "No count while a tag filter is on.",
+  "lead.boardCountsNoTeamFilter":
+    "The counts cannot narrow by team or to unassigned leads, so none is shown.",
+  "lead.boardCountsNoScoreFilter": "No count while a score filter is on.",
+  "lead.boardCountsNoResponseFilter": "No count while a response filter is on.",
+  "lead.boardCountsNoCompanyFilter":
+    "The counts cannot narrow by industry, country or company size, so none is shown.",
+  "lead.boardCountsNoOtherFilter":
+    "The counts cannot apply every filter on this list, so none is shown.",
+  "lead.boardCountsNoConnectorSource":
+    "The counts cannot narrow to every lead from one connector, so none is shown.",
+  "lead.boardCountsOwnerNotMeasurable":
+    "No count for this owner’s leads. Only an administrator can let you measure them.",
   "lead.boardTerminalRowsUnavailable":
     "These leads did not load. The count above is still correct.",
+  "lead.boardTerminalRowsUnavailableNoCount": "These leads did not load.",
   "lead.boardTerminalOnly":
     "No open leads here. They are counted under Qualified and Disqualified.",
 
@@ -6112,7 +6128,7 @@ export const en = {
   // pages on demand, so that number grows as the reader presses Load more.
   // Naming only the total would leave the count reading as final.
   "deals.totalsOwnerNotMeasurable":
-    "Loaded deals only. This owner’s totals are outside what you may measure.",
+    "Loaded deals only. Only an administrator can let you measure this owner’s totals.",
   "deals.totalsNoTagFilter":
     "Loaded deals only. No total while a tag filter is on.",
   "deals.totalsNoSearch":
