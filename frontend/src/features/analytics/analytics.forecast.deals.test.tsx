@@ -154,7 +154,7 @@ describe("ForecastDeals", () => {
     });
     await openDeals();
     expect(
-      await screen.findByText("Weighted 210,000 EUR from 2 open deals"),
+      await screen.findByText("Weighted €210,000 from 2 open deals"),
     ).toBeTruthy();
   });
 
@@ -168,7 +168,7 @@ describe("ForecastDeals", () => {
     await openDeals();
     expect(
       await screen.findByText(
-        "Weighted 210,000 EUR, colleagues’ deals included",
+        "Weighted €210,000, colleagues’ deals included",
       ),
     ).toBeTruthy();
   });

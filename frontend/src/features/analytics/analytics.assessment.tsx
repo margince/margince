@@ -19,6 +19,7 @@ import { useCanWrite } from "../../lib/capability";
 import { isVersionSkewOf, problemFieldErrors, unwrap } from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
 import {
+  assessmentResidue,
   assessmentText,
   readableQuantities,
 } from "./analytics.assessment.text";
@@ -276,7 +277,19 @@ function WrittenAssessment({
       }
     : undefined;
   const next =
-    proposed && readableQuantities(proposed.text) ? proposed : undefined;
+    proposed &&
+    readableQuantities(
+      assessmentResidue(
+        {
+          text: proposed.text,
+          cells: assessment.cells.map((cell) => cell.id),
+        },
+        assessment,
+        locale,
+      ),
+    )
+      ? proposed
+      : undefined;
   return (
     <>
       <Panel
@@ -458,7 +471,9 @@ function readableAssessment(
   return assessmentParagraphs(assessment)
     .flat()
     .every((line) => {
-      const text = assessmentText(line, assessment, locale);
-      return !unsupported.test(text) && readableQuantities(text);
+      return (
+        !unsupported.test(assessmentText(line, assessment, locale)) &&
+        readableQuantities(assessmentResidue(line, assessment, locale))
+      );
     });
 }

@@ -100,7 +100,7 @@ describe("the lead and its readings", () => {
   it("keeps a measured zero's explanation and actions with no blank chart", async () => {
     openScenario("trueZero");
     await readings();
-    expect(hero().getAllByText("0 EUR").length).toBeGreaterThan(0);
+    expect(hero().getAllByText("€0").length).toBeGreaterThan(0);
     expect(hero().queryByRole("figure")).toBeNull();
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
     expect(screen.queryByText("No supported decision.")).toBeNull();

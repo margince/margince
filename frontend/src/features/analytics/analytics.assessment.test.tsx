@@ -257,12 +257,12 @@ it("formats raw legacy quantities in both report prose and supporting records", 
     ],
   });
   expect(
-    await screen.findByText("Open business is ≈7,432,190 EUR."),
+    await screen.findByText("Open business is ≈€7,432,190."),
   ).toBeInTheDocument();
   await userEvent.click(
     screen.getByRole("button", { name: "View supporting records" }),
   );
-  expect(screen.getAllByText("Open business is ≈7,432,190 EUR.")).toHaveLength(
+  expect(screen.getAllByText("Open business is ≈€7,432,190.")).toHaveLength(
     2,
   );
   expect(screen.queryByText(/7432189\.65/)).not.toBeInTheDocument();
