@@ -306,7 +306,37 @@ func TestAForkMayDeclareItsOwnModulePath(t *testing.T) {
 		"build/extensions/crm/go.mod": "module example.test/acme/crm-fork\n",
 		"build/extensions/crm/crm.go": "package crm\n",
 	})
-	if _, err := scanExtensions(root); err != nil && strings.Contains(err.Error(), "declares module") {
+	units, err := scanExtensions(root)
+	if err != nil {
 		t.Fatalf("err = %v, want the fork's own path accepted, as Go accepts it", err)
+	}
+	if len(units) != 1 || units[0].ModulePath != "example.test/acme/crm-fork" {
+		t.Fatalf("units = %+v, want the fork module composed", units)
+	}
+}
+
+func TestAForkClaimingACoreOrTakenPathIsRefused(t *testing.T) {
+	for name, files := range map[string]map[string]string{
+		"a core module": {
+			"instance/go.mod": "module i\n\nrequire example.test/acme/crm v1.2.0\n\n" +
+				"replace example.test/acme/crm v1.2.0 => github.com/margince/margince/backend v1.2.1\n",
+			"build/extensions/crm/go.mod": "module github.com/margince/margince/backend\n",
+			"build/extensions/crm/crm.go": "package crm\n",
+		},
+		"another unit's path": {
+			"instance/go.mod": "module i\n\nrequire (\n\texample.test/acme/crm v1.2.0\n\texample.test/acme/notes v0.0.0\n)\n\n" +
+				"replace example.test/acme/crm v1.2.0 => example.test/acme/notes v1.2.1\n" +
+				"replace example.test/acme/notes => ./notes\n",
+			"build/extensions/crm/go.mod": "module example.test/acme/notes\n",
+			"build/extensions/crm/crm.go": "package crm\n",
+			"instance/notes/go.mod":       "module example.test/acme/notes\n",
+			"instance/notes/notes.go":     "package notes\n",
+		},
+	} {
+		root := t.TempDir()
+		writeTree(t, root, files)
+		if _, err := scanExtensions(root); err == nil {
+			t.Errorf("%s: a fork declaring %s was accepted; the workspace cannot hold it twice", name, name)
+		}
 	}
 }

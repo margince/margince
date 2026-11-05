@@ -54,6 +54,7 @@ func scanExtensions(root string) ([]extensionUnit, error) {
 		return nil, err
 	}
 	units := make([]extensionUnit, 0, len(sources))
+	modulePaths := map[string]string{}
 	for _, src := range sources {
 		// The ONE unit-name rule, published on the seam: scan-time
 		// acceptance must never drift from boot-time validation.
@@ -72,6 +73,14 @@ func scanExtensions(root string) ([]extensionUnit, error) {
 		if src.fetched && unit.ModulePath != src.modulePath && unit.ModulePath != src.replacementPath() {
 			return nil, fmt.Errorf("%s@%s declares module %q in its go.mod; refused, since it would replace that module in the whole build", src.modulePath, src.version, unit.ModulePath)
 		}
+		// A fork may declare its own path, but not one the workspace already holds.
+		if isCoreModule(unit.ModulePath) {
+			return nil, fmt.Errorf("%s declares module %q, one of core's own; refused", src.modulePath, unit.ModulePath)
+		}
+		if other, dup := modulePaths[unit.ModulePath]; dup {
+			return nil, fmt.Errorf("%s and %s both declare module %q; one module path, one unit", other, src.modulePath, unit.ModulePath)
+		}
+		modulePaths[unit.ModulePath] = src.modulePath
 		units = append(units, unit)
 	}
 	sort.Slice(units, func(i, j int) bool { return units[i].Name < units[j].Name })

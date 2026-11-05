@@ -1238,8 +1238,8 @@ the gates are green.
 
 ## Remove a unit
 
-Remove its `require` and `replace` from `instance/go.mod` and its `!/extensions/<name>` line from `.gitignore`, then
-its folder:
+For a unit this repository ships, remove its `require` and `replace` from `instance/go.mod` and its
+`!/extensions/<name>` line from `.gitignore`, then its folder:
 
 ```bash
 git rm -r extensions/<name>
@@ -1250,6 +1250,9 @@ make check-q
 Use `git rm`, never `mv` or a plain `rm`. `make drift` compares the working tree against the index. So a
 `manifest.generated.json` that you delete but do not stage fails the gate, and a moved folder is still a folder
 under `extensions/`. Run the `rm -rf` after it. `git rm` takes the tracked files and leaves `node_modules` behind.
+
+A unit for one installation only is not in git. Remove it from that installation's `go.mod`, and its name from
+`extensions/operator-units`. Then delete its folder under `extensions/`; there is nothing to stage.
 
 No other core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
 the unit out, migrations skip it), but it does **not erase**. The unit's tables and rows, its `extension_secret`
