@@ -3,7 +3,7 @@
 
 import type { Inline } from "./markdown-parse";
 
-// The inline half of `<Markdown>`: one line of source text in, a closed list of
+// The inline half of `<Markdown>`: a span of source text in, a closed list of
 // inline nodes out. `markdown-parse.ts` calls it for each block's text.
 
 // The opening run only. A backreference to the close, /^(`+)(.+?)\1/, retries
