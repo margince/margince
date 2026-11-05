@@ -84,7 +84,6 @@ export function BriefChanges() {
                       </span>
                     )}
                   </p>
-                  <ReceiptDetail receipt={receipt} />
                   <div className="magic-line-controls">
                     <ReceiptReview receipt={receipt} />
                   </div>
@@ -99,6 +98,7 @@ export function BriefChanges() {
                   >
                     {changeWhen(receipt.occurred_at, asOf, locale, readerZone)}
                   </time>
+                  <ReceiptDetail receipt={receipt} />
                 </li>
               ))}
             </ul>
