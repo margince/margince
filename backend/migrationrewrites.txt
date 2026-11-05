@@ -73,10 +73,10 @@
 1793791341_the_win_probability_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793791342_the_landing_is_built_from_likely.up.sql | setting | one row, the saved forward measure, and only where it holds an old spelling
 1793791342_the_landing_is_built_from_likely.down.sql | setting | one row, the saved forward measure, and only where it holds a Likely spelling
-1793810030_the_qualified_forecast_is_retired.up.sql | setting | three single-key rows at most: the retired enforcement switch, and the saved forward measure only where it names a qualified reading
-1793810030_the_qualified_forecast_is_retired.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1793810040_margince_judges_a_deals_date_amount_and_probability.down.sql | assurance_deal_receipt | runs only on a rollback and deletes only receipts a verdict wrote for a deal the input check had not walked; there is at most one receipt per open deal
-1793820813_a_booking_page_remembers_it_was_used.up.sql | booking_page | booking_page holds one live row per member, and only live rows of members who were booked through their page, erased bookings included, are stamped
+1793847150_the_qualified_forecast_is_retired.up.sql | setting | three single-key rows at most: the retired enforcement switch, and the saved forward measure only where it names a qualified reading
+1793847150_the_qualified_forecast_is_retired.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793847151_margince_judges_a_deals_date_amount_and_probability.down.sql | assurance_deal_receipt | runs only on a rollback and deletes only receipts a verdict wrote for a deal the input check had not walked; there is at most one receipt per open deal
+1793847155_a_booking_page_remembers_it_was_used.up.sql | booking_page | booking_page holds one live row per member, and only live rows of members who were booked through their page, erased bookings included, are stamped
 1793829963_a_vouch_belongs_to_one_sending_entity.up.sql | *, audit_log, communication_override | the recursive walk only reads merge chains of the same table; audit_log gets one row per vouch revoked here; one row per vouch a rep typed by hand for a contact the engine refused, so the set is a handful of rows per refused contact; a row whose recorder cannot be named is revoked rather than given an entity
 1793829966_the_decision_ground_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793830466_the_vouch_entity_link_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
