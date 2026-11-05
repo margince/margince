@@ -427,9 +427,9 @@ and there it pushes out the `main` entries that every PR loads.
   restore. The save runs under `!cancelled()`, and only if a cache file is newer than the stamp. A
   red lint run still saves, because it read the whole tree. A run that stopped before lint saves
   nothing. The census does not hold this entry back, because golangci replays no test result.
-- **The golangci entry is also saved on each push.** A cold pass costs about 39 minutes of CPU, and
+- `lint-cache.yml` also saves the golangci entry on each push. A cold pass costs about 39 minutes of CPU, and
   `internal/compose` imports every module, so an entry many merges old lints close to cold.
-  `lint-cache.yml` runs `make lint` from the entry of the push before, so it only reads what that push
+  It runs `make lint` from the entry of the push before, so it only reads what that push
   changed. It then deletes the older entries of its branch, so `main` and `develop` hold one each.
 - **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
   entry until `cache-warm` runs after the merge.
