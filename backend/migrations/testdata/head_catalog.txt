@@ -4032,7 +4032,7 @@ public.deal_line_item.deal_line_item_one_tax_source CHECK (((tax_rate IS NULL) <
 public.deal_line_item.deal_line_item_pkey PRIMARY KEY (id)
 public.deal_line_item.deal_line_item_position_check CHECK (("position" >= 1))
 public.deal_line_item.deal_line_item_position_unique UNIQUE (deal_id, "position")
-public.deal_line_item.deal_line_item_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
+public.deal_line_item.deal_line_item_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE RESTRICT
 public.deal_line_item.deal_line_item_quantity_check CHECK (((quantity IS NULL) OR (quantity > (0)::numeric)))
 public.deal_line_item.deal_line_item_tax_category_check CHECK (((tax_category IS NULL) OR (tax_category = ANY (ARRAY['standard'::text, 'reduced'::text, 'exempt'::text]))))
 public.deal_line_item.deal_line_item_tax_rate_check CHECK (((tax_rate IS NULL) OR (tax_rate >= (0)::numeric)))

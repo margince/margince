@@ -20,10 +20,10 @@ const (
 	commercialRevisionColumn = "commercial_revision"
 )
 
-// settleDealLines derives the deal's value from its lines after a line write,
-// in the same transaction: the deal row through the patch seam, so its
-// forecast move is recorded, then the product split, then the audit row and
-// deal.updated. A failure anywhere rolls the line write back with it.
+// settleDealLines derives the deal's value from its lines, in the line write's
+// transaction. The deal row goes through the patch seam, so its forecast move
+// is recorded. Then come the product split, the audit row and deal.updated. A
+// failure anywhere rolls the line write back with it.
 func (s *Store) settleDealLines(ctx context.Context, tx pgx.Tx, open openedDealLines, evidence map[string]any) error {
 	lines, err := readDealLineRows(ctx, tx, open.DealID)
 	if err != nil {

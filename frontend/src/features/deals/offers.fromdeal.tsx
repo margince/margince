@@ -3,6 +3,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import { ifMatch, requireVersion } from "../../api/version";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
@@ -16,8 +17,7 @@ import { OfferLineEditor } from "./offers.lines";
 /**
  * The lines part of an offer. An offer typed by hand is edited here while it
  * is a draft. An offer made from the deal's products changes only through the
- * deal: it says which revision it copied, says when the deal moved on, and a
- * draft can take the deal's lines again.
+ * deal. It says when the deal moved on, and a draft can take the lines again.
  */
 export function OfferLinesPanel({ offer }: Readonly<{ offer: Offer }>) {
   if (offer.source_commercial_revision == null) {
@@ -42,7 +42,10 @@ function DealSourcedLines({
     mutationFn: async (expected: number) =>
       unwrap(
         await api.POST("/offers/{id}/refresh-from-deal", {
-          params: { path: { id: offer.id } },
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
           body: { expected_revision: expected },
         }),
         t,

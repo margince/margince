@@ -10,9 +10,8 @@ import { installFetchStub, jsonResponse } from "../../../testing/story-utils";
 import type { DealCommercial } from "./deallines";
 import { DealProductsCard } from "./dealproducts";
 
-// A deal priced from its own lines: the card lists them with the net value
-// they add up to, says what is missing while they are incomplete, and the
-// editor saves them against the revision it read.
+// A deal priced from its own lines. The card lists them with their net value
+// and says what is missing. The editor saves against the revision it read.
 
 afterEach(() => {
   cleanup();

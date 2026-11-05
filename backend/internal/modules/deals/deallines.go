@@ -6,10 +6,10 @@ package deals
 // A deal's own product lines, and the value they set on it.
 //
 // A deal in `lines` mode takes its amount, recurring value and product split
-// from these rows and from nothing else: a typed amount, a hand-set product
-// list and an accepted offer are each refused or ignored for it. Every write
-// here advances the deal's commercial_revision under the deal's row lock, so
-// two sellers editing from one revision cannot both win.
+// from these rows only. A typed amount or a hand-set product list is refused,
+// and an accepted offer is ignored. Every write here advances the deal's
+// commercial_revision under the deal's row lock, so two sellers editing from
+// one revision cannot both win.
 
 import (
 	"context"
@@ -261,8 +261,8 @@ func requireLineWrite(ctx context.Context, picksProduct bool) error {
 	return nil
 }
 
-// openedDealLines is what a line write holds once it is admitted: the deal's
-// row lock, its commercial state and its lines, all read under that lock.
+// openedDealLines is what an admitted line write holds. That is the deal's row
+// lock, plus its commercial state and its lines read under that lock.
 type openedDealLines struct {
 	DealID ids.DealID
 	Lock   storekit.RowLock

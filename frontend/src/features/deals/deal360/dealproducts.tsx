@@ -21,7 +21,7 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../../design-system/recordpicker";
-import { formatMoneyOrAbsent } from "../../../format/format";
+import { formatMoneyOrAbsent, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { problemMessageOf, problemStatus, unwrap } from "../../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingfigures";
@@ -198,7 +198,9 @@ function DealLineRows({ state }: Readonly<{ state: DealCommercial }>) {
           key={line.id}
           title={line.description}
           sub={
-            line.quantity == null ? undefined : `${line.quantity} ${line.unit}`
+            line.quantity == null
+              ? undefined
+              : `${formatNumber(line.quantity, locale)} ${line.unit}`
           }
           right={formatMoneyOrAbsent(
             line.committed_net_minor,

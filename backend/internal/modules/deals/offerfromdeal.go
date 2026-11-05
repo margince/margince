@@ -3,15 +3,13 @@
 
 package deals
 
-// An offer made from a deal's lines. The offer copies the lines at one
-// commercial revision and names it, so a later change to the deal shows as a
-// newer revision and never reaches the offer by itself. Such an offer's lines
-// change only through a refresh of the draft from the deal.
+// An offer made from a deal's lines copies them at one commercial revision
+// and names it. A later deal change shows as a newer revision and never
+// reaches the offer by itself; only a refresh of the draft takes it.
 //
-// The issuing legal entity and the language come from the offer request, as
-// for any offer; they are not part of the deal's lines. A product line takes
-// its name in the offer's language when the seller left the catalogue name
-// as it was.
+// The legal entity and the language come from the offer request, as for any
+// offer. A product line takes its name in the offer's language when the
+// seller left the catalogue name as it was.
 
 import (
 	"context"
@@ -66,6 +64,15 @@ func (e *DealPricingIncompleteError) Error() string {
 // MessageFault names the condition; the fields are on the deal, not here.
 func (e *DealPricingIncompleteError) MessageFault() (code, message string) {
 	return "pricing_incomplete", e.Error()
+}
+
+// ensureTypedDraft admits a line edit: the offer is a draft, and its lines
+// were typed on it rather than copied from its deal.
+func ensureTypedDraft(offer crmcontracts.Offer) error {
+	if err := ensureDraft(offer); err != nil {
+		return err
+	}
+	return ensureOfferLinesTyped(offer)
 }
 
 // ensureOfferLinesTyped refuses a line edit on an offer made from its deal.

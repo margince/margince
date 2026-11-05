@@ -426,14 +426,8 @@ func copyOfferIntoRevision(ctx context.Context, tx pgx.Tx, fromID, newID ids.Off
 	// not silently become accepted (and start counting toward totals)
 	// just because the offer grew a revision.
 	//
-	// So does the billing classification. It is a SNAPSHOT, and a revision is
-	// the same document renumbered — a line that repeated monthly for a year
-	// in revision 1 repeats monthly for a year in revision 2. Dropping it here
-	// would silently unclassify every recurring line, zero the offer's annual
-	// and committed figures, and let the new revision be accepted without ever
-	// stating the deal's recurring value. The deal line a line came from
-	// travels too, so a revision of an offer made from the deal can be
-	// refreshed from it.
+	// So does the billing classification, a snapshot of the same document. The
+	// source deal line travels too, so a revision made from the deal can be refreshed.
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer_line_item (id, offer_id, position, product_id, description,
 		                              unit, quantity, unit_price_minor, discount_pct, tax_rate, evidence, proposal_state, price_grounded,

@@ -4,9 +4,8 @@
 package deals
 
 // What a deal line copies from its product, and what makes a line valid.
-// The product snapshot, the tax-category rule and the billing-shape rule are
-// the offer line's own functions, so a deal line and the offer line made from
-// it are judged by one rule.
+// The product snapshot, tax and billing rules are the offer line's functions.
+// So a deal line and the offer line made from it obey one rule.
 
 import (
 	"context"

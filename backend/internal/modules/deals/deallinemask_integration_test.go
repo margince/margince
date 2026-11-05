@@ -74,8 +74,8 @@ func TestAMaskedReaderGetsNoNumberOfTheLines(t *testing.T) {
 	}
 }
 
-// What a typed amount means is told only to a reader who may read it: the
-// comparison with an accepted offer's gross would otherwise disclose it.
+// Only a reader who may read the amount is told what it means. The comparison
+// with an accepted offer's gross would disclose the amount to anyone else.
 func TestAMaskedReaderIsNotToldTheAmountBasis(t *testing.T) {
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
@@ -129,8 +129,10 @@ func TestAnAmountVerdictLeavesALinesDealAlone(t *testing.T) {
 	amount, currency := int64(20_000), "EUR"
 	result, err := e.store.ApplyVerdict(e.productCtx(), VerdictInput{
 		DealID: dealID, Owner: e.admin,
-		Seen:          VerdictValues{AmountMinor: &amount, Currency: &currency},
-		Changes:       []VerdictChange{{Correction: VerdictAmountCorrection, AmountMinor: 99_000, NewestCitedAt: clocktest.Now(t).Add(time.Hour)}},
+		Seen:    VerdictValues{AmountMinor: &amount, Currency: &currency},
+		Changes: []VerdictChange{{Correction: VerdictAmountCorrection, AmountMinor: 99_000, NewestCitedAt: clocktest.Now(t).Add(time.Hour)}},
+		// The owner is the seeded admin, so its authority is the admin's grants.
+		AsOwner:       func(context.Context, pgx.Tx) (context.Context, error) { return e.productCtx(), nil },
 		Allowed:       func(context.Context, pgx.Tx, string) (bool, error) { return true, nil },
 		EvidenceHolds: func(context.Context, pgx.Tx) (bool, error) { return true, nil },
 		Record:        func(context.Context, pgx.Tx, []VerdictChange) error { return nil },

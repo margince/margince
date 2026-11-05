@@ -102,9 +102,9 @@ func readDealLineRows(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]deal
 	return out, nil
 }
 
-// dealLineFigures derives the lines' figures. A category line reads today's
-// rate from the sheet for the installation's default issuer, because a deal
-// names no legal entity; a rate the sheet lacks leaves the tax unknown.
+// dealLineFigures derives the lines' figures. A deal names no legal entity,
+// so a category line reads today's rate for the default issuer. A rate the
+// sheet lacks leaves the tax unknown.
 func (s *Store) dealLineFigures(ctx context.Context, tx pgx.Tx, lines []dealLineRow) ([]DealLineInput, DealCommercialFigures, error) {
 	basis := s.draftTaxBasis(ctx, tx, nil)
 	inputs := make([]DealLineInput, 0, len(lines))
@@ -264,8 +264,8 @@ func dealAmountBasis(ctx context.Context, tx pgx.Tx, dealID ids.DealID, head dea
 }
 
 // dealLineWire renders one line, with the tax rate it is figured at. A reader
-// the amount is masked from gets the words and whether the price repeats, and
-// no number: a quantity or a term beside a catalogue price rebuilds the amount.
+// the amount is masked from gets the words and whether the price repeats. They
+// get no number, because a quantity beside a catalogue price rebuilds the amount.
 func dealLineWire(line dealLineRow, figures DealLineFigures, readable bool) (crmcontracts.DealLine, error) {
 	out := crmcontracts.DealLine{
 		Id: openapi_types.UUID(line.ID), Position: line.Position, ProductId: uuidPtr(line.ProductID),

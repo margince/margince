@@ -57,7 +57,7 @@ CREATE TABLE deal_line_item (
 
     CONSTRAINT deal_line_item_pkey PRIMARY KEY (id),
     CONSTRAINT deal_line_item_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE,
-    CONSTRAINT deal_line_item_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id),
+    CONSTRAINT deal_line_item_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE RESTRICT,
     CONSTRAINT deal_line_item_position_unique UNIQUE (deal_id, position),
     CONSTRAINT deal_line_item_position_check CHECK (position >= 1),
     CONSTRAINT deal_line_item_description_present CHECK (btrim(description) <> '' AND length(description) <= 2000),

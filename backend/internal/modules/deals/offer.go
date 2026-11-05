@@ -240,40 +240,6 @@ func requireReadCommitted(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// offerTotalsChange is the transition recomputeOfferTotals wrote to the
-// offer's three stored money columns: what the row held, and what it now
-// holds. One derivation answers both audit images, so a caller never re-sums
-// a total the UPDATE has already landed — two spellings of one number are
-// two numbers.
-type offerTotalsChange struct{ Before, After OfferFigures }
-
-// The three money columns an offer's totals image carries, so the image and the
-// statement that writes them spell each one the same way.
-const (
-	offerKeyNet   = "net_minor"
-	offerKeyTax   = "tax_minor"
-	offerKeyGross = "gross_minor"
-)
-
-// offerTotalsImage renders one side of that transition as an audit image,
-// keyed by the column names, so field history reads three money fields moving
-// on the offer rather than a shape only this package understands.
-func offerTotalsImage(f OfferFigures) map[string]any {
-	return map[string]any{offerKeyNet: f.NetMinor, offerKeyTax: f.TaxMinor, offerKeyGross: f.GrossMinor}
-}
-
-// lineFieldEvidence is what a line write contributes as context ABOUT the
-// offer update it causes: which line moved, and what that line's own fields
-// held on either side. It is evidence and never an image, because a key in
-// an offer's before/after is projected as a field OF THE OFFER — a line's
-// description landing there reads as the offer growing a description it
-// never had.
-//
-//craft:ignore naked-any a line image carries whatever SQL types its columns hold, exactly as the audit seam takes them
-func lineFieldEvidence(lineID ids.UUID, was, now map[string]any) map[string]any {
-	return map[string]any{lineIDKey: lineID, "line_before": was, "line_after": now}
-}
-
 // recomputeOfferTotals re-derives net/tax/gross from the offer's live
 // lines through the totals engine — the ONE writer of the stored totals,
 // called inside every transaction that touches a line. Only accepted
