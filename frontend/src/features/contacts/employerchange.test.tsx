@@ -104,6 +104,7 @@ function mount(view: Contact360) {
         <ContactRail
           view={view}
           consent={{
+            guard: undefined,
             loading: false,
             failed: false,
             onRetry: () => undefined,
