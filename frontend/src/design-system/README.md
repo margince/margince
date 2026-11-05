@@ -250,9 +250,11 @@ A selected view tab, a pressed button, the current record tab or the current row
 reader is. So it is neutral, like a pressed `FilterPills` pill. `selectedstate.test.ts` fails such a
 state in any shipped sheet when its ground, ink, edge or bar comes from an `--accent*` token.
 
-The current row of the side rail, and its cell in the phone bar, are the one exception: they are
-filled with `--accent`. That row marks where the reader is in the whole app, not one choice of
-several. The gate names these two rules and no other.
+The current row of the side rail, and its cell in the phone bar, are the one exception. They take
+`--accentLight` as ground and `--accentText` as ink, in medium weight. That row marks where the
+reader is in the whole app, not one choice of several. Where the rail shows icons only, an inset
+`--accentText` edge joins the tint, since weight has no label to act on. The gate names these rules
+and no others.
 
 `--ai` is provenance. A progress bar or a running step
 in that colour claims a model decided the figure. So work still running reads `--info*`: the ring
@@ -280,7 +282,7 @@ Paint it where that is true and nowhere else. A card tinted indigo for looks tel
 that screen something false about who decided.
 
 It is a family of its own for the same reason the five states are: one meaning per colour.
-`--accent` (deep teal) is the brand and the primary action. The state hues report how something
+`--accent` (deep teal in light, green in dark) is the brand and the primary action. The state hues report how something
 went. None of them means "written by a model". The top of `tokens.css` states the split, and
 `tokens.test.ts` pins it.
 
