@@ -113,7 +113,7 @@
   border-top: 0;
 }
 .reporting-sheet-grid > .reporting-panel:not(.reporting-panel-wide) {
-  margin-inline-start: -1px;
+  margin-inline-start: -1px; /* ds:ignore a hairline offset, not spacing */
   border-inline-start: 1px solid var(--groundEdge);
 }
 @media (max-width: 900px) {
