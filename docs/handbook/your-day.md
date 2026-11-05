@@ -102,7 +102,7 @@ To complete a task in Margince, press **Done** on its Worklist row, or on the ta
 3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task and pick
    a day under **Move to**.
 
-**Snooze 1 day** adds a day to the task's own due date, so a task with no date does not show it. If
+**Snooze 1 day** moves the due date one day later, or to tomorrow if that is later, keeping its time. A task with no date does not show it. If
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### How do I mark a meeting ready?
