@@ -97,13 +97,16 @@ func closeCapturedMeetingTx(
 	// oversight. Somebody retired that row deliberately; a calendar sync is not
 	// the caller entitled to move its status back under them, and a cancellation
 	// changes nothing a reader of an archived row can see.
+	//
+	// FOR UPDATE, not FOR NO KEY UPDATE: it waits out an import row in flight.
+	// The standing check then sees the seat's own import once it commits.
 	var id ids.ActivityID
 	var status *string
 	err := tx.QueryRow(ctx, `
 		SELECT id, meeting_status FROM activity
 		 WHERE source_system = $1 AND source_id = $2
 		   AND kind = 'meeting' AND restricted_at IS NULL AND archived_at IS NULL
-		 FOR NO KEY UPDATE`,
+		 FOR UPDATE`,
 		key.SourceSystem, key.SourceID).Scan(&id, &status)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

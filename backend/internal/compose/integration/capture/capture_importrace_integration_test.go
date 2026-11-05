@@ -96,8 +96,13 @@ func beginImport(t *testing.T, e *integration.SearchEnv, activityID, seat ids.UU
 			return nil
 		})
 	}()
-	if err := <-written; err != nil {
-		t.Fatalf("writing seat %s's import row: %v", seat, err)
+	select {
+	case err := <-written:
+		if err != nil {
+			t.Fatalf("writing seat %s's import row: %v", seat, err)
+		}
+	case <-r.finished:
+		t.Fatalf("seat %s's transaction ended before writing its import row: %v", seat, r.err)
 	}
 	t.Cleanup(func() {
 		r.recompute()
