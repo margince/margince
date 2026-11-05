@@ -85,33 +85,33 @@ func contactFullName(fields map[string]string) string {
 	if name := strings.TrimSpace(fields[fieldFullName]); name != "" {
 		return name
 	}
-	if joined := contacts.JoinNameParts(fields["first_name"], fields["last_name"]); joined != "" {
+	joined := strings.TrimSpace(strings.TrimSpace(fields["first_name"]) + " " + strings.TrimSpace(fields["last_name"]))
+	if joined != "" {
 		return joined
 	}
 	return strings.TrimSpace(fields[fieldEmail])
 }
 
-// withoutDisagreeingFullName drops a full name that disagrees with the two name
-// parts beside it in the same row. Such a name is never sent on its own. The parts
-// go to the store, whose rule decides whether the stored display name follows
-// them: a plain join does, a hand-typed name stays.
-func withoutDisagreeingFullName(fields map[string]string) map[string]string {
+// withNamePartsAsFullName gives a row that states both name parts those parts
+// as its full name, whether or not it maps a full name column. The update
+// comparison reads it, so a disagreeing full name is never sent on its own.
+func withNamePartsAsFullName(fields map[string]string) map[string]string {
 	joined := joinedNameParts(fields)
-	if _, given := fields[fieldFullName]; !given || joined == "" || strings.TrimSpace(fields[fieldFullName]) == joined {
+	if joined == "" || fields[fieldFullName] == joined {
 		return fields
 	}
 	out := maps.Clone(fields)
-	delete(out, fieldFullName)
+	out[fieldFullName] = joined
 	return out
 }
 
 // joinedNameParts is "first last" when the row states both parts, else "".
 func joinedNameParts(fields map[string]string) string {
-	first, last := fields["first_name"], fields["last_name"]
-	if strings.TrimSpace(first) == "" || strings.TrimSpace(last) == "" {
+	first, last := strings.TrimSpace(fields["first_name"]), strings.TrimSpace(fields["last_name"])
+	if first == "" || last == "" {
 		return ""
 	}
-	return contacts.JoinNameParts(first, last)
+	return first + " " + last
 }
 
 // contactEmailsFrom reads the single email column a spreadsheet carries into the

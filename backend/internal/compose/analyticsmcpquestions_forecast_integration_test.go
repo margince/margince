@@ -254,7 +254,7 @@ func proveF06QuarterAgainstItsTarget(t *testing.T) {
 	if answered := *got.Evaluation.Metrics[0].TargetComparison; !reflect.DeepEqual(answered, want) {
 		t.Errorf("the tool compared %+v, the web evaluation %+v: one question, two answers", answered, want)
 	}
-	if *want.Gap != 4_000_000 {
-		t.Errorf("comparison %+v, want 40k short", want)
+	if *want.Gap != 4_000_000 || want.Qualified == nil {
+		t.Errorf("comparison %+v, want 40k short with its qualified coverage state", want)
 	}
 }

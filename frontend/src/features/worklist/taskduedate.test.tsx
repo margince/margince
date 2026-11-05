@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The picker can also move a deadline to a specific day.
+// Moving a task to a day the reader names.
+//
+// The snooze beside this one adds a day to the task's OWN due date, so it
+// cannot reach a named day in principle rather than merely in clicks: a task
+// three days overdue snoozes to two days overdue, and a rep who means tomorrow
+// presses it four times.
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -59,7 +64,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-  vi.useRealTimers();
 });
 
 // The version the row was drawn at, which every write on it is pinned to.
@@ -245,18 +249,5 @@ describe("moving a task to a callback time", () => {
   it("opens empty on a task due by its day, whatever its stored hour", () => {
     renderVerbs("2026-09-01T13:00:00.000Z", false);
     expect(timeBox().value).toBe("");
-  });
-});
-
-it("snoozes to tomorrow after midnight passes with the task still open", async () => {
-  vi.setSystemTime(new Date("2026-09-01T21:59:00Z"));
-  const user = userEvent.setup();
-  renderVerbs("2026-08-20T13:00:00Z", true);
-  vi.setSystemTime(new Date("2026-09-01T22:01:00Z"));
-  await user.click(screen.getByRole("button", { name: "Snooze 1 day" }));
-  await waitFor(() => expect(sent).toHaveLength(1));
-  expect(sent[0]).toMatchObject({
-    due_at: "2026-09-03T13:00:00.000Z",
-    due_has_time: true,
   });
 });

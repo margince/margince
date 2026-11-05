@@ -9,14 +9,8 @@ import { asksWhy } from "../../lib/compose-context";
 import { remedyCategoryOf } from "../../lib/sendstatus";
 import type { Activity } from "./compose";
 import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
-import { ComposeDeal, type DealChoiceState } from "./composedeal";
 import type { ComposeFields } from "./composefields";
-import {
-  alternativeReasonOf,
-  ContactReasonPick,
-  ReasonSwitch,
-  type ReasonTarget,
-} from "./composereason";
+import { ContactReasonPick, type ReasonTarget } from "./composereason";
 import type { ComposeSend } from "./composesend";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
@@ -91,7 +85,6 @@ export function ComposeBlockers({
   fields,
   send,
   anchorActivity,
-  dealChoice,
   contactOf,
   bodyKey,
   permission: drawPermission,
@@ -100,8 +93,6 @@ export function ComposeBlockers({
   fields: ComposeFields;
   send: ComposeSend;
   anchorActivity: Activity | undefined;
-  /** Which deal a new message to a contact is about, where that is asked. */
-  dealChoice: DealChoiceState;
   /** The contact an address belongs to, where the records behind the draft say. */
   contactOf: (address: string) => string | undefined;
   bodyKey: MessageKey;
@@ -112,10 +103,6 @@ export function ComposeBlockers({
   const target = isChannelReply
     ? undefined
     : reasonTargetOf(send.permission, contactOf);
-  // A reason the record already carries comes before recording a new one.
-  const alternative = isChannelReply
-    ? undefined
-    : alternativeReasonOf(send.permission);
   // Until the message says why it is written, the engine has judged no reason.
   // Its missing-reason refusal would then ask the same question twice.
   const whyMissing = asksWhy(anchorActivity) && fields.context === "";
@@ -128,11 +115,6 @@ export function ComposeBlockers({
         flagged={send.flagged}
         context={fields.context}
         onContextChange={fields.setContext}
-      />
-      <ComposeDeal
-        choice={dealChoice}
-        onDealChange={fields.account.setDealId}
-        flagged={send.flagged}
       />
       {!isChannelReply && (
         <MailSendNotices
@@ -147,16 +129,12 @@ export function ComposeBlockers({
       {(!isChannelReply || send.permission.refusal) &&
         !(whyMissing && unproven) &&
         drawPermission(
-          alternative ? (
-            <ReasonSwitch reason={alternative} onSwitch={fields.setContext} />
-          ) : (
-            target && (
-              <ContactReasonPick
-                key={`${target.contactId}:${target.category}`}
-                target={target}
-                chosen={send.claimedContext}
-              />
-            )
+          target && (
+            <ContactReasonPick
+              key={`${target.contactId}:${target.category}`}
+              target={target}
+              chosen={send.claimedContext}
+            />
           ),
           asksWhy(anchorActivity),
         )}

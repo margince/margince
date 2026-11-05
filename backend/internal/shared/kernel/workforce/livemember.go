@@ -71,13 +71,3 @@ func AskableMemberSQL(alias string) string {
 	}
 	return prefix + "is_agent = false AND " + ActivatableMemberSQL(alias)
 }
-
-// NamedSeatSQL is a seat a colleague's name may still be shown for. A departed
-// colleague keeps their name on what they did; an archived seat names nobody.
-func NamedSeatSQL(alias string) string {
-	prefix := ""
-	if alias != "" {
-		prefix = alias + "."
-	}
-	return prefix + "archived_at IS NULL"
-}

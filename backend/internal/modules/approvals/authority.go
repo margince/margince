@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -27,13 +26,15 @@ import (
 
 const objectUserAdmin = "user_admin"
 
-// kindArchiveRecord is the staged archive of one record.
-const kindArchiveRecord = "archive_record"
-
 // objectActivity is the RBAC object every timeline write is governed by, spelled
 // once: three staged kinds and the target-visibility switch below all name it,
 // and a typo in any of them would silently ask for a grant nobody holds.
 const objectActivity = "activity"
+
+// objectDeal is the RBAC object a stage move is governed by. Spelled here
+// rather than imported, for targetImportRun's reason: approvals may not import
+// a module it governs.
+const objectDeal = "deal"
 
 // targetImportRun is the staged target a migrate-in commit names, and the RBAC
 // object the migration module admits on (migration.ImportRunObject). One word
@@ -297,6 +298,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not
 	// have made by hand.
+	"stage_progression": {{objectDeal, principal.ActionUpdate}},
 	// An automation's request_approval stages under emit_flow_event, and that
 	// action IS the confirm-first act: approving it performs no downstream
 	// write, it finishes the asking. The grant is the one the action catalog
@@ -349,11 +351,11 @@ var targetResolvedGrants = map[string]principal.Action{
 	// release adds beyond that write — its own provenance and the redeemed
 	// version pin — is enumerated in compose/assignownerrelease.go and changes
 	// nothing about the grant.)
-	"assign_owner":    principal.ActionUpdate,
-	kindArchiveRecord: principal.ActionDelete,
-	"merge_records":   principal.ActionUpdate,
-	"update_record":   principal.ActionUpdate,
-	"create_record":   principal.ActionCreate,
+	"assign_owner":   principal.ActionUpdate,
+	"archive_record": principal.ActionDelete,
+	"merge_records":  principal.ActionUpdate,
+	"update_record":  principal.ActionUpdate,
+	"create_record":  principal.ActionCreate,
 	// A part is written on the record it hangs off (an offer, a company, a
 	// project). Its store gates the write on that record's update grant.
 	"change_record_parts": principal.ActionUpdate,
@@ -407,23 +409,11 @@ func requireDecisionGrants(p principal.Principal, a row) error {
 		return err
 	}
 	for _, g := range grants {
-		if !p.Permissions.Allows(g.Object, g.Action) && !mayArchiveOwnRecord(p, a, g) {
+		if !p.Permissions.Allows(g.Object, g.Action) {
 			return fmt.Errorf("approving %s needs %s.%s: %w", a.Kind, g.Object, g.Action, apperrors.ErrPermissionDenied)
 		}
 	}
 	return nil
-}
-
-// mayArchiveOwnRecord is the object half of the archive rule the store asks.
-// Archiving a record type whose owner may archive it without delete takes
-// update at the object level. Whether this row is the decider's own to archive
-// is the row half, which decidableRows asks with auth.EnsureArchivable.
-func mayArchiveOwnRecord(p principal.Principal, a row, g grantRequirement) bool {
-	if a.Kind != kindArchiveRecord || g.Action != principal.ActionDelete {
-		return false
-	}
-	_, ruled := auth.ArchiveRuleFor(g.Object)
-	return ruled && p.Permissions.Allows(g.Object, principal.ActionUpdate)
 }
 
 // decisionGrantsFor derives every grant approving this staging requires: the

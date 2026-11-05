@@ -43,8 +43,8 @@ func TestTheSampleQuarterIsFortyThousandShortAtThreePointSixCoverage(t *testing.
 	if rounded := fmt.Sprintf("%.1f", *got.Coverage); rounded != "3.6" {
 		t.Fatalf("coverage %v rounds to %s, want 3.6: 1.36m open over 380k left to win", *got.Coverage, rounded)
 	}
-	if *got.TargetRevision != 3 || got.Operands == nil {
-		t.Fatalf("comparison %+v, want target revision 3 and its operands", got)
+	if *got.TargetRevision != 3 || got.Operands == nil || got.Qualified.Status != "not_enforced" {
+		t.Fatalf("comparison %+v, want target revision 3, its operands, and no qualified figure while it is off", got)
 	}
 }
 
@@ -59,10 +59,27 @@ func TestAManagerCallIsTheWholeQuarterAndIsNotAddedToWhatIsWon(t *testing.T) {
 
 func TestATargetAlreadyWonReadsReachedRatherThanAnEndlessCoverage(t *testing.T) {
 	evaluation, ops, held := sampleQuarter()
-	ops.WonMinor, ops.LandingMinor = 90_000_000, 95_000_000
+	ops.WonMinor, ops.LandingMinor, ops.QualifiedOpenMinor = 90_000_000, 95_000_000, new(int64(1_000_000))
 	got := compareForecast(context.Background(), evaluation, ops, held)
 	if got.Status != "target_reached" || got.Coverage != nil || *got.Remaining != 0 || *got.Gap != -15_000_000 {
 		t.Fatalf("comparison %+v, want the target reached, nothing left and no coverage", got)
+	}
+	if got.Qualified.Status != "target_reached" || got.Qualified.Coverage != nil {
+		t.Fatalf("qualified %+v, want reached with no coverage", got.Qualified)
+	}
+}
+
+func TestQualifiedCoverageDividesTheQualifiedOpenDealsByTheSameRemainder(t *testing.T) {
+	evaluation, ops, held := sampleQuarter()
+	ops.QualifiedOpenMinor = new(int64(57_000_000))
+	got := compareForecast(context.Background(), evaluation, ops, held)
+	if got.Qualified.Status != "compared" || *got.Qualified.OpenPipeline != 57_000_000 || *got.Qualified.Coverage != 1.5 {
+		t.Fatalf("qualified %+v, want 570k over the 380k left to win, 1.5", got.Qualified)
+	}
+	ops.QualifiedOpenMinor = new(int64(0))
+	got = compareForecast(context.Background(), evaluation, ops, held)
+	if got.Qualified.Status != "compared" || *got.Qualified.Coverage != 0 {
+		t.Fatalf("qualified %+v, want a measured zero when no open deal qualifies", got.Qualified)
 	}
 }
 

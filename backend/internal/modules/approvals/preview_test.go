@@ -190,9 +190,9 @@ func TestAnEditedTagMergeCannotSpendAnotherSurvivorsPin(t *testing.T) {
 	}
 }
 
-func TestAStageMovePreviewRequiresItsOriginalDestinationPin(t *testing.T) {
+func TestProgressionPreviewRequiresItsOriginalDestinationPin(t *testing.T) {
 	destination := ids.NewV7()
-	subject := row{Kind: "advance_deal", CoTargetType: new("stage"), CoTargetID: &destination, CoTargetVersion: new(int64(1))}
+	subject := row{Kind: "stage_progression", CoTargetType: new("stage"), CoTargetID: &destination, CoTargetVersion: new(int64(1))}
 	payload := map[string]any{"to_stage_id": destination.String()}
 	proposal := crmcontracts.Approval{ProposedChange: &payload}
 	if !previewCoTargetPinned(subject, proposal) {

@@ -292,12 +292,6 @@ func (s schedulerOf) storedActor() migration.StoredActor {
 // whose message stopped. Surfacing a held message TO that rep is #1312; this is
 // the provenance any such surface will read.
 func (w *scheduledSendWorker) holdScope(wsCtx context.Context, scheduler ids.UUID) context.Context {
-	return holdScopeFor(wsCtx, scheduler)
-}
-
-// holdScopeFor is holdScope for any hold the system makes on a rep's message.
-// The card it raises then names the same rep, whichever path held it.
-func holdScopeFor(wsCtx context.Context, scheduler ids.UUID) context.Context {
 	ctx := sendWorkerScope(wsCtx)
 	actor, ok := principal.Actor(ctx)
 	if !ok {

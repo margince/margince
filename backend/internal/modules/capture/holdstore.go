@@ -31,10 +31,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The hold vocabulary, the Go spelling of the table's CHECK. The kinds are
-// exclusion kinds by design: both answer "which addresses does this rule cover".
-// One spelling lets them share validRuleValue, so no second parser folds case
-// differently.
+// The hold vocabulary, the Go spelling of the table's CHECK. The kinds are the
+// exclusion kinds by design: both lists answer "which addresses does this rule
+// cover", and one spelling is what lets them share ValidExclusionValue rather
+// than growing a second parser that folds case differently somewhere.
 const (
 	HoldKindAddress = ExclusionKindAddress
 	HoldKindDomain  = ExclusionKindDomain
@@ -108,7 +108,7 @@ func (s *CounterpartyHoldStore) Add(ctx context.Context, kind, value string) (Co
 		return CounterpartyHold{}, err
 	}
 	seat := actor.UserID
-	normalized, err := validRuleValue(holdKinds, kind, value)
+	normalized, err := ValidExclusionValue(kind, value)
 	if err != nil {
 		return CounterpartyHold{}, err
 	}

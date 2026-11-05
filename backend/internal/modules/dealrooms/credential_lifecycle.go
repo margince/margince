@@ -14,7 +14,6 @@ package dealrooms
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -100,12 +99,14 @@ func lockParticipant(ctx context.Context, tx pgx.Tx, participantID ids.DealRoomP
 
 // RecordInvitationSend stamps the outcome of handing an invitation to the relay.
 //
-// It writes only the row of the credential that was mailed, while it stands.
-// The answer can arrive after a resend, so the row is found by the credential's
-// digest. A late outcome then cannot mark the newer invitation.
+// It writes only the standing credential's row, and only the two columns that
+// say what the relay did — so a resend that has already superseded this
+// invitation is untouched, and a late-arriving outcome cannot resurrect a
+// retired link's delivery state.
 //
-// Not audited or evented: nobody gained or lost access.
-func (s *Store) RecordInvitationSend(ctx context.Context, participantID ids.DealRoomParticipantID, credential string, sendErr error) error {
+// Deliberately NOT audited or evented: nothing about the record changed, and
+// nobody gained or lost access. This is the mail server's answer written down.
+func (s *Store) RecordInvitationSend(ctx context.Context, participantID ids.DealRoomParticipantID, sendErr error) error {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return err
 	}
@@ -126,36 +127,12 @@ func (s *Store) RecordInvitationSend(ctx context.Context, participantID ids.Deal
 		// a value off a request.
 		if _, err := tx.Exec(ctx,
 			`UPDATE deal_room_invitation SET `+column+` = now(), failure_reason = $2
-			  WHERE participant_id = $1 AND token_hash = $3
-			    AND consumed_at IS NULL AND superseded_at IS NULL`,
-			participantID, reason, digestOfCredential(credential)); err != nil {
+			  WHERE participant_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`,
+			participantID, reason); err != nil {
 			return fmt.Errorf("record deal room invitation delivery: %w", err)
 		}
 		return nil
 	})
-}
-
-// InvitationMailable reports whether an issued credential may still be mailed.
-// It must still admit its bearer, by the rule peek and exchange apply. Its
-// participant's address must still be the one it was issued to.
-func (s *Store) InvitationMailable(ctx context.Context, credential, email string) (bool, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
-		return false, err
-	}
-	var current string
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT p.email FROM deal_room_invitation i, deal_room_participant p, deal_room r
-			  WHERE `+exchangeablePredicate,
-			digestOfCredential(credential)).Scan(&current)
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("read deal room invitation before mailing: %w", err)
-	}
-	return current == email, nil
 }
 
 // failureReasonLimit bounds what a relay's refusal may write into the row.

@@ -32,24 +32,12 @@ const PURPOSES = [
   "Sending contract and invoice correspondence",
 ];
 
-// What every notice carries whatever the record: who sees the data. The other
-// lists a story leaves out are empty, as the server sends them.
-const ALWAYS = {
-  purpose_bases: [],
-  data_categories: [],
-  recipients: ["colleagues", "service_providers"],
-  retention: [],
-} satisfies Partial<PrivacyInformationPage>;
-
-function notice(
-  card: Omit<PrivacyInformationPage, keyof typeof ALWAYS> &
-    Partial<PrivacyInformationPage>,
-) {
+function notice(card: PrivacyInformationPage) {
   return () => {
     installFetchStub({});
     return (
       <StoryProviders>
-        <PrivacyNotice card={{ ...ALWAYS, ...card }} />
+        <PrivacyNotice card={card} />
       </StoryProviders>
     );
   };
@@ -72,44 +60,6 @@ export const Purchased: Story = {
     acquired_as: "purchased_or_imported",
     acquired_at: "2026-03-04T10:00:00Z",
     purposes: PURPOSES,
-    rights: ALL_RIGHTS,
-  }),
-};
-
-// Everything an installation that stated its particulars discloses. The right
-// to object carries the installation's own way to say it.
-export const Complete: Story = {
-  render: notice({
-    kind: "privacy_notice",
-    acquired_as: "public_or_business_source",
-    acquired_at: "2026-03-04T10:00:00Z",
-    controller: {
-      identity: "Beispiel GmbH\nHauptstraße 1\n10115 Berlin",
-      privacy_contact: "privacy@beispiel.test",
-      objection_route: "Reply STOP to any of our emails.",
-    },
-    purposes: PURPOSES,
-    purpose_bases: ["subject_initiated_correspondence", "contract"],
-    data_categories: [
-      "name",
-      "job_title",
-      "employer",
-      "email",
-      "postal_address",
-    ],
-    retention: [
-      { scope: "activity", retain_days: 1095, action: "archive" },
-      {
-        scope: "raw_capture",
-        retain_days: 90,
-        action: "erase",
-        kept_by_law: {
-          name: "commercial_correspondence",
-          keep: "P6Y",
-          from_year_end: true,
-        },
-      },
-    ],
     rights: ALL_RIGHTS,
   }),
 };

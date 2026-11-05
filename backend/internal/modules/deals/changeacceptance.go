@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -42,7 +43,7 @@ func (s *Store) AcceptAppliedChange(ctx context.Context, dealID ids.DealID, chan
 		if err := auth.EnsureWritable(ctx, tx, dealTable, dealID.UUID); err != nil {
 			return err
 		}
-		review, err := readAppliedChangeReview(ctx, tx, dealID, changeID)
+		review, err := readAppliedChangeReview(ctx, tx, dealID, changeID, s.clock())
 		if err != nil {
 			return err
 		}
@@ -55,7 +56,7 @@ func (s *Store) AcceptAppliedChange(ctx context.Context, dealID ids.DealID, chan
 		if review.Accepted {
 			return nil
 		}
-		if err := stampChangeAccepted(ctx, tx, dealID, changeID); err != nil {
+		if err := stampChangeAccepted(ctx, tx, dealID, changeID, review.Kind); err != nil {
 			return err
 		}
 		before := map[string]any{"applied_change": acceptedChangeAudit{ID: changeID.String(), Accepted: false}}
@@ -68,9 +69,12 @@ func (s *Store) AcceptAppliedChange(ctx context.Context, dealID ids.DealID, chan
 	})
 }
 
-func stampChangeAccepted(ctx context.Context, tx pgx.Tx, dealID ids.DealID, changeID ids.UUID) error {
+func stampChangeAccepted(ctx context.Context, tx pgx.Tx, dealID ids.DealID, changeID ids.UUID, kind crmcontracts.AppliedDealChangeReviewKind) error {
 	args := []any{dealID.UUID, changeID}
 	query := storekit.SQLf(`UPDATE deal_correction SET accepted_at = now() WHERE deal_id = $%d AND audit_log_id = $%d AND reversed_at IS NULL`, len(args)-1, len(args))
+	if kind == "stage" {
+		query = storekit.SQLf(`UPDATE stage_progression_outcome SET accepted_at = now() WHERE deal_id = $%d AND approval_id = $%d AND reversed_at IS NULL AND outcome = 'auto_applied'`, len(args)-1, len(args))
+	}
 	result, err := tx.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("record acceptance of the change: %w", err)
@@ -81,9 +85,9 @@ func stampChangeAccepted(ctx context.Context, tx pgx.Tx, dealID ids.DealID, chan
 	return nil
 }
 
-func readAppliedChangeReview(ctx context.Context, tx pgx.Tx, dealID ids.DealID, changeID ids.UUID) (crmcontracts.AppliedDealChangeReview, error) {
+func readAppliedChangeReview(ctx context.Context, tx pgx.Tx, dealID ids.DealID, changeID ids.UUID, now time.Time) (crmcontracts.AppliedDealChangeReview, error) {
 	key := AppliedChangeKey{DealID: dealID, ChangeID: changeID}
-	reviews, err := readAppliedChangeReviews(ctx, tx, []AppliedChangeKey{key})
+	reviews, err := readAppliedChangeReviews(ctx, tx, []AppliedChangeKey{key}, now)
 	if err != nil {
 		return crmcontracts.AppliedDealChangeReview{}, err
 	}
@@ -109,7 +113,7 @@ func (s *Store) AppliedChangeReview(ctx context.Context, dealID ids.DealID, chan
 }
 
 // Correction reversal takes the correction lock before the deal lock. Acceptance
-// follows that order too.
+// follows that order too; stage progression has no correction row to lock.
 func lockAcceptedCorrection(ctx context.Context, tx pgx.Tx, dealID ids.DealID, changeID ids.UUID) error {
 	args := []any{dealID.UUID, changeID}
 	var id ids.UUID
@@ -118,21 +122,4 @@ func lockAcceptedCorrection(ctx context.Context, tx pgx.Tx, dealID ids.DealID, c
 		return nil
 	}
 	return err
-}
-
-// lockDealForReversal takes the deal's row lock after the correction's, the
-// order a correction reversal takes them in. ErrNotFound for a deal that is
-// gone or archived, the answer a caller who cannot see it gets too.
-func lockDealForReversal(ctx context.Context, tx pgx.Tx, dealID ids.DealID) error {
-	var id ids.DealID
-	err := tx.QueryRow(ctx,
-		`SELECT id FROM deal WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
-		dealID).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return apperrors.ErrNotFound
-	}
-	if err != nil {
-		return fmt.Errorf("hold the deal being reviewed: %w", err)
-	}
-	return nil
 }

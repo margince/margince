@@ -14,8 +14,6 @@ package compose
 
 import (
 	"context"
-	"errors"
-	"io"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -39,12 +37,7 @@ type documentReadEngine struct {
 // start queues the reading and says how the request landed.
 func (e *documentReadEngine) start(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	attachmentID := ids.UUID(id)
-	question, err := readQuestionOf(w, r)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	read, joined, err := e.activities.StartExtractionReadFor(r.Context(), attachmentID, question, requestedBy(r.Context()),
+	read, joined, err := e.activities.StartExtractionReadQueued(r.Context(), attachmentID, requestedBy(r.Context()),
 		func(ctx context.Context, tx pgx.Tx, read activities.ExtractionRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, DocumentExtractArgs{
 				Workspace:        storekit.MustWorkspace(ctx),
@@ -68,20 +61,6 @@ func (e *documentReadEngine) start(w http.ResponseWriter, r *http.Request, id op
 		Status: status,
 		Joined: joined,
 	})
-}
-
-// readQuestionOf is the question the optional body names. No body reads for
-// the deal facts, which is what every caller before the body asked.
-func readQuestionOf(w http.ResponseWriter, r *http.Request) (string, error) {
-	var body crmcontracts.AttachmentReadRequest
-	err := httperr.DecodeOrRefusal(w, r, &body)
-	if errors.Is(err, io.EOF) || (err == nil && body.Question == nil) {
-		return activities.ExtractionQuestionDealFacts, nil
-	}
-	if err != nil {
-		return "", err
-	}
-	return string(*body.Question), nil
 }
 
 // WithDocumentRead enables the document-reading transport on the api role:

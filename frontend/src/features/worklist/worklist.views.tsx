@@ -8,7 +8,7 @@ import { SegmentedControl } from "../../design-system/atoms";
 import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural, useT } from "../../i18n";
-import { outstandingCounts, pillFigure } from "../../lib/worklistcounts";
+import { outstandingCounts, pillCount } from "../../lib/worklistcounts";
 import { WORKLIST_VIEWS, type WorklistView } from "../../lib/worklistviews";
 import type { Worklist, WorklistFilter } from "./worklist.queries";
 
@@ -33,9 +33,9 @@ export const VIEW_PILLS = {
 /** A filter some view draws as a button. */
 export type ViewPill = (typeof VIEW_PILLS)["today"][number];
 
-/** The view's own count, exact or a floor; never a count of another view. */
+/** The view's own count, exact or absent; never a count of another view. */
 export function viewCount(day: Worklist, view: WorklistView) {
-  return pillFigure(day, "all", view);
+  return pillCount(day, "all", view);
 }
 
 /** The headline of one view: how much it holds, in its own unit. */
@@ -44,21 +44,16 @@ export function viewHeadline(
   view: WorklistView,
   locale: Locale,
 ): string {
-  // A view no category was counted for has only the summary to go on. The
-  // figure is the tab's own, so the heading and the tab never disagree.
-  const figure = outstandingCounts(day, view).length
-    ? (viewCount(day, view) ?? { count: day.summary.total, floor: true })
-    : { count: day.summary.total, floor: false };
-  return translatePlural(locale, `worklist.view.total.${view}`, figure.count, {
-    count: floorFigure(
-      formatNumber(figure.count, locale),
-      figure.floor,
-      figure.count,
-    ),
+  // A view no category was counted for has only the summary to go on.
+  const counted = outstandingCounts(day, view).length > 0;
+  const exact = counted ? viewCount(day, view) : day.summary.total;
+  const value = exact ?? day.summary.total;
+  return translatePlural(locale, `worklist.view.total.${view}`, value, {
+    count: floorFigure(formatNumber(value, locale), exact === undefined, value),
   });
 }
 
-/** Today, Decisions and System, each with its count, or the floor it counted. */
+/** Today, Decisions and System, each with its count where it is exact. */
 export function WorklistViewPicker({
   day,
   view,
@@ -70,12 +65,9 @@ export function WorklistViewPicker({
 }>) {
   const t = useT();
   const counts: Partial<Record<WorklistView, number>> = {};
-  const floors: Partial<Record<WorklistView, boolean>> = {};
   for (const option of WORKLIST_VIEWS) {
-    const figure = viewCount(day, option);
-    if (figure === undefined) continue;
-    counts[option] = figure.count;
-    floors[option] = figure.floor;
+    const count = viewCount(day, option);
+    if (count !== undefined) counts[option] = count;
   }
   return (
     <SegmentedControl
@@ -89,7 +81,6 @@ export function WorklistViewPicker({
         system: t("worklist.view.system"),
       }}
       counts={counts}
-      floors={floors}
     />
   );
 }

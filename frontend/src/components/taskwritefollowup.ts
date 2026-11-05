@@ -1,8 +1,4 @@
-import type {
-  InfiniteData,
-  QueryClient,
-  QueryKey,
-} from "@tanstack/react-query";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import type { components } from "../api/schema";
 import { showsAMessage, TASK_QUEUE_KEY } from "../lib/activitykeys";
 import { ENTITY_KINDS } from "../lib/entity";
@@ -23,66 +19,6 @@ export function refetchAfterWrite(
       queryClient.invalidateQueries({ queryKey }),
     ),
   );
-}
-
-type Activity = components["schemas"]["Activity"];
-type Worklist = components["schemas"]["Worklist"];
-type WorklistItem = components["schemas"]["WorklistItem"];
-
-export async function refreshMovedTask(
-  client: QueryClient,
-  invalidateKeys: readonly QueryKey[],
-  activity: Activity,
-) {
-  const queryKey = ["activity", activity.id];
-  await Promise.all([
-    client.cancelQueries({ queryKey }),
-    client.cancelQueries({ queryKey: worklistKey }),
-  ]);
-  client.setQueryData(queryKey, activity);
-  const overdue = activity.due_at
-    ? Date.parse(activity.due_at) < Date.now()
-    : false;
-  const moved = (item: WorklistItem): WorklistItem =>
-    item.source === "task" && item.id === activity.id
-      ? {
-          ...item,
-          due_at: activity.due_at ?? undefined,
-          due_has_time: activity.due_has_time,
-          version: activity.version,
-          overdue,
-          because: overdue
-            ? item.because
-            : item.because.filter((reason) => reason.kind !== "overdue"),
-        }
-      : item;
-  client.setQueriesData<InfiniteData<Worklist>>(
-    {
-      predicate: (query) =>
-        query.queryKey[0] === "worklist" && query.queryKey.length >= 4,
-    },
-    (day) =>
-      day && Array.isArray(day.pages)
-        ? {
-            ...day,
-            pages: day.pages.map((page) => ({
-              ...page,
-              queue: page.queue.map(moved),
-              focus: page.focus
-                ? { ...page.focus, items: page.focus.items.map(moved) }
-                : page.focus,
-            })),
-          }
-        : day,
-  );
-  await Promise.all([
-    client.invalidateQueries({ queryKey }),
-    ...invalidateKeys.map((key) => {
-      const refresh = client.invalidateQueries({ queryKey: key });
-      // Home rebuilds the whole day; record lists must land their new versions first.
-      return key[0] === worklistKey[0] ? undefined : refresh;
-    }),
-  ]);
 }
 
 // What a refused Done says. A stale press means the task moved on under it,

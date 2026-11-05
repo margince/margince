@@ -1,6 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, type useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import type { components } from "../../api/schema";
 import { unwrap } from "../../lib/problem";
 import { roomBriefKey } from "./dealroombrief.key";
 
@@ -21,59 +20,9 @@ export function refreshSeats(
   ]);
 }
 
-type Seat = Pick<
-  components["schemas"]["DealRoomParticipant"],
-  "delivery_state" | "revoked_at"
->;
-
-// How often the roster is read again while an invitation mail is on its way.
-// The relay's answer is stamped on the row just after the invite answers, and
-// must reach it.
-export const MAIL_POLL_MS = 2_000;
-
-// How long after a queued invitation the roster keeps reading: the server's
-// 10-second relay wait, plus a margin. `pending` also means "no relay
-// configured", so the watch ends rather than polling forever.
-export const MAIL_WATCH_MS = 30_000;
-
-function mailWatchKey(roomId: string) {
-  return ["deal-room-mail-watch", roomId] as const;
-}
-
-// Called when an invitation was handed to the sender: the roster reads again
-// until the relay's answer lands on it.
-export function watchInviteMail(
-  queryClient: ReturnType<typeof useQueryClient>,
-  roomId: string,
-  now = Date.now(),
-) {
-  queryClient.setQueryData(mailWatchKey(roomId), now + MAIL_WATCH_MS);
-}
-
-export function seatPollInterval(
-  seats: readonly Seat[] | undefined,
-  watchUntil: number | undefined,
-  now: number,
-): number | false {
-  if (watchUntil === undefined || now > watchUntil) {
-    return false;
-  }
-  const onItsWay = seats?.some(
-    (seat) => !seat.revoked_at && seat.delivery_state === "pending",
-  );
-  return onItsWay ? MAIL_POLL_MS : false;
-}
-
 export function useParticipants(roomId: string) {
-  const queryClient = useQueryClient();
   return useQuery({
     queryKey: participantsKey(roomId),
-    refetchInterval: (query) =>
-      seatPollInterval(
-        query.state.data?.data,
-        queryClient.getQueryData<number>(mailWatchKey(roomId)),
-        Date.now(),
-      ),
     queryFn: async () => {
       return unwrap(
         await api.GET("/deal-rooms/{id}/participants", {

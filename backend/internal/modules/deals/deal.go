@@ -310,9 +310,6 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	// resulting row derived from `in` alone would still hold every figure the
 	// caller just cleared — and the pairing would then be checked against a row
 	// that is not the one about to be written.
-	if err := refuseTypedMoneyOnLines(ctx, tx, ids.From[ids.DealKind](ids.UUID(current.Id)), p); err != nil {
-		return err
-	}
 	after := p.After()
 	resultingAmount := patchedMoney(after, amountField, current.AmountMinor)
 	resultingArr := patchedMoney(after, arrField, current.ExpectedArrMinor)

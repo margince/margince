@@ -61,7 +61,6 @@ const grounded: Extraction["fields"] = [
 function extraction(over: Partial<Extraction>): Extraction {
   return {
     id: "ex-1",
-    question: "deal_facts",
     status: "done",
     fields: [],
     omitted: [],

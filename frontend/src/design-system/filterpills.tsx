@@ -10,7 +10,6 @@
 // set. Joined into a single object the counts read as part of one label, and
 // the row stopped saying what it is for.
 
-import { floorFigure } from "../format/figure";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import "./filterpills.css";
@@ -19,11 +18,10 @@ export type FilterPill<Value extends string> = {
   value: Value;
   label: string;
   // How much this cut holds. Absent draws no number — which is NOT a zero: a
-  // list still loading knows nothing yet.
+  // list still loading, or one whose server said `has_more`, knows only a
+  // floor, and a floor printed as a count is a wrong number rather than a
+  // missing one.
   count?: number;
-  // The count is a floor, drawn "25+". Without the mark a floor reads as a
-  // total, which is a wrong number rather than a bounded one.
-  floor?: boolean;
 };
 
 /**
@@ -72,13 +70,7 @@ export function FilterPills<Value extends string>({
         >
           {pill.label}
           {pill.count !== undefined && (
-            <span className="t-num">
-              {floorFigure(
-                formatNumber(pill.count, locale),
-                pill.floor ?? false,
-                pill.count,
-              )}
-            </span>
+            <span className="t-num">{formatNumber(pill.count, locale)}</span>
           )}
         </button>
       ))}

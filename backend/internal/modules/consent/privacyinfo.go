@@ -44,26 +44,8 @@ type PrivacyInformation struct {
 	// page can name the purposes the product seeds in its reader's language.
 	Purposes    []string
 	PurposeKeys []string
-	// PurposeBases is why each purpose may use the data, at the same index.
-	PurposeBases []string
 	// Rights are the codes a page renders in its own language.
 	Rights []string
-	// Controller is who answers for the data; DataCategories, Recipients and
-	// Retention are the rest of what the page owes (privacyinfoparts.go).
-	Controller     ControllerParticulars
-	DataCategories []string
-	Recipients     []string
-	Retention      []RetentionRule
-}
-
-// newDisclosure is the answer before anything is read: every list empty
-// rather than absent, and the fixed lists filled.
-func newDisclosure() PrivacyInformation {
-	return PrivacyInformation{
-		Rights: subjectRights(), Recipients: disclosureRecipients(),
-		Purposes: []string{}, PurposeKeys: []string{}, PurposeBases: []string{},
-		DataCategories: []string{}, Retention: []RetentionRule{},
-	}
 }
 
 // subjectRights is what Art. 14(2)(c)-(e) requires naming, in the order a
@@ -93,7 +75,7 @@ func subjectRights() []string {
 func (s *Store) assembleDisclosure(
 	ctx context.Context, contactID ids.ContactID,
 ) (PrivacyInformation, error) {
-	out := newDisclosure()
+	out := PrivacyInformation{Rights: subjectRights(), Purposes: []string{}, PurposeKeys: []string{}}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			SELECT coalesce(n.source_kind, e.kind),
@@ -112,20 +94,19 @@ func (s *Store) assembleDisclosure(
 		} else if err != nil {
 			return fmt.Errorf("consent: reading how this contact was obtained: %w", err)
 		}
-		return readControllerTx(ctx, tx, &out)
+		return readDisclosedPurposes(ctx, tx, &out)
 	})
-	if err != nil {
-		return out, err
-	}
-	return out, s.readHeld(ctx, NoticeSubject{ContactID: contactID}, &out)
+	return out, err
 }
 
 // assembleLeadDisclosure is assembleDisclosure for a website lead. Only a lead
 // read off a company's public website holds a notice link. So that is its
 // source, dated when the lead was captured.
 func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (PrivacyInformation, error) {
-	out := newDisclosure()
-	out.AcquiredAs = acquiredFromAPublicSource
+	out := PrivacyInformation{
+		Rights: subjectRights(), Purposes: []string{}, PurposeKeys: []string{},
+		AcquiredAs: acquiredFromAPublicSource,
+	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var capturedAt time.Time
 		if err := tx.QueryRow(ctx, `SELECT created_at FROM lead WHERE id = $1`, leadID).
@@ -133,12 +114,9 @@ func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (
 			return fmt.Errorf("consent: reading when this lead was obtained: %w", err)
 		}
 		out.AcquiredAt = &capturedAt
-		return readControllerTx(ctx, tx, &out)
+		return readDisclosedPurposes(ctx, tx, &out)
 	})
-	if err != nil {
-		return out, err
-	}
-	return out, s.readHeld(ctx, NoticeSubject{LeadID: leadID}, &out)
+	return out, err
 }
 
 // acquiredFromAPublicSource mirrors contacts.AcquiredPublicOrBusinessSource:
@@ -147,6 +125,28 @@ func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (
 // Held by: TestThePublicSourceAcquisitionIsSpelledTheSameOnBothSides
 // (backend/gates/acquisitionvocabulary_test.go)
 const acquiredFromAPublicSource = "public_or_business_source"
+
+// readDisclosedPurposes fills in what the installation uses data for, which a
+// contact's and a lead's disclosure state alike.
+func readDisclosedPurposes(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) error {
+	rows, err := tx.Query(ctx, `
+		SELECT key, label FROM consent_purpose
+		 WHERE archived_at IS NULL
+		 ORDER BY label`)
+	if err != nil {
+		return fmt.Errorf("consent: reading what this installation uses data for: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var key, label string
+		if err := rows.Scan(&key, &label); err != nil {
+			return err
+		}
+		out.Purposes = append(out.Purposes, label)
+		out.PurposeKeys = append(out.PurposeKeys, key)
+	}
+	return rows.Err()
+}
 
 // acquiredUnknownLegacy mirrors contacts.AcquiredUnknownLegacy, which this
 // module may not import — consent and contacts are siblings.

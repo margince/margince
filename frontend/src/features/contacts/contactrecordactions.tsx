@@ -105,8 +105,6 @@ export function ContactRecordActions({
       {beforeArchive}
       <ArchiveAction
         requires={{ object: "contact", action: "delete" }}
-        archivable={contact.archivable ?? false}
-        refusedReason={t("contact.archiveRefused")}
         disabledReasonId={disabledReasonId}
         label={t("record.archive")}
         confirmText={t("record.archiveConfirm")}

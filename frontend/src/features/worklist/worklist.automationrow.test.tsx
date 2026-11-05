@@ -173,29 +173,3 @@ function renderUnderAToastRegion() {
     </QueryClientProvider>,
   );
 }
-
-describe("a failed automation says why in the reader's language", () => {
-  it("draws the reason from its code, not the engine's English", async () => {
-    stub(
-      day({
-        queue: [
-          aFailedRule({
-            detail: "the target record could not be found",
-            run_reason_code: "target_missing",
-          }),
-        ],
-        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
-      }),
-    );
-    renderWorklist("de");
-
-    expect(
-      await screen.findByText(
-        /der Datensatz, auf den sie wirkt, existiert nicht mehr/,
-      ),
-    ).toBeTruthy();
-    expect(
-      screen.queryByText(/the target record could not be found/),
-    ).toBeNull();
-  });
-});

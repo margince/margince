@@ -139,11 +139,7 @@ export const BUSY_NIGHT: MagicReceipt = {
       lane: "could_not_complete",
       summary: {
         key: "magic.action.automation_troubled",
-        values: {
-          name: "Nightly follow-up",
-          outcome: "failed",
-          reason_code: "target_missing",
-        },
+        values: { name: "Nightly follow-up", outcome: "timed out" },
       },
       consequence: "magic.consequence.automation_did_nothing",
       undo: { undoable: false, reason: "no_completed_change" },

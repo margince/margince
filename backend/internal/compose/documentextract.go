@@ -321,24 +321,24 @@ func documentExtractSchema() json.RawMessage {
 // output entirely would leave the panel unable to say whether the document was
 // silent about it or the reading forgot to look — and "the document does not
 // state a close date" is information a rep acts on.
-func groundDocumentFields(q documentQuestion, payload documentPayload) []extraction.ExtractedField {
+func groundDocumentFields(payload documentPayload) []extraction.ExtractedField {
 	reported := make(map[string]documentField, len(payload.fields()))
 	for _, field := range payload.fields() {
-		// Keyed by the stored field names: the model's vocabulary stops at
+		// Keyed by the DEAL's own field names: the model's vocabulary stops at
 		// this line, and everything downstream — the row, the accept allowlist,
 		// the panel — speaks one.
-		reported[q.fromModel(field.Field)] = field
+		reported[fromModelField(field.Field)] = field
 	}
-	out := make([]extraction.ExtractedField, 0, len(q.fields))
-	for _, name := range q.fields {
-		out = append(out, groundOneField(q, name, reported[name]))
+	out := make([]extraction.ExtractedField, 0, len(documentFieldOrder()))
+	for _, name := range documentFieldOrder() {
+		out = append(out, groundOneField(name, reported[name]))
 	}
 	return out
 }
 
 // groundOneField decides one field's fate: grounded with its evidence, or
 // omitted with the reason it was.
-func groundOneField(q documentQuestion, name string, field documentField) extraction.ExtractedField {
+func groundOneField(name string, field documentField) extraction.ExtractedField {
 	omitted := extraction.ExtractedField{Field: name, Omitted: true, OmittedReason: omitReasonNotStated}
 	if field.Stated != documentStated {
 		return omitted
@@ -350,7 +350,7 @@ func groundOneField(q documentQuestion, name string, field documentField) extrac
 		omitted.OmittedReason = omitReasonNotConfident
 		return omitted
 	}
-	value, ok := q.coerce(name, field.Value)
+	value, ok := coerceDocumentValue(name, field.Value)
 	if !ok {
 		// The document states something this field cannot hold — an amount that
 		// is not a number, a currency that is not a code. Silence is the wrong
@@ -455,11 +455,6 @@ func resolveDocumentAmount(fields []extraction.ExtractedField) []extraction.Extr
 // The certification case calls THIS, not a copy of it, so what a corpus scores
 // is what a deal gets.
 func readDocumentFields(output string) ([]extraction.ExtractedField, error) {
-	return readQuestionFields(dealFactsQuestion(), output)
-}
-
-// readQuestionFields is readDocumentFields for any question.
-func readQuestionFields(q documentQuestion, output string) ([]extraction.ExtractedField, error) {
 	var payload documentPayload
 	if err := json.Unmarshal([]byte(ai.Unfence(output)), &payload); err != nil {
 		return nil, fmt.Errorf("%w: output is not the required JSON shape: %w", errRefusedDocument, err)
@@ -467,5 +462,5 @@ func readQuestionFields(q documentQuestion, output string) ([]extraction.Extract
 	if payload.Fields == nil {
 		return nil, fmt.Errorf("%w: the reply carries no fields key", errRefusedDocument)
 	}
-	return q.settle(groundDocumentFields(q, payload)), nil
+	return resolveDocumentAmount(groundDocumentFields(payload)), nil
 }

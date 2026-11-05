@@ -6,7 +6,6 @@ package dealrooms
 import (
 	"context"
 	"net/http"
-	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -32,15 +31,6 @@ type Handlers struct {
 	// installation has no object store, and a buyer's download says so
 	// rather than pretending the file is absent.
 	documents blobstore.Store
-	// sendBudget is a test seam: a shorter budget for the invitation send.
-	// Zero means inviteRelayWait.
-	sendBudget time.Duration
-	// inviteRecords is a test seam standing in for the store's invitation
-	// reads and writes on the invitation send. Nil means the store.
-	inviteRecords inviteMailRecords
-	// sendDone is a test seam, called when an invitation send has
-	// finished, outcome recorded. Nil in production.
-	sendDone func()
 }
 
 // WithDocumentStore binds the object store a buyer's download reads from.

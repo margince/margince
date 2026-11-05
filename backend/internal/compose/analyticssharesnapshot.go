@@ -37,15 +37,6 @@ type SharedSnapshot struct {
 	// what a reader may not see is itself a statement about how much of it
 	// there is.
 	Withheld bool
-	// Supported is the Likely and weighted money of the open deals a snapshot
-	// froze as still supported by their customer. Only a snapshot frozen under
-	// the retired qualified forecast lands on it.
-	Supported SupportedMoney
-}
-
-// SupportedMoney is the open money the retired qualified forecast counted.
-type SupportedMoney struct {
-	LikelyMinor, WeightedMinor int64
 }
 
 // ReadSharedSnapshot re-sums a snapshot's contributions under the CALLER's
@@ -119,12 +110,6 @@ func ReadSharedSnapshot(
 		  count(*) FILTER (WHERE NOT %[1]s) > 0,
 		  -- A snapshot frozen before the threshold existed carries none.
 		  COALESCE((SELECT s.likely_threshold FROM forecast_snapshot s WHERE s.id = $1), 0),
-		  -- The retired qualified forecast counted only the deals frozen as
-		  -- eligible; excluded, unsupported and unknown deals stayed out.
-		  COALESCE(sum(c.base_minor) FILTER (
-		    WHERE c.in_open AND c.in_evidence AND c.qualification = 'eligible' AND %[1]s), 0),
-		  COALESCE(sum(c.weighted_minor) FILTER (
-		    WHERE c.in_open AND c.qualification = 'eligible' AND %[1]s), 0),
 		  %[2]s
 		FROM forecast_contribution c
 		JOIN deal d ON d.id = c.deal_id
@@ -132,13 +117,12 @@ func ReadSharedSnapshot(
 
 	var r forecasting.Readings
 	var withheld bool
-	var supported SupportedMoney
 	sources := forecasting.ProbabilitySources()
 	totals := make([]forecasting.SourceTotal, len(sources))
 	dest := []any{
 		&r.WonMinor, &r.EvidenceMinor, &r.OpenMinor, &r.WeightedMinor,
 		&r.EligibleCount, &r.PricedCount, &r.ConfirmedDateCount, &r.FxMissingCount,
-		&withheld, &r.LikelyThreshold, &supported.LikelyMinor, &supported.WeightedMinor,
+		&withheld, &r.LikelyThreshold,
 	}
 	for i := range totals {
 		dest = append(dest, &totals[i].OpenMinor, &totals[i].WeightedMinor)
@@ -150,7 +134,7 @@ func ReadSharedSnapshot(
 	for i, source := range sources {
 		r.BySource[source] = totals[i]
 	}
-	return SharedSnapshot{Readings: r, Withheld: withheld, Supported: supported}, nil
+	return SharedSnapshot{Readings: r, Withheld: withheld}, nil
 }
 
 // sharedBySourceSQL is the open and weighted sums per probability source, in

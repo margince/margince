@@ -335,16 +335,3 @@ func TestADateTimeArgumentNoZoneCanRenderIsRefusedByName(t *testing.T) {
 		t.Fatalf("decodeArgs → %v, want a BadArgsError naming due_at", err)
 	}
 }
-
-// A tool argument list the contract declares uniqueItems refuses a repeated
-// item by name, as the REST body decode does.
-func TestARepeatedItemInAUniqueListIsRefusedByName(t *testing.T) {
-	var args struct {
-		Scopes []string `json:"scopes" unique:"items"`
-	}
-	err := decodeArgs(json.RawMessage(`{"scopes":["read","read"]}`), &args)
-	bad, ok := errors.AsType[*BadArgsError](err)
-	if !ok || bad.Field != "scopes" {
-		t.Fatalf("decodeArgs → %v, want a BadArgsError naming scopes", err)
-	}
-}

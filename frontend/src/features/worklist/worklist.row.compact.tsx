@@ -10,7 +10,6 @@ import { Popover } from "../../design-system/popover";
 import { useTruncationTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
 import { isUnprepared } from "../../lib/meetingreadiness";
-import { PinnedMark } from "./worklist.pinmark";
 import type { WorklistItem } from "./worklist.queries";
 import { RowName } from "./worklist.rowname";
 import { VerdictLine } from "./worklist.verdict";
@@ -48,8 +47,6 @@ export type RowReadings = Readonly<{
   detail?: string | null;
   /** A grouped row's named members. */
   sample: readonly string[];
-  /** Whether the row shows the reader's pin. The Brief's rows withhold it. */
-  pinned: boolean;
   /** The zone a verdict's timestamps are read in. */
   zone: string;
   /** The record the row is about, linked, where the row does not link it,
@@ -129,7 +126,6 @@ export function CompactRowLine({
         {isUnprepared(item) && (
           <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
         )}
-        {readings.pinned && <PinnedMark />}
       </p>
       {said.length > 0 && (
         <p className="worklist-row-because">{said.join(" · ")}</p>

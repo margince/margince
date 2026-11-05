@@ -49,6 +49,7 @@ With the time span set to this quarter, **This quarter against its target** sits
 - **Gap to target** is the target minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
 - **Left to win** is the target minus sales won so far, and never below zero.
 - **Coverage, deals closing this quarter** is the open value eligible to close this quarter, over what is left to win. It is not all open pipeline, which also holds deals expected later.
+- **Coverage, qualified deals** counts only the deals the qualified forecast keeps; see [Deals the customer still supports](deals-the-customer-supports.md). While the qualified forecast is off, it says **Not switched on**.
 
 When nothing is left to win, the panel says **Target reached** and shows no coverage. When it cannot compare, it says why:
 

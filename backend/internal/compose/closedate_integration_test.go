@@ -80,8 +80,6 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 		}
 	}
 	e.seedObservedPace(t)
-	// The seeded deals are Rep1's, and a correction writes as Rep1's agent.
-	e.GrantRole(t, e.Rep1, "rep")
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(e.svc, deals.NewStore(e.DB(), DealsInstallation())))
@@ -90,7 +88,7 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 	// about, and a harness answering it itself would prove nothing.
 	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
 	e.corrector = deals.NewCloseDateCorrector(e.DB(),
-		closeDatePolicy{owner: owner},
+		closeDatePolicy{svc: e.svc, owner: owner},
 		quietReviewReader{db: e.DB(), owner: owner}, quiet, installseam.Deals()).
 		SetClock(func() time.Time { return e.day }).WithBaseLanguage(installationLanguage(e.Pool))
 	return e
@@ -341,24 +339,23 @@ func TestCloseDateSweepAttributesTheDateItMoved(t *testing.T) {
 	}
 
 	var after, actorType, actorID string
-	var onBehalfOf *ids.UUID
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT after::text, actor_type, actor_id, on_behalf_of FROM audit_log
+		`SELECT after::text, actor_type, actor_id FROM audit_log
 		 WHERE entity_type = 'deal' AND entity_id = $1 AND action = 'update'
-		 ORDER BY occurred_at DESC LIMIT 1`, id).Scan(&after, &actorType, &actorID, &onBehalfOf); err != nil {
+		 ORDER BY occurred_at DESC LIMIT 1`, id).Scan(&after, &actorType, &actorID); err != nil {
 		t.Fatalf("no audit row for the overnight re-date: %v", err)
 	}
 	if !strings.Contains(after, want.Format(time.DateOnly)) {
 		t.Errorf("the audit row carries %s, want the date the deal now has (%s)",
 			after, want.Format(time.DateOnly))
 	}
-	// The deal has an owner, so Margince writes as their agent, the way every
-	// other deal writer does. All three halves: an agent acting for nobody, or
-	// for the wrong member, would carry the right name under the wrong grants.
-	if actorType != string(principal.PrincipalAgent) || actorID != marginceActorID ||
-		onBehalfOf == nil || *onBehalfOf != e.Rep1 {
-		t.Errorf("the audit row is attributed to %s/%s for %v, want %s/%s for %s",
-			actorType, actorID, onBehalfOf, principal.PrincipalAgent, marginceActorID, e.Rep1)
+	// closeDateSweepActor is what the WORKER binds (jobs_deals.go), so this
+	// asserts the attribution production writes rather than a spelling the
+	// fixture chose for itself. Both halves: a sweep writing as a human would
+	// carry the right name under the wrong type.
+	if actorType != string(principal.PrincipalSystem) || actorID != closeDateSweepActor {
+		t.Errorf("the audit row is attributed to %s/%s, want %s/%s",
+			actorType, actorID, principal.PrincipalSystem, closeDateSweepActor)
 	}
 }
 
@@ -884,9 +881,11 @@ func (e *closeDateEnv) stageLegacyCard(t *testing.T, dealID ids.UUID, proposed t
 // A rep who has asked to be asked keeps their deals, whoever the pass first
 // saw holding them.
 //
-// The member page joins the live deal table, so the next page sees an
-// ordinary hand-over. A hand-over after the page is read and before the row
-// lock waits for the next pass, which asks the new owner.
+// The member page joins the live deal table, so an ordinary hand-over is
+// already picked up on the next page. What it cannot see is a hand-over that
+// lands AFTER that page is read and before the row lock is taken — the same
+// window the status re-check beside it exists for. The policy is re-asked there
+// when the owner has moved, so the sweep never writes for the rep who declined.
 func TestADealOwnedByAnOptedOutRepIsLeftAlone(t *testing.T) {
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Not to be touched", e.late, new(95), new(30), 90)

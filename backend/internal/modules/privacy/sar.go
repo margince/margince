@@ -268,7 +268,12 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		}
 		sections := sarSections(&pkg, contactID, emails, leads, identities, authored)
 
-		subject, err := rowMaps(ctx, tx, sarSubjectQuery, contactID)
+		subject, err := rowMaps(ctx, tx, `
+			SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
+			       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
+			       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
+			       p.source, p.created_at
+			FROM contact p WHERE p.id = $1`, contactID)
 		if err != nil {
 			return err
 		}
@@ -302,15 +307,6 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 	})
 	return pkg, err
 }
-
-// sarSubjectQuery is the subject's own row as the export hands it over. The
-// privacy notice page reads the same row to name the kinds it holds.
-const sarSubjectQuery = `
-	SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
-	       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
-	       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
-	       p.source, p.created_at
-	FROM contact p WHERE p.id = $1`
 
 // appendSubjectCustomValues merges the subject's stored cf_ values into
 // the export's subject map, keyed by column name. The column set comes

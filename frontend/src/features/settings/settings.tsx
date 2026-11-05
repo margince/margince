@@ -69,6 +69,7 @@ import { AiAccessTab } from "./settings.aiaccess";
 import { JurisdictionCard } from "./settings.jurisdiction";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
+import { StageAutomationCard } from "./settings.stageautomation";
 import { SystemHealthPage } from "./settings.systemhealth";
 import { AuditLogCard } from "./settings-audit";
 import { SharedMergeReviewsCard } from "./sharedmergereviews";
@@ -194,6 +195,8 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     // ---- sales ----
     case "pipelines":
       return <PipelinesCard />;
+    case "stageautomation":
+      return <StageAutomationCard />;
     case "leads":
       return (
         <>

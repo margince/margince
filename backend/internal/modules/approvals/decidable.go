@@ -5,12 +5,9 @@ package approvals
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -72,34 +69,5 @@ func decidableRows(ctx context.Context, tx pgx.Tx, p principal.Principal, rows [
 	for j, i := range offerAt {
 		out[i] = offered[j]
 	}
-	if err := narrowToOwnArchives(ctx, tx, p, rows, out); err != nil {
-		return nil, err
-	}
 	return out, nil
-}
-
-// narrowToOwnArchives keeps a staged archive decidable, for a decider without
-// the target's delete grant, only while the record is theirs to archive. It
-// asks the archive's own rule. A decider holding delete is not narrowed.
-func narrowToOwnArchives(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row, out []bool) error {
-	for i, a := range rows {
-		if !out[i] || a.Kind != kindArchiveRecord || a.TargetType == nil || a.TargetID == nil ||
-			p.Permissions.Allows(*a.TargetType, principal.ActionDelete) {
-			continue
-		}
-		rule, ruled := auth.ArchiveRuleFor(*a.TargetType)
-		if !ruled {
-			out[i] = false
-			continue
-		}
-		err := auth.EnsureArchivable(ctx, tx, rule, *a.TargetID)
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			out[i] = false
-			continue
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
