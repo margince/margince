@@ -15446,7 +15446,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Margince eröffnet einen Deal für ein Unternehmen, das dir gehört, wenn der Kunde kaufen will, etwa mit einer Anfrage nach einem Angebot. Der Deal gehört dir und steht in der ersten Phase. Jeder neue Deal erscheint auf Home mit „Rückgängig“.",
   "autonomy.kind.deal_revive.label": "Wieder eröffnete Deals",
   "autonomy.kind.deal_revive.help":
-    "Margince eröffnet einen verlorenen Deal von dir wieder, wenn der Kunde mit neuen Kaufsignalen zurückkommt, etwa mit der Bitte um ein neues Angebot. Der Deal kommt in die erste Phase. Jeder wieder eröffnete Deal erscheint auf Home mit „Rückgängig“, das ihn wieder als verloren schließt.",
+    "Margince eröffnet einen verlorenen Deal von dir wieder, wenn der Kunde mit neuen Kaufsignalen zurückkommt, etwa wenn er ein neues Angebot anfragt. Der Deal kommt in die erste Phase. Jeder wieder eröffnete Deal erscheint auf Home mit „Rückgängig“, das ihn wieder als verloren schließt.",
   "autonomy.kind.company_name_promotion.label": "Unternehmensnamen",
   "autonomy.kind.company_name_promotion.help":
     "Margince übernimmt vorgeschlagene Unternehmensnamen aus E-Mail-Signaturen für Unternehmen, die nach ihrer Domain benannt sind. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Von unabhängigen Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
