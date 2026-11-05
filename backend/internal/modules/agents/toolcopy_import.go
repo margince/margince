@@ -27,7 +27,7 @@ var previewImportCopy = toolCopy{
 		"`object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's " +
 		"`company_ref` names a company's ref. " +
 		"read_import with view format lists each file's columns.",
-	Instead: "create_record for one record you already know.",
+	Instead: "create_record for one record you already know, and change_capture to import a vCard file.",
 	Retain: "Keep the run_id. The counts its report answers — created, duplicates, skipped — and the " +
 		"mapping it settled on are what the user weighs, so report both: a column this placed by " +
 		"a name they did not write is a decision they did not make.",

@@ -253,7 +253,7 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 				`INSERT INTO signal_resolution (id, signal_id, outcome, note, resolved_by, source, captured_by)
 				 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 				ids.NewV7(), id, *in.Status, in.Note,
-				storekit.UUIDOrNil(actor.UserID), "manual", actor.ID); err != nil {
+				resolvedByOf(actor), "manual", actor.ID); err != nil {
 				return fmt.Errorf("append signal outcome: %w", err)
 			}
 		}
@@ -411,4 +411,13 @@ func archiveSignalTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	}
 	_, err = storekit.Audit(ctx, tx, "archive", "signal", id, nil, nil)
 	return err
+}
+
+// resolvedByOf is the user an outcome names. An agent's outcome names none, and
+// its captured_by says which agent, so it never reads as the user's own decision.
+func resolvedByOf(actor principal.Principal) *ids.UUID {
+	if actor.Type == principal.PrincipalAgent {
+		return nil
+	}
+	return storekit.UUIDOrNil(actor.UserID)
 }

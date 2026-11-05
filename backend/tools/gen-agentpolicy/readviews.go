@@ -40,6 +40,8 @@ type routeShape struct {
 	idempotencyKey bool
 	body           bool
 	summary        string
+	// uploadField is the form field of a route that takes one file as multipart.
+	uploadField string
 	// bodySchema is the route's JSON body schema, $refs resolved;
 	// answerSchema is its first 2xx answer's.
 	bodySchema   string
@@ -100,6 +102,11 @@ func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryP
 				return nil, fmt.Errorf("%s: %w", p.Route, err)
 			}
 			shape.answerSchema = answer
+			field, err := uploadField(&op.RequestBody)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", p.Route, err)
+			}
+			shape.uploadField = field
 		}
 		for _, param := range op.Parameters {
 			if param.Ref != "" {
@@ -190,7 +197,7 @@ func renderRouteShapes(shapes map[string]routeShape) string {
 	b.WriteString(`
 // routeVerbShapes is what each route-backed verb passes on to its route: the
 // query parameters typed as the route types them, If-Match, a JSON body, and
-// the summary that describes the verb.
+// the file field of an upload, and the summary that describes the verb.
 var routeVerbShapes = map[string]routeVerbShape{
 `)
 	routes := make([]string, 0, len(shapes))
@@ -200,8 +207,8 @@ var routeVerbShapes = map[string]routeVerbShape{
 	sort.Strings(routes)
 	for _, route := range routes {
 		shape := shapes[route]
-		fmt.Fprintf(&b, "\t%q: {Summary: %q, IfMatch: %t, IdempotencyKey: %t, Body: %t, BodySchema: %q, AnswerSchema: %q, Query: []viewQuery{",
-			route, shape.summary, shape.ifMatch, shape.idempotencyKey, shape.body, shape.bodySchema, shape.answerSchema)
+		fmt.Fprintf(&b, "\t%q: {Summary: %q, IfMatch: %t, IdempotencyKey: %t, Body: %t, UploadField: %q, BodySchema: %q, AnswerSchema: %q, Query: []viewQuery{",
+			route, shape.summary, shape.ifMatch, shape.idempotencyKey, shape.body && shape.uploadField == "", shape.uploadField, shape.bodySchema, shape.answerSchema)
 		for i, q := range shape.queries {
 			if i > 0 {
 				b.WriteString(", ")

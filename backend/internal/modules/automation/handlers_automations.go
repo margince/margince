@@ -4,8 +4,8 @@
 package automation
 
 // The automations transport slice (B-E15.4): compose embeds Handlers so
-// the generated stubs are shadowed. Mutations are contract-annotated
-// human-only; the store re-gates on the `automation` RBAC object.
+// the generated stubs are shadowed. The store gates each mutation on the
+// `automation` RBAC object.
 
 import (
 	"encoding/json"
@@ -182,7 +182,7 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 			enabled := false
 			in.Enabled = &enabled
 		default:
-			httperr.Write(w, r, httperr.Validation("status", "invalid", "status is enabled or paused"))
+			httperr.Write(w, r, httperr.Validation(keyStatus, "invalid", "status is enabled or paused"))
 			return
 		}
 	}

@@ -24,6 +24,9 @@ func (h Handlers) actingFor(w http.ResponseWriter, r *http.Request) (Identity, b
 	if id, ok := identityFrom(r.Context()); ok {
 		return id, true
 	}
+	if _, bound := principal.Actor(r.Context()); !bound {
+		return h.actor(w, r)
+	}
 	id, err := h.svc.agentsUser(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
