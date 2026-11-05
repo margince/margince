@@ -130,7 +130,8 @@ function dialogBoxes(
   return dialogBoxes(g, inner, handedAt(e, def, outer), depth + 1);
 }
 // Each ancestor is asked again for every element under it, so the answer is
-// kept. It reads the host in force and nothing else of the gate.
+// kept. Beyond the host in force it reads g.modal and g.keys, which the memo,
+// made once per run, never outlives.
 function boxesAt(g: Gate, p: ts.Node): Chain[] {
   const key = memoKey(g.memo, g.host, p);
   return remembered(g.memo.boxes, key, () => boxesDrawnAt(g, p));
