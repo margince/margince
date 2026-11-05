@@ -22011,6 +22011,11 @@ components:
           readOnly: true
           description: >-
             Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
+        attachable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether this caller may attach an activity or meeting to this live contact. Computed with the same row-scope and write-share predicate the attach gate uses. A read-only share grants no attach right. Activity creation also needs its own object permission. Absent means no attach right; the server rechecks every write.
         writable:
           type: boolean
           readOnly: true

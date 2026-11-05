@@ -28,7 +28,7 @@ import { ContactToday } from "./contacttoday";
 
 beforeEach(() =>
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /activities/a-9": () => jsonResponse(OPEN_TASK),
   }),
 );
@@ -54,7 +54,12 @@ const CAPTURED = {
 // passing after the wire shape moved under it.
 const VIEW: Contact360 = {
   as_of: "2026-08-13T09:00:00Z",
-  contact: { id: "p-1", full_name: "Dana Buyer", ...CAPTURED },
+  contact: {
+    id: "p-1",
+    full_name: "Dana Buyer",
+    attachable: true,
+    ...CAPTURED,
+  },
   sections_omitted: [],
 };
 
@@ -677,3 +682,14 @@ it("keeps a quiet relationship readable when compliance work is outside the read
   expect(screen.getByText(en["standing.next.noTask"])).not.toBeNull();
   expect(screen.queryByText(/Not included: privacy duties/)).toBeNull();
 });
+
+it.each([false, undefined])(
+  "blocks the Next bar action without an attach right even when an older server offers it: %s",
+  async (attachable) => {
+    show({ ...VIEW, contact: { ...VIEW.contact, attachable } }, THIN);
+    expect(await screen.findByText(en["contact.attachRefused"])).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Log an interaction" }),
+    ).toHaveProperty("disabled", true);
+  },
+);

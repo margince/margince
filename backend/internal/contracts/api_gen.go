@@ -40333,6 +40333,9 @@ type Contact struct {
 	Archivable *bool      `json:"archivable,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
+	// Attachable Whether this caller may attach an activity or meeting to this live contact. Computed with the same row-scope and write-share predicate the attach gate uses. A read-only share grants no attach right. Activity creation also needs its own object permission. Absent means no attach right; the server rechecks every write.
+	Attachable *bool `json:"attachable,omitempty"`
+
 	// Author Who created this contact in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
@@ -77398,6 +77401,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "archived_at")
 	}
 
+	if raw, found := object["attachable"]; found {
+		err = json.Unmarshal(raw, &a.Attachable)
+		if err != nil {
+			return fmt.Errorf("error reading 'attachable': %w", err)
+		}
+		delete(object, "attachable")
+	}
+
 	if raw, found := object["author"]; found {
 		err = json.Unmarshal(raw, &a.Author)
 		if err != nil {
@@ -77698,6 +77709,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.Attachable != nil {
+		object["attachable"], err = json.Marshal(a.Attachable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'attachable': %w", err)
 		}
 	}
 

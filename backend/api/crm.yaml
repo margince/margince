@@ -43365,6 +43365,14 @@ components:
             "shared with everybody" instead of leaving the owner to guess. An `owner` row
             reaches the workspace through a verdict or through the owner's own
             `POST /contacts/{id}/publish`, and never travels back.
+        attachable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether this caller may attach an activity or meeting to this live contact.
+            Computed with the same row-scope and write-share predicate the attach gate uses.
+            A read-only share grants no attach right. Activity creation also needs its own
+            object permission. Absent means no attach right; the server rechecks every write.
         writable:
           type: boolean
           readOnly: true
