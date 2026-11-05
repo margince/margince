@@ -33,21 +33,28 @@ const (
 	HeldRecipientReplied = "recipient_replied"
 )
 
-// HoldMarketingToContact holds every pending scheduled marketing message
-// addressed to one of the contact's addresses, and answers how many it held.
+// PendingMarketing is one queued marketing message a stop reaches, with the
+// rep it belongs to, so its hold can be raised in their inbox.
+type PendingMarketing struct {
+	ID          ids.UUID
+	ScheduledBy ids.UUID
+}
+
+// PendingMarketingToContact lists every pending scheduled marketing message
+// addressed to one of the contact's addresses. The caller holds each through
+// HoldScheduledSend, the one hold that also raises the rep's card.
 //
 // purposeKey narrows a withdrawal to the marketing sends it covers: a send for
-// that purpose, or one that names no purpose. Empty holds every marketing
-// send, which is what a suppression binds. Rows are locked as they are read,
-// so a message firing at this moment is held or sent, never both.
-func (s *Store) HoldMarketingToContact(ctx context.Context, contact ids.ContactID, purposeKey string) (int, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		return 0, err
+// that purpose, or one that names no purpose. Empty lists every marketing
+// send, which is what a suppression binds.
+func (s *Store) PendingMarketingToContact(ctx context.Context, contact ids.ContactID, purposeKey string) ([]PendingMarketing, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
 	}
-	held := 0
+	var pending []PendingMarketing
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT ss.id
+			SELECT ss.id, ss.scheduled_by
 			  FROM scheduled_send ss
 			 WHERE ss.status = 'scheduled'
 			   AND ss.payload->>'context' = $1
@@ -60,24 +67,17 @@ func (s *Store) HoldMarketingToContact(ctx context.Context, contact ids.ContactI
 			                || coalesce(ss.payload->'bcc', '[]'::jsonb)) AS addressed(address)
 			         JOIN contact_email ce ON lower(ce.email) = lower(trim(addressed.address))
 			        WHERE ce.contact_id = $2)
-			 ORDER BY ss.id
-			   FOR UPDATE OF ss`, string(commsauthz.CategoryMarketing), contact.UUID, purposeKey)
+			 ORDER BY ss.id`, string(commsauthz.CategoryMarketing), contact.UUID, purposeKey)
 		if err != nil {
 			return fmt.Errorf("scheduled send: finding marketing to a stopped contact: %w", err)
 		}
-		pending, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		pending, err = pgx.CollectRows(rows, pgx.RowToStructByPos[PendingMarketing])
 		if err != nil {
 			return fmt.Errorf("scheduled send: finding marketing to a stopped contact: %w", err)
 		}
-		for _, id := range pending {
-			if err := s.holdInTx(ctx, tx, id, HeldRecipientStopped); err != nil {
-				return err
-			}
-		}
-		held = len(pending)
 		return nil
 	})
-	return held, err
+	return pending, err
 }
 
 // pursuitPausedByReply reports whether a recipient wrote to us after a deal

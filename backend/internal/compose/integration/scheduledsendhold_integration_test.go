@@ -101,16 +101,21 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 			if held != tc.wantHeld {
 				t.Fatalf("status %q reason %q, want held for a reply = %v", status, reason, tc.wantHeld)
 			}
+			if _, carded := p.heldCardFor(t, id); tc.wantHeld && !carded {
+				t.Fatal("the paused follow-up raised no card in its rep's inbox")
+			}
 		})
 	}
 }
 
 // A stop holds the contact's queued marketing when it is recorded, not when
-// the message comes due. Mail with another reason stays queued, and a stop
-// delivered twice holds nothing twice.
+// the message comes due, and raises one card in the rep's inbox. Mail with
+// another reason stays queued, and a stop delivered twice holds nothing twice
+// and raises no second card.
 //
-// Mutation: make HoldMarketingToContact match no context, and the marketing
-// message stays scheduled.
+// Mutation: make PendingMarketingToContact match no context, and the marketing
+// message stays scheduled; build the consumer's store without the send
+// assembly, and no card is raised.
 func TestAStopHoldsQueuedMarketingAtOnce(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
@@ -135,6 +140,25 @@ func TestAStopHoldsQueuedMarketingAtOnce(t *testing.T) {
 	if status, _ := p.scheduledStatus(t, other); status != activities.ScheduledStatusScheduled {
 		t.Fatalf("a message with another reason reads %q after a marketing stop, want it still scheduled", status)
 	}
+	if _, found := p.heldCardFor(t, marketing); !found {
+		t.Fatal("the stopped message raised no card in its rep's inbox")
+	}
+	if n := p.cardsFor(t, marketing); n != 1 {
+		t.Fatalf("a stop delivered twice raised %d cards, want 1", n)
+	}
+}
+
+// cardsFor counts the approval rows raised for one held message.
+func (p *preflightEnv) cardsFor(t *testing.T, id ids.UUID) int {
+	t.Helper()
+	var n int
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM approval WHERE proposed_change->>'scheduled_send_id' = $1`, id.String()).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting the cards: %v", err)
+	}
+	return n
 }
 
 // A withdrawal reaches only the marketing it withdrew, and a lead's

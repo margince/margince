@@ -11,7 +11,7 @@ package compose
 // the other.
 //
 // Idempotency is the hold's own predicate: only a row still `scheduled` is
-// held, so a redelivered stop holds nothing twice. events.Dedupe sits in front
+// held, so a redelivered stop holds nothing twice and raises no second card. events.Dedupe sits in front
 // of that as a cache, never as the guarantee. The fire path still asks the
 // engine again when a message comes due, so a missed event is caught there.
 
@@ -31,9 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// scheduledSendStopActor names this consumer in the audit rows it causes.
-const scheduledSendStopActor = "system:scheduled-send-stop"
-
 // consentWithdrawn is the consent.changed state a stop is recorded as.
 const consentWithdrawn = "withdrawn"
 
@@ -46,7 +43,9 @@ type ScheduledSendStop struct {
 
 // NewScheduledSendStop builds the consumer over the installation's handle.
 func NewScheduledSendStop(pool *pgxpool.Pool, ident *identity.Service, log *slog.Logger) *ScheduledSendStop {
-	return &ScheduledSendStop{store: activities.NewStore(InstallationDB(pool)), identity: ident, log: log}
+	// The shared send assembly, so a hold here raises the rep's card the way
+	// the fire path's does.
+	return &ScheduledSendStop{store: sendStore(pool, SendPath{}), identity: ident, log: log}
 }
 
 // HandleEvent routes one envelope. Anything that is not a stop on a contact
@@ -60,17 +59,21 @@ func (s *ScheduledSendStop) HandleEvent(ctx context.Context, env events.Envelope
 	if err != nil {
 		return err
 	}
-	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-	ctx = principal.WithCorrelationID(ctx, env.EventID)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: scheduledSendStopActor,
-	})
-	held, err := s.store.HoldMarketingToContact(ctx, ids.From[ids.ContactKind](env.Entity.ID), purpose)
+	wsCtx := principal.WithCorrelationID(principal.WithWorkspaceID(ctx, ws.UUID), env.EventID)
+	pending, err := s.store.PendingMarketingToContact(sendWorkerScope(wsCtx), ids.From[ids.ContactKind](env.Entity.ID), purpose)
 	if err != nil {
 		return fmt.Errorf("scheduled send stop: %w", err)
 	}
-	if held > 0 {
-		s.log.InfoContext(ctx, "held queued marketing to a contact who stopped it", "contact_id", env.Entity.ID, "held", held)
+	for _, message := range pending {
+		// A stop is about the world now, so it holds the message whatever
+		// version a rep last moved it to.
+		if err := s.store.HoldScheduledSend(holdScopeFor(wsCtx, message.ScheduledBy), message.ID,
+			activities.HeldRecipientStopped, activities.UnobservedVersion); err != nil {
+			return fmt.Errorf("scheduled send stop: holding %s: %w", message.ID, err)
+		}
+	}
+	if len(pending) > 0 {
+		s.log.InfoContext(ctx, "held queued marketing to a contact who stopped it", "contact_id", env.Entity.ID, "held", len(pending))
 	}
 	return nil
 }
