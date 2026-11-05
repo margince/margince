@@ -147,9 +147,9 @@ If the deal has open tasks, the dialog lists them, and **Confirm** waits until y
 
 ### Losing
 
-**A lost deal needs a reason** from **Why was it lost?**, which an administrator
-keeps under **Settings → Loss reasons**. The **Note** is optional. Reopening
-clears the reason, and the deal's history keeps every time it was lost.
+**A lost deal needs a reason** from **Why was it lost?**, which an administrator keeps under **Settings → Loss reasons**. The **Note** is optional.
+**How it stands** shows the reason beside the day the deal closed, with the note under it. A long note shows its first two lines, and **Show more** opens the rest.
+Reopening clears the reason, and the deal's history keeps every time it was lost.
 
 ### Winning
 

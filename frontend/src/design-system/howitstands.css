@@ -67,6 +67,28 @@
   color: var(--textPrimary);
   text-wrap: pretty;
 }
+/* The note a rep wrote under the call: body text, two lines until opened. */
+.standing-sheet-note {
+  margin: 0;
+  max-inline-size: 62ch;
+  font: var(--fontBody);
+  color: var(--textSecondary);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+.standing-sheet-note[data-clamped] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.standing-sheet-note-toggle {
+  align-self: flex-start;
+  margin-inline-start: -4px;
+  font: var(--fontBodySmall);
+}
 /* The ring and the dimension rows, side by side. */
 .standing-sheet-readings {
   display: flex;

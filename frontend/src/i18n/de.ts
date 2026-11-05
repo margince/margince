@@ -3882,6 +3882,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.routeIn.bandBadge.unknown": "Kontakt erfasst, noch kein Muster",
   "record.context": "Kontext",
   "standing.title": "Wie es steht · {date}",
+  "standing.noteMore": "Mehr anzeigen",
+  "standing.noteLess": "Weniger anzeigen",
   "standing.sources.records": "Aus den CRM-Daten",
   "standing.sources.model_one": "Margince · {count} Quelle",
   "standing.sources.model_other": "Margince · {count} Quellen",
