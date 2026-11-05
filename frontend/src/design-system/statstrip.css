@@ -240,7 +240,8 @@
     "basis";
   align-content: start;
   row-gap: var(--space-1);
-  padding: var(--space-3) var(--space-4);
+  /* The card's own inset, so a cell's words start where the card's do. */
+  padding: var(--space-3) var(--padCard);
   border: 0;
   border-inline-end: 1px solid var(--borderSubtle);
   border-radius: 0;
