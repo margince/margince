@@ -15444,6 +15444,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_open.label": "Neue Deals",
   "autonomy.kind.deal_open.help":
     "Margince eröffnet einen Deal für ein Unternehmen, das dir gehört, wenn der Kunde kaufen will, etwa mit einer Anfrage nach einem Angebot. Der Deal gehört dir und steht in der ersten Phase. Jeder neue Deal erscheint auf Home mit „Rückgängig“.",
+  "autonomy.kind.deal_revive.label": "Wieder eröffnete Deals",
+  "autonomy.kind.deal_revive.help":
+    "Margince eröffnet einen verlorenen Deal von dir wieder, wenn der Kunde mit neuen Kaufsignalen zurückkommt, etwa mit der Bitte um ein neues Angebot. Der Deal kommt in die erste Phase. Jeder wieder eröffnete Deal erscheint auf Home mit „Rückgängig“, das ihn wieder als verloren schließt.",
   "autonomy.kind.company_name_promotion.label": "Unternehmensnamen",
   "autonomy.kind.company_name_promotion.help":
     "Margince übernimmt vorgeschlagene Unternehmensnamen aus E-Mail-Signaturen für Unternehmen, die nach ihrer Domain benannt sind. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Von unabhängigen Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
@@ -18530,6 +18533,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.kind.deal_amount": "Neuer Betrag",
   "changes.kind.deal_probability": "Neue Wahrscheinlichkeit",
   "changes.kind.deal_open": "Aus Kaufsignalen eröffnet",
+  "changes.kind.deal_revive": "Mit neuen Kaufsignalen wieder eröffnet",
+  "changes.undo.relost":
+    "Wieder als verloren geschlossen, mit dem früheren Grund. Margince eröffnet ihn nur wieder, wenn neuere Kaufsignale kommen.",
   "changes.undo.confirmArchive":
     "Dieser Deal hat jetzt {notes} Notizen und {tasks} Aufgaben von deinem Team. Trotzdem archivieren?",
   "changes.undo.archived":
@@ -18549,6 +18555,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.part.probabilities_other": "{count} Wahrscheinlichkeiten",
   "changes.part.moved_one": "{count} verschoben",
   "changes.part.moved_other": "{count} verschoben",
+  "changes.part.opened_one": "{count} eröffnet",
+  "changes.part.opened_other": "{count} eröffnet",
+  "changes.part.revived_one": "{count} wieder eröffnet",
+  "changes.part.revived_other": "{count} wieder eröffnet",
   "changes.viewAll": "Alle ansehen",
   "changes.undoAll": "Alle rückgängig machen",
   "changes.undoAllDone_one": "Auf {count} Deal rückgängig gemacht.",

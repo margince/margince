@@ -55,8 +55,9 @@ type AdvanceDealInput struct {
 	// and the product must not propose it again. Without it a reversed move is
 	// re-proposable the moment the fortnight's human-move protection lapses.
 	ReversalOf *ids.UUID
-	// closedAt is the instant a closing move records as the close, set only
-	// by ImportDealTx: an imported win keeps the day its source closed it.
+	// closedAt is the instant a closing move records as the close. An
+	// imported win keeps the day its source closed it, and the Undo of a
+	// reopen keeps the day the deal was lost.
 	closedAt *time.Time
 	// auditEvidence rides into the move's audit row. Margince's own close sets
 	// it, so the Home receipt can say why the deal was closed.

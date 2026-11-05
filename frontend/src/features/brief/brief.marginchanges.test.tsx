@@ -63,6 +63,7 @@ function routes(pending: Bundle[], undo?: (body: unknown) => Response) {
         probabilities: 0,
         moved: pending.filter((b) => b.kinds.includes("stage_move")).length,
         opened: pending.filter((b) => b.kinds.includes("deal_open")).length,
+        revived: pending.filter((b) => b.kinds.includes("deal_revive")).length,
         base_currency: "EUR",
         bundles: pending,
         truncated: false,
@@ -230,4 +231,35 @@ it("undoes every deal at once and says how many", async () => {
       writes(calls).filter((c) => c.path === "/deal-corrections/undo"),
     ).toHaveLength(1),
   );
+});
+
+it("counts and names a reopened lost deal, and says it is lost again after Undo", async () => {
+  const reopened = bundle(5, ["deal_revive"], ["r5"]);
+  routes([...bundles, reopened], () =>
+    jsonResponse({
+      results: [
+        {
+          deal_id: reopened.deal_id,
+          outcome: "undone",
+          undone: ["deal_revive"],
+          kept: [],
+        },
+      ],
+    }),
+  );
+  const user = userEvent.setup();
+  render(<BriefChanges />);
+  expect(
+    await screen.findByText(
+      "Margince updated 4 of your deals: 1 closed, 1 reopened, 1 moved, 2 re-dated, 1 re-valued",
+    ),
+  ).toBeTruthy();
+  const row = (await screen.findByText(en["changes.kind.deal_revive"])).closest(
+    "li",
+  );
+  if (!row) throw new Error("no row for the reopened deal");
+  await user.click(
+    await within(row).findByRole("button", { name: en["common.undo"] }),
+  );
+  expect(await screen.findByText(en["changes.undo.relost"])).toBeTruthy();
 });

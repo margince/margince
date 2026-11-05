@@ -148,6 +148,10 @@ const kindDealStageMove = "deal_stage_move"
 // company's owner. Its Undo archives the deal.
 const kindDealOpen = "deal_open"
 
+// kindDealRevive is Margince reopening a lost deal when new buying evidence
+// arrives at its company. Its Undo closes the deal as lost again.
+const kindDealRevive = "deal_revive"
+
 var AutoApplyKinds = map[string]bool{
 	closeDateCorrectionKind:  true,
 	kindDealCloseLost:        true,
@@ -155,6 +159,7 @@ var AutoApplyKinds = map[string]bool{
 	kindDealProbability:      true,
 	kindDealStageMove:        true,
 	kindDealOpen:             true,
+	kindDealRevive:           true,
 	kindCompanyNamePromotion: true,
 	kindLifecycleChange:      true,
 }

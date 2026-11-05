@@ -80,10 +80,11 @@ func morningChangeKinds(kinds []string, words mailcopy.Copy) string {
 		deals.VerdictProbabilityCorrection: words.MorningChangeProbability,
 		deals.VerdictStageMoveCorrection:   words.MorningChangeMoved,
 		deals.DealOpenCorrection:           words.MorningChangeOpened,
+		deals.DealReviveCorrection:         words.MorningChangeReopened,
 	}
 	var out []string
 	for _, kind := range []string{
-		deals.DealOpenCorrection, deals.CloseLostCorrection, deals.VerdictStageMoveCorrection, deals.VerdictCloseDateCorrection,
+		deals.DealOpenCorrection, deals.DealReviveCorrection, deals.CloseLostCorrection, deals.VerdictStageMoveCorrection, deals.VerdictCloseDateCorrection,
 		deals.VerdictAmountCorrection, deals.VerdictProbabilityCorrection,
 	} {
 		for _, have := range kinds {

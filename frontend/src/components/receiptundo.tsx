@@ -35,6 +35,9 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   if (receiptUndo.undone && receipt.kind === "deal_close_lost") {
     return <span role="status">{t("worklist.handled.closeLostUndone")}</span>;
   }
+  if (receiptUndo.undone && receipt.kind === "deal_revive") {
+    return <span role="status">{t("changes.undo.relost")}</span>;
+  }
   const field = changeFieldKey(receipt.kind);
   if (receiptUndo.undone && field) {
     return (

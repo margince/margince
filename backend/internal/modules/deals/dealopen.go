@@ -296,8 +296,8 @@ func dismissOpenedSuggestion(ctx context.Context, tx pgx.Tx, deal ids.DealID) er
 	var id ids.UUID
 	err = tx.QueryRow(ctx, `
 		UPDATE deal_suggestion SET state = 'dismissed', accepted_deal_id = NULL, decided_by = $2, decided_at = now()
-		 WHERE accepted_deal_id = $1 AND state = 'accepted'
-		RETURNING id`, deal, storekit.UUIDOrNil(actor.UserID)).Scan(&id)
+		 WHERE accepted_deal_id = $1 AND state = 'accepted' AND kind = $3
+		RETURNING id`, deal, storekit.UUIDOrNil(actor.UserID), SuggestionKindOpenDeal).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

@@ -15536,6 +15536,7 @@ const (
 	MarginceChangeBundleKindsDealCloseDate   MarginceChangeBundleKinds = "deal_close_date"
 	MarginceChangeBundleKindsDealOpen        MarginceChangeBundleKinds = "deal_open"
 	MarginceChangeBundleKindsDealProbability MarginceChangeBundleKinds = "deal_probability"
+	MarginceChangeBundleKindsDealRevive      MarginceChangeBundleKinds = "deal_revive"
 	MarginceChangeBundleKindsStageMove       MarginceChangeBundleKinds = "stage_move"
 )
 
@@ -15551,6 +15552,8 @@ func (e MarginceChangeBundleKinds) Valid() bool {
 	case MarginceChangeBundleKindsDealOpen:
 		return true
 	case MarginceChangeBundleKindsDealProbability:
+		return true
+	case MarginceChangeBundleKindsDealRevive:
 		return true
 	case MarginceChangeBundleKindsStageMove:
 		return true
@@ -44175,7 +44178,7 @@ type DealSuggestion struct {
 	Evidence []DealSuggestionEvidence `json:"evidence"`
 	Id       openapi_types.UUID       `json:"id"`
 
-	// Kind Only open_deal is suggested today.
+	// Kind An open suggestion is open_deal. One Margince reopened a lost deal from is revive.
 	Kind DealSuggestionKind `json:"kind"`
 
 	// NameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
@@ -44190,7 +44193,7 @@ type DealSuggestion struct {
 	State   DealSuggestionState `json:"state"`
 }
 
-// DealSuggestionKind Only open_deal is suggested today.
+// DealSuggestionKind An open suggestion is open_deal. One Margince reopened a lost deal from is revive.
 type DealSuggestionKind string
 
 // DealSuggestionNameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
@@ -50939,6 +50942,9 @@ type MarginceChangeSummary struct {
 
 	// Revalued Deals given a new amount.
 	Revalued int `json:"revalued"`
+
+	// Revived Lost deals Margince reopened from new buying evidence.
+	Revived int `json:"revived"`
 
 	// Truncated True when more bundles exist than were returned. The counts are never cut.
 	Truncated bool `json:"truncated"`

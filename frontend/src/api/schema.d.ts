@@ -27822,7 +27822,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description Only open_deal is suggested today.
+             * @description An open suggestion is open_deal. One Margince reopened a lost deal from is revive.
              * @enum {string}
              */
             kind: "open_deal" | "advance_stage" | "revive";
@@ -55414,6 +55414,8 @@ export interface components {
             moved: number;
             /** @description Deals Margince opened from buying evidence. */
             opened: number;
+            /** @description Lost deals Margince reopened from new buying evidence. */
+            revived: number;
             /** @description The currency of every `value_base_minor`. */
             base_currency: string;
             /** @description One per deal, the largest value first. */
@@ -55433,7 +55435,7 @@ export interface components {
             version: number;
             /** @description The changes, newest first. */
             audit_log_ids: string[];
-            kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability" | "stage_move" | "deal_open")[];
+            kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability" | "stage_move" | "deal_open" | "deal_revive")[];
             /**
              * Format: int64
              * @description The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.

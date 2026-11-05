@@ -15355,6 +15355,9 @@ export const en = {
   "autonomy.kind.deal_open.label": "New deals",
   "autonomy.kind.deal_open.help":
     "Opens a deal for a company you own when the customer asks to buy, such as a request for an offer. It is yours, at the first stage. Each new deal shows on Home with an Undo.",
+  "autonomy.kind.deal_revive.label": "Reopened deals",
+  "autonomy.kind.deal_revive.help":
+    "Reopens a deal of yours that was lost when the customer comes back with new buying evidence, such as asking for a new offer. It goes back to the first stage. Each reopened deal shows on Home with an Undo, which closes it as lost again.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accepts proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -18345,6 +18348,9 @@ export const en = {
   "changes.kind.deal_amount": "New amount",
   "changes.kind.deal_probability": "New probability",
   "changes.kind.deal_open": "Opened from buying evidence",
+  "changes.kind.deal_revive": "Reopened from new buying evidence",
+  "changes.undo.relost":
+    "Closed as lost again, with its earlier reason. Margince reopens it only if newer buying evidence arrives.",
   "changes.undo.confirmArchive":
     "This deal now has {notes} notes and {tasks} tasks from your team. Archive it anyway?",
   "changes.undo.archived":
@@ -18362,6 +18368,10 @@ export const en = {
   "changes.part.probabilities_other": "{count} probabilities",
   "changes.part.moved_one": "{count} moved",
   "changes.part.moved_other": "{count} moved",
+  "changes.part.opened_one": "{count} opened",
+  "changes.part.opened_other": "{count} opened",
+  "changes.part.revived_one": "{count} reopened",
+  "changes.part.revived_other": "{count} reopened",
   "changes.viewAll": "View all",
   "changes.undoAll": "Undo all",
   "changes.undoAllDone_one": "Undone on {count} deal.",

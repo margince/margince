@@ -232,3 +232,24 @@ it("asks before an opened deal's receipt archives the team's work, as the change
     },
   ]);
 });
+
+it("says a reopened deal is lost again once its receipt is undone", async () => {
+  const reopened = {
+    ...automaticStageReceipt,
+    kind: "deal_revive",
+    review: automaticStageReceipt.review && {
+      ...automaticStageReceipt.review,
+      kind: "deal_revive" as const,
+    },
+  };
+  stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+    [`POST /records/deal/${reopened.subject?.id}/history/${reopened.undo?.audit_log_id}/restore`]:
+      () => jsonResponse({}),
+  });
+  const user = userEvent.setup();
+  render(<ReceiptReview receipt={reopened} />);
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  expect(await screen.findByText(en["changes.undo.relost"])).toBeTruthy();
+});
