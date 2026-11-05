@@ -493,8 +493,10 @@ function jsonResponse(body: unknown, status = 200) {
 function serve(answers: Readonly<Record<string, () => Response>>) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (request: Request) => {
-      const path = new URL(request.url).pathname;
+    // The connector discovery read asks by URL string, the API client by Request.
+    vi.fn(async (request: Request | string) => {
+      const url = typeof request === "string" ? request : request.url;
+      const path = new URL(url, "https://crm.test").pathname;
       const route = Object.keys(answers).find((end) => path.endsWith(end));
       return route ? answers[route]() : jsonResponse({}, 404);
     }),
