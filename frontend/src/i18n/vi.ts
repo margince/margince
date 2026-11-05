@@ -14838,6 +14838,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.reminder.progress": "Tiến độ thiết lập",
   // end polish: setup-popover
   "account.profileCard": "Hồ sơ",
+  "account.pictureLabel": "Ảnh hồ sơ",
+  "account.pictureHelp":
+    "PNG, JPEG hoặc WebP tối đa 5 MB, đồng nghiệp thấy bên cạnh tên bạn.",
+  "account.pictureEmpty": "Thả ảnh vào đây, hoặc chọn tệp",
+  "account.pictureAdd": "Tải ảnh lên",
+  "account.pictureReplace": "Thay ảnh",
+  "account.pictureRemove": "Gỡ ảnh",
+  "account.pictureSaved": "Đã lưu ảnh",
+  "account.pictureRemoved": "Đã gỡ ảnh",
+  "account.pictureWrongType":
+    "Không thể tải ảnh lên. Hãy dùng tệp PNG, JPEG hoặc WebP.",
+  "account.pictureTooLarge": "Không thể tải ảnh lên. Hãy dùng tệp tối đa 5 MB.",
+  "account.pictureNoStorage":
+    "Bản cài đặt này chưa có nơi lưu ảnh. Liên hệ quản trị viên.",
+  "account.pictureUploadFailed":
+    "Không thể tải ảnh lên. Thử lại hoặc tải lại trang.",
+  "account.pictureRemoveFailed":
+    "Không thể gỡ ảnh. Thử lại hoặc tải lại trang.",
   "account.signInCard": "Đăng nhập",
   "account.timezoneLabel": "Múi giờ",
   "account.timezoneHelp":
@@ -18696,7 +18714,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.google.helpStep1":
     "Trong Google Cloud console, mở một project rồi vào “APIs & Services”, sau đó “Credentials”. Chọn “Create credentials”, rồi “OAuth client ID”, và chọn “Web application”.",
   "firstRun.google.helpStep2":
-    "Bật Gmail API và thêm cả hai scope gmail.readonly và gmail.send vào màn hình đồng ý. Hai scope dùng chung một lần đồng ý vì Google không thêm scope vào refresh token đã cấp; muốn xin quyền gửi sau này thì phải kết nối lại hộp thư.",
+    "Bật Gmail API và thêm các scope gmail.readonly, gmail.send và userinfo.profile vào màn hình đồng ý (userinfo.profile cung cấp ảnh của tài khoản Google). Các scope dùng chung một lần đồng ý vì Google không thêm scope vào refresh token đã cấp; muốn xin thêm scope sau này thì phải kết nối lại hộp thư.",
   "firstRun.google.helpStep3":
     "Trong Authorized redirect URIs, thêm các URI liệt kê ở trên. Hộp thư là bắt buộc để nhận thư; Lịch và Đăng nhập bật các tính năng tương ứng.",
   "firstRun.google.helpStep4":

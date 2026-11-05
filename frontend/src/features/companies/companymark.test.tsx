@@ -311,7 +311,7 @@ it("draws the refusals below the tiles, wide first, never inside a slot", async 
     alerts.map((alert) => alert.querySelector(".callout-title")?.textContent),
   ).toEqual(["Wide logo not uploaded", "Square icon not uploaded"]);
   for (const alert of alerts) {
-    expect(alert.closest(".brand-slot")).toBeNull();
+    expect(alert.closest(".image-slot")).toBeNull();
   }
   const slots = alerts[0].closest(".brand-refusals")?.previousElementSibling;
   expect(slots?.className).toBe("brand-slots");

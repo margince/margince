@@ -264,7 +264,7 @@ describe("AuditLogCard", () => {
     expect(link).toHaveAttribute("href", "/#/contacts/p-1");
   });
 
-  it("names a record without a label by its kind and its id's random tail, and asks the server nothing else", async () => {
+  it("names a record without a label by its kind and its id's random tail, and reads no record to name it", async () => {
     const backend = auditLogBackend({ entries: [created] });
     vi.stubGlobal("fetch", backend);
     render(<AuditLogCard />);
@@ -278,7 +278,10 @@ describe("AuditLogCard", () => {
     const asked = backend.mock.calls.map(([input]) =>
       String(input instanceof Request ? input.url : input),
     );
-    expect(asked.every((url) => /\/v1\/(me|audit-log)/.test(url))).toBe(true);
+    // The names read is the actor's picture; no record is read to name the row.
+    expect(
+      asked.every((url) => /\/v1\/(me|audit-log|users\/names)/.test(url)),
+    ).toBe(true);
   });
 
   it("keeps the change detail hidden until the row is expanded", async () => {

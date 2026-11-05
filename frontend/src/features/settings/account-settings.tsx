@@ -38,6 +38,7 @@ import { useSaveMyTimezone, useViewerZone } from "../../lib/viewerzone";
 import { MfaSettingRow } from "../sign-in/mfacard";
 import { PasswordSettingRow } from "../sign-in/passwordcard";
 import { reloadReaderLanguageReads } from "./languagereads";
+import { ProfilePictureRow } from "./profilepicture";
 import { NameSettingRows, useAccountNames } from "./settings-names";
 import { SignatureSettingRow } from "./settingssignaturerow";
 import { InstallSettingRow } from "./thisdevice";
@@ -76,6 +77,7 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
                 size="lg"
                 identity={me.user.id}
                 name={me.user.display_name || me.user.email || ""}
+                photo={me.user.avatar_url}
               />
               <div className="settings-identity-id">
                 <div className="settings-identity-name">
@@ -96,6 +98,9 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
         </QueryGate>
       </PanelBody>
       <SettingList bleed="settings">
+        {query.data && (
+          <ProfilePictureRow user={query.data.user} toast={toast} />
+        )}
         <NameSettingRows names={names} />
         <SignatureSettingRow toast={toast} />
       </SettingList>

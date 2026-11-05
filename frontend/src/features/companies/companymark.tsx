@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useRef } from "react";
+import { useId } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Avatar, Button } from "../../design-system/atoms";
+import { Avatar } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { CompanyLogo } from "../../design-system/companylogo";
-import { FileDropzoneControl } from "../../design-system/filedropzone";
+import { ImageSlot, type ImageSlotVerbs } from "../../design-system/imageslot";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -240,86 +240,33 @@ function MarkSlot({
   name: string;
   hintId: string;
   emptyLabel: string;
-  verbs: { add: string; replace: string; remove: string };
+  verbs: ImageSlotVerbs;
   writes: MarkWrites;
   refusalId?: string;
 }>) {
   const t = useT();
-  const nameId = useId();
-  const inputId = useId();
-  const tile = useRef<HTMLDivElement>(null);
-  const { send, uploading, removing } = writes;
-  const describedBy = refusalId ? `${hintId} ${refusalId}` : hintId;
-  // The tile takes nothing while a write is out: a drop racing a DELETE lands
-  // in whichever order the two answer.
-  const busy = uploading || removing;
-  const control = {
-    id: inputId,
-    "aria-labelledby": nameId,
-    "aria-describedby": describedBy,
-    disabled: busy,
-  };
-  const choose = () => {
-    tile.current?.querySelector<HTMLInputElement>("input[type=file]")?.click();
-  };
-
   return (
-    <section
-      className={`brand-slot brand-slot-${shape}`}
-      aria-labelledby={nameId}
-    >
-      <div
-        ref={tile}
-        className={src ? "brand-tile is-filled" : "brand-tile"}
-        aria-busy={busy || undefined}
-      >
-        {canEdit && (
-          <FileDropzoneControl
-            control={control}
-            emptyLabel={emptyLabel}
-            accept={ACCEPTED_IMAGES}
-            onPick={send}
-          />
-        )}
-        <div className="brand-tile-mark">
-          <MarkPreview profile={profile} src={src} />
-        </div>
-      </div>
-      <span className="t-name" id={nameId}>
-        {name}
-      </span>
-      {canEdit && (
-        <div className="brand-slot-verbs">
-          {/* Each verb is disabled by the OTHER one's flight and pending on its
-              own, so focus stays on a pressed verb and a repeat press is
-              swallowed rather than racing the first request. */}
-          <Button
-            variant="ghost"
-            aria-label={src ? verbs.replace : verbs.add}
-            onClick={choose}
-            aria-describedby={refusalId}
-            disabled={removing}
-            pending={uploading}
-          >
-            {src
-              ? t("settings.companyMarkReplace")
-              : t("settings.companyMarkAdd")}
-          </Button>
-          {src && (
-            <Button
-              variant="ghost"
-              aria-label={verbs.remove}
-              onClick={() => send(null)}
-              aria-describedby={refusalId}
-              disabled={uploading}
-              pending={removing}
-            >
-              {t("settings.companyMarkRemove")}
-            </Button>
-          )}
-        </div>
-      )}
-    </section>
+    <ImageSlot
+      shape={shape}
+      filled={Boolean(src)}
+      preview={<MarkPreview profile={profile} src={src} />}
+      editable={canEdit}
+      name={name}
+      describedBy={hintId}
+      refusalId={refusalId}
+      emptyLabel={emptyLabel}
+      accept={ACCEPTED_IMAGES}
+      words={{
+        add: t("settings.companyMarkAdd"),
+        replace: t("settings.companyMarkReplace"),
+        remove: t("settings.companyMarkRemove"),
+      }}
+      names={verbs}
+      uploading={writes.uploading}
+      removing={writes.removing}
+      onPick={writes.send}
+      onRemove={() => writes.send(null)}
+    />
   );
 }
 

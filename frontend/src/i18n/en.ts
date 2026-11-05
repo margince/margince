@@ -15149,6 +15149,24 @@ export const en = {
   "setup.reminder.progress": "Setup progress",
   // end polish: setup-popover
   "account.profileCard": "Profile",
+  "account.pictureLabel": "Profile picture",
+  "account.pictureHelp":
+    "PNG, JPEG or WebP up to 5 MB, shown to colleagues beside your name.",
+  "account.pictureEmpty": "Drop picture here, or choose a file",
+  "account.pictureAdd": "Upload picture",
+  "account.pictureReplace": "Replace picture",
+  "account.pictureRemove": "Remove picture",
+  "account.pictureSaved": "Picture saved",
+  "account.pictureRemoved": "Picture removed",
+  "account.pictureWrongType":
+    "Picture not uploaded. Use a PNG, JPEG or WebP file.",
+  "account.pictureTooLarge": "Picture not uploaded. Use a file up to 5 MB.",
+  "account.pictureNoStorage":
+    "This installation has no file storage for pictures. Contact your system administrator.",
+  "account.pictureUploadFailed":
+    "Picture not uploaded. Retry, or reload the page.",
+  "account.pictureRemoveFailed":
+    "Picture not removed. Retry, or reload the page.",
   "account.signInCard": "Sign-in",
   "account.timezoneLabel": "Time zone",
   "account.timezoneHelp":
@@ -19007,7 +19025,7 @@ export const en = {
   "firstRun.google.helpStep1":
     "In the Google Cloud console, open a project and go to “APIs & Services”, then “Credentials”. Select “Create credentials”, then “OAuth client ID”, and choose “Web application”.",
   "firstRun.google.helpStep2":
-    "Enable the Gmail API and add both the gmail.readonly and gmail.send scopes to the consent screen. They share one consent because Google does not add a scope to an issued refresh token; requesting send later means connecting the mailbox again.",
+    "Enable the Gmail API and add the gmail.readonly, gmail.send and userinfo.profile scopes to the consent screen (userinfo.profile supplies the Google account picture). They share one consent because Google does not add a scope to an issued refresh token; requesting one later means connecting the mailbox again.",
   "firstRun.google.helpStep3":
     "Under Authorized redirect URIs, add the URIs listed above. Mailbox is required for mail; Calendar and Sign-in enable those features.",
   "firstRun.google.helpStep4":

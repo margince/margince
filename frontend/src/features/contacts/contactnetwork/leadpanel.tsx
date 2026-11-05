@@ -9,6 +9,7 @@
 // here: nothing on this panel is machine-authored.
 
 import type { components } from "../../../api/schema";
+import { SeatAvatar } from "../../../components/seatavatar";
 import { Avatar, Badge, Button } from "../../../design-system/atoms";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { Panel } from "../../../design-system/panel";
@@ -90,9 +91,9 @@ export function LeadPanel({
               A reader checks the shape of a route before they read its
               counts. */}
           <div className="pn-hero">
-            <Avatar
+            <SeatAvatar
+              id={route.via_user_id}
               name={route.via_display_name}
-              identity={route.via_user_id}
               size="md"
             />
             <div className="pn-hero-who">

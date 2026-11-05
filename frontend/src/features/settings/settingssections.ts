@@ -11,6 +11,7 @@ export const SETTINGS_SECTIONS = {
     "settings.profileTitle",
     "account.signInCard",
     "account.browserCard",
+    "account.pictureLabel",
     "settings.displayName",
     "settings.greetingName",
     "settings.signature",

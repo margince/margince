@@ -296,7 +296,11 @@ function MemberIdentity({ member }: Readonly<{ member: User }>) {
   return (
     // Focusable by script only: the deactivate confirm hands focus back here.
     <span id={memberAnchorId(member.id)} className="users-member" tabIndex={-1}>
-      <Avatar name={member.display_name} identity={member.id} />
+      <Avatar
+        name={member.display_name}
+        identity={member.id}
+        photo={member.avatar_url}
+      />
       <CellStack>
         <span className="users-member-name">
           <span className="t-name">{member.display_name}</span>

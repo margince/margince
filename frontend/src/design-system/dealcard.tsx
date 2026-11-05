@@ -135,11 +135,18 @@ function DealCardCompany({
  * stop of its own: the card is a link and already has one, and a second stop
  * inside it would be a control that does nothing.
  */
+/** The colleague who owns a deal, with their picture when they have one. */
+export type DealOwnerSeat = Readonly<{
+  id: string;
+  name: string;
+  photo?: string | null;
+}>;
+
 function DealOwner({
-  owner: { id, name },
+  owner: { id, name, photo },
   dealLink,
 }: Readonly<{
-  owner: Readonly<{ id: string; name: string }>;
+  owner: DealOwnerSeat;
   dealLink: RefObject<HTMLAnchorElement | null>;
 }>) {
   const tip = useTooltip<HTMLSpanElement>(name);
@@ -174,7 +181,7 @@ function DealOwner({
         }
       }}
     >
-      <Avatar name={name} identity={id} />
+      <Avatar name={name} identity={id} photo={photo} />
       {tip.tip}
     </span>
   );

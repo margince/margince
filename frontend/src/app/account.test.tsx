@@ -24,7 +24,7 @@ import { AccountMenu } from "./account";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
 
-// The account block: a glyph in the top bar's trail. Its menu is the one door
+// The account block: the seat's chip in the top bar's trail. Its menu is the one door
 // into settings and the one appearance control. Behaviour only: where the panel
 // opens is CSS, but what it holds and what a keyboard reader can do are promises.
 
@@ -434,7 +434,7 @@ describe("AccountMenu", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
-  // The trigger prints nothing, and a glyph alone tells a screen reader
+  // The trigger prints nothing, and its hidden initials tell a screen reader
   // nothing. The sentence is carried as clipped text and wired as the trigger's
   // description — the `title` is the pointer's copy of it and is never the
   // accessible name.
@@ -451,15 +451,18 @@ describe("AccountMenu", () => {
     expect(trigger.getAttribute("title")).toBe(spoken?.textContent);
   });
 
-  // The trigger is a glyph alone, so its name is all that identifies it. The
-  // panel is where the reader confirms whose account they are about to act on.
-  it("names the top bar's glyph-only trigger, and prints the identity in the panel", async () => {
+  // The trigger is the seat's chip alone, so its name is all that identifies
+  // it. The panel is where the reader confirms whose account they act on.
+  it("names the top bar's chip-only trigger, and prints the identity in the panel", async () => {
     const user = userEvent.setup();
     const { container } = render(<AccountMenu />);
     const trigger = glyphTrigger();
     expect(container.querySelector(".acctwho")).toBeNull();
     expect(trigger.getAttribute("aria-label")).toBe("Account");
-    expect(trigger.querySelector(".avatar")).toBeNull();
+    // The initials are drawn and hidden, so they never join the name.
+    const chip = trigger.querySelector(".avatar");
+    expect(chip?.textContent).toBe("TU");
+    expect(chip?.closest("[aria-hidden='true']")).not.toBeNull();
 
     await openMenu(user, trigger);
     const who = container.querySelector(".acctmenuwho");
@@ -500,6 +503,37 @@ const renderHeadless = () => {
   );
   return client;
 };
+
+describe("AccountMenu for a seat with a picture", () => {
+  it("draws the picture in the trigger and in the menu's head", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const me = meFixture();
+    const picture = "/v1/users/u-1/avatar?v=3";
+    client.setQueryData(["me"], {
+      ...me,
+      user: { ...me.user, avatar_url: picture },
+    });
+    const { container } = rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <AccountMenu />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    const trigger = glyphTrigger();
+    expect(trigger.querySelector(".avatar-photo img")).toHaveAttribute(
+      "src",
+      picture,
+    );
+    await openMenu(user, trigger);
+    expect(
+      container.querySelector(".acctmenuwho .avatar-photo img"),
+    ).toHaveAttribute("src", picture);
+  });
+});
 
 describe("AccountMenu before /me names the seat", () => {
   it("starts on Settings and walks only the rows it draws", async () => {

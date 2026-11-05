@@ -15233,6 +15233,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.reminder.progress": "Fortschritt der Einrichtung",
   // end polish: setup-popover
   "account.profileCard": "Profil",
+  "account.pictureLabel": "Profilbild",
+  "account.pictureHelp":
+    "PNG, JPEG oder WebP bis 5 MB, für Teammitglieder neben deinem Namen sichtbar.",
+  "account.pictureEmpty": "Bild hier ablegen oder Datei auswählen",
+  "account.pictureAdd": "Bild hochladen",
+  "account.pictureReplace": "Bild ersetzen",
+  "account.pictureRemove": "Bild entfernen",
+  "account.pictureSaved": "Bild gespeichert",
+  "account.pictureRemoved": "Bild entfernt",
+  "account.pictureWrongType":
+    "Bild nicht hochgeladen. Nimm eine PNG-, JPEG- oder WebP-Datei.",
+  "account.pictureTooLarge":
+    "Bild nicht hochgeladen. Nimm eine Datei bis 5 MB.",
+  "account.pictureNoStorage":
+    "Diese Installation hat keinen Dateispeicher für Bilder. Bitte wende dich an die Systemadministration.",
+  "account.pictureUploadFailed":
+    "Bild nicht hochgeladen. Bitte versuche es erneut oder lade die Seite neu.",
+  "account.pictureRemoveFailed":
+    "Bild nicht entfernt. Bitte versuche es erneut oder lade die Seite neu.",
   "account.signInCard": "Anmeldung",
   "account.timezoneLabel": "Zeitzone",
   "account.timezoneHelp":
@@ -19195,7 +19214,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "firstRun.google.helpStep1":
     "Öffne in der Google Cloud Console ein Projekt und gehe zu „APIs und Dienste“, dann „Anmeldedaten“. Wähle „Anmeldedaten erstellen“, dann „OAuth-Client-ID“, und wähle „Webanwendung“.",
   "firstRun.google.helpStep2":
-    "Aktiviere die Gmail API und füge dem Zustimmungsbildschirm die Bereiche gmail.readonly und gmail.send hinzu. Beide Bereiche werden gemeinsam angefragt, da Google einem bereits ausgestellten Refresh-Token keinen Bereich hinzufügt. Wird das Senden später angefordert, muss das Postfach erneut verbunden werden.",
+    "Aktiviere die Gmail API und füge dem Zustimmungsbildschirm die Bereiche gmail.readonly, gmail.send und userinfo.profile hinzu (userinfo.profile liefert das Profilbild des Google-Kontos). Die Bereiche werden gemeinsam angefragt, da Google einem bereits ausgestellten Refresh-Token keinen Bereich hinzufügt. Wird ein Bereich später angefordert, muss das Postfach erneut verbunden werden.",
   "firstRun.google.helpStep3":
     "Füge unter „Autorisierte Weiterleitungs-URIs“ die oben aufgeführten URIs hinzu. „Postfach“ ist für E-Mails erforderlich. „Kalender“ und „Anmeldung“ aktivieren die jeweilige Funktion.",
   "firstRun.google.helpStep4":
