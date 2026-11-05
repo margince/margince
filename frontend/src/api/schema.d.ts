@@ -55840,6 +55840,50 @@ export interface components {
             changes: components["schemas"]["Receipt"][];
             /** @description Where the next page starts; absent on the last page. */
             next_cursor?: string;
+            last_check?: components["schemas"]["DealMarginceCheck"];
+        };
+        /**
+         * @description Margince's latest nightly reading of the deal, present on the first page only when that
+         *     reading changed nothing. Every reader of the deal sees when it was and when the next one
+         *     is due. Only the owner it was made for, signed in as themselves, reads why and which
+         *     sources it read. For anyone else, an agent acting for the owner included, `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
+         *     reasons come from the deal's mail and meetings.
+         */
+        DealMarginceCheck: {
+            /** Format: date-time */
+            checked_at: string;
+            /**
+             * Format: date-time
+             * @description When the clock alone makes the deal due again, the day after its close date. Absent when only new evidence or a changed field does.
+             */
+            next_check_at?: string;
+            /** @description Whether the caller may read why. */
+            explained: boolean;
+            /**
+             * @description Why no model was asked. `switched_off` is every switch off; `no_evidence` is no mail, meeting, call or note every member may read.
+             * @enum {string}
+             */
+            skipped?: "switched_off" | "no_evidence";
+            outcomes: components["schemas"]["DealMarginceCheckOutcome"][];
+            sources: components["schemas"]["DealMarginceCheckSource"][];
+        };
+        /** @description One change Margince weighed and did not make. */
+        DealMarginceCheckOutcome: {
+            /** @enum {string} */
+            kind: "close_date" | "amount" | "probability" | "stage";
+            /** @enum {string} */
+            why: "switched_off" | "kept_your_edit" | "not_sure" | "outside_limits" | "changed_while_checking" | "undo_hold" | "already_right" | "accepted_offer" | "no_rate" | "no_owner" | "owner_cannot_edit" | "stage_rules" | "other";
+        };
+        /**
+         * @description One source and what the reading made of it. `private` is a source whose only items on
+         *     the deal are ones not every member may read, so they were left out. `unavailable` is a
+         *     mailbox that was not read on time.
+         */
+        DealMarginceCheckSource: {
+            /** @enum {string} */
+            source: "mail" | "meetings" | "calls" | "notes" | "offers";
+            /** @enum {string} */
+            state: "read" | "private" | "unavailable" | "none";
         };
         TeamMarginceChanges: {
             /** Format: date-time */
@@ -55851,6 +55895,37 @@ export interface components {
             rows: components["schemas"]["TeamMarginceChangeRow"][];
             /** @description True when more rows exist than were returned. The groups are never cut. */
             truncated: boolean;
+            /**
+             * @description Open deals Margince leaves alone because they have no live owner: no owner, or an
+             *     owner who left, is invited, suspended or archived. Every such deal the nightly check
+             *     skips, read under the caller's row scope, the largest value first, at most 200. They
+             *     wait for somebody to assign an owner; this list does not follow `since`.
+             */
+            ownerless: components["schemas"]["TeamMarginceOwnerlessDeal"][];
+            /** @description True when more ownerless deals exist than were returned. */
+            ownerless_truncated: boolean;
+        };
+        TeamMarginceOwnerlessDeal: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /**
+             * @description `departed_owner` left; `inactive_owner` is invited, suspended or archived.
+             * @enum {string}
+             */
+            reason: "no_owner" | "departed_owner" | "inactive_owner";
+            /**
+             * Format: uuid
+             * @description The owner who is not live; absent for an unowned deal.
+             */
+            owner_id?: string;
+            /** @description The name of the owner who is not live; absent for an unowned deal or an archived owner. */
+            owner_name?: string;
+            /**
+             * Format: int64
+             * @description The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate, or the caller's mask withholds it.
+             */
+            value_base_minor?: number;
         };
         UndoMarginceChangeItem: {
             /** Format: uuid */
@@ -55899,11 +55974,34 @@ export interface components {
              * @description The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
              */
             value_base_minor: number;
+            /**
+             * Format: int64
+             * @description How much value these changes moved, in the base currency's minor units. Each deal's
+             *     changes of this kind net out first and the group adds the size of each net move.
+             *     An amount change moves its difference; a close as lost takes the deal's value out
+             *     of the pipeline and an opened or revived deal puts it in; a probability change or a
+             *     stage move moves the amount times the change in win probability; a close date moves
+             *     nothing. Each move is valued from the deal as it stood when the change was made, so
+             *     a later edit does not rewrite it. An undone change adds nothing. A deal whose move
+             *     cannot be valued adds nothing and counts in `unvalued`.
+             */
+            value_moved_base_minor: number;
+            /**
+             * @description Of these deals, how many moved a value this total leaves out: the amount is masked
+             *     for the caller, no exchange rate is stored, or a probability change was written
+             *     before Margince kept the amount it was valued from.
+             */
+            unvalued: number;
         };
         TeamMarginceChangeRow: {
             /** Format: uuid */
             owner_id: string;
             change: components["schemas"]["Receipt"];
+            /**
+             * Format: int64
+             * @description The value this change moved, signed, as the group counts it. Absent for a change that moves no value or one the caller may not price.
+             */
+            value_moved_base_minor?: number;
         };
         /**
          * @description Whether this change can be taken back, and why not when it cannot.

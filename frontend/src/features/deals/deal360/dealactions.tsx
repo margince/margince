@@ -214,6 +214,7 @@ export function DealActions({
         <VerbWord word={t("record.verb.call")} label={t("log.kindCall")} />
       </Button>
       <DealBookMeeting
+        dealId={deal.id}
         companyId={deal.company_id ?? undefined}
         allowed={!logPending && !logRefused}
         pending={logPending}
@@ -317,11 +318,13 @@ export function DealActions({
 // Meet books with one of the account's contacts, through that contact's own
 // booking screen. A deal on no company has nobody to book with yet.
 function DealBookMeeting({
+  dealId,
   companyId,
   allowed,
   pending,
   reasonId,
 }: Readonly<{
+  dealId: string;
   companyId?: string;
   allowed: boolean;
   pending: boolean;
@@ -356,7 +359,10 @@ function DealBookMeeting({
       search={(term) => searchCompanyContacts(companyId, term)}
       onPick={(contact, done) => {
         done();
-        navigate({ screen: "book", id: `contact-${contact.id}` });
+        navigate(
+          { screen: "book", id: `contact-${contact.id}` },
+          new Map([["deal", dealId]]),
+        );
       }}
     />
   );
