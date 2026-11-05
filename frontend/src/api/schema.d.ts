@@ -36280,6 +36280,13 @@ export interface components {
              * @enum {string}
              */
             readonly win_probability_source?: "stage" | "human" | "margince";
+            /**
+             * Format: uuid
+             * @description The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
+             */
+            readonly win_probability_set_by_user_id?: string | null;
+            /** @description The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability. */
+            readonly win_probability_set_by_name?: string | null;
             /** @description The probability of the deal's current stage, so a client can show it beside a probability set on the deal. */
             readonly stage_win_probability?: number;
             /**

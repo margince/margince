@@ -27324,6 +27324,16 @@ components:
           readOnly: true
           description: >-
             Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+        win_probability_set_by_user_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
+        win_probability_set_by_name:
+          type: [string, 'null']
+          readOnly: true
+          description: The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
         stage_win_probability:
           type: integer
           minimum: 0

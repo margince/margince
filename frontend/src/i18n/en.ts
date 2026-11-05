@@ -5711,6 +5711,8 @@ export const en = {
   "deal.winProbability.invalid": "Enter a whole number from 0 to 100.",
   "deal.winProbability.source.stage": "from the stage",
   "deal.winProbability.source.human": "set by hand",
+  "deal.winProbability.source.you": "set by you",
+  "deal.winProbability.source.colleague": "set by {name}",
   "deal.winProbability.source.margince": "lowered by Margince",
   "deal.winProbability.stageValue": "stage {percent}",
   "deal.winProbability.setByStage":

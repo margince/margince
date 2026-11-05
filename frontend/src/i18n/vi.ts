@@ -5584,6 +5584,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.invalid": "Nhập một số nguyên từ 0 đến 100.",
   "deal.winProbability.source.stage": "theo giai đoạn",
   "deal.winProbability.source.human": "đặt thủ công",
+  "deal.winProbability.source.you": "do bạn đặt",
+  "deal.winProbability.source.colleague": "do {name} đặt",
   "deal.winProbability.source.margince": "do Margince hạ xuống",
   "deal.winProbability.stageValue": "giai đoạn {percent}",
   "deal.winProbability.setByStage":

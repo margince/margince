@@ -67,6 +67,9 @@ type CloseLostInput struct {
 	StillDue func(ctx context.Context, tx pgx.Tx) (bool, error)
 	// Record writes the entry on the deal's timeline, in the close's transaction.
 	Record func(ctx context.Context, tx pgx.Tx, correction ids.UUID) error
+	// AsOwner binds the owner's agent as of the close's transaction, so a
+	// role change or suspension that committed before the close stops it.
+	AsOwner OwnerAuthorityTx
 }
 
 // CloseAsLost closes one open deal as lost for its owner, and reports whether
@@ -82,33 +85,44 @@ func (s *Store) CloseAsLost(ctx context.Context, in CloseLostInput) (bool, error
 	}
 	var closed bool
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		due, err := s.closeStillDue(ctx, tx, in)
-		if err != nil || !due {
+		actor, ok, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
+		if err != nil || !ok {
 			return err
 		}
-		lost, code, err := lostStageAndCode(ctx, tx, in)
-		if err != nil || lost.IsZero() {
-			return err
-		}
-		reason := in.Reason
-		// The target is a lost stage, so the move claims no win.
-		moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
-			ToStageID: lost, LostReason: &reason, LostReasonCode: code, WonWithoutContractReason: nil,
-			auditEvidence: map[string]any{
-				"basis": in.Reason, "basis_owner": in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
-			},
-		}, active)
-		if err != nil {
-			return err
-		}
-		correction, err := recordStageCorrection(ctx, tx, in.DealID, moved, CloseLostCorrection)
-		if err != nil {
-			return err
-		}
-		closed = true
-		return in.Record(ctx, tx, correction)
+		closed, err = s.closeAsLostTx(actor, tx, in, active)
+		return err
 	})
 	return closed, err
+}
+
+func (s *Store) closeAsLostTx(ctx context.Context, tx pgx.Tx, in CloseLostInput, active []fieldcatalog.Column) (bool, error) {
+	due, err := s.closeStillDue(ctx, tx, in)
+	if err != nil || !due {
+		return false, err
+	}
+	lost, code, err := lostStageAndCode(ctx, tx, in)
+	if err != nil || lost.IsZero() {
+		return false, err
+	}
+	reason := in.Reason
+	// The target is a lost stage, so the move claims no win.
+	moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
+		ToStageID: lost, LostReason: &reason, LostReasonCode: code, WonWithoutContractReason: nil,
+		auditEvidence: map[string]any{
+			"basis": in.Reason, "basis_owner": in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
+		},
+	}, active)
+	if err != nil {
+		return false, err
+	}
+	correction, err := recordStageCorrection(ctx, tx, in.DealID, moved, CloseLostCorrection)
+	if err != nil {
+		return false, err
+	}
+	if err := in.Record(ctx, tx, correction); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // CorrectionKindEvidenceKey names, in a Margince change's audit evidence, which

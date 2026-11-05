@@ -140,6 +140,7 @@ func (s *Store) revertCorrectionTx(
 	if correction.AcceptedAt != nil {
 		return correction, &CorrectionReversalError{Reason: AlreadyAccepted}
 	}
+	evidence = reversalEvidence(evidence, correction.ID)
 	switch correction.Correction {
 	case CloseLostCorrection:
 		err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, closeMovedSince)
