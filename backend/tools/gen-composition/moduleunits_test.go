@@ -316,27 +316,36 @@ func TestAForkMayDeclareItsOwnModulePath(t *testing.T) {
 }
 
 func TestAForkClaimingACoreOrTakenPathIsRefused(t *testing.T) {
-	for name, files := range map[string]map[string]string{
+	for name, tc := range map[string]struct {
+		files map[string]string
+		want  string
+	}{
 		"a core module": {
-			"instance/go.mod": "module i\n\nrequire example.test/acme/crm v1.2.0\n\n" +
-				"replace example.test/acme/crm v1.2.0 => github.com/margince/margince/backend v1.2.1\n",
-			"build/extensions/crm/go.mod": "module github.com/margince/margince/backend\n",
-			"build/extensions/crm/crm.go": "package crm\n",
+			files: map[string]string{
+				"instance/go.mod": "module i\n\nrequire example.test/acme/crm v1.2.0\n\n" +
+					"replace example.test/acme/crm v1.2.0 => github.com/margince/margince/backend v1.2.1\n",
+				"build/extensions/crm/go.mod": "module github.com/margince/margince/backend\n",
+				"build/extensions/crm/crm.go": "package crm\n",
+			},
+			want: "one of core's own",
 		},
 		"another unit's path": {
-			"instance/go.mod": "module i\n\nrequire (\n\texample.test/acme/crm v1.2.0\n\texample.test/acme/notes v0.0.0\n)\n\n" +
-				"replace example.test/acme/crm v1.2.0 => example.test/acme/notes v1.2.1\n" +
-				"replace example.test/acme/notes => ./notes\n",
-			"build/extensions/crm/go.mod": "module example.test/acme/notes\n",
-			"build/extensions/crm/crm.go": "package crm\n",
-			"instance/notes/go.mod":       "module example.test/acme/notes\n",
-			"instance/notes/notes.go":     "package notes\n",
+			files: map[string]string{
+				"instance/go.mod": "module i\n\nrequire (\n\texample.test/acme/crm v1.2.0\n\texample.test/acme/notes v0.0.0\n)\n\n" +
+					"replace example.test/acme/crm v1.2.0 => example.test/acme/notes v1.2.1\n" +
+					"replace example.test/acme/notes => ./notes\n",
+				"build/extensions/crm/go.mod": "module example.test/acme/notes\n",
+				"build/extensions/crm/crm.go": "package crm\n",
+				"instance/notes/go.mod":       "module example.test/acme/notes\n",
+				"instance/notes/notes.go":     "package notes\n",
+			},
+			want: `both declare module "example.test/acme/notes"`,
 		},
 	} {
 		root := t.TempDir()
-		writeTree(t, root, files)
-		if _, err := scanExtensions(root); err == nil {
-			t.Errorf("%s: a fork declaring %s was accepted; the workspace cannot hold it twice", name, name)
+		writeTree(t, root, tc.files)
+		if _, err := scanExtensions(root); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: err = %v, want the collision refused with %q", name, err, tc.want)
 		}
 	}
 }
