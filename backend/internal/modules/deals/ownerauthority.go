@@ -17,6 +17,8 @@ import (
 // OwnerAuthorityTx binds the principal a Margince write acts as for a deal's
 // owner, with the grants the owner holds in tx. An owner who is no longer a
 // live member answers apperrors.ErrNotFound. Members are not this module's.
+// Bind it before the write locks a row: the bind waits for authorization
+// changes, and removing a member locks the deals that member owns.
 type OwnerAuthorityTx func(ctx context.Context, tx pgx.Tx) (context.Context, error)
 
 // actAsOwnerNow binds the owner's authority as of tx and asks require of it

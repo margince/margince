@@ -360,11 +360,23 @@ func usersMatching(ctx context.Context, tx pgx.Tx, query string, users []ids.UUI
 // can widen between a check and the write it admits. One installation per
 // database, so one key.
 func lockAuthorization(ctx context.Context, tx pgx.Tx) error {
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('margince:authz')::bigint)`); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(`+authorizationLockKey+`)`); err != nil {
 		return fmt.Errorf("identity: serializing an authorization change: %w", err)
 	}
 	return nil
 }
+
+// lockAuthorizationShared holds the same lock in shared mode until commit. Reads
+// that admit a write run side by side, and an authorization change waits until
+// the writes they admitted commit.
+func lockAuthorizationShared(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock_shared(`+authorizationLockKey+`)`); err != nil {
+		return fmt.Errorf("identity: holding authority steady for a write: %w", err)
+	}
+	return nil
+}
+
+const authorizationLockKey = `hashtext('margince:authz')::bigint`
 
 // administrationObjects are the grants that reach back and change who may do
 // what. Handing one out is handing out authority; handing out record work is
