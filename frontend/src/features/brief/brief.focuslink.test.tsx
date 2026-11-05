@@ -34,6 +34,11 @@ it("opens the named row beside the day, and closing clears the address", async (
   expect(
     within(dialog).getByRole("heading", { name: en["brief.focus.context"] }),
   ).toBeTruthy();
+  // m2 is the prepared meeting; only m1 carries the unprepared reason.
+  expect(dialog.textContent).toContain(en["worklist.ask.meeting"]);
+  expect(dialog.textContent).not.toContain(
+    en["worklist.because.meeting_unprepared"],
+  );
 
   await user.keyboard("{Escape}");
   await waitFor(() => expect(window.location.hash).not.toContain("focus="));
