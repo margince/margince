@@ -518,9 +518,9 @@ jobs:
       # and breaks cache-warm's save hours later. Here it fails the PR that
       # adds it. On this job because it finishes minutes before
       # deterministic-gates, so the census's uncached pass adds no wall clock.
-      # One leg runs it, since it reads no lint output.
+      # It reads no lint output, so only the strict leg, the shorter one, runs it.
       - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() && matrix.pass == 'baseline' }}
+        if: ${{ !cancelled() && matrix.pass == 'strict' }}
         working-directory: .
         run: make test-input-census
 
