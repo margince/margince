@@ -13,7 +13,7 @@ import (
 )
 
 // PresentationVersion pins queued markup independently of published wording.
-const PresentationVersion = 4
+const PresentationVersion = 5
 
 // Message holds approved words. Text remains the readable fallback verbatim.
 type Message struct {
@@ -30,10 +30,13 @@ type Message struct {
 // installation's own company. LogoContentID, when set, names the inline image
 // part the send attaches, and the logo stands in for the name. Attribution is
 // a small line under either, the localized "Powered by Margince".
+// MarkContentID names the attached Margince mark, drawn when the mail speaks
+// as Margince itself.
 type Letterhead struct {
 	Name          string
 	Attribution   string
 	LogoContentID string
+	MarkContentID string
 }
 
 // Render escapes all supplied text. Only standalone web destinations become links.
@@ -90,14 +93,14 @@ func document(language, preheader, card string) string {
 // when the send attaches one, else a brand tile with its initials beside the
 // name. The attribution, when given, is a muted line under either.
 func header(head Letterhead) string {
-	name := strings.TrimSpace(head.Name)
-	if name == "" {
-		name = "Margince"
-	}
+	name := letterheadName(head)
 	band := look{edge: borderSubtle}.attrs("padding:22px 32px;border-bottom:1px solid", "pad")
 	mark := LetterheadName(name)
-	if head.LogoContentID != "" {
+	switch {
+	case head.LogoContentID != "":
 		mark = letterheadLogo(name, head.LogoContentID)
+	case head.UsesBrandMark() && head.MarkContentID != "":
+		mark = letterheadMark(name, head.MarkContentID)
 	}
 	if attribution := strings.TrimSpace(head.Attribution); attribution != "" {
 		mark += `<div` + look{ink: textSecondary}.attrs("margin-top:6px;font:"+bodySmall.font()) + `>` + html.EscapeString(attribution) + `</div>`
@@ -105,11 +108,27 @@ func header(head Letterhead) string {
 	return `<tr><td` + band + `>` + mark + `</td></tr>`
 }
 
+func letterheadName(head Letterhead) string {
+	if name := strings.TrimSpace(head.Name); name != "" {
+		return name
+	}
+	return "Margince"
+}
+
 // LetterheadName is the name-only letterhead: a brand tile with the name's
 // initials beside the name.
 func LetterheadName(name string) string {
 	tile := `<td width="24" height="24" align="center" valign="middle"` + look{ink: textOnAccentControl, fill: accent}.attrs("width:24px;height:24px;border-radius:6px;font:"+headingXXSmall.font()) + `>` + html.EscapeString(initials(name)) + `</td>`
 	return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>` + tile +
+		`<td valign="middle"` + look{ink: textPrimary}.attrs("padding-left:10px;font:"+wordmark.font()) + `>` + html.EscapeString(name) + `</td></tr></table>`
+}
+
+// letterheadMark is the Margince mark beside the wordmark. The mark is its
+// own green tile, so it reads on a light and a dark client alike; the alt
+// text is empty because the wordmark beside it already says the name.
+func letterheadMark(name, contentID string) string {
+	mark := `<td width="28" valign="middle"><img src="cid:` + html.EscapeString(contentID) + `" alt="" width="28" height="28" style="display:block;width:28px;height:28px;border:0"></td>`
+	return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>` + mark +
 		`<td valign="middle"` + look{ink: textPrimary}.attrs("padding-left:10px;font:"+wordmark.font()) + `>` + html.EscapeString(name) + `</td></tr></table>`
 }
 

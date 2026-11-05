@@ -65,13 +65,27 @@ func routineFooterContent(base string, words mailcopy.Copy) emailview.Content {
 	return content
 }
 
+// writeMailItemLink links every row: a row that is itself the work (a task,
+// a meeting, its outcome) opens on Home, any other its record page, and a
+// row with neither opens on Home as well.
 func writeMailItemLink(body *emailview.Content, item crmcontracts.WorklistItem, base string, words mailcopy.Copy) {
-	if item.Subject == nil {
-		return
+	fragment := ""
+	if item.Subject != nil && !opensOnHome(item.Source) {
+		fragment = mailcopy.RecordFragment(string(item.Subject.Type), item.Subject.Id.String())
 	}
-	fragment := mailcopy.RecordFragment(string(item.Subject.Type), item.Subject.Id.String())
-	if fragment != "" {
-		body.ItemAction(words.MailReview, mailcopy.Destination(base, fragment))
+	if fragment == "" {
+		fragment = mailcopy.WorkItemFragment(string(item.Source), item.Id)
+	}
+	body.ItemAction(words.MailReview, mailcopy.Destination(base, fragment))
+}
+
+// opensOnHome names the rows whose id is an activity with no page of its own.
+func opensOnHome(source crmcontracts.WorklistItemSource) bool {
+	switch source {
+	case crmcontracts.WorklistItemSourceTask, crmcontracts.WorklistItemSourceMeeting, crmcontracts.WorklistItemSourceMeetingOutcome:
+		return true
+	default:
+		return false
 	}
 }
 

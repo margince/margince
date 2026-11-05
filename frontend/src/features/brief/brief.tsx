@@ -37,6 +37,7 @@ import {
 } from "../worklist/worklist.queries";
 import { readerTask } from "../worklist/worklist.reader";
 import { changedSinceBrief } from "./brief.changed";
+import { FOCUS_PARAM, focusKey } from "./brief.focuslink";
 import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
 import { briefDay } from "./brief.facts";
@@ -208,9 +209,15 @@ function PersonalMorning({
   const [params] = useUrlParams();
   const update = useTaskUpdate([worklistKey]);
   const day = briefDay(query.data?.pages);
-  const context = day?.focus?.items.find(
-    (item) => `${item.source}-${item.id}` === selected,
-  );
+  // A row named by the address opens as a click on it does; mail links there.
+  const linkedFocus = params.get(FOCUS_PARAM);
+  const shown = selected || linkedFocus;
+  const context = shown
+    ? [
+        ...(day?.focus?.items ?? []),
+        ...(query.data?.pages.flatMap((page) => page.queue) ?? []),
+      ].find((item) => focusKey(item) === shown)
+    : undefined;
   // A task named by the address, as a reminder notification opens it. It
   // opens whether or not the day lists it, and writes only where a row the
   // reader holds offers `complete`.
@@ -250,7 +257,7 @@ function PersonalMorning({
           <>
             <BriefFeed
               day={day}
-              onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+              onContext={(item) => setSelected(focusKey(item))}
               state={state}
               changed={changedSinceBrief(day)}
               refreshFailed={query.isRefetchError}
@@ -321,7 +328,10 @@ function PersonalMorning({
         <FocusDetails
           item={context}
           update={update}
-          onClose={() => setSelected("")}
+          onClose={() => {
+            setSelected("");
+            if (linkedFocus) replaceDial(FOCUS_PARAM, undefined);
+          }}
         />
       )}
     </>
