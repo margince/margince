@@ -59,7 +59,9 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 if [[ -z "${GOLANGCI_LINT_CACHE:-}" ]]; then
   # cksum, not shasum: POSIX, present everywhere this runs. The basename rides
   # along so a human listing the cache directory can tell the partitions apart.
-  export GOLANGCI_LINT_CACHE="$HOME/.cache/golangci-lint/$(basename "$root")-$(printf '%s' "$root" | cksum | cut -d' ' -f1)"
+  # GOLANGCI_CACHE_PASS splits one checkout's cache per pass: `make check` runs
+  # the baseline and strict passes at once, and this wrapper turns off the lock.
+  export GOLANGCI_LINT_CACHE="$HOME/.cache/golangci-lint/$(basename "$root")-$(printf '%s' "$root" | cksum | cut -d' ' -f1)${GOLANGCI_CACHE_PASS:+-$GOLANGCI_CACHE_PASS}"
 fi
 
 # Prefer the version-pinned install from `make tools` over whatever is on PATH,
