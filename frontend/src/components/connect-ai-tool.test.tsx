@@ -339,7 +339,30 @@ describe("the picker's marks", () => {
     await user.click(
       await screen.findByRole("combobox", { name: "Which AI do you use?" }),
     );
-    const claude = await screen.findByRole("option", { name: "Claude" });
-    expect(claude.querySelector('svg [fill="#D97757"]')).toBeTruthy();
+    const expected = [
+      ["Claude", "claude"],
+      ["ChatGPT / Codex", "openai"],
+      ["Copilot", "github-copilot"],
+      ["Gemini", "gemini"],
+      ["Cursor", "cursor"],
+      ["Another AI tool", "other"],
+    ];
+    for (const [name, mark] of expected) {
+      const option = await screen.findByRole("option", { name });
+      const shown = option.querySelector("svg");
+      if (plain.has(mark)) {
+        expect(shown?.classList.contains("lucide")).toBe(true);
+        return;
+      }
+      const { container } = render(<ProviderMark providerKey={mark} />);
+      const own = container.querySelector("svg.provider-mark");
+      expect(shown?.innerHTML).toBe(own?.innerHTML);
+    }
+    expect(screen.getAllByRole("option")).toHaveLength(expected.length);
+  });
+
+  it("keeps the fallback for a provider key an object inherits", () => {
+    const { container } = render(<ProviderMark providerKey="constructor" />);
+    expect(container.querySelector("svg.lucide")).toBeTruthy();
   });
 });

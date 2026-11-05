@@ -299,7 +299,10 @@ export function ProviderMark({
       </svg>
     );
   }
-  const mark = AI_MARKS[providerKey];
+  // An own-key check: a custom provider named "constructor" keeps the fallback.
+  const mark = Object.hasOwn(AI_MARKS, providerKey)
+    ? AI_MARKS[providerKey]
+    : undefined;
   if (mark) {
     return (
       <svg
