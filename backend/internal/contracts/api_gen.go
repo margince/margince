@@ -58940,7 +58940,7 @@ type ScheduledSend struct {
 	// `followup_settled` — the recorded request was answered or completed after scheduling.
 	// `meeting_canceled` — the meeting named as follow-up evidence was canceled.
 	// `recipient_stopped` — a recipient stopped marketing after a marketing message was scheduled.
-	// `recipient_replied` — a recipient wrote to us after a deal follow-up or quote was scheduled.
+	// `recipient_replied` — new mail came in from a recipient after a deal follow-up or quote was scheduled: on its own thread for a scheduled reply, from any thread for a new message.
 	HeldReason *ScheduledSendHeldReason `json:"held_reason,omitempty"`
 
 	// HtmlBody The frozen markup beside `body`, so an edit keeps the formatting. Absent on a plain message.
@@ -59005,7 +59005,7 @@ type ScheduledSend struct {
 // `followup_settled` — the recorded request was answered or completed after scheduling.
 // `meeting_canceled` — the meeting named as follow-up evidence was canceled.
 // `recipient_stopped` — a recipient stopped marketing after a marketing message was scheduled.
-// `recipient_replied` — a recipient wrote to us after a deal follow-up or quote was scheduled.
+// `recipient_replied` — new mail came in from a recipient after a deal follow-up or quote was scheduled: on its own thread for a scheduled reply, from any thread for a new message.
 type ScheduledSendHeldReason string
 
 // ScheduledSendStatus `scheduled`: waiting; the rep may move or cancel it.

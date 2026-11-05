@@ -18134,7 +18134,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sched.held.recipientStopped":
     "Jemand unter den Empfangenden hat nach der Planung Werbung gestoppt. An diese Adresse wird sie nicht gesendet.",
   "sched.held.recipientReplied":
-    "Jemand unter den Empfangenden hat nach der Planung geantwortet. Lies die Antwort, bevor du dieses Follow-up sendest.",
+    "Nach der Planung kam neue Mail von jemandem unter den Empfangenden. Lies sie, bevor du dieses Follow-up sendest.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",

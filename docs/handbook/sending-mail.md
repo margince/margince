@@ -299,7 +299,7 @@ reason says which, and what to do:
 
 - **A recipient withdrew their consent** after you set the send.
 - **A recipient stopped marketing** after you scheduled a marketing message. It is held at once.
-- **A recipient replied** after you scheduled a deal follow-up or a quote. Read the reply first.
+- **New mail came in from a recipient** after you scheduled a deal follow-up or a quote. Read it first.
 - **Your seat or mailbox changed**, so it cannot be sent as you.
 - **Its send time passed** while the system was not running, and it is now too late to send. Reschedule or withdraw it.
 - **The send job ran out of attempts.** Reschedule it to try again.

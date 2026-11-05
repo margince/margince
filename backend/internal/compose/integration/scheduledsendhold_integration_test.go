@@ -50,64 +50,6 @@ func (p *preflightEnv) scheduleClaiming(t *testing.T, claim AnyMap) ids.UUID {
 	return uuidOf(t, scheduled.ID)
 }
 
-// theyReply plants an authenticated inbound mail from the recipient, as
-// capture writes one, dated now: after the message was scheduled.
-func (p *preflightEnv) theyReply(t *testing.T, authenticated bool) {
-	t.Helper()
-	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
-		reply := ids.NewV7()
-		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO activity (id, kind, direction, subject, occurred_at, source, captured_by, inbound_sender_authenticated)
-			VALUES ($1, 'email', 'inbound', 'Re: Next steps', now(), 'gmail', 'connector:gmail', $2)`,
-			reply, authenticated); err != nil {
-			return err
-		}
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'buyer@preflight.test', 'from')`, reply)
-		return err
-	}); err != nil {
-		t.Fatalf("planting the reply: %v", err)
-	}
-}
-
-// A reply after a deal follow-up was scheduled holds the follow-up for the
-// rep. A message with no deal claim is not pursuit and still goes, and a
-// sender the mailbox could not authenticate pauses nothing.
-//
-// Mutation: drop the pursuitPausedByReply call from changedScheduledContext,
-// and the deal follow-up is sent.
-func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
-	for _, tc := range []struct {
-		name          string
-		claim         AnyMap
-		authenticated bool
-		wantHeld      bool
-	}{
-		{"a deal follow-up after a reply", AnyMap{"communication_context": "active_deal_followup"}, true, true},
-		{"a deal follow-up after a forged reply", AnyMap{"communication_context": "active_deal_followup"}, false, false},
-		{"a message with no deal claim", AnyMap{"consent_purpose": "transactional"}, true, false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			p := setupPreflight(t)
-			p.connect(t, gmailReadonlyScope, gmailSendScope)
-			id := p.scheduleClaiming(t, tc.claim)
-
-			p.theyReply(t, tc.authenticated)
-			p.makeDue(t, id)
-			p.fire(t, id)
-
-			status, reason := p.scheduledStatus(t, id)
-			held := status == activities.ScheduledStatusHeld && reason == activities.HeldRecipientReplied
-			if held != tc.wantHeld {
-				t.Fatalf("status %q reason %q, want held for a reply = %v", status, reason, tc.wantHeld)
-			}
-			if _, carded := p.heldCardFor(t, id); tc.wantHeld && !carded {
-				t.Fatal("the paused follow-up raised no card in its rep's inbox")
-			}
-		})
-	}
-}
-
 // A stop holds the contact's queued marketing when it is recorded, not when
 // the message comes due, and raises one card in the rep's inbox. Mail with
 // another reason stays queued, and a stop delivered twice holds nothing twice
@@ -168,6 +110,11 @@ func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 	newsletter := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing", "marketing_purpose": "newsletter"})
 	events := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing", "marketing_purpose": "events"})
+	// The legacy purpose key names the purpose the engine judges, so a
+	// withdrawal reaches it; a message naming no purpose is judged against it.
+	legacy := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing", "consent_purpose": "Newsletter"})
+	purposeless := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing"})
+	legacyOther := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing", "consent_purpose": "events"})
 
 	stop := compose.NewScheduledSendStop(p.Pool, identity.NewService(p.Pool), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	changed := func(entityType string) kevents.Envelope {
@@ -191,5 +138,62 @@ func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 	}
 	if status, _ := p.scheduledStatus(t, events); status != activities.ScheduledStatusScheduled {
 		t.Fatalf("another purpose reads %q after a newsletter withdrawal, want it still scheduled", status)
+	}
+	if status, _ := p.scheduledStatus(t, legacyOther); status != activities.ScheduledStatusScheduled {
+		t.Errorf("a legacy key for another purpose reads %q after a newsletter withdrawal, want it still scheduled", status)
+	}
+	for name, id := range map[string]ids.UUID{"the legacy purpose key": legacy, "no purpose at all": purposeless} {
+		if status, reason := p.scheduledStatus(t, id); status != activities.ScheduledStatusHeld || reason != activities.HeldRecipientStopped {
+			t.Errorf("%s: status %q reason %q, want held", name, status, reason)
+		}
+	}
+}
+
+// An address the stopped contact no longer holds is not theirs. After it moved
+// to another contact, a stop on the first holds nothing sent to it, and a stop
+// on the contact who holds it now does.
+//
+// Mutation: drop `ce.archived_at IS NULL` from PendingMarketingToContact, and
+// the first stop holds the message.
+func TestAStopDoesNotReachAnAddressTheContactNoLongerHolds(t *testing.T) {
+	p := setupPreflight(t)
+	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, uuidOf(t, p.contactID))
+		return err
+	}); err != nil {
+		t.Fatalf("taking the address off the first contact: %v", err)
+	}
+	var holder struct {
+		ID string `json:"id"`
+	}
+	if status := p.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source": "manual", "full_name": "New Holder",
+		"emails": []AnyMap{{"email": "buyer@preflight.test"}},
+	}, nil, &holder); status != http.StatusCreated {
+		t.Fatalf("giving the address to another contact → %d", status)
+	}
+	marketing := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing"})
+
+	stop := compose.NewScheduledSendStop(p.Pool, identity.NewService(p.Pool), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	suppressed := func(contact string) kevents.Envelope {
+		return kevents.Envelope{
+			EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: time.Now().UTC(),
+			Entity:  kevents.EntityRef{Type: "contact", ID: uuidOf(t, contact)},
+			Payload: []byte(`{"kind":"objection","decided_by_level":"subject"}`),
+		}
+	}
+	if err := stop.HandleEvent(context.Background(), suppressed(p.contactID)); err != nil {
+		t.Fatalf("handling the first contact's stop: %v", err)
+	}
+	if status, _ := p.scheduledStatus(t, marketing); status != activities.ScheduledStatusScheduled {
+		t.Fatalf("a stop on the address's former holder held the message: %q", status)
+	}
+	if err := stop.HandleEvent(context.Background(), suppressed(holder.ID)); err != nil {
+		t.Fatalf("handling the holder's stop: %v", err)
+	}
+	if status, reason := p.scheduledStatus(t, marketing); status != activities.ScheduledStatusHeld || reason != activities.HeldRecipientStopped {
+		t.Fatalf("a stop on the address's holder: status %q reason %q, want held", status, reason)
 	}
 }

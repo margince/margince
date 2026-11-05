@@ -17999,7 +17999,7 @@ export const en = {
   "sched.held.recipientStopped":
     "A recipient stopped marketing after you scheduled this. It will not send to them.",
   "sched.held.recipientReplied":
-    "A recipient replied after you scheduled this follow-up. Read the reply before you send it.",
+    "New mail came in from a recipient after you scheduled this follow-up. Read it before you send this.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",
