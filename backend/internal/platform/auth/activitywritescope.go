@@ -103,7 +103,7 @@ func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live 
 		if !live {
 			return apperrors.ErrNotFound
 		}
-		return refuseRow(ctx, "activity")
+		return refuseRowChange(ctx, "activity")
 	}
 	return nil
 }

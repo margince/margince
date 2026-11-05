@@ -133,8 +133,10 @@ func assertRunsRenderEveryOutcomeWithItsTrace(t *testing.T, e *apptest.AppEnv, a
 
 	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "applied", Trigger: ids.NewV7(), Planned: &actionTrace, Applied: &actionTrace, At: base})
 	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "failed", Trigger: ids.NewV7(), Detail: reason("provider error"), At: base.Add(time.Minute)})
-	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "requires_approval", Trigger: ids.NewV7(), Planned: &actionTrace,
-		Detail: reason("staged as approval " + ids.NewV7().String() + "; awaiting the human decision"), At: base.Add(2 * time.Minute)})
+	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{
+		Automation: autoID, Status: "requires_approval", Trigger: ids.NewV7(), Planned: &actionTrace,
+		Detail: reason("staged as approval " + ids.NewV7().String() + "; awaiting the human decision"), At: base.Add(2 * time.Minute),
+	})
 
 	var page automationRunsPage
 	if status := e.Call(t, "GET", "/v1/automations/"+autoID+"/runs", nil, nil, &page); status != http.StatusOK {

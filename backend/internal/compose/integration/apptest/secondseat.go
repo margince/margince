@@ -35,7 +35,7 @@ func (e *AppEnv) AsSecondSeat(t *testing.T, email, password string) *AppEnv {
 	t.Cleanup(own.CloseIdleConnections)
 	seat.Client = &http.Client{Transport: forwardedFor{next: own, addr: nextSeatAddr()}, Jar: jar}
 	seat.Owner = connectOwner(t, os.Getenv("MARGINCE_TEST_DSN"))
-	if status := seat.Call(t, "POST", "/v1/auth/login", map[string]any{"email": email, "password": password}, nil, nil); status != http.StatusOK {
+	if status := seat.signIn(t, email, password); status != http.StatusOK {
 		t.Fatalf("signing in as %s → %d", email, status)
 	}
 	return &seat
@@ -78,4 +78,10 @@ func connectOwner(t *testing.T, ownerDSN string) *pgx.Conn {
 		}
 	})
 	return owner
+}
+
+// signIn posts the password sign-in of email on e's client, keeping its cookie.
+func (e *AppEnv) signIn(t *testing.T, email, password string) int {
+	t.Helper()
+	return e.Call(t, "POST", "/v1/auth/login", map[string]any{"email": email, "password": password}, nil, nil)
 }

@@ -256,7 +256,7 @@ func EnsureAttachTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUI
 		return err
 	}
 	if !permitted {
-		return refuseRow(ctx, table)
+		return refuseRowChange(ctx, table)
 	}
 	return nil
 }

@@ -18,7 +18,9 @@ type RoleVerdict int
 const (
 	// VerdictOpen is an answer no gate decided, which a sweep fails on.
 	VerdictOpen RoleVerdict = iota
+	// VerdictAllowed is a call that ran.
 	VerdictAllowed
+	// VerdictRefused is a call a recorded gate stopped.
 	VerdictRefused
 )
 

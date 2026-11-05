@@ -283,7 +283,7 @@ func ensureAssignableSource(ctx context.Context, tx pgx.Tx, table string, id ids
 		return nil
 	}
 	if !unowned {
-		return refuseRow(ctx, table)
+		return refuseRowChange(ctx, table)
 	}
 	// RequireHuman rather than a type comparison: it also refuses a buyer
 	// principal, which is a seat the raw check would have admitted onto the

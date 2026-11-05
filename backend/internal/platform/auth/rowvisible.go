@@ -65,8 +65,8 @@ func HideRow(ctx context.Context, object string) error {
 	return apperrors.ErrNotFound
 }
 
-// refuseRow is a gate's answer to a row the caller sees and may not change.
-func refuseRow(ctx context.Context, table string) error {
+// refuseRowChange is a gate's answer to a row the caller sees and may not change.
+func refuseRowChange(ctx context.Context, table string) error {
 	return RefuseRow(ctx, table, apperrors.ErrPermissionDenied)
 }
 

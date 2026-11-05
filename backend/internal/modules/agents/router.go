@@ -10,9 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
-	"math"
 	"slices"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -191,12 +189,9 @@ func readObjectSchema(owner string, raw json.RawMessage) (objectSchema, error) {
 // refuses a call missing one only it needs. The router may only word an
 // argument for every action at once, never restate its shape.
 func routedSchema(routerName, field string, choices []string, own json.RawMessage, targets []mcp.ToolSpec) (json.RawMessage, error) {
-	schemas := make([]objectSchema, len(targets))
-	for i, target := range targets {
-		var err error
-		if schemas[i], err = readObjectSchema(target.Name, target.InputSchema); err != nil {
-			return nil, err
-		}
+	schemas, err := targetSchemas(targets)
+	if err != nil {
+		return nil, err
 	}
 	properties, required, takers, err := unitedArguments(routerName, field, choices, targets, schemas)
 	if err != nil {
@@ -206,25 +201,10 @@ func routedSchema(routerName, field string, choices []string, own json.RawMessag
 	if err != nil {
 		return nil, err
 	}
-	for name, wording := range routerOwn.Properties {
-		_, known := properties[name]
-		if _, extra := wording[schemaDescription]; len(wording) != 1 || !extra || (!known && name != field) {
-			return nil, fmt.Errorf("router %s may only describe an argument its targets take, and %s is not that", routerName, name)
-		}
-		if known {
-			properties[name][schemaDescription] = wording[schemaDescription]
-		}
+	if err := applyRouterWording(routerName, field, routerOwn, properties); err != nil {
+		return nil, err
 	}
-	for name, choicesTaking := range takers {
-		if _, worded := routerOwn.Properties[name]; !worded && field != "" && len(choicesTaking) < len(choices) {
-			properties[name][schemaDescription] = scopedDescription(choicesTaking, properties[name][schemaDescription])
-		}
-	}
-	for name, arg := range properties {
-		if note := boundNotes(name, choices, schemas); note != "" {
-			arg[schemaDescription] = noted(arg[schemaDescription], note)
-		}
-	}
+	describeArguments(field, choices, schemas, routerOwn, properties, takers)
 	out := map[string]json.RawMessage{}
 	for name, arg := range properties {
 		out[name] = mustMarshal(arg)
@@ -234,6 +214,17 @@ func routedSchema(routerName, field string, choices []string, own json.RawMessag
 		required = append([]string{field}, required...)
 	}
 	return mustMarshal(routedObject{Type: schemaObject, Required: required, Properties: out}), nil
+}
+
+func targetSchemas(targets []mcp.ToolSpec) ([]objectSchema, error) {
+	schemas := make([]objectSchema, len(targets))
+	for i, target := range targets {
+		var err error
+		if schemas[i], err = readObjectSchema(target.Name, target.InputSchema); err != nil {
+			return nil, err
+		}
+	}
+	return schemas, nil
 }
 
 // unitedArguments unites the arguments of a router's targets. Two targets
@@ -261,69 +252,6 @@ func unitedArguments(routerName, field string, choices []string, targets []mcp.T
 		}
 	}
 	return properties, required, takers, nil
-}
-
-// scopedDescription names the choices that take an argument, so a caller
-// learns before the target refuses it that another choice does not.
-func scopedDescription(choicesTaking []string, description json.RawMessage) json.RawMessage {
-	var text string
-	if description != nil && json.Unmarshal(description, &text) != nil {
-		return description
-	}
-	scoped := strings.Join(slices.Sorted(slices.Values(choicesTaking)), ", ") + " only"
-	if text != "" {
-		scoped += ": " + text
-	}
-	return mustMarshal(scoped)
-}
-
-// boundNotes names the choices whose own bound on an argument is tighter than
-// the loosest one the router advertises. Without it the schema promises a value
-// those choices refuse. A choice that sets no bound is the loosest of all, so
-// every bounded choice is then named. It is empty when all choices share a bound.
-func boundNotes(name string, choices []string, schemas []objectSchema) string {
-	var notes []string
-	for _, b := range []struct {
-		member, phrase string
-		sign           float64
-	}{{schemaMaximum, "at most", 1}, {schemaMinimum, "at least", -1}} {
-		byBound := map[float64][]string{}
-		loosest := math.Inf(-1)
-		for i, schema := range schemas {
-			arg, takes := schema.Properties[name]
-			if !takes {
-				continue
-			}
-			bound := math.Inf(1)
-			if raw := arg[b.member]; raw != nil {
-				if err := json.Unmarshal(raw, &bound); err != nil {
-					continue
-				}
-				bound *= b.sign
-				byBound[bound] = append(byBound[bound], choices[i])
-			}
-			loosest = max(loosest, bound)
-		}
-		for _, bound := range slices.Sorted(maps.Keys(byBound)) {
-			if bound < loosest {
-				notes = append(notes, fmt.Sprintf("%s %s for %s", b.phrase, strconv.FormatFloat(bound*b.sign, 'f', -1, 64),
-					strings.Join(slices.Sorted(slices.Values(byBound[bound])), ", ")))
-			}
-		}
-	}
-	return strings.Join(notes, "; ")
-}
-
-// noted appends a note to an argument's description, which may be absent.
-func noted(description json.RawMessage, note string) json.RawMessage {
-	var text string
-	if description != nil && json.Unmarshal(description, &text) != nil {
-		return description
-	}
-	if text = strings.TrimRight(text, "."); text != "" {
-		note = text + "; " + note
-	}
-	return mustMarshal(note + ".")
 }
 
 // uniteArgument is one argument as two targets declare it, ignoring wording.

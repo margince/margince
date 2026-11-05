@@ -365,9 +365,7 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, workspaceName, adminEmai
 	if err := compose.EnsureInstallation(context.Background(), e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), cfg); err != nil {
 		t.Fatalf("bootstrap: %v", err)
 	}
-	if status := e.Call(t, "POST", "/v1/auth/login", map[string]any{
-		"email": adminEmail, "password": operatorSupplied,
-	}, nil, nil); status != http.StatusOK {
+	if status := e.signIn(t, adminEmail, operatorSupplied); status != http.StatusOK {
 		t.Fatalf("login → %d", status)
 	}
 	// A configured bootstrap hands the admin a password the operator chose, and

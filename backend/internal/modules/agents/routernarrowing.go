@@ -74,9 +74,13 @@ func withoutClausesNaming(field json.RawMessage, hidden []string) (json.RawMessa
 	if err := json.Unmarshal(field, &doc); err != nil {
 		return nil, err
 	}
-	var description string
-	if raw, has := doc["description"]; !has || json.Unmarshal(raw, &description) != nil {
+	raw, has := doc["description"]
+	if !has {
 		return field, nil
+	}
+	var description string
+	if err := json.Unmarshal(raw, &description); err != nil {
+		return nil, err
 	}
 	names := namesAny(hidden)
 	clauses := slices.DeleteFunc(clauseEnd.Split(description, -1), names)
