@@ -657,7 +657,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_acquisition_evidence
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+13 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -668,6 +668,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `note` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone` |  |  |
 | `purpose_claimed` | `text` |  |  |
+| `recorded_for_addresses` | `text[]` |  |  |
 | `request_retracted_at` | `timestamp with time zone` |  |  |
 | `request_retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |
@@ -1506,7 +1507,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## legal_entity
 
-29 columns · primary key `(id)` · referenced by 3 foreign keys
+29 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

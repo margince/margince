@@ -424,8 +424,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_analytics` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `change_capture` | 1.00 | 2 | `case82_keep_that_newsletter_out` |
 | `change_attention` | 1.00 | 2 | `case70_clear_my_notices` |
-| `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
+| `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
