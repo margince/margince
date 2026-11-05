@@ -578,7 +578,7 @@ func TestARoutersActionsAreOfferedAtTheTierAColleaguesAgentIsAdmittedOn(t *testi
 
 // A router names only its actions that run at once and need the user's yes. A
 // client asks the user before those, and not before the others.
-func TestARouterAsksTheUserFirstOnlyForActionsItCannotUndo(t *testing.T) {
+func TestARouterAsksTheUserFirstOnlyForItsAskFirstActions(t *testing.T) {
 	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
 	archive := targetSpec("fake_archive", principal.ScopeWrite, mcp.TierAutoExecute)
 	archive.AskUserFirst = true

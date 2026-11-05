@@ -36,13 +36,19 @@ func (s *Store) PurgeStaleMailDrafts(ctx context.Context, limit int) (int, error
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		stale, err := deleteDrafts(ctx, tx, fmt.Sprintf(`id IN (
+		cutoff := arg(s.now().Add(-MailDraftRetention))
+		// The cutoff is asked again of the row the DELETE locks. A draft saved while
+		// the sweep waited on it is fresh again and stays.
+		stale, err := deleteDrafts(ctx, tx, fmt.Sprintf(`updated_at < $%d AND id IN (
 			SELECT id FROM mail_draft WHERE updated_at < $%d ORDER BY updated_at LIMIT $%d)`,
-			arg(s.now().Add(-MailDraftRetention)), arg(limit)), args)
+			cutoff, cutoff, arg(limit)), args)
 		purged = len(stale)
 		return err
 	})
-	return purged, err
+	if err != nil {
+		return 0, err
+	}
+	return purged, nil
 }
 
 // discardComposedDraftTx removes the draft a message was composed in, inside

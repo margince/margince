@@ -13,6 +13,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -460,5 +462,53 @@ func TestAStaleBacklogDeeperThanOnePassDrainsOldestFirst(t *testing.T) {
 		if e.draftExists(t, id) {
 			t.Errorf("draft %s survived the passes that drained the backlog", id)
 		}
+	}
+}
+
+// A draft saved while the sweep waits on it is fresh again, so the sweep leaves it and
+// counts nothing it did not delete.
+func TestTheRetentionSweepLeavesADraftSavedWhileItWaited(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	draft := saveDraft(ctx, t, e, replyAnchor(e.seedAnchor(t, "", "")))
+	if _, err := e.owner.Exec(context.Background(), `UPDATE mail_draft SET updated_at = $2 WHERE id = $1`,
+		draft.ID, draftClock.Add(-MailDraftRetention-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	saver, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := saver.Close(context.Background()); err != nil {
+			t.Errorf("closing the saver: %v", err)
+		}
+	})
+	save, err := saver.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pid int32
+	if err := save.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := save.Exec(context.Background(), `UPDATE mail_draft SET updated_at = $2 WHERE id = $1`, draft.ID, draftClock); err != nil {
+		t.Fatal(err)
+	}
+	system := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
+	returned := make(chan struct{})
+	var purged int
+	var swept error
+	go func() {
+		defer close(returned)
+		purged, swept = draftStore(e).PurgeStaleMailDrafts(system, 10)
+	}()
+	testdb.AwaitQueuedBehind(t, e.owner, pid, 1, returned, "the sweep")
+	if err := save.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	<-returned
+	if swept != nil || purged != 0 || !e.draftExists(t, draft.ID) {
+		t.Errorf("the sweep purged %d (%v), draft kept %v; want the saved draft left and nothing counted", purged, swept, e.draftExists(t, draft.ID))
 	}
 }

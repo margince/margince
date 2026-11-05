@@ -33,8 +33,8 @@ var changeOffersCopy = toolCopy{
 		"offer; record, change, renew, cancel or archive a contract; and run a deal room's documents, " +
 		"access and expiry.",
 	Limits: "Sending an offer fixes its version and its exchange rate from then on. What a buyer reads " +
-		"in a deal room reaches them at once, so inviting them, writing to them, adding or changing a " +
-		"document, editing the room's words, setting its expiry and resuming it are send_outbound's.",
+		"in a deal room reaches them at once, so inviting them or resending their invitation, writing to " +
+		"them, adding, changing or removing a document, editing the room's words, setting its expiry and resuming it are send_outbound's.",
 	Instead: "Use change_record_parts to change an offer's line items, change_state to move the " +
 		"deal itself, and run_research to regenerate an offer.",
 }

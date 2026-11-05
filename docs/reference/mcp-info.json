@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 13,
-    "tool_catalog_bytes": 227184,
+    "tool_catalog_bytes": 227224,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 58110,
+    "approx_wire_tokens_total": 58120,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 54306,
+      "description_bytes": 54346,
       "input_schema_bytes": 113004,
       "output_schema_bytes": 47766,
-      "description_plus_input_schema_bytes": 167310
+      "description_plus_input_schema_bytes": 167350
     }
   },
   "tools": {
@@ -1832,7 +1832,7 @@
           "readOnlyHint": false,
           "title": "Work offers, contracts and deal rooms"
         },
-        "description": "Work the commercial paper around a deal: send, accept, reject or render an offer; record, change, renew, cancel or archive a contract; and run a deal room's documents, access and expiry. Sending an offer fixes its version and its exchange rate from then on. What a buyer reads in a deal room reaches them at once, so inviting them, writing to them, adding or changing a document, editing the room's words, setting its expiry and resuming it are send_outbound's. Use change_record_parts to change an offer's line items, change_state to move the deal itself, and run_research to regenerate an offer. (Runs immediately; the user's yes is needed for the actions archive_contract, archive_room, cancel_contract, reject_offer, send_offer, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Work the commercial paper around a deal: send, accept, reject or render an offer; record, change, renew, cancel or archive a contract; and run a deal room's documents, access and expiry. Sending an offer fixes its version and its exchange rate from then on. What a buyer reads in a deal room reaches them at once, so inviting them or resending their invitation, writing to them, adding, changing or removing a document, editing the room's words, setting its expiry and resuming it are send_outbound's. Use change_record_parts to change an offer's line items, change_state to move the deal itself, and run_research to regenerate an offer. (Runs immediately; the user's yes is needed for the actions archive_contract, archive_room, cancel_contract, reject_offer, send_offer, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {

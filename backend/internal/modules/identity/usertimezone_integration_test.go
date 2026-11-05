@@ -146,8 +146,14 @@ func TestAnAgentRepeatingAZoneTakesOnlyAGuess(t *testing.T) {
 	agent := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:zone", UserID: user, OnBehalfOf: user, PassportID: ids.NewV7(),
 	})
-	if _, err := svc.SaveMyTimezone(ctx, "Europe/Berlin", TimezoneFromBrowser); err != nil {
+	if err := svc.db.Tx(context.Background(), func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE app_user SET timezone = NULL, timezone_chosen = false, timezone_set_by = NULL WHERE id = $1`, user)
+		return err
+	}); err != nil {
 		t.Fatal(err)
+	}
+	if guess, err := svc.SaveMyTimezone(ctx, "Europe/Berlin", TimezoneFromBrowser); err != nil || guess.Timezone != "Europe/Berlin" || guess.TimezoneChosen {
+		t.Fatalf("the browser's guess reads %+v (%v)", guess, err)
 	}
 	seat, err := svc.SaveMyTimezone(agent, "Europe/Berlin", TimezoneFromAgent)
 	if err != nil || seat.TimezoneSetBy == nil || *seat.TimezoneSetBy != "agent:zone" || seat.TimezoneChosen {

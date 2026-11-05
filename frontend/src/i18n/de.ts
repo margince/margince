@@ -12668,7 +12668,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.pausedReason.listInvalid":
     "Pausiert, da der Filter der beobachteten Live-Liste nicht mehr funktioniert. Wenn du den Filter reparierst, läuft die Automatisierung nicht von selbst weiter.",
   "auto.pausedReason.passportRevoked":
-    "Der Agent, der die Regel eingerichtet hat, hat keinen Zugang mehr: Passport abgelaufen oder widerrufen, oder Verbindung beendet. Setze sie fort, dann läuft sie ohne Agenten weiter.",
+    "Der Agent, der die Regel eingerichtet hat, hat keinen Zugang mehr, da sein Passport abgelaufen oder widerrufen wurde oder seine Verbindung beendet wurde. Setze sie fort, dann läuft sie ohne Agenten weiter.",
   "auto.setByYourAgent": "Von deinem Agenten",
   "auto.setByAnAgent": "Von einem Agenten",
   "auto.pausedReason.listUnavailable":

@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // ErrOwnDraftWaiting refuses an agent's draft where the human already keeps
@@ -59,17 +61,18 @@ func (s *Store) saveAgentDraft(ctx context.Context, anchor MailDraftAnchor, draf
 	if err != nil {
 		return MailDraft{}, err
 	}
-	if draft.content, err = s.withWhatTheDraftHolds(ctx, author, anchor, draft); err != nil {
+	namesFiles := draft.content.AttachmentIDs != nil
+	if draft.content, _, err = s.prepareDraft(ctx, anchor, draft.content); err != nil {
 		return MailDraft{}, err
 	}
-	content, files, err := s.prepareDraft(ctx, anchor, draft.content)
-	if err != nil {
-		return MailDraft{}, err
-	}
-	draft.content = content
 	var out MailDraft
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := ensureDraftAnchorVisible(ctx, tx, anchor); err != nil {
+			return err
+		}
+		// What the draft holds is read under the row's lock and written in this same
+		// transaction. An agent save meanwhile then loses nothing this one keeps.
+		if draft.content, err = s.withWhatTheDraftHolds(ctx, tx, author, anchor, draft, namesFiles); err != nil {
 			return err
 		}
 		out, err = upsertAgentMailDraft(ctx, tx, author, anchor, draft)
@@ -78,40 +81,46 @@ func (s *Store) saveAgentDraft(ctx context.Context, anchor MailDraftAnchor, draf
 	if err != nil {
 		return MailDraft{}, err
 	}
-	out.Files = files
+	// The files are judged after the lock is gone, the way every read judges them.
+	if out.Files, err = s.draftFilesOf(ctx, out.Content.AttachmentIDs); err != nil {
+		return MailDraft{}, err
+	}
 	return out, nil
 }
 
-// withWhatTheDraftHolds fills in what a save leaves out from the agent draft already
-// there. New words keep the files, the context and a schedule still to come, and a
-// save that names no files keeps those. prepareDraft then judges the files again, so
-// one the caller can no longer see stays out.
-func (s *Store) withWhatTheDraftHolds(ctx context.Context, author ids.UUID, anchor MailDraftAnchor, draft groundedContent) (MailDraftContent, error) {
+// withWhatTheDraftHolds fills in what new words leave out from the agent draft already
+// there. That is the files as stored, the context and a schedule still to come. It
+// looks up no file while the row is held. A file since hidden or unsendable is left to the read
+// and the send, which judge every file again.
+func (s *Store) withWhatTheDraftHolds(
+	ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, draft groundedContent, namesFiles bool,
+) (MailDraftContent, error) {
 	content := draft.content
-	if content.AttachmentIDs != nil && !draft.newWords {
+	if !draft.newWords {
 		return content, nil
 	}
-	var held MailDraft
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		held, err = scanMailDraft(tx.QueryRow(ctx, `SELECT `+mailDraftColumns+` FROM mail_draft
-			WHERE author_id = $1 AND anchor_type = $2 AND anchor_id = $3 AND agent_drafted`, author, string(anchor.Type), anchor.ID))
-		return err
-	})
-	if errors.Is(err, apperrors.ErrNotFound) {
+	var held MailDraftContent
+	var at *time.Time
+	var tz, claimed *string
+	err := tx.QueryRow(ctx, `SELECT attachment_ids, communication_context, scheduled_at, scheduled_tz FROM mail_draft
+		WHERE author_id = $1 AND anchor_type = $2 AND anchor_id = $3 AND agent_drafted FOR UPDATE`,
+		author, string(anchor.Type), anchor.ID).Scan(&held.AttachmentIDs, &claimed, &at, &tz)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return content, nil
 	}
 	if err != nil {
-		return content, err
+		return content, fmt.Errorf("activities: reading what the draft holds: %w", err)
 	}
-	if content.AttachmentIDs == nil {
-		content.AttachmentIDs = held.Content.AttachmentIDs
+	if !namesFiles {
+		content.AttachmentIDs = held.AttachmentIDs
 	}
-	if draft.newWords {
-		content.Context = held.Content.Context
-		if held.Content.Schedule != nil && held.Content.Schedule.At.After(s.now()) {
-			content.Schedule = held.Content.Schedule
-		}
+	content.Context = ""
+	if claimed != nil {
+		content.Context = commsauthz.Category(*claimed)
+	}
+	content.Schedule = nil
+	if at != nil && tz != nil && at.After(s.now()) {
+		content.Schedule = &SendSchedule{At: *at, TZ: *tz}
 	}
 	return content, nil
 }

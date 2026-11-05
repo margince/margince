@@ -7,6 +7,7 @@ package toolrole
 
 import (
 	"encoding/json"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -50,8 +51,11 @@ func (s sweepSeed) asCallerWhereItMay(method, path string, body integration.AnyM
 	var made struct {
 		ID string `json:"id"`
 	}
-	if status := s.e.Call(s.t, method, path, body, s.pool.caller, &made); status >= 200 && status < 300 {
+	switch status := s.e.Call(s.t, method, path, body, s.pool.caller, &made); {
+	case status >= 200 && status < 300:
 		return made.ID
+	case status != http.StatusForbidden:
+		s.t.Fatalf("seeding %s %s as the call's passport → %d", method, path, status)
 	}
 	s.call(method, path, body, nil, &made)
 	return made.ID

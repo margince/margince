@@ -17,10 +17,10 @@ import (
 // and the source that shows why. The two reads call ai.ReadLane, so an agent without
 // enrich gets the deterministic floor and no model call. draft_email has its own
 // scope, which a passport holds to draft and nothing more.
-var modelVerbsOffEnrich = map[string]struct{ file, proof string }{
-	"getMeetingBrief":  {"internal/compose/meetingbrief/write.go", "ai.ReadLane("},
-	"getDealRoomBrief": {"internal/compose/roombrief/service.go", "ai.ReadLane("},
-	"draftEmail":       {"internal/modules/agents/tools_comms.go", `Name: "draft_email"`},
+var modelVerbsOffEnrich = map[string]struct{ scope, file, proof string }{
+	"getMeetingBrief":  {"read", "internal/compose/meetingbrief/write.go", "ai.ReadLane("},
+	"getDealRoomBrief": {"read", "internal/compose/roombrief/service.go", "ai.ReadLane("},
+	"draftEmail":       {"draft", "internal/modules/agents/tools_comms.go", `Name: "draft_email"`},
 }
 
 // AI work an agent starts spends enrich. The census is the contract's own marker.
@@ -60,6 +60,10 @@ func TestAnAgentVerbThatAlwaysCallsAModelSpendsEnrich(t *testing.T) {
 			if !waived {
 				t.Errorf("%s (%s) always calls a model and an agent reaches it on scope %v, not enrich; "+
 					"move it to scope enrich, on a router that spends enrich", route, op, tool["scope"])
+				continue
+			}
+			if tool["scope"] != named.scope {
+				t.Errorf("%s spends %v, and its reason here holds only for scope %s", op, tool["scope"], named.scope)
 				continue
 			}
 			source, err := os.ReadFile(named.file)

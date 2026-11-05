@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 221.9 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 58110 |
+| Approx. wire tokens | 58120 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,7 +33,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 46.6 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.0 KB | 23% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.1 KB | 23% | Yes, every step |
 | Input schemas | 110.4 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
 | **Description + input schema** | **163.4 KB** | **73%** | **the recurring cost** |
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 811 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 601 |
-| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 549 |
+| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 559 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 472 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1296 |
@@ -2318,12 +2318,13 @@ get it before calling, unless they asked for this call themselves; requires pass
 Work the commercial paper around a deal: send, accept, reject or render an offer; record, change,
 renew, cancel or archive a contract; and run a deal room's documents, access and expiry. Sending an
 offer fixes its version and its exchange rate from then on. What a buyer reads in a deal room
-reaches them at once, so inviting them, writing to them, adding or changing a document, editing the
-room's words, setting its expiry and resuming it are send_outbound's. Use change_record_parts to
-change an offer's line items, change_state to move the deal itself, and run_research to regenerate
-an offer. (Runs immediately; the user's yes is needed for the actions archive_contract,
-archive_room, cancel_contract, reject_offer, send_offer, so tell them what the call will change and
-get it before calling, unless they asked for this call themselves; requires passport scope "write".)
+reaches them at once, so inviting them or resending their invitation, writing to them, adding,
+changing or removing a document, editing the room's words, setting its expiry and resuming it are
+send_outbound's. Use change_record_parts to change an offer's line items, change_state to move the
+deal itself, and run_research to regenerate an offer. (Runs immediately; the user's yes is needed
+for the actions archive_contract, archive_room, cancel_contract, reject_offer, send_offer, so tell
+them what the call will change and get it before calling, unless they asked for this call
+themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>

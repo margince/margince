@@ -55,9 +55,12 @@ func TestASendPassportWritesToTheBuyer(t *testing.T) {
 	d.tool(t, "send_outbound", map[string]any{
 		"as": "reply_room_thread", "id": room, "threadId": thread, "request_body": AnyMap{"body": "One more thing."},
 	})
-	var stamped string
-	if err := d.e.Owner.QueryRow(t.Context(), `SELECT source FROM deal_room_comment WHERE thread_id = $1 ORDER BY created_at DESC LIMIT 1`, thread).Scan(&stamped); err != nil {
+	var stamped, reply string
+	if err := d.e.Owner.QueryRow(t.Context(), `SELECT source, id::text FROM deal_room_comment WHERE thread_id = $1 ORDER BY created_at DESC LIMIT 1`, thread).Scan(&stamped, &reply); err != nil {
 		t.Fatal(err)
+	}
+	if got := actorOfLastAudit(t, d, "deal_room_comment", reply); got != "agent" {
+		t.Errorf("the reply's audit row names %q, want the agent", got)
 	}
 	if stamped != "agent" {
 		t.Errorf("the reply names source %q, want the agent, which named none", stamped)

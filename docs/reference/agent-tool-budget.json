@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39165,
+    "tokens": 39175,
     "median_tool_tokens": 616,
     "mean_tool_tokens": 815
   },
@@ -193,7 +193,7 @@
     },
     {
       "name": "change_offers",
-      "tokens": 549
+      "tokens": 559
     },
     {
       "name": "draft_outbound",

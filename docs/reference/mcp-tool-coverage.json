@@ -4348,7 +4348,7 @@
     },
     {
       "name": "change_offers",
-      "tokens": 549,
+      "tokens": 559,
       "agents": [],
       "required_by_cases": [
         "case71_record_the_signed_contract"
