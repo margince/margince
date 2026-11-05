@@ -44,8 +44,8 @@ export function mayOwnRecords(entry: RosterEntry): boolean {
 
 /**
  * The colleagues the reader may make a record's owner: an active human seat
- * that can write. Every owner picker reads this, so a picker never offers
- * somebody the owner change then refuses.
+ * that can write. Every owner picker reads this, so a picker offers only those
+ * the server admits, bar an older server's unanswered entries.
  */
 export function useRecordOwnerOptions(enabled = true): UserOptions {
   const roster = useRoster("user", enabled);
