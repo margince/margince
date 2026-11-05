@@ -18,14 +18,14 @@ run on every PR. The last two are the role sweep, which runs weekly and with `ma
 - `TestToolsListAgreesWithTheGateForAnOperatorsRoles`, beside it. It holds an operator's own roles'
   `tools/list` to the gate.
 
-The two sweep tests carry `//go:build integration && rolesweep`, so the per-PR lane does not build them. They
-take longer than one shard of that lane may run. `scheduled.yml` runs `make test-roles` every Monday. A red
+The two sweep tests carry `//go:build integration && rolesweep`, so a pull request run does not build them. They
+take longer than one job of that run may take. `scheduled.yml` runs `make test-roles` on a weekly schedule. A red
 weekly run files an issue, and it is a red `main`: claim it first, as
 [claim-a-red-main.md](claim-a-red-main.md) says.
 
 The sweep uses no model and no network, so the author runs it. A PR that adds or changes a tool, a gate or a
 role runs `make test-roles`. Its body carries the command and its pass line, or the diff the sweep wrote. The
-weekly run is only the backup.
+weekly run is only the fallback.
 
 Every cell is a ✓ or a ✗: the call ran for the role, or a gate refused it. A cell that is neither fails the
 sweep. A refusal counts only where a gate in `platform/auth` recorded refusing that role in that call. The gate
