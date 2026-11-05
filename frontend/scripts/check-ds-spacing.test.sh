@@ -26,6 +26,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GATE="$SCRIPT_DIR/check-ds-spacing.sh"
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$SCRIPT_DIR/../../scripts/lib-git-fixture.sh"
 
 # The gate is deliberately fail-open outside a git checkout (a source export, a
 # container that refuses a dubious-ownership repo). Its test has to skip on the
@@ -36,8 +38,6 @@ if [[ -z "$ROOT" ]]; then
   echo "==> DS spacing census: not a git checkout — skipped"
   exit 0
 fi
-# shellcheck source=scripts/lib-git-fixture.sh
-source "$ROOT/scripts/lib-git-fixture.sh"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
