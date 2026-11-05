@@ -137,8 +137,8 @@ jobs:
       - name: Compute the golangci cache key
         id: golangci-key
         uses: ./.github/actions/golangci-cache-key
-      - name: Cache the golangci-lint analysis cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore the golangci-lint analysis cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
@@ -160,6 +160,13 @@ jobs:
       # an undeclared read withholds the entry, leaving readers on the last one
       # that was honest. A PR's backend-lint job runs the same census, so a read
       # is caught before it merges rather than here.
+      # Saved even when a gate failed: the lint passes still analyzed the tree.
+      - name: Save the golangci-lint analysis cache
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/golangci-lint
+          key: ${{ steps.golangci-key.outputs.key }}
       - name: Census the test cache's inputs (make test-input-census)
         id: census
         if: ${{ !cancelled() }}

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/scheduled.yml .github/actions/go-build-cache scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -405,6 +405,17 @@ they meant to seed. `cache-warm.yml` runs one job per kind, and takes
 
 The refresh steps use `!cancelled()`, not `success()`. A red gate still compiled the tree, and that build
 output can be used again as well as a green run's.
+
+### The lint cache is also written on each push
+
+The cache of `golangci-lint` is the exception to "not on each push". A cold pass costs about 39 minutes of
+CPU. `internal/compose` is one package that imports every module, so a change to any module makes lint
+read all of it again. So a `backend-lint` that restores an entry many merges old runs close to cold.
+
+[`lint-cache.yml`](../../.github/workflows/lint-cache.yml) runs `make lint` after each push to `main` or
+`develop` that touches Go. It starts from the entry of the push before, so it only reads what that push
+changed. Each entry is about 30 MB, so the job deletes the older entries of its branch once the new one is
+saved. `cache-warm.yml` still restores and saves the same entry, also with `!cancelled()`.
 
 `scripts/check-image-pins.sh` scans `.github/actions/` beside the workflows. The `./path` allowance lets a
 local action through, because the repo versions its own code. That holds for the action's own ref, but
