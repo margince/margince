@@ -4265,6 +4265,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.products.remove": "{name} entfernen",
   "deal.products.add": "Produkt hinzufügen",
   "deal.products.alreadyListed": "Bereits aufgeführt",
+  "deal.products.changedWhileEditing":
+    "Jemand hat die Produkte dieses Deals gespeichert, während du sie bearbeitet hast. Die Liste zeigt jetzt diese Fassung; nimm deine Änderung erneut vor und speichere.",
   "deal.products.fromOffer": "Aus dem Angebot",
   "deal.products.setByHand": "Selbst festgelegt",
   "deal.lines.empty":
@@ -6338,6 +6340,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bulk.doneCount_other": "{count} Einträge für dich erledigt.",
 
   "deal.pendingApprovals": "Wartet auf Freigabe",
+  "deal.approval.open": "Öffnen",
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",
   "deal.offerNeedsCurrency":

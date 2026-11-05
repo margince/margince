@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -36,7 +37,7 @@ func (p *preflightEnv) scheduleClaiming(t *testing.T, claim AnyMap) ids.UUID {
 	body := AnyMap{
 		"subject": "Next steps", "body": "Written the night before.",
 		"to":           []string{"buyer@preflight.test"},
-		"scheduled_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
+		"scheduled_at": clocktest.Now(t).Add(2 * time.Hour).UTC().Format(time.RFC3339),
 		"scheduled_tz": "Europe/Berlin",
 	}
 	maps.Copy(body, claim)
@@ -65,7 +66,7 @@ func TestAStopHoldsQueuedMarketingAtOnce(t *testing.T) {
 
 	stop := compose.NewScheduledSendStop(p.Pool, identity.NewService(p.Pool), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	env := kevents.Envelope{
-		EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: time.Now().UTC(),
+		EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: clocktest.Now(t).UTC(),
 		Entity:  kevents.EntityRef{Type: "contact", ID: uuidOf(t, p.contactID)},
 		Payload: []byte(`{"kind":"objection","decided_by_level":"subject"}`),
 	}
@@ -118,7 +119,7 @@ func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 	stop := compose.NewScheduledSendStop(p.Pool, identity.NewService(p.Pool), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	changed := func(entityType string) kevents.Envelope {
 		return kevents.Envelope{
-			EventID: ids.NewV7(), Type: "consent.changed", Version: 1, OccurredAt: time.Now().UTC(),
+			EventID: ids.NewV7(), Type: "consent.changed", Version: 1, OccurredAt: clocktest.Now(t).UTC(),
 			Entity:  kevents.EntityRef{Type: entityType, ID: uuidOf(t, p.contactID)},
 			Payload: []byte(`{"purpose_id":"` + ids.NewV7().String() + `","purpose":"newsletter","new_state":"withdrawn"}`),
 		}
@@ -178,7 +179,7 @@ func TestAStopDoesNotReachAnAddressTheContactNoLongerHolds(t *testing.T) {
 	stop := compose.NewScheduledSendStop(p.Pool, identity.NewService(p.Pool), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	suppressed := func(contact string) kevents.Envelope {
 		return kevents.Envelope{
-			EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: time.Now().UTC(),
+			EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: clocktest.Now(t).UTC(),
 			Entity:  kevents.EntityRef{Type: "contact", ID: uuidOf(t, contact)},
 			Payload: []byte(`{"kind":"objection","decided_by_level":"subject"}`),
 		}

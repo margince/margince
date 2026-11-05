@@ -13,6 +13,7 @@ import {
 import { ResetRoute } from "./App.screens";
 import { ScreenView } from "./App.views";
 import { useWarmRouteChunks } from "./App.warmchunks";
+import { ApprovalHost } from "./app/approvalhost";
 import { AskFromAddress } from "./app/askfromaddress";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
@@ -413,13 +414,15 @@ function AuthedApp({
           <WriteToHost>
             <CallLogHost>
               <SourceHost>
-                <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-                  <ScreenView
-                    screen={route.screen}
-                    id={route.id}
-                    id2={route.id2}
-                  />
-                </AuthedShell>
+                <ApprovalHost>
+                  <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+                    <ScreenView
+                      screen={route.screen}
+                      id={route.id}
+                      id2={route.id2}
+                    />
+                  </AuthedShell>
+                </ApprovalHost>
               </SourceHost>
             </CallLogHost>
           </WriteToHost>

@@ -433,7 +433,7 @@ func (r *Registry) connectorContext(ctx context.Context, name string, grantedBy 
 	if err != nil {
 		return nil, err
 	}
-	return principal.WithCorrelationID(runCtx, ids.NewV7()), nil
+	return asMailboxRun(principal.WithCorrelationID(runCtx, ids.NewV7())), nil
 }
 
 func (r *Registry) connector(name string) (connector.Connector, error) {

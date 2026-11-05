@@ -4231,6 +4231,8 @@ export const en = {
   "deal.products.remove": "Remove {name}",
   "deal.products.add": "Add a product",
   "deal.products.alreadyListed": "Already listed",
+  "deal.products.changedWhileEditing":
+    "Someone saved this deal’s products while you edited them. The list now shows their version; make your change again and save.",
   "deal.products.fromOffer": "From the offer",
   "deal.products.setByHand": "Set by hand",
   "deal.lines.empty":
@@ -6310,6 +6312,7 @@ export const en = {
   "worklist.bulk.doneCount_other": "Marked {count} items done for you.",
 
   "deal.pendingApprovals": "Awaiting approval",
+  "deal.approval.open": "Open",
   "deal.offers": "Offers",
   "deal.newOffer": "New offer",
   "deal.offerNeedsCurrency":

@@ -4153,6 +4153,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.products.remove": "Xóa {name}",
   "deal.products.add": "Thêm sản phẩm",
   "deal.products.alreadyListed": "Đã có trong danh sách",
+  "deal.products.changedWhileEditing":
+    "Ai đó đã lưu sản phẩm của giao dịch này trong lúc bạn chỉnh sửa. Danh sách giờ hiển thị phiên bản của họ; hãy thực hiện lại thay đổi của bạn rồi lưu.",
   "deal.products.fromOffer": "Từ báo giá",
   "deal.products.setByHand": "Tự đặt",
   "deal.lines.empty":
@@ -6188,6 +6190,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.bulk.doneCount_other": "Đã đánh dấu xong {count} việc cho bạn.",
 
   "deal.pendingApprovals": "Chờ duyệt",
+  "deal.approval.open": "Mở",
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
   "deal.offerNeedsCurrency":

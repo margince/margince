@@ -135,7 +135,7 @@ function installBaseFetch(
 }
 
 describe("ShareScreen", () => {
-  it("defaults a new team share to lasting write access and a person share to seven days of read access", async () => {
+  it("defaults a new team share to lasting write access and a colleague share to seven days of read access", async () => {
     installBaseFetch();
     render(<ShareScreen recordType="deal" recordId="d-1" />);
     const user = userEvent.setup();

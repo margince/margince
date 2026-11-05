@@ -309,6 +309,10 @@ var replayableOperations = map[string]replayTarget{
 		objectNote: "sharing is gated by the manage-sharing permission, which is not an entry in policy.coreObjects",
 		tableField: "record_type", idPath: "record_id",
 	},
+	"POST /v1/companies/{id}/share-contacts": { //nolint:goconst // the idempotency gate reads each key as a literal
+		objectNote: "sharing is gated by the manage-sharing permission, which is not an entry in policy.coreObjects",
+		rowNote:    "the answer is two counts, shared and skipped, and names no contact or company",
+	},
 
 	// Workspace-shared configuration and catalog rows: no owner column, so
 	// object RBAC is the whole gate rather than half of it.
