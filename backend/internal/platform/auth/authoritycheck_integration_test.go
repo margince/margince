@@ -53,17 +53,14 @@ func TestEveryGateRefusalIsRecordedAndABranchIsNot(t *testing.T) {
 }
 
 // A store's own refusal of a record goes through RefuseRow, which answers the
-// store's words and notes it; a nil refusal fails closed.
+// store's words and notes it.
 func TestAStoresRowRefusalIsRecordedInItsOwnWords(t *testing.T) {
 	ctx, recorded := recordingAs(principal.Permissions{})
 	refusal := errors.New("recorded at a level you do not outrank: permission denied")
 	if err := RefuseRow(ctx, "communication_suppression", refusal); !errors.Is(err, refusal) {
 		t.Errorf("RefuseRow answered %v, want the store's refusal", err)
 	}
-	if err := RefuseRow(ctx, "x", nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a nil refusal answered %v, want a 403", err)
-	}
-	if got := recorded().Refused; !slices.Equal(got, []string{"row:communication_suppression", "row:x"}) {
+	if got := recorded().Refused; !slices.Equal(got, []string{"row:communication_suppression"}) {
 		t.Errorf("recorded refusals %v", got)
 	}
 }

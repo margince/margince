@@ -100,12 +100,12 @@ func teamWeekChecks() []Check {
 // records the grants the answer read, and refuses a caller it reaches no team
 // for. A refusal the individual-performance switch made is the caller's to ask.
 func RequireTeamWeekReach(ctx context.Context) (TeamWeekReach, error) {
+	reach := TeamWeekReachOf(ctx)
 	if p, ok := principal.Actor(ctx); ok {
 		for _, c := range teamWeekChecks() {
-			RecordDecision(ctx, c, c.HeldBy(p))
+			RecordDecision(ctx, c, reach != ReachesNoTeam || c.HeldBy(p))
 		}
 	}
-	reach := TeamWeekReachOf(ctx)
 	if reach == ReachesNoTeam {
 		return reach, fmt.Errorf("a team's week: %w", apperrors.ErrPermissionDenied)
 	}

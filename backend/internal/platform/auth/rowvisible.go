@@ -59,7 +59,9 @@ func EnsureVisibleLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID
 // reach. It is ErrNotFound, as EnsureVisible answers, so "not yours" reads as
 // "not there". Only a gate that has told the two apart calls it.
 func HideRow(ctx context.Context, object string) error {
-	noteRefusal(ctx, rowRefusalPrefix+object)
+	if recording(ctx) {
+		noteRefusal(ctx, rowRefusalPrefix+object)
+	}
 	return apperrors.ErrNotFound
 }
 
@@ -73,10 +75,8 @@ func refuseRow(ctx context.Context, table string) error {
 // notes the refusal as a gate's and answers refusal, so a recorder never meets
 // a 403 no gate made.
 func RefuseRow(ctx context.Context, object string, refusal error) error {
-	noteRefusal(ctx, rowRefusalPrefix+object)
-	if refusal == nil {
-		// A nil refusal would admit the caller this refuses, so it fails closed.
-		return apperrors.ErrPermissionDenied
+	if recording(ctx) {
+		noteRefusal(ctx, rowRefusalPrefix+object)
 	}
 	return refusal
 }

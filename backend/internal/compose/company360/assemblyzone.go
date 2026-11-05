@@ -33,7 +33,7 @@ func (a *assembly) installationBaseCurrency() (string, error) {
 		return a.baseCurrency, nil
 	}
 	// A caller who may not read it is withheld the money sections, not the read.
-	readCtx, err := auth.Unrecorded(a.ctx, identity.SettingsObject, principal.ActionRead)
+	readCtx, err := auth.Unrecorded(a.ctx, identity.BaseCurrency.Object(), principal.ActionRead)
 	if err != nil {
 		return "", err
 	}

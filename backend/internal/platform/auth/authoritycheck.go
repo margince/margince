@@ -155,9 +155,8 @@ func grantsAnyOf(perms principal.Permissions, object string, actions []principal
 	return slices.ContainsFunc(actions, func(a principal.Action) bool { return perms.Allows(object, a) })
 }
 
-// checkRecorderKey carries a checkRecorder. Only the integration build can put
-// one in a context (authoritycheck_integration.go), so a shipped binary never
-// records, and no request can make it.
+// checkRecorderKey carries a checkRecorder. Only the integration build puts a
+// live one in a context; Unrecorded's nil one, in any build, records nothing.
 type checkRecorderKey struct{}
 
 // checkRecorder collects the checks asked of one principal during one call,
@@ -176,7 +175,7 @@ type checkRecorder struct {
 // human's. A recorder then reads the check and any refusal as a gate's.
 func RecordDecision(ctx context.Context, c Check, held bool) {
 	noteCheck(ctx, c)
-	if !held {
+	if !held && recording(ctx) {
 		noteRefusal(ctx, c.String())
 	}
 }
@@ -184,7 +183,7 @@ func RecordDecision(ctx context.Context, c Check, held bool) {
 // refusedOn notes c as refused when err is a refusal. A recorder then tells a
 // gate's 403 from one a store made up.
 func refusedOn(ctx context.Context, c Check, err error) error {
-	if err != nil {
+	if err != nil && recording(ctx) {
 		noteRefusal(ctx, c.String())
 	}
 	return err

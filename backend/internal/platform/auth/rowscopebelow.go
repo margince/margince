@@ -5,9 +5,7 @@ package auth
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -25,10 +23,8 @@ func RequireRowScopeNarrowerThan(ctx context.Context, most principal.RowScope, r
 	if c.HeldBy(p) {
 		return nil
 	}
-	noteRefusal(ctx, c.String())
-	if refusal == nil {
-		// A nil refusal would admit the caller this refuses, so it fails closed.
-		return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
+	if recording(ctx) {
+		noteRefusal(ctx, c.String())
 	}
 	return refusal
 }

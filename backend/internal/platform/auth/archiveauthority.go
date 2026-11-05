@@ -76,15 +76,19 @@ func RequireArchiveGrant(ctx context.Context, r ArchiveRule) error {
 // gate, which keeps a colleague's record out of reach.
 func EnsureArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, id ids.UUID) error {
 	refusal := probe(ctx, r.object, principal.ActionDelete)
-	if refusal == nil || !Allows(ctx, r.object, principal.ActionUpdate) {
-		return refusal
+	if refusal == nil {
+		return nil
+	}
+	deleteCheck := Check{Object: r.object, Actions: []principal.Action{principal.ActionDelete}}
+	if !Allows(ctx, r.object, principal.ActionUpdate) {
+		return refusedOn(ctx, deleteCheck, refusal)
 	}
 	owned, err := ownedArchivable(ctx, tx, r, []ids.UUID{id})
 	if err != nil {
 		return err
 	}
 	if !owned[id] {
-		return refusal
+		return refusedOn(ctx, deleteCheck, refusal)
 	}
 	return nil
 }

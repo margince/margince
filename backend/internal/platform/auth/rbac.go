@@ -58,23 +58,7 @@ func refuseBuyer(p principal.Principal, what string) error {
 func Require(ctx context.Context, object string, action principal.Action) error {
 	c := Check{Object: object, Actions: []principal.Action{action}}
 	noteCheck(ctx, c)
-	return refusedOn(ctx, c, probe(ctx, object, action))
-}
-
-// probe is Require recording nothing. A branch uses it, because its refusal is
-// not the call's answer, and a recorded check hides a tool from its lacker.
-func probe(ctx context.Context, object string, action principal.Action) error {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return err
-	}
-	if err := refuseBuyer(p, object+"."+string(action)); err != nil {
-		return err
-	}
-	if !(Check{Object: object, Actions: []principal.Action{action}}).HeldBy(p) {
-		return fmt.Errorf("%s.%s: %w", object, action, apperrors.ErrPermissionDenied)
-	}
-	return nil
+	return refusedOn(ctx, c, probeCheck(ctx, c))
 }
 
 // Allows is Require's boolean form: the same object-level admission decision

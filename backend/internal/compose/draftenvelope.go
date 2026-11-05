@@ -45,7 +45,7 @@ func draftEnvelope(pool *pgxpool.Pool, log *slog.Logger) *draftfloor.Resolver {
 		}).
 		WithZone(func(ctx context.Context) (*time.Location, error) {
 			// A caller who may not read the zone drafts in UTC, so the draft never needs the grant.
-			readCtx, err := auth.Unrecorded(ctx, identity.SettingsObject, principal.ActionRead)
+			readCtx, err := auth.Unrecorded(ctx, identity.Timezone.Object(), principal.ActionRead)
 			if err != nil {
 				return nil, err
 			}

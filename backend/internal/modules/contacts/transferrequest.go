@@ -71,9 +71,6 @@ func TransferRequestableTx(ctx context.Context, tx pgx.Tx, recordType string, id
 	if err := auth.EnsureVisibleLive(ctx, tx, recordType, id); err != nil {
 		return TransferableRecord{}, err
 	}
-	if err := auth.RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, errTransferAlreadyYours); err != nil {
-		return TransferableRecord{}, err
-	}
 	var owner *ids.UUID
 	var out TransferableRecord
 	err := tx.QueryRow(ctx, readOwner, id).Scan(&owner, &out.Label)
@@ -82,6 +79,9 @@ func TransferRequestableTx(ctx context.Context, tx pgx.Tx, recordType string, id
 	}
 	if err != nil {
 		return TransferableRecord{}, fmt.Errorf("contacts: reading the owner of the record asked for: %w", err)
+	}
+	if err := auth.RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, errTransferAlreadyYours); err != nil {
+		return TransferableRecord{}, err
 	}
 	writable, err := auth.WritableLiveBy(ctx, tx, recordType, id)
 	if err != nil {

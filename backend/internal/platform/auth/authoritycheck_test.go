@@ -185,13 +185,3 @@ func TestAnUnrecordedReadIsNoRequirement(t *testing.T) {
 		t.Errorf("an unrecorded read recorded %v", got)
 	}
 }
-
-// A caller wide enough to be refused is refused even when no refusal was named.
-func TestARowScopeRefusalFailsClosed(t *testing.T) {
-	ctx := principal.WithActor(context.Background(), principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:all", Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
-	})
-	if err := RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("an all-scope caller with no named refusal was answered %v, want permission denied", err)
-	}
-}

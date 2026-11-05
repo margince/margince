@@ -138,6 +138,6 @@ func BaseLanguageForRecord(ctx context.Context, tx pgx.Tx) textlang.Lang {
 // refuses gets English from both readers above, as any failed read does, so the
 // call never needs the grant.
 func baseLanguageReader(ctx context.Context) (context.Context, bool) {
-	readCtx, err := auth.Unrecorded(ctx, installationSettingsObject, principal.ActionRead)
+	readCtx, err := auth.Unrecorded(ctx, BaseLanguage.Object(), principal.ActionRead)
 	return readCtx, err == nil
 }
