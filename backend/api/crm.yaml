@@ -60176,9 +60176,11 @@ components:
           description: >
             Whether this member's seat may own records: an active human seat that can write. The
             answer is the same for every caller. A record's owner change asks this of the new
-            owner, and also needs the caller to be allowed to change the record, unless it has no
-            owner. Every record owner picker and a website form's owner of new leads read it.
-            Present on `listUsers`; absent means not computed.
+            owner. It also needs the caller to be allowed to change the record, unless the record
+            has no owner and the caller is a human. Every record owner picker and a website form's
+            owner of new leads read it. A form's new leads may also go to an invited colleague,
+            so its picker offers fewer members than its write accepts. Present on `listUsers`;
+            absent means not computed.
         roles:
           type: array
           items: { type: string }

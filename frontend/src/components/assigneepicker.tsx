@@ -30,14 +30,14 @@ type MemberStatus = components["schemas"]["User"]["status"];
 
 /**
  * Whether the server says this entry's seat may own records: an active human
- * seat that can write. An older server sent only `assignable`, so that answer
- * stands in; an entry with neither is offered, and the write decides.
+ * seat that can write. An entry without the answer is offered, and the write
+ * decides.
  */
 export function mayOwnRecords(entry: RosterEntry): boolean {
   if (!("display_name" in entry) || entry.is_agent) {
     return false;
   }
-  return (entry.can_own_records ?? entry.assignable) !== false;
+  return entry.can_own_records !== false;
 }
 
 function ownerOptions(
@@ -66,7 +66,10 @@ export function useRecordOwnerOptions(enabled = true): UserOptions {
 export function useRunAsOwnerOptions(enabled = true): UserOptions {
   return ownerOptions(
     useRoster("user", enabled),
-    (entry) => mayOwnRecords(entry) && entry.assignable !== false,
+    (entry) =>
+      mayOwnRecords(entry) &&
+      "assignable" in entry &&
+      entry.assignable !== false,
   );
 }
 

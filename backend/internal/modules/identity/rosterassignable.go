@@ -11,9 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
-// markAssignable answers, per row, the two owner checks a write would run for
-// this caller. A record's owner needs the seat alone. An automation's owner
-// also needs to lie inside the caller's own write scope.
+// markAssignable answers both owner checks: a record's owner needs the seat
+// alone, and an automation's owner must also lie inside the caller's scope.
 func (s *Service) markAssignable(ctx context.Context, rows []userRow) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		seated, err := auth.EligibleAssignees(ctx, tx, rowIDs(rows))
