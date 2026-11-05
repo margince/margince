@@ -100,7 +100,12 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		panic(fmt.Sprintf("crmagents: router %s must pick its target either by one argument or by the arguments named", spec.Name))
 	}
 	spec.ActionField = field
-	spec.InputSchema = routedSchema(spec.Name, field, choices, spec.InputSchema, targets)
+	schema, err := routedSchema(spec.Name, field, choices, spec.InputSchema, targets)
+	if err != nil {
+		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
+		panic("crmagents: " + err.Error())
+	}
+	spec.InputSchema = schema
 	spec.OutputSchema = nil
 	if spec.UI != nil {
 		spec.OutputSchema = targetsOutput(spec.Name, targets)
@@ -170,34 +175,41 @@ type objectSchema struct {
 	Properties map[string]argument `json:"properties"`
 }
 
-func readObjectSchema(owner string, raw json.RawMessage) objectSchema {
+func readObjectSchema(owner string, raw json.RawMessage) (objectSchema, error) {
 	var schema objectSchema
 	if raw == nil {
-		return schema
+		return schema, nil
 	}
 	if err := json.Unmarshal(raw, &schema); err != nil {
-		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
-		panic(fmt.Sprintf("crmagents: cannot read %s's input schema: %v", owner, err))
+		return schema, fmt.Errorf("cannot read %s's input schema: %w", owner, err)
 	}
-	return schema
+	return schema, nil
 }
 
 // routedSchema is the targets' arguments plus the route field. An argument is
 // required only when every target requires it; the target's own check still
 // refuses a call missing one only it needs. The router may only word an
 // argument for every action at once, never restate its shape.
-func routedSchema(routerName, field string, choices []string, own json.RawMessage, targets []mcp.ToolSpec) json.RawMessage {
+func routedSchema(routerName, field string, choices []string, own json.RawMessage, targets []mcp.ToolSpec) (json.RawMessage, error) {
 	schemas := make([]objectSchema, len(targets))
 	for i, target := range targets {
-		schemas[i] = readObjectSchema(target.Name, target.InputSchema)
+		var err error
+		if schemas[i], err = readObjectSchema(target.Name, target.InputSchema); err != nil {
+			return nil, err
+		}
 	}
-	properties, required, takers := unitedArguments(routerName, field, choices, targets, schemas)
-	routerOwn := readObjectSchema(routerName, own)
+	properties, required, takers, err := unitedArguments(routerName, field, choices, targets, schemas)
+	if err != nil {
+		return nil, err
+	}
+	routerOwn, err := readObjectSchema(routerName, own)
+	if err != nil {
+		return nil, err
+	}
 	for name, wording := range routerOwn.Properties {
 		_, known := properties[name]
 		if _, extra := wording[schemaDescription]; len(wording) != 1 || !extra || (!known && name != field) {
-			//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
-			panic(fmt.Sprintf("crmagents: router %s may only describe an argument its targets take, and %s is not that", routerName, name))
+			return nil, fmt.Errorf("router %s may only describe an argument its targets take, and %s is not that", routerName, name)
 		}
 		if known {
 			properties[name][schemaDescription] = wording[schemaDescription]
@@ -221,14 +233,14 @@ func routedSchema(routerName, field string, choices []string, own json.RawMessag
 		out[field] = mustMarshal(routeChoice{Type: schemaString, Enum: choices, Description: routerOwn.Properties[field][schemaDescription]})
 		required = append([]string{field}, required...)
 	}
-	return mustMarshal(routedObject{Type: schemaObject, Required: required, Properties: out})
+	return mustMarshal(routedObject{Type: schemaObject, Required: required, Properties: out}), nil
 }
 
 // unitedArguments unites the arguments of a router's targets. Two targets
 // naming one argument must agree on its shape. Where they differ only in the
 // words an enum admits, the router admits all of them. Neither target's call is
 // then refused by a client holding the advertised schema.
-func unitedArguments(routerName, field string, choices []string, targets []mcp.ToolSpec, schemas []objectSchema) (map[string]argument, []string, map[string][]string) {
+func unitedArguments(routerName, field string, choices []string, targets []mcp.ToolSpec, schemas []objectSchema) (map[string]argument, []string, map[string][]string, error) {
 	properties := map[string]argument{}
 	takers := map[string][]string{}
 	var required []string
@@ -238,8 +250,7 @@ func unitedArguments(routerName, field string, choices []string, targets []mcp.T
 			takers[name] = append(takers[name], choices[i])
 			united, ok := uniteArgument(properties[name], arg)
 			if name == field || !ok {
-				//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
-				panic(fmt.Sprintf("crmagents: router %s cannot advertise %s's argument %s as one shape", routerName, target.Name, name))
+				return nil, nil, nil, fmt.Errorf("router %s cannot advertise %s's argument %s as one shape", routerName, target.Name, name)
 			}
 			properties[name] = united
 		}
@@ -249,7 +260,7 @@ func unitedArguments(routerName, field string, choices []string, targets []mcp.T
 			required = slices.DeleteFunc(required, func(name string) bool { return !slices.Contains(schema.Required, name) })
 		}
 	}
-	return properties, required, takers
+	return properties, required, takers, nil
 }
 
 // scopedDescription names the choices that take an argument, so a caller
@@ -386,7 +397,7 @@ func loosest(united, next argument, bound string, looser func(float64, float64) 
 func mustMarshal[T any](v T) json.RawMessage {
 	out, err := json.Marshal(v)
 	if err != nil {
-		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
+		//craft:ignore panic-in-domain it marshals strings and members read from a schema that parsed, which json.Marshal cannot refuse
 		panic(err)
 	}
 	return out

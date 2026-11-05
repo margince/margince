@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -85,12 +86,9 @@ func (r *Registry) grantedTo(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSp
 		return spec, false
 	}
 	spec.Actions = kept
-	if spec.ActionField == "" {
-		return spec, true
-	}
-	schema, err := narrowedChoices(spec.InputSchema, spec.ActionField, kept)
+	schema, err := r.narrowedRouterSchema(spec.Name, spec.InputSchema, kept)
 	if err != nil {
-		// Offering the whole enum would advertise actions the caller cannot run.
+		// Offering the whole schema would advertise actions the caller cannot run.
 		slog.Warn("router schema could not be narrowed, so it is not offered", "tool", spec.Name, "err", err)
 		return spec, false
 	}
@@ -107,32 +105,99 @@ func (r *Registry) holdsChecks(p principal.Principal, verb string) bool {
 	return true
 }
 
-// narrowedChoices is a router's schema with its route field admitting only
-// the kept actions.
-func narrowedChoices(schema json.RawMessage, field string, kept []mcp.ToolAction) (json.RawMessage, error) {
-	var doc map[string]json.RawMessage
-	if err := json.Unmarshal(schema, &doc); err != nil {
+// narrowedRouterSchema is a router's served schema as the kept actions alone
+// derive it, through routedSchema, which derives the registered one. An
+// argument only hidden actions take is gone. The route enum, the choices named
+// as taking an argument, a united enum and a bound note name only kept ones.
+// A member the surface added, such as the retry key, stays.
+func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kept []mcp.ToolAction) (json.RawMessage, error) {
+	r.mu.RLock()
+	rt, ok := r.tools[name].(router)
+	r.mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("%s is not a registered router", name)
+	}
+	field, _ := routeFieldOf(rt)
+	every, err := r.routerSchemaFor(rt, field, slices.Sorted(maps.Keys(rt.routeTargets())))
+	if err != nil {
 		return nil, err
 	}
-	var properties map[string]map[string]json.RawMessage
+	choices := make([]string, len(kept))
+	for i, action := range kept {
+		choices[i] = action.Action
+	}
+	narrowed, err := r.routerSchemaFor(rt, field, choices)
+	if err != nil {
+		return nil, err
+	}
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(served, &doc); err != nil {
+		return nil, err
+	}
+	var properties map[string]json.RawMessage
 	if err := json.Unmarshal(doc["properties"], &properties); err != nil {
 		return nil, err
 	}
-	choice, ok := properties[field]
-	if !ok {
-		return nil, fmt.Errorf("the schema has no %s property", field)
+	var required []string
+	if raw, has := doc["required"]; has {
+		if err := json.Unmarshal(raw, &required); err != nil {
+			return nil, err
+		}
 	}
-	words := make([]string, len(kept))
-	for i, a := range kept {
-		words[i] = a.Action
+	for member := range every.Properties {
+		delete(properties, member)
 	}
-	slices.Sort(words)
-	var err error
-	if choice[schemaEnum], err = json.Marshal(words); err != nil {
-		return nil, err
-	}
+	maps.Copy(properties, narrowed.Properties)
+	required = slices.DeleteFunc(required, func(member string) bool { _, derived := every.Properties[member]; return derived })
+	required = append(slices.Clone(narrowed.Required), required...)
 	if doc["properties"], err = json.Marshal(properties); err != nil {
 		return nil, err
 	}
+	if doc["required"], err = json.Marshal(required); err != nil {
+		return nil, err
+	}
 	return json.Marshal(doc)
+}
+
+// routerSchemaFor is routedSchema over choices, read back member by member.
+// Router wording for an argument no chosen target takes is left out, as that
+// argument is.
+func (r *Registry) routerSchemaFor(rt router, field string, choices []string) (routedObject, error) {
+	targets := make([]mcp.ToolSpec, len(choices))
+	r.mu.RLock()
+	for i, choice := range choices {
+		if target, ok := r.tools[rt.routeTargets()[choice]]; ok {
+			targets[i] = target.Spec()
+		}
+	}
+	r.mu.RUnlock()
+	own, err := wordingFor(rt.Spec().InputSchema, field, targets)
+	if err != nil {
+		return routedObject{}, err
+	}
+	raw, err := routedSchema(rt.Spec().Name, field, choices, own, targets)
+	if err != nil {
+		return routedObject{}, err
+	}
+	var out routedObject
+	return out, json.Unmarshal(raw, &out)
+}
+
+// wordingFor is a router's own argument wording less what no target takes.
+func wordingFor(own json.RawMessage, field string, targets []mcp.ToolSpec) (json.RawMessage, error) {
+	wording, err := readObjectSchema("router", own)
+	if err != nil {
+		return nil, err
+	}
+	for name := range wording.Properties {
+		taken := name == field || slices.ContainsFunc(targets, func(target mcp.ToolSpec) bool {
+			schema, err := readObjectSchema(target.Name, target.InputSchema)
+			_, takes := schema.Properties[name]
+			return err == nil && takes
+		})
+		if !taken {
+			delete(wording.Properties, name)
+		}
+	}
+	return json.Marshal(wording)
 }

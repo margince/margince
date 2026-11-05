@@ -172,3 +172,39 @@ func TestASelfDescribingToolIsOfferedWithoutItsChecks(t *testing.T) {
 		t.Error("a self-describing tool is hidden from a caller who lacks a check its path asks")
 	}
 }
+
+// A router narrowed to the caller's actions names no hidden one anywhere in
+// its schema. The argument only a hidden action takes is gone. The united
+// enum, bound note and route enum come from the kept actions. The retry key
+// the surface added stays.
+func TestANarrowedRouterSchemaNamesNoHiddenAction(t *testing.T) {
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	kept := targetSpec("fake_kept", principal.ScopeWrite, mcp.TierAutoExecute)
+	kept.InputSchema = json.RawMessage(`{"type":"object","properties":{"x":{"type":"integer"},"mode":{"type":"string","enum":["calm"]}}}`)
+	hidden := targetSpec("fake_hidden", principal.ScopeWrite, mcp.TierAutoExecute)
+	hidden.InputSchema = json.RawMessage(`{"type":"object","properties":{"x":{"type":"integer","maximum":5},` +
+		`"mode":{"type":"string","enum":["secret_mode"]},"secret_knob":{"type":"string"}}}`)
+	r.Register(&argsTool{spec: kept})
+	r.Register(&argsTool{spec: hidden})
+	r.Register(fakeRouter{name: "narrowed", targets: map[string]string{"plain": "fake_kept", "secret_act": "fake_hidden"},
+		schema: `{"properties":{"secret_knob":{"description":"Only for secret_act."}}}`})
+	r.required = map[string][]auth.Check{"fake_kept": dealCheck(t, "deal.read"), "fake_hidden": dealCheck(t, "deal.update")}
+
+	served, ok := r.Spec("narrowed")
+	if !ok || !strings.Contains(string(served.InputSchema), "secret") {
+		t.Fatalf("the registered router does not name its hidden action, so this proves nothing: %s", served.InputSchema)
+	}
+	narrowed, ok := offeredByName(grantedCtx(principal.SeatFull), r)["narrowed"]
+	if !ok {
+		t.Fatal("the router is not offered, and the caller holds one of its actions")
+	}
+	if strings.Contains(string(narrowed.InputSchema), "secret") || strings.Contains(string(narrowed.InputSchema), "at most") {
+		t.Errorf("the narrowed schema still speaks of the hidden action: %s", narrowed.InputSchema)
+	}
+	if !strings.Contains(string(narrowed.InputSchema), `"calm"`) {
+		t.Errorf("the narrowed schema lost the kept action's argument: %s", narrowed.InputSchema)
+	}
+	if !strings.Contains(string(narrowed.InputSchema), idempotencyKeyArg) {
+		t.Errorf("the narrowed schema lost the retry key the surface added: %s", narrowed.InputSchema)
+	}
+}
