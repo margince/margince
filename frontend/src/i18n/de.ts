@@ -14521,6 +14521,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.basis.likely": "Gewonnen + wahrscheinliche Deals",
   "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
   "forecast.basis.manager_call": "Einschätzung der Führungskraft",
+  "forecast.basis.qualified_likely":
+    "Gewonnen + gestützte wahrscheinliche Deals",
+  "forecast.basis.qualified_weighted": "Gewonnen + gestützte gewichtete Deals",
   "forecast.basis.unknown": "Grundlage nicht erfasst",
   "forecast.split": "{won} gewonnen + {remaining} erwartet",
   "forecast.callNotAdded":

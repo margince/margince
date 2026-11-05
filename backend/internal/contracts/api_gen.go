@@ -12087,9 +12087,11 @@ func (e ForecastLandingCaveat) Valid() bool {
 
 // Defines values for ForecastLandingMeasure.
 const (
-	ForecastLandingMeasureForwardMeasureLikely      ForecastLandingMeasure = "likely"
-	ForecastLandingMeasureForwardMeasureManagerCall ForecastLandingMeasure = "manager_call"
-	ForecastLandingMeasureForwardMeasureWeighted    ForecastLandingMeasure = "weighted"
+	ForecastLandingMeasureForwardMeasureLikely            ForecastLandingMeasure = "likely"
+	ForecastLandingMeasureForwardMeasureManagerCall       ForecastLandingMeasure = "manager_call"
+	ForecastLandingMeasureForwardMeasureQualifiedLikely   ForecastLandingMeasure = "qualified_likely"
+	ForecastLandingMeasureForwardMeasureQualifiedWeighted ForecastLandingMeasure = "qualified_weighted"
+	ForecastLandingMeasureForwardMeasureWeighted          ForecastLandingMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingMeasure enum.
@@ -12098,6 +12100,10 @@ func (e ForecastLandingMeasure) Valid() bool {
 	case ForecastLandingMeasureForwardMeasureLikely:
 		return true
 	case ForecastLandingMeasureForwardMeasureManagerCall:
+		return true
+	case ForecastLandingMeasureForwardMeasureQualifiedLikely:
+		return true
+	case ForecastLandingMeasureForwardMeasureQualifiedWeighted:
 		return true
 	case ForecastLandingMeasureForwardMeasureWeighted:
 		return true
@@ -45983,7 +45989,7 @@ type ForecastLanding struct {
 	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
 	Caveat *ForecastLandingCaveat `json:"caveat,omitempty"`
 
-	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name.
+	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name. `qualified_likely` and `qualified_weighted` appear only on a shared snapshot frozen under the retired qualified forecast. Their forward half counts only the open deals that snapshot froze as still supported by their customer.
 	Measure ForecastLandingMeasure `json:"measure"`
 
 	// RemainingMinor The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
@@ -45999,7 +46005,7 @@ type ForecastLanding struct {
 // ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
 type ForecastLandingCaveat string
 
-// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name.
+// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name. `qualified_likely` and `qualified_weighted` appear only on a shared snapshot frozen under the retired qualified forecast. Their forward half counts only the open deals that snapshot froze as still supported by their customer.
 type ForecastLandingMeasure string
 
 // ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.

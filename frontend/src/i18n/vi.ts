@@ -14143,6 +14143,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.basis.likely": "Đã chốt + deal khả năng cao",
   "forecast.basis.weighted": "Đã chốt + deal mở theo trọng số",
   "forecast.basis.manager_call": "Ước tính của quản lý",
+  "forecast.basis.qualified_likely": "Đã chốt + deal khả năng cao được ủng hộ",
+  "forecast.basis.qualified_weighted": "Đã chốt + deal có trọng số được ủng hộ",
   "forecast.basis.unknown": "Chưa ghi nhận cơ sở",
   "forecast.split": "{won} đã chốt + {remaining} sắp tới",
   "forecast.callNotAdded": "Ước tính của quản lý {call}, không cộng thêm",

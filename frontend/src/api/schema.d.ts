@@ -44165,10 +44165,10 @@ export interface components {
              */
             amount_minor: number;
             /**
-             * @description Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name.
+             * @description Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name. `qualified_likely` and `qualified_weighted` appear only on a shared snapshot frozen under the retired qualified forecast. Their forward half counts only the open deals that snapshot froze as still supported by their customer.
              * @enum {string}
              */
-            measure: "likely" | "weighted" | "manager_call";
+            measure: "likely" | "weighted" | "manager_call" | "qualified_likely" | "qualified_weighted";
             /**
              * Format: int64
              * @description The money already banked, the backward half of the sum.
