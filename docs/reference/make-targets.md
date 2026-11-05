@@ -229,7 +229,7 @@ Some steps of the gate write files that other steps read. A reader that opens su
    - `composition` removes `build/composition/` and writes it again.
    - `drift` writes the generated Go files, `config/` and generated pages under `docs/reference/`.
    - `contract-frontend-drift` writes `frontend/src/api/schema.d.ts` and `public-events.ts`.
-2. **Four lanes**, side by side (`CHECK_LANES`): `craft-static`, `check-root-gates`, the backend `check` and `check-fe`.
+2. **Four lanes**, side by side (`CHECK_LANES`): `craft-static`, `check-root-gates`, the backend `check` and `check-fe`. `CHECK_LANE_JOBS=1 make check` runs them one after the other. Use it when the machine has a high load. Then vitest and `go test` in two lanes slow each other until tests fail on their time limits.
 
 The lanes run with `CHECK_WRITERS_RAN=1`. Then `composition` and `fe-drift` print a line and write nothing, and the backend `check` leaves out `drift`. The other writes in a lane are files that only that lane reads: `check-fe` installs the composed frontend workspace under `build/composition-frontend/` and builds `frontend/dist`.
 

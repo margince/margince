@@ -170,6 +170,12 @@ CHECK_WRITERS := fe-install composition drift contract-frontend-drift
 # line and do nothing, and the backend gate leaves out drift.
 CHECK_LANES := check-lane-craft check-lane-gates check-lane-backend check-lane-fe
 
+# How many lanes run at once: all of them by default. vitest and go test each
+# use every core, so on a machine that is already busy the lanes slow each
+# other until tests hit their timeouts. `CHECK_LANE_JOBS=1 make check` runs the
+# lanes one after the other and keeps the writers first.
+CHECK_LANE_JOBS ?= $(words $(CHECK_LANES))
+
 # Make 3.81, which macOS ships, has no --output-sync, so each lane writes its
 # own log. scripts/check-lane-end.sh prints the log of a lane that failed. A
 # dry run of `make check` from inside a lane (make-target-parity) points this
@@ -188,8 +194,8 @@ check:
 	$(MAKE) -j1 $(CHECK_WRITERS)
 	@bash scripts/phase-timer.sh stop
 	@rm -rf $(CHECK_LANE_LOGS)
-	@echo "check: $(words $(CHECK_LANES)) lanes side by side, each logs to $(CHECK_LANE_LOGS)/<lane>.log"
-	@CHECK_WRITERS_RAN=1 PHASE_TIMER_OWNED=1 $(MAKE) -j$(words $(CHECK_LANES)) $(CHECK_LANES)
+	@echo "check: $(words $(CHECK_LANES)) lanes, $(CHECK_LANE_JOBS) at a time, each logs to $(CHECK_LANE_LOGS)/<lane>.log"
+	@CHECK_WRITERS_RAN=1 PHASE_TIMER_OWNED=1 $(MAKE) -j$(CHECK_LANE_JOBS) $(CHECK_LANES)
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
 # One lane each. PHASE_LANE puts the lane's phases in a lane of their own in
