@@ -17981,6 +17981,10 @@ export const en = {
     "The request was answered or completed after scheduling. Review whether this follow-up is still needed.",
   "sched.held.meetingCanceled":
     "The meeting was canceled after scheduling. Review this message before sending it.",
+  "sched.held.recipientStopped":
+    "A recipient stopped marketing after you scheduled this. It will not send to them.",
+  "sched.held.recipientReplied":
+    "A recipient replied after you scheduled this follow-up. Read the reply before you send it.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",

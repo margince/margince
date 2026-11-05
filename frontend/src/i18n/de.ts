@@ -18117,6 +18117,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Anfrage wurde nach der Planung beantwortet oder erledigt. Prüfe, ob diese Nachfrage noch nötig ist.",
   "sched.held.meetingCanceled":
     "Der Termin wurde nach der Planung abgesagt. Prüfe diese Nachricht vor dem Versand.",
+  "sched.held.recipientStopped":
+    "Jemand unter den Empfangenden hat nach der Planung Werbung gestoppt. An diese Adresse wird sie nicht gesendet.",
+  "sched.held.recipientReplied":
+    "Jemand unter den Empfangenden hat nach der Planung geantwortet. Lies die Antwort, bevor du dieses Follow-up sendest.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",

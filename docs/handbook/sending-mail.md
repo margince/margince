@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
 # Writing and sending mail
 
 ### How do I send an email to a contact?
@@ -294,18 +294,18 @@ later means writing it again.
 
 ### Held
 
-A scheduled message is **Held** when its time came and a check refused it. The
-reason says which check, and what to do:
+A scheduled message is **Held** when a check refused it, or when a recipient answered first. The
+reason says which, and what to do:
 
 - **A recipient withdrew their consent** after you set the send.
+- **A recipient stopped marketing** after you scheduled a marketing message. It is held at once.
+- **A recipient replied** after you scheduled a deal follow-up or a quote. Read the reply first.
 - **Your seat or mailbox changed**, so it cannot be sent as you.
-- **Its send time passed** while the system was not running, and it is now too
-  late to send. Reschedule or withdraw it.
+- **Its send time passed** while the system was not running, and it is now too late to send. Reschedule or withdraw it.
 - **The send job ran out of attempts.** Reschedule it to try again.
 - **A check blocked it when it was due.** Nothing was sent.
 
-A held message also adds an approval card that never runs out. See
-[Approvals](approvals.md).
+A held message also adds an approval card that never runs out. See [Approvals](approvals.md).
 
 ## What the recipient controls
 

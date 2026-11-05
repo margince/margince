@@ -20744,6 +20744,8 @@ const (
 	ScheduledSendHeldReasonMeetingCanceled  ScheduledSendHeldReason = "meeting_canceled"
 	ScheduledSendHeldReasonMissedWindow     ScheduledSendHeldReason = "missed_window"
 	ScheduledSendHeldReasonPassportRevoked  ScheduledSendHeldReason = "passport_revoked"
+	ScheduledSendHeldReasonRecipientReplied ScheduledSendHeldReason = "recipient_replied"
+	ScheduledSendHeldReasonRecipientStopped ScheduledSendHeldReason = "recipient_stopped"
 	ScheduledSendHeldReasonSendRefused      ScheduledSendHeldReason = "send_refused"
 	ScheduledSendHeldReasonSenderInactive   ScheduledSendHeldReason = "sender_inactive"
 	ScheduledSendHeldReasonTimerExhausted   ScheduledSendHeldReason = "timer_exhausted"
@@ -20761,6 +20763,10 @@ func (e ScheduledSendHeldReason) Valid() bool {
 	case ScheduledSendHeldReasonMissedWindow:
 		return true
 	case ScheduledSendHeldReasonPassportRevoked:
+		return true
+	case ScheduledSendHeldReasonRecipientReplied:
+		return true
+	case ScheduledSendHeldReasonRecipientStopped:
 		return true
 	case ScheduledSendHeldReasonSendRefused:
 		return true
@@ -58933,6 +58939,8 @@ type ScheduledSend struct {
 	// `passport_revoked` — the agent credential was revoked.
 	// `followup_settled` — the recorded request was answered or completed after scheduling.
 	// `meeting_canceled` — the meeting named as follow-up evidence was canceled.
+	// `recipient_stopped` — a recipient stopped marketing after a marketing message was scheduled.
+	// `recipient_replied` — a recipient wrote to us after a deal follow-up or quote was scheduled.
 	HeldReason *ScheduledSendHeldReason `json:"held_reason,omitempty"`
 
 	// HtmlBody The frozen markup beside `body`, so an edit keeps the formatting. Absent on a plain message.
@@ -58996,6 +59004,8 @@ type ScheduledSend struct {
 // `passport_revoked` — the agent credential was revoked.
 // `followup_settled` — the recorded request was answered or completed after scheduling.
 // `meeting_canceled` — the meeting named as follow-up evidence was canceled.
+// `recipient_stopped` — a recipient stopped marketing after a marketing message was scheduled.
+// `recipient_replied` — a recipient wrote to us after a deal follow-up or quote was scheduled.
 type ScheduledSendHeldReason string
 
 // ScheduledSendStatus `scheduled`: waiting; the rep may move or cancel it.

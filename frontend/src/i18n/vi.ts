@@ -17660,6 +17660,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Yêu cầu đã được trả lời hoặc hoàn thành sau khi lên lịch. Hãy xem còn cần thư theo dõi này không.",
   "sched.held.meetingCanceled":
     "Cuộc họp đã bị hủy sau khi lên lịch. Hãy xem lại thư trước khi gửi.",
+  "sched.held.recipientStopped":
+    "Một địa chỉ nhận đã dừng nhận tiếp thị sau khi bạn lên lịch. Thư sẽ không gửi đến địa chỉ đó.",
+  "sched.held.recipientReplied":
+    "Bên nhận đã trả lời sau khi bạn lên lịch thư theo dõi này. Hãy đọc thư trả lời trước khi gửi.",
   "sched.held.sendRefused":
     "Một bước kiểm tra đã chặn tin nhắn này khi đến giờ gửi. Không có gì được gửi.",
   "sched.inZone": "theo giờ {zone}",

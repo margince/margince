@@ -104,6 +104,11 @@ func Groups() []Group {
 		// what happened to the proposal, so a wedged extraction must not stop
 		// the measurement that says whether the feature may stay on.
 		{Name: "cg:approval-notice-retract", Streams: forEntities(approvalStreamEntity)},
+		// Holding a contact's queued marketing the moment they stop it. The
+		// CONTACT stream, where consent.suppressed and consent.changed ride.
+		// Its own group: a backlog behind any other contact consumer must not
+		// let a stopped message wait for its due time.
+		{Name: "cg:scheduled-send-stop", Streams: forEntities(contactStreamEntity)},
 		// Telling the seats that could decide a staged proposal that it is
 		// waiting on them. The APPROVAL stream, where approval.requested
 		// rides.

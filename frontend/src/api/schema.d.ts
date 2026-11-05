@@ -40141,9 +40141,11 @@ export interface components {
              *     `passport_revoked` — the agent credential was revoked.
              *     `followup_settled` — the recorded request was answered or completed after scheduling.
              *     `meeting_canceled` — the meeting named as follow-up evidence was canceled.
+             *     `recipient_stopped` — a recipient stopped marketing after a marketing message was scheduled.
+             *     `recipient_replied` — a recipient wrote to us after a deal follow-up or quote was scheduled.
              * @enum {string|null}
              */
-            held_reason?: "consent_withdrawn" | "sender_inactive" | "passport_revoked" | "missed_window" | "timer_exhausted" | "send_refused" | "followup_settled" | "meeting_canceled" | null;
+            held_reason?: "consent_withdrawn" | "sender_inactive" | "passport_revoked" | "missed_window" | "timer_exhausted" | "send_refused" | "followup_settled" | "meeting_canceled" | "recipient_stopped" | "recipient_replied" | null;
             /**
              * Format: uuid
              * @description The review this message's refusal opened, when one stands. Null on every message
