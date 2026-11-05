@@ -177,7 +177,7 @@ type querySchema struct {
 func (q ViewQuery) schema() json.RawMessage {
 	words := querySchema{Type: q.Type, Enum: q.Enum, Format: q.Format}
 	if q.Type == schemaArray {
-		words.Type = "string"
+		words.Type = schemaString
 		return mustMarshal(querySchema{Type: schemaArray, Items: &words})
 	}
 	return mustMarshal(words)

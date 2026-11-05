@@ -126,8 +126,10 @@ func placedSections(report parityReport, doc toolRolesFile) []placedSection {
 		}
 	}
 	if calls := byPlace[callPlace{unplacedGroup, unplacedGroup}]; len(calls) > 0 {
-		sections = append(sections, placedSection{key: unplacedGroup, title: "Tools no one operation serves",
-			areas: []placedArea{{"", calls}}})
+		sections = append(sections, placedSection{
+			key: unplacedGroup, title: "Tools no one operation serves",
+			areas: []placedArea{{"", calls}},
+		})
 	}
 	return sections
 }

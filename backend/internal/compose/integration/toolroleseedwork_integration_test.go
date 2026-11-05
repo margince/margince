@@ -388,8 +388,10 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 		},
 		"vcard_contact": func() string {
 			email := uniqueEmail()
-			contact := s.post("/v1/contacts", AnyMap{"full_name": "Rita Sweep", "source": "manual", "title": "CFO",
-				"emails": []AnyMap{{"email": email, "email_type": "work", "is_primary": true}}})
+			contact := s.post("/v1/contacts", AnyMap{
+				"full_name": "Rita Sweep", "source": "manual", "title": "CFO",
+				"emails": []AnyMap{{"email": email, "email_type": "work", "is_primary": true}},
+			})
 			card := "BEGIN:VCARD\nVERSION:3.0\nFN:Rita Sweep\nTITLE:VP Finance\nEMAIL;TYPE=WORK:" + email + "\nEND:VCARD\n"
 			form, contentType := multipartDocument(s.t, "rita.vcf", "text/vcard", []byte(card))
 			if status, raw := postUpload(s.t, s.e, "/v1/contacts/vcard-import", nil, form, contentType); status < 200 || status >= 300 {
