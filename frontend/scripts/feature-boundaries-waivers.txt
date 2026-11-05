@@ -365,8 +365,6 @@ reach features/settings/settings-chrome.test.tsx app/shell.tsx
 reach features/settings/settings-passports.tsx features/automations/agentusage.tsx
 reach features/settings/settings-reach.test.tsx app/shell.tsx
 reach features/settings/settings.aiaccess.tsx features/automations/approval-preferences.tsx
-reach features/settings/settings.aiaccess.tsx features/automations/coding-agents.tsx
-reach features/settings/settings.aiaccess.tsx features/automations/connect-ai-tool.tsx
 reach features/settings/settings.aiaccess.tsx features/automations/connected-agents.tsx
 reach features/settings/settings.privacy.tsx features/privacy/noticecases.tsx
 reach features/settings/settings.privacy.tsx features/privacy/privacy.corrections.tsx

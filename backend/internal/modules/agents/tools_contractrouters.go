@@ -37,6 +37,10 @@ var contractRouters = []mcp.ToolSpec{
 		Description: changeSettingsCopy.render(), Instead: changeSettingsCopy.Instead,
 	},
 	{
+		Name: "change_my_settings", Title: "Change the user's own preferences and voice",
+		Description: changeMySettingsCopy.render(), Instead: changeMySettingsCopy.Instead,
+	},
+	{
 		Name: "change_compliance", Title: "Record consent, stops, holds and privacy work",
 		Description: changeComplianceCopy.render(), Instead: changeComplianceCopy.Instead,
 	},

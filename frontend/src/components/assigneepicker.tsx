@@ -56,6 +56,27 @@ export function useRecordOwnerOptions(enabled = true): UserOptions {
   return { options, roster };
 }
 
+/**
+ * The colleagues a configured intake may hand its records to: every seat that
+ * may own records. A website form's owner of new leads reads this, because the
+ * installation writes those leads.
+ */
+export function useSeatedOwnerOptions(enabled = true): UserOptions {
+  const roster = useRoster("user", enabled);
+  const options = (roster.data ?? [])
+    .filter(
+      (entry) =>
+        "display_name" in entry &&
+        !entry.is_agent &&
+        entry.can_own_records !== false,
+    )
+    .map((entry) => ({
+      value: entry.id,
+      label: "display_name" in entry ? entry.display_name : entry.id,
+    }));
+  return { options, roster };
+}
+
 const STATUS_SUFFIX: Partial<
   Record<
     MemberStatus,

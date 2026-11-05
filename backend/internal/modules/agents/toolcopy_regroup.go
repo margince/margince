@@ -130,9 +130,12 @@ var readWorkspaceCopy = toolCopy{
 		"(read_analytics step compose). data_subject_requests, notice_cases, audit_log, legal_holds, " +
 		"restricted_records and record_history are the privacy queues and trail. capture_senders, " +
 		"held_threads, counterparty_holds, owner_identities and contacts_awaiting_decision are the " +
-		"user's own mail decisions.",
+		"user's own mail decisions. my_working_hours and my_brief_delivery are the user's own settings. " +
+		"system_health, job_health, capture_health, recovery_health, automatic_work_health and data_tasks are " +
+		"health and operations pages, each under its own grant. ai_routing, ai_calls, retention_settings, tax_rates, fx_rates and ai_model_rates are " +
+		"separate settings, traces and rates; ask first before ai_calls and ai_call.",
 	Limits: "A q matching nobody answers with every colleague and a warning. A stage's semantic, " +
-		"not its name, says whether it closes a deal. None of the name topics is a " +
+		"not its name, says whether it closes a deal, and only a user changes it, in the app. None of the name topics is a " +
 		"prerequisite: each tool refuses an unknown name with the accepted list.",
 	Instead: "Use find_records to find a customer contact; colleagues are seats here. Use " +
 		"data_coverage to learn whether a number can be trusted: how complete and current the data is.",

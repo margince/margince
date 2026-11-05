@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../../api/schema";
 import {
   installFetchStub,
@@ -260,6 +261,58 @@ export const Lost: Story = {
         />
       </StoryProviders>
     );
+  },
+};
+
+/** A long note keeps the reason as the headline and sits under it, two lines
+ *  until Show more. */
+export const LostWithLongNote: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /field-history": stageHistory,
+      "GET /loss-reasons": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "r-1",
+              key: "no_fit",
+              label: "Product did not fit",
+              active: true,
+              sort_order: 10,
+              system: false,
+              version: 1,
+              created_at: "2026-08-01T08:00:00Z",
+              updated_at: "2026-08-01T08:00:00Z",
+            },
+          ],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <DealHowItStands
+          head={read}
+          inputs={{
+            ...drifting,
+            deal: {
+              ...DEAL,
+              status: "lost",
+              closed_at: "2026-08-12T12:00:00Z",
+              lost_reason_code: "no_fit",
+              lost_reason:
+                "The club's board turned the rollout down. Its members would rather keep the way they work today, so the project met resistance at board level. The sponsor thanked us for the groundwork and is closing the deal on their side. Clubs are not in the customer's target market, so they will not take it further.",
+            },
+          }}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const more = await canvas.findByRole("button", { name: "Show more" });
+    await userEvent.click(more);
+    await expect(
+      canvas.getByRole("button", { name: "Show less" }),
+    ).toHaveAttribute("aria-expanded", "true");
   },
 };
 

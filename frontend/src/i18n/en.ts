@@ -2725,6 +2725,7 @@ export const en = {
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
+  "shell.accountSettingsAria": "{who}: account settings",
   "shell.theme": "Theme",
   "shell.helpMenu": "Help and feedback",
   "shell.help.report": "Report a problem",
@@ -3660,7 +3661,7 @@ export const en = {
   "co.strip.nextMeeting": "Next meeting",
   "co.strip.next.none": "None scheduled",
   "co.360.fullHistory": "Full history",
-  "co.overview.alsoOnList": "Also on your list",
+  "co.overview.otherOpen": "Other open tasks",
   "record.allTasks": "All tasks",
   "co.overview.latest": "Latest",
   "co.overview.nothingOpen": "Nothing else open",
@@ -3841,6 +3842,8 @@ export const en = {
   "co.routeIn.bandBadge.unknown": "Contact on file, no pattern yet",
   "record.context": "Context",
   "standing.title": "How it stands · {date}",
+  "standing.noteMore": "Show more",
+  "standing.noteLess": "Show less",
   "standing.sources.records": "From CRM records",
   "standing.sources.model_one": "Margince · {count} source",
   "standing.sources.model_other": "Margince · {count} sources",
@@ -3853,6 +3856,15 @@ export const en = {
   "stageLadder.earlier": "Show earlier stages",
   "stageLadder.later": "Show later stages",
   "standing.timeline.empty": "Nothing dated here yet.",
+  "standing.timeline.zoom": "Time shown",
+  "standing.timeline.zoom.month": "Month",
+  "standing.timeline.zoom.quarter": "Quarter",
+  "standing.timeline.zoom.year": "Year",
+  "standing.timeline.zoom.all": "All time",
+  "standing.timeline.loadingOlder": "Loading earlier items…",
+  "standing.timeline.olderOnHistory": "Earlier items are in History.",
+  "standing.timeline.olderFailed":
+    "Earlier items could not load. They are in History.",
   "latest.kind.email": "New email",
   "latest.kind.message": "New message",
   "latest.kind.webForm": "New website form",
@@ -5307,6 +5319,7 @@ export const en = {
   "lead.source.manual": "Created manually",
   "lead.source.inbound": "Inbound",
   "lead.source.webform": "Web form",
+  "lead.source.webformNamed": "Web form “{name}”",
   "lead.source.referral": "Referral",
   "lead.source.import": "Import",
   "lead.source.crawl": "Web research",
@@ -5424,8 +5437,24 @@ export const en = {
     "You cannot change this lead. Ask its owner to share it, or an administrator for edit access.",
   "lead.boardCountsUnavailable":
     "Qualified and Disqualified counts did not load.",
+  "lead.boardCountsNoSearch":
+    "The counts cannot apply a search, so none is shown.",
+  "lead.boardCountsNoTagFilter": "No count while a tag filter is on.",
+  "lead.boardCountsNoTeamFilter":
+    "The counts cannot narrow by team or to unassigned leads, so none is shown.",
+  "lead.boardCountsNoScoreFilter": "No count while a score filter is on.",
+  "lead.boardCountsNoResponseFilter": "No count while a response filter is on.",
+  "lead.boardCountsNoCompanyFilter":
+    "The counts cannot narrow by industry, country or company size, so none is shown.",
+  "lead.boardCountsNoOtherFilter":
+    "The counts cannot apply every filter on this list, so none is shown.",
+  "lead.boardCountsNoConnectorSource":
+    "The counts cannot narrow to every lead from one connector, so none is shown.",
+  "lead.boardCountsOwnerNotMeasurable":
+    "No count for this owner’s leads. Only an administrator can let you measure them.",
   "lead.boardTerminalRowsUnavailable":
     "These leads did not load. The count above is still correct.",
+  "lead.boardTerminalRowsUnavailableNoCount": "These leads did not load.",
   "lead.boardTerminalOnly":
     "No open leads here. They are counted under Qualified and Disqualified.",
 
@@ -5637,8 +5666,9 @@ export const en = {
     "What happens to the {count} open task on this deal?",
   "deals.closeTasks.legend_other":
     "What happens to the {count} open tasks on this deal?",
-  "deals.closeTasks.listLabel": "Open tasks on this deal",
   "deals.closeTasks.untitled": "Untitled task",
+  "deals.closeTasks.more_one": "and {count} more",
+  "deals.closeTasks.more_other": "and {count} more",
   "deals.closeTasks.complete": "Complete all",
   "deals.closeTasks.completeHint":
     "Mark them done once the deal closes. You can undo it.",
@@ -6098,7 +6128,7 @@ export const en = {
   // pages on demand, so that number grows as the reader presses Load more.
   // Naming only the total would leave the count reading as final.
   "deals.totalsOwnerNotMeasurable":
-    "Loaded deals only. This owner’s totals are outside what you may measure.",
+    "Loaded deals only. Only an administrator can let you measure this owner’s totals.",
   "deals.totalsNoTagFilter":
     "Loaded deals only. No total while a tag filter is on.",
   "deals.totalsNoSearch":
@@ -6963,6 +6993,7 @@ export const en = {
     "This section did not load. The rest of the page is unaffected.",
   "today.quiet": "Nothing needs attention right now.",
   "task.untitled": "Untitled task",
+  "task.assigneeYou": "You",
   "task.next.openContact": "Open contact",
   "task.next.draftEmail": "Draft email",
   "task.next.draftIntent": "write about this task",
@@ -8628,7 +8659,7 @@ export const en = {
   "passport.noneOption": "No passport",
   "settings.passportUseAi": "In a script or another AI tool",
   "settings.passportUseAiDetail":
-    "Install the Margince skill in a tool that cannot sign in by itself, then give it your passport. Claude Code, Codex and Antigravity sign in without one, under Coding agents.",
+    "Install the Margince skill in a tool that cannot sign in by itself, then give it your passport. Claude Code, Codex, Cursor and the editors sign in without one, under Connect your AI tool.",
   "settings.skillDownload": "Download skill",
   "settings.skillDownloadFailed": "Skill not downloaded",
   "settings.passportUseCode": "In your own code",
@@ -8981,8 +9012,6 @@ export const en = {
   "agents.colConnected": "Connected",
   "agents.disconnectConfirm":
     "This ends the whole connection, not one credential. The agent loses access on its next call and cannot renew. Reconnecting requires approving access again.",
-  "agents.connectAntigravityPath":
-    "Antigravity has no add command. Put the block below in ~/.gemini/config/mcp_config.json, then open its agent settings, “Customizations”, and choose “Authenticate” next to margince.",
   "agents.connectorOff": "AI tools cannot connect to Margince yet.",
   "agents.connectorOffDetail":
     "Whoever runs this installation turns this on in its configuration. Until then, passports still work for scripts.",
@@ -9099,7 +9128,7 @@ export const en = {
   "aiAccess.connect.help": "Help from {vendor}",
   "aiAccess.connect.helpAdmin": "Help from {vendor} for your admin",
   "aiAccess.connect.devHint":
-    "Using a command-line tool or your own code? See For developers below.",
+    "Writing your own code? Create an API key under For developers below.",
   "aiAccess.step.allow": "Margince opens. Sign in and choose Authorize. Done.",
   "aiAccess.claude.openConnectors":
     "In Claude, open “Customize”, then “Connectors”.",
@@ -9178,14 +9207,84 @@ export const en = {
   "aiAccess.guide.checked": "These steps were checked on {date}.",
   "aiAccess.dev.title": "For developers",
   "aiAccess.dev.sub":
-    "API keys for your own code, coding agents, and what agents may do without you.",
+    "API keys for your own code, and what agents may do without you.",
   "aiAccess.dev.tab.passports": "API keys",
-  "aiAccess.dev.tab.agents": "Coding agents",
   "aiAccess.dev.tab.rules": "Agent rules",
-  "aiAccess.cli.title": "Coding agents",
-  "aiAccess.cli.sub":
-    "Connect once, then sign in in the browser. No passport needed.",
-  "aiAccess.cli.then": "Then run {command}.",
+  "aiAccess.connect.placeQuestion": "Where do you use it?",
+  "aiAccess.connect.copy": "Copy",
+  "aiAccess.connect.command": "Text to copy",
+  "aiAccess.choice.other": "Another AI tool",
+  "aiAccess.place.claudeApp": "Claude app: web, desktop or phone",
+  "aiAccess.place.claudeAppNote":
+    "One connection covers Claude on the web, the desktop app and your phone. Claude Code is set up on its own.",
+  "aiAccess.place.claudeCodeTerminal": "Claude Code in a terminal",
+  "aiAccess.place.claudeCodeVsCode": "Claude Code in VS Code",
+  "aiAccess.place.claudeCodeJetBrains": "Claude Code in JetBrains",
+  "aiAccess.place.claudeCodeVisualStudio": "Claude Code in Visual Studio",
+  "aiAccess.place.claudeInCopilot":
+    "Using Claude as the model inside GitHub Copilot? Choose Copilot above.",
+  "aiAccess.place.chatgptApp": "ChatGPT app: web, desktop or phone",
+  "aiAccess.place.codex": "Codex in a terminal or editor",
+  "aiAccess.place.m365": "Microsoft 365 Copilot or Teams",
+  "aiAccess.place.githubVsCode": "GitHub Copilot in VS Code",
+  "aiAccess.place.githubVisualStudio": "GitHub Copilot in Visual Studio",
+  "aiAccess.place.geminiApp": "Gemini app, at work or at home",
+  "aiAccess.place.antigravity": "Antigravity, Google’s agent editor",
+  "aiAccess.runIn.vscode":
+    "Run the command in VS Code’s terminal: “Terminal”, then “New Terminal”.",
+  "aiAccess.runIn.jetbrains": "Run the command in the IDE’s “Terminal” window.",
+  "aiAccess.runIn.visualStudio":
+    "Run the command in Visual Studio’s terminal: “View”, then “Terminal”.",
+  "aiAccess.local.sub": "Set up on your own computer. No admin needed.",
+  "aiAccess.local.claudeCode.add":
+    "Run this once. Margince is then there in every project and editor.",
+  "aiAccess.local.claudeCode.signIn":
+    "In Claude Code, type /mcp, choose margince and sign in.",
+  "aiAccess.local.codex.add": "Run this once in a terminal.",
+  "aiAccess.local.codex.signIn": "Then run “codex mcp login margince”.",
+  "aiAccess.local.vscode.add":
+    "In the Command Palette, run “MCP: Add Server” and choose “HTTP”.",
+  "aiAccess.local.vscode.paste":
+    "Paste the address, enter margince as the server ID and choose “Global”.",
+  "aiAccess.local.vscode.signIn":
+    "Accept VS Code’s sign-in prompt. Margince opens: sign in and choose Authorize.",
+  "aiAccess.local.visualStudio.file":
+    "In Visual Studio, create or open the file %USERPROFILE%\\.mcp.json, add this text and save it. If the file already lists servers, add only the margince entry beside them.",
+  "aiAccess.local.visualStudio.signIn":
+    "Above margince in the file, choose “Authentication Required”, then “Authenticate”. Sign in and choose Authorize.",
+  "aiAccess.local.visualStudio.tools":
+    "In Copilot Chat, switch to Agent mode and turn on the margince tools.",
+  "aiAccess.local.cursor.file":
+    "Open ~/.cursor/mcp.json, or create it, add this text and save. Then restart Cursor. If the file already lists servers, add only the margince entry beside them.",
+  "aiAccess.local.cursor.signIn":
+    "Follow Cursor’s sign-in prompt for margince. Margince opens: sign in and choose Authorize.",
+  "aiAccess.local.antigravity.file":
+    "Put this text in ~/.gemini/config/mcp_config.json. If the file already lists servers, add only the margince entry beside them.",
+  "aiAccess.local.antigravity.signIn":
+    "Open the agent settings, then “Customizations”, and choose “Authenticate” next to margince.",
+  "aiAccess.other.sub":
+    "Margince works with any AI tool that can add a remote MCP server. Look for “MCP”, “connectors” or “tools” in its settings.",
+  "aiAccess.other.typeLabel": "Type",
+  "aiAccess.other.type":
+    "Remote server over HTTP, sometimes called “Streamable HTTP”",
+  "aiAccess.other.signInLabel": "Sign-in",
+  "aiAccess.other.signIn":
+    "OAuth in your browser. Most tools start it the first time they connect.",
+  "aiAccess.other.apiKey":
+    "No sign-in in the tool? Create an API key in Settings under AI access, For developers, and send it as the header “Authorization: Bearer” followed by the key.",
+  "aiAccess.other.notAllowed":
+    "If sign-in says the tool is not allowed, an administrator chooses which tools may connect in Settings under MCP.",
+  "setup.step.ai": "Connect your AI tool",
+  "setup.caption.ai":
+    "Use Margince from Claude, ChatGPT, Copilot or your editor.",
+  "setup.action.ai": "Connect",
+  "setup.step.aiDone": "{name} is connected.",
+  "setup.step.aiDoneUnnamed": "An AI tool is connected.",
+  "ob.conv.connect.aiRow": "Your AI tool",
+  "ob.conv.connect.aiBody":
+    "Ask Claude, ChatGPT, Copilot or your editor about your deals, and let it update Margince for you.",
+  "ob.conv.connect.aiConnect": "Connect",
+  "ob.conv.connect.aiConnected": "Connected",
   "aiAccess.cli.docs": "{tool} docs",
   "settings.token": "Credential",
   "settings.autonomy": "Autonomy tiers",
@@ -12540,6 +12639,8 @@ export const en = {
     "Paused because the list it watches or adds to was archived. Restoring the list does not resume it.",
   "auto.pausedReason.listInvalid":
     "Paused because the filter of the Live List it watches stopped working. Fixing the filter does not resume it.",
+  "auto.pausedReason.passportRevoked":
+    "The agent that set this rule up had its passport revoked, so the rule stopped. Resume it to keep it running with no agent behind it.",
   "auto.pausedReason.listUnavailable":
     "Paused because its owner can no longer find the list it watches.",
   "auto.pausedReason.burst":
@@ -12586,6 +12687,7 @@ export const en = {
   "auto.action.addToShortlist": "add to a Shortlist",
   "auto.pausedShort.listArchived": "Paused · list archived",
   "auto.pausedShort.listInvalid": "Paused · list filter broken",
+  "auto.pausedShort.passportRevoked": "Paused · agent’s passport revoked",
   "auto.pausedShort.listUnavailable": "Paused · list not found",
   "auto.pausedShort.burst": "Paused · too many records",
   "auto.withheld": "Configured automations are hidden for your role.",
@@ -14992,7 +15094,8 @@ export const en = {
   "ob.conv.connect.continueNoImport": "Continue without importing",
   "ob.conv.connect.importAndContinue": "Import {period} and continue",
   "ob.conv.connect.alsoTitle": "Also worth doing now",
-  "ob.conv.connect.alsoSub": "Optional. Both can be changed later in Settings.",
+  "ob.conv.connect.alsoSub":
+    "Optional. All of these can be changed later in Settings.",
   "ob.conv.connect.linkedinRow": "Your LinkedIn profile",
   "ob.conv.connect.linkedinAdd": "Add profile",
   "setup.reminder.trigger": "Finish setup",
@@ -15010,8 +15113,6 @@ export const en = {
   "setup.action.voice": "Add samples",
   "setup.action.booking": "Turn on",
   "settings.home.setup.title": "Your setup",
-  "settings.home.setup.complete": "Setup is complete",
-  "settings.home.setup.show": "Show steps",
   "connectors.tile.notSetUp": "Not set up",
   "connectors.tile.askAdmin": "An administrator turns {vendor} on in {page}.",
   "connectors.tile.registerApp":
@@ -16883,6 +16984,17 @@ export const en = {
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":
     "The link to {company} and its history are deleted permanently. {company} itself stays. If they left, mark the role ended instead.",
+  // The About column's employer dialog: move the contact to another company or
+  // none, and say what became of the old job.
+  "contact.employer.changeTitle": "Change employer",
+  "contact.employer.none": "No current employer",
+  "contact.employer.fateQuestion": "What about {company}?",
+  "contact.employer.fateLeft": "They left {company}",
+  "contact.employer.fateLeftHint":
+    "It stays on their record as a former employer, and the job ends today.",
+  "contact.employer.fateWrong": "{company} was never their employer",
+  "contact.employer.fateWrongHint":
+    "The link and its history are deleted. {company} itself stays.",
   "contact.proposal.title": "From {source}: {company}",
   "contact.proposal.ask": "Link or create this company?",
   "contact.proposal.link": "Link",
@@ -18689,6 +18801,8 @@ export const en = {
     "Nothing to rerun. This run was stopped on purpose, not by an error.",
   "worklist.verb.retryRefusedRepeats":
     "This rule is not allowed to run twice, so a rerun could repeat its actions.",
+  "worklist.verb.retryRefusedPassportRevoked":
+    "The agent that set this rule up had its passport revoked, so the rule is paused. Resume it to keep it running with no agent behind it.",
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",

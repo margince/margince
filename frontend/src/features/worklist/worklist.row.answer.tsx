@@ -391,6 +391,8 @@ function refusalMessage(
       return "worklist.verb.retryRefusedRepeats";
     case "trigger_event_unavailable":
       return "worklist.verb.retryRefusedEventGone";
+    case "passport_revoked":
+      return "worklist.verb.retryRefusedPassportRevoked";
     default:
       return "worklist.verb.retryFailed";
   }

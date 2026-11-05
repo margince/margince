@@ -51,11 +51,11 @@ type healthRead struct {
 func (s Server) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
 		return
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

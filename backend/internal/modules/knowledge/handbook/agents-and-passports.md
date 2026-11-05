@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/features/automations/connect-ai-tool.tsx frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant frontend/src/features/automations/oauthconsent.tsx backend/internal/modules/agents/prompts.go backend/internal/modules/agents/recordlinks.go backend/internal/modules/agents/bulkconfirm.go backend/internal/modules/agents/anchorpick.go -->
+<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/components/connect-ai-tool.tsx frontend/src/lib/aiconnect.ts frontend/src/features/onboarding/onboarding-conversation/connect-also.tsx frontend/src/lib/setup-checklist.ts frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant frontend/src/features/automations/oauthconsent.tsx backend/internal/modules/agents/prompts.go backend/internal/modules/agents/recordlinks.go backend/internal/modules/agents/bulkconfirm.go backend/internal/modules/agents/anchorpick.go -->
 # Agents, passports and what they may do
 
 Margince is made to be worked in by AI agents as much as by humans. Here you
@@ -17,12 +17,12 @@ There is one rule under everything here:
 ## Connecting and controlling agents
 
 ### How do I connect my AI tool to Margince?
-To connect your AI tool to Margince, open **Settings → AI access** and answer the two questions on the **Connect your AI tool** card. Copilot on a personal account cannot connect; the card says so. Gemini through work or school needs [an admin to register it first](settings.md#how-do-i-let-gemini-through-work-or-school-connect). If the card says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
+To connect your AI tool to Margince, open **Settings → AI access** and answer the questions on the **Connect your AI tool** card. It shows only the steps for your AI and where you use it, such as Claude Code, Codex, Cursor or Visual Studio. Where AI tools can connect, onboarding offers the same card, and **Finish setup** lists it until a tool signs in. Microsoft Copilot on a personal account cannot connect; the card says so. Gemini through work or school needs [an admin to register it first](settings.md#how-do-i-let-gemini-through-work-or-school-connect). If the card says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 1. Open the account menu, choose **Settings**, then **AI access**.
-2. Under **Which AI do you use?**, choose **Claude**, **ChatGPT**, **Microsoft Copilot** or **Gemini**.
-3. Under **Whose plan is it?**, choose **My company’s** or **My own**.
-4. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
-5. If the card shows your Margince address, choose **Copy address** and paste it where the steps say.
+2. Under **Which AI do you use?**, choose your AI. For a tool not listed, choose **Another AI tool**: the card gives the address and how it signs in.
+3. If the card asks **Where do you use it?**, choose the app, editor or terminal.
+4. For a chat app, under **Whose plan is it?**, choose **My company’s** or **My own**. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
+5. To paste the address, a command or text for a file, choose **Copy address** or **Copy**.
 6. Follow the numbered steps the card shows for that one case.
 7. When Margince opens, sign in. **Authorize access** ticks all five permissions; beside **Send messages** it says "sends messages as you, without asking first". Clear any permissions the tool should not get, then choose **Authorize**.
 To refuse, choose **Deny access**.
@@ -65,8 +65,8 @@ The `openapi.yaml` file in the skill lists every call a passport can make.
 Also called: REST API, API key, script, access token, integration.
 
 ### How do I connect a coding agent to Margince?
-For Claude Code, Codex or Antigravity, open **Settings → AI access**, then **For developers**, the **Coding agents** tab and your tool.
-Do what the tab shows for your tool: run the command, or for Antigravity add the block to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**. You need no passport for this.
+For Claude Code, Codex, GitHub Copilot in an editor, Cursor or Antigravity, use the **Connect your AI tool** card in **Settings → AI access**. Choose the AI, then where you use it, for example **Claude Code in Visual Studio**.
+Do what the card shows: run the command, or add the text to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**; no passport is needed.
 If the page says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 Also called: MCP client, MCP server, command line, AI assistant integration.
 
@@ -212,16 +212,16 @@ widen anything. So an agent can take its own request back off your list.
 request, lift a legal hold, release a held record or change retention rules. It cannot destroy
 the mail from an address, or change what you decided about one. Those stay with you in the app.
 
-**Changing the pipeline or its stages.** The stage ladder is what the "advance
-a deal" approval is judged against. An agent that could edit the ladder could
-change the meaning of the approval it was asking for.
+**What closes a deal.** The stage ladder is what the "advance a deal" approval is
+judged against. An agent can add open stages and move stages, but it cannot decide whether a
+stage counts as won or lost. While a move runs by itself on a pipeline, it cannot
+change that pipeline's stages or **Exit criteria**. See
+[What your agent can set up](what-the-ai-does.md#what-your-agent-can-set-up-and-what-stays-yours).
 
-**Custom fields and webhooks.** These are settings for members, and an agent can
-neither read nor change them. It can still read which custom fields exist, so it
-can search on them.
+**Webhooks.** These are settings for members, and an agent can neither read nor
+change them.
 
-For these and for pipeline settings, a passport cannot sign in at all. Approvals
-work in another way: the passport is let in, and the check happens on the card
+The API refuses a passport on every webhook operation. Approvals work in another way: the passport is let in, and the check happens on the card
 itself.
 
 **New actions that change data.** Agents cannot use a new action that changes

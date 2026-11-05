@@ -817,6 +817,27 @@ BEGIN
   RETURN NULL;
 END;
 
+public.advance_last_activity(tbl regclass, rid uuid, at timestamp with time zone) secdef=false cfg=- acl=- 
+BEGIN
+  IF rid IS NULL OR at IS NULL THEN RETURN; END IF;
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  CASE tbl
+    WHEN 'contact'::regclass THEN
+      PERFORM 1 FROM contact WHERE id = rid FOR UPDATE;
+      UPDATE contact SET last_activity_at = at WHERE id = rid AND (last_activity_at IS NULL OR last_activity_at < at);
+    WHEN 'deal'::regclass THEN
+      PERFORM 1 FROM deal WHERE id = rid FOR UPDATE;
+      UPDATE deal SET last_activity_at = at WHERE id = rid AND (last_activity_at IS NULL OR last_activity_at < at);
+    WHEN 'company'::regclass THEN
+      PERFORM 1 FROM company WHERE id = rid FOR UPDATE;
+      UPDATE company SET last_activity_at = at WHERE id = rid AND (last_activity_at IS NULL OR last_activity_at < at);
+    WHEN 'project'::regclass THEN
+      PERFORM 1 FROM project WHERE id = rid FOR UPDATE;
+      UPDATE project SET last_activity_at = at WHERE id = rid AND (last_activity_at IS NULL OR last_activity_at < at);
+  END CASE;
+  PERFORM set_config('margince.last_activity_move', 'off', true);
+END;
+
 public.advance_report_projection_authority() secdef=false cfg=- acl=- 
 BEGIN
  UPDATE report_projection_fence SET generation=generation+1 WHERE singleton;
@@ -1205,6 +1226,7 @@ public.app_user.service_extension text gen=- def=-
 public.app_user.status text NOT NULL gen=- def='active'::text
 public.app_user.timezone text gen=- def=-
 public.app_user.timezone_chosen boolean NOT NULL gen=- def=false
+public.app_user.timezone_set_by text gen=- def=-
 public.app_user.trg_app_user_updated CREATE TRIGGER trg_app_user_updated BEFORE UPDATE ON public.app_user FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.app_user.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.weekly_delivery text gen=- def=-
@@ -1640,8 +1662,9 @@ public.automation.archived_at timestamp with time zone gen=- def=-
 public.automation.automation_origin_check CHECK ((origin = ANY (ARRAY['catalog'::text, 'agent_authored'::text])))
 public.automation.automation_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.automation.automation_owner_id_retirement_guard CREATE TRIGGER automation_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.automation FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.enabled AND (new.archived_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
-public.automation.automation_paused_reason_check CHECK ((paused_reason = ANY (ARRAY['list_archived'::text, 'list_invalid'::text, 'list_unavailable'::text, 'burst'::text])))
+public.automation.automation_paused_reason_check CHECK ((paused_reason = ANY (ARRAY['list_archived'::text, 'list_invalid'::text, 'list_unavailable'::text, 'burst'::text, 'passport_revoked'::text])))
 public.automation.automation_pkey PRIMARY KEY (id)
+public.automation.automation_setter_passport_id_fkey FOREIGN KEY (setter_passport_id) REFERENCES passport(id) ON DELETE SET NULL
 public.automation.automation_tier_check CHECK ((tier = ANY (ARRAY['auto_execute'::text, 'confirmation_required'::text])))
 public.automation.automation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.automation.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1653,6 +1676,7 @@ public.automation.origin text NOT NULL gen=- def='catalog'::text
 public.automation.owner_id uuid gen=- def=-
 public.automation.params jsonb NOT NULL gen=- def='{}'::jsonb
 public.automation.paused_reason text gen=- def=-
+public.automation.setter_passport_id uuid gen=- def=-
 public.automation.tier text NOT NULL gen=- def='confirmation_required'::text
 public.automation.trigger jsonb NOT NULL gen=- def=-
 public.automation.updated_at timestamp with time zone gen=- def=-
@@ -5685,6 +5709,15 @@ public.knowledge_document_one_per_content CREATE UNIQUE INDEX knowledge_document
 public.knowledge_document_one_per_managed_page CREATE UNIQUE INDEX knowledge_document_one_per_managed_page ON public.knowledge_document USING btree (corpus_id, filename) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))
 public.knowledge_document_pkey CREATE UNIQUE INDEX knowledge_document_pkey ON public.knowledge_document USING btree (id)
 public.label_key_while_shipped(label text, shipped_label text, shipped_label_key text) secdef=false cfg=- acl=-  SELECT CASE WHEN label = shipped_label THEN shipped_label_key END 
+public.last_activity_of_activity(aid uuid) secdef=false cfg=- acl=- 
+  SELECT max(a.occurred_at)
+    FROM activity_link l
+    JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+     AND a.audience = 'workspace'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+   WHERE l.activity_id = aid
+
 public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=- 
   SELECT max(v) FROM (
     -- Filed against the account itself.
@@ -5715,6 +5748,43 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
        AND a.origin NOT IN ('system_remediation', 'system_notice')
        AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE r.company_id = cid AND r.kind = 'employment'
+       AND r.ended_at IS NULL AND r.archived_at IS NULL
+       AND (CASE WHEN r.started_at IS NOT NULL THEN (r.started_at::timestamp AT TIME ZONE 'UTC' <= a.occurred_at)
+		WHEN r.first_observed_at IS NOT NULL THEN (a.occurred_at >= r.first_observed_at AND (a.occurred_precision = 'instant' OR (CASE WHEN a.occurred_precision = 'day'
+		THEN date_trunc('day', a.occurred_at AT TIME ZONE 'UTC') AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')
+		ELSE a.occurred_at END) >= r.first_observed_at)) ELSE true END)
+  ) arms
+
+public.last_activity_of_company_activity(aid uuid, oid uuid) secdef=false cfg=- acl=- 
+  SELECT max(v) FROM (
+    -- Filed against the account itself.
+    SELECT max(a.occurred_at) AS v
+      FROM activity_link l
+      JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+       AND a.audience = 'workspace'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     WHERE l.activity_id = aid AND l.company_id = oid
+    UNION ALL
+    -- Filed against one of its deals.
+    SELECT max(a.occurred_at)
+      FROM deal d
+      JOIN activity_link l ON l.deal_id = d.id
+      JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+       AND a.audience = 'workspace'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     WHERE l.activity_id = aid AND d.company_id = oid
+    UNION ALL
+    -- Filed against a contact it currently employs, sent while they worked there.
+    SELECT max(a.occurred_at)
+      FROM relationship r
+      JOIN activity_link l ON l.contact_id = r.contact_id
+      JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+       AND a.audience = 'workspace'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     WHERE l.activity_id = aid AND r.company_id = oid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
        AND (CASE WHEN r.started_at IS NOT NULL THEN (r.started_at::timestamp AT TIME ZONE 'UTC' <= a.occurred_at)
 		WHEN r.first_observed_at IS NOT NULL THEN (a.occurred_at >= r.first_observed_at AND (a.occurred_precision = 'instant' OR (CASE WHEN a.occurred_precision = 'day'
@@ -8687,11 +8757,26 @@ BEGIN
 END;
 
 public.trg_activity_link_last_activity() secdef=false cfg=- acl=- 
+DECLARE
+  at timestamptz;
+  reached record;
 BEGIN
-  IF TG_OP IN ('DELETE', 'UPDATE') THEN
-    PERFORM refresh_last_activity_for_link(OLD.contact_id, OLD.deal_id, OLD.company_id);
+  IF TG_OP = 'INSERT' THEN
+    at := last_activity_of_activity(NEW.activity_id);
+    IF at IS NOT NULL THEN
+      FOR reached IN
+         SELECT reach.kind, reach.id
+           FROM last_activity_reach(ARRAY[NEW.contact_id], ARRAY[NEW.deal_id], ARRAY[NEW.company_id]) reach
+          ORDER BY reach.kind, reach.id
+      LOOP
+        PERFORM advance_last_activity(reached.kind::regclass, reached.id,
+          CASE reached.kind WHEN 'company' THEN last_activity_of_company_activity(NEW.activity_id, reached.id) ELSE at END);
+      END LOOP;
+    END IF;
+    RETURN NULL;
   END IF;
-  IF TG_OP IN ('INSERT', 'UPDATE') THEN
+  PERFORM refresh_last_activity_for_link(OLD.contact_id, OLD.deal_id, OLD.company_id);
+  IF TG_OP = 'UPDATE' THEN
     PERFORM refresh_last_activity_for_link(NEW.contact_id, NEW.deal_id, NEW.company_id);
   END IF;
   RETURN NULL;
@@ -8699,10 +8784,12 @@ END;
 
 public.trg_activity_link_project_last_activity() secdef=false cfg=- acl=- 
 BEGIN
-  IF TG_OP IN ('DELETE', 'UPDATE') THEN
-    PERFORM move_project_last_activity(OLD.project_id);
+  IF TG_OP = 'INSERT' THEN
+    PERFORM advance_last_activity('project'::regclass, NEW.project_id, last_activity_of_activity(NEW.activity_id));
+    RETURN NULL;
   END IF;
-  IF TG_OP IN ('INSERT', 'UPDATE') THEN
+  PERFORM move_project_last_activity(OLD.project_id);
+  IF TG_OP = 'UPDATE' THEN
     PERFORM move_project_last_activity(NEW.project_id);
   END IF;
   RETURN NULL;

@@ -11,8 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
-// markAssignable answers, per row, the owner-change check the write would run
-// for this caller, so a picker offers the owners the write accepts.
+// markAssignable answers, per row, the owner-change check the write would run.
+// That check is the seat alone, so the two roster fields carry one answer.
 func (s *Service) markAssignable(ctx context.Context, rows []userRow) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		eligible, err := auth.EligibleAssignees(ctx, tx, rowIDs(rows))
@@ -21,7 +21,7 @@ func (s *Service) markAssignable(ctx context.Context, rows []userRow) error {
 		}
 		for i := range rows {
 			assignable := eligible[rows[i].ID]
-			rows[i].Assignable = &assignable
+			rows[i].Assignable, rows[i].CanOwnRecords = &assignable, &assignable
 		}
 		return nil
 	})

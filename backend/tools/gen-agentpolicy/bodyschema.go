@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"sort"
@@ -47,10 +48,84 @@ func bodySchema(requestBody *yaml.Node, schemas map[string]any) (string, error) 
 	return string(out), err
 }
 
+// uploadField names the one binary field of a route's multipart body, and is
+// empty for a route with no such body. The door sends that one field, so a
+// multipart body with any other field is refused rather than sent short.
+func uploadField(requestBody *yaml.Node) (string, error) {
+	if requestBody == nil || requestBody.Kind == 0 {
+		return "", nil
+	}
+	var body struct {
+		Content map[string]struct {
+			Schema struct {
+				Properties map[string]struct {
+					Format string `yaml:"format"`
+				} `yaml:"properties"`
+			} `yaml:"schema"`
+		} `yaml:"content"`
+	}
+	if err := requestBody.Decode(&body); err != nil {
+		return "", err
+	}
+	media, ok := body.Content["multipart/form-data"]
+	if !ok {
+		return "", nil
+	}
+	if len(media.Schema.Properties) != 1 {
+		return "", fmt.Errorf("served_by: route uploads one file, and this multipart body has %d fields", len(media.Schema.Properties))
+	}
+	for name, field := range media.Schema.Properties {
+		if field.Format == "binary" {
+			return name, nil
+		}
+	}
+	return "", errors.New("served_by: route uploads a binary field, and this multipart body has none")
+}
+
 // fileAnswerSchema is the answer of a route that returns a file's bytes.
 const fileAnswerSchema = `{"type":"object","required":["content_type","size_bytes","content_base64"],"properties":{` +
 	`"filename":{"type":"string"},"content_type":{"type":"string"},"size_bytes":{"type":"integer"},` +
 	`"content_base64":{"type":"string"}}}`
+
+// jsonMedia is the content of a response whose media type is JSON of any kind,
+// such as application/schema+json. The door passes each on as JSON.
+func jsonMedia[M any](content map[string]M) (M, bool) {
+	if plain, ok := content["application/json"]; ok {
+		return plain, true
+	}
+	for media, value := range content {
+		if strings.Contains(media, "json") {
+			return value, true
+		}
+	}
+	var none M
+	return none, false
+}
+
+// withoutRequired drops every nested required list from an answer's schema. The
+// surface carries one type per member, so a required member that may be null has
+// no true shape here. A member a route leaves out would fail a check that withholds
+// the whole structured answer from the client.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded JSON, whatever its shape
+func withoutRequired(node any) any {
+	schema, isSchema := node.(map[string]any)
+	if !isSchema {
+		return node
+	}
+	delete(schema, "required")
+	for key, member := range schema {
+		// A key under properties names a field, which may be called required.
+		if named, isProperties := member.(map[string]any); key == "properties" && isProperties {
+			for field, fieldSchema := range named {
+				named[field] = withoutRequired(fieldSchema)
+			}
+			continue
+		}
+		schema[key] = withoutRequired(member)
+	}
+	return schema
+}
 
 // answerSchema is the JSON schema of a route's first 2xx answer, $refs
 // resolved. An array answer reads as the {items} object the door wraps it in.
@@ -73,7 +148,7 @@ func answerSchema(responses yaml.Node, schemas map[string]any) (string, error) {
 	}
 	sort.Strings(codes)
 	for _, code := range codes {
-		media, ok := byStatus[code].Content["application/json"]
+		media, ok := jsonMedia(byStatus[code].Content)
 		if strings.HasPrefix(code, "2") && !ok && len(byStatus[code].Content) > 0 {
 			return fileAnswerSchema, nil
 		}
@@ -87,7 +162,7 @@ func answerSchema(responses yaml.Node, schemas map[string]any) (string, error) {
 		if shape, isMap := resolved.(map[string]any); isMap && shape["type"] == "array" {
 			resolved = map[string]any{"type": "object", "properties": map[string]any{"items": shape}}
 		}
-		out, err := json.Marshal(resolved)
+		out, err := json.Marshal(withoutRequired(resolved))
 		return string(out), err
 	}
 	return `{"type":"object","properties":{"status":{"type":"integer"}}}`, nil
