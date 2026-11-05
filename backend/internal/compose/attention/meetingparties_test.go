@@ -178,7 +178,7 @@ func TestAFailedEmployerReadKeepsTheRowsAndSaysSo(t *testing.T) {
 	}
 }
 
-// sameMembers holds when got names each wanted id exactly once, in any order.
+// sameMembers holds when got names each wanted id once and nothing else, in any order.
 func sameMembers(got, want []ids.UUID) bool {
 	if len(got) != len(want) {
 		return false
