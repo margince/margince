@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// RequireLeadTier refuses a reader below a row scope of `team`.
+// requireLeadTier refuses a reader below a row scope of `team`.
 //
 // The KIND check first, and it is not decoration: a tier test answers from
 // `Permissions`, and a Deal Room buyer is minted carrying none — so it would be
@@ -32,7 +32,7 @@ import (
 //
 // A background pass wanting these figures would need to say so here rather than
 // arriving by default on a system principal's row scope.
-func RequireLeadTier(ctx context.Context) error {
+func requireLeadTier(ctx context.Context) error {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}

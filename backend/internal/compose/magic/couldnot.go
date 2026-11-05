@@ -80,7 +80,7 @@ const sourceAutomationHealth = "automation_run"
 // to the rule, and two failures of one rule name one thing to fix rather than
 // two things to look at.
 func troubledLine(run automation.TroubledAutomationRun) crmcontracts.MagicLine {
-	values := map[string]string{"name": run.Name, "outcome": run.Outcome, "reason_code": run.ReasonCode}
+	values := map[string]string{"name": run.Name, "outcome": run.Outcome}
 	if run.Reason != nil {
 		values["reason"] = *run.Reason
 	}

@@ -297,7 +297,7 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]stagedClaim, threadKey string, links []ids.UUID) commsauthz.Request {
 	staged := claims[decisionRecipientKey(r)]
 	// The purpose staging judged, held against the delivery's own key: two
-	// keys that disagree reach CanonicalPurpose and are refused there.
+	// keys that disagree reach canonicalPurpose and are refused there.
 	purposeKey, deliveryKey := staged.purposeKey, ""
 	if purposeKey == "" {
 		purposeKey = req.PurposeKey

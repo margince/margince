@@ -100,25 +100,25 @@ func (a *assembly) readStateStrip() error {
 	if in.pipeline {
 		strip.Commercial = new(struct {
 			BaseCurrency          *string             `json:"base_currency,omitempty"`
-			ConvertedCount        int                 `json:"converted_count" minimum:"0"`
+			ConvertedCount        int                 `json:"converted_count"`
 			FxAsOf                *openapi_types.Date `json:"fx_as_of,omitempty"`
 			NextCloseOn           *openapi_types.Date `json:"next_close_on,omitempty"`
-			OpenCount             int                 `json:"open_count" minimum:"0"`
+			OpenCount             int                 `json:"open_count"`
 			OpenPipelineMinorBase *int                `json:"open_pipeline_minor_base,omitempty"`
-			PricedCount           int                 `json:"priced_count" minimum:"0"`
-			StalledCount          int                 `json:"stalled_count" minimum:"0"`
+			PricedCount           int                 `json:"priced_count"`
+			StalledCount          int                 `json:"stalled_count"`
 		})
 		fillCommercialStrip(strip.Commercial, in.open)
 	}
 	if in.contracts {
 		strip.Contracts = new(struct {
-			ActiveCount              int                 `json:"active_count" minimum:"0"`
+			ActiveCount              int                 `json:"active_count"`
 			AnnualizedValueMinorBase *int                `json:"annualized_value_minor_base,omitempty"`
 			BaseCurrency             *string             `json:"base_currency,omitempty"`
 			CancellationEffectiveOn  *openapi_types.Date `json:"cancellation_effective_on,omitempty"`
 			CancellationPending      bool                `json:"cancellation_pending"`
 			NearestRenewalOn         *openapi_types.Date `json:"nearest_renewal_on,omitempty"`
-			PricedCount              *int                `json:"priced_count,omitempty" minimum:"0"`
+			PricedCount              *int                `json:"priced_count,omitempty"`
 			TotalBasisValueMinorBase *int                `json:"total_basis_value_minor_base,omitempty"`
 		})
 		fillContractStrip(strip.Contracts, in.contractStrip)
@@ -151,13 +151,13 @@ func (a *assembly) readStateStrip() error {
 // this page can convert (plan §4.2).
 func fillCommercialStrip(out *struct {
 	BaseCurrency          *string             `json:"base_currency,omitempty"`
-	ConvertedCount        int                 `json:"converted_count" minimum:"0"`
+	ConvertedCount        int                 `json:"converted_count"`
 	FxAsOf                *openapi_types.Date `json:"fx_as_of,omitempty"`
 	NextCloseOn           *openapi_types.Date `json:"next_close_on,omitempty"`
-	OpenCount             int                 `json:"open_count" minimum:"0"`
+	OpenCount             int                 `json:"open_count"`
 	OpenPipelineMinorBase *int                `json:"open_pipeline_minor_base,omitempty"`
-	PricedCount           int                 `json:"priced_count" minimum:"0"`
-	StalledCount          int                 `json:"stalled_count" minimum:"0"`
+	PricedCount           int                 `json:"priced_count"`
+	StalledCount          int                 `json:"stalled_count"`
 }, open pipeline,
 ) {
 	out.OpenCount = open.OpenCount

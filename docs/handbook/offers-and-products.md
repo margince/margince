@@ -1,24 +1,10 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx frontend/src/features/deals/deal360/deallines.tsx frontend/src/features/deals/offers.fromdeal.tsx backend/internal/modules/deals/deallines.go backend/internal/modules/deals/deallinefigures.go backend/internal/modules/deals/offerfromdeal.go -->
+<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx -->
 # Offers and the rate card
 
 An **offer** in Margince is the document with prices that you give a buyer. It belongs to a deal. Once it has been sent, you do not edit it; you make a new version of it instead.
 
 An offer starts in the deal's currency, and while it is a draft you can change it. The currency belongs to the offer; changing the deal's currency later does not change it.
-
-### How do I price a deal from its products?
-To price a deal from its products in Margince, open the deal and click **Price from products** on the **Products** card of its **Overview** tab.
-1. Pick a product under **Add a product**, or type a **Custom item** and click **Add item**.
-2. Fill **Quantity** and **Selling price** on each line, and say whether it is paid once or repeats.
-3. Click **Save products**.
-
-The deal's value is then the net of its lines, without tax: 100 pieces at €2 make a deal worth €200. A line that repeats counts once for each period agreed. Once a deal has lines, **Edit products** on the same card changes them.
-
-If the deal held a value somebody typed, the editor says: "Saving replaces the typed value of …". The old value stays in the deal's history and is not added to the lines.
-
-While a line has no quantity or price, the card says "Pricing incomplete", with the part that has a price so far. The deal then has no value, not zero, and cannot be won until every line is complete.
-A deal priced from its products refuses a typed value and a hand-set product list. Change its lines instead.
-Also called: line items on a deal, deal products, quote lines before the quote.
 
 ### How do I create an offer for a customer?
 To create an offer in Margince, open the deal and click **New offer** in the **Offers** panel on its **Overview** tab.
@@ -28,14 +14,6 @@ To create an offer in Margince, open the deal and click **New offer** in the **O
 4. Add lines under **Line items** (see the next question).
 If the deal has no currency yet, the button is turned off and says: "Set the deal value first. An offer uses the deal’s currency."
 Also called: quote, quotation, proposal, estimate.
-
-### How do I make an offer from the deal's products?
-On a deal priced from its products, **New offer** copies the deal's lines into a new draft. You do not type them again. Each product takes its name in the offer's language. The offer says "Made from the deal's products", and its lines change only through the deal.
-
-When the deal changes later, the offer says "The deal changed since this offer was created". A draft then shows **Refresh from deal**, which takes the deal's lines again and keeps the header. A sent offer stays as it was: use **Regenerate revision** for the new terms.
-
-**Accept** on such an offer records the buyer's answer and leaves the deal's value to its lines.
-The deal's value has no tax. The offer works out its tax on the day you send it, so the two can show a different gross.
 
 ### How do I add a product or a line to an offer?
 To add a line to an offer in Margince, open the draft offer and fill the **Add line** row in the **Line items** panel.

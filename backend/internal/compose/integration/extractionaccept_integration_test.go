@@ -15,11 +15,8 @@ package integration
 // invisible parent — is whole-request with ZERO writes.
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"image"
-	imagepng "image/png"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -546,52 +543,5 @@ func TestAcceptAttachmentExtractionWritesTheReadingItWasShownNotTheNewest(t *tes
 	// beside the older reading's number is the same defect, half-landed.
 	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "agent:attachment-extractor"); n != 1 {
 		t.Errorf("audit notes quoting the SHOWN reading's evidence = %d, want 1", n)
-	}
-}
-
-// A chat reading is never accepted onto a deal, even when a field carries a
-// deal field's name. Only a deal-facts reading holds values a deal can take.
-func TestAcceptAttachmentExtractionRefusesAChatReading(t *testing.T) {
-	e := Setup(t)
-	ctx := e.Admin()
-	store := activities.NewStore(e.DB()).WithBlobstore(blobstore.NewMemory())
-	pipeline, open, _ := DealFixture(t, e)
-	deal := e.SeedDeal(t, "Accept Target", pipeline, open, &e.Rep1)
-	var png bytes.Buffer
-	if err := imagepng.Encode(&png, image.NewRGBA(image.Rect(0, 0, 4, 4))); err != nil {
-		t.Fatal(err)
-	}
-	att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "deal", EntityID: deal, Filename: "chat.png", ContentType: "image/png", Content: bytes.NewReader(png.Bytes()),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	attachmentID := ids.UUID(att.Id)
-	read, _, err := store.StartExtractionReadFor(ctx, attachmentID, activities.ExtractionQuestionChatCapture, "seed", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	claim, err := store.BeginExtractionRead(ctx, read.ID, activities.ExtractionReadLease)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := store.FinishExtractionRead(ctx, read.ID, activities.ExtractionReadOutcome{
-		Status: activities.ExtractionReadDone, ClaimedAt: *claim.StartedAt,
-		Fields: []extraction.ExtractedField{{Field: "name", Value: "Injected Deal", SourceQuote: "Injected Deal",
-			PageOrSection: "messages", Confidence: "high"}},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = compose.NewExtractionAccept(e.Pool).Accept(ctx, attachmentID, crmcontracts.AcceptExtractionRequest{
-		ExtractionId: openapi_types.UUID(read.ID), FieldKeys: []string{"name"},
-	})
-	var refused *compose.ExtractionAcceptError
-	if !errors.As(err, &refused) || refused.Code != "not_deal_facts" {
-		t.Fatalf("err = %v, want an ExtractionAcceptError with code not_deal_facts", err)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND name = 'Accept Target'`, deal); n != 1 {
-		t.Error("a chat reading renamed the deal")
 	}
 }

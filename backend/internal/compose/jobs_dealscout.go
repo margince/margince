@@ -46,16 +46,13 @@ type scoutWorker struct {
 	log     *slog.Logger
 	logLine string
 	run     func(ctx context.Context, tx pgx.Tx, now time.Time) (scoutTally, error)
-	// then runs after the pass has committed, on its own transactions. Deal
-	// Scout opens the deals its owners let it open there.
-	then func(ctx context.Context) (int, error)
 }
 
 // scoutWorkspace runs w's pass as actor, the scout's own system principal, so
 // every suggestion reads as the scout's claim rather than a colleague's.
 func scoutWorkspace(ctx context.Context, w *scoutWorker, actor string, workspace ids.UUID) error {
 	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), actor)
-	if err := w.report(ctx, wsCtx, func() (scoutTally, error) {
+	return w.report(ctx, wsCtx, func() (scoutTally, error) {
 		var pass scoutTally
 		err := database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
 			var err error
@@ -63,15 +60,7 @@ func scoutWorkspace(ctx context.Context, w *scoutWorker, actor string, workspace
 			return err
 		})
 		return pass, err
-	}); err != nil || w.then == nil {
-		return err
-	}
-	done, err := w.then(wsCtx)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	w.log.InfoContext(wsCtx, w.logLine+" then", "done", done)
-	return nil
+	})
 }
 
 // report runs one workspace's pass under wsCtx and logs what it did.
@@ -98,9 +87,7 @@ func (w *dealScoutWorker) Work(ctx context.Context, _ *river.Job[DealScoutArgs])
 // addDealScoutJobs registers the pass and hands back its schedule, whose
 // cadence is api/jobs.yaml's.
 func addDealScoutJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
-	opener := newScoutDealOpener(pool, log)
 	addDeclaredWorker[DealScoutArgs](reg, &dealScoutWorker{scoutWorker{
-		then: opener.OpenWorkspace,
 		pool: pool, now: time.Now, log: log, logLine: "deal scout pass",
 		run: func(ctx context.Context, tx pgx.Tx, now time.Time) (scoutTally, error) {
 			pass, err := RunDealScout(ctx, tx, now)

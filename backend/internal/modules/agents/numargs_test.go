@@ -353,15 +353,3 @@ func TestRegisterRefusesASchemaWhoseBoundIsNotANumber(t *testing.T) {
 		}})
 	})
 }
-
-func TestRegisterRefusesAnExclusiveBound(t *testing.T) {
-	for _, keyword := range []string{"exclusiveMinimum", "exclusiveMaximum"} {
-		r := NewRegistry(nil, nil)
-		mustPanic(t, "an exclusive bound would be advertised and never enforced", func() {
-			r.Register(&fakeTool{spec: mcp.ToolSpec{
-				Name: "exclusive_bound", Title: "Exclusive bound", Version: testToolVersion, Description: describedForRegistration, Tier: mcp.TierAutoExecute,
-				InputSchema: json.RawMessage(`{"type":"object","properties":{"limit":{"type":"integer","` + keyword + `":0}}}`),
-			}})
-		})
-	}
-}

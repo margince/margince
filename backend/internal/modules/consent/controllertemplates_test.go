@@ -50,10 +50,10 @@ func TestEveryControllerTemplateCarriesExactlyOnePlaceholder(t *testing.T) {
 					"refuses a body whose count disagrees with its material, so this template can "+
 					"never be sent", key, language, got, want)
 			}
-			if RenderControllerPresentation(rendered, "Example Company", "") == "" || !strings.Contains(RenderControllerPresentation(rendered, "Example Company", ""), `lang="`+string(language)+`"`) {
+			if RenderControllerPresentation(rendered, "Example Company") == "" || !strings.Contains(RenderControllerPresentation(rendered, "Example Company"), `lang="`+string(language)+`"`) {
 				t.Errorf("template %s lacks localized markup", key)
 			}
-			if got := strings.Count(RenderControllerPresentation(rendered, "Example Company", ""), linkPlaceholder); got != want {
+			if got := strings.Count(RenderControllerPresentation(rendered, "Example Company"), linkPlaceholder); got != want {
 				t.Errorf("template %s markup has %d personal actions, want %d", key, got, want)
 			}
 			if rendered.Subject == "" {

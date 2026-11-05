@@ -150,8 +150,7 @@ func TestPrivacyNoticesAndProductMailNameTheSameCompany(t *testing.T) {
 	var body string
 	if err := InstallationDB(e.Pool).Tx(e.Admin(), func(tx pgx.Tx) error {
 		var err error
-		mail, err := presentControllerMailTx(e.Admin(), tx, consent.Rendered{Body: "We recorded your request.", Language: "en", Subject: "Your request"})
-		body = mail.body
+		_, body, err = presentControllerMailTx(e.Admin(), tx, consent.Rendered{Body: "We recorded your request.", Language: "en", Subject: "Your request"})
 		return err
 	}); err != nil {
 		t.Fatal(err)

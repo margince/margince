@@ -17,7 +17,7 @@ import { useToast } from "../../design-system/toast";
 import { timezoneOption } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemFieldSentencesOf, unwrap } from "../../lib/problem";
+import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { putSchedulingChanges } from "../../lib/scheduling-profile-query";
 import {
@@ -94,9 +94,6 @@ function sortedHours(hours: WorkingHours): WorkingHours {
 
 type Draft = Readonly<{ hours: WorkingHours | null; rules: Partial<Rules> }>;
 
-// The hours fields a refused save is shown beside, by the names the server uses.
-const HOURS_FIELDS = ["start_time", "end_time"] as const;
-
 // The card's drafts against what was last saved, and the one write for both.
 function useAvailabilityDraft(
   chosen: boolean,
@@ -139,7 +136,6 @@ function useAvailabilityDraft(
     offered: !chosen,
     offer: JSON.stringify(savedHours),
     invalid,
-    placed: HOURS_FIELDS,
     save: () => {
       const nextHours = hoursDirty || !chosen ? sortedHours(draftHours) : null;
       setNarrowed(nextHours !== null && narrowing(savedHours, nextHours));
@@ -201,7 +197,6 @@ function AvailabilityForm({
           chosen={chosen}
           value={draft.draftHours}
           onChange={draft.setDraftHours}
-          refused={save.error}
         />
       </PanelBody>
       {next && (
@@ -228,17 +223,14 @@ function HoursFields({
   chosen,
   value,
   onChange,
-  refused,
 }: Readonly<{
   chosen: boolean;
   value: WorkingHours;
   onChange: (next: WorkingHours) => void;
-  refused: unknown;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const [now] = useState(() => new Date());
-  const refusedAt = problemFieldSentencesOf(refused, locale);
   return (
     <>
       {!chosen && <Callout kind="standing" title={t("workingHours.unset")} />}
@@ -254,10 +246,7 @@ function HoursFields({
         onChange={(days) => onChange({ ...value, days: days.map(Number) })}
       />
       <div className="form-row meeting-hours">
-        <Field
-          label={t("workingHours.from")}
-          error={refusedAt.get("start_time")}
-        >
+        <Field label={t("workingHours.from")}>
           {(control) => (
             <TimeInput
               {...control}
@@ -268,10 +257,7 @@ function HoursFields({
             />
           )}
         </Field>
-        <Field
-          label={t("workingHours.until")}
-          error={refusedAt.get("end_time")}
-        >
+        <Field label={t("workingHours.until")}>
           {(control) => (
             <TimeInput
               {...control}

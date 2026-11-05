@@ -127,32 +127,6 @@ describe("AutomationRuns", () => {
     expect(screen.getByText("Needs approval")).toBeTruthy();
   });
 
-  it("says why a run stopped from its reason code", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        jsonResponse({
-          data: [
-            run({
-              id: "r3",
-              outcome: "failed",
-              reason: "the target record could not be found",
-              reason_code: "target_missing",
-            }),
-          ],
-          page: { next_cursor: null },
-        }),
-      ),
-    );
-    render(<AutomationRuns automationId="au-1" />);
-    expect(
-      await screen.findByText("the record it acts on no longer exists"),
-    ).toBeTruthy();
-    expect(
-      screen.queryByText("the target record could not be found"),
-    ).toBeNull();
-  });
-
   it("keyset-pages: Load more appends the second page", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);

@@ -10,7 +10,6 @@ import {
 import {
   installFetchStub,
   jsonResponse,
-  meRoute,
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -18,7 +17,6 @@ import { BookingScreen } from "./book";
 export function bookingFrame(view: () => ReactNode, overrides: RouteMap = {}) {
   return () => {
     installFetchStub({
-      "GET /me": meRoute({ activity: ["read", "create"] }),
       "GET /me/working-hours": () => jsonResponse(bookingHours),
       "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
       "GET /scheduling/profile": () => jsonResponse(bookingProfile),

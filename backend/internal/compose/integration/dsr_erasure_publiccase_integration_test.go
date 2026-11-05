@@ -86,7 +86,7 @@ func TestFulfillingAnErasureCaseTheSubjectOpenedCompletes(t *testing.T) {
 
 	done := make(chan int, 1)
 	go func() {
-		w := fulfilErasureDSR(t, e, h, caseID, `{"status":"fulfilled"}`)
+		w := fulfilErasureDSR(t, e, h, caseID, `{"status":"fulfilled","resolution":"erased on request"}`)
 		done <- w.Code
 	}()
 

@@ -177,21 +177,3 @@ func TestTheTwoConversionRefusalsAreDistinguishable(t *testing.T) {
 		t.Error("an overflowing amount reads as a corrupt rate, so one big deal would fail a whole read")
 	}
 }
-
-// 1,000.00 EUR into USD at 1 EUR = 1 base and 1 USD = 0.922 base is 1,084.60
-// USD; into JPY at 0.0062 base it is 161,290 yen, with no minor unit.
-func TestConvertBetweenAppliesBothRatesAndBothScales(t *testing.T) {
-	t.Parallel()
-	one := pgtype.Numeric{Int: big.NewInt(1), Exp: 0, Valid: true}
-	usd := pgtype.Numeric{Int: big.NewInt(922), Exp: -3, Valid: true}
-	jpy := pgtype.Numeric{Int: big.NewInt(62), Exp: -4, Valid: true}
-	if got, err := ConvertBetween(100_000, one, usd, "EUR", "USD"); err != nil || got != 108_460 {
-		t.Fatalf("EUR→USD = %d, %v; want 108460", got, err)
-	}
-	if got, err := ConvertBetween(100_000, one, jpy, "EUR", "JPY"); err != nil || got != 161_290 {
-		t.Fatalf("EUR→JPY = %d, %v; want 161290", got, err)
-	}
-	if _, err := ConvertBetween(100_000, one, pgtype.Numeric{NaN: true, Valid: true}, "EUR", "USD"); err != ErrRateNotFinite {
-		t.Fatalf("a NaN rate answered %v, want ErrRateNotFinite", err)
-	}
-}

@@ -67,7 +67,7 @@ func tierService() *Service {
 // Those tests passed a bare context before these gates existed, which was a
 // reader with no principal at all — now a refusal. It lives beside the rule it
 // satisfies rather than in each file, so a reader of either file finds the tier
-// explained where RequireLeadTier is.
+// explained where requireLeadTier is.
 func aLead() context.Context {
 	return boardReaderAt(principal.RowScopeTeam)
 }

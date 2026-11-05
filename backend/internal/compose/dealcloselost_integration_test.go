@@ -184,43 +184,6 @@ func TestTheOwnersSwitchStopsTheClose(t *testing.T) {
 	}
 }
 
-func TestAnOwnerWhoLosesTheDealGrantBeforeTheCloseKeepsTheDeal(t *testing.T) {
-	for name, revoke := range map[string]string{
-		"role removed": `DELETE FROM role_assignment WHERE user_id = $1`,
-		"suspended":    `UPDATE app_user SET status = 'suspended' WHERE id = $1`,
-	} {
-		t.Run(name, func(t *testing.T) {
-			c := setupCloseLost(t)
-			ctx := principal.SystemActing(c.Admin(), closeDateSweepActor)
-			var due []closeDecision
-			if err := database.WithWorkspaceTx(ctx, c.Pool, func(tx pgx.Tx) error {
-				var err error
-				due, err = closeDecisions(ctx, tx, c.now, nil)
-				return err
-			}); err != nil {
-				t.Fatal(err)
-			}
-			if len(due) != 1 || due[0].deal.UUID != c.silent {
-				t.Fatalf("due = %+v, want only the silent deal", due)
-			}
-			owner, err := ownersAgent(ctx, c.closer.users, c.Rep1, marginceActorID)
-			if err != nil {
-				t.Fatal(err)
-			}
-			c.WsExec(t, revoke, c.Rep1)
-
-			closed, err := c.closer.closeAs(owner, due[0], c.now)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if closed || c.status(t, c.silent) != string(deals.DealOpen) {
-				t.Fatalf("closed = %v, deal is %s: want the deal left open for an owner who lost the grant",
-					closed, c.status(t, c.silent))
-			}
-		})
-	}
-}
-
 func TestADealOnLegalHoldIsNotClosed(t *testing.T) {
 	c := setupCloseLost(t)
 	c.WsExec(t, `UPDATE deal SET legal_hold = true WHERE id = $1`, c.silent)
@@ -406,9 +369,3 @@ func TestHomeShowsAnOlderCloseAsAChangeWithItsWayBack(t *testing.T) {
 		t.Fatalf("Home lines for the close two days on = %d, want 1", found)
 	}
 }
-
-// fixedBrief is a last brief at one instant: the reader's own state, which
-// is what the window depends on.
-type fixedBrief struct{ at time.Time }
-
-func (b fixedBrief) CutoffFor(context.Context) (time.Time, bool, error) { return b.at, true, nil }

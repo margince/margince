@@ -58,7 +58,6 @@ func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 	             WHERE f->>'Field' = 'currency' AND NOT coalesce((f->>'Omitted')::boolean, false)) AS currency
 	      FROM attachment_extraction x
 	     WHERE cited.kind = 'attachment' AND x.attachment_id = cited.ref AND x.status = 'done'
-	       AND x.question = 'deal_facts'
 	     ORDER BY x.finished_at DESC LIMIT 1) reading ON true
 	 WHERE cited.kind = 'signal' OR cited.rank <= $` + fmt.Sprint(arg(dealScoutItemCap)) + `
 	 ORDER BY cited.company_id, cited.occurred_at DESC, cited.ref`

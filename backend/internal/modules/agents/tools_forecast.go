@@ -126,6 +126,16 @@ type ForecastReadingsResult struct {
 	// forecast_movement takes. Empty is a real answer: nothing was frozen.
 	Snapshots []ForecastSnapshotRefResult `json:"snapshots"`
 
+	// Qualified is the readings restricted to deals the customer still
+	// supports. Absent while the installation does not enforce viability
+	// reviews, which means no qualified reading exists, not that it equals the
+	// figures above.
+	Qualified *ForecastQualifiedResult `json:"qualified,omitempty"`
+	// QualificationMode is "enforcing" while viability reviews gate the
+	// qualified block, else "off". An enforced scope with no deals sends a zero
+	// block rather than none.
+	QualificationMode string `json:"qualification_mode"`
+
 	// Landing is where the period finishes, the answer GET /forecast gives. The
 	// range below sits beside it. Absent for managed teams, as on the endpoint.
 	Landing *ForecastLandingResult `json:"landing,omitempty"`
@@ -185,6 +195,21 @@ type ForecastContributionResult struct {
 	AppliedProbability int                    `json:"applied_probability"`
 }
 
+// ForecastQualifiedResult mirrors the qualified readings on GET /forecast.
+type ForecastQualifiedResult struct {
+	EvidenceMinor int64 `json:"evidence_minor"`
+	WeightedMinor int64 `json:"weighted_minor"`
+	ExcludedMinor int64 `json:"excluded_minor"`
+	UnknownMinor  int64 `json:"unknown_minor"`
+	ExcludedCount int   `json:"excluded_count"`
+	UnknownCount  int   `json:"unknown_count"`
+	// The part of the excluded money with no review behind it.
+	UnsupportedMinor int64 `json:"unsupported_minor"`
+	UnsupportedCount int   `json:"unsupported_count"`
+	// AmountsPartial says some left-out deal had no amount the reader can see.
+	AmountsPartial bool `json:"amounts_partial"`
+}
+
 // ForecastSnapshotRefResult is one frozen state a movement can start or end at.
 type ForecastSnapshotRefResult struct {
 	ID      string `json:"id"`
@@ -223,7 +248,7 @@ func (t forecastMovement) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"from":{"type":"string","format":"uuid","description":"The opening snapshot."},
 			"to":{"type":"string","format":"uuid","description":"The closing snapshot."},
-			"reading":{"type":"string","enum":["open","weighted","evidence"],"description":"Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total."}},
+			"reading":{"type":"string","enum":["open","weighted","evidence","qualified_evidence","qualified_weighted"],"description":"Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastMovementResult](),
 	}

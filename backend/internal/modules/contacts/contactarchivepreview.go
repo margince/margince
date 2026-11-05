@@ -25,14 +25,11 @@ func (s *Store) PreviewContactArchive(ctx context.Context, id ids.ContactID, ver
 	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
 		return out, err
 	}
-	if err := auth.RequireArchiveGrant(ctx, auth.ContactArchive); err != nil {
+	if err := auth.Require(ctx, contactEntity, principal.ActionDelete); err != nil {
 		return out, err
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritableLive(ctx, tx, contactEntity, id.UUID); err != nil {
-			return err
-		}
-		if err := auth.EnsureArchivable(ctx, tx, auth.ContactArchive, id.UUID); err != nil {
 			return err
 		}
 		if err := previewFieldsVisible(ctx, contactEntity, fieldEmail, contactEmailsField, fieldPhone, contactPhonesField, "reachability"); err != nil {

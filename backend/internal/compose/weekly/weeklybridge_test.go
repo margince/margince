@@ -42,8 +42,8 @@ func TestEveryForecastBucketLandsInExactlyOneBridgeBar(t *testing.T) {
 func TestTheBridgeNamesOnlyMovesAndNotItsTwoAnchors(t *testing.T) {
 	t.Parallel()
 	bars := BridgeBars()
-	if len(bars) != 6 {
-		t.Errorf("the bridge declares %d bars, want the 6 moves — the opening and closing "+
+	if len(bars) != 9 {
+		t.Errorf("the bridge declares %d bars, want the 9 moves — the opening and closing "+
 			"landings are anchors, and a bar for either double-counts it", len(bars))
 	}
 	for _, anchor := range []string{"start", "end", "opening", "closing"} {

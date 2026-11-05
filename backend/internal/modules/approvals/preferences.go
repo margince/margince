@@ -128,19 +128,8 @@ func preferenceMuted(ctx context.Context, tx pgx.Tx, reader ids.UUID, kind strin
 
 // Mute and automatic application must not race into a hidden automatic-write policy.
 func lockPersonalPolicy(ctx context.Context, tx pgx.Tx, reader ids.UUID, kind string) error {
-	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(@policy, 0))`, personalPolicyLock(reader, kind))
+	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(@policy, 0))`, pgx.NamedArgs{"policy": fmt.Sprintf("approval-policy:%s:%s", reader, kind)})
 	return err
-}
-
-// shareLockPersonalPolicy holds a rep's policy for one kind still until tx
-// ends. A write that read the mode then commits before a change to it can.
-func shareLockPersonalPolicy(ctx context.Context, tx pgx.Tx, reader ids.UUID, kind string) error {
-	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock_shared(hashtextextended(@policy, 0))`, personalPolicyLock(reader, kind))
-	return err
-}
-
-func personalPolicyLock(reader ids.UUID, kind string) pgx.NamedArgs {
-	return pgx.NamedArgs{"policy": fmt.Sprintf("approval-policy:%s:%s", reader, kind)}
 }
 
 func writeAutonomyMode(ctx context.Context, tx pgx.Tx, reader ids.UUID, kind string, mode AutonomyMode) error {

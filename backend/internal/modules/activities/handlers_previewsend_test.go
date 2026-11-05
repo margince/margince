@@ -75,24 +75,3 @@ func TestThePreviewMarksTheAddressTheSendWouldFile(t *testing.T) {
 		t.Errorf("new_contact for an address on file = %v, want absent", *got)
 	}
 }
-
-// The reasons the record would carry travel with the refused recipient. An
-// answer with none leaves the field out rather than sending an empty list.
-func TestThePreviewCarriesTheSupportedAlternatives(t *testing.T) {
-	t.Parallel()
-	out := previewResponse(SendPreview{Decisions: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
-		{
-			Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonNoEvidence, Mode: commsauthz.ModeEnforce,
-			Requested:             commsauthz.CategoryActiveDealFollowup,
-			SupportedAlternatives: []commsauthz.Category{commsauthz.CategoryRequestedFollowup},
-		},
-		{Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonNoEvidence, Mode: commsauthz.ModeEnforce},
-	}}})
-	offered := out.Recipients[0].SupportedAlternatives
-	if offered == nil || len(*offered) != 1 || (*offered)[0] != "requested_followup" {
-		t.Errorf("supported_alternatives = %v, want [requested_followup]", offered)
-	}
-	if none := out.Recipients[1].SupportedAlternatives; none != nil {
-		t.Errorf("supported_alternatives = %v, want absent", *none)
-	}
-}

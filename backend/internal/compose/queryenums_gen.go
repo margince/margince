@@ -95,9 +95,6 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/attachments": {
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "activity", "lead", "project"}, Array: false, Explode: true},
 	},
-	"GET /v1/attachments/{id}/extraction": {
-		{Name: "question", Values: []string{"deal_facts", "chat_capture"}, Array: false, Explode: true},
-	},
 	"GET /v1/automations/{id}/runs": {
 		{Name: "outcome", Values: []string{"fired", "failed", "blocked", "skipped", "queued_for_approval"}, Array: false, Explode: true},
 	},
@@ -195,7 +192,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "scope_kind", Values: []string{"workspace", "team", "owner"}, Array: false, Explode: true},
 	},
 	"GET /v1/forecast/movement": {
-		{Name: "reading", Values: []string{"open", "weighted", "evidence"}, Array: false, Explode: true},
+		{Name: "reading", Values: []string{"open", "weighted", "evidence", "qualified_evidence", "qualified_weighted"}, Array: false, Explode: true},
 	},
 	"GET /v1/imports": {
 		{Name: "view", Values: []string{"history", "drafts"}, Array: false, Explode: true},
@@ -226,7 +223,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "anchor_type", Values: []string{"activity", "contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 	},
 	"GET /v1/me/ai-activity": {
-		{Name: "kinds", Values: []string{"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "brief_ranking", "capture_classify", "capture_confidentiality_verdict", "capture_counterparty_verdict", "cert_judge", "cold_start", "deal_health", "draft_reply", "enrich", "growth_fit", "nl_search", "offer_draft", "rate_extract", "signal_extract", "site_extract", "site_fact_extract", "site_triage", "stage_evidence_extract", "summarize", "transcript", "transcript_propose", "voice_build", "corpus_ask", "weekly_review", "weekly_learnings", "propose_roles", "owed_verdict", "request_settlement", "account_scan", "tag_suggest", "report_setup", "report_interpret", "reader_rendering", "deal_verdict"}, Array: true, Explode: true},
+		{Name: "kinds", Values: []string{"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "brief_ranking", "capture_classify", "capture_confidentiality_verdict", "capture_counterparty_verdict", "cert_judge", "cold_start", "deal_health", "draft_reply", "enrich", "growth_fit", "nl_search", "offer_draft", "rate_extract", "signal_extract", "site_extract", "site_fact_extract", "site_triage", "stage_evidence_extract", "summarize", "transcript", "transcript_propose", "voice_build", "corpus_ask", "weekly_review", "weekly_learnings", "propose_roles", "owed_verdict", "request_settlement", "account_scan", "tag_suggest", "report_setup", "report_interpret", "reader_rendering"}, Array: true, Explode: true},
 	},
 	"GET /v1/meeting-prep": {
 		{Name: "record_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},
@@ -294,9 +291,6 @@ var queryEnumTable = map[string][]queryEnum{
 // queryMinimumTable maps "METHOD /v1/path" to the integer query parameters
 // the contract gives a minimum, with that minimum.
 var queryMinimumTable = map[string][]queryMinimum{
-	"DELETE /v1/deals/{id}/lines/{lineId}": {
-		{Name: "expected_revision", Minimum: 0},
-	},
 	"GET /v1/activities": {
 		{Name: "limit", Minimum: 1},
 	},
@@ -534,6 +528,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/signals": {
 		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/stage-automation/report": {
+		{Name: "window_days", Minimum: 1},
 	},
 	"GET /v1/teams": {
 		{Name: "limit", Minimum: 1},

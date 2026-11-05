@@ -20,6 +20,7 @@ import {
   rangeOf,
   SufficiencyCard,
 } from "./analytics.forecast.landing";
+import { QualifiedAnswer } from "./analytics.forecast.qualified";
 import type { ForecastPeriod } from "./forecast.queries";
 import "./analytics.css";
 
@@ -144,6 +145,7 @@ export function ForecastAnswer({
                 ` ${t("forecast.callHistoryUnavailable")}`}
             </p>
           )}
+          <QualifiedAnswer readings={readings} money={money} />
         </PanelBody>
       </Panel>
 

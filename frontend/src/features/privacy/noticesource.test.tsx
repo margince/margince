@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import * as timezone from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
@@ -80,20 +81,20 @@ it("offers source assessment without claiming a duty or offering a notice", asyn
   expect(
     screen.queryByRole("button", { name: en["noticeDuty.sendNotice"] }),
   ).not.toBeInTheDocument();
-  await user.click(
-    within(dialog).getByRole("radio", {
-      name: en["notice.source.answer.introduced"],
-    }),
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: en["noticeDuty.obtainedAs"] }),
+    en["notice.acq.referral"],
   );
   await user.type(
     within(dialog).getByRole("textbox", { name: en["notice.source.evidence"] }),
     "Incoming original",
   );
   expect(confirm).toBeEnabled();
-  await user.click(
-    within(dialog).getByRole("radio", {
-      name: en["notice.source.answer.contacted"],
-    }),
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: en["noticeDuty.obtainedAs"] }),
+    en["notice.acq.subjectInitiated"],
   );
   await user.click(confirm);
   await waitFor(() =>
@@ -159,8 +160,10 @@ it("submits the entered acquisition date in the selected calendar timezone", asy
     await screen.findByRole("button", { name: en["notice.source.review"] }),
   );
   const dialog = within(screen.getByRole("dialog"));
-  await user.click(
-    dialog.getByRole("radio", { name: en["notice.source.answer.introduced"] }),
+  await pickOption(
+    user,
+    dialog.getByRole("combobox", { name: en["noticeDuty.obtainedAs"] }),
+    en["notice.acq.referral"],
   );
   await user.type(
     dialog.getByRole("textbox", { name: en["noticeDuty.obtainedOn"] }),
@@ -184,139 +187,4 @@ it("submits the entered acquisition date in the selected calendar timezone", asy
       },
     ]),
   );
-});
-
-function stubReview(writes: unknown[]) {
-  stubWithSession(
-    {
-      "GET /privacy/notice-case-reviews/case-source": () =>
-        jsonResponse({
-          ...duty,
-          acquisition: {
-            kind: "unknown_legacy",
-            captured_at: "2025-11-03T09:00:00Z",
-            captured_by: "system",
-          },
-        }),
-      "POST /privacy/notice-case-reviews/case-source/source": (body) => {
-        writes.push(body);
-        return jsonResponse({ ...duty, state: "open", rule: "art13" });
-      },
-    },
-    { privacy_request: ["read", "update"] },
-  );
-}
-
-async function openReview() {
-  const user = userEvent.setup();
-  render(
-    <StoryProviders>
-      <NoticeDuty caseId={duty.id} />
-    </StoryProviders>,
-  );
-  await user.click(
-    await screen.findByRole("button", { name: en["notice.source.review"] }),
-  );
-  return { user, dialog: within(screen.getByRole("dialog")) };
-}
-
-it("says why it asks and what is on record before the question", async () => {
-  stubReview([]);
-  const { dialog } = await openReview();
-
-  expect(
-    await dialog.findByText(en["notice.source.whyUnknown"]),
-  ).toBeInTheDocument();
-  expect(dialog.getByText(en["notice.source.onRecord"])).toBeInTheDocument();
-  expect(
-    dialog.getByRole("group", { name: en["notice.source.question"] }),
-  ).toBeInTheDocument();
-});
-
-it("records a face-to-face meeting as met at an event, which keeps the notice duty", async () => {
-  vi.spyOn(timezone, "browserZone").mockReturnValue("Europe/Berlin");
-  const writes: unknown[] = [];
-  stubReview(writes);
-  const { user, dialog } = await openReview();
-
-  await user.click(
-    dialog.getByRole("radio", {
-      name: en["notice.source.answer.met"],
-    }),
-  );
-  expect(dialog.getByText(en["notice.source.effect"])).toBeInTheDocument();
-  await user.type(
-    dialog.getByRole("textbox", { name: en["notice.source.evidence"] }),
-    "Card from the trade fair",
-  );
-  await user.click(
-    dialog.getByRole("button", { name: en["notice.source.confirm"] }),
-  );
-
-  await waitFor(() =>
-    expect(writes).toEqual([
-      {
-        kind: "event_or_form",
-        note: "Card from the trade fair",
-        obtained_at: null,
-        timezone: "Europe/Berlin",
-      },
-    ]),
-  );
-});
-
-it("offers the remaining kinds behind Another source", async () => {
-  vi.spyOn(timezone, "browserZone").mockReturnValue("Europe/Berlin");
-  const writes: unknown[] = [];
-  stubReview(writes);
-  const { user, dialog } = await openReview();
-
-  await user.click(
-    dialog.getByRole("radio", { name: en["notice.source.answer.other"] }),
-  );
-  const second = dialog.getByRole("group", {
-    name: en["notice.source.otherQuestion"],
-  });
-  expect(within(second).getAllByRole("radio")).toHaveLength(7);
-  await user.click(
-    within(second).getByRole("radio", {
-      name: en["notice.acq.purchasedOrImported"],
-    }),
-  );
-  await user.type(
-    dialog.getByRole("textbox", { name: en["notice.source.evidence"] }),
-    "Bought list, spring fair",
-  );
-  await user.click(
-    dialog.getByRole("button", { name: en["notice.source.confirm"] }),
-  );
-
-  await waitFor(() =>
-    expect(writes).toEqual([
-      expect.objectContaining({ kind: "purchased_or_imported" }),
-    ]),
-  );
-});
-
-it("leaves the source unconfirmed and saves nothing when the reviewer is not sure", async () => {
-  const writes: unknown[] = [];
-  stubReview(writes);
-  const { user, dialog } = await openReview();
-
-  await user.click(
-    dialog.getByRole("radio", {
-      name: new RegExp(`^${en["notice.source.answer.unsure"]}`),
-    }),
-  );
-  expect(
-    dialog.queryByRole("textbox", { name: en["notice.source.evidence"] }),
-  ).not.toBeInTheDocument();
-  await user.click(
-    dialog.getByRole("button", { name: en["notice.source.leave"] }),
-  );
-
-  await waitFor(() =>
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
-  );
-  expect(writes).toEqual([]);
 });

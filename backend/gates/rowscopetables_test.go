@@ -631,13 +631,5 @@ const (
 	// 152: activities.carryMissingParticipantsTx copies a folded meeting copy's
 	// guests onto the meeting that stays, under a system job or a calendar sync.
 	// The contacts move between two rows of one meeting, and nothing is returned.
-	//
-	// 153: deals.correctionReceiptSelect is the SELECT list every change report
-	// shares, with no `WHERE` of its own. Each caller (RecentCorrectionsOwnedBy,
-	// DealChanges, TeamChanges) adds auth.ScopeClauseFor or auth.EnsureVisible.
-	//
-	// 154: privacy.readLeadNotice names the kinds of data a notice link's own
-	// website lead holds, for the privacy page. It reads presence flags only,
-	// for the lead the link resolved, and returns no reference.
-	modulesTierUnscopedCeiling = 154
+	modulesTierUnscopedCeiling = 152
 )

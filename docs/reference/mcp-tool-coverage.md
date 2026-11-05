@@ -119,7 +119,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 2 |
 | … **no case requires** | 10 |
 | … of those, permitted somewhere but never required | 3 |
-| Prompt tokens spent on tools no case requires | 5073 |
+| Prompt tokens spent on tools no case requires | 5091 |
 | Use cases | 58 |
 | Acceptance criteria the cases declare, each with a statement | 97 |
 
@@ -414,21 +414,21 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `read_workspace` | 1.00 | 7 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case80_who_changed_that` |
+| `change_state` | 1.00 | 11 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
 | `change_activities` | 1.00 | 14 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
-| `change_state` | 1.00 | 11 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
 | `read_details` | 1.00 | 8 | `case72_read_the_dossier`, `case73_read_my_weekly_plan`, `case87_may_we_write_to_her`, `case88_send_it_anyway` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `change_reports` | 1.00 | 4 | `case83_write_the_decision_down`, `case84_my_call_for_the_quarter` |
-| `read_analytics` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
+| `read_analytics` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `change_capture` | 1.00 | 2 | `case82_keep_that_newsletter_out` |
 | `change_attention` | 1.00 | 2 | `case70_clear_my_notices` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
 | `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
-| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
+| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
@@ -452,13 +452,13 @@ Every run of every case requiring this tool passed, for the model named.
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `change_reports` | 1.00 | 4 | `case83_write_the_decision_down`, `case84_my_call_for_the_quarter` |
-| `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
+| `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `change_capture` | 1.00 | 2 | `case82_keep_that_newsletter_out` |
 | `change_attention` | 1.00 | 2 | `case70_clear_my_notices` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
-| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
+| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `change_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
@@ -548,8 +548,8 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 984 | - | `case76_she_said_yes_at_the_fair`, `case77_record_her_yes` | - |
-| `change_settings` | 770 | - | - | - |
+| `read_view` | 1008 | - | `case76_she_said_yes_at_the_fair`, `case77_record_her_yes` | - |
+| `change_settings` | 764 | - | - | - |
 | `change_record_parts` | 621 | - | - | - |
 | `change_relationships` | 494 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |

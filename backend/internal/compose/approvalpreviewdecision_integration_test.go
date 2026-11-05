@@ -49,8 +49,7 @@ func TestStaleCommercialPreviewRefusesEveryDecisionEntryPoint(t *testing.T) {
 			case "edited":
 				_, err = svc.DecideEdited(e.Admin(), id, raw)
 			case "policy":
-				applier, decision := ownersApplier(e.Admin(), t, e.Pool, svc, id, e.AdminUser)
-				_, err = svc.ApplyUnderPolicy(e.Admin(), id, applier.ownerNow(decision))
+				_, err = svc.ApplyUnderPolicy(e.Admin(), id)
 			case "bundle":
 				members, bundleErr := svc.DecideBundle(e.Admin(), bundle, true, nil)
 				if bundleErr != nil || len(members) != 1 || members[0].Outcome != approvals.BundleRefused {

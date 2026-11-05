@@ -21,7 +21,6 @@ const page = { next_cursor: null, has_more: false };
 const activeSubscription = {
   id: "sub-active",
   owner_id: "u1",
-  owner_active: true,
   target_url: "https://hooks.acme.test/margince",
   event_types: ["deal.stage_changed", "lead.promoted", "offer.accepted"],
   state: "active",
@@ -34,7 +33,6 @@ const activeSubscription = {
 const pausedSubscription = {
   id: "sub-paused",
   owner_id: "u1",
-  owner_active: true,
   target_url: "https://hooks.partner.test/inbound",
   event_types: ["company.updated"],
   state: "paused",
@@ -172,26 +170,6 @@ export const ManyEventTypes: Story = {
 
 export const PausedSubscription: Story = {
   render: cardStory(baseRoutes([activeSubscription, pausedSubscription])),
-};
-
-// The owner left: nothing is delivered, and the row says so rather than
-// "Active". Editing offers a colleague to run it as.
-const orphanedSubscription = {
-  ...activeSubscription,
-  id: "sub-orphaned",
-  owner_active: false,
-};
-
-export const OwnerDeactivated: Story = {
-  render: cardStory(baseRoutes([orphanedSubscription])),
-};
-
-export const OwnerDeactivatedEditOpen: Story = {
-  render: cardStory(baseRoutes([orphanedSubscription])),
-  play: async ({ canvasElement }) => {
-    await openRowActions(canvasElement);
-    await clickTestIds(["edit-webhook-subscription"]);
-  },
 };
 
 export const NonAdminReadOnly: Story = {
