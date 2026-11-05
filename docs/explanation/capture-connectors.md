@@ -389,8 +389,9 @@ connection** footer. The roster manages an existing connection.
 
 ### Google Calendar (gcal): standing OAuth, poll only
 
-OAuth2 to Google with `calendar.readonly`. It **uses the same Google OAuth app as Gmail**. Connected
-alone, it is its *own* authorization that asks for the calendar scopes only. It sets no
+OAuth2 to Google with `calendar.readonly` and `calendar.events.owned` (`gcal.ConsentScopes`). It **uses
+the same Google OAuth app as Gmail**. Connected alone, it is its *own* authorization that asks for
+those calendar scopes only. It sets no
 `include_granted_scopes`, so an earlier grant to read mail never leaks into this credential.
 
 Connected together with Gmail, it shares the mail consent instead
