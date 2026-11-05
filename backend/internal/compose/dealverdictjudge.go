@@ -163,7 +163,7 @@ func (p dealVerdictPass) applyAsOwner(
 }
 
 // applyAs writes as an owner's agent bound before the write. The owner may
-// leave in between, so the evidence check asks again under the lock.
+// leave or lose the deal grant in between, so the write binds them again.
 func (p dealVerdictPass) applyAs(
 	ownerCtx context.Context, c verdictCandidate, read dealVerdictRead, changes []deals.VerdictChange,
 ) ([]string, string, error) {
@@ -184,6 +184,7 @@ func (p dealVerdictPass) applyAs(
 			return tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL("d")+` FROM deal d WHERE d.id = $1`, c.deal).
 				Scan(&written)
 		},
+		AsOwner: ownersAgentTx(p.users, c.owner, marginceActorID),
 	})
 	return result.Outcomes, written, err
 }

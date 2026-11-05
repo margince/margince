@@ -31,10 +31,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // dealOwnerAuthority answers "read this deal's world as its owner would".
@@ -131,6 +133,24 @@ func ownersAgent(ctx context.Context, users *identity.Service, owner ids.UUID, a
 	if err != nil {
 		return nil, fmt.Errorf("compose: authority of the owner to act for: %w", err)
 	}
+	return withOwnersAgent(ctx, owner, actorID, rbac, seat), nil
+}
+
+// ownersAgentTx is ownersAgent read in the write's own transaction. The write
+// acts on the grants a role change or suspension committed before it left.
+func ownersAgentTx(users *identity.Service, owner ids.UUID, actorID string) deals.OwnerAuthorityTx {
+	return func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
+		rbac, seat, err := users.EffectiveAuthorityTx(ctx, tx, owner)
+		if err != nil {
+			return nil, fmt.Errorf("compose: authority of the owner to act for: %w", err)
+		}
+		return withOwnersAgent(ctx, owner, actorID, rbac, seat), nil
+	}
+}
+
+func withOwnersAgent(
+	ctx context.Context, owner ids.UUID, actorID string, rbac authz.RBAC, seat principal.SeatType,
+) context.Context {
 	return principal.WithActor(ctx, principal.Principal{
 		Type:       principal.PrincipalAgent,
 		ID:         actorID,
@@ -142,5 +162,5 @@ func ownersAgent(ctx context.Context, users *identity.Service, owner ids.UUID, a
 		// never puts a message on the wire.
 		Scopes:      principal.ScopeSet{principal.ScopeWrite: struct{}{}},
 		Permissions: rbac.Permissions,
-	}), nil
+	})
 }
