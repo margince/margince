@@ -16,10 +16,10 @@ import {
 } from "react";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { OptionCount } from "./atoms";
 import { coveredByDialog } from "./dialogfocus";
 import { MenuHead } from "./listmenu";
 import { PopoverSheet } from "./listpopover";
-import { OptionCount } from "./optioncount";
 
 export type ViewRow = Readonly<{
   key: string;
