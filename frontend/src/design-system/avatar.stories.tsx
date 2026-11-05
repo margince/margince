@@ -184,8 +184,7 @@ export const KeyedOnTheRecord: Story = {
   ),
 };
 
-// A seat's own picture covers the circle inside the ground's hairline. The
-// white one is the case for the ring: without it the chip has no edge here.
+// The white picture is the case for the control-edge ring: without it the chip has no edge.
 export const SeatPhoto: Story = {
   render: () => (
     <div style={column}>

@@ -38,7 +38,7 @@ type Story = StoryObj<typeof AccountMenu>;
 
 /**
  * The top bar: the seat's chip alone, a circle filling the bar's square inside
- * its hairline. The initials are hidden, so the button's name is "Account".
+ * a control-edge ring. The initials are hidden, so the button's name is "Account".
  */
 export const TopBar: Story = {
   name: "Top bar trigger",
