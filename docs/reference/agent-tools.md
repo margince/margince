@@ -208,8 +208,8 @@ The catalog comes from the `mcp.ToolSpec` each tool returns from `Spec()`. **The
   verb with no measured row stays offered. So an agent made with `["read"]` sees the read tools and
   nothing else, and a rep's agent is not offered the admin's settings actions.
 
-  This filters the list only. A scheduled run chooses among every tool its passport may invoke
-  (`Registry.Runnable`), and each call still checks the user's grants, row scope and the call's
+  This filters the list only. A scheduled run may choose any tool its passport may call
+  (`Registry.Runnable`). Each call still checks the user's grants, row scope and the call's
   arguments, which can refuse a call the list showed.
 - **Extensions register after core.** `registerComposedTools` runs last in `internal/compose/registry.go`, so an
   extension unit can add verbs, and a name that is the same as a core verb fails boot. Each extension operation

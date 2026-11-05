@@ -12,13 +12,13 @@ Use this page when a new or changed MCP tool or router action turns one of four 
 - The role sweep in `backend/internal/compose/integration/toolrole/`, a test binary of its own. It calls every
   tool and action as each seeded role and writes [mcp-tool-roles.json](../reference/mcp-tool-roles.json) and
   `toolchecks.json`.
-- The sweep's `cells` subtest, once the sweep is done. It holds each seeded role's `tools/list` to the ✓ cells
-  of the committed matrix: no ✗ call is offered and no ✓ call is hidden. Its `listing` subtests run beside the
-  roles and hold an operator's own roles' `tools/list` to the gate.
+- The sweep's `cells` check, after the sweep. It holds each seeded role's `tools/list` to the ✓ cells of the
+  committed matrix: no ✗ call is offered and every ✓ call is. Its `listing` checks run beside the roles and hold
+  an operator's own roles' `tools/list` to the gate.
 
 Every cell is a ✓ or a ✗: the call ran for the role, or a gate refused it. A cell that is neither fails the
-sweep. A refusal counts only where a gate in `platform/auth` recorded refusing that role in that call, whether it
-answered 403 or hid a row as not found. A 403 no gate recorded fails the sweep as `a 403 no gate recorded`.
+sweep. A refusal counts only where a gate in `platform/auth` recorded refusing that role in that call. The gate
+answered 403, or kept a row out of sight as not there. A 403 no gate recorded fails the sweep as `a 403 no gate recorded`.
 Each record a call takes is owned by the passport's own user, so a cell measures the role's grants. Row scope is
 the colleague pass's subject.
 
@@ -41,8 +41,8 @@ the colleague pass's subject.
    - `a 403 no gate recorded`: a store refused the call on a rule of its own. Make it an auth decision. A rule
      the role decides goes through a gate (`auth.Require`, `auth.RequireAdmin` and the rest), or
      `auth.RecordDecision` where the store reads the grants itself. A rule the record holds, such as the level a
-     stop was recorded at, answers through `auth.RefuseRow`; then seed a record the role can act on, since the
-     matrix measures the role and not the record.
+     stop was recorded at, answers through `auth.RefuseRow`. Then seed a record the role can act on: the matrix
+     measures the role and not the record.
 
 3. **Check a grant only where it is needed.** `auth.Require` records each check it is asked.
    `tools/list` then hides the tool from a role without that grant. A branch that only changes what an
@@ -50,9 +50,9 @@ the colleague pass's subject.
    `auth.Require(...) == nil` in a branch.
    - A read the call still answers without, such as a setting with a default, is a branch too. Read it
      under the context `auth.Unrecorded` returns, or a role without the grant is not offered a tool it can run.
-   - A tool that picks its record by an enum argument, such as `record_type`, is called again as the admin,
-     once for each word of that enum. `tools/list` offers it to a caller who holds every check of one call
-     that ran, and the matrix allows a role the call on some kind ran for.
+   - A tool that picks its record by an enum argument, such as `record_type`, is called again as the admin
+     for each word of that enum. `tools/list` offers it to a caller who holds every check of one call that
+     ran. The matrix allows a role the call on some kind ran for.
    - A gate that hides a row that is there answers through `auth.HideRow`, so the 404 is recorded as a refusal.
      A row that is not there stays a plain 404, and fails the sweep.
    - An act only a seat short of a row scope needs goes through `auth.RequireRowScopeNarrowerThan`. Its check

@@ -249,7 +249,7 @@ func setupSeeders(s sweepSeed) map[string]func() string {
 	}
 	stage := func() string {
 		owner := pipeline()
-		id := strings.Split(s.pool.fact(owner, "stages"), ",")[0]
+		id, _, _ := strings.Cut(s.pool.fact(owner, "stages"), ",")
 		var read struct {
 			Version int `json:"version"`
 		}

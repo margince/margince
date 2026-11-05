@@ -23,6 +23,11 @@ func RequireRowScopeNarrowerThan(ctx context.Context, most principal.RowScope, r
 	if c.HeldBy(p) {
 		return nil
 	}
+	return refuseAs(ctx, c, refusal)
+}
+
+// refuseAs refuses the caller c with the caller's own refusal, and notes it.
+func refuseAs(ctx context.Context, c Check, refusal error) error {
 	if recording(ctx) {
 		noteRefusal(ctx, c.String())
 	}

@@ -11,9 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/cookiejar"
-	"net/url"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 

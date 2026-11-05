@@ -52,7 +52,7 @@ func nextSeatAddr() string {
 
 // forwardedFor sends each request as from addr, through a proxy the server
 // trusts. A server that trusts no proxy reads the peer and ignores it. Each
-// seat then has its own per-address sign-in budget, as each person would.
+// seat then has its own per-address sign-in budget, as each user would.
 type forwardedFor struct {
 	next http.RoundTripper
 	addr string
