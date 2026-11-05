@@ -113,8 +113,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterReportTool(registry,
 		reportToolRunner(newReportEngine(pool)),
 		reportToolCatalog(), reportPlanVocabulary())
-	agents.RegisterReportVocabularyTool(registry,
-		agents.NewReportVocabularyResource(reportToolCatalog()))
+	agents.RegisterReportVocabularyTool(registry, agents.NewReportVocabularyResource(reportToolCatalog()))
 	agents.RegisterReportingTool(registry, reportingReader(pool))
 	agents.RegisterReportDraftTool(registry, reportDrafter(pool))
 	agents.RegisterAnalyticsReportTool(registry,

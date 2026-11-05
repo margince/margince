@@ -87,18 +87,13 @@ Yes. Before a change to many records, or an undo of one, your AI tool asks you t
 Also called: confirm a bulk change, undo a bulk update, can I undo what the assistant did, which requests cannot be undone.
 
 ### What happens when I name a record and several match?
-When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one.
-Also called: two contacts with the same name, name that matches twice, pick the right record.
+When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one. To test whether your AI tool can show such a form, an admin turns on **Check what an AI tool supports** on **Settings → MCP**.
+Also called: two contacts with the same name, name that matches twice, pick the right record, client check.
 
 ### How do I revoke an agent's access?
 To stop an agent, open **Settings → AI access**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
 For a connected AI tool, open the **…** menu on its row under **Your connections** and choose **Disconnect**, which ends the whole connection. Turning off a user revokes all their passports at once.
 Also called: kill switch, remove an agent, disconnect, delete an API key.
-
-### How do I check whether my AI tool can answer a form?
-An admin turns on **Check what an AI tool supports** under **Experiments** on **Settings → MCP**. Then reconnect Margince in your AI tool and ask it to use the Margince `check_client` tool; **(?)** next to the switch has the question to copy.
-If the tool shows a form that asks you to pick a color, it can answer a form. If it cannot, the answer says why. Only admins see the tool, and it changes no data. Turn the switch off when you are done.
-Also called: elicitation, client check.
 
 ### How do I let Margince work overnight for me?
 To let Margince prepare your Morning brief overnight, open **Settings → Connections**. On the **Overnight preparation** card, turn on **Let Margince prepare the Morning brief overnight**.

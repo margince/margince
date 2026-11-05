@@ -2295,6 +2295,7 @@ export const en = {
   "systemJob.domain_triage": "Website triage",
   "systemJob.employment_import_worker": "Employment history import",
   "systemJob.enabled_oidc_providers_read": "Sign-in provider read",
+  "systemJob.client_check_read": "AI tool check switch read",
   "systemJob.client_registration_read": "AI tool registration read",
   "systemJob.erasure_replay": "Erasure replay after a restore",
   "systemJob.extension_inventory": "Extension inventory",

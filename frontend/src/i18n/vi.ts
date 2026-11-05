@@ -2317,6 +2317,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.domain_triage": "Phân loại trang web",
   "systemJob.employment_import_worker": "Nhập lịch sử công tác",
   "systemJob.enabled_oidc_providers_read": "Đọc nhà cung cấp đăng nhập",
+  "systemJob.client_check_read": "Đọc công tắc kiểm tra công cụ AI",
   "systemJob.client_registration_read": "Đọc cách đăng ký công cụ AI",
   "systemJob.erasure_replay": "Xóa lại dữ liệu sau khi khôi phục",
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
