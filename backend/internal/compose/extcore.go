@@ -63,7 +63,9 @@ type extensionCore struct {
 	// is refused is about the INVOCATION, not about the context the handler
 	// passes in.
 	unattended bool
-	deps       extensionRuntimeBinding
+	// notifies lets an unattended invocation send a notice, and nothing else.
+	notifies bool
+	deps     extensionRuntimeBinding
 	// audit queues the export entries a list makes, for Tx to write once this
 	// transaction has ended. Nil on a port built without one.
 	audit *readAudit

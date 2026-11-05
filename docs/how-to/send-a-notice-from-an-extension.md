@@ -36,7 +36,8 @@ flowchart TD
 
 | Rule | What you see |
 |---|---|
-| No caller, no notice | A job tick and a bus delivery have nobody to check against, so `Send` answers `ErrForbidden`. A notice started by a scheduled job is refused for now. |
+| No caller, no notice from a tick | A job tick has nobody to check against, so `Send` answers `ErrForbidden`. A notice started by a scheduled job is refused for now. |
+| A delivery may send | A bus delivery, such as a mail arriving, can send with nobody signed in. Each recipient's own rights are still checked, so a record nobody may open reaches nobody and answers zero. |
 | The caller must see the record | A record the caller cannot open answers `ErrNotFound`, the same as a missing id. |
 | Recipients are resolved at send time | Only members who are active and not archived or erased are reached. Each must hold read on the record type and pass their own row scope. Someone who fails either is left out without an error. |
 | A rate per unit | A unit may call `Send` 60 times a minute across all its calls. The next call answers `ErrRateLimited`. The count is per call, not per member reached. If the shared counter is down, the call is refused. |
