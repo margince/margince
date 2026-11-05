@@ -3,7 +3,6 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  AI_RATE_DAY_ZONE,
   calendarDay,
   calendarMonth,
   dueInstant,
@@ -16,7 +15,7 @@ import {
   todayIn,
 } from "./calendarday";
 import { displayDay } from "./format.dates";
-import { dueTimeOf } from "./timezone";
+import { AI_RATE_DAY_ZONE, dueTimeOf } from "./timezone";
 
 // The zone the machine running this suite happens to be in. Every assertion
 // below is written against it rather than against a fixed offset, because the

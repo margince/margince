@@ -13,12 +13,7 @@
 // as input, so nothing here has to be tested against the machine's own zone.
 
 import type { ISODate } from "./datepattern";
-import {
-  DAY_MS,
-  endOfDayInZone,
-  instantAtWallClock,
-  UTC_ZONE,
-} from "./timezone";
+import { DAY_MS, endOfDayInZone, instantAtWallClock } from "./timezone";
 
 // The calendar day an instant falls on, in a named IANA zone, as `yyyy-mm-dd` so
 // two of them compare as strings without a second parse.
@@ -118,10 +113,6 @@ export function sameCalendarDay(a: Date, b: Date, zone: string): boolean {
 export function todayIn(zone: string): string {
   return calendarDay(new Date(), zone);
 }
-
-// The zone the AI model rate sheet counts its effective days in: the server
-// stores and compares each price's day as a UTC date (ai/ratewrite.go).
-export const AI_RATE_DAY_ZONE = UTC_ZONE;
 
 // The calendar MONTH an instant falls in, in a named IANA zone, as `yyyy-mm`.
 //
