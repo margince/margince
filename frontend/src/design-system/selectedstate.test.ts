@@ -13,12 +13,9 @@ import {
 
 // A selected, pressed or current state says where the reader is, so it is
 // neutral like a pressed filter pill (filterpills.css). The accent is the brand
-// and the primary action (README). A state drawn in it reads as the one control
-// worth pressing. A control's value (`:checked`, a switch's `aria-checked`) is
-// not where the reader is, so it keeps the accent the platform paints it in.
-// So does a progress ladder's rung, which says where a record stands.
-// The rail's current row is the app's location marker, not a pick among peers,
-// so it alone takes the accent fill (README, State colours).
+// and the primary action, so a state in it reads as the control to press.
+// A control's value (`:checked`, `aria-checked`) and a progress rung keep it.
+// The rail's current row marks the app's location, not a pick among peers.
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -43,8 +40,13 @@ const ACCENT = /var\(\s*--accent/;
 
 // Exact entries, so a new selector, sheet or property stays a finding.
 const LOCATION_MARKERS = new Set([
-  "src/app/shell.css: .rail .navitem.active { background: var(--accent) }",
-  "src/app/shell.css: .rail .railmore.active { background: var(--accent) }",
+  "src/app/shell.css: .rail .navitem.active { background: var(--accentLight) }",
+  "src/app/shell.css: .rail .navitem.active { color: var(--accentText) }",
+  "src/app/shell.css: .rail .railmore.active { color: var(--accentText) }",
+  "src/app/shell.css: .rail .railmore.active { background: var(--accentLight) }",
+  "src/app/shell.css: .rail.collapsed:not(.sheetopen) .navitem.active { box-shadow: inset 0 0 0 1px var(--accentText) }",
+  "src/app/shell.css: .rail:not(.sheetopen) .navitem.active { box-shadow: inset 0 0 0 1px var(--accentText) }",
+  "src/app/shell.css: .rail:not(.sheetopen) .railmore.active { box-shadow: inset 0 0 0 1px var(--accentText) }",
 ]);
 
 function stateMarkers(selector: string): string[] {
@@ -136,17 +138,20 @@ describe("a selected or pressed state is neutral", () => {
     ).toEqual([]);
   });
 
-  it("lets through only the rail's own fill, in its own sheet", () => {
+  it("lets through only the rail's own tint and ink, in its own sheet", () => {
     const shell = join(frontendRoot, "src", "app", "shell.css");
     const elsewhere = join(frontendRoot, "src", "probe.css");
     const marked = (file: string, selector: string, body: string) =>
       unexcused([{ file, selector, body }]);
-    const fill = "background: var(--accent)";
-    expect(marked(shell, ".rail .navitem.active", fill)).toEqual([]);
+    const tint = "background: var(--accentLight)";
+    expect(marked(shell, ".rail .navitem.active", tint)).toEqual([]);
     expect(
       marked(shell, ".rail .navitem.active", "color: var(--accentText)"),
+    ).toEqual([]);
+    expect(
+      marked(shell, ".rail .navitem.active", "background: var(--accent)"),
     ).toHaveLength(1);
-    expect(marked(shell, ".tabs .tab.active", fill)).toHaveLength(1);
-    expect(marked(elsewhere, ".rail .navitem.active", fill)).toHaveLength(1);
+    expect(marked(shell, ".tabs .tab.active", tint)).toHaveLength(1);
+    expect(marked(elsewhere, ".rail .navitem.active", tint)).toHaveLength(1);
   });
 });

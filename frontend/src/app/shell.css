@@ -695,22 +695,22 @@
   padding: 0;
   justify-content: center;
 }
-/* Hover is the current row's tint at one step quieter, so the two read as one
-   gesture at two strengths. */
+/* Not --groundHover: on the rail it is a --hoverShade tint close to the current
+   row's ground. */
 .rail .navitem:hover {
-  background: var(--accentLight);
+  background: color-mix(in srgb, var(--textPrimary) 4%, var(--ground));
   color: var(--accentText);
 }
-/* Declared after hover, so a pointer on the current row keeps this. A ground
-   alone is colour-only (WCAG 1.4.1, Level A), so the weight goes with it. */
+/* Declared after hover, so a pointer on the current row keeps this. A tint
+   alone is colour-only (WCAG 1.4.1, Level A): a labelled row adds weight, an
+   icon-only one adds an edge, since weight has no label to act on. */
 .rail .navitem.active {
-  background: var(--accent);
-  color: var(--textOnAccentControl);
+  background: var(--accentLight);
+  color: var(--accentText);
   font-weight: var(--fontWeightMedium);
 }
-/* The ring takes the ink: an accent ring vanishes on the accent fill. */
-.rail .navitem.active:focus-visible {
-  outline-color: var(--textOnAccentControl);
+.rail.collapsed:not(.sheetopen) .navitem.active {
+  box-shadow: inset 0 0 0 1px var(--accentText);
 }
 /* One icon size in both states. Animating the glyph's box relayouts the whole
    sidebar every frame, and a resizing icon is the jitter — 18px reads correctly
@@ -840,17 +840,14 @@
   margin-bottom: var(--space-2);
   /* Filled rather than outlined: it is the way OUT of a level, standing above a
      column of rows, and a hairline would read as a field at the head of them. A
-     recessed ground says "control" in a different word than a border does.
-     Only the RESTING ground is stated here. This element carries `navitem` too,
-     so `.rail .navitem:hover` already gives it the panel's one hover — it used to
-     restate that in --bgHover, which is LIGHTER than the sidebar's ground, and so
-     this control was the single thing in the rail that brightened under a pointer
-     while every row beside it darkened. A second spelling of one hover is how the
-     two got to disagree; there is one now. */
+     recessed ground says "control" in a different word than a border does. */
   background: var(--bgInset);
   color: var(--textPrimary);
   font-family: var(--fontFamilyBody);
   text-align: left;
+}
+.rail .navback:hover {
+  background: color-mix(in srgb, var(--textPrimary) 4%, var(--bgInset));
 }
 /* The chevron leads the movement it stands for: it pulls back the way the reader
    is about to go, which is the whole gesture in 2px. */
@@ -1038,8 +1035,8 @@
 .sectionpickgroup a svg {
   flex: none;
 }
-/* The entry the reader came from, on the inset ground the sidebar's current
-   row uses. */
+/* The entry the reader came from, on a neutral inset ground like every selected
+   state. */
 .sectionpickgroup a[aria-current="page"] {
   background: var(--bgInset);
   color: var(--textPrimary);
@@ -1450,14 +1447,14 @@
   /* A destination inside the More sheet is still the current one; without this
      the closed bar shows no active tab at all on those routes. */
   .rail .railmore.active {
-    color: var(--textOnAccentControl);
+    color: var(--accentText);
     font-weight: var(--fontWeightMedium);
-    background: var(--accent);
+    background: var(--accentLight);
     border-radius: var(--r-md);
   }
-  /* Closed only: open, the cell drops its fill and the accent ring shows. */
-  .rail:not(.sheetopen) .railmore.active:focus-visible {
-    outline-color: var(--textOnAccentControl);
+  .rail:not(.sheetopen) .navitem.active,
+  .rail:not(.sheetopen) .railmore.active {
+    box-shadow: inset 0 0 0 1px var(--accentText);
   }
 
   /* the sheet: the same element, every destination, thumb-reachable */

@@ -805,7 +805,7 @@
   --ladder3Edge: #31383a;
   --ladder4Edge: #3b4345;
 
-  --accent: #3aae94;
+  --accent: #16a34a;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
      fill that ISN'T --accent and doesn't lighten here (a toast on
      --bgInkField, the AI FAB on --ai, the voice orb over the Core's own glass,
@@ -815,12 +815,12 @@
      it flips here for the same reason --textOnAccentControl does — see its
      declaration below. */
   /* Lighter than --accent, so it reads on --accentLight over each dark ground. */
-  --accentText: #66d5ba;
-  --accentLight: rgba(58, 174, 148, 0.16);
-  --accentMed: rgba(58, 174, 148, 0.28);
-  /* Dark ink: white fails AA on the light dark-theme accent. Not --textOnAccent,
+  --accentText: #4ade80;
+  --accentLight: rgba(22, 163, 74, 0.16);
+  --accentMed: rgba(22, 163, 74, 0.28);
+  /* Dark ink: white fails AA on the lifted dark-theme accent. Not --textOnAccent,
      which still inks fills that stay dark here (--bgInkField, --ai). */
-  --textOnAccentControl: #07221d;
+  --textOnAccentControl: #06130b;
   /* The same flip, one theme later: a filled state control's ground is the
      tone's *Text token, and a Text red is DEEP in light and BRIGHT here — a
      near-black pane barely has to move a hue before it reads on it. So the ink
@@ -966,14 +966,14 @@
     --ladder3Edge: #31383a;
     --ladder4Edge: #3b4345;
 
-    --accent: #3aae94;
+    --accent: #16a34a;
 
-    --accentText: #66d5ba;
+    --accentText: #4ade80;
 
-    --accentLight: rgba(58, 174, 148, 0.16);
-    --accentMed: rgba(58, 174, 148, 0.28);
+    --accentLight: rgba(22, 163, 74, 0.16);
+    --accentMed: rgba(22, 163, 74, 0.28);
 
-    --textOnAccentControl: #07221d;
+    --textOnAccentControl: #06130b;
     --textOnStatusControl: #04240f;
 
     --avatarGroundL: 0.32;
