@@ -130,11 +130,16 @@ help: ## List targets with their descriptions (the default goal)
 # internal/contracts/ and build/composition/ in place — a
 # write-under-reader race for any pass still compiling them.
 #
+# Under CHECK_WRITERS_RAN, which the root `make check` sets for its lanes,
+# drift is left out: that run did drift before its lanes, and here it would
+# rewrite files that the frontend lane reads at the same time.
+#
 # Each phase reports how long it took (scripts/phase-timer.sh). The ledger has
-# ONE owner per run: the root `check-backend` exports PHASE_TIMER_OWNED and
-# prints the table itself, covering its gate fan-out and these four phases
-# together; run on its own (`make check-go`, or here directly) this target is
-# the owner instead and prints its own four. Without that, a standalone run
+# ONE owner per run: the root `check-backend` or `check` exports
+# PHASE_TIMER_OWNED and prints the table itself, covering its other phases and
+# these together (three under CHECK_WRITERS_RAN, four otherwise); run on its own
+# (`make check-go`, or here directly) this target is the owner instead and prints
+# its own four. Without that, a standalone run
 # would leave its rows to be counted inside somebody else's table, and a
 # standalone run that FAILED would leave its open phase to abort the next one.
 #
@@ -157,9 +162,11 @@ check: ## The merge gate: everything a PR must pass
 	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
 	$(MAKE) -j4 $(CHECK_LEGS)
 	@bash ../scripts/phase-timer.sh stop
+ifndef CHECK_WRITERS_RAN
 	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
 	@bash ../scripts/phase-timer.sh stop
+endif
 	@bash ../scripts/phase-timer.sh start "backend: composition reproducibility"
 	$(MAKE) check-composition
 	@bash ../scripts/phase-timer.sh stop
@@ -171,8 +178,17 @@ check-static: composition ## The static half of check (STATIC_LEGS), which CI ru
 # gen-composition runs pinned to the ROOT workspace: the tool lives in
 # the separate backend/tools module, so a caller-exported GOWORK (off, or
 # an unrelated workspace) would break resolution before anything builds.
+#
+# Under CHECK_WRITERS_RAN it writes nothing. gen-composition removes
+# build/composition/ before it writes it again, so a run in one `make check`
+# lane would take the tree away from the other lanes that read it.
+# `make check` composes once, before the lanes start.
 composition: ## Materialize build/composition/ from the enabled set under extensions/ (every build lane depends on this)
+ifdef CHECK_WRITERS_RAN
+	@echo "composition: written by make check's writers phase, so this lane only reads it"
+else
 	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
+endif
 
 check-composition: composition ## Reproducibility gate: a clean regeneration must reproduce composition.json byte-for-byte
 	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition -verify
