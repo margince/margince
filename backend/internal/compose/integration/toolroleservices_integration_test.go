@@ -47,19 +47,21 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *twoDoors {
 		t.Fatalf("registering the offline data provider: %v", err)
 	}
 	vault := keyvault.NewMemory()
-	calendar := &bookingProviderTransport{fallback: http.DefaultTransport, calendar: "ada@example.com", events: map[string]json.RawMessage{}}
+	calendar := &bookingProviderTransport{fallback: sweepGmail{next: http.DefaultTransport}, calendar: "ada@example.com", events: map[string]json.RawMessage{}}
 	previous := http.DefaultTransport
 	http.DefaultTransport = calendar
 	t.Cleanup(func() { http.DefaultTransport = previous })
+	// The channel surface takes its vault from WithKeyvault, so it is composed first.
 	d := newTwoDoorsWith(t, slug, append([]compose.Option{
-		compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
+		compose.WithChannelSurface(), compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
 			ClientID: "calendar-fixture", ClientSecret: "calendar-fixture",
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
-		}, compose.CaptureConfig{}),
+		}, compose.CaptureConfig{}), compose.WithCaptureBackfill(jobs),
 		compose.WithTranscriptRead(jobs), compose.WithDocumentRead(jobs), compose.WithDeepRead(jobs, siteReads.ColdStart),
 		compose.WithRoleProposals(models.ProposeRoles), compose.WithEmbedReindex(embeddings, jobs),
 		compose.WithAssuranceRun(jobs), compose.WithKnowledgeIngest(jobs), compose.WithCaptureTrace(true),
-		compose.WithChannelSurface(), compose.WithListsEnabled(true), compose.WithVatChecking(jobs),
+		compose.WithListsEnabled(true), compose.WithOperatorMail(discardingMailer{}),
+		compose.WithFilterProposals(sweepLane{reply: sweepFilterReply}), compose.WithCorpusAsk(askableEmbedder{}, nil, quietAskLog()), compose.WithReportSetup(sweepLane{reply: sweepSetupReply}), compose.WithVatChecking(jobs),
 		compose.WithProvider(providers, vault, jobs),
 	}, more...), "read", "write", "send", "draft", "enrich")
 	// The VAT queue binds the stores compose builds anywhere in the process.
@@ -110,8 +112,9 @@ func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPCli
 	var refusal json.RawMessage
 	switch status := e.Call(t, "POST", "/v1/approvals/"+staged[1]+"/approve", AnyMap{}, nil, &refusal); status {
 	case http.StatusOK:
-	case http.StatusForbidden:
-		// The human may not release the call, so the role cannot run it.
+	case http.StatusForbidden, http.StatusNotFound:
+		// The human may not release the call, so the role cannot run it. The
+		// call staged this approval, so a 404 is the inbox hiding it from them.
 		return apptest.MCPResult{IsError: true, Text: "releasing the staged call: permission denied " + string(refusal)}
 	default:
 		return got

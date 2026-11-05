@@ -36,6 +36,9 @@ type recordPool struct {
 	// late seeds a kind as a call takes it, for a state an earlier call in
 	// the same sweep takes away.
 	late map[string]func() string
+	// caller is the passport the next call goes out on, for a state only that
+	// agent's own act makes.
+	caller map[string]string
 }
 
 // fact is what the seed of a record noted beside it. Counting mode has none.

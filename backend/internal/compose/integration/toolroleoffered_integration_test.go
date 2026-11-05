@@ -47,6 +47,7 @@ func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
 			for n, call := range calls {
 				// One set of records for both. The role calls first, so a call it
 				// was refused leaves the records as the admin control finds them.
+				pool.caller = clients[n/toolRoleCallsPerPassport].Bearer()
 				args := call.args(pool)
 				holdRoles(t, d.e, holding...)
 				got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)

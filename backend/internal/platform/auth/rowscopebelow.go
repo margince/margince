@@ -5,14 +5,16 @@ package auth
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // RequireRowScopeNarrowerThan admits a caller whose row scope is narrower than
-// most, and answers refusal otherwise. It guards an act that only a seat short
-// of most needs, such as asking a colleague for a record. An all-scope seat may
-// already change every record.
+// most, and answers refusal otherwise, or 403 when refusal is nil. It guards an
+// act that only a seat short of most needs, such as asking a colleague for a
+// record. An all-scope seat may already change every record.
 func RequireRowScopeNarrowerThan(ctx context.Context, most principal.RowScope, refusal error) error {
 	p, err := rbacActor(ctx)
 	if err != nil {
@@ -24,5 +26,8 @@ func RequireRowScopeNarrowerThan(ctx context.Context, most principal.RowScope, r
 		return nil
 	}
 	noteRefusal(ctx, c.String())
+	if refusal == nil {
+		return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
+	}
 	return refusal
 }

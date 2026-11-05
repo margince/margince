@@ -60,8 +60,13 @@ func seedToolRoleRecords(t *testing.T, e *apptest.AppEnv, calls []toolRoleCall, 
 }
 
 // lateKinds are seeded as a call takes them. The anchor company's logo is one:
-// the sweep's own calls take the logo off before the reads run.
-var lateKinds = map[string]bool{"anchor_logo": true}
+// the sweep's own calls take the logo off before the reads run. So is the
+// Telegram bot, which a disconnect takes off before the sends run. So is an
+// agent's own act, made as the passport of the call that takes it.
+var lateKinds = map[string]bool{
+	"anchor_logo": true, "live_channel": true, "channel_conversation": true,
+	"agent_withdrawn_owner_identity": true,
+}
 
 // toolRoleSeeders makes one record of each kind a call can take. An owner, when
 // named, owns the records that carry one; the admin owns them otherwise. A seed

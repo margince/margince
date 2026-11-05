@@ -1387,36 +1387,73 @@
       "tool": "change_capture",
       "action": "add_consumer_mail_domain",
       "verb": "add_consumer_mail_domain",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_capture",
       "action": "add_counterparty_hold",
       "verb": "add_counterparty_hold",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "add_exclusion",
       "verb": "add_capture_exclusion",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "add_owner_identity",
       "verb": "add_owner_identity",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "add_workspace_email_domain",
       "verb": "add_workspace_email_domain",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_capture",
@@ -1437,15 +1474,30 @@
       "tool": "change_capture",
       "action": "cancel_backfill",
       "verb": "cancel_connector_backfill",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "cancel_import_run",
       "verb": "cancel_import_run",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_capture",
@@ -1466,15 +1518,30 @@
       "tool": "change_capture",
       "action": "discard_domain",
       "verb": "discard_domain_question",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "disconnect_channel",
       "verb": "disconnect_channel",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_capture",
@@ -1494,35 +1561,72 @@
       "tool": "change_capture",
       "action": "dismiss_mailbox_silence",
       "verb": "dismiss_connector_silence",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "keep_domain_as_company",
       "verb": "keep_domain_as_company",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_capture",
       "action": "keep_domain_as_vendor",
       "verb": "keep_domain_as_vendor",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_capture",
       "action": "lift_counterparty_hold",
       "verb": "lift_counterparty_hold",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "lift_exclusion",
       "verb": "lift_capture_exclusion",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
@@ -1559,56 +1663,115 @@
       "tool": "change_capture",
       "action": "reopen_domain",
       "verb": "reopen_withheld_domain",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_capture",
       "action": "restore_owner_identity",
       "verb": "restore_owner_identity",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "set_blocked_domain",
       "verb": "set_blocked_domain",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_capture",
       "action": "set_context_tag",
       "verb": "set_connector_context_tag",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "set_history_baseline",
       "verb": "set_connector_history_baseline",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "set_mail_posture",
       "verb": "set_connector_mail_posture",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "set_sender_decision",
       "verb": "set_capture_sender_decision",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_capture",
       "action": "set_signature_enrichment",
       "verb": "set_connector_signature_enrichment",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
@@ -1629,8 +1792,16 @@
       "tool": "change_capture",
       "action": "undo_import_run",
       "verb": "undo_import_run",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_capture",
@@ -1651,28 +1822,58 @@
       "tool": "change_capture",
       "action": "update_import_run",
       "verb": "update_import_run",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_capture",
       "action": "validate_import_run",
       "verb": "validate_import_run",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_capture",
       "action": "withdraw_owner_identity",
       "verb": "withdraw_owner_identity",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "change_capture",
       "action": "withdraw_sender_decision",
       "verb": "withdraw_capture_sender_decision",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
@@ -1698,29 +1899,61 @@
       "tool": "change_compliance",
       "action": "assign_notice_case",
       "verb": "assign_notice_case",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_compliance",
       "action": "assign_notice_case_review",
       "verb": "assign_notice_case_review",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_compliance",
       "action": "confirm_notice_source",
       "verb": "confirm_notice_source",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_compliance",
       "action": "lift_suppression",
       "verb": "lift_contact_suppression",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -1745,58 +1978,118 @@
       "tool": "change_compliance",
       "action": "pin_activity_to_floor",
       "verb": "pin_activity_to_floor",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_compliance",
       "action": "place_legal_hold",
       "verb": "place_legal_hold",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops"
+      ],
+      "refused_for": [
+        "read_only",
+        "rep"
+      ],
+      "colleague_record": {
+        "manager": "refused",
+        "rep": "refused"
+      }
     },
     {
       "tool": "change_compliance",
       "action": "record_communication_context",
       "verb": "record_communication_context",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_compliance",
       "action": "record_consent",
       "verb": "record_consent",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_compliance",
       "action": "record_qualifying_event",
       "verb": "record_qualifying_event",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "refused",
+        "rep": "refused"
       }
     },
     {
       "tool": "change_compliance",
       "action": "resolve_confirm_submission",
       "verb": "resolve_confirm_submission",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_compliance",
       "action": "retract_acquisition_request",
       "verb": "retract_acquisition_request",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -1806,8 +2099,16 @@
       "tool": "change_compliance",
       "action": "retract_qualifying_event",
       "verb": "retract_qualifying_event",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -1817,8 +2118,16 @@
       "tool": "change_compliance",
       "action": "revoke_override",
       "verb": "revoke_contact_override",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -1847,8 +2156,16 @@
       "tool": "change_compliance",
       "action": "update_data_subject_request",
       "verb": "update_data_subject_request",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_lists",
@@ -2532,15 +2849,31 @@
       "tool": "change_reports",
       "action": "archive_report",
       "verb": "archive_reporting_report",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "close_lost_input_check",
       "verb": "close_lost_input_check",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_reports",
@@ -2576,29 +2909,61 @@
       "tool": "change_reports",
       "action": "create_report",
       "verb": "create_reporting_report",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "create_schedule",
       "verb": "create_reporting_schedule",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management"
+      ],
+      "refused_for": [
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "create_target",
       "verb": "create_reporting_target",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management"
+      ],
+      "refused_for": [
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "discard_draft",
       "verb": "discard_reporting_report_draft",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ]
     },
     {
       "tool": "change_reports",
@@ -2619,29 +2984,61 @@
       "tool": "change_reports",
       "action": "freeze_edition",
       "verb": "freeze_reporting_edition",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "launch_initiative",
       "verb": "launch_sales_initiative",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager"
+      ],
+      "refused_for": [
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "publish_draft",
       "verb": "publish_reporting_report_draft",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management"
+      ],
+      "refused_for": [
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "publish_framework",
       "verb": "publish_reporting_framework",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_reports",
@@ -2650,22 +3047,32 @@
       "allowed_for": [
         "admin",
         "management",
-        "ops"
+        "manager",
+        "ops",
+        "rep"
       ],
       "refused_for": [
         "read_only"
       ],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_reports",
       "action": "record_decision_outcome",
       "verb": "record_sales_decision_outcome",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_reports",
@@ -2701,36 +3108,71 @@
       "tool": "change_reports",
       "action": "resolve_input_check",
       "verb": "resolve_input_check",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "restore_revision",
       "verb": "restore_reporting_report_revision",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management"
+      ],
+      "refused_for": [
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "retry_execution",
       "verb": "retry_reporting_execution",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "revoke_forecast_share",
       "verb": "revoke_forecast_share",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops"
+      ],
+      "refused_for": [
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "start_input_check",
       "verb": "start_forecast_assurance_run",
       "allowed_for": [
-        "admin"
+        "admin",
+        "management",
+        "manager",
+        "ops"
       ],
       "refused_for": [
         "read_only",
@@ -2756,29 +3198,61 @@
       "tool": "change_reports",
       "action": "update_report",
       "verb": "update_reporting_report",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "update_schedule",
       "verb": "update_reporting_schedule",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management"
+      ],
+      "refused_for": [
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "update_target",
       "verb": "update_reporting_target",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management"
+      ],
+      "refused_for": [
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_reports",
       "action": "wait_input_check",
       "verb": "wait_input_check",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_settings",
@@ -3346,8 +3820,16 @@
       "tool": "change_state",
       "action": "correct_project_health",
       "verb": "correct_project_health_assessment",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -3357,8 +3839,16 @@
       "tool": "change_state",
       "action": "decide_commission",
       "verb": "decide_commission_entry",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops"
+      ],
+      "refused_for": [
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_state",
@@ -3698,8 +4188,16 @@
       "tool": "change_state",
       "action": "transfer_projects",
       "verb": "transfer_project_ownership",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops"
+      ],
+      "refused_for": [
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_state",
@@ -3881,7 +4379,9 @@
         "ops",
         "rep"
       ],
-      "refused_for": []
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "decide_approvals",
@@ -3941,7 +4441,9 @@
         "ops",
         "rep"
       ],
-      "refused_for": [],
+      "refused_for": [
+        "read_only"
+      ],
       "colleague_record": {
         "manager": "other",
         "rep": "other"
@@ -4228,8 +4730,16 @@
       "tool": "read_details",
       "action": "backfill_preview",
       "verb": "preview_connector_backfill",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "read_details",
@@ -4253,7 +4763,14 @@
       "tool": "read_details",
       "action": "communication_review",
       "verb": "get_communication_review",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
@@ -4468,11 +4985,19 @@
       "tool": "read_details",
       "action": "controller_mail_preview",
       "verb": "preview_controller_mail",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
       "colleague_record": {
-        "manager": "refused",
-        "rep": "refused"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -4643,7 +5168,14 @@
       "tool": "read_details",
       "action": "filter_preview",
       "verb": "preview_filter",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
@@ -5080,15 +5612,31 @@
       "tool": "read_details",
       "action": "notice_case",
       "verb": "get_notice_case",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "read_details",
       "action": "notice_case_review",
       "verb": "get_notice_case_review",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "read_details",
@@ -5625,7 +6173,14 @@
       "tool": "read_reports",
       "action": "analytics_cell_records",
       "verb": "explain_analytics_cell",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
@@ -5702,15 +6257,34 @@
       "tool": "read_reports",
       "action": "question_card_records",
       "verb": "explain_reporting_question_card",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
+      }
     },
     {
       "tool": "read_reports",
       "action": "report_revisions",
       "verb": "list_reporting_report_revisions",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ]
     },
     {
       "tool": "read_reports",
@@ -5730,7 +6304,14 @@
       "tool": "read_reports",
       "action": "report_run_cell_records",
       "verb": "explain_report_run_cell",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
@@ -6385,7 +6966,14 @@
       "tool": "read_workspace",
       "action": "connector_containers",
       "verb": "list_connector_containers",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
@@ -7392,14 +7980,28 @@
       "tool": "run_research",
       "action": "ask_corpus",
       "verb": "ask_knowledge_corpus",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "run_research",
       "action": "assess_sales_review",
       "verb": "assess_sales_review",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
@@ -7420,15 +8022,30 @@
       "tool": "run_research",
       "action": "propose_filter",
       "verb": "propose_filter",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
       "refused_for": []
     },
     {
       "tool": "run_research",
       "action": "propose_report_setup",
       "verb": "propose_report_setup",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager"
+      ],
+      "refused_for": [
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "run_research",
@@ -7542,8 +8159,16 @@
       "tool": "run_research",
       "action": "start_backfill",
       "verb": "start_connector_backfill",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "schedule_meeting",
@@ -7628,29 +8253,53 @@
       "tool": "send_outbound",
       "action": "details_confirmation",
       "verb": "request_details_confirmation",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
       "colleague_record": {
-        "manager": "refused",
-        "rep": "refused"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "send_outbound",
       "action": "direct_send",
       "verb": "direct_communication_send",
-      "allowed_for": [],
-      "refused_for": []
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ]
     },
     {
       "tool": "send_outbound",
       "action": "double_opt_in",
       "verb": "issue_double_opt_in",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
       "colleague_record": {
-        "manager": "refused",
-        "rep": "refused"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -7739,11 +8388,19 @@
       "tool": "send_outbound",
       "action": "privacy_notice",
       "verb": "send_privacy_notice",
-      "allowed_for": [],
-      "refused_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
       "colleague_record": {
-        "manager": "refused",
-        "rep": "refused"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {

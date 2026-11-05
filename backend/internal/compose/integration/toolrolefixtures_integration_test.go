@@ -392,12 +392,12 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"get_legal_entity_logo": byID("entity_logo"),
 }
 
-// fixtureTables are every table of fixtures: the two above, and one per
+// fixtureTables lists the tables of fixtures: the two above, and one per
 // family of route verbs, each in that family's own file.
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 func fixtureTables() []map[string]func(p *recordPool) map[string]any {
-	return []map[string]func(p *recordPool) map[string]any{toolRoleFixtures, routeVerbFixtures, captureFixtures}
+	return []map[string]func(p *recordPool) map[string]any{toolRoleFixtures, routeVerbFixtures, captureFixtures, complianceFixtures, reportingFixtures, projectFixtures}
 }
 
 // fixtureOf is the fixture a verb has in any table.

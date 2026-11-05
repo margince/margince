@@ -61,7 +61,9 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 				verdicts[call.row] = row.toolRoleVerdicts
 				continue
 			}
-			got := callThroughApproval(t, d.e, clients[n/toolRoleCallsPerPassport], call.verb, call.args(pool))
+			client := clients[n/toolRoleCallsPerPassport]
+			pool.caller = client.Bearer()
+			got := callThroughApproval(t, d.e, client, call.verb, call.args(pool))
 			if got.IsError && strings.Contains(got.Text, "human-only operation") {
 				t.Errorf("%s is offered to agents and its route refuses every agent: %s", call.verb, got.Text)
 			}

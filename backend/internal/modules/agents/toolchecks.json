@@ -47,12 +47,13 @@
       "checks": []
     },
     "add_capture_exclusion": {
-      "checks": [
-        "capture_settings.update"
-      ]
+      "checks": []
     },
     "add_consumer_mail_domain": {
-      "checks": []
+      "checks": [
+        "capture_settings.create",
+        "capture_settings.create|update"
+      ]
     },
     "add_counterparty_hold": {
       "checks": []
@@ -76,7 +77,9 @@
       ]
     },
     "add_workspace_email_domain": {
-      "checks": []
+      "checks": [
+        "capture_settings.update"
+      ]
     },
     "advance_project_phase": {
       "checks": [
@@ -190,10 +193,14 @@
       ]
     },
     "ask_knowledge_corpus": {
-      "checks": []
+      "checks": [
+        "installation_settings.read",
+        "knowledge_corpus.read"
+      ]
     },
     "assess_sales_review": {
       "checks": [
+        "deal.read",
         "installation_settings.read",
         "report_definition.read"
       ]
@@ -206,12 +213,14 @@
     },
     "assign_notice_case": {
       "checks": [
+        "contact.read",
         "privacy_request.read",
         "privacy_request.update"
       ]
     },
     "assign_notice_case_review": {
       "checks": [
+        "contact.read",
         "privacy_request.read",
         "privacy_request.update"
       ]
@@ -336,8 +345,12 @@
     },
     "close_lost_input_check": {
       "checks": [
+        "company.read",
         "deal.update",
-        "forecast.update"
+        "forecast.update",
+        "installation_settings.read",
+        "project.read",
+        "signal.update"
       ]
     },
     "commit_import": {
@@ -377,6 +390,7 @@
     },
     "confirm_notice_source": {
       "checks": [
+        "contact.read",
         "privacy_request.read",
         "privacy_request.update"
       ]
@@ -493,12 +507,14 @@
     },
     "create_reporting_report": {
       "checks": [
+        "installation_settings.read",
         "report_definition.create",
         "report_definition.read"
       ]
     },
     "create_reporting_schedule": {
       "checks": [
+        "installation_settings.read",
         "report_definition.read",
         "report_schedule.create",
         "report_schedule.read"
@@ -506,6 +522,7 @@
     },
     "create_reporting_target": {
       "checks": [
+        "installation_settings.read",
         "sales_target.create",
         "sales_target.read"
       ]
@@ -671,7 +688,11 @@
     },
     "direct_communication_send": {
       "checks": [
-        "communication_exception.create"
+        "activity.create",
+        "activity.read",
+        "communication_exception.create",
+        "contact.read",
+        "installation_settings.read"
       ]
     },
     "discard_domain_question": {
@@ -683,7 +704,10 @@
       ]
     },
     "discard_reporting_report_draft": {
-      "checks": []
+      "checks": [
+        "report_definition.read",
+        "report_definition.update"
+      ]
     },
     "disconnect_channel": {
       "checks": [
@@ -859,6 +883,7 @@
       "checks": [
         "activity.read",
         "deal.read",
+        "installation_settings.read",
         "lead.read",
         "project.read"
       ]
@@ -869,10 +894,21 @@
       ]
     },
     "explain_report_run_cell": {
-      "checks": []
+      "checks": [
+        "activity.read",
+        "deal.read",
+        "installation_settings.read",
+        "lead.read",
+        "project.read"
+      ]
     },
     "explain_reporting_question_card": {
       "checks": [
+        "activity.read",
+        "deal.read",
+        "installation_settings.read",
+        "lead.read",
+        "project.read",
         "report_definition.read"
       ]
     },
@@ -899,6 +935,7 @@
     },
     "freeze_reporting_edition": {
       "checks": [
+        "installation_settings.read",
         "report_edition.create",
         "report_edition.read"
       ]
@@ -1296,11 +1333,13 @@
     },
     "get_notice_case": {
       "checks": [
+        "contact.read",
         "privacy_request.read"
       ]
     },
     "get_notice_case_review": {
       "checks": [
+        "contact.read",
         "privacy_request.read"
       ]
     },
@@ -1371,8 +1410,7 @@
     "get_sdr_team_review": {
       "checks": [
         "installation_settings.read",
-        "lead.read",
-        "sales_target.read"
+        "lead.read"
       ]
     },
     "get_tag": {
@@ -1397,6 +1435,7 @@
         "deal.read",
         "installation_settings.read",
         "project.read",
+        "relationship.read",
         "scope:team"
       ]
     },
@@ -1520,27 +1559,35 @@
     "invite_user": {
       "checks": [
         "user_admin.create",
+        "user_admin.create|update",
         "user_admin.read|create|update|delete"
       ]
     },
     "issue_double_opt_in": {
       "checks": [
+        "activity.create",
+        "activity.read",
         "contact.update"
       ]
     },
     "keep_domain_as_company": {
       "checks": [
+        "activity.read",
+        "company.create",
+        "company.read",
         "company.update"
       ]
     },
     "keep_domain_as_vendor": {
       "checks": [
+        "activity.read",
         "company.update"
       ]
     },
     "launch_sales_initiative": {
       "checks": [
         "deal.read",
+        "lead.read",
         "sales_initiative.update"
       ]
     },
@@ -1591,6 +1638,7 @@
         "contact.read",
         "deal.read",
         "lead.read",
+        "project.read",
         "tag.read"
       ]
     },
@@ -1799,11 +1847,13 @@
     },
     "list_notice_case_reviews": {
       "checks": [
+        "contact.read",
         "privacy_request.read"
       ]
     },
     "list_notice_cases": {
       "checks": [
+        "contact.read",
         "privacy_request.read"
       ]
     },
@@ -2057,7 +2107,9 @@
       ]
     },
     "place_legal_hold": {
-      "checks": []
+      "checks": [
+        "contact.delete"
+      ]
     },
     "prep_for_meeting": {
       "checks": [
@@ -2093,6 +2145,7 @@
     "preview_filter": {
       "checks": [
         "contact.read",
+        "lead.read",
         "relationship.read"
       ]
     },
@@ -2169,11 +2222,19 @@
     },
     "propose_filter": {
       "checks": [
-        "contact.read"
+        "company.read",
+        "contact.read",
+        "custom_field.read",
+        "installation_settings.read",
+        "list.read",
+        "relationship.read"
       ]
     },
     "propose_report_setup": {
       "checks": [
+        "installation_settings.read",
+        "product.read",
+        "report_definition.read",
         "sales_initiative.create"
       ]
     },
@@ -2183,10 +2244,18 @@
       ]
     },
     "publish_reporting_framework": {
-      "checks": []
+      "checks": [
+        "installation_settings.read",
+        "reporting_framework.read",
+        "reporting_framework.update"
+      ]
     },
     "publish_reporting_report_draft": {
-      "checks": []
+      "checks": [
+        "installation_settings.read",
+        "report_definition.read",
+        "report_definition.update"
+      ]
     },
     "put_anchor_company": {
       "checks": [
@@ -2307,7 +2376,9 @@
       ]
     },
     "record_communication_context": {
-      "checks": []
+      "checks": [
+        "contact.update"
+      ]
     },
     "record_consent": {
       "checks": [
@@ -2334,7 +2405,9 @@
       ]
     },
     "record_qualifying_event": {
-      "checks": []
+      "checks": [
+        "contact.update"
+      ]
     },
     "record_sales_decision": {
       "checks": [
@@ -2345,7 +2418,8 @@
     },
     "record_sales_decision_outcome": {
       "checks": [
-        "activity.read"
+        "activity.read",
+        "activity.update"
       ]
     },
     "refresh_company_dossier": {
@@ -2477,7 +2551,9 @@
       ]
     },
     "reopen_withheld_domain": {
-      "checks": []
+      "checks": [
+        "company.update"
+      ]
     },
     "reopen_worklist_rows": {
       "checks": []
@@ -2509,6 +2585,8 @@
     },
     "request_details_confirmation": {
       "checks": [
+        "activity.create",
+        "activity.read",
         "contact.update"
       ]
     },
@@ -2547,7 +2625,11 @@
       ]
     },
     "resolve_confirm_submission": {
-      "checks": []
+      "checks": [
+        "company.read",
+        "contact.update",
+        "relationship.read"
+      ]
     },
     "resolve_deal_room_thread": {
       "checks": [
@@ -2562,7 +2644,6 @@
     "resolve_input_check": {
       "checks": [
         "deal.update",
-        "forecast.create",
         "forecast.update",
         "signal.update"
       ]
@@ -2596,7 +2677,11 @@
       ]
     },
     "restore_reporting_report_revision": {
-      "checks": []
+      "checks": [
+        "installation_settings.read",
+        "report_definition.read",
+        "report_definition.update"
+      ]
     },
     "restore_tag": {
       "checks": [
@@ -2761,6 +2846,8 @@
     },
     "send_privacy_notice": {
       "checks": [
+        "activity.create",
+        "activity.read",
         "contact.update"
       ]
     },
@@ -2776,7 +2863,9 @@
       ]
     },
     "set_blocked_domain": {
-      "checks": []
+      "checks": [
+        "company.update"
+      ]
     },
     "set_capture_sender_decision": {
       "checks": [
@@ -2874,12 +2963,16 @@
     },
     "transfer_project_ownership": {
       "checks": [
+        "project.read",
         "project.update"
       ]
     },
     "undo_import_run": {
       "checks": [
-        "import_run.read"
+        "company.create",
+        "custom_field.read",
+        "import_run.read",
+        "import_run.update"
       ]
     },
     "undo_meeting_ready": {
@@ -3038,13 +3131,26 @@
       ]
     },
     "update_reporting_report": {
-      "checks": []
+      "checks": [
+        "installation_settings.read",
+        "report_definition.read",
+        "report_definition.update"
+      ]
     },
     "update_reporting_schedule": {
-      "checks": []
+      "checks": [
+        "installation_settings.read",
+        "report_definition.read",
+        "report_schedule.read",
+        "report_schedule.update"
+      ]
     },
     "update_reporting_target": {
-      "checks": []
+      "checks": [
+        "installation_settings.read",
+        "sales_target.read",
+        "sales_target.update"
+      ]
     },
     "update_sales_initiative": {
       "checks": [
@@ -3068,6 +3174,7 @@
     },
     "validate_import_run": {
       "checks": [
+        "custom_field.read",
         "import_run.read",
         "import_run.update"
       ]
@@ -3079,8 +3186,11 @@
     },
     "wait_input_check": {
       "checks": [
+        "company.read",
         "deal.update",
-        "forecast.update"
+        "forecast.update",
+        "project.read",
+        "signal.update"
       ]
     },
     "whats_slipping_this_week": {

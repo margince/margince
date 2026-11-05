@@ -18529,7 +18529,6 @@ paths:
         domain is captured again from the next message on; nothing already dropped comes back.
       x-mcp-tool: { verb: lift_capture_exclusion, router: change_capture, action: lift_exclusion, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-settings-audience: member
       responses:
         '204': { description: Lifted. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -21356,7 +21355,6 @@ paths:
       operationId: addConsumerMailDomain
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: add_consumer_mail_domain, router: change_capture, action: add_consumer_mail_domain, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      x-settings-audience: member
       summary: Add a consumer-mail domain, or carve one out.
       description: |
         It changes a workspace-wide capture posture, so an agent asks its user first. `kind:

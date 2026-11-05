@@ -440,10 +440,6 @@ func (w *grantWalk) call(call *ast.CallExpr, info *types.Info, bound map[types.O
 		w.recordRefusal(used.Name(), call, info, bound, mainLine)
 		return
 	}
-	if used.Pkg() != nil && used.Pkg().Path() == authPackagePath && used.Name() == authAllows {
-		w.recordRefusal(used.Name(), call, info, bound, false)
-		return
-	}
 	// The primitive every object grant ends at. It answers a boolean and refuses
 	// nobody, so it is conditional however it is called.
 	if isPermissionsAllows(used) {
@@ -452,9 +448,18 @@ func (w *grantWalk) call(call *ast.CallExpr, info *types.Info, bound map[types.O
 		}
 		return
 	}
+	if isAuthAllows(used) {
+		w.recordRefusal(used.Name(), call, info, bound, false)
+		return
+	}
 	for _, callee := range w.source.graph.callees(used) {
 		w.function(callee, boundArguments(callee, call, info, bound), mainLine)
 	}
+}
+
+func isAuthAllows(fn *types.Func) bool {
+	sig, ok := fn.Type().(*types.Signature)
+	return ok && sig.Recv() == nil && fn.Pkg() != nil && fn.Pkg().Path() == authPackagePath && fn.Name() == authAllows
 }
 
 // refusingChecks are the auth functions the walk records by name, because each one

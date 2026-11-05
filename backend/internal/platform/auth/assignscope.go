@@ -168,16 +168,34 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 		}
 		status = "CASE WHEN status IN ('invited','deactivated') THEN 'active' ELSE status END AS status"
 	}
+	permitted, err := assigneeAdmitted(ctx, tx, destPos, status, eligible(p, "u", arg), args)
+	if err != nil || permitted {
+		return err
+	}
+	// A seat that may own the row, outside the caller's scope, is refused by
+	// the scope: the same 422, noted as the gate's refusal.
+	var seatArgs []any
+	seatArg := func(v any) int { seatArgs = append(seatArgs, v); return len(seatArgs) }
+	seatPos := seatArg(dest)
+	if seatOK, err := assigneeAdmitted(ctx, tx, seatPos, status, eligible(consentedAssigner(p), "u", seatArg), seatArgs); err != nil {
+		return err
+	} else if seatOK {
+		noteRefusal(ctx, rowRefusalPrefix+"assignee")
+	}
+	return refuseIneligibleAssignee(false)
+}
+
+// assigneeAdmitted asks whether the seat bound at destPos passes the
+// eligibility predicate.
+func assigneeAdmitted(ctx context.Context, tx pgx.Tx, destPos int, status, predicate string, args []any) (bool, error) {
 	var permitted bool
 	query := fmt.Sprintf(
 		`SELECT EXISTS (SELECT 1 FROM (
 		   SELECT id AS owner_id, %s, archived_at, is_agent, seat_type
 		   FROM app_user WHERE id = $%d AND removed_at IS NULL FOR KEY SHARE) u WHERE %s)`,
-		status, destPos, eligible(p, "u", arg))
-	if err := tx.QueryRow(ctx, query, args...).Scan(&permitted); err != nil {
-		return err
-	}
-	return refuseIneligibleAssignee(permitted)
+		status, destPos, predicate)
+	err := tx.QueryRow(ctx, query, args...).Scan(&permitted)
+	return permitted, err
 }
 
 // refuseIneligibleAssignee turns the eligibility answer into the refusal.

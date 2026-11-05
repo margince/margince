@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -125,7 +126,7 @@ func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.P
 		return nil, err
 	}
 	if len(mine) == 0 {
-		return nil, apperrors.ErrNotFound
+		return nil, hiddenBundle(ctx, rows)
 	}
 	if oversized {
 		return nil, &BundleTooLargeError{Cap: bundleDecisionCap}
@@ -153,6 +154,15 @@ func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.P
 		return nil, apperrors.ErrNotFound
 	}
 	return out, nil
+}
+
+// hiddenBundle answers a bundle with no member this caller may decide. With no
+// members it is absent; with members, the gate hides them.
+func hiddenBundle(ctx context.Context, members []row) error {
+	if len(members) == 0 {
+		return apperrors.ErrNotFound
+	}
+	return auth.HideRow(ctx, "approval")
 }
 
 // decidableMembers keeps the members this caller could decide one at a time, by

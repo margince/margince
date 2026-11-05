@@ -27,7 +27,7 @@ func (s *Service) preflightBundle(ctx context.Context, p principal.Principal, bu
 			return err
 		}
 		if len(mine) == 0 {
-			return apperrors.ErrNotFound
+			return hiddenBundle(ctx, rows)
 		}
 		if oversized {
 			return &BundleTooLargeError{Cap: bundleDecisionCap}

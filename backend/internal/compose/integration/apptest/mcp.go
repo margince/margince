@@ -47,6 +47,12 @@ func NewMCPClient(e *AppEnv, bearer string) *MCPClient {
 	return &MCPClient{env: e, bearer: bearer}
 }
 
+// Bearer is the client's credential as a REST header. A test uses it for a
+// record only this agent's own act makes, such as one it alone may restore.
+func (c *MCPClient) Bearer() map[string]string {
+	return map[string]string{"Authorization": "Bearer " + c.bearer}
+}
+
 // MCPResult is one tools/call outcome, with the refusal kept separate from the
 // text so neither can be read as the other.
 type MCPResult struct {

@@ -21,7 +21,7 @@ import (
 func stateSeeders(s sweepSeed) map[string]func() string {
 	seeders := map[string]func() string{}
 	for _, group := range []func(sweepSeed) map[string]func() string{
-		memberSeeders, accessSeeders, salesSeeders, leadSeeders, roomSeeders, workSeeders, meetingSeeders, reportSeeders, companySeeders, weeklySeeders,
+		memberSeeders, accessSeeders, salesSeeders, leadSeeders, roomSeeders, workSeeders, meetingSeeders, reportSeeders, companySeeders, weeklySeeders, captureSeeders, complianceSeeders, reportingSeeders, projectSeeders,
 	} {
 		maps.Copy(seeders, group(s))
 	}

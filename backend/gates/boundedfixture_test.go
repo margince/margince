@@ -74,6 +74,8 @@ var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
 	"agentaccess": "the MCP transport and its authorization server: every case is about a " +
 		"passport's own authority, and the row scope behind it is exercised by the tool suites " +
 		"in the parent package rather than here",
+	"extensionrole": "one extension read measured per seeded role through a passport; the roles " +
+		"come from the database, so their row scopes are the seeded ones, not a fixture's",
 	"humanonlyext": "the human-only door, which refuses an agent before any row is reached — " +
 		"the refusal is the subject and a bounded seat would not change it",
 	"jobfanout": "fan-out from the scheduler, whose actor is a system principal by construction; " +

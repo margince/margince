@@ -1,7 +1,7 @@
 <!-- prose:plain -->
 # Prove a tool in the role matrix
 
-Use this page when a new or changed MCP tool or router action turns one of two tests red:
+Use this page when a new or changed MCP tool or router action turns one of three tests red:
 
 - `TestEveryServedVerbHasItsToolChecksRow` in `backend/internal/compose/toolcheckscensus_test.go`. It runs in
   `make check` with no database, and holds `backend/internal/modules/agents/toolchecks.json` to the tools the
@@ -38,8 +38,8 @@ in `platform/auth` recorded refusing that role in that call.
    `tools/list` then hides the tool from a role without that grant. A branch that only changes what an
    answer holds uses `auth.Allows` or `auth.AdminGranted`, which record nothing. Never write
    `auth.Require(...) == nil` in a branch.
-   - A gate that hides a row it found answers through `auth.HideRow`, so the 404 is recorded as a refusal.
-     A row that is not there stays a plain not found, and fails the sweep.
+   - A gate that hides a row that is there answers through `auth.HideRow`, so the 404 is recorded as a refusal.
+     A row that is not there stays a plain 404, and fails the sweep.
    - An act only a seat short of a row scope needs goes through `auth.RequireRowScopeNarrowerThan`. Its check
      hides the tool from a wider seat, and its refusal counts for the admin too.
    - A verb that needs a composed extension unit is measured in

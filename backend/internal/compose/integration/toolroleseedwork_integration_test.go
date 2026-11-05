@@ -327,6 +327,9 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 		"channel_conversation": func() string {
 			c := &channelSendEnv{AppEnv: s.e, user: sessionUserID(s.t, s.e)}
 			if existing := s.ownerScalar(`SELECT count(*)::text FROM activity WHERE thread_key = $1`, channelSendThreadKey); existing != "0" {
+				if s.ownerScalar(`SELECT count(*)::text FROM channel_connection WHERE archived_at IS NULL`) == "0" {
+					c.connectBot(s.t)
+				}
 				return s.ownerScalar(`SELECT id::text FROM activity WHERE thread_key = $1`, channelSendThreadKey)
 			}
 			c.contactID = s.create["contact"]()
