@@ -22,6 +22,9 @@ export type MarginceChangeBundle =
 export type UndoMarginceChangeResult =
   components["schemas"]["UndoMarginceChangeResult"];
 export type TeamMarginceChanges = components["schemas"]["TeamMarginceChanges"];
+export type TeamMarginceOwnerlessDeal =
+  components["schemas"]["TeamMarginceOwnerlessDeal"];
+export type DealMarginceCheck = components["schemas"]["DealMarginceCheck"];
 
 /** How many open changed deals it takes before Home shows one summary row. */
 export const CHANGE_SUMMARY_FLOOR = 3;
@@ -64,12 +67,35 @@ export function useTeamMarginceChanges(enabled: boolean) {
 }
 
 /** The Undo of whole deals; each bundle is one deal. */
-export function bundleItem(bundle: MarginceChangeBundle) {
+export function bundleItem(
+  bundle: MarginceChangeBundle,
+  archiveConfirmedFor?: string,
+) {
   return {
     deal_id: bundle.deal_id,
     version: bundle.version,
     audit_log_ids: bundle.audit_log_ids,
+    ...(archiveConfirmedFor
+      ? { archive_confirmed_for: archiveConfirmedFor }
+      : {}),
   };
+}
+
+/** The team's work an Undo of an opened or reopened deal asks about first. */
+export function archiveQuestion(
+  result: UndoMarginceChangeResult,
+): { notes: number; tasks: number; work: string; kind: string } | null {
+  const asked = result.kept.find(
+    (kept) => kept.reason === "needs_confirmation",
+  );
+  return asked
+    ? {
+        notes: asked.team_notes ?? 0,
+        tasks: asked.team_tasks ?? 0,
+        work: asked.team_work ?? "",
+        kind: asked.kind ?? "",
+      }
+    : null;
 }
 
 // The route takes at most this many deals per call.
@@ -79,15 +105,21 @@ const UNDO_BATCH = 200;
 export function useUndoMarginceChanges() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (
-      bundles: readonly MarginceChangeBundle[],
-    ): Promise<UndoMarginceChangeResult[]> => {
+    mutationFn: async ({
+      bundles,
+      archiveConfirmedFor,
+    }: {
+      bundles: readonly MarginceChangeBundle[];
+      archiveConfirmedFor?: string;
+    }): Promise<UndoMarginceChangeResult[]> => {
       const results: UndoMarginceChangeResult[] = [];
       for (let at = 0; at < bundles.length; at += UNDO_BATCH) {
         const answer = unwrap(
           await api.POST("/deal-corrections/undo", {
             body: {
-              items: bundles.slice(at, at + UNDO_BATCH).map(bundleItem),
+              items: bundles
+                .slice(at, at + UNDO_BATCH)
+                .map((bundle) => bundleItem(bundle, archiveConfirmedFor)),
             },
           }),
         );

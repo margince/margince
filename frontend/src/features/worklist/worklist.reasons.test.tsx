@@ -380,10 +380,10 @@ describe("a follow-up row says why it is there", () => {
   });
 });
 
-// A pinned row says it is pinned. The order alone does not: a new pin or a
-// change in the ranking moves the row, and the reader then has to open each
-// row's menu to find which one is pinned.
-describe("a pinned row says it is pinned", () => {
+// A pinned row shows a pin beside its name. The order alone does not say it.
+// A new pin or a change in the ranking moves the row. The reader would then
+// have to open each row's menu to find which one is pinned.
+describe("a pinned row shows that it is pinned", () => {
   function taskRow(because: WorklistItem["because"]): WorklistItem {
     return {
       occurred_precision: "instant",
@@ -398,17 +398,23 @@ describe("a pinned row says it is pinned", () => {
     };
   }
 
-  it("says pinned by you beside the row's other reasons", async () => {
+  it("shows the pin, named for a screen reader, and keeps the other reasons", async () => {
     draw([taskRow([{ kind: "unassigned" }, { kind: "pinned" }])]);
 
-    expect(await screen.findByText(/\bpinned by you\b/)).toBeTruthy();
+    expect(
+      await screen.findByRole("img", { name: en["worklist.pinnedMark"] }),
+    ).toBeTruthy();
     expect(await screen.findByText(/\bno owner\b/)).toBeTruthy();
+    // The pin says it once: the reason line does not repeat it in words.
+    expect(screen.queryByText(/\bpinned by you\b/)).toBeNull();
   });
 
-  it("says nothing about a pin on a row that is not pinned", async () => {
+  it("shows no pin on a row that is not pinned", async () => {
     draw([taskRow([{ kind: "unassigned" }])]);
 
     expect(await screen.findByText(/\bno owner\b/)).toBeTruthy();
-    expect(screen.queryByText(/\bpinned by you\b/)).toBeNull();
+    expect(
+      screen.queryByRole("img", { name: en["worklist.pinnedMark"] }),
+    ).toBeNull();
   });
 });

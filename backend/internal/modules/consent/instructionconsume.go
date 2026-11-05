@@ -301,15 +301,9 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 // GATED ON THE SAME GRANT AS DIRECTING, because this read exists to serve that
 // act and no other. A seat that may not direct a send has no use for it.
 func (s *Store) HeldMessageForReview(ctx context.Context, reviewID ids.UUID) (ids.UUID, error) {
-	// THE SAME DOOR DirectSend USES, not the weaker one beside it.
-	// auth.RequireHuman refuses buyers and agents but ADMITS connectors and the
-	// system principal, and a connector runs with the granting human's own
-	// grants — so it would hold communication_exception:create and could learn
-	// which reviews exist before the stricter check on the write ever ran.
-	//
-	// This read serves directing and nothing else; it answers to the same
-	// human the write does.
-	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
+	// The same door DirectSend uses. A connector holds the granting user's
+	// communication_exception:create and would learn which reviews exist.
+	if err := requireAUserOrTheirAgent(ctx); err != nil {
 		return ids.UUID{}, err
 	}
 	// CREATE here, not read: this lookup exists to serve DIRECTING a send, and

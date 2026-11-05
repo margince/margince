@@ -55,6 +55,12 @@ export function undoResultText(
       ),
     });
   }
+  if (result.undone.includes("deal_open")) {
+    return t("changes.undo.archived");
+  }
+  if (result.undone.includes("deal_revive")) {
+    return t("changes.undo.relost");
+  }
   if (result.undone.includes("close_lost")) {
     return t("worklist.handled.closeLostUndone");
   }

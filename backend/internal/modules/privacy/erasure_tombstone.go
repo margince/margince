@@ -64,7 +64,7 @@ func certifyErasure(ctx context.Context, tx *tallyTx, subject ids.ContactID, rea
 
 // The eraser's arms that destroy something outside the database. The rows that
 // named it are counted; the objects are not. An arm is named in an account
-// only when it destroyed at least one thing (tallyTx.uncounted): a store that
+// only when it destroyed at least one thing (tallyTx.uncounted). A store that
 // is wired but held nothing for the subject destroyed nothing.
 const (
 	armAttachmentObject = "attachment_object"

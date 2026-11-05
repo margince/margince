@@ -176,6 +176,14 @@ func heldReasonText(said approvalSummaryCopy, reason string) string {
 		return said.heldTimerExhausted
 	case activities.HeldSendRefused:
 		return said.heldSendRefused
+	case activities.HeldFollowupSettled:
+		return said.heldFollowupSettled
+	case activities.HeldMeetingCanceled:
+		return said.heldMeetingCanceled
+	case activities.HeldRecipientStopped:
+		return said.heldRecipientStopped
+	case activities.HeldRecipientReplied:
+		return said.heldRecipientReplied
 	}
 	// An unknown code still reaches the rep: a held message with no explanation
 	// is worse than an unpolished one.

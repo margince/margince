@@ -26,7 +26,7 @@
 //   the reader's fallback, and for a datetime-local input, which the browser
 //   parses in its own zone.
 //
-// The census in zone-by-purpose.test.ts lists every file that reads the
+// The census in zone-by-purpose.readers.test.ts lists every file that reads the
 // company or the browser zone, each with its reason. A file not on that list
 // reads the reader's zone.
 //

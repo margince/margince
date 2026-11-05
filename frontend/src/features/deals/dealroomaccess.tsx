@@ -117,7 +117,7 @@ function useReadingSoFar(participant: Participant): string {
 }
 
 // Whether the relay took the invitation for a buyer who has not come in yet.
-// The invite answers before the relay does, so this lands on the row later.
+// The relay's answer is stamped on the row just after the invite answers.
 function mailSent(participant: Participant): boolean {
   return (
     !participant.has_signed_in &&

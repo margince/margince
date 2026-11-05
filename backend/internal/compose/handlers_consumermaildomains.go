@@ -75,9 +75,9 @@ func (h consumerMailDomainHandlers) AddConsumerMailDomain(w http.ResponseWriter,
 		httperr.NotImplemented(w, r, "AddConsumerMailDomain")
 		return
 	}
-	// Human-only (x-agent-access): an agent never changes a workspace-wide
-	// capture posture. The store re-checks the admin/ops object grant.
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	// Automatic work never changes a workspace-wide capture posture. The store
+	// re-checks the admin/ops object grant.
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -104,7 +104,7 @@ func (h consumerMailDomainHandlers) RemoveConsumerMailDomain(w http.ResponseWrit
 		httperr.NotImplemented(w, r, "RemoveConsumerMailDomain")
 		return
 	}
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

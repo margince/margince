@@ -142,7 +142,6 @@ export const SETTINGS_SECTIONS = {
     "legalReview.settingsTitle",
     "legalReview.settingsSwitch",
   ],
-  stageautomation: ["stageAutomation.record"],
   leads: [
     "leadOrigins.title",
     "leadReasons.title",
@@ -220,6 +219,7 @@ export const SETTINGS_SECTIONS = {
   automations: ["auto.instances", "auto.catalog"],
   privacy: [
     "settings.purposes",
+    "privacy.customerNotices",
     "retention.title",
     "privacy.requestsPanel",
     "notice.title",

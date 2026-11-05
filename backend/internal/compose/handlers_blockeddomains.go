@@ -54,7 +54,7 @@ func (h blockedDomainHandlers) ListBlockedDomains(w http.ResponseWriter, r *http
 }
 
 func (h blockedDomainHandlers) SetBlockedDomain(w http.ResponseWriter, r *http.Request) {
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -110,8 +110,7 @@ func (h blockedDomainHandlers) SetBlockedDomain(w http.ResponseWriter, r *http.R
 // domain IS. It says only that the machine's grounds for giving up are not the
 // last word, and the crawl is what answers.
 func (h blockedDomainHandlers) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string) {
-	// Human-only (x-agent-access): capture posture, not record data.
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -98,7 +99,8 @@ func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *st
 // refusal is anybody's to lift. Both are answers this engine already holds, and
 // a surface that re-derived either would be a second implementation of a rule
 // that decides whether mail reaches a contact.
-func previewResponse(set commsauthz.DecisionSet) crmcontracts.SendAuthorizationPreview {
+func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview {
+	set := preview.Decisions
 	out := crmcontracts.SendAuthorizationPreview{
 		Allowed:    set.Allowed(),
 		Recipients: make([]crmcontracts.SendAuthorizationPreviewRecipient, 0, len(set.Decisions)),
@@ -119,6 +121,17 @@ func previewResponse(set commsauthz.DecisionSet) crmcontracts.SendAuthorizationP
 		if d.Requested != "" {
 			requested := crmcontracts.CommunicationContext(d.Requested)
 			entry.RequestedCategory = &requested
+		}
+		if len(d.SupportedAlternatives) > 0 {
+			alternatives := make([]crmcontracts.CommunicationContext, 0, len(d.SupportedAlternatives))
+			for _, c := range d.SupportedAlternatives {
+				alternatives = append(alternatives, crmcontracts.CommunicationContext(c))
+			}
+			entry.SupportedAlternatives = &alternatives
+		}
+		if preview.NewContacts[correspondence.Fold(d.Recipient.Email)] {
+			newContact := true
+			entry.NewContact = &newContact
 		}
 		if d.Basis != "" {
 			basis := string(d.Basis)

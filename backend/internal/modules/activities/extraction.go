@@ -34,8 +34,14 @@ import (
 // between nobody asking and a reading that got nothing. Valid for ANY
 // entity_type: a non-deal attachment reads fine, since accepting fields onto a
 // deal (not this op) is what is deal-only.
-func (h Handlers) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	read, err := h.store.LatestExtractionRead(r.Context(), ids.UUID(id))
+func (h Handlers) GetAttachmentExtraction(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetAttachmentExtractionParams,
+) {
+	question := ExtractionQuestionDealFacts
+	if params.Question != nil {
+		question = string(*params.Question)
+	}
+	read, err := h.store.LatestExtractionRead(r.Context(), ids.UUID(id), question)
 	h.writeExtraction(w, r, read, err)
 }
 

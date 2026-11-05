@@ -2121,6 +2121,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "home.receipt.dateUnconfirmed":
     "Geschätztes Abschlussdatum: {before} → {after} (Bestätigung nötig)",
   "home.receipt.undated": "Kein Datum",
+  "home.receipt.verdictDate": "Abschlussdatum laut Kunde: {before} → {after}",
+  "home.receipt.verdictDateReverted":
+    "Rückgängig gemacht: Abschlussdatum wieder {before} (zuvor {after})",
   "home.receipt.confidence": "Prognosesicherheit aktualisiert",
   "home.receipt.forecast": "Abschlusschance geändert",
   "home.task.yours": "Deine Aufgabe: {action}",
@@ -2430,8 +2433,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.sign_in_policy_read": "Lesen der Anmelderichtlinie",
   "systemJob.stage_evidence": "Phasenbelege",
   "systemJob.stage_evidence_read": "Auswertung der Phasenbelege",
-  "systemJob.stage_progression": "Phasenfortschritt",
-  "systemJob.stage_progression_outcome": "Ergebnis des Phasenwechsels",
   "systemJob.suppression_journal_worker": "Export des Löschjournals",
   "systemJob.stored_object_reap_worker": "Bereinigung des Dateispeichers",
   "systemJob.technical_backfill": "Nachholen der technischen Abfrage",
@@ -2747,6 +2748,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_attribution": "Partnerzuordnung",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Projekt",
+  "history.field.about_deal": "Betreffender Deal",
   "history.field.qualifying_event": "Qualifizierendes Ereignis",
   "history.field.qualifying_event_retracted":
     "Erfasster Austausch zurückgenommen",
@@ -3016,6 +3018,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
+  "contact.attachRefused":
+    "Du kannst diesen Kontakt nur lesen. Frage die verantwortliche Person nach Schreibzugriff.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -3023,6 +3027,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.moreActionsFor": "Weitere Aktionen für {subject}",
   "record.fullHistory": "Vollständiger Verlauf",
 
+  "share.bulkConfirmTitle": "Diese Kontakte freigeben?",
+  "share.bulkConfirmBody":
+    "Die bisherigen Freigaben für {name} werden durch {access} und die gewählte Laufzeit ersetzt. Dadurch kann der Zugriff eingeschränkt werden oder enden.",
+  "share.companyContacts": "Kontakte freigeben",
+  "share.companyContactsNote":
+    "Gib aktuelle Kontakte frei, die du lesen und freigeben darfst. Andere lesbare Kontakte werden übersprungen. Verborgene Kontakte werden nicht gezählt.",
+  "share.companyContactsResult":
+    "{shared} freigegeben · {skipped} übersprungen",
   "share.title": "Diesen Datensatz teilen",
   "share.ceiling.pre": "Das Teilen ändert die Sichtbarkeit für ",
   "share.ceiling.recordEmphasis": "genau diesen einen Datensatz",
@@ -3494,6 +3506,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.guardFailed": "Die Kontakterlaubnis konnte nicht geladen werden.",
   "consent.permissionScope":
     "Berechtigungen gelten für den genannten Zweck. Konto- und Servicehinweise berechtigen nicht zu Vertrieb oder Marketing. Jede Nachricht wird vor dem Versand geprüft.",
+  "consent.retractRequest": "Anfrage zurücknehmen",
+  "consent.retractRequestTitle": "Anfrage zurücknehmen?",
+  "consent.retractRequestBody":
+    "Keine Nachricht stützt sich mehr darauf, auch keine, die schon in der Warteschlange steht. Die Anfrage bleibt als zurückgenommen im Datensatz und lässt sich nicht wiederherstellen.",
+  "consent.acquisitionRequest":
+    "Bei der Aufnahme hat der Kontakt ein Angebot oder einen Termin angefragt oder persönlich erlaubt, dass Mails an ihn gehen dürfen.",
+  "consent.stopsTitle": "Sperren",
+  "consent.stopKind.subject_request":
+    "Hat gebeten, keinen Kontakt mehr aufzunehmen",
+  "consent.stopKind.marketing_objection": "Hat Werbung widersprochen",
+  "consent.stopKind.processing_restriction": "Verarbeitung ist eingeschränkt",
+  "consent.stopKind.hard_bounce": "Adresse nimmt keine Mails an",
+  "consent.stopKind.unknown": "Sperre",
+  "consent.stopOnAddress": "Für {address}",
+  "consent.stopOnPurpose": "Nur für {purpose}",
+  "consent.stopRecordedBy": "Erfasst von {name} am {date}",
+  "consent.stopRecordedByColleague": "Erfasst von einem Teammitglied am {date}",
+  "consent.stopRecordedBySubject": "Vom Kontakt selbst gesetzt am {date}",
+  "consent.stopRecordedAutomatically": "Von Margince erfasst am {date}",
+  "consent.stopBlocked.address":
+    "Die Sperre endet, sobald Mails an die Adresse wieder ankommen.",
+  "consent.stopBlocked.restriction":
+    "Wer eine Einschränkung aufhebt, muss den Kontakt vorher informieren. Margince kann diese Nachricht noch nicht senden, daher bleibt die Einschränkung.",
+  "consent.stopBlocked.subject_decision":
+    "Der Kontakt hat diese Sperre selbst gesetzt. Nur er kann sie ändern.",
+  "consent.stopCorrect": "Sperre korrigieren",
+  "consent.stopLift": "Sperre aufheben",
+  "consent.stopCorrectTitle": "Versehentlich erfasste Sperre korrigieren?",
+  "consent.stopLiftTitle": "Sperre aufheben?",
+  "consent.stopCorrectBody":
+    "Nur korrigieren, wenn jemand die Sperre versehentlich erfasst hat. Hat der Kontakt darum gebeten, bleibt sie. Mails, die die Sperre zurückgehalten hat, können wieder gesendet werden.",
+  "consent.stopLiftBody":
+    "Mails, die die Sperre zurückgehalten hat, können wieder gesendet werden.",
+  "consent.stopReason": "Grund (bleibt im Verlauf des Datensatzes)",
   "consent.manage": "Einwilligungen und Nachweisverlauf verwalten",
   "contact.consent": "Einwilligung",
   "consent.grant": "Einwilligung erfassen",
@@ -3569,8 +3615,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.consent_withdrawn":
     "Einwilligung für diesen Zweck widerrufen",
   "consent.reason.no_consent_exception_not_offered":
-    "Keine Einwilligung erfasst; die Bestandskundenausnahme wird nicht angeboten",
+    "Keine Einwilligung erfasst, und kein Kauf ist durch einen eingetragenen Hinweis gedeckt",
   "consent.reason.no_consent": "Keine Einwilligung erfasst",
+  "consent.reason.existing_customer":
+    "Der Kontakt hat bei dir gekauft und wurde dabei auf sein Widerspruchsrecht gegen Werbung hingewiesen",
   "consent.reason.qualifying.inbound_message":
     "Der Kontakt hat dir am {date} geschrieben",
   "consent.reason.qualifying.inquiry": "Der Kontakt hat am {date} angefragt",
@@ -3966,7 +4014,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Link wird dir zum Kopieren angezeigt. Ist ein Mail-Relay eingerichtet, wird der Link zusätzlich per E-Mail gesendet. Die Zustellung ist aber nicht garantiert.",
   "access.issued.title": "Link für {name}",
   "access.issued.mailed":
-    "Für {email} vorgemerkt. Die Liste zeigt, wann sie gesendet wurde oder ob sie fehlgeschlagen ist. Du kannst den Link unten auch kopieren.",
+    "An {email} gesendet. Du kannst den Link unten auch kopieren.",
   "access.issued.notMailed":
     "Der Link wurde nicht per E-Mail gesendet. Kopiere den Link und sende ihn selbst.",
   "access.issued.mailedTitle": "Einladungs-E-Mail zum Versand vorgemerkt",
@@ -4217,6 +4265,48 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.products.alreadyListed": "Bereits aufgeführt",
   "deal.products.fromOffer": "Aus dem Angebot",
   "deal.products.setByHand": "Selbst festgelegt",
+  "deal.lines.empty":
+    "Noch keine Produkte. Füge ein Produkt oder eine eigene Position hinzu, um den Deal zu bepreisen.",
+  "deal.lines.edit": "Produkte bearbeiten",
+  "deal.lines.start": "Aus Produkten bepreisen",
+  "deal.lines.notWritable": "Du kannst die Produkte dieses Deals nicht ändern.",
+  "deal.lines.withheld": "Deine Rolle zeigt den Wert dieses Deals nicht.",
+  "deal.lines.committedNet": "Nettowert: {amount}, ohne Steuer",
+  "deal.lines.incomplete":
+    "Preis unvollständig. Bisher bekannt: {known}. Es fehlt noch: {missing}.",
+  "deal.lines.missing.lines": "ein Produkt",
+  "deal.lines.missing.quantity": "eine Menge",
+  "deal.lines.missing.unitPrice": "ein Preis",
+  "deal.lines.missing.billing": "einmalig oder wiederkehrend",
+  "deal.lines.missing.term": "die Anzahl der Zeiträume",
+  "deal.lines.missing.taxRate": "ein Steuersatz",
+  "deal.lines.description": "Beschreibung",
+  "deal.lines.quantity": "Menge",
+  "deal.lines.price": "Verkaufspreis",
+  "deal.lines.remove": "{name} entfernen",
+  "deal.lines.editTitle": "Produkte und Leistungen",
+  "deal.lines.save": "Produkte speichern",
+  "deal.lines.intro":
+    "Der Wert des Deals ist der Nettobetrag dieser Positionen, ohne Steuer. Ein Angebot übernimmt sie später.",
+  "deal.lines.replacesEstimate":
+    "Speichern ersetzt den eingegebenen Wert von {amount}. Der alte Wert bleibt im Verlauf.",
+  "deal.lines.partlySaved":
+    "{saved} von {total} Änderungen wurden gespeichert. Die nächste schlug fehl: {reason}",
+  "deal.lines.addProduct": "Produkt hinzufügen",
+  "deal.lines.customItem": "Eigene Position",
+  "deal.lines.addCustom": "Position hinzufügen",
+  "deal.offerNeedsCompleteLines":
+    "Gib zuerst jedem Produkt eine Menge und einen Preis. Ein Angebot übernimmt die Produkte des Deals.",
+  "offer.moneyWithheld":
+    "Deine Rolle zeigt den Wert dieses Deals nicht, daher sind die Preise des Angebots ausgeblendet.",
+  "offer.fromDeal.title": "Aus den Produkten des Deals erstellt",
+  "offer.fromDeal.stale": "Der Deal hat sich seit diesem Angebot geändert",
+  "offer.fromDeal.body":
+    "Ändere die Produkte im Deal. Die Positionen des Angebots folgen erst, wenn du den Entwurf aktualisierst.",
+  "offer.fromDeal.revise":
+    "Ein gesendetes Angebot bleibt, wie es war. Erstelle eine neue Fassung, um die neuen Bedingungen anzubieten.",
+  "offer.fromDeal.editDeal": "Produkte des Deals bearbeiten",
+  "offer.fromDeal.refresh": "Aus dem Deal aktualisieren",
   "deal.commitments.title": "Zusagen des Kunden",
   "deal.commitments.empty":
     "Der Kunde hat zu diesem Deal keine offenen Zusagen.",
@@ -4400,7 +4490,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
-  "approval.kind.stage_progression": "Deal-Phase voranbringen",
   "approval.preview.requiredCriterionMet": "Erforderliches Kriterium erfüllt",
   "approval.preview.requiredCriterionUnmet":
     "Erforderliches Kriterium nicht erfüllt",
@@ -4410,8 +4499,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.because": "Grund",
   "approval.field.lost_reason": "Warum er verloren ging",
   "approval.field.note": "Notiz",
-  "approval.field.from_stage": "Von",
-  "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript erstellen",
   "approval.kind.commitment_task": "Aufgabenzusage",
@@ -5730,6 +5817,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.invalid": "Gib eine ganze Zahl von 0 bis 100 ein.",
   "deal.winProbability.source.stage": "aus der Phase",
   "deal.winProbability.source.human": "von Hand gesetzt",
+  "deal.winProbability.source.you": "von dir gesetzt",
+  "deal.winProbability.source.colleague": "von {name} gesetzt",
   "deal.winProbability.source.margince": "von Margince gesenkt",
   "deal.winProbability.stageValue": "Phase {percent}",
   "deal.winProbability.setByStage":
@@ -7263,8 +7352,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
-  "compose.reasonRecord": "Diesen Grund erfassen",
-  "compose.reasonRecordFor": "Diesen Grund erfassen: {reason}, für {address}",
+  "compose.reasonRecord": "Als dauerhaften Grund festhalten",
+  "compose.reasonStanding":
+    "Ein dauerhafter Grund gilt für diese Art von Nachricht an {address} aus deinem Unternehmen, bis ihn jemand widerruft. Er ist deine Angabe, keine Einwilligung.",
+  "compose.reasonRecordFor":
+    "Als dauerhaften Grund festhalten: {reason}, für {address}",
   "compose.reasonLabel": "Warum du an {address} schreiben darfst",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
@@ -7326,6 +7418,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.relatedTo": "Bezug",
   "compose.relatedToNone": "Nichts Bestimmtes",
   "compose.relatedDeal": "Deal: {name}",
+  "compose.aboutDeal": "Deal, um den es geht",
+  "compose.aboutDealNone": "Kein Deal",
+  "compose.aboutDealUnavailable":
+    "Die Deals des Kontakts konnten nicht geladen werden. Schreib stattdessen von der Seite des Deals.",
+  "compose.aboutDealPartial":
+    "Hier stehen nicht alle Deals. Fehlt deiner, schreib von der Seite des Deals.",
   "compose.draftNeedsRecipient":
     "Für einen KI-Entwurf füge unter „An“ einen Kontakt dieses Unternehmens hinzu.",
   "compose.project": "Projekt",
@@ -7478,10 +7576,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+  "sendPermission.reason.optedOutAfterRequest":
+    "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
+  "sendPermission.reason.consentRequired":
+    "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+  "sendPermission.reason.dealNotRequested":
+    "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
   "sendPermission.reason.tooMany":
     "Die empfangende Person hat das Limit für Marketingnachrichten vorerst erreicht. Das Limit wird automatisch zurückgesetzt.",
   "sendPermission.reason.ambiguous":
-    "Es lässt sich nicht feststellen, wer die Nachricht erhält, da mehrere Datensätze diese Adresse teilen. Führe die Datensätze zusammen, um das zu lösen.",
+    "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
   "sendPermission.reason.unconfirmed":
     "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
   "sendPermission.reason.noMarketingConsent":
@@ -7528,6 +7632,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageBody":
     "Die Nachricht wird sofort gesendet. Das lässt sich nicht rückgängig machen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
+  "directSend.sent": "Als festgehaltene Ausnahme gesendet.",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":
     "Darüber wurde bereits entschieden. Öffne die Prüfung, um das Ergebnis zu sehen.",
@@ -7573,6 +7678,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapableGoto": "Postfach neu verbinden",
   "compose.sharedUnsubscribeToken":
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
+  "compose.newContact":
+    "{address} steht noch in keinem Datensatz. Beim Senden wird die Adresse als dein Kontakt angelegt.",
   "compose.multiRecipientWarning":
     "Ein Versand an mehr als eine Adresse wird abgelehnt, da dieser Zweck einen Abmeldelink hinzufügt. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
@@ -7591,6 +7698,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.missingSubject": "Gib einen Betreff ein.",
   "compose.missingBody": "Gib vor dem Senden eine Nachricht ein.",
   "compose.missingWhy": "Wähle den Kontaktgrund aus.",
+  "compose.reasonSwitchText":
+    "Für diese Nachricht steht schon ein anderer Grund im Datensatz.",
+  "compose.reasonSwitch": "Stattdessen „{reason}“ verwenden",
+  "compose.missingDeal": "Wähle den Deal, um den es in diesem Follow-up geht.",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",
 
@@ -10387,6 +10498,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
   "privacy.purposesEmpty": "Noch keine Zwecke registriert.",
+  "privacy.customerNotices": "Bestandskunden",
+  "privacy.customerNoticesSub":
+    "In Deutschland darfst du Kunden ohne Einwilligung Werbung für ähnliche Produkte schicken, wenn du sie beim Erheben der Adresse auf ihr Widerspruchsrecht hingewiesen hast. Trage hier ein, wo und wann du den Hinweis gegeben hast. Kunden, die in diesem Zeitraum bei dieser Gesellschaft gekauft haben, erhalten dann deine Newsletter mit Abmeldelink.",
+  "privacy.customerNoticesEmpty":
+    "Noch kein Hinweis eingetragen. Kunden ohne Einwilligung erhalten keine Werbung.",
+  "privacy.customerNoticesLoading": "Hinweise werden geladen …",
+  "privacy.customerNoticeDeclare": "Hinweis eintragen",
+  "privacy.customerNoticeGroup": "Betroffene Kunden",
+  "privacy.customerNoticeGroupHint":
+    "Zum Beispiel: alle, die im Webshop bestellt haben",
+  "privacy.customerNoticeChannel": "Wo die Adresse erhoben wurde",
+  "privacy.customerNoticeChannelHint":
+    "Zum Beispiel: im Bestellvorgang des Webshops",
+  "privacy.customerNoticeText": "Der Hinweis, den sie gesehen haben",
+  "privacy.customerNoticeEntity": "Absendende Gesellschaft",
+  "privacy.customerNoticeFrom": "Gezeigt ab",
+  "privacy.customerNoticeUntil": "Gezeigt bis",
+  "privacy.customerNoticeUntilHint": "Leer lassen, solange du ihn noch zeigst.",
+  "privacy.customerNoticeProof": "Wo der Nachweis liegt",
+  "privacy.customerNoticeProofHint":
+    "Nötig für Käufe vor heute, zum Beispiel eine archivierte Kopie der Bestellseite. Ohne Nachweis gilt der Hinweis ab heute.",
+  "privacy.customerNoticeProofDay": "Datum auf dem Nachweis",
+  "privacy.customerNoticePurposes": "Newsletter für ähnliche Produkte",
+  "privacy.customerNoticeNoPurposes": "Lege zuerst einen Werbezweck an.",
+  "privacy.customerNoticePeriod": "Zeitraum",
+  "privacy.customerNoticeOngoing": "seit {from}",
+  "privacy.customerNoticeRange": "{from} bis {until}",
+  "privacy.customerNoticeWithdrawn": "Zurückgezogen",
+  "privacy.customerNoticeWithdraw": "Zurückziehen",
+  "privacy.customerNoticeWithdrawTitle": "Diesen Hinweis zurückziehen",
+  "privacy.customerNoticeWithdrawBody":
+    "Ab jetzt geht darauf keine Werbung mehr raus. Schon gesendete Mails behalten ihren Nachweis.",
+  "privacy.customerNoticeWithdrawReason": "Warum",
+  "privacy.customerNoticeSave": "Eintragen",
   "privacy.kind": "Typ",
   "privacy.contact": "Kontakt",
   "privacy.subjectRef": "Referenz der Betroffenen",
@@ -11356,6 +11501,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "blockedDomains.source.verdict": "Modellergebnis",
   "blockedDomains.source.heuristic": "Heuristik",
   "blockedDomains.source.human": "Mensch",
+  "blockedDomains.source.agent": "Agent",
   "blockedDomains.source.reservedDomain":
     "Reservierte Domain: Firmenerkennung pausiert",
   "blockedDomains.source.forwardedIdentity":
@@ -12855,7 +13001,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tab.teams": "Teams",
   "settings.tab.roles": "Rollen und Berechtigungen",
   "settings.tab.seats": "Plätze und Lizenz",
-  "settings.tab.stageautomation": "Phasensteuerung",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.acquisition": "Akquisitionsquellen",
   "settings.tab.lossreasons": "Verlustgründe",
@@ -14527,6 +14672,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.basis.likely": "Gewonnen + wahrscheinliche Deals",
   "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
   "forecast.basis.manager_call": "Einschätzung der Führungskraft",
+  "forecast.basis.qualified_likely":
+    "Gewonnen + gestützte wahrscheinliche Deals",
+  "forecast.basis.qualified_weighted": "Gewonnen + gestützte gewichtete Deals",
   "forecast.basis.unknown": "Grundlage nicht erfasst",
   "forecast.split": "{won} gewonnen + {remaining} erwartet",
   "forecast.callNotAdded":
@@ -15447,6 +15595,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_stage_move.label": "Phasenwechsel",
   "autonomy.kind.deal_stage_move.help":
     "Margince verschiebt einen Deal in eine spätere Phase, wenn die Worte des Kunden zeigen, dass er dort ist, etwa eine Anfrage nach dem Vertragsentwurf. Nie auf Gewonnen und nie zurück. Jeder Wechsel erscheint auf Home mit „Rückgängig“.",
+  "autonomy.kind.deal_open.label": "Neue Deals",
+  "autonomy.kind.deal_open.help":
+    "Margince eröffnet einen Deal für ein Unternehmen, das dir gehört, wenn der Kunde kaufen will, etwa mit einer Anfrage nach einem Angebot. Der Deal gehört dir und steht in der ersten Phase. Jeder neue Deal erscheint auf Home mit „Rückgängig“.",
+  "autonomy.kind.deal_revive.label": "Wieder eröffnete Deals",
+  "autonomy.kind.deal_revive.help":
+    "Margince eröffnet einen verlorenen Deal von dir wieder, wenn der Kunde mit neuen Kaufsignalen zurückkommt, etwa wenn er ein neues Angebot anfragt. Der Deal kommt in die erste Phase. Jeder wieder eröffnete Deal erscheint auf Home mit „Rückgängig“, das ihn wieder als verloren schließt.",
   "autonomy.kind.company_name_promotion.label": "Unternehmensnamen",
   "autonomy.kind.company_name_promotion.help":
     "Margince übernimmt vorgeschlagene Unternehmensnamen aus E-Mail-Signaturen für Unternehmen, die nach ihrer Domain benannt sind. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Von unabhängigen Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
@@ -17078,6 +17232,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.strip.today": "Heute",
   "contact.strip.yesterday": "Gestern",
   "contact.strip.days": "{count} Tage",
+  "contact.consent.fact.existingCustomer": "Bestandskunde, Werbung erlaubt",
+  "contact.consent.fact.saidWeMayWrite": "Erlaubnis zu schreiben erfasst",
+  "contact.consent.fact.businessContact": "Aktueller Geschäftskontakt erfasst",
+  "contact.consent.fact.serviceMessages": "Servicenachrichten erlaubt",
+  "contact.consent.fact.marketingPermission": "Werbeerlaubnis erfasst",
+  "contact.consent.fact.bounced": "Adresse nimmt keine Mail an",
+  "contact.consent.fact.marketingOptOut": "Werbewiderspruch erfasst",
+  "contact.consent.fact.stopped": "Hat um Stopp gebeten",
+  "contact.consent.fact.noMarketingPermission": "Keine Werbeerlaubnis erfasst",
+  "contact.consent.fact.notAllowed": "Für diesen Zweck nicht erlaubt",
+  "contact.consent.fact.nothingRecorded": "Noch nichts erfasst",
   "contact.consent.allowedWord": "Erlaubt",
   "contact.consent.blockedWord": "Blockiert",
   "contact.consent.unknownWord": "Unbekannt",
@@ -17967,6 +18132,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Anfrage wurde nach der Planung beantwortet oder erledigt. Prüfe, ob diese Nachfrage noch nötig ist.",
   "sched.held.meetingCanceled":
     "Der Termin wurde nach der Planung abgesagt. Prüfe diese Nachricht vor dem Versand.",
+  "sched.held.recipientStopped":
+    "Jemand unter den Empfangenden hat nach der Planung Werbung gestoppt. An diese Adresse wird sie nicht gesendet.",
+  "sched.held.recipientReplied":
+    "Nach der Planung kam neue Mail von jemandem unter den Empfangenden. Lies sie, bevor du dieses Follow-up sendest.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",
@@ -18300,6 +18469,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.stewardOnly":
     "Klären kann das nur, wer beide Datensätze bearbeiten kann: Admins oder Vertriebsleitungen.",
   "worklist.needsPrep": "Vorbereitung nötig",
+  "worklist.pinnedMark": "Von dir angeheftet",
   "worklist.ready.confirm": "Ich bin bereit",
   "worklist.ready.badge": "Bereit",
   "worklist.ready.done": "Als bereit für diesen Termin markiert.",
@@ -18531,6 +18701,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.kind.deal_close_date": "Neues Abschlussdatum",
   "changes.kind.deal_amount": "Neuer Betrag",
   "changes.kind.deal_probability": "Neue Wahrscheinlichkeit",
+  "changes.kind.deal_open": "Aus Kaufsignalen eröffnet",
+  "changes.kind.deal_revive": "Mit neuen Kaufsignalen wieder eröffnet",
+  "changes.undo.relost":
+    "Wieder als verloren geschlossen, mit dem früheren Grund. Margince eröffnet ihn nur wieder, wenn neuere Kaufsignale kommen.",
+  "changes.undo.confirmRelost":
+    "Dieser Deal hat jetzt {notes} Notizen und {tasks} Aufgaben von deinem Team. Trotzdem als verloren schließen?",
+  "changes.undo.confirmArchive":
+    "Dieser Deal hat jetzt {notes} Notizen und {tasks} Aufgaben von deinem Team. Trotzdem archivieren?",
+  "changes.undo.archived":
+    "Archiviert. Margince eröffnet dafür keinen Deal mehr, außer es kommen neue Kaufsignale.",
   "changes.kind.stage_move": "In eine spätere Phase verschoben",
   "changes.summary_one":
     "Margince hat {count} deiner Deals aktualisiert: {parts}",
@@ -18546,6 +18726,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.part.probabilities_other": "{count} Wahrscheinlichkeiten",
   "changes.part.moved_one": "{count} verschoben",
   "changes.part.moved_other": "{count} verschoben",
+  "changes.part.opened_one": "{count} eröffnet",
+  "changes.part.opened_other": "{count} eröffnet",
+  "changes.part.revived_one": "{count} wieder eröffnet",
+  "changes.part.revived_other": "{count} wieder eröffnet",
   "changes.viewAll": "Alle ansehen",
   "changes.undoAll": "Alle rückgängig machen",
   "changes.undoAllDone_one": "Auf {count} Deal rückgängig gemacht.",
@@ -18567,9 +18751,69 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.team.owner": "Zuständig",
   "changes.team.kind": "Änderung",
   "changes.team.deals": "Deals",
-  "changes.team.value": "Wert",
   "changes.team.undone": "Rückgängig",
   "changes.team.truncated": "Liste gekürzt. Es gibt weitere Änderungen.",
+  "changes.team.valueMoved": "Bewegter Wert",
+  "changes.team.ownerless.title":
+    "Deals, die Margince liegen lässt, bis jemand sie übernimmt",
+  "changes.team.ownerless.deal": "Deal",
+  "changes.team.ownerless.reason": "Grund",
+  "changes.team.ownerless.value": "Wert",
+  "changes.team.ownerless.no_owner": "Niemand zuständig",
+  "changes.team.ownerless.departed_owner": "{name} ist gegangen",
+  "changes.team.ownerless.departed_unnamed":
+    "Das zuständige Mitglied ist gegangen",
+  "changes.team.ownerless.inactive_owner": "{name} ist nicht aktiv",
+  "changes.team.ownerless.inactive_unnamed":
+    "Das zuständige Mitglied ist nicht aktiv",
+  "changes.check.why.owner_cannot_edit":
+    "das zuständige Mitglied darf den Deal nicht mehr ändern",
+  "changes.team.unvalued":
+    "Der bewegte Wert lässt Änderungen aus, die Margince nicht bewerten konnte: einen Betrag, den du nicht sehen darfst, einen fehlenden Wechselkurs oder eine ältere Änderung der Wahrscheinlichkeit.",
+  "changes.team.ownerless.truncated":
+    "Liste gekürzt. Für weitere Deals ist niemand zuständig.",
+  "changes.check.title":
+    "Margince hat diesen Deal am {date} geprüft und nichts geändert",
+  "changes.check.ownerOnly": "Den Grund sieht nur das zuständige Mitglied",
+  "changes.check.next":
+    "Nächste Prüfung am {date} oder früher, wenn etwas Neues kommt",
+  "changes.check.nextOnNews": "Nächste Prüfung, wenn etwas Neues kommt",
+  "changes.check.outcome": "{kind}: {why}",
+  "changes.check.sources": "Quellen: {list}",
+  "changes.check.skipped.switched_off":
+    "Deine Schalter sind aus, darum hat Margince den Deal nicht gelesen",
+  "changes.check.skipped.no_evidence":
+    "Keine E-Mail, kein Termin, kein Anruf und keine Notiz, die alle lesen dürfen",
+  "changes.check.kind.close_date": "Abschlussdatum",
+  "changes.check.kind.amount": "Betrag",
+  "changes.check.kind.probability": "Wahrscheinlichkeit",
+  "changes.check.kind.stage": "Phase",
+  "changes.check.why.switched_off": "dein Schalter ist aus",
+  "changes.check.why.kept_your_edit": "deine eigene Änderung bleibt",
+  "changes.check.why.not_sure": "nicht sicher genug",
+  "changes.check.why.outside_limits":
+    "außerhalb der Grenzen, die Margince setzen darf",
+  "changes.check.why.changed_while_checking":
+    "der Deal hat sich während der Prüfung geändert",
+  "changes.check.why.undo_hold":
+    "du hast die letzte Änderung rückgängig gemacht, darum wartet Margince auf Neues",
+  "changes.check.why.already_right": "stimmt schon",
+  "changes.check.why.accepted_offer": "das angenommene Angebot legt es fest",
+  "changes.check.why.priced_by_products": "die Produkte des Deals legen es fest",
+  "changes.check.why.no_rate": "kein Wechselkurs für die Währung",
+  "changes.check.why.no_owner": "das zuständige Mitglied ist gegangen",
+  "changes.check.why.stage_rules":
+    "die Ausstiegskriterien der Phase erlauben es nicht",
+  "changes.check.why.other": "eine Regel hat es verhindert",
+  "changes.check.source.mail": "E-Mails",
+  "changes.check.source.meetings": "Termine",
+  "changes.check.source.calls": "Anrufe",
+  "changes.check.source.notes": "Notizen",
+  "changes.check.source.offers": "Angebote",
+  "changes.check.state.read": "{source} gelesen",
+  "changes.check.state.private": "{source} privat, ausgelassen",
+  "changes.check.state.unavailable": "{source} nicht rechtzeitig gelesen",
+  "changes.check.state.none": "keine {source}",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Ausgeführt von",
@@ -19381,62 +19625,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.readings.noCompany": "Keins",
   "lead.readings.owed": "Ausstehend",
   "lead.readings.answered": "Beantwortet",
-  "stageAutomation.record": "Bilanz",
-  "stageAutomation.pipeline": "Pipeline",
-  "stageAutomation.transition": "\u00dcbergang",
-  "stageAutomation.reviewed": "Geprüft",
-  "stageAutomation.reviewedHint":
-    "Vorschläge, über die jemand entschieden hat. Jede Quote ist ein Anteil dieser Zahl.",
-  "stageAutomation.open": "Noch offen",
-  "stageAutomation.expired": "Abgelaufen",
-  "stageAutomation.expiredHint":
-    "Niemand hat geantwortet, bevor das Zeitfenster endete. Das ist keine Ablehnung.",
-  "stageAutomation.cleanAcceptance": "Angenommen",
-  "stageAutomation.edits": "Bearbeitet",
-  "stageAutomation.rejections": "Abgelehnt",
-  "stageAutomation.unsafe": "Rückgängig gemacht oder korrigiert",
-  "stageAutomation.unsafeHint":
-    "Wechsel, die jemand rückgängig gemacht hat oder deren Beleg als falsch markiert wurde. Ein Wechsel zählt einmal, auch wenn beides geschah.",
-  "stageAutomation.observationDays": "Beobachtete Tage",
-  "stageAutomation.observationHint":
-    "Vom ersten bis zum letzten geprüften Vorschlag. Eine gute Quote an einem Nachmittag ist keine belastbare Bilanz.",
-  "stageAutomation.glossary": "Was die Zahlen bedeuten",
-  "stageAutomation.evidenceKinds": "Nach Beleg",
-  "stageAutomation.emptyTitle": "Noch keine vorgeschlagenen Phasenwechsel",
-  "stageAutomation.empty":
-    "Jeder Phasenwechsel, den Margince auf dieser Pipeline vorschlägt, wird hier gezählt, zusammen mit der Antwort darauf.",
-  "stageAutomation.noPipelines": "Noch keine Pipelines für einen Bericht.",
-  "stageAutomation.unreadable": "Dieser Bericht wurde nicht geladen",
-  "stageAutomation.rules": "Regeln für Übergänge",
-  "stageAutomation.rulesIntro":
-    "Ein aktivierter Übergang verschiebt noch keine Deals. Margince schlägt weiter Phasenwechsel vor, bis die Bilanz oben die Schwelle erreicht. Danach verschiebt Margince die Deals selbstständig und benachrichtigt dich im Anschluss.",
-  "stageAutomation.offTitle": "Die Phasensteuerung ist deaktiviert",
-  "stageAutomation.offBody":
-    "Solange die Phasensteuerung deaktiviert ist, wird kein Deal von selbst verschoben, unabhängig von der Einstellung der Übergänge unten. Wer diese Installation betreibt, aktiviert die Phasensteuerung in deren Konfiguration.",
-  "stageAutomation.notEarnedYet": "Noch nicht qualifiziert: {why}",
-  "stageAutomation.suspended": "Von Margince ausgesetzt",
-  "stageAutomation.suspendedSince": "Ausgesetzt am {date}",
-  "stageAutomation.resume": "Fortsetzen",
-  "stageAutomation.resumeTitle": "Diesen Übergang fortsetzen?",
-  "stageAutomation.resumeBody":
-    "Margince hat diesen Übergang ausgesetzt (Grund: {reason}). Das Fortsetzen überspringt die Schwelle nicht: Der Übergang muss die Bilanz oben erreichen, bevor er Deals automatisch verschiebt.",
-  "stageAutomation.noRules":
-    "Noch kein Übergang dieser Pipeline hat eine Regel, daher wird jeder Wechsel einer Person zur Prüfung vorgeschlagen.",
-  "stageAutomation.undoWindow": "Rückgängig für {hours} h",
-  "stageAutomation.rulesLoading": "Regeln für Übergänge werden geladen…",
-  "stageAutomation.saveFailed": "Änderung nicht gespeichert",
-  "stageAutomation.nothingReviewed": "Vorgeschlagen, aber noch keiner geprüft.",
-  "stageAutomation.detail": "Details",
-  "stageAutomation.detailFor": "Details zu {transition}",
-  "stageAutomation.evidenceShare":
-    "{accepted} von {reviewed} wie vorgeschlagen angenommen",
-  "stageAutomation.acceptedHint":
-    "Wie vorgeschlagen angenommen, ohne Änderung.",
-  "stageAutomation.editedHint":
-    "Angenommen, nachdem jemand den Vorschlag geändert hat.",
-  "stageAutomation.rejectedHint": "Vorschläge, die jemand abgelehnt hat.",
-  "stageAutomation.openHint":
-    "Vorschläge, auf die noch niemand geantwortet hat. Keine Quote zählt sie mit.",
   "employment.importLoading": "Gekaufter beruflicher Werdegang wird geladen…",
   "employment.apply": "Importierte Unternehmen verknüpfen",
   "employment.status.current": "Aktuell",

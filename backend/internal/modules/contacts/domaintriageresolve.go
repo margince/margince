@@ -56,6 +56,12 @@ type ResolveDomainTriageInput struct {
 	Facts       []DeepReadFact
 }
 
+// decidedByAUser reports an answer from a user or their agent, which the
+// machine's own withholding rules exist to ask for.
+func (in ResolveDomainTriageInput) decidedByAUser() bool {
+	return in.Source == DomainSourceHuman || in.Source == DomainSourceAgent
+}
+
 // ResolveDomainTriageResult reports what the verdict actually did.
 type ResolveDomainTriageResult struct {
 	CompanyID      *ids.CompanyID
@@ -128,7 +134,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 	if !known {
 		return ResolveDomainTriageResult{}, fmt.Errorf("%w: no open question about %s", apperrors.ErrNotFound, in.Domain)
 	}
-	if in.Source == DomainSourceHuman && in.ReadID.IsZero() && prior.SiteReadID != nil {
+	if in.decidedByAUser() && in.ReadID.IsZero() && prior.SiteReadID != nil {
 		in.ReadID = *prior.SiteReadID
 	}
 	if prior.PendingReason == PendingForwardedIdentity && in.Status == DomainCompany && in.CompanyID == nil {
@@ -160,7 +166,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 	if in.Status != DomainCompany {
 		return ResolveDomainTriageResult{}, settleDisposition(ctx, tx, in, nil)
 	}
-	if in.Source != DomainSourceHuman && DomainIdentityForwarded(in.Domain, in.SeedURL) {
+	if !in.decidedByAUser() && DomainIdentityForwarded(in.Domain, in.SeedURL) {
 		evidence, err := json.Marshal(DomainForwardEvidence{RequestedDomain: in.Domain, EffectiveURL: in.SeedURL, ReadID: in.ReadID, RedirectChain: []string{TriageSeedURL(in.Domain), in.SeedURL}})
 		if err != nil {
 			return ResolveDomainTriageResult{}, err
@@ -218,7 +224,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 // duplicate the dedupe chokepoint exists to prevent.
 func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, prior DomainDisposition) (ResolveDomainTriageResult, error) {
 	if in.CompanyID != nil {
-		if in.Source != DomainSourceHuman {
+		if !in.decidedByAUser() {
 			return ResolveDomainTriageResult{}, apperrors.ErrPermissionDenied
 		}
 		by, err := storekit.CapturedBy(ctx)
@@ -265,7 +271,7 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 	// nothing rearms the cursor and the one caller who could settle it is
 	// refused without being told why — the rule withholdForStaleEvidence states
 	// for the same reason.
-	if in.Source != DomainSourceHuman {
+	if !in.decidedByAUser() {
 		held, err := withholdForNameTwin(ctx, tx, in, match)
 		if err != nil || held {
 			return ResolveDomainTriageResult{}, err

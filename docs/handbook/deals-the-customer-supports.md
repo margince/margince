@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -81,6 +81,29 @@ Margince leaves a value alone in these cases:
 - Something on the deal changed while Margince was reading it. The deal is
   read again the next night.
 
+When a check changed nothing, the deal's **Changes by Margince** card says when
+it ran and when the next one is due. The owner also sees why each value stayed
+and what came of each source: mail, meetings, calls, notes and offers. A source
+is read, private (only items not everyone may read, so they were left out), not
+read on time (the mailbox), or empty. Anyone else sees only that the check ran,
+and so does an agent acting for the owner.
+
+Margince does not read a deal with no owner, or one whose owner is not an
+active member: they left, are invited, suspended or archived. Team leads see
+these deals under **Changes by Margince on your team**, each linked, so someone
+can give it an owner.
+
+That panel's **Value moved** column is how much value each kind of change
+moved, in the base currency. An amount change moves its difference. A close as
+lost takes the deal's value out of the pipeline, and a new or reopened deal
+puts it in. A new win probability or stage moves the amount times the change
+in probability. A new close date moves nothing. An undone change counts
+nothing.
+
+Each move is valued from the deal as it was when Margince changed it, so a
+later edit does not change it. Some changes cannot be priced: an amount you may
+not see, or one with no exchange rate. The panel leaves them out and says so.
+
 A price in another currency is converted into the deal's currency at the stored
 rate, through the base currency. It is rounded to whole units. The receipt
 shows the customer's words, the amount they named and the date of the rate.
@@ -97,8 +120,8 @@ changes.
 since. After an Undo, Margince does not make that change on the deal again.
 That lasts until a new message, offer or stage move arrives on the deal.
 
-The switches are **Close dates**, **Deal amounts**, **Win probabilities** and
-**Stage moves** among the automatic changes. Margince checks the switch again
+The switches are **Close dates**, **Deal amounts**, **Win probabilities**,
+**Stage moves**, **New deals** and **Reopened deals** among the automatic changes. Margince checks the switch again
 just before it writes.
 
 ## When the deal reached a later stage
@@ -108,3 +131,52 @@ and never to won or lost. It moves a deal only across stages that list
 criteria. A message, meeting or note on the deal must show each of the
 criteria of each stage the deal leaves. **Undo** moves the deal back, unless someone moved it since. An admin
 can stop all stage moves in the installation settings.
+
+## When the customer asks for an offer
+
+Margince looks for a company with no open deal where a customer asked for an
+offer or a proposal. If the company has an owner, Margince opens the
+deal for that owner at the first stage. It sets an amount only when the
+customer wrote a number and a currency. Home, the morning mail and the deal show
+what it read, and when.
+
+**Undo** archives the deal. Margince then does not open a deal on the same
+evidence; a new request opens one again. If your team added notes or tasks to
+the deal, Undo asks first.
+
+A company with no owner gets a suggestion instead, as does one whose owner
+switched **New deals** off or left.
+
+A company whose last closed deal was lost never gets a second deal beside it.
+Margince reopens the lost deal instead, as below.
+
+## When a lost deal's customer comes back
+
+When a customer asks for an offer again after their deal was lost, Margince
+reopens the lost deal for its owner. It takes the last closed deal of the
+company, and only when that deal was lost. The deal goes back to the first open
+stage of its pipeline, never to won. Margince counts only messages, meetings and
+documents that reached it after the deal was lost.
+
+Margince reopens a deal only when all of these hold:
+
+- The company has no open deal.
+- The deal has an owner who still works in the workspace, with **Reopened
+  deals** switched on.
+- The deal is not on legal hold.
+- Nobody on your team closed the deal in the last 30 days. A close by Margince
+  does not count.
+- Everyone in the workspace may still read the evidence.
+
+The reopen shows on the owner's **Home**, in the morning mail and on the deal,
+with the reason and **Undo**. Only the owner reads the reason. The deal's
+timeline gets a note about the reopen.
+
+**Undo** closes the deal as lost again, with the reason and the close date it
+had. Undo is refused when someone moved the deal to another stage since. If
+your team added notes or tasks to the deal since, Undo asks first. After
+an Undo, Margince reopens the deal only for evidence that arrived after it.
+
+With no owner, an owner who left, or the switch off, the suggestion stays for
+your team to decide. Evidence that reached Margince before the deal was lost is
+not used.

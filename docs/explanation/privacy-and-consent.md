@@ -5,8 +5,7 @@
 How Margince meets its duties to a data subject. The **authorization engine** decides whether each
 outbound message may go, and keeps a record of why. The **privacy engines** (erasure, subject
 access, retention) do the work a granted request asks for. The product refuses to fill records by
-scraping in the first place. The legal reasons behind that, for the EU and Vietnam, are in a
-document kept with the company's business files, not in this tree.
+scraping in the first place.
 
 Two modules work together: `consent` owns the engine and the case queue, and `privacy` owns the
 code that does the work. They are connected at the composition root, never by a sibling import.
@@ -44,6 +43,12 @@ the **proof** that category needs, and records a **decision** per recipient sayi
   itself goes into `communication_basis`, not on the decision row.) A message that reaches a provider
   always has both rows. The second sees a withdrawal, a bounce or an edit to the words that comes
   in between the two.
+
+  The dispatcher asks once more at the wire (`RecheckTransmit`), after pacing and the file read. A
+  stop, or a request taken back, recorded in that time parks the message. The same answer records nothing new.
+- A request stays with the record it was made on. A merge binds each request on either record to
+  that record's addresses (`recorded_for_addresses`). After a wrong merge, one human's request does
+  not cover the other's addresses.
 - **Withdrawals and stops are separate, and both bind.** An unsubscribe is a consent withdrawal. The
   engine reads it **by class** ("has the subject stopped this kind of message"). That is because a category worked out from
   proof may carry no purpose key to match. `communication_suppression` records the other stops: an
@@ -146,8 +151,8 @@ Anna" stops being true when Anna leaves:
 Resuming uses the held message again, so a resumed review stages one delivery and not a second copy
 of the message. A review can be read by the user who started it, or by a user who holds
 `communication_exception:read`. Any other user gets 404, not 403. The fact that a refused message
-about a named subject exists is itself something to keep private. A principal that is not human is
-refused before the query runs.
+about a named subject exists is itself something to keep private. A principal that is neither a user
+nor a user's agent is refused before the query runs.
 
 **An instruction overrides one refusal, by name.** It is a named user sending one refused message all
 the same. At times the installation has a reason the engine cannot see. It may be a contract clause, a legal
@@ -187,8 +192,11 @@ something that never happened:
 Directing a send answers to `communication_exception`, its own RBAC object, not a part of
 consent's settings. The two are different authorities. Consent's settings decide who may change the
 rules. This decides who may act against the answer those rules gave about one contact. An
-installation that handed over the first has not handed over the second with it. The check is
-`auth.RequireHuman` plus the grant, so a passport that holds an admin's grants cannot make one.
+installation that handed over the first has not handed over the second with it.
+
+The check is `requireAUserOrTheirAgent` plus the grant, so a connector cannot make one. A user's agent
+carries out the user's own decision on `send_outbound`, with the `send` scope, and asks first.
+`directed_by` names the user who took it on and `directed_by_agent` names the agent.
 
 Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
 alone does not say which refusals a seat may send past. Each refusal reason declares what can
@@ -196,10 +204,16 @@ resolve it in `commsauthz.RemediesFor`.
 
 - A reason that lists the plain exception can be sent past by any holder of the grant. Examples are
   no evidence and no marketing consent.
-- A reason that lists only the admin exception can be sent past only by an admin. Examples are a
-  hard bounce and a frequency cap.
+- A reason that lists only the admin exception can be sent past only by an admin. An example is a
+  hard bounce.
 - A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
-  objection, a withdrawal, a limit on processing and a request to stop.
+  objection, a withdrawal, a limit on processing and a request to stop. It also covers a quote that
+  rests on a request alone when the contact opted out of marketing after that request
+  (`opted_out_after_request`). A request recorded after the opt-out carries the quote again.
+- Some packs list nothing either. A pack that sets `ConsentOnly` (Vietnam does)
+  turns marketing without consent into `marketing_consent_required`. No exception and no standing
+  override answers it. Nobody sends past a pack's limit on advertising mail
+  (`frequency_cap_reached`); it clears with time.
 
 `Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
 The direction stores whether an admin gave it. Staging and the transmit check both ask
@@ -219,6 +233,16 @@ counts either. So a seat cannot make this ground by copying the contact.
 The rule reads the thread key and records its basis against that thread. So it never becomes
 standing permission for the contact. It never supports a message the sender calls marketing.
 `copiedOnThisMatter` holds the whole rule.
+
+An open deal the contact is a stakeholder on supports a follow-up only when the record shows them
+asking about that deal (`requestedNegotiation`). That is mail they wrote or a meeting they joined,
+filed on the deal. It can also be a request recorded about the deal, or the request they came in with
+when it names the deal. A deal we created is not their request, and a request about one deal does
+not carry another. A picked deal with no such request is refused with `deal_not_requested`. The
+answer a rep gives in the review form is recorded about that deal, so it is asked once.
+
+A quote on a deal reads only the requests about that deal or about no deal. So a newer request for
+one quote does not lift an opt-out for another.
 
 ## Reaching the subject without the message that carried the link
 
@@ -250,11 +274,13 @@ since rotated.
   `communication_suppression` records which kind, its `source`, the seat that captured it, and the
   authority level that decided it. `lift.go` refuses any lift that the level of the user who lifts it cannot override.
 
-  The two kinds are not the same there. A passed-on **marketing objection** is marked
-  `decided_by_level='subject'`, because Article 21 is the subject's own act and no seat should undo
-  it. A passed-on **subject request** keeps the seat's level. It is a user's report of a call with no
-  article behind it. So an admin who fixes a wrong "stop everything" note does not need the subject
-  back on the phone.
+  A passed-on **marketing objection** is marked `decided_by_level='subject'`, because Article 21 is
+  the subject's own act. An admin may still correct one a user typed in error, with a reason the
+  audit row keeps (`stopcorrection.go`). One the subject pressed on a mailed link stays theirs. A
+  passed-on **subject request** keeps the seat's level, so an admin can fix a wrong "stop
+  everything" note a user typed from a call. `GET /contacts/{id}/consent/stops` shows each user
+  which stops they may lift. Nobody lifts a limit on processing here, because that owes the subject
+  notice first, and Margince sends none yet.
 - **A public fix or erasure opens a case.** A subject who types into a confirm link opens a
   `data_subject_request` in the same transaction. The case gets a reference number and the last day to answer it.
   No row is left behind for nobody to work.
@@ -337,6 +363,10 @@ into consent's handlers.
   write one. So a transcript is archived under the `activity` row, and only an Article 17 request
   destroys a contact's data. `backend/gates/retentionseedcoverage_test.go` records why each scope
   with no row has none.
+
+  No retention action deletes a stop. The `anonymize` action copies a stop for the whole record onto
+  each of its addresses (`privacy/retentionstops.go`). It writes a marketing withdrawal as an
+  objection on each address. So a subject who comes back on a new record is still stopped.
 
 ## The single-transaction cross-store exception
 
@@ -547,28 +577,22 @@ version the build sends.
 
 ## Mail from the contact
 
-Mail from a contact shows that they gave their own details. For `bulk_mail_attested`,
-`inbound_sender_authenticated` must also be true.
+Mail from a contact shows that they gave their own details; for `bulk_mail_attested`,
+`inbound_sender_authenticated` must also be true. Before closing old cases, the data task reads
+the stored mail with capture's parser and checks that proof. Mail with no proof stays unknown.
 
-Before closing old cases, the data task reads the stored mail with capture's parser and checks
-the same proof. Mail with no proof keeps its unknown source.
+An unknown source needs review. It has no legal deadline and no send route. A missing mail, a
+reply from our team, or a capture date cannot prove where the details came from. A source with a
+notice duty keeps that duty when its date is unknown. The capture date gives the latest possible
+deadline; the notice may already be due.
 
-An unknown source needs review. It has no legal deadline and no send route. A missing mail,
-a reply from our team, or a capture date cannot prove where the details came from.
+A user with privacy access answers how the details came in and gives the proof, in **Settings →
+Privacy** or a drawer on the contact page. Both sit under the same access check. Each answer maps
+to one existing source kind and changes only the notice duty and the disclosure text.
 
-A source with a notice duty keeps that duty when its date is unknown. The capture date
-gives the latest possible deadline; the notice may already be due.
-
-A user with privacy access answers how the details came in and gives the proof. The question
-opens in **Settings → Privacy** and in a drawer on the contact page. Each answer maps to one
-existing source kind.
-
-The answer changes only the notice duty and the disclosure text. Send permission reads the
-original source record, so a confirmed source never lets a send through.
-
-The contact page shows the review under the same access check. If the contact gave the details,
-no separate notice is needed. A date is optional: a known past date is used as given, and a
-missing date uses the original capture date as a bound. The clock never starts again at review.
+Send permission reads the original source record, so a confirmed source never lets a send through.
+A contact who gave the details needs no separate notice. A known past date is used as given; a
+missing one uses the capture date as a bound. The clock never starts again at review.
 
 A data task moves live cases with an unknown source to review. It keeps their audit history,
 finished decisions and mail already on its way. If a send fails, the source is checked again.

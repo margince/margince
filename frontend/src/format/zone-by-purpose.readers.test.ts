@@ -1,0 +1,322 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+import ts from "typescript";
+import { beforeAll, describe, expect, it } from "vitest";
+import { checkedProgram } from "../../scripts/lib/source-tree";
+import { sourceFiles, srcRoot, zoneModule } from "./zone-by-purpose.testkit";
+
+// Every time a signed-in screen shows is read on the reader's own clock,
+// `useViewerZone()`. Each file that uses another source is listed here with its
+// reason. A new screen that reaches for one without a reason fails this census.
+
+// The company zone is for what belongs to the company: report periods and runs,
+// and days and weeks the server buckets on the company's clock. Decision B1 on
+// #7894 keeps server "today" and "overdue" lists there.
+const REPORTING =
+  "Report periods and runs are counted on the company's clock, for every reader alike.";
+const SERVER_WEEK =
+  "The server buckets this week or day on the company's clock (decision B1 on #7894); naming it in another zone would label the bucket with days it does not hold.";
+const SERVER_TODAY =
+  "The server reads 'today' on the company's clock, so the form opens on the day the server will count.";
+const companyZoneSites: { file: string; why: string }[] = [
+  ...[
+    "analytics.decisions.tsx",
+    "analytics.forecast.checktable.tsx",
+    "analytics.forecast.tsx",
+    "analytics.overview.donext.tsx",
+    "analytics.overview.initiative.tsx",
+    "analytics.overview.interventions.tsx",
+    "analytics.overview.prospecting.tsx",
+    "analytics.overview.sales.tsx",
+    "analytics.overview.team.tsx",
+    "analytics.questions.saved.tsx",
+    "inputcheck.answer.tsx",
+    "inputcheck.facts.tsx",
+    "reporting.executions.tsx",
+    "reporting.filters.tsx",
+    "reporting.initiatives.tsx",
+    "reporting.library.tsx",
+    "reporting.overview.tsx",
+    "reporting.questionpicker.tsx",
+    "reporting.targets.tsx",
+    "reporting.versions.tsx",
+  ].map((name) => ({ file: `features/analytics/${name}`, why: REPORTING })),
+  { file: "features/companies/companies.hierarchy.tsx", why: REPORTING },
+  {
+    file: "design-system/boardtotals.tsx",
+    why: "The rates day behind a converted total is the company's, counted on its clock like every report figure.",
+  },
+  { file: "lib/deals.queries.ts", why: SERVER_TODAY },
+  { file: "features/settings/rates.tsx", why: SERVER_TODAY },
+  { file: "features/settings/taxrates.tsx", why: SERVER_TODAY },
+  {
+    file: "features/brief/brief.glance.tsx",
+    why: "Home holds the server's day and the weekly's week, both bucketed on the company's clock (decision B1), so the day and week it is labelled with are on that clock; the greeting hour is the reader's.",
+  },
+  { file: "features/brief/brief.plan.tsx", why: SERVER_WEEK },
+  { file: "features/brief/brief.weekly.tsx", why: SERVER_WEEK },
+  { file: "features/brief/brief.weekly.figures.tsx", why: SERVER_WEEK },
+  { file: "features/worklist/brief.teamplan.tsx", why: SERVER_WEEK },
+  {
+    file: "features/worklist/worklist.row.tsx",
+    why: "A row's due day is the server's bucket, counted on the company's clock (decision B1), so the day comparison and the due-day text read that clock; every other time on the row is the reader's.",
+  },
+  {
+    file: "features/brief/brief.focus.tsx",
+    why: "A focus row's due day is the server's bucket, counted on the company's clock (decision B1), so the due-day text reads that clock; every other time on the row is the reader's.",
+  },
+  {
+    file: "features/brief/brief.intro.tsx",
+    why: "Whether today's read has been greeted, and the day the curtain names, follow the server's day on the company's clock (decision B1); the greeting hour is the reader's.",
+  },
+  {
+    file: "mail-history/window-picker.tsx",
+    why: "The server supplies the calendar day the import window starts on, counted on the company's clock.",
+  },
+];
+
+// The browser's zone is for screens with no signed-in reader, and for the zone
+// module and the reader's own fallback. It also serves the few values that are a
+// calendar day or a browser input rather than an instant.
+const PUBLIC =
+  "A public screen has no signed-in reader, so the browser's clock is the only one it knows.";
+const DATE_ONLY =
+  "A date-only value is read at its midday, so it names the same calendar day in every zone; no reader's clock changes it.";
+const browserZoneSites: { file: string; why: string }[] = [
+  { file: "features/deals/buyerroomframe.tsx", why: PUBLIC },
+  {
+    file: "features/booking/booking-guest.tsx",
+    why: "A guest on the public booking page has only the browser's clock; a host previewing their own page starts from their own zone instead.",
+  },
+  {
+    file: "features/booking/booking-reschedule.tsx",
+    why: "A guest on the public token link has only the browser's clock; a signed-in host starts from their own zone instead.",
+  },
+  { file: "features/privacy/confirmprivacy.tsx", why: PUBLIC },
+  { file: "features/privacy/confirmdetailsaction.tsx", why: PUBLIC },
+  {
+    file: "features/sign-in/magic.tsx",
+    why: `${PUBLIC} It is the magic-link sign-in.`,
+  },
+  {
+    file: "features/sign-in/magic.records.tsx",
+    why: `${PUBLIC} It is the magic-link sign-in.`,
+  },
+  {
+    file: "features/sign-in/setupclaim.tsx",
+    why: "The first admin sets the installation up before any user or zone is stored; the browser's zone is the only one there is.",
+  },
+  {
+    file: "lib/viewerzone.tsx",
+    why: "The reader's zone falls back to the browser's until the user has one, and the first sign-in stores the browser's as a guess.",
+  },
+  { file: "components/customfields.form.ts", why: DATE_ONLY },
+  { file: "components/recordfieldvalues.ts", why: DATE_ONLY },
+  {
+    file: "features/mail/composeschedule.tsx",
+    why: "The browser parses a datetime-local input in its own zone, so the zone sent with the instant has to be that one, or the send is moved by the gap.",
+  },
+];
+
+const ZONE_SOURCES_SKIP =
+  /\.test\.|\.stories\.|testkit|storykit|fixture|\/testing\//;
+
+type ZoneSource = "useCompanyZone" | "browserZone";
+type ZoneRef = { source: ZoneSource; file: string; line: number };
+
+const companyZoneModule = join(srcRoot, "lib", "companyzone.tsx");
+
+/**
+ * Every reference to the two exported zone sources in the given files. The
+ * TypeScript checker resolves them, so a name that only looks the same is not
+ * counted. A reference can be called, passed uncalled, renamed on import or read
+ * off a namespace import.
+ *
+ * `overlay` holds files that exist only in memory, for the planted cases.
+ */
+function zoneSourceRefs(
+  roots: readonly string[],
+  overlay: ReadonlyMap<string, string> = new Map(),
+): ZoneRef[] {
+  const { program, checker } = checkedProgram(
+    join(srcRoot, "..", "tsconfig.app.json"),
+    roots,
+    overlay,
+  );
+  const exported = (file: string, name: string): ts.Symbol | undefined => {
+    const source = program.getSourceFile(file);
+    const module = source && checker.getSymbolAtLocation(source);
+    return module
+      ? checker.getExportsOfModule(module).find((each) => each.name === name)
+      : undefined;
+  };
+  const targets = new Map<ts.Symbol, ZoneSource>();
+  const company = exported(companyZoneModule, "useCompanyZone");
+  const browser = exported(zoneModule, "browserZone");
+  if (company) targets.set(company, "useCompanyZone");
+  if (browser) targets.set(browser, "browserZone");
+  const refs: ZoneRef[] = [];
+  for (const root of roots) {
+    const source = program.getSourceFile(root);
+    if (!source) continue;
+    const file = relative(srcRoot, root).split("\\").join("/");
+    const record = (found: ts.Symbol | undefined, at: ts.Node): void => {
+      const symbol =
+        found && found.flags & ts.SymbolFlags.Alias
+          ? checker.getAliasedSymbol(found)
+          : found;
+      const kind = symbol && targets.get(symbol);
+      if (kind) {
+        refs.push({
+          source: kind,
+          file,
+          line:
+            source.getLineAndCharacterOfPosition(at.getStart(source)).line + 1,
+        });
+      }
+    };
+    const visit = (node: ts.Node): void => {
+      // An import or export names the source without using it.
+      if (
+        ts.isImportDeclaration(node) ||
+        ts.isExportDeclaration(node) ||
+        ts.isImportEqualsDeclaration(node) ||
+        ts.isTypeQueryNode(node) ||
+        ts.isTypeReferenceNode(node)
+      ) {
+        return;
+      }
+      // `zones["browserZone"]()` and `zones[key]()` name the export by a string
+      // type, whether written in place or held in a constant.
+      if (ts.isElementAccessExpression(node)) {
+        const key = checker.getTypeAtLocation(node.argumentExpression);
+        const keys = key.isUnion() ? key.types : [key];
+        for (const each of keys) {
+          if (each.isStringLiteral()) {
+            const read = checker.getPropertyOfType(
+              checker.getTypeAtLocation(node.expression),
+              each.value,
+            );
+            record(read, node);
+          }
+        }
+      }
+      if (ts.isIdentifier(node)) {
+        const declares =
+          (ts.isFunctionDeclaration(node.parent) ||
+            ts.isVariableDeclaration(node.parent)) &&
+          node.parent.name === node;
+        // A shorthand property `{ browserZone }` names the property first, and
+        // the value it reads is a second symbol the checker keeps apart.
+        const symbol = declares
+          ? undefined
+          : ts.isShorthandPropertyAssignment(node.parent)
+            ? checker.getShorthandAssignmentValueSymbol(node.parent)
+            : checker.getSymbolAtLocation(node);
+        record(symbol, node);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
+  return refs;
+}
+
+describe("a signed-in screen reads the reader's clock unless it says why", () => {
+  let calls: ZoneRef[] = [];
+  beforeAll(() => {
+    const roots = sourceFiles(srcRoot, fileURLToPath(import.meta.url)).filter(
+      (path) =>
+        !ZONE_SOURCES_SKIP.test(relative(srcRoot, path).split("\\").join("/")),
+    );
+    calls = zoneSourceRefs(roots);
+  }, 180_000);
+  const listed = {
+    useCompanyZone: new Set(companyZoneSites.map(({ file }) => file)),
+    browserZone: new Set(browserZoneSites.map(({ file }) => file)),
+  };
+
+  it("sees at least one site of each source", () => {
+    // A census that reads nothing passes every check below.
+    expect(calls.some(({ source }) => source === "useCompanyZone")).toBe(true);
+    expect(calls.some(({ source }) => source === "browserZone")).toBe(true);
+  });
+
+  it("catches a renamed, a namespaced and an uncalled zone read in an unlisted file", () => {
+    const planted = join(srcRoot, "features", "zzplanted.tsx");
+    const refs = zoneSourceRefs(
+      [planted],
+      new Map([
+        [
+          planted,
+          [
+            'import { useState } from "react";',
+            'import { browserZone, browserZone as bz } from "../format/timezone";',
+            'import * as zones from "../format/timezone";',
+            'import { useCompanyZone as companyClock } from "../lib/companyzone";',
+            "export function Planted() {",
+            "  const [a] = useState(browserZone);",
+            "  const b = bz();",
+            "  const c = zones.browserZone();",
+            "  const d = companyClock();",
+            "  const e = { browserZone };",
+            '  const f = zones["browserZone"]();',
+            '  const key = "browserZone";',
+            "  const g = zones[key]();",
+            '  const either = Math.random() > 0.5 ? "browserZone" : "nothing";',
+            "  const h = zones[either]();",
+            "  return [a, b, c, d, e, f, g, h].join();",
+            "}",
+            "export type Zone = ReturnType<typeof browserZone>;",
+          ].join("\n"),
+        ],
+      ]),
+    );
+    expect(refs).toEqual([
+      { source: "browserZone", file: "features/zzplanted.tsx", line: 6 },
+      { source: "browserZone", file: "features/zzplanted.tsx", line: 7 },
+      { source: "browserZone", file: "features/zzplanted.tsx", line: 8 },
+      { source: "useCompanyZone", file: "features/zzplanted.tsx", line: 9 },
+      { source: "browserZone", file: "features/zzplanted.tsx", line: 10 },
+      { source: "browserZone", file: "features/zzplanted.tsx", line: 11 },
+      { source: "browserZone", file: "features/zzplanted.tsx", line: 13 },
+      { source: "browserZone", file: "features/zzplanted.tsx", line: 15 },
+    ]);
+    expect(listed.browserZone.has("features/zzplanted.tsx")).toBe(false);
+    expect(listed.useCompanyZone.has("features/zzplanted.tsx")).toBe(false);
+  }, 60_000);
+
+  it("finds no company or browser zone read outside the listed files", () => {
+    const unlisted = calls
+      .filter(({ source, file }) => !listed[source].has(file))
+      .map(({ source, file, line }) => `${file}:${line}: ${source}`);
+    // A time on a signed-in screen takes useViewerZone(). Reaching for the
+    // company's or the browser's clock is a decision; list the file above
+    // with the reason, or read the reader's zone.
+    expect(unlisted.sort()).toEqual([]);
+  });
+
+  it("keeps no listed file that no longer reads that source", () => {
+    const stale = [
+      ...companyZoneSites.filter(
+        ({ file }) =>
+          !calls.some((c) => c.source === "useCompanyZone" && c.file === file),
+      ),
+      ...browserZoneSites.filter(
+        ({ file }) =>
+          !calls.some((c) => c.source === "browserZone" && c.file === file),
+      ),
+    ].map(({ file }) => file);
+    expect(stale.sort()).toEqual([]);
+  });
+
+  it("states a reason for every listed file", () => {
+    const unexplained = [...companyZoneSites, ...browserZoneSites]
+      .filter(({ why }) => why.trim().length < 40)
+      .map(({ file }) => file);
+    expect(unexplained).toEqual([]);
+  });
+});

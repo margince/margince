@@ -7,7 +7,11 @@ package compose
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -206,5 +210,34 @@ func TestErasingTheContactErasesTheFiledScreenshot(t *testing.T) {
 	if n := f.env.WsCount(t, `SELECT count(*) FROM activity
 		 WHERE id = $1 AND body IS NULL AND archived_at IS NOT NULL`, filed); n != 1 {
 		t.Fatal("the filed chat kept its text, or stayed live, after the erasure")
+	}
+}
+
+// A chat reading is the model's transcript of an image no quote could be
+// checked against. The deal-facts poll does not return it, and an agent
+// cannot read it.
+func TestAChatReadingIsNotDealFactsAndNotForAnAgent(t *testing.T) {
+	f := readChatScreenshot(t, chatReply())
+	h := activities.NewHandlers(f.env.DB()).WithBlobstore(f.blob)
+	poll := func(ctx context.Context, question *crmcontracts.GetAttachmentExtractionParamsQuestion) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+f.attachment.String()+"/extraction", nil).WithContext(ctx)
+		h.GetAttachmentExtraction(rec, req, openapi_types.UUID(f.attachment),
+			crmcontracts.GetAttachmentExtractionParams{Question: question})
+		return rec
+	}
+	if rec := poll(f.env.Admin(), nil); rec.Code != http.StatusNotFound {
+		t.Errorf("the deal-facts poll answered %d for a file read only as a chat, want 404: %s", rec.Code, rec.Body)
+	}
+	chat := crmcontracts.GetAttachmentExtractionParamsQuestionChatCapture
+	rec := poll(f.env.Admin(), &chat)
+	var got crmcontracts.AttachmentExtraction
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); rec.Code != http.StatusOK || err != nil ||
+		got.Question != crmcontracts.AttachmentExtractionQuestionChatCapture {
+		t.Fatalf("the chat poll = %d %s", rec.Code, rec.Body)
+	}
+	agent := f.env.AgentFor(t, f.env.AdminUser, nil, integration.AdminPerms)
+	if rec := poll(agent, &chat); rec.Code != http.StatusForbidden {
+		t.Errorf("an agent's chat poll answered %d, want 403", rec.Code)
 	}
 }

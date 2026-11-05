@@ -168,7 +168,7 @@ func (h integrationsHandlers) CreateContactEnrichmentRun(w http.ResponseWriter, 
 	// way was not knowing the id. An id is not a secret.
 	//
 	// Visibility is the floor. A lookup also needs the right to edit the
-	// contact, because every run writes the provider's details onto it:
+	// contact, because every run writes the provider's details onto it.
 	// QueueRun asks for the contact write grant and EnsureWritableLive. There
 	// is no separate spend grant.
 	//

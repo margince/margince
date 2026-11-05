@@ -19,6 +19,7 @@ import { useCanWrite } from "../lib/capability";
 import { changeFieldKey } from "../lib/changecopy";
 import type { Receipt } from "../lib/handled";
 import { useReceiptUndo } from "../lib/receiptundo";
+import { BundleUndo } from "./marginchanges";
 
 export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   const t = useT();
@@ -51,6 +52,25 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   const subject = receipt.subject;
   if (subject?.type !== "deal") {
     return null;
+  }
+  // An opened or reopened deal undoes through the bundle path, which asks
+  // before it archives or closes work the team added since.
+  if (receipt.kind === "deal_open" || receipt.kind === "deal_revive") {
+    return (
+      <BundleUndo
+        bundles={[
+          {
+            deal_id: subject.id,
+            deal_name: subject.label ?? "",
+            version: undo.version,
+            audit_log_ids: [undo.audit_log_id],
+            kinds: [receipt.kind],
+            latest_at: receipt.occurred_at,
+          },
+        ]}
+        label={t("common.undo")}
+      />
+    );
   }
   const kind = subject.type;
   return (

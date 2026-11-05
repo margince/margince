@@ -15,6 +15,7 @@ import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { undoResultText } from "../lib/changecopy";
 import {
+  archiveQuestion,
   type MarginceChangeBundle,
   type MarginceChangeSummary,
   useUndoMarginceChanges,
@@ -30,6 +31,8 @@ const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   deal_amount: "changes.kind.deal_amount",
   deal_probability: "changes.kind.deal_probability",
   stage_move: "changes.kind.stage_move",
+  deal_open: "changes.kind.deal_open",
+  deal_revive: "changes.kind.deal_revive",
 };
 
 /** What changed on one deal, in words. */
@@ -53,6 +56,14 @@ export function ChangeSummaryRow({
     summary.closed > 0 &&
       plural("changes.part.closed", summary.closed, {
         count: count(summary.closed),
+      }),
+    summary.opened > 0 &&
+      plural("changes.part.opened", summary.opened, {
+        count: count(summary.opened),
+      }),
+    summary.revived > 0 &&
+      plural("changes.part.revived", summary.revived, {
+        count: count(summary.revived),
       }),
     summary.moved > 0 &&
       plural("changes.part.moved", summary.moved, {
@@ -120,43 +131,82 @@ export function BundleUndo({
   const writable = useCanWrite("deal", "update");
   const undo = useUndoMarginceChanges();
   const [answer, setAnswer] = useState<string | null>(null);
+  const [asking, setAsking] = useState<{
+    notes: number;
+    tasks: number;
+    work: string;
+    kind: string;
+  } | null>(null);
   if (answer) {
     return <span role="status">{answer}</span>;
   }
   if (!writable || bundles.length === 0) {
     return null;
   }
+  const press = (archiveConfirmedFor?: string) =>
+    undo.mutate(
+      { bundles, archiveConfirmedFor },
+      {
+        onSuccess: (results) => {
+          const only = results.length === 1 ? results[0] : undefined;
+          const question = only && archiveQuestion(only);
+          if (question) {
+            setAsking(question);
+            return;
+          }
+          setAsking(null);
+          if (only) {
+            setAnswer(undoResultText(only, t));
+            return;
+          }
+          const kept = results.filter((r) => r.outcome !== "undone").length;
+          setAnswer(
+            kept === 0
+              ? plural("changes.undoAllDone", results.length, {
+                  count: formatNumber(results.length, locale),
+                })
+              : t("changes.undoAllPartly", {
+                  undone: formatNumber(results.length - kept, locale),
+                  kept: formatNumber(kept, locale),
+                }),
+          );
+        },
+      },
+    );
   return (
     <>
-      <Button
-        variant="ghost"
-        pending={undo.isPending}
-        busyLabel={t("history.undo.busy")}
-        onClick={() =>
-          undo.mutate(bundles, {
-            onSuccess: (results) => {
-              const only = results.length === 1 ? results[0] : undefined;
-              if (only) {
-                setAnswer(undoResultText(only, t));
-                return;
-              }
-              const kept = results.filter((r) => r.outcome !== "undone").length;
-              setAnswer(
-                kept === 0
-                  ? plural("changes.undoAllDone", results.length, {
-                      count: formatNumber(results.length, locale),
-                    })
-                  : t("changes.undoAllPartly", {
-                      undone: formatNumber(results.length - kept, locale),
-                      kept: formatNumber(kept, locale),
-                    }),
-              );
-            },
-          })
-        }
-      >
-        {label}
-      </Button>
+      {asking ? (
+        <>
+          <span role="status">
+            {t(
+              asking.kind === "deal_revive"
+                ? "changes.undo.confirmRelost"
+                : "changes.undo.confirmArchive",
+              {
+                notes: formatNumber(asking.notes, locale),
+                tasks: formatNumber(asking.tasks, locale),
+              },
+            )}
+          </span>
+          <Button
+            variant="ghost"
+            pending={undo.isPending}
+            busyLabel={t("history.undo.busy")}
+            onClick={() => press(asking.work)}
+          >
+            {label}
+          </Button>
+        </>
+      ) : (
+        <Button
+          variant="ghost"
+          pending={undo.isPending}
+          busyLabel={t("history.undo.busy")}
+          onClick={() => press()}
+        >
+          {label}
+        </Button>
+      )}
       {undo.isError && <ErrorLine error={undo.error} />}
     </>
   );

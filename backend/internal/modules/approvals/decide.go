@@ -205,7 +205,35 @@ func landEditedPayload(
 	return applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, decidedPayload)
 }
 
+// readToDecide reads the locked approval as the decider sees it. An
+// undecidable approval reads as absent; one whose automatic apply the owner
+// withdrew says so.
+func readToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, by decider) (row, error) {
+	a, err := get(ctx, tx, id)
+	if err != nil {
+		return row{}, err
+	}
+	visible, err := decidable(ctx, tx, p, a)
+	switch {
+	case err != nil:
+		return row{}, err
+	case !visible && by == decidedBySystem:
+		return row{}, ErrPolicyWithdrawn
+	case !visible:
+		return row{}, apperrors.ErrNotFound
+	}
+	return a, nil
+}
+
 func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
+	// An automatic apply binds the owner, reads the mode and holds the target
+	// before the row lock (bindUnderPolicy has the lock order).
+	if by == decidedBySystem {
+		var err error
+		if ctx, p, err = bindUnderPolicy(ctx, tx, id); err != nil {
+			return row{}, err
+		}
+	}
 	// The row lock makes the pending pre-read and the status write below
 	// one race-free unit: two concurrent decisions cannot both pass the
 	// pending guard. Taken raw — the approval table has no archived_at,
@@ -217,16 +245,9 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 		}
 		return row{}, err
 	}
-	a, err := get(ctx, tx, id)
+	a, err := readToDecide(ctx, tx, p, id, by)
 	if err != nil {
 		return row{}, err
-	}
-	visible, err := decidable(ctx, tx, p, a)
-	if err != nil {
-		return row{}, err
-	}
-	if !visible {
-		return row{}, apperrors.ErrNotFound
 	}
 	// After visibility, so a caller who cannot see this row is told it is absent
 	// rather than that their credential is short a cap — the existence-hiding
@@ -341,25 +362,15 @@ func (s *Service) emitKindDecided(ctx context.Context, tx pgx.Tx, p principal.Pr
 // ApplyUnderPolicy approves a proposal because the rep it belongs to has put
 // this kind on automatic, rather than because anybody was asked.
 //
-// It is the SAME decision path a contact takes — one entry point, so the
-// registered effect, the audit row, the outbox event and the track record are
-// all written exactly as they are for a human. A second execution route would
-// be a second answer to "what does approving this do", and the two would drift.
-//
-// What differs is only what the receipt claims: decided_by_system marks the row
-// so the day's "Done for you" lane can say nobody was asked. The authority is
-// NOT the system principal — the caller binds an agent principal carrying the
-// owner's own grants, seat and row scope, so an automatic apply is bounded by
-// exactly what that rep could have done by hand. compose/autoapply.go builds
-// it, and refuses to apply at all when the owner cannot be resolved or is no
-// longer live.
-//
-// The caller checks the mode. This does not read the policy itself because the
-// decision to apply is made where the owner is resolved: reading it again here
-// would be a second answer to whether this may run, from the place with less
-// context about whose policy was consulted.
-func (s *Service) ApplyUnderPolicy(ctx context.Context, id ids.ApprovalID) (row, error) {
-	return s.recordDecision(ctx, id, true, nil, nil, decidedBySystem)
+// It takes the decision path a contact takes, so the effect, audit row, event
+// and track record are written as they are for a human. decided_by_system tells
+// the receipt nobody was asked. actAs binds an agent with the owner's own
+// grants, so the apply is bounded by what that rep could do by hand. The
+// decision and the effect's redemption each bind it again in their own
+// transaction and ask the owner's mode there. A withdrawn policy answers
+// ErrPolicyWithdrawn, and that stage writes nothing.
+func (s *Service) ApplyUnderPolicy(ctx context.Context, id ids.ApprovalID, actAs PolicyActor) (row, error) {
+	return s.recordDecision(withPolicyActor(ctx, id, actAs), id, true, nil, nil, decidedBySystem)
 }
 
 // statusAfter is the state a decision leaves the approval in, which is what the

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // The composer offers a recorded reason where the preview says a refusal can be
@@ -27,7 +28,7 @@ func TestThePreviewOffersAnOverrideOnlyWhereARecordedReasonIsAccepted(t *testing
 			ReasonCode: code,
 			Mode:       commsauthz.ModeEnforce,
 		}
-		out := previewResponse(commsauthz.DecisionSet{Decisions: []commsauthz.Decision{decision}})
+		out := previewResponse(SendPreview{Decisions: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{decision}}})
 		got := out.Recipients[0].CanBeOverruled
 		if got == nil {
 			t.Fatalf("%s: can_be_overruled is absent", code)
@@ -43,15 +44,55 @@ func TestThePreviewOffersAnOverrideOnlyWhereARecordedReasonIsAccepted(t *testing
 // missing deal from the claim.
 func TestThePreviewCarriesTheClaimBesideTheResolvedCategory(t *testing.T) {
 	t.Parallel()
-	out := previewResponse(commsauthz.DecisionSet{Decisions: []commsauthz.Decision{{
+	out := previewResponse(SendPreview{Decisions: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{{
 		Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonNoEvidence, Mode: commsauthz.ModeEnforce,
 		Requested: commsauthz.CategoryActiveDealFollowup, Resolved: commsauthz.CategoryRequestedFollowup,
-	}}})
+	}}}})
 	got := out.Recipients[0]
 	if got.RequestedCategory == nil || *got.RequestedCategory != "active_deal_followup" {
 		t.Errorf("requested_category = %v, want active_deal_followup", got.RequestedCategory)
 	}
 	if got.ResolvedCategory == nil || *got.ResolvedCategory != "requested_followup" {
 		t.Errorf("resolved_category = %v, want it unchanged as requested_followup", got.ResolvedCategory)
+	}
+}
+
+// An address the send would file is marked new, in any case the rep typed.
+// An address a record holds is not.
+func TestThePreviewMarksTheAddressTheSendWouldFile(t *testing.T) {
+	t.Parallel()
+	out := previewResponse(SendPreview{
+		Decisions: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
+			{Recipient: connector.Recipient{Email: "New.Buyer@Example.test"}, Verdict: commsauthz.VerdictAllow},
+			{Recipient: connector.Recipient{Email: "known@example.test"}, Verdict: commsauthz.VerdictAllow},
+		}},
+		NewContacts: map[string]bool{"new.buyer@example.test": true},
+	})
+	if got := out.Recipients[0].NewContact; got == nil || !*got {
+		t.Errorf("new_contact for the new address = %v, want true", got)
+	}
+	if got := out.Recipients[1].NewContact; got != nil {
+		t.Errorf("new_contact for an address on file = %v, want absent", *got)
+	}
+}
+
+// The reasons the record would carry travel with the refused recipient. An
+// answer with none leaves the field out rather than sending an empty list.
+func TestThePreviewCarriesTheSupportedAlternatives(t *testing.T) {
+	t.Parallel()
+	out := previewResponse(SendPreview{Decisions: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
+		{
+			Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonNoEvidence, Mode: commsauthz.ModeEnforce,
+			Requested:             commsauthz.CategoryActiveDealFollowup,
+			SupportedAlternatives: []commsauthz.Category{commsauthz.CategoryRequestedFollowup},
+		},
+		{Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonNoEvidence, Mode: commsauthz.ModeEnforce},
+	}}})
+	offered := out.Recipients[0].SupportedAlternatives
+	if offered == nil || len(*offered) != 1 || (*offered)[0] != "requested_followup" {
+		t.Errorf("supported_alternatives = %v, want [requested_followup]", offered)
+	}
+	if none := out.Recipients[1].SupportedAlternatives; none != nil {
+		t.Errorf("supported_alternatives = %v, want absent", *none)
 	}
 }

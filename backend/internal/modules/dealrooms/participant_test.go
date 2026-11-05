@@ -160,20 +160,26 @@ func (m *invitationMailCapture) Send(_ context.Context, to, subject, body string
 	return nil
 }
 
-// heldRelay holds every send until the test releases it.
-type heldRelay struct {
-	taken   chan struct{}
-	release chan struct{}
+// silentRelay never answers, and gives up when the send's deadline passes, as
+// the SMTP relay does.
+type silentRelay struct{}
+
+func (silentRelay) Send(ctx context.Context, _, _, _ string) error {
+	<-ctx.Done()
+	return ctx.Err()
 }
 
-func (m heldRelay) Send(ctx context.Context, _, _, _ string) error {
-	close(m.taken)
-	select {
-	case <-m.release:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+// deafRelay ignores the send's deadline and takes the mail only when the test
+// releases it: a relay whose answer comes after the invite stopped waiting.
+type deafRelay struct {
+	release chan struct{}
+	sends   *int
+}
+
+func (m deafRelay) Send(context.Context, string, string, string) error {
+	*m.sends++
+	<-m.release
+	return nil
 }
 
 // stubInviteRecords answers whether the invitation may still be mailed, and
@@ -196,30 +202,98 @@ func heldInvite() IssuedInvitation {
 	return IssuedInvitation{RoomTitle: "Northstar proposal", Credential: "fictional", ExpiresAt: time.Date(2026, 11, 15, 12, 37, 0, 0, time.UTC), Participant: crmcontracts.DealRoomParticipant{Email: openapi_types.Email("buyer@example.test")}}
 }
 
-// The relay holds its answer until the test releases it, so the invite can
-// answer only if the send runs off the request.
-func TestAnInviteAnswersBeforeTheRelayDoes(t *testing.T) {
-	relay := heldRelay{taken: make(chan struct{}), release: make(chan struct{})}
-	records := &stubInviteRecords{mailable: true}
+// inviteHandler is a handler on a relay, with the invitation records stubbed
+// and a channel closed once the send and its record are over.
+func inviteHandler(relay interface {
+	Send(context.Context, string, string, string) error
+}, records *stubInviteRecords) (Handlers, chan struct{}) {
 	finished := make(chan struct{})
 	handler := Handlers{}.WithInviteMailer(relay).WithInviteLinkBase("https://example.test")
 	handler.inviteRecords = records
 	handler.sendDone = func() { close(finished) }
+	return handler, finished
+}
+
+// A relay that takes the mail within the wait reads as emailed.
+func TestAnInviteReportsTheMailTheRelayTook(t *testing.T) {
+	relay := &invitationMailCapture{}
+	records := &stubInviteRecords{mailable: true}
+	handler, finished := inviteHandler(relay, records)
 
 	body := handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), heldInvite())
-	if !body.Queued {
-		t.Error("an invitation handed to the sender reads as not queued")
-	}
-	<-relay.taken
-	select {
-	case <-finished:
-		t.Fatal("the send finished before the relay answered")
-	default:
-	}
-	close(relay.release)
 	<-finished
+	if !body.Queued {
+		t.Error("an invitation the relay took reads as not emailed")
+	}
+	if relay.to != "buyer@example.test" {
+		t.Errorf("mailed to %q", relay.to)
+	}
 	if len(records.recorded) != 1 || records.recorded[0] != nil {
 		t.Errorf("recorded %v, want one sent outcome", records.recorded)
+	}
+}
+
+// A relay that refuses the mail reads as not emailed, so the seller copies the
+// link, and the refusal lands on the roster.
+func TestAnInviteTheRelayRefusedReadsAsNotEmailed(t *testing.T) {
+	records := &stubInviteRecords{mailable: true}
+	handler, finished := inviteHandler(refusingRelay{}, records)
+
+	body := handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), heldInvite())
+	<-finished
+	if body.Queued {
+		t.Error("an invitation the relay refused reads as emailed")
+	}
+	if len(records.recorded) != 1 || records.recorded[0] == nil {
+		t.Errorf("recorded %v, want one failed outcome", records.recorded)
+	}
+}
+
+type refusingRelay struct{}
+
+func (refusingRelay) Send(context.Context, string, string, string) error {
+	return errors.New("the relay refused the envelope")
+}
+
+// A relay that has not answered when the wait ends reads as not emailed. The
+// send stops at the same moment and records why it failed.
+func TestARelayThatDoesNotAnswerInTimeReadsAsNotEmailed(t *testing.T) {
+	records := &stubInviteRecords{mailable: true}
+	handler, finished := inviteHandler(silentRelay{}, records)
+	handler.sendBudget = 50 * time.Millisecond
+
+	body := handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), heldInvite())
+	<-finished
+	if body.Queued {
+		t.Error("an invitation the relay never answered reads as emailed")
+	}
+	if len(records.recorded) != 1 || records.recorded[0] == nil ||
+		!strings.Contains(records.recorded[0].Error(), "did not answer within") {
+		t.Errorf("recorded %v, want one failure that says the relay did not answer in time", records.recorded)
+	}
+}
+
+// A relay that ignores the deadline and takes the mail after the invite
+// answered does not turn that answer, and the mail goes out once. The roster
+// then says what the relay did.
+func TestALateRelayAnswerKeepsTheInvitesAnswerAndSendsOnce(t *testing.T) {
+	sends := 0
+	relay := deafRelay{release: make(chan struct{}), sends: &sends}
+	records := &stubInviteRecords{mailable: true}
+	handler, finished := inviteHandler(relay, records)
+	handler.sendBudget = 50 * time.Millisecond
+
+	body := handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), heldInvite())
+	close(relay.release)
+	<-finished
+	if body.Queued {
+		t.Error("the invite waited past its budget for a relay that did not answer")
+	}
+	if sends != 1 {
+		t.Errorf("the relay was asked %d times, want once", sends)
+	}
+	if len(records.recorded) != 1 {
+		t.Errorf("recorded %v, want the relay's one answer", records.recorded)
 	}
 }
 
@@ -228,13 +302,13 @@ func TestAnInviteAnswersBeforeTheRelayDoes(t *testing.T) {
 func TestAnInvitationThatChangedBeforeTheSendIsNotMailed(t *testing.T) {
 	relay := &invitationMailCapture{}
 	records := &stubInviteRecords{mailable: false}
-	finished := make(chan struct{})
-	handler := Handlers{}.WithInviteMailer(relay).WithInviteLinkBase("https://example.test")
-	handler.inviteRecords = records
-	handler.sendDone = func() { close(finished) }
+	handler, finished := inviteHandler(relay, records)
 
-	handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), heldInvite())
+	body := handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), heldInvite())
 	<-finished
+	if body.Queued {
+		t.Error("an invitation that was not mailed reads as emailed")
+	}
 	if relay.to != "" {
 		t.Errorf("the old link was mailed to %q", relay.to)
 	}
