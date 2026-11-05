@@ -3883,6 +3883,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.routeIn.bandBadge.unknown": "Kontakt erfasst, noch kein Muster",
   "record.context": "Kontext",
   "standing.title": "Wie es steht · {date}",
+  "standing.noteMore": "Mehr anzeigen",
+  "standing.noteLess": "Weniger anzeigen",
   "standing.sources.records": "Aus den CRM-Daten",
   "standing.sources.model_one": "Margince · {count} Quelle",
   "standing.sources.model_other": "Margince · {count} Quellen",
@@ -3895,6 +3897,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "stageLadder.earlier": "Frühere Phasen zeigen",
   "stageLadder.later": "Spätere Phasen zeigen",
   "standing.timeline.empty": "Hier ist noch nichts datiert.",
+  "standing.timeline.zoom": "Gezeigter Zeitraum",
+  "standing.timeline.zoom.month": "Monat",
+  "standing.timeline.zoom.quarter": "Quartal",
+  "standing.timeline.zoom.year": "Jahr",
+  "standing.timeline.zoom.all": "Gesamt",
+  "standing.timeline.loadingOlder": "Frühere Einträge werden geladen…",
+  "standing.timeline.olderOnHistory": "Frühere Einträge stehen im Verlauf.",
+  "standing.timeline.olderFailed":
+    "Frühere Einträge konnten nicht geladen werden und stehen im Verlauf.",
   "latest.kind.email": "Neue E-Mail",
   "latest.kind.message": "Neue Nachricht",
   "latest.kind.webForm": "Neues Website-Formular",
@@ -5355,6 +5366,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.source.manual": "Manuell erstellt",
   "lead.source.inbound": "Eingehend",
   "lead.source.webform": "Webformular",
+  "lead.source.webformNamed": "Webformular „{name}“",
   "lead.source.referral": "Empfehlung",
   "lead.source.import": "Import",
   "lead.source.crawl": "Webrecherche",
@@ -5477,8 +5489,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst diesen Lead nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "lead.boardCountsUnavailable":
     "Die Anzahlen für Qualifiziert und Disqualifiziert konnten nicht geladen werden.",
+  "lead.boardCountsNoSearch":
+    "Es wird keine Anzahl angezeigt, da die Anzahlen keine Suche berücksichtigen können.",
+  "lead.boardCountsNoTagFilter":
+    "Keine Anzahl, solange ein Tag-Filter aktiv ist.",
+  "lead.boardCountsNoTeamFilter":
+    "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht nach Team oder auf nicht zugewiesene Leads eingrenzen lassen.",
+  "lead.boardCountsNoScoreFilter":
+    "Keine Anzahl, solange ein Score-Filter aktiv ist.",
+  "lead.boardCountsNoResponseFilter":
+    "Keine Anzahl, solange ein Antwortfilter aktiv ist.",
+  "lead.boardCountsNoCompanyFilter":
+    "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht nach Branche, Land oder Unternehmensgröße eingrenzen lassen.",
+  "lead.boardCountsNoOtherFilter":
+    "Es wird keine Anzahl angezeigt, da die Anzahlen nicht jeden Filter dieser Liste berücksichtigen können.",
+  "lead.boardCountsNoConnectorSource":
+    "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht auf alle Leads eines Connectors eingrenzen lassen.",
+  "lead.boardCountsOwnerNotMeasurable":
+    "Keine Anzahl für die Leads dieser verantwortlichen Person. Nur Admins können dir erlauben, diese Anzahl auszuwerten.",
   "lead.boardTerminalRowsUnavailable":
     "Diese Leads konnten nicht geladen werden. Die Anzahl oben stimmt weiterhin.",
+  "lead.boardTerminalRowsUnavailableNoCount":
+    "Diese Leads konnten nicht geladen werden.",
   "lead.boardTerminalOnly":
     "Hier sind keine offenen Leads. Die Leads zählen unter Qualifiziert und Disqualifiziert.",
 
@@ -5693,8 +5725,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Was passiert mit der {count} offenen Aufgabe dieses Deals?",
   "deals.closeTasks.legend_other":
     "Was passiert mit den {count} offenen Aufgaben dieses Deals?",
-  "deals.closeTasks.listLabel": "Offene Aufgaben dieses Deals",
   "deals.closeTasks.untitled": "Aufgabe ohne Titel",
+  "deals.closeTasks.more_one": "und {count} weitere",
+  "deals.closeTasks.more_other": "und {count} weitere",
   "deals.closeTasks.complete": "Alle erledigen",
   "deals.closeTasks.completeHint":
     "Die Aufgaben werden als erledigt markiert, sobald der Deal geschlossen ist. Du kannst das rückgängig machen.",
@@ -6123,7 +6156,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur stockende",
   "deals.totalsOwnerNotMeasurable":
-    "Nur geladene Deals. Die Summen der verantwortlichen Person darfst du nicht auswerten.",
+    "Nur geladene Deals. Nur Admins können dir erlauben, die Summen dieser verantwortlichen Person auszuwerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.totalsNoSearch":

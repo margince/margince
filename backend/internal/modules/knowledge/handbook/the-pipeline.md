@@ -36,8 +36,8 @@ Also called: close won, close a deal as won, win an opportunity.
 ### How do I mark a deal as lost?
 When a customer or client says no, mark the deal as lost. Move it to a stage whose **Stage type** is **Lost** and say why. There is no separate Lost button.
 1. Open the deal and click the Lost stage on its **Stage** ladder. Or drag the card to the Lost column on **Board**.
-2. Pick a reason under **Why was it lost?**, and add a **Note** if it needs explaining. **Confirm** stays off until you pick a reason.
-3. Press **Confirm**.
+2. Pick a reason under **Why was it lost?**, and add a **Note** if it needs explaining. The note box has room for several lines, and Enter starts a new line. **Confirm** stays off until you pick a reason.
+3. Press **Confirm**, or press Ctrl+Enter (⌘+Enter on a Mac) in the note.
 
 The reason and the note are kept on the deal. If the customer comes back later, reopen the deal instead of creating a new one. Pressing **Cancel** or Escape, or clicking outside, clears what you picked and typed.
 Also called: close lost, lose a deal, mark an opportunity lost, the customer said no.
@@ -143,13 +143,13 @@ or lost stage asks first:
 > **Move to Lost?** This closes the deal as lost. Nothing changes until you
 > confirm.
 
-If the deal has open tasks, the dialog lists them, and **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
+If the deal has open tasks, the dialog lists them under the question, each with its due date or **No due date**. It lists at most five, then says how many more there are, if any. **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
 
 ### Losing
 
-**A lost deal needs a reason** from **Why was it lost?**, which an administrator
-keeps under **Settings → Loss reasons**. The **Note** is optional. Reopening
-clears the reason, and the deal's history keeps every time it was lost.
+**A lost deal needs a reason** from **Why was it lost?**, which an administrator keeps under **Settings → Loss reasons**. The **Note** is optional.
+**How it stands** shows the reason beside the day the deal closed, with the note under it. A long note shows its first two lines, and **Show more** opens the rest.
+Reopening clears the reason, and the deal's history keeps every time it was lost.
 
 ### Winning
 
@@ -289,16 +289,15 @@ A date Margince set is a guess, marked "provisional close date, not confirmed by
 
 ## Reading the numbers
 
-The deals board in Margince loads 100 deals at a time. But the totals at the top of each column count every matching deal, the ones not loaded yet too. Each column header carries the stage name, its win probability and how many deals are in it. Under that are the stage total and the weighted total, in the short form the cards use. A bar under the two figures shows how large the stage is next to the largest stage on the board. Its dark part is the weighted share.
+Each stage column of the deals board loads 25 deals at a time. Click **Load more** under a column's cards to see more in that column only. Each column header carries the stage name, its win probability and how many deals are in it. Under that are the stage total and the weighted total, in the short form the cards use. A bar under the two figures shows how large the stage is next to the largest stage on the board. Its dark part is the weighted share.
 
 A stage with no total shows no bar, and the bar has no dark part when the weighted total is unknown. No stage shows a bar when the totals on the board are in more than one currency. When the totals have a rate date, a last line gives the date of the exchange rates used. It also says how many deals have no price, when some have none. Point at the stage total, or move to it with Tab, to see both totals in full, down to the smallest unit of the currency. A weighted total that is unknown shows there as a line, not an amount.
 
-The totals count every matching deal you may see, loaded as a card or not. They
-are held back when a tag filter is on ("Loaded deals only. No total
-while a tag filter is on."). They are also held back when the owner filter names
-someone whose numbers you may not measure ("Loaded deals only. This owner’s
-totals are outside what you may measure."). You may measure yourself, the
-members of teams you lead, and anyone if your access covers the whole company.
+The totals at the top of each column count every matching deal, the ones not loaded yet too. While the totals are still loading, or if they fail to load, a column shows the count of its loaded cards instead. A column that is still loading shows no count. If a column fails to load, it shows its own error and **Retry**, and the other columns stay as they are. If a later page fails, the cards already loaded stay, an error shows, and **Load more** tries that page again. The **Table** view loads one list.
+
+The totals count every deal you may see, which are the deals the board shows as cards. They are held back when the board includes archived deals. They are also held back when you narrow the board by stage, tag, search, team or unassigned deals. A range such as close date or value holds them back too. A tag filter, for example, shows "Loaded deals only. No total while a tag filter is on."
+
+They are held back too when the owner filter names someone whose numbers you may not measure ("Loaded deals only. Only an administrator can let you measure this owner’s totals."). You may measure yourself, the members of teams you lead, and anyone if your access covers the whole company. Where totals are held back, the count at the top of the board covers only the loaded cards and says so.
 
 Every deal report has an **Explain this number** control that shows the rows the
 number was built from. If a number looks wrong, open it.

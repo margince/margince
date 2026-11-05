@@ -29,6 +29,7 @@ export function buildColumns(
   // play, which is the ordinary case.
   totalsWithheld?: string,
   owners?: OwnerNaming,
+  uncounted: ReadonlySet<string> = new Set(),
 ): BoardMoneyColumn[] {
   return [...stages]
     .sort((a, b) => a.position - b.position)
@@ -46,10 +47,10 @@ export function buildColumns(
         weightedMinor: stageTotals?.weightedBaseMinor ?? null,
         currency: stageTotals?.currency ?? null,
         deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
-        // The true count, not the loaded page's. It falls back to the page
-        // count while totals are still loading, so the column shows some
-        // number rather than a misleading 0.
-        count: stageTotals?.count ?? stageDeals.length,
+        count: columnCount(
+          stageTotals,
+          uncounted.has(stage.id) ? null : stageDeals.length,
+        ),
         asOf: stageTotals?.asOf ?? null,
         timezone: stageTotals?.timezone ?? null,
         unpricedCount: stageTotals?.unpricedCount ?? null,
@@ -57,6 +58,31 @@ export function buildColumns(
         sumHiddenReason: totalsWithheld,
       };
     });
+}
+
+// The report's count over every matching deal. While the report is pending,
+// withheld or refused, the loaded cards count; before a first read, none do.
+function columnCount<Loaded extends number | null>(
+  stageTotals: StageTotals | undefined,
+  loaded: Loaded,
+): number | Loaded {
+  return stageTotals?.count ?? loaded;
+}
+
+export function boardDealCount(
+  stages: readonly Stage[],
+  totals: Map<string, StageTotals> | null | undefined,
+  deals: readonly Deal[],
+): number {
+  return stages.reduce(
+    (sum, stage) =>
+      sum +
+      columnCount(
+        totals?.get(stage.id),
+        deals.filter((deal) => deal.stage_id === stage.id).length,
+      ),
+    0,
+  );
 }
 
 /**
