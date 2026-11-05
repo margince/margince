@@ -26,8 +26,10 @@ replace example.com/acme-margince/addons/notes => ./addons/notes
 
 - **Core is three requires at one version.** `github.com/margince/margince` carries the web app, the scripts and
   `go.work`; `backend` the server; `backend/tools` this composer, which the `tool` line runs. Composing refuses
-  them at different commits. Write all three at once:
-  `go get -tool github.com/margince/margince/backend/tools/gen-composition@<v> github.com/margince/margince@<v> github.com/margince/margince/backend@<v>`.
+  them at different commits. Write them with two commands (`-tool` applies to every argument):
+  `go get -tool github.com/margince/margince/backend/tools/gen-composition@<v>`, then
+  `go get github.com/margince/margince@<v> github.com/margince/margince/backend@<v>`. Go marks the three
+  `// indirect`, since no package of the instance imports them; that is expected.
 - **Each other line in `require` is an extension**, apart from the lines marked `// indirect`. Nothing else
   turns one on. A folder under `extensions/` that `go.mod` does not list stays off.
 - **The name of an extension** is the last part of its module path, without a `/v2`-style version:

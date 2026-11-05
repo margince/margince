@@ -131,7 +131,7 @@ func requiredCoreVersions(goModPath string) (map[string]string, error) {
 	}
 	if len(missing) > 0 {
 		return nil, fmt.Errorf("%s requires no %s; require core at one version:\n"+
-			"  go get -tool %s/gen-composition@<v> %s@<v> %s@<v>",
+			"  go get -tool %s/gen-composition@<v>\n  go get %s@<v> %s@<v>",
 			goModPath, strings.Join(missing, ", "), coreToolsModule, coreRootModule, backendModule)
 	}
 	return versions, nil
