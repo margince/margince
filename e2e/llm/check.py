@@ -472,8 +472,11 @@ def unclean(path):
     not scored. The CLI states each in its init line; a driver that writes its
     own init line states none of them and passes.
     """
+    inits = _events(path, "init")
+    if not inits:
+        return "the transcript carries no init line, so what the candidate loaded is unknown"
     problems = []
-    for event in _events(path, "init"):
+    for event in inits:
         places = {event.get("cwd"), event.get("original_cwd"), *(event.get("additional_directories") or [])}
         problems += [f"it started inside the repository ({place})" for place in sorted(places, key=str)
                      if isinstance(place, str) and _inside_repo(place)]

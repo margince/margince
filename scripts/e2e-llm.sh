@@ -524,6 +524,16 @@ for line in open(sys.argv[1]):
   fi
 }
 
+# keep_transcript copies a stopped run's transcript where the reader looks. It is
+# the only evidence of which failure this was, so a copy that fails says so.
+keep_transcript() {
+  if ! cp "$1" "$RECORD_DIR/"; then
+    echo "  and the transcript could not be kept: $1" >&2
+  else
+    echo "  the transcript is at $RECORD_DIR/$(basename "$1")"
+  fi
+}
+
 # run_once drives one run on the chosen route: 0 when it ran, 1 when it left no
 # usable transcript (scored as a failed run, as before), 3 when the route could
 # not run it at all — a harness stop, never a score. drive.py reads the
@@ -695,7 +705,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "HARNESS: $name run $i could not be run:"
       tail -5 "$transcript.err" | sed 's/^/  /'
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      keep_transcript "$transcript"
       exit 2
     fi
     if [[ "$run_status" -ne 0 ]]; then
@@ -722,14 +732,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "  $why"
       tail -5 "$transcript.err" 2>/dev/null | sed 's/^/  driver: /'
       echo "  This is not a use-case failure. Nothing was scored."
-      # The transcript is the only evidence of WHICH failure this was, so a
-      # copy that fails says so rather than leaving the reader with a verdict
-      # and nothing to check it against.
-      if ! cp "$transcript" "$RECORD_DIR/"; then
-        echo "  and the transcript could not be kept: $transcript" >&2
-      else
-        echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
-      fi
+      keep_transcript "$transcript"
       exit 2
     fi
     # A candidate that loaded the repository's rules or the operator's setup
@@ -738,7 +741,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo
       echo "HARNESS: $name run $i did not start clean: $why"
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      keep_transcript "$transcript"
       exit 2
     fi
     # A REQUIRED TOOL THE MODEL WAS NEVER OFFERED fails must_call for a reason
@@ -748,7 +751,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo
       echo "HARNESS: $name run $i was not offered what it needs: $why"
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      keep_transcript "$transcript"
       exit 2
     fi
     # THE WORLD IS READ BEFORE IT IS RESTORED. An answer can report a write
@@ -765,7 +768,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "HARNESS: $name run $i left a world that could not be read:"
       tail -3 "$results" | sed 's/^/  /' || :
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      keep_transcript "$transcript"
       exit 2
     fi
     # EXIT 2 IS NOT A FAILED RUN. `--check` answers 1 for a scenario the answer

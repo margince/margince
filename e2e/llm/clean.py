@@ -12,9 +12,7 @@ loaded anything anyway.
 """
 
 import contextlib
-import filecmp
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -40,12 +38,20 @@ def run_claude(args):
         return subprocess.run(["claude", *args, *flags], cwd=empty, env=env, check=False).returncode
 
 
-def _private_copy(source, target):
+def _private_write(target, login):
     # Created 0600 before a byte is written: the login is a credential.
     created = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with open(source, "rb") as src, os.fdopen(created, "wb") as dst:
-        os.fchmod(dst.fileno(), 0o600)
-        shutil.copyfileobj(src, dst)
+    with os.fdopen(created, "wb") as out:
+        os.fchmod(out.fileno(), 0o600)
+        out.write(login)
+
+
+def _read(path):
+    try:
+        with open(path, "rb") as handle:
+            return handle.read()
+    except FileNotFoundError:
+        return None
 
 
 def _operator_codex_home():
@@ -62,16 +68,18 @@ def codex_home():
     login = os.path.join(_operator_codex_home(), CODEX_AUTH)
     with tempfile.TemporaryDirectory(prefix="e2e-llm-codex-home.") as home:
         copy = os.path.join(home, CODEX_AUTH)
-        if os.path.isfile(login):
-            _private_copy(login, copy)
+        given = _read(login)
+        if given is not None:
+            _private_write(copy, given)
         try:
             yield home
         finally:
-            # A refresh rotates the token in the copy and voids the one it replaced,
-            # so the refreshed login goes back or the operator is signed out.
-            if os.path.isfile(login) and os.path.isfile(copy) and not filecmp.cmp(login, copy, shallow=False):
+            # A refresh rotates the token in the copy and voids the one it replaced, so a
+            # login codex changed goes back, unless the operator's changed meanwhile too.
+            refreshed = _read(copy)
+            if given is not None and refreshed not in (None, given) and _read(login) == given:
                 staged = os.path.join(os.path.dirname(login), f".{CODEX_AUTH}.e2e-llm")
-                _private_copy(copy, staged)
+                _private_write(staged, refreshed)
                 os.replace(staged, login)
 
 

@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -19,8 +20,15 @@ CLEAN_INIT = {"type": "system", "subtype": "init", "cwd": tempfile.gettempdir(),
               "skills": [], "mcp_servers": [{"name": transcript.SERVER, "status": "connected"}], "tools": []}
 
 
-def written(*events):
-    path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+def scratch(case):
+    """A temporary directory removed when the test ends."""
+    path = tempfile.mkdtemp()
+    case.addCleanup(shutil.rmtree, path, ignore_errors=True)
+    return path
+
+
+def written(case, *events):
+    path = os.path.join(scratch(case), "run.jsonl")
     with open(path, "w", encoding="utf-8") as out:
         for event in events:
             out.write(json.dumps(event) + "\n")
@@ -30,44 +38,48 @@ def written(*events):
 class UncleanTest(unittest.TestCase):
     """The init line the claude CLI writes says what it loaded besides the lane's server."""
 
+    def test_a_transcript_with_no_init_line_fails(self):
+        result = {"type": "result", "is_error": False, "result": "ok", "num_turns": 1}
+        self.assertIn("no init line", check.unclean(written(self, result)))
+
     def test_a_clean_launch_passes(self):
-        self.assertEqual(check.unclean(written(CLEAN_INIT)), "")
+        self.assertEqual(check.unclean(written(self, CLEAN_INIT)), "")
 
     def test_a_launch_from_inside_the_repository_fails(self):
-        self.assertIn("inside the repository", check.unclean(written(dict(CLEAN_INIT, cwd=HERE))))
+        self.assertIn("inside the repository", check.unclean(written(self, dict(CLEAN_INIT, cwd=HERE))))
 
     def test_a_repository_folder_added_to_the_session_fails(self):
         init = dict(CLEAN_INIT, additional_directories=[ROOT])
-        self.assertIn("inside the repository", check.unclean(written(init)))
+        self.assertIn("inside the repository", check.unclean(written(self, init)))
 
     def test_the_operators_memory_fails(self):
         init = dict(CLEAN_INIT, memory_paths={"auto": "/home/operator/.claude/projects/x/memory/"})
-        self.assertIn("memory", check.unclean(written(init)))
+        self.assertIn("memory", check.unclean(written(self, init)))
 
     def test_a_user_plugin_fails_and_a_builtin_one_does_not(self):
         user = {"name": "superpowers", "path": "/home/operator/.claude/plugins/cache/superpowers/7.0.0"}
-        problem = check.unclean(written(dict(CLEAN_INIT, plugins=BUILTIN + [user])))
+        problem = check.unclean(written(self, dict(CLEAN_INIT, plugins=BUILTIN + [user])))
         self.assertIn("superpowers", problem)
         self.assertNotIn("cc-plugin-privacy", problem)
 
     def test_a_loaded_skill_fails(self):
         init = dict(CLEAN_INIT, skills=["superpowers:brainstorming"])
-        self.assertIn("skills", check.unclean(written(init)))
+        self.assertIn("skills", check.unclean(written(self, init)))
 
     def test_an_operator_hook_fails(self):
         hook = {"type": "system", "subtype": "hook_started", "hook_name": "SessionStart:startup"}
-        self.assertIn("SessionStart", check.unclean(written(hook, CLEAN_INIT)))
+        self.assertIn("SessionStart", check.unclean(written(self, hook, CLEAN_INIT)))
 
     def test_the_lanes_check_stops_a_leaky_run_and_passes_a_clean_one(self):
-        leaky = written(dict(CLEAN_INIT, cwd=ROOT))
-        for path, code in ((leaky, 1), (written(CLEAN_INIT), 0)):
+        leaky = written(self, dict(CLEAN_INIT, cwd=ROOT))
+        for path, code in ((leaky, 1), (written(self, CLEAN_INIT), 0)):
             done = subprocess.run([sys.executable, os.path.join(HERE, "check.py"), "--clean", path],
                                   capture_output=True, text=True, check=False)
             self.assertEqual(done.returncode, code, done.stdout + done.stderr)
 
     def test_a_driver_that_writes_its_own_init_line_passes(self):
         # The bridge and the codex route write the init line themselves, from the lane.
-        path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        path = os.path.join(scratch(self), "run.jsonl")
         with transcript.Transcript(path) as out:
             out.init("gpt-5.6-sol", "gpt:cli", "cli-default", "listed-by-lane", ["list_pipelines"])
         self.assertEqual(check.unclean(path), "")
@@ -108,13 +120,13 @@ class RunClaudeTest(unittest.TestCase):
     """run_claude from the lane itself, against a CLI that reports what it was given."""
 
     def setUp(self):
-        self.bin = tempfile.mkdtemp()
+        self.bin = scratch(self)
         fake = os.path.join(self.bin, "claude")
         with open(fake, "w", encoding="utf-8") as handle:
             handle.write(FAKE_CLAUDE)
         os.chmod(fake, 0o755)
         self.seen_file = os.path.join(self.bin, "seen.json")
-        self.out = os.path.join(tempfile.mkdtemp(), "run.jsonl")
+        self.out = os.path.join(scratch(self), "run.jsonl")
         self.prompt = os.path.join(self.bin, "prompt.txt")
         with open(self.prompt, "w", encoding="utf-8") as handle:
             handle.write("List the pipelines.")

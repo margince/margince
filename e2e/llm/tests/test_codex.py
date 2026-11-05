@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -146,6 +147,9 @@ with open(os.environ["FAKE_CODEX_ARGV"], "w") as f:
                "cdir": os.listdir(cdir), "home": home, "user_home": os.environ.get("HOME"), "home_listing": sorted(os.listdir(home)) if home else None,
                "auth": open(auth).read() if os.path.isfile(auth) else None,
                "auth_mode": oct(os.stat(auth).st_mode & 0o777) if os.path.isfile(auth) else None}, f)
+if os.environ.get("FAKE_OPERATOR_RELOGIN"):
+    with open(os.environ["FAKE_OPERATOR_AUTH"], "w") as relogin:
+        relogin.write(os.environ["FAKE_OPERATOR_RELOGIN"])
 if os.environ.get("FAKE_CODEX_REFRESH"):
     with open(auth, "w") as refreshed:
         refreshed.write(os.environ["FAKE_CODEX_REFRESH"])
@@ -182,6 +186,8 @@ class RunCodexTest(unittest.TestCase):
 
     def tearDown(self):
         self.mcp.__exit__(None, None, None)
+        shutil.rmtree(self.operator_home, ignore_errors=True)
+        shutil.rmtree(self.bin, ignore_errors=True)
 
     def run_codex(self, timeout=60, **env):
         import candidates
@@ -244,6 +250,12 @@ class RunCodexTest(unittest.TestCase):
             self.assertEqual(handle.read(), '{"tokens": "login-v2"}')
         self.assertEqual(sorted(os.listdir(self.operator_home)),
                          ["AGENTS.md", "auth.json", "memories_1.sqlite", "plugins", "skills"])
+
+    def test_a_login_the_operator_renewed_during_the_run_is_kept(self):
+        auth = os.path.join(self.operator_home, "auth.json")
+        self.run_codex(FAKE_OPERATOR_AUTH=auth, FAKE_OPERATOR_RELOGIN='{"tokens": "operator-v2"}')
+        with open(auth, encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), '{"tokens": "operator-v2"}')
 
     def test_a_codex_that_exits_nonzero_is_a_harness_fault_even_with_a_complete_stream(self):
         code, _out = self.run_codex(FAKE_CODEX_EXIT="1")
