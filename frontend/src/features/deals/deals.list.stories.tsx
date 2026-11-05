@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { playOpenView } from "../../testing/listview.play";
 import {
   installFetchStub,
@@ -226,14 +226,18 @@ function boardWithTwoPipelines() {
   );
 }
 
+// The surface fades in from nothing, so the count is waited for, not read once.
+async function expectCountLine(canvasElement: HTMLElement) {
+  const count = await within(canvasElement).findByText("3 deals in Sales");
+  await waitFor(() => expect(count).toBeVisible());
+}
+
 // View opened over the board: Board or Table first, then the pipeline it
 // counts, which the count line names too.
 async function boardPanelOpen({
   canvasElement,
 }: Readonly<{ canvasElement: HTMLElement }>) {
-  await expect(
-    await within(canvasElement).findByText("3 deals in Sales"),
-  ).toBeVisible();
+  await expectCountLine(canvasElement);
   const panel = within(await playOpenView(canvasElement));
   await expect(panel.getByRole("button", { name: "Board" })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Table" })).toBeVisible();
@@ -279,9 +283,7 @@ export const OnePipelineViewPanel: Story = {
     );
   },
   play: async ({ canvasElement }) => {
-    await expect(
-      await within(canvasElement).findByText("3 deals in Sales"),
-    ).toBeVisible();
+    await expectCountLine(canvasElement);
     const panel = within(await playOpenView(canvasElement));
     await expect(panel.getByRole("button", { name: "Table" })).toBeVisible();
     await expect(
