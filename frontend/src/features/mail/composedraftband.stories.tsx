@@ -2,8 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { RefreshCw, RotateCcw } from "lucide-react";
+import { expect, screen } from "storybook/test";
 import type { components } from "../../api/schema";
-import { StoryProviders } from "../../testing/story-utils";
+import { IconAction } from "../../design-system/iconaction";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { DraftBand, RewriteRow } from "./composedraftband";
 // The drawer's own sheet: `.compose-band-body` and `.compose-rewrite` are
 // reached BY CLASS, and a story's module graph stops short of compose.tsx,
@@ -43,17 +50,25 @@ const REASONS: readonly DraftReason[] = [
   },
 ];
 
+// The band's email drawer reads who is viewing, though no story opens it.
+function viewerRoutes() {
+  installFetchStub({ "GET /me": meRoute({}) });
+}
+
 function band(provenance: Provenance, maturity: Maturity | undefined) {
-  return () => (
-    <StoryProviders>
-      <DraftBand
-        provenance={provenance}
-        maturity={maturity}
-        reasons={[...REASONS]}
-        actions={<RewriteRow onRewrite={() => {}} disabled={false} />}
-      />
-    </StoryProviders>
-  );
+  return () => {
+    viewerRoutes();
+    return (
+      <StoryProviders>
+        <DraftBand
+          provenance={provenance}
+          maturity={maturity}
+          reasons={[...REASONS]}
+          actions={<RewriteRow onRewrite={() => {}} disabled={false} />}
+        />
+      </StoryProviders>
+    );
+  };
 }
 
 const meta: Meta<typeof DraftBand> = {
@@ -125,4 +140,62 @@ export const RewritesBarred: Story = {
 export const Dark: Story = {
   render: band(WROTE_IT, "provisional"),
   globals: { theme: "dark" },
+};
+
+const LONG_NOTICE: Provenance = {
+  ...WROTE_IT,
+  ai_disclosure:
+    "Drafted with AI assistance from the deal, the last three emails and your writing samples. Check every figure and date before sending.",
+};
+
+function everyAction() {
+  return () => {
+    viewerRoutes();
+    return (
+      <StoryProviders>
+        <div className="compose-aiband">
+          <DraftBand
+            provenance={LONG_NOTICE}
+            maturity="building"
+            reasons={[]}
+            actions={
+              <>
+                <RewriteRow onRewrite={() => {}} disabled={false} />
+                <IconAction
+                  label="Change the ask"
+                  icon={<RefreshCw aria-hidden="true" />}
+                  onClick={() => {}}
+                />
+                <IconAction
+                  label="Discard draft"
+                  icon={<RotateCcw aria-hidden="true" />}
+                  onClick={() => {}}
+                />
+              </>
+            }
+          />
+        </div>
+      </StoryProviders>
+    );
+  };
+}
+
+/** A long disclosure beside every verb: the verbs wrap to a row of their own
+ *  rather than clip the disclosure. */
+export const LongNoticeEveryAction: Story = {
+  render: everyAction(),
+  play: async () => {
+    await expect(await screen.findByText(/Check every figure/)).toBeVisible();
+  },
+};
+
+export const LongNoticeEveryActionDark: Story = {
+  ...LongNoticeEveryAction,
+  globals: { theme: "dark" },
+};
+
+export const LongNoticeEveryActionPhone: Story = {
+  ...LongNoticeEveryAction,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
