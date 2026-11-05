@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 13 |
-| Tool catalog | 219.5 KB |
+| Tool catalog | 221.0 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 57507 |
+| Approx. wire tokens | 57894 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 46.6 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 52.5 KB | 23% | Yes, every step |
-| Input schemas | 108.5 KB | 49% | Yes, every step |
+| Input schemas | 110.0 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **161.0 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **162.5 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -67,7 +67,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 693 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1886 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1893 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 811 |
@@ -77,7 +77,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 502 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1296 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 1724 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 1715 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1906 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
@@ -94,19 +94,19 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1878 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2031 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 952 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 307 |
 | [`read_record`](#read_record) | Read a record | yes |  | 324 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2501 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2557 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1008 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2402 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2602 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
-| [`run_research`](#run_research) | Run AI work for your user |  |  | 676 |
+| [`run_research`](#run_research) | Run AI work for your user |  |  | 680 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1473 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
@@ -1564,6 +1564,10 @@ yes before calling, unless they asked for this call themselves; requires passpor
     },
     "scope": {
       "description": "bring_back only",
+      "enum": [
+        "mine",
+        "thread"
+      ],
       "type": "string"
     },
     "source_activity_id": {
@@ -1648,7 +1652,6 @@ their yes before calling, unless they asked for this call themselves; requires p
         "mark_notice_read",
         "mark_rows_done",
         "pin_row",
-        "raise_notice",
         "reopen_rows",
         "resolve_signal",
         "restore_company_suggestion",
@@ -1700,7 +1703,7 @@ their yes before calling, unless they asked for this call themselves; requires p
       "type": "string"
     },
     "request_body": {
-      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, raise_notice, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "row_id": {
@@ -3045,7 +3048,6 @@ calling, unless they asked for this call themselves; requires passport scope "wr
         "archive_saved_view",
         "archive_stage",
         "archive_web_form",
-        "ask_company_setup",
         "ask_site_read",
         "confirm_site_read",
         "control_data_task",
@@ -3163,7 +3165,7 @@ calling, unless they asked for this call themselves; requires passport scope "wr
       "type": "string"
     },
     "request_body": {
-      "description": "activate_home_repair, apply_legacy_loss_reasons, ask_company_setup, ask_site_read, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_saved_view, create_stage, decide_legacy_loss_reason, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "activate_home_repair, apply_legacy_loss_reasons, ask_site_read, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_saved_view, create_stage, decide_legacy_loss_reason, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "text_hash": {
@@ -8396,7 +8398,6 @@ needs the user now, and read_record for a record's own fields.
         "tag_suggestion",
         "team_board",
         "team_exceptions",
-        "team_weekly_review",
         "teammate_weekly_plan",
         "voice_source_preview",
         "weekly_plan",
@@ -8407,22 +8408,40 @@ needs the user now, and read_record for a record's own fields.
     },
     "actor_type": {
       "description": "field_history only",
+      "enum": [
+        "human",
+        "agent",
+        "system",
+        "connector",
+        "buyer"
+      ],
       "type": "string"
     },
     "anchor_id": {
       "description": "mail_draft only",
+      "format": "uuid",
       "type": "string"
     },
     "anchor_type": {
       "description": "mail_draft only",
+      "enum": [
+        "activity",
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project"
+      ],
       "type": "string"
     },
     "company_id": {
       "description": "deal_suggestions only",
+      "format": "uuid",
       "type": "string"
     },
     "contact_id": {
       "description": "meeting_proposals only",
+      "format": "uuid",
       "type": "string"
     },
     "create_company": {
@@ -8459,10 +8478,19 @@ needs the user now, and read_record for a record's own fields.
     },
     "entity_id": {
       "description": "field_history only",
+      "format": "uuid",
       "type": "string"
     },
     "entity_type": {
       "description": "field_history only",
+      "enum": [
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project",
+        "activity"
+      ],
       "type": "string"
     },
     "field": {
@@ -8471,6 +8499,7 @@ needs the user now, and read_record for a record's own fields.
     },
     "from": {
       "description": "meeting_availability only",
+      "format": "date-time",
       "type": "string"
     },
     "history": {
@@ -8487,10 +8516,20 @@ needs the user now, and read_record for a record's own fields.
     },
     "lang": {
       "description": "import_problems only",
+      "enum": [
+        "en",
+        "de",
+        "vi"
+      ],
       "type": "string"
     },
     "language": {
       "description": "controller_mail_preview only",
+      "enum": [
+        "de",
+        "en",
+        "vi"
+      ],
       "type": "string"
     },
     "limit": {
@@ -8503,14 +8542,17 @@ needs the user now, and read_record for a record's own fields.
     },
     "owner_team_id": {
       "description": "deal_suggestions only",
+      "format": "uuid",
       "type": "string"
     },
     "pipeline_id": {
       "description": "deal_suggestions only",
+      "format": "uuid",
       "type": "string"
     },
     "project_id": {
       "description": "company_brief only",
+      "format": "uuid",
       "type": "string"
     },
     "provider": {
@@ -8539,26 +8581,48 @@ needs the user now, and read_record for a record's own fields.
     },
     "since": {
       "description": "magic, magic_line_records only",
+      "format": "date-time",
       "type": "string"
     },
     "stage_id": {
       "description": "deal_suggestions only",
+      "format": "uuid",
       "type": "string"
     },
     "state": {
       "description": "job_health_history only",
+      "enum": [
+        "retryable",
+        "discarded",
+        "cancelled"
+      ],
       "type": "string"
     },
     "status": {
       "description": "company_contracts, legal_reviews, scheduled_sends only",
+      "enum": [
+        "active",
+        "cancelled",
+        "decided",
+        "draft",
+        "expired",
+        "held",
+        "open",
+        "released",
+        "scheduled",
+        "sent",
+        "superseded"
+      ],
       "type": "string"
     },
     "team": {
-      "description": "team_board, team_weekly_review only",
+      "description": "team_board only",
+      "format": "uuid",
       "type": "string"
     },
     "to": {
       "description": "meeting_availability only",
+      "format": "date-time",
       "type": "string"
     },
     "token": {
@@ -8574,7 +8638,8 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "week": {
-      "description": "latest_weekly_review, team_weekly_review only",
+      "description": "latest_weekly_review only",
+      "format": "date",
       "type": "string"
     }
   },
@@ -10005,6 +10070,7 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "deal_id": {
       "description": "sales_decisions only",
+      "format": "uuid",
       "type": "string"
     },
     "entity": {
@@ -10036,7 +10102,7 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
       "type": "array"
     },
     "id": {
-      "description": "question_card_answer, question_card_records, reader_preview, report_revisions, sales_initiative, sales_initiative_members, standard only",
+      "description": "question_card_answer, question_card_records, report_revisions, sales_initiative, sales_initiative_members, standard only",
       "type": "string"
     },
     "kind": {
@@ -10049,7 +10115,6 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
         "evidence",
         "question_card_answer",
         "question_card_records",
-        "reader_preview",
         "report_revisions",
         "report_run",
         "report_run_cell_records",
@@ -10089,6 +10154,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "period": {
       "description": "sdr_team only",
+      "enum": [
+        "this_week",
+        "last_week",
+        "this_month",
+        "last_month"
+      ],
       "type": "string"
     },
     "query": {
@@ -10098,6 +10169,10 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "record_type": {
       "description": "sales_initiative_members only",
+      "enum": [
+        "lead",
+        "deal"
+      ],
       "type": "string"
     },
     "reference": {
@@ -10147,16 +10222,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
       "type": "object"
     },
     "revision": {
-      "description": "question_card_answer, question_card_records, reader_preview, standard only; at least 1 for standard.",
+      "description": "question_card_answer, question_card_records, standard only; at least 1 for standard.",
       "type": "integer"
     },
     "right_id": {
       "description": "standard only",
       "format": "uuid",
-      "type": "string"
-    },
-    "role": {
-      "description": "reader_preview only",
       "type": "string"
     },
     "run_id": {
@@ -10185,10 +10256,17 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "scope_id": {
       "description": "company_coverage, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
+      "format": "uuid",
       "type": "string"
     },
     "scope_kind": {
       "description": "company_coverage, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
+      "enum": [
+        "managed_teams",
+        "owner",
+        "team",
+        "workspace"
+      ],
       "type": "string"
     },
     "selection": {
@@ -10373,22 +10451,40 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "state": {
       "description": "sdr_handoffs only",
+      "enum": [
+        "waiting",
+        "returned"
+      ],
       "type": "string"
     },
     "status": {
       "description": "sales_decisions, sales_initiatives only",
+      "enum": [
+        "done",
+        "draft",
+        "ended",
+        "live",
+        "open"
+      ],
       "type": "string"
     },
     "view": {
       "description": "company_coverage only",
+      "enum": [
+        "single_threaded",
+        "untouched",
+        "silent"
+      ],
       "type": "string"
     },
     "window_end": {
       "description": "sdr_meetings only",
+      "format": "date-time",
       "type": "string"
     },
     "window_start": {
       "description": "sdr_meetings only",
+      "format": "date-time",
       "type": "string"
     }
   },
@@ -10913,6 +11009,7 @@ cf_<slug>.
     },
     "batch_id": {
       "description": "audit_log only",
+      "format": "uuid",
       "type": "string"
     },
     "buildId": {
@@ -10921,6 +11018,7 @@ cf_<slug>.
     },
     "contact_id": {
       "description": "confirm_submissions only",
+      "format": "uuid",
       "type": "string"
     },
     "country": {
@@ -10941,6 +11039,7 @@ cf_<slug>.
     },
     "entity_id": {
       "description": "audit_log only",
+      "format": "uuid",
       "type": "string"
     },
     "entity_type": {
@@ -10949,6 +11048,22 @@ cf_<slug>.
     },
     "filter": {
       "description": "worklist only",
+      "enum": [
+        "all",
+        "urgent",
+        "customer_waiting",
+        "leads",
+        "prospecting",
+        "deals_at_risk",
+        "meetings",
+        "tasks",
+        "decisions",
+        "relationships",
+        "system",
+        "except_decisions",
+        "changed_since_brief",
+        "upcoming"
+      ],
       "type": "string"
     },
     "from": {
@@ -10957,6 +11072,14 @@ cf_<slug>.
     },
     "group": {
       "description": "ai_call_stats only",
+      "enum": [
+        "provider",
+        "model",
+        "served_model",
+        "served_provider",
+        "tier",
+        "task"
+      ],
       "type": "string"
     },
     "id": {
@@ -10977,6 +11100,11 @@ cf_<slug>.
     },
     "kind": {
       "description": "data_subject_request_deadline only",
+      "enum": [
+        "access",
+        "rectify",
+        "erasure"
+      ],
       "type": "string"
     },
     "kinds": {
@@ -10992,6 +11120,11 @@ cf_<slug>.
     },
     "locale": {
       "description": "onboarding_company_proposal only",
+      "enum": [
+        "en",
+        "de",
+        "vi"
+      ],
       "type": "string"
     },
     "location": {
@@ -11021,10 +11154,21 @@ cf_<slug>.
     },
     "outcome": {
       "description": "ai_calls, automation_runs only",
+      "enum": [
+        "answered",
+        "blocked",
+        "declined",
+        "failed",
+        "fallback",
+        "fired",
+        "queued_for_approval",
+        "skipped"
+      ],
       "type": "string"
     },
     "owner": {
       "description": "worklist only",
+      "format": "uuid",
       "type": "string"
     },
     "provider": {
@@ -11041,10 +11185,15 @@ cf_<slug>.
     },
     "received_at": {
       "description": "data_subject_request_deadline only",
+      "format": "date-time",
       "type": "string"
     },
     "relationships": {
       "description": "worklist only",
+      "enum": [
+        "include",
+        "omit"
+      ],
       "type": "string"
     },
     "resolved": {
@@ -11053,6 +11202,15 @@ cf_<slug>.
     },
     "resource": {
       "description": "saved_views only",
+      "enum": [
+        "contacts",
+        "companies",
+        "deals",
+        "activities",
+        "leads",
+        "partners",
+        "projects"
+      ],
       "type": "string"
     },
     "router": {
@@ -11081,6 +11239,12 @@ cf_<slug>.
     },
     "scope": {
       "description": "worklist only",
+      "enum": [
+        "mine",
+        "unassigned",
+        "team",
+        "all"
+      ],
       "type": "string"
     },
     "scopes": {
@@ -11109,6 +11273,12 @@ cf_<slug>.
     },
     "status": {
       "description": "data_subject_requests only",
+      "enum": [
+        "open",
+        "in_progress",
+        "fulfilled",
+        "rejected"
+      ],
       "type": "string"
     },
     "task": {
@@ -11258,10 +11428,22 @@ cf_<slug>.
     },
     "view": {
       "description": "import_runs, worklist only",
+      "enum": [
+        "decisions",
+        "drafts",
+        "history",
+        "system",
+        "today"
+      ],
       "type": "string"
     },
     "window": {
       "description": "ai_call_stats, ai_task_flow only",
+      "enum": [
+        "24h",
+        "30d",
+        "7d"
+      ],
       "type": "string"
     }
   },
@@ -11449,6 +11631,7 @@ scope "enrich".)
     },
     "project_id": {
       "description": "refresh_company_brief only",
+      "format": "uuid",
       "type": "string"
     },
     "provider": {

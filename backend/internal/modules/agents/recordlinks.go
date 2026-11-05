@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -48,18 +47,6 @@ func linkEvidence(refs []EvidenceRef, origin string) {
 	}
 }
 
-// minorSuffix and currencyMembers are how money is spelled on this surface:
-// `<name>_minor` beside the `currency` it is counted in. A forecast's figures
-// sit beside the `base_currency` they were converted to.
-const (
-	minorSuffix       = "_minor"
-	displaySuffix     = "_display"
-	fieldCurrency     = "currency"
-	fieldBaseCurrency = "base_currency"
-)
-
-var currencyMembers = []string{fieldCurrency, fieldBaseCurrency}
-
 // withReadableAmounts adds `<name>_display` ("72000.00 USD") beside every
 // `<name>_minor` that sits next to a currency. A model then reads money in major
 // units and never divides by the minor-unit factor itself. The figure comes from
@@ -68,7 +55,7 @@ var currencyMembers = []string{fieldCurrency, fieldBaseCurrency}
 // Bytes with no money pair are returned untouched, so a result that carries no
 // amount keeps the handler's exact rendering.
 func withReadableAmounts(data json.RawMessage) json.RawMessage {
-	if !bytes.Contains(data, []byte(minorSuffix+`"`)) || !bytes.Contains(data, []byte(`currency"`)) {
+	if !bytes.Contains(data, []byte(values.MinorAmountSuffix+`"`)) || !bytes.Contains(data, []byte(`currency"`)) {
 		return data
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -105,9 +92,9 @@ func addDisplays(node any, inherited string) bool {
 		if currency != "" {
 			added = addPairDisplays(typed, currency)
 		}
-		if base, ok := typed[fieldBaseCurrency].(string); ok && base != "" {
+		if base, ok := typed[values.ConvertedCurrency].(string); ok && base != "" {
 			inherited = base
-		} else if own, ok := typed[fieldCurrency].(string); ok && own != "" {
+		} else if own, ok := typed[values.AmountCurrency].(string); ok && own != "" {
 			inherited = ""
 		}
 		for _, child := range typed {
@@ -123,7 +110,7 @@ func addDisplays(node any, inherited string) bool {
 
 // currencyOf is the currency an object's amounts are counted in, if it names one.
 func currencyOf(object map[string]any) string {
-	for _, member := range currencyMembers {
+	for _, member := range values.AmountCurrencyMembers() {
 		if currency, ok := object[member].(string); ok && currency != "" {
 			return currency
 		}
@@ -134,19 +121,19 @@ func currencyOf(object map[string]any) string {
 func addPairDisplays(object map[string]any, currency string) bool {
 	displays := map[string]string{}
 	for key, value := range object {
-		base, isMinor := strings.CutSuffix(key, minorSuffix)
+		display, isMinor := values.DisplayMemberOf(key)
 		number, isNumber := value.(json.Number)
-		if !isMinor || !isNumber || base == "" {
+		if !isMinor || !isNumber {
 			continue
 		}
-		if _, taken := object[base+displaySuffix]; taken {
+		if _, taken := object[display]; taken {
 			continue
 		}
 		minor, err := number.Int64()
 		if err != nil {
 			continue
 		}
-		displays[base+displaySuffix] = values.MajorUnits(minor, currency) + " " + currency
+		displays[display] = values.MajorUnits(minor, currency) + " " + currency
 	}
 	for key, display := range displays {
 		object[key] = display

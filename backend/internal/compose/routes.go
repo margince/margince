@@ -220,6 +220,9 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// write deadline has to be set before anything starts writing — including
 	// the access log's own wrapper, which is what holds the ResponseWriter the
 	// controller reaches through.
+	if srv.routesForTest != nil {
+		publicEdge = srv.routesForTest(publicEdge)
+	}
 	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
 		httpserver.AccessLog(log, publicRecordPreviews(srv, identitySvc)(authH.Middleware(publicEdge))))))
 	// The remote MCP connector, mounted as ONE group behind the deployment

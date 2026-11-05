@@ -101,7 +101,7 @@ func TestTheDraftRoutesAnswerTheComposersQuestions(t *testing.T) {
 // wrote, even when the refused message is frozen for review.
 func TestADraftStaysThroughARefusalAndGoesWithTheAcceptedSend(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	_, draft := p.saveReplyDraft(t, "As discussed.", nil)
 	send := AnyMap{
 		"subject": "Re: pricing", "body": "As discussed.",
@@ -149,7 +149,7 @@ func TestErasingARecipientDeletesTheDraftsAddressedToThem(t *testing.T) {
 // commits, not when the message later fires.
 func TestAScheduledReplyTakesItsDraftWithIt(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	_, draft := p.saveReplyDraft(t, "Written the night before.", nil)
 
 	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{

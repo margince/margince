@@ -136,7 +136,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 2 |
 | … **no case requires** | 9 |
 | … of those, permitted somewhere but never required | 3 |
-| Prompt tokens spent on tools no case requires | 4603 |
+| Prompt tokens spent on tools no case requires | 4607 |
 | Use cases | 75 |
 | Acceptance criteria the cases declare, each with a statement | 114 |
 
@@ -480,10 +480,10 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
-| `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `read_workspace` | 1.00 | 11 | `case100_are_the_jobs_failing`, `case101_which_model_reads_our_mail`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case80_who_changed_that` |
-| `change_activities` | 1.00 | 14 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
+| `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `read_details` | 1.00 | 8 | `case72_read_the_dossier`, `case73_read_my_weekly_plan`, `case87_may_we_write_to_her`, `case88_send_it_anyway` |
+| `change_activities` | 1.00 | 14 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_settings` | 1.00 | 6 | `case91_add_a_review_stage`, `case95_the_rate_for_today`, `case96_put_our_logo_in` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
@@ -515,8 +515,8 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
-| `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `read_workspace` | 1.00 | 11 | `case100_are_the_jobs_failing`, `case101_which_model_reads_our_mail`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case80_who_changed_that` |
+| `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `change_activities` | 1.00 | 15 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_settings` | 1.00 | 6 | `case91_add_a_review_stage`, `case95_the_rate_for_today`, `case96_put_our_logo_in` |
@@ -563,8 +563,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
-| `change_state` | 0.75 | 9/12 | `case41_close_the_project` | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
 | `read_details` | 0.89 | 8/9 | - | `case72_read_the_dossier`, `case73_read_my_weekly_plan`, `case87_may_we_write_to_her`, `case88_send_it_anyway` |
+| `change_state` | 0.75 | 9/12 | `case41_close_the_project` | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
 | `preview_import` | 0.50 | 2/4 | `case10_finish_the_import` | `case10_finish_the_import`, `case3_spreadsheet` |
 | `create_record` | 0.91 | 10/11 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case98_one_new_contact` |
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
@@ -621,7 +621,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
 | `read_view` | 1008 | - | `case102_shorter_in_my_voice`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
-| `run_research` | 676 | - | - | - |
+| `run_research` | 680 | - | - | - |
 | `change_record_parts` | 621 | - | - | - |
 | `change_relationships` | 502 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |

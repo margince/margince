@@ -233,7 +233,7 @@ func TestEnablingARuleThatSpendsAModelNeedsEnrich(t *testing.T) {
 	if got := automationKeyed(t, d, "post_meeting_recap"); got.Status == "enabled" {
 		t.Errorf("the rule was enabled: %+v", got)
 	}
-	bearer, _ := passportWithID(t, d.e, "with enrich", "read", "write", "enrich")
+	bearer, _ := apptest.PassportWithID(t, d.e, "with enrich", "read", "write", "enrich")
 	withEnrich := &twoDoors{e: d.e, bearer: bearer, mcp: apptest.NewMCPClient(d.e, strings.TrimPrefix(bearer["Authorization"], "Bearer "))}
 	withEnrich.tool(t, "change_settings", args)
 	if got := automationKeyed(t, d, "post_meeting_recap"); got.Status != "enabled" {

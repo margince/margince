@@ -20,9 +20,9 @@ import (
 // row names the user who took it on and the agent that acted. The refusal stays a
 // refusal, and the user's own decision names no agent.
 func TestAnAgentDirectsARefusedSendAndTheRowNamesItAndItsUser(t *testing.T) {
-	d := newTwoDoorsWith(t, "agent-direct-send", []compose.Option{compose.WithOperatorMail(discardingMailer{})}, "read", "write")
+	d := newTwoDoorsWith(t, "agent-direct-send", []compose.Option{compose.WithOperatorMail(apptest.DiscardingMailer{})}, "read", "write")
 	c := seedConsentSubject(t, d.e)
-	sendBearer, passport := passportWithID(t, d.e, "direct-send agent", "read", "write", "send")
+	sendBearer, passport := apptest.PassportWithID(t, d.e, "direct-send agent", "read", "write", "send")
 	agent := apptest.NewMCPClient(d.e, strings.TrimPrefix(sendBearer["Authorization"], "Bearer "))
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -107,7 +107,7 @@ func TestAnAgentDirectsARefusedSendAndTheRowNamesItAndItsUser(t *testing.T) {
 
 // The mail an agent would send is the mail the user would see in the composer.
 func TestAnAgentPreviewsAContactsPrivacyMailAsTheUserDoes(t *testing.T) {
-	d := newTwoDoorsWith(t, "agent-mail-preview", []compose.Option{compose.WithOperatorMail(discardingMailer{})}, "read")
+	d := newTwoDoorsWith(t, "agent-mail-preview", []compose.Option{compose.WithOperatorMail(apptest.DiscardingMailer{})}, "read")
 	c := seedConsentSubject(t, d.e)
 	var asUser map[string]any
 	if status := d.e.Call(t, "GET", "/v1/contacts/"+c.contactID+"/consent/mail-preview?kind=privacy_notice", nil, nil, &asUser); status != http.StatusOK {

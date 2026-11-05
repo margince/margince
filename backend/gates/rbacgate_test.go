@@ -197,7 +197,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/capture:Get":                            "SettingsStore.Get reads each capture setting through config.StoredVal, which first calls settings.RequireRead — the object grant PER SETTING against the object the entry declares (auth.Require(def.Object(), ActionRead)) — and then reads through Store.Raw, which takes it again. internal/platform/settings is one of THIS gate's roots, so that gate is judged here directly rather than assumed; re-gating in the wrapper would re-check the same read against a coarser object, the same shape as identity:GetInstallation",
 	"internal/modules/capture:AutoEnrichOn":                   "the same shape as capture:Get above: one setting read through config.StoredVal, whose settings.RequireRead takes the entry's capture_settings read grant, so re-gating here would check the same read twice",
 	"internal/modules/capture:SiteReadLimits":                 "the same shape as capture:Get above: each limit is read through config.StoredValTx, whose settings.RequireRead takes the per-setting object grant (capture_settings for all three), so re-gating here would check the same read twice",
-	"internal/modules/capture:LadderByActivityID":             "the bound is a PREDICATE IN THE SQL, not a grant: the lookup selects `user_id = <caller>` and can express nothing else, so it reaches only rows the calling member's own connection produced. There is no object to gate on because capture_trace rows answer to their owner rather than to a grant — 0258 is categorical that no grant widens them — and an auth.Require here would check the wrong question. The sibling LadderByTraceID asks auth.Require itself, but only to decide whether to ALSO admit workspace-owned rows (user_id IS NULL); this call has no such branch, since a shared binding's rows are reached through the trace id, never through somebody's activity",
+	"internal/modules/capture:LadderByActivityID":             "the bound is a PREDICATE IN THE SQL, not a grant: the lookup selects `user_id = <caller>` and can express nothing else, so it reaches only rows the calling member's own connection produced. There is no object to gate on because capture_trace rows answer to their owner rather than to a grant — 0258 is categorical that no grant widens them — and an auth.Require here would check the wrong question. The sibling LadderByTraceID asks auth.Allows itself, but only to decide whether to ALSO admit workspace-owned rows (user_id IS NULL), and hides such a row with auth.HideRow when the answer is no; this call has no such branch, since a shared binding's rows are reached through the trace id, never through somebody's activity",
 	"internal/modules/capture:LinkProposal":                   "sweep bookkeeping: binds the staged proposal to the pending row it was raised from",
 	"internal/modules/capture:ListDueCompanies":               "auto-enrich sweep (compose/captureautoenrich.go) under the system principal",
 	"internal/modules/capture:MarkQueued":                     "auto-enrich sweep bookkeeping for a company it just queued",
@@ -764,6 +764,7 @@ var authNotDecisions = map[string]string{
 	"VisibleSubset":   "OMITS the rows the caller may not see rather than refusing, and answers an empty map for a caller holding no read at all. Its callers use the set to withhold a reference, which is a projection decision made above it",
 	"WritableSubset":  "the write half of the same shape: an empty map for a caller with no update verb, and omission rather than refusal for the rest",
 	"LockSubjectLive": "takes a row lock and refuses a table outside the closed set or a row already archived. It never reads the principal: the authority probe is a separate call the caller makes first, and its own comment says so",
+	"RefuseRow":       "relays a refusal the store already decided on a rule the record holds, and records it; it reads no grant and decides nothing",
 	"StampWritable":   "stamps a per-row boolean the CLIENT reads to decide what to offer. It removes no row and refuses no caller — its comment separates what the client is told from what the server enforces",
 }
 
@@ -779,6 +780,7 @@ var authDecisionsByRatification = map[string]string{
 	"EdgeReadScope":    "calls EdgeReadAdmitted before composing, so a caller it refuses gets an error rather than a predicate",
 	"VisibleTo":        "per-record read admission — it answers about ONE row and its callers act on the refusal",
 	"WritableBy":       "the write half of the same question",
+	"Allows":           "Require read as a boolean, recording nothing: its callers withhold what the caller lacks, by the same decision Require refuses on",
 }
 
 // TestTheAuthDecisionVerbsStillDescribeThePackage holds the convention the gate

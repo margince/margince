@@ -37,7 +37,7 @@ func assignSessionRole(t *testing.T, e *apptest.AppEnv, roleKey string) {
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var roleID string
-	userID := sessionUserID(t, e)
+	userID := apptest.SessionUserID(t, e)
 	if err := tx.QueryRow(ctx, `SELECT id FROM role WHERE key = $1`, roleKey).Scan(&roleID); err != nil {
 		t.Fatalf("role %s lookup: %v", roleKey, err)
 	}
@@ -52,28 +52,6 @@ func assignSessionRole(t *testing.T, e *apptest.AppEnv, roleKey string) {
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatalf("commit: %v", err)
 	}
-}
-
-// sessionUserID is who this session is signed in AS, answered by the app.
-//
-// Read through /me rather than resolved from the table, for the reason
-// AGENTS.md's review-loop rule 6 gives: a fixture that derives production's
-// answer itself is free to derive a different one, and here "different" means
-// demoting somebody the session has never used.
-func sessionUserID(t *testing.T, e *apptest.AppEnv) string {
-	t.Helper()
-	var me struct {
-		User struct {
-			ID string `json:"id"`
-		} `json:"user"`
-	}
-	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
-		t.Fatalf("reading the signed-in seat → %d", status)
-	}
-	if me.User.ID == "" {
-		t.Fatal("/me answered no user id — there is no seat to demote, and demoting an arbitrary one would leave this session an admin")
-	}
-	return me.User.ID
 }
 
 // assertSignedInAsRep proves the demotion reached the seat making the requests.
