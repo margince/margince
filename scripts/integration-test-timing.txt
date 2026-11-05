@@ -1825,8 +1825,8 @@ backend|./internal/compose/weekly|TestTheWriterRefusesProseTheColumnCannotHold|1
 backend|./internal/compose/weekly|TestUndoingAnEditDoesNotReadAsUnarchivingTheDeal|1.05
 backend|./internal/compose/weekly|TestWeeklyCountsExcludeUnadoptedHistoricalAutomaticWork|2.55
 backend|./internal/compose|*|0.290
-backend|./internal/compose|TestABacklogPastEveryScanCapIsWalkedToItsEnd|160.00
 backend|./internal/compose|TestABacklogDeeperThanThePageStillLeadsWithTheOldest|4.12
+backend|./internal/compose|TestABacklogPastEveryScanCapIsWalkedToItsEnd|160.00
 backend|./internal/compose|TestABookedMeetingAheadGivesDealHealthFullRecency|1.76
 backend|./internal/compose|TestABookedMeetingAheadKeepsADealOffStalled|2.65
 backend|./internal/compose|TestABulkCompletionRefusesUnassignedClaimsAndReportsWhatItLeftAlone|2.48

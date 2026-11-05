@@ -247,7 +247,7 @@ part_tests() { # the tests a `dir|pkg|^(A|B)$` line runs, one `dir|pkg|Test` eac
 split_parts "$work/discovery" "$work/timing" 50 > "$work/parts"
 expect_order "the parts together must hold every test exactly once" \
   "$(LC_ALL=C sort "$work/discovery")" "$(part_tests "$work/parts")"
-expect_order "./big (123 s) splits into three parts of at most 50 s each, ./small (9 s) stays whole" \
+expect_order "./big (123 s) splits into three parts, each under 50 s but the one holding the 60 s test alone; ./small (9 s) stays whole" \
   './big
 ./big
 ./big
@@ -268,6 +268,19 @@ expect_order "a package under the part size runs as one process with all its tes
 backend|./small' \
   "$(split_parts "$work/discovery" "$work/timing" 900 | cut -d'|' -f1,2)"
 
+if grep -qE '\^\(\||\|\||\|\)\$' "$work/parts"; then
+  fail "a -run union has an empty alternative, which matches every test: $(tr '\n' ' ' < "$work/parts")"
+fi
+# Dealing is not packing: two parts take 40 s, then 30 + 30 s. A part of more
+# than one test over the part size asks for one more part.
+printf 'backend|./trio|TestX\nbackend|./trio|TestY\nbackend|./trio|TestZ\n' > "$work/triodisc"
+printf 'backend|./trio|TestX|40.0\nbackend|./trio|TestY|30.0\nbackend|./trio|TestZ|30.0\n' > "$work/triotime"
+expect_order "40, 30 and 30 s under a 50 s part size run as three parts, one test each" \
+  '^(TestX)$
+^(TestY)$
+^(TestZ)$' \
+  "$(split_parts "$work/triodisc" "$work/triotime" 50 | cut -d'|' -f3- | LC_ALL=C sort)"
+
 # The committed shard timing has to be readable by assign_shard: four fields,
 # a number last. A line it cannot read silently weighs its test at the mean.
 shard_timing="$root_dir/scripts/integration-test-timing.txt"
@@ -277,6 +290,9 @@ live=$(grep -v '^#' "$shard_timing" | cut -d'|' -f2 | LC_ALL=C sort -u | while r
   [[ -d "$root_dir/backend/${pkg#./}" ]] && echo "$pkg"
 done | wc -l | tr -d ' ')
 (( live > 0 )) || fail "no package named in $shard_timing still exists — every shard splits by count"
+# The refresh script writes the rows in C sort order; a hand edit keeps it.
+grep -v '^#' "$shard_timing" | LC_ALL=C sort -c 2>/dev/null \
+  || fail "$shard_timing rows are not in LC_ALL=C sort order, as scripts/refresh-integration-test-timing.sh writes them"
 
 if (( fails > 0 )); then
   echo "test-laneorder: $fails failure(s)" >&2

@@ -146,18 +146,31 @@ split_parts() {
   local assigned="$1" timing="$2" seconds="$3"
   weigh_tests "$assigned" "$timing" \
     | awk -F'|' -v target="$seconds" "$LANEORDER_DEAL"'
-        function flush(    bins, i, b) {
+        # Deals the package into bins parts; answers whether every part of
+        # more than one test fits under target.
+        function dealt(bins,    i, b, s) {
+          for (s = 1; s <= bins; s++) { sum[s] -= load[pkg, s]; load[pkg, s] = 0; count[s] = 0 }
+          for (b in part) delete part[b]
+          for (i = 1; i <= n; i++) {
+            b = deal(pkg, weight[i], bins)
+            # Counted, never `b in part`: mawk creates part[b] for the
+            # assignment before it tests membership.
+            part[b] = count[b]++ ? part[b] "|" name[i] : name[i]
+          }
+          for (s = 1; s <= bins; s++) if (count[s] > 1 && load[pkg, s] > target) return 0
+          return 1
+        }
+        # The least parts that bring each one under target. Dealing is not
+        # packing: 40, 30 and 30 s deal into two parts as 40 and 60, so a part
+        # over target asks for one more, up to a part per test.
+        function flush(    bins, b) {
           if (n == 0) return
           bins = (target > 0) ? int(total / target) : 1
           if (target > 0 && bins * target < total) bins++
           if (bins < 1) bins = 1
           if (bins > n) bins = n
-          split("", part)
-          for (i = 1; i <= n; i++) {
-            b = deal(pkg, weight[i], bins)
-            part[b] = (b in part) ? part[b] "|" name[i] : name[i]
-          }
-          for (b = 1; b <= bins; b++) print pkg "|^(" part[b] ")$"
+          while (!dealt(bins) && target > 0 && bins < n) bins++
+          for (b = 1; b <= bins; b++) if (count[b]) print pkg "|^(" part[b] ")$"
           n = 0
           total = 0
         }
