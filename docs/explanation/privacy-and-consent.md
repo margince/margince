@@ -586,13 +586,13 @@ reply from our team, or a capture date cannot prove where the details came from.
 notice duty keeps that duty when its date is unknown. The capture date gives the latest possible
 deadline; the notice may already be due.
 
-A user with privacy access answers how the details came in, with proof, in **Settings →
-Privacy** or a drawer on the contact page, which shows the review under the same access check.
-Each answer maps to one existing source kind. It changes only the notice duty and the disclosure
-text: send permission reads the original source record, so a confirmed source never lets a send
-through. If the contact gave the details, no separate notice is needed. A date is optional: a
-known past date is used as given, and a missing date uses the original capture date as a bound.
-The clock never starts again at review.
+A user with privacy access answers how the details came in and gives the proof, in **Settings →
+Privacy** or a drawer on the contact page. Both sit under the same access check. Each answer maps
+to one existing source kind and changes only the notice duty and the disclosure text.
+
+Send permission reads the original source record, so a confirmed source never lets a send through.
+A contact who gave the details needs no separate notice. A known past date is used as given; a
+missing one uses the capture date as a bound. The clock never starts again at review.
 
 A data task moves live cases with an unknown source to review. It keeps their audit history,
 finished decisions and mail already on its way. If a send fails, the source is checked again.
