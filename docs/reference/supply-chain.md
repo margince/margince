@@ -212,6 +212,12 @@ files each one embeds, so a new dependency is covered the day it is added. A
 binary under `testdata/` in the module cache is not: no build reaches it, and
 walking the cache instead finds about 8000 such files.
 
+It runs in two places. The license gate runs it on a change to a manifest, which
+is how a new dependency comes in. `make check-backend` runs it as a root script
+gate, so the `deterministic-gates` job in CI runs it on every backend change. A
+file embedded under `backend/` changes no manifest, and only the second place
+sees it.
+
 `make test-embedded-binary-licenses` proves the check refuses each way, against
 planted declarations and the live scan.
 
