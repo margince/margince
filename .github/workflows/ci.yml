@@ -461,13 +461,23 @@ jobs:
   # arch-lint), beside deterministic-gates rather than inside it. On one runner
   # the two halves took turns on four cores, and lint finished last.
   backend-lint:
-    name: backend-lint
+    name: backend-lint (${{ matrix.pass }})
     timeout-minutes: 30
     needs: [changes]
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # The two golangci passes each load the whole tree, so each gets a runner.
+    # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pass: baseline
+            legs: lint-base vet arch-lint
+          - pass: strict
+            legs: lint-strict
     # Setup mirrors deterministic-gates, which says why each step is there.
     # Full history, because the strict lint diffs against origin/main.
     steps:
@@ -489,6 +499,8 @@ jobs:
       - name: Compute the golangci cache key
         id: golangci-key
         uses: ./.github/actions/golangci-cache-key
+      # cache-warm's one entry holds both passes' partitions, so each leg
+      # restores its own pass warm.
       - name: Restore the golangci-lint analysis cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -497,13 +509,14 @@ jobs:
           restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
       - name: Backend static gate (make check-static)
         working-directory: .
-        run: make check-static
+        run: make check-static STATIC_LEGS="${{ matrix.legs }}"
       # A test read outside its module that skips the tree digest merges green
       # and breaks cache-warm's save hours later. Here it fails the PR that
       # adds it. On this job because it finishes minutes before
       # deterministic-gates, so the census's uncached pass adds no wall clock.
+      # One leg runs it, since it reads no lint output.
       - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.pass == 'baseline' }}
         working-directory: .
         run: make test-input-census
 
