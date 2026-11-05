@@ -31,6 +31,7 @@ type scheduledPayload struct {
 	AttachmentIDs  []string `json:"attachment_ids,omitempty"`
 	ConsentPurpose string   `json:"consent_purpose"`
 	DraftRef       string   `json:"draft_ref,omitempty"`
+	PendingDraftID string   `json:"pending_draft_id,omitempty"`
 	// The four context fields the send door decoded. Frozen with the message
 	// for the reason everything else here is: what the rep claimed at 17:00
 	// today is what the decision row must say when the message goes out at

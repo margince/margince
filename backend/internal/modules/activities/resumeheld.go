@@ -88,13 +88,17 @@ func (s *Store) ResumeHeldSend(
 		// unlocked, so the row may have been cancelled or resumed by somebody
 		// else since — and this is where that is decided, under the row's own
 		// lock, before anything is staged.
-		if _, found, err := s.claimHeldForResume(ctx, tx, id); err != nil {
+		claimed, found, err := s.claimHeldForResume(ctx, tx, id)
+		if err != nil {
 			return err
 		} else if !found {
 			return apperrors.ErrNotFound
 		}
 		sent, err = s.SendPreparedTx(ctx, tx, origin, prepared, stager)
 		if err != nil {
+			return err
+		}
+		if err := discardHeldDraftTx(ctx, tx, claimed, origin, in); err != nil {
 			return err
 		}
 		if err := s.releaseHeldInTx(ctx, tx, id, ids.UUID(sent.Id)); err != nil {
@@ -162,11 +166,12 @@ func (s *Store) heldRow(ctx context.Context, tx pgx.Tx, id ids.UUID, lock string
 	var c claimedSend
 	err := tx.QueryRow(ctx, `
 		SELECT scheduled_at, origin_kind, anchor_activity_id,
-		       origin_links, also_links, payload, payload_version, version
+		       origin_links, also_links, payload, payload_version, version,
+		       scheduled_by, nullif(payload->>'pending_draft_id', '')::uuid, created_at
 		  FROM scheduled_send
 		 WHERE id = $1 AND status = 'held' AND held_reason = $2`+lock, id, HeldSendRefused).
 		Scan(&c.ScheduledAt, &c.OriginKind, &c.Anchor,
-			&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion)
+			&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion, &c.ScheduledBy, &c.PendingDraftID, &c.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return claimedSend{}, false, nil
 	}

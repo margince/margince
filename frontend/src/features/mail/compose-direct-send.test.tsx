@@ -3,7 +3,10 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { entityTimelineKeys } from "../../lib/activitykeys";
 import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
@@ -12,6 +15,7 @@ import {
   render,
   stubRoutes,
 } from "./compose.testkit";
+import { draftKey } from "./composesaveddraftcalls";
 
 // A message sent past its refusal as a recorded exception is a sent message.
 // The composer closes the way a normal send closes it, so nothing on screen
@@ -37,7 +41,24 @@ afterEach(() => {
 
 describe("sending with a recorded exception", () => {
   it("closes the composer once the exception has sent the message", async () => {
+    const saved = {
+      id: "md-1",
+      anchor_type: "contact",
+      anchor_id: "c-1",
+      to: [],
+      cc: [],
+      bcc: [],
+      subject: "Before lunch",
+      body: "Earlier words.",
+      html_body: "<p>Earlier words.</p>",
+      version: 1,
+      agent_drafted: false,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    };
     const sent = stubRoutes({
+      "GET /mail-drafts": () => jsonResponse(saved),
+      "PUT /mail-drafts": () => jsonResponse({ ...saved, version: 2 }),
       "POST /emails": () =>
         problemResponse(
           {
@@ -57,16 +78,31 @@ describe("sending with a recorded exception", () => {
     });
     const onClose = vi.fn();
     const onSent = vi.fn();
-    render(
-      <ComposeModal
-        entityType="contact"
-        entityId="c-1"
-        contactId="c-1"
-        open
-        onClose={onClose}
-        onSent={onSent}
-      />,
+    function Composer() {
+      const [open, setOpen] = useState(true);
+      return (
+        <ComposeModal
+          entityType="contact"
+          entityId="c-1"
+          contactId="c-1"
+          open={open}
+          onClose={() => {
+            setOpen(false);
+            onClose();
+          }}
+          onSent={onSent}
+        />
+      );
+    }
+    const { queryClient } = render(
+      <ToastProvider>
+        <Composer />
+        <ToastRegion />
+      </ToastProvider>,
     );
+    const timelineKeys = entityTimelineKeys("contact", "c-1");
+    for (const key of timelineKeys) queryClient.setQueryData(key, []);
+    await screen.findByText("Saved draft restored");
     await fillSendableForm();
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
@@ -85,7 +121,19 @@ describe("sending with a recorded exception", () => {
     );
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByText("Sent as a recorded exception.")).toBeTruthy();
+    expect(
+      queryClient.getQueryData(draftKey({ type: "contact", id: "c-1" })),
+    ).toBeNull();
+    expect(timelineKeys.length).toBeGreaterThan(0);
+    for (const key of timelineKeys.slice(0, 1)) {
+      expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+    }
     expect(onSent).toHaveBeenCalledTimes(1);
+    expect(sent.find((s) => s.key === "POST /emails")?.body).toMatchObject({
+      mail_draft_id: saved.id,
+    });
     expect(sent.filter((s) => s.key === "POST /emails")).toHaveLength(1);
     expect(
       sent.filter(

@@ -211,12 +211,14 @@ const UnobservedVersion int64 = -1
 
 // claimedSend is one scheduled row locked for firing.
 type claimedSend struct {
-	CreatedAt    time.Time
-	RepliesSince time.Time
-	ScheduledAt  time.Time
-	OriginKind   string
-	Anchor       *ids.UUID
-	OriginLinks  []byte
+	CreatedAt      time.Time
+	RepliesSince   time.Time
+	ScheduledBy    ids.UUID
+	PendingDraftID *ids.UUID
+	ScheduledAt    time.Time
+	OriginKind     string
+	Anchor         *ids.UUID
+	OriginLinks    []byte
 	// AlsoLinks are the records a reply was told to file itself under beyond
 	// its anchor's. Frozen at composition because nothing at fire could work
 	// out which ones the caller meant.
