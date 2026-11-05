@@ -2942,6 +2942,13 @@ export const en = {
   "record.moreActionsFor": "More actions for {subject}",
   "record.fullHistory": "Full history",
 
+  "share.bulkConfirmTitle": "Share these contacts?",
+  "share.bulkConfirmBody":
+    "This replaces {name}’s existing shares on these contacts with {access} and the chosen expiry. It can reduce or end their existing access.",
+  "share.companyContacts": "Share contacts",
+  "share.companyContactsNote":
+    "Share the current contacts you can read and share. Contacts you cannot share are skipped. Hidden contacts are not counted.",
+  "share.companyContactsResult": "{shared} shared · {skipped} skipped",
   "share.title": "Share this record",
   "share.ceiling.pre": "A grant changes who can see ",
   "share.ceiling.recordEmphasis": "exactly this one record",

@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 47,
     "system_frame_tokens": 592,
-    "tokens": 35823,
+    "tokens": 35835,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 761
+    "mean_tool_tokens": 762
   },
   "agents": [
     {
@@ -165,7 +165,7 @@
     },
     {
       "name": "change_access",
-      "tokens": 656
+      "tokens": 669
     },
     {
       "name": "update_record",

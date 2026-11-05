@@ -10,16 +10,16 @@
   "totals": {
     "tools": 47,
     "resources": 13,
-    "tool_catalog_bytes": 211919,
+    "tool_catalog_bytes": 211968,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 54294,
+    "approx_wire_tokens_total": 54306,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 49373,
-      "input_schema_bytes": 103275,
+      "input_schema_bytes": 103324,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 152648
+      "description_plus_input_schema_bytes": 152697
     }
   },
   "tools": {
@@ -825,6 +825,7 @@
                 "remove_team_member",
                 "request_ownership",
                 "share",
+                "share_contacts",
                 "unshare",
                 "update_assignment",
                 "update_member",
@@ -836,7 +837,7 @@
               "type": "string"
             },
             "id": {
-              "description": "add_team_member, assign_legal_entity, change_role, claim_record, deactivate_member, end_assignment, hand_over_work, offer_ownership, reactivate_member, remove_member, remove_team_member, request_ownership, unshare, update_assignment, update_member, update_record_role, update_team, withdraw_ownership_offer, withdraw_ownership_request only",
+              "description": "add_team_member, assign_legal_entity, change_role, claim_record, deactivate_member, end_assignment, hand_over_work, offer_ownership, reactivate_member, remove_member, remove_team_member, request_ownership, share_contacts, unshare, update_assignment, update_member, update_record_role, update_team, withdraw_ownership_offer, withdraw_ownership_request only",
               "type": "string"
             },
             "idempotency_key": {
@@ -857,7 +858,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "assign, assign_legal_entity, change_role, create_record_role, create_team, deactivate_member, hand_over_work, offer_ownership, remove_member, request_ownership, share, update_assignment, update_member, update_record_role, update_team only: The request body of createRecordAssignment",
+              "description": "assign, assign_legal_entity, change_role, create_record_role, create_team, deactivate_member, hand_over_work, offer_ownership, remove_member, request_ownership, share, share_contacts, update_assignment, update_member, update_record_role, update_team only: The request body of createRecordAssignment",
               "type": "object"
             },
             "userId": {

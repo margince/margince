@@ -530,6 +530,7 @@
     "POST /v1/companies/{id}/partner/setup": "set_up_partner",
     "POST /v1/companies/{id}/profile-fields/{field}/confirm": "change_record_parts",
     "POST /v1/companies/{id}/scan": "ensure_company_scan",
+    "POST /v1/companies/{id}/share-contacts": "share_company_contacts",
     "POST /v1/companies/{id}/suggestions/dismiss": "dismiss_company_suggestion",
     "POST /v1/companies/{id}/technical-enrich": "enrich",
     "POST /v1/companies/{id}/vat-check": "request_company_vat_check",

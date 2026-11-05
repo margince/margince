@@ -97,6 +97,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /companies/{id}/intro-request-draft` | draftIntroRequest | Draft the message asking a colleague to introduce you. | Change records | at once |
 | `GET /companies/{id}/coverage` | getCompanyCoverage | How well this account is covered — who answers, who is missing from the buying team, and the warmest way in. | Read records | at once |
 | `GET /companies/{id}/contacts` | listCompanyContacts | The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account. | Read records | at once |
+| `POST /companies/{id}/share-contacts` | shareCompanyContacts | Share the company's current contacts with a person or team. | Change records | at once |
 | `GET /companies/{id}/link-candidates` | listCompanyLinkCandidates | Live contacts on this company's domains who do not work here yet. | Read records | at once |
 | `POST /companies/{id}/link-contacts` | linkCompanyContacts | Link the chosen link candidates to this company as current employees. | Change records | at once |
 | `GET /companies/{id}/dossier` | getCompanyDossier | What this company IS — assembled from its own facts, every sentence citing one. | Read records | at once |

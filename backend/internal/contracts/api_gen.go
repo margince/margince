@@ -21583,6 +21583,42 @@ func (e SettleClaimRequestOutcome) Valid() bool {
 	}
 }
 
+// Defines values for ShareCompanyContactsRequestAccess.
+const (
+	ShareCompanyContactsRequestAccessRead  ShareCompanyContactsRequestAccess = "read"
+	ShareCompanyContactsRequestAccessWrite ShareCompanyContactsRequestAccess = "write"
+)
+
+// Valid indicates whether the value is a known member of the ShareCompanyContactsRequestAccess enum.
+func (e ShareCompanyContactsRequestAccess) Valid() bool {
+	switch e {
+	case ShareCompanyContactsRequestAccessRead:
+		return true
+	case ShareCompanyContactsRequestAccessWrite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ShareCompanyContactsRequestSubjectType.
+const (
+	ShareCompanyContactsRequestSubjectTypeTeam ShareCompanyContactsRequestSubjectType = "team"
+	ShareCompanyContactsRequestSubjectTypeUser ShareCompanyContactsRequestSubjectType = "user"
+)
+
+// Valid indicates whether the value is a known member of the ShareCompanyContactsRequestSubjectType enum.
+func (e ShareCompanyContactsRequestSubjectType) Valid() bool {
+	switch e {
+	case ShareCompanyContactsRequestSubjectTypeTeam:
+		return true
+	case ShareCompanyContactsRequestSubjectTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SharedForecastViewKind.
 const (
 	SharedForecastViewKindLive     SharedForecastViewKind = "live"
@@ -60307,6 +60343,27 @@ type ShareCaptureHoldHistoryResponse struct {
 	Released int `json:"released" minimum:"0"`
 }
 
+// ShareCompanyContactsRequest defines model for ShareCompanyContactsRequest.
+type ShareCompanyContactsRequest struct {
+	Access      ShareCompanyContactsRequestAccess      `json:"access"`
+	ExpiresAt   *time.Time                             `json:"expires_at,omitempty"`
+	Reason      *string                                `json:"reason,omitempty"`
+	SubjectId   openapi_types.UUID                     `json:"subject_id"`
+	SubjectType ShareCompanyContactsRequestSubjectType `json:"subject_type"`
+}
+
+// ShareCompanyContactsRequestAccess defines model for ShareCompanyContactsRequest.Access.
+type ShareCompanyContactsRequestAccess string
+
+// ShareCompanyContactsRequestSubjectType defines model for ShareCompanyContactsRequest.SubjectType.
+type ShareCompanyContactsRequestSubjectType string
+
+// ShareCompanyContactsResult defines model for ShareCompanyContactsResult.
+type ShareCompanyContactsResult struct {
+	Shared  int `json:"shared" minimum:"0"`
+	Skipped int `json:"skipped" minimum:"0"`
+}
+
 // SharedForecastView What one caller reads through a share.
 //
 // The numbers are about THEM. A snapshot share re-sums the frozen contributions this
@@ -69088,6 +69145,30 @@ type RejectCompanyParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// ShareCompanyContactsParams defines parameters for ShareCompanyContacts.
+type ShareCompanyContactsParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // RestoreCompanySuggestionParams defines parameters for RestoreCompanySuggestion.
 type RestoreCompanySuggestionParams struct {
 	// Fingerprint The `fingerprint` that was dismissed, unchanged.
@@ -75006,6 +75087,9 @@ type RejectCompanyJSONRequestBody = RejectCompanyRequest
 
 // EnsureCompanyScanJSONRequestBody defines body for EnsureCompanyScan for application/json ContentType.
 type EnsureCompanyScanJSONRequestBody = CompanyScanRequest
+
+// ShareCompanyContactsJSONRequestBody defines body for ShareCompanyContacts for application/json ContentType.
+type ShareCompanyContactsJSONRequestBody = ShareCompanyContactsRequest
 
 // DismissCompanySuggestionJSONRequestBody defines body for DismissCompanySuggestion for application/json ContentType.
 type DismissCompanySuggestionJSONRequestBody DismissCompanySuggestionJSONBody
@@ -89436,6 +89520,9 @@ type ServerInterface interface {
 	// Make sure this reader's scan of the account is current, reading it again only when the account changed.
 	// (POST /companies/{id}/scan)
 	EnsureCompanyScan(w http.ResponseWriter, r *http.Request, id Id)
+	// Share the company's current contacts with a person or team.
+	// (POST /companies/{id}/share-contacts)
+	ShareCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params ShareCompanyContactsParams)
 	// The newest deep read on this account, so a crawl that failed after the rep navigated away is still visible.
 	// (GET /companies/{id}/site-reads/latest)
 	GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id)
@@ -93447,6 +93534,12 @@ func (_ Unimplemented) GetCompanyScan(w http.ResponseWriter, r *http.Request, id
 // Make sure this reader's scan of the account is current, reading it again only when the account changed.
 // (POST /companies/{id}/scan)
 func (_ Unimplemented) EnsureCompanyScan(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Share the company's current contacts with a person or team.
+// (POST /companies/{id}/share-contacts)
+func (_ Unimplemented) ShareCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params ShareCompanyContactsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111846,6 +111939,64 @@ func (siw *ServerInterfaceWrapper) EnsureCompanyScan(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.EnsureCompanyScan(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ShareCompanyContacts operation middleware
+func (siw *ServerInterfaceWrapper) ShareCompanyContacts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ShareCompanyContactsParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ShareCompanyContacts(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -143090,6 +143241,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/companies/{id}/scan", wrapper.EnsureCompanyScan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/companies/{id}/share-contacts", wrapper.ShareCompanyContacts)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/site-reads/latest", wrapper.GetLatestSiteRead)

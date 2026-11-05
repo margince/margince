@@ -3469,7 +3469,7 @@
     },
     {
       "name": "change_access",
-      "tokens": 656,
+      "tokens": 669,
       "agents": [],
       "required_by_cases": [
         "case68_let_sofia_read_the_account",

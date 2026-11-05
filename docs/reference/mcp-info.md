@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 207.0 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 54294 |
+| Approx. wire tokens | 54306 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -66,7 +66,7 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
-| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 656 |
+| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 669 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1884 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 807 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 865 |
@@ -1237,6 +1237,7 @@ get their yes before calling, unless they asked for this call themselves; requir
         "remove_team_member",
         "request_ownership",
         "share",
+        "share_contacts",
         "unshare",
         "update_assignment",
         "update_member",
@@ -1248,7 +1249,7 @@ get their yes before calling, unless they asked for this call themselves; requir
       "type": "string"
     },
     "id": {
-      "description": "add_team_member, assign_legal_entity, change_role, claim_record, deactivate_member, end_assignment, hand_over_work, offer_ownership, reactivate_member, remove_member, remove_team_member, request_ownership, unshare, update_assignment, update_member, update_record_role, update_team, withdraw_ownership_offer, withdraw_ownership_request only",
+      "description": "add_team_member, assign_legal_entity, change_role, claim_record, deactivate_member, end_assignment, hand_over_work, offer_ownership, reactivate_member, remove_member, remove_team_member, request_ownership, share_contacts, unshare, update_assignment, update_member, update_record_role, update_team, withdraw_ownership_offer, withdraw_ownership_request only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1269,7 +1270,7 @@ get their yes before calling, unless they asked for this call themselves; requir
       "type": "string"
     },
     "request_body": {
-      "description": "assign, assign_legal_entity, change_role, create_record_role, create_team, deactivate_member, hand_over_work, offer_ownership, remove_member, request_ownership, share, update_assignment, update_member, update_record_role, update_team only: The request body of createRecordAssignment",
+      "description": "assign, assign_legal_entity, change_role, create_record_role, create_team, deactivate_member, hand_over_work, offer_ownership, remove_member, request_ownership, share, share_contacts, update_assignment, update_member, update_record_role, update_team only: The request body of createRecordAssignment",
       "type": "object"
     },
     "userId": {

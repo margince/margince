@@ -2698,6 +2698,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/{id}/share-contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Share the company's current contacts with a person or team.
+         * @description Creates ordinary record grants for the current employees this caller can read and share.
+         *     Reuses the single-record share checks, audit and event writer. Contacts the caller can
+         *     read but cannot share are skipped. Hidden contacts are absent from both counts.
+         *     Ended employments and archived contacts are excluded. Needs company, contact and
+         *     relationship read rights, and contact update rights. A company outside row scope is 404.
+         *     All grants commit together; an invalid recipient or grant aborts the whole request.
+         */
+        post: operations["shareCompanyContacts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}/link-candidates": {
         parameters: {
             query?: never;
@@ -49331,6 +49359,21 @@ export interface components {
             /** Format: date-time */
             expires_at?: string | null;
         };
+        ShareCompanyContactsRequest: {
+            /** @enum {string} */
+            subject_type: "user" | "team";
+            /** Format: uuid */
+            subject_id: string;
+            /** @enum {string} */
+            access: "read" | "write";
+            reason?: string | null;
+            /** Format: date-time */
+            expires_at?: string | null;
+        };
+        ShareCompanyContactsResult: {
+            shared: number;
+            skipped: number;
+        };
         /**
          * @description Who can open one contact or company and who can change it. `data` is one page of the
          *     members who can open it; `group_counts` and `page.total` count all of them.
@@ -61050,6 +61093,61 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    shareCompanyContacts: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareCompanyContactsRequest"];
+            };
+        };
+        responses: {
+            /** @description Counts of shared and skipped readable contacts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareCompanyContactsResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

@@ -1283,6 +1283,10 @@ func (stubs) EnsureCompanyScan(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "EnsureCompanyScan")
 }
 
+func (stubs) ShareCompanyContacts(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ShareCompanyContactsParams) {
+	httperr.NotImplemented(w, r, "ShareCompanyContacts")
+}
+
 func (stubs) GetLatestSiteRead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetLatestSiteRead")
 }

@@ -2940,6 +2940,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.moreActionsFor": "Thao tác khác cho {subject}",
   "record.fullHistory": "Lịch sử đầy đủ",
 
+  "share.bulkConfirmTitle": "Chia sẻ các liên hệ này?",
+  "share.bulkConfirmBody":
+    "Thay quyền chia sẻ hiện có của {name} trên các liên hệ này bằng {access} và thời hạn đã chọn. Việc này có thể giảm hoặc kết thúc quyền truy cập hiện có.",
+  "share.companyContacts": "Chia sẻ liên hệ",
+  "share.companyContactsNote":
+    "Chia sẻ các liên hệ đang làm việc tại công ty mà bạn có quyền đọc và chia sẻ. Bỏ qua các liên hệ bạn không được chia sẻ. Không đếm các liên hệ bị ẩn.",
+  "share.companyContactsResult": "Đã chia sẻ {shared} · Bỏ qua {skipped}",
   "share.title": "Chia sẻ hồ sơ này",
   "share.ceiling.pre": "Một lần cấp quyền thay đổi ai xem được ",
   "share.ceiling.recordEmphasis": "đúng một hồ sơ này",
