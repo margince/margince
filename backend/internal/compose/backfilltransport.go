@@ -154,7 +154,7 @@ func monthsWindow(m int) string { return windowNames[m] }
 // caller extracts the signed-in human; every backfill op is per-user.
 func (h backfillHandlers) caller(w http.ResponseWriter, r *http.Request) (ids.UserID, bool) {
 	actor, ok := principal.Actor(r.Context())
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnauthorized, Code: codeUnauthorized,
 			Detail: "Backfill is a signed-in human action.",

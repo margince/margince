@@ -36,6 +36,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `DELETE /contacts/{id}/nudge-dismissal` | restoreRelationshipNudge | Put a set-aside contact back on the lane — the undo behind the dismiss verb. | Change records | at once |
 | `GET /contacts/{id}/brief` | getContactBrief | The standing relationship brief — who this contact is commercially, what they care about, what changed. | Read records | at once |
 | `POST /contacts/{id}/brief` | regenerateContactBrief | Regenerate this contact's brief, ignoring the cached one. | Buy contact data | at once |
+| `GET /contacts/{id}/consent/guard` | getContactConsentGuard | May we write to this contact right now — per purpose and channel, with the reason. | Read records | at once |
 | `POST /contacts/{id}/claims` | recordConversationClaim | Record something promised, asked or decided in a captured conversation. | Change records | at once |
 | `POST /claims/{id}/settle` | settleConversationClaim | Say a promise was kept, or that it no longer stands. | Change records | at once |
 | `POST /claims/{id}/take-over` | takeOverConversationClaim | Take over a promise one of us made that nobody was asked to keep. | Change records | at once |
@@ -251,6 +252,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /projects` | listProjects | List projects (live by default; cursor-paginated). | Read records | at once |
 | `POST /projects` | createProject | Create a project on a company. | Change records | at once |
+| `POST /projects/transfer-ownership` | transferProjectOwnership | Move every live project one user owns to another user, in one transaction. | Change records | at once |
 | `GET /projects/{id}` | getProject | Get a project by id. | Read records | at once |
 | `PATCH /projects/{id}` | updateProject | Update a project. | Change records | at once |
 | `DELETE /projects/{id}` | archiveProject | Archive a project (soft delete; archive is the delete). | Change records | at once |
@@ -258,6 +260,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /projects/{id}/handoff` | prepareProjectHandoff | What delivery needs to take this project over. | Read records | at once |
 | `GET /projects/{id}/360` | getProject360 | The whole project page in one round trip — the project, its company, its phase history, its deals, stakeholders, contracts, documents, commitments, timeline and filing coverage. | Read records | at once |
 | `GET /projects/{id}/health-assessments` | listProjectHealthAssessments | How this project has been going, newest judgement first. | Read records | at once |
+| `POST /projects/{id}/health-assessments` | createProjectHealthAssessment | Record how this project is going. | Change records | at once |
+| `POST /projects/{id}/health-assessments/{assessment_id}/corrections` | correctProjectHealthAssessment | Correct one reading, keeping when it was said. | Change records | at once |
 | `GET /projects/{id}/stakeholders` | listProjectStakeholders | List a project's stakeholders (project↔contact relationships). | Read records | at once |
 | `PUT /projects/{id}/stakeholders` | setProjectStakeholder | Attach a contact to a project with a role (idempotent per contact). | Change records | at once |
 | `DELETE /projects/{id}/stakeholders/{contact_id}` | removeProjectStakeholder | Detach a contact from a project (archives the edge). | Change records | at once |
@@ -388,6 +392,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /lists/{id}/members/{recordId}/why` | explainListMember | Say why a record is, or is not, on a list. | Read records | at once |
 | `GET /records/{entity_type}/{entity_id}/lists` | getRecordLists | The lists one record is on that this caller may find. | Read records | at once |
 | `GET /lists/{id}/history` | listListHistory | Read what changed on a list, newest first. | Read records | at once |
+| `POST /lists/{id}/visit` | visitList | Record that the signed-in user has opened this list — the mark `since_last_visit` counts from. | Change records | at once |
 
 ## Tags
 
@@ -412,8 +417,13 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /filters/vocabulary` | getFilterVocabulary | Read what a new filter clause may name on one record type. | Read records | at once |
+| `POST /filters/preview` | previewFilter | Count and sample what a filter would select, before it is saved. | Read records | at once |
+| `POST /filters/propose` | proposeFilter | Propose filter clauses for a list described in plain words. | Buy contact data | at once |
 | `GET /views` | listSavedViews | List the caller's saved views (per-user; optionally scoped to one resource). | Read records | at once |
+| `POST /views` | createSavedView | Save a per-user view (columns, sort, filter state) for a resource. | Change records | at once |
 | `GET /views/{id}` | getSavedView | Get one of the caller's saved views by id. | Read records | at once |
+| `PATCH /views/{id}` | updateSavedView | Update a saved view's name or query state. | Change records | at once |
+| `DELETE /views/{id}` | archiveSavedView | Archive a saved view. | Change records | at once |
 
 ## CustomFields
 
@@ -427,41 +437,70 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /analytics/initiatives` | listSalesInitiatives | The sales initiatives a reader may open, drafts and live ones. | Read records | at once |
+| `POST /analytics/initiatives` | createSalesInitiative | Define a sales initiative as a draft. Nothing is enrolled until it is launched. | Change records | at once |
 | `GET /analytics/initiatives/{id}` | getSalesInitiative | One sales initiative. | Read records | at once |
+| `PATCH /analytics/initiatives/{id}` | updateSalesInitiative | Change an initiative's definition. A live initiative keeps its baseline. | Change records | at once |
+| `POST /analytics/initiatives/{id}/launch` | launchSalesInitiative | Launch a draft. The member deals of this moment become the frozen baseline. | Change records | at once |
 | `GET /analytics/initiatives/{id}/members` | listSalesInitiativeMembers | The leads and deals that belong, each with why, under the reader's own row scope. | Read records | at once |
+| `PUT /analytics/initiatives/{id}/members` | replaceSalesInitiativeMembers | Set the picked and the excluded records. An exclusion stands over a rule match. | Change records | at once |
 | `GET /analytics/decisions` | listSalesDecisions | The decisions recorded from a sales review, newest first, as tasks the reader may see. | Read records | at once |
+| `POST /analytics/decisions` | recordSalesDecision | Record a decision from a sales review as a task on its deal. An open decision with the same text on the same deal is returned instead of a second one. | Change records | at once |
+| `POST /analytics/decisions/{id}/outcome` | recordSalesDecisionOutcome | Record what work was completed and close the decision. The deal does not change. | Change records | at once |
+| `POST /analytics/assessment` | assessSalesReview | The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see. Written by the model and kept per reader until the figures or the recorded decisions move; without a model, or when the model's reply cannot be grounded, it answers no sentences and `generated_by` says so, and the page shows its own summary. | Buy contact data | at once |
+| `POST /analytics/setup-proposal` | proposeReportSetup | A sales initiative or a custom report proposed from a description in plain words: the filters, metrics and charts the words name, resolved against what the reader may use, with the phrase each came from, the questions the words leave open and the phrases nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without a model it answers 409 `ai_not_configured`. | Buy contact data | at once |
+| `GET /analytics/account-coverage` | getAccountCoverage | The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them. | Read records | at once |
 | `GET /analytics/metrics` | getReportingMetrics | Get reporting metrics | Read records | at once |
 | `GET /analytics/evaluate.csv` | exportReportingEvaluation | Evaluate reporting | Read records | at once |
 | `GET /analytics/editions/{id}/export.csv` | exportReportingEdition | Export this edition's permitted frozen metrics, chart readings and kept question answers. | Read records | at once |
 | `GET /analytics/evaluate` | evaluateReporting | Evaluate reporting | Read records | at once |
 | `GET /analytics/evidence` | getReportingEvidence | Get reporting evidence | Read records | at once |
 | `GET /analytics/reports` | listReportingReports | List reporting reports | Read records | at once |
+| `POST /analytics/reports` | createReportingReport | Create reporting report | Change records | at once |
 | `GET /analytics/reports/{id}` | getReportingReport | Get reporting report | Read records | at once |
+| `PATCH /analytics/reports/{id}` | updateReportingReport | Update reporting report | Change records | at once |
+| `DELETE /analytics/reports/{id}` | archiveReportingReport | Archive reporting report | Change records | at once |
 | `PUT /analytics/reports/{id}/draft` | saveReportingReportDraft | Save a reporting report draft | Change records | at once |
+| `DELETE /analytics/reports/{id}/draft` | discardReportingReportDraft | Discard a reporting report draft | Change records | at once |
+| `POST /analytics/reports/{id}/draft/publish` | publishReportingReportDraft | Publish a reporting report draft | Change records | at once |
+| `GET /analytics/reports/{id}/revisions` | listReportingReportRevisions | List reporting report revisions | Read records | at once |
+| `POST /analytics/reports/{id}/revisions/{revision}/restore` | restoreReportingReportRevision | Restore a reporting report revision | Change records | at once |
 | `GET /analytics/reports/{id}/reader-preview` | previewReportingReportAsRole | Evaluate a saved report as a seat holding one role would see it. | Read records | at once |
 | `GET /analytics/reports/{id}/evaluation` | evaluateReportingReport | Evaluate reporting report | Read records | at once |
 | `GET /analytics/reports/{id}/questions/{card_id}/answer` | answerReportingQuestionCard | A question card's answer, asked on the server for this reader. | Read records | at once |
+| `POST /analytics/reports/{id}/questions/{card_id}/explain` | explainReportingQuestionCard | The records behind one cell of a question card. | Read records | at once |
 | `GET /analytics/targets` | listReportingTargets | List reporting targets | Read records | at once |
+| `POST /analytics/targets` | createReportingTarget | Create reporting target | Change records | at once |
 | `GET /analytics/targets/{id}` | getReportingTarget | Get reporting target | Read records | at once |
+| `PATCH /analytics/targets/{id}` | updateReportingTarget | Update reporting target | Change records | at once |
 | `GET /analytics/framework` | getReportingFramework | Get reporting framework | Read records | at once |
+| `PUT /analytics/framework` | publishReportingFramework | Publish reporting framework | Change records | at once |
 | `GET /analytics/reports/{id}/schedules` | listReportingSchedules | List reporting schedules | Read records | at once |
+| `POST /analytics/reports/{id}/schedules` | createReportingSchedule | Create reporting schedule | Change records | at once |
+| `PATCH /analytics/schedules/{id}` | updateReportingSchedule | Update reporting schedule | Change records | at once |
 | `GET /analytics/reports/{id}/editions` | listReportingEditions | List reporting editions | Read records | at once |
+| `POST /analytics/reports/{id}/editions` | freezeReportingEdition | Freeze reporting edition | Change records | at once |
 | `GET /analytics/editions/{id}` | getReportingEdition | Get reporting edition | Read records | at once |
 | `GET /analytics/editions/{id}/evidence` | getReportingEditionEvidence | Get reporting edition evidence | Read records | at once |
 | `GET /analytics/editions/compare` | compareReportingEditions | Compare reporting editions | Read records | at once |
 | `GET /analytics/reports/{id}/executions` | listReportingExecutions | List reporting executions | Read records | at once |
 | `GET /analytics/executions/{id}` | getReportingExecution | Get reporting execution | Read records | at once |
+| `POST /analytics/executions/{id}/retry` | retryReportingExecution | Retry reporting execution | Change records | at once |
 | `POST /reports/{report}` | runReport | Run a report (the `run_report` MCP verb) and return aggregate rows. | Read records | at once |
 | `GET /reports/{report}/derivation` | explainReport | "Explain This Number" — resolve a derivation handle to its definition + source rows. | Read records | at once |
 | `GET /forecast` | getForecast | What a period is expected to close, and what the figure does not cover. | Read records | at once |
 | `GET /forecast/stage-chances` | getForecastStageChances | The chance the forecast uses for each open stage, and the evidence behind it. | Read records | at once |
 | `GET /forecast/assurance` | getForecastAssurance | What last night's input check found, and how much of the pipeline it reached. | Read records | at once |
 | `GET /forecast/assurance/preview` | previewForecastAssurance | What a check would find, without recording any of it. | Read records | at once |
+| `POST /forecast/assurance/runs` | startForecastAssuranceRun | Run the input check now. | Change records | at once |
 | `GET /analytics/coverage` | getDataCoverage | How current the sources behind the numbers are. | Read records | at once |
 | `GET /forecast/assurance/exceptions` | listInputChecks | The open findings this caller can see. | Read records | at once |
+| `POST /forecast/assurance/exceptions/{id}/resolve` | resolveInputCheck | Answer a finding from the nightly input check. | Change records | at once |
 | `GET /forecast/movement` | getForecastMovement | What moved the forecast between two snapshots, and which deals moved it. | Read records | at once |
 | `GET /forecast/calls` | listForecastCalls | What this period's forecast has been called, newest first. | Read records | at once |
+| `POST /forecast/calls` | recordForecastCall | Record what somebody believes will close. | Change records | at once |
 | `GET /forecast/shares` | listForecastShares | List the share links you issued that still serve. | Read records | at once |
+| `POST /forecast/shares` | createForecastShare | Issue a link that shows a forecast reading to a colleague. | Change records | at once |
+| `DELETE /forecast/shares/{id}` | revokeForecastShare | Close a share link before it expires. | Change records | at once |
 | `GET /forecast/shared/{token}` | openForecastShare | Open a shared forecast view. | Read records | at once |
 | `GET /forecast/shared/{token}/export.csv` | exportForecastShare | The rows behind a shared reading, as CSV. | Read records | at once |
 | `GET /analytics/context` | getAnalyticsContext | Which population this caller measures by default, and which they may choose. | Read records | at once |
@@ -474,10 +513,12 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /analytics/runs` | listReportRuns | The caller's own saved questions, newest first. | Read records | at once |
 | `GET /analytics/runs/{run_id}` | getReportRun | The answer a report sentence points at. | Read records | at once |
 | `POST /analytics/runs/{run_id}/evidence-search` | searchReportEvidence | Which records behind a saved run carry the words, and which do not. | Read records | at once |
+| `POST /analytics/runs/{run_id}/cells/explain` | explainReportRunCell | The records behind one cell of a saved run. | Read records | at once |
 | `POST /analytics/reports/render` | renderAnalyticsReport | Resolve a report document's figures for this reader. | Read records | at once |
 | `GET /analytics/vocabulary` | describeAnalyticsVocabulary | What an analytics query may name, for this caller. | Read records | at once |
 | `GET /analytics/reports/blocks` | describeReportBlocks | The block grammar a report document is written in. | Read records | at once |
 | `GET /analytics/reports/vocabulary` | describeReportVocabulary | The prebuilt reports, and the names each one's plan may use. | Read records | at once |
+| `POST /analytics/explain` | explainAnalyticsCell | The records one cell of an analytics answer was computed from. | Read records | at once |
 
 ## Search
 
@@ -521,8 +562,15 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /channel-connections` | listChannelConnections | List the workspace's messaging-channel connections. | Read records | at once |
+| `DELETE /channel-connections/{id}` | disconnectChannel | Disconnect a messaging channel (archives the binding and destroys the credential). | Change records | at once |
 | `GET /connectors` | listConnectors | List the calling user's capture connections + sync state. | Read records | at once |
+| `POST /connectors/{provider}/disconnect` | disconnectConnector | Disconnect the calling user's mail/calendar capture. | Change records | at once |
+| `PUT /connectors/{provider}/signature-enrichment` | setConnectorSignatureEnrichment | Set this mailbox's own answer to the nightly signature pass. | Change records | at once |
 | `GET /connectors/{provider}/containers` | listConnectorContainers | The folders or labels this mailbox has, to pick one to keep out of capture. | Read records | at once |
+| `POST /connectors/{provider}/silence/dismiss` | dismissConnectorSilence | Dismiss the owner's current mailbox silence warning. | Change records | at once |
+| `PUT /connectors/{provider}/mail-posture` | setConnectorMailPosture | Set what this mailbox asks of the mail it brings in. | Change records | at once |
+| `PUT /connectors/{provider}/history-baseline` | setConnectorHistoryBaseline | Set the date this mailbox's automatic commitment suggestions start from. | Change records | at once |
+| `PUT /connectors/{provider}/context-tag` | setConnectorContextTag | Set the word this connector files what it captures under. | Change records | at once |
 
 ## Approvals
 
@@ -583,9 +631,13 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /knowledge/corpora` | listCorpora | The document corpora this workspace has defined. | Read records | at once |
+| `POST /knowledge/corpora` | createCorpus | Define a document corpus. | Change records | at once |
 | `GET /knowledge/corpora/{id}` | readCorpus | One corpus and how much of it is searchable. | Read records | at once |
+| `PATCH /knowledge/corpora/{id}` | updateCorpus | Edit a corpus — its words, its floor, or which one the palette asks. | Change records | at once |
+| `DELETE /knowledge/corpora/{id}` | archiveCorpus | Archive a corpus and everything filed in it. | Change records | at once |
 | `GET /knowledge/corpora/{id}/documents` | listCorpusDocuments | The documents filed in this corpus, and how far each one's ingest got. | Read records | at once |
 | `GET /knowledge/documents/{id}` | downloadCorpusDocument | Download a document's own bytes. | Read records | at once |
+| `POST /knowledge/corpora/{id}/ask` | askCorpus | Ask this corpus a question, answered only from its documents. | Buy contact data | at once |
 
 ## Assignments
 
@@ -688,15 +740,42 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /capture/email-domains` | listWorkspaceEmailDomains | The workspace's own email domains. | Read records | at once |
+| `POST /capture/email-domains` | createWorkspaceEmailDomain | Register one of the workspace's own email domains. | Change records | at once |
 | `GET /contacts/{id}/conversation-suggestions` | listContactConversationSuggestions | Recipients copied on inbound correspondence who have no contact or live lead. | Read records | at once |
 | `GET /leads/{id}/conversation-suggestions` | listLeadConversationSuggestions | Recipients copied on inbound correspondence who have no contact or live lead. | Read records | at once |
 | `GET /capture/exclusions` | listCaptureExclusions | The addresses and domains capture keeps out — the workspace's rules and the caller's own. | Read records | at once |
+| `POST /capture/exclusions` | createCaptureExclusion | Keep an address or a domain out of capture. | Change records | at once |
+| `DELETE /capture/exclusions/{id}` | deleteCaptureExclusion | Lift an exclusion. | Change records | at once |
+| `GET /capture/held-threads` | listHeldThreads | What your mailbox is holding right now. | Read records | at once |
+| `GET /capture/senders` | listCaptureSenders | Every decision this product made about your senders. | Read records | at once |
+| `GET /capture/contacts-awaiting-decision` | listCaptureContactsAwaitingDecision | Your captured contacts still waiting on a sender decision. | Read records | at once |
+| `PUT /capture/senders/{address}/decision` | setCaptureSenderDecision | Overrule what the classifier decided about a sender. | Change records | at once |
+| `DELETE /capture/senders/{address}/decision` | deleteCaptureSenderDecision | Withdraw your decision and hand the sender back to the classifier. | Change records | at once |
+| `GET /capture/counterparty-holds` | listCaptureCounterpartyHolds | Whose mail the caller keeps out of the shared timeline. | Read records | at once |
+| `POST /capture/counterparty-holds` | createCaptureCounterpartyHold | Keep one party's mail to the contacts on it. | Change records | at once |
+| `POST /capture/counterparty-holds/share-history` | shareCaptureCounterpartyHoldHistory | Re-open the mail the caller's counterparty holds already caught. | Change records | at once |
+| `DELETE /capture/counterparty-holds/{id}` | deleteCaptureCounterpartyHold | Lift a counterparty hold. | Change records | at once |
+| `GET /capture/owner-identities` | listCaptureOwnerIdentities | The caller's own other email addresses. | Read records | at once |
+| `POST /capture/owner-identities` | createCaptureOwnerIdentity | Declare another address as your own. | Change records | at once |
+| `DELETE /capture/owner-identities/{id}` | deleteCaptureOwnerIdentity | Withdraw one of your own addresses. | Change records | at once |
+| `POST /capture/owner-identities/{id}/restore` | restoreCaptureOwnerIdentity | Put back one of your own addresses you just withdrew. | Change records | at once |
+| `DELETE /capture/email-domains/{domain}` | deleteWorkspaceEmailDomain | Stop treating a domain as the workspace's own. | Change records | at once |
+| `POST /connectors/{provider}/backfill/preview` | previewConnectorBackfill | Preview a backfill window — the scope before the spend. | Read records | at once |
+| `POST /connectors/{provider}/backfill` | startConnectorBackfill | Start the bounded connect-time backfill. | Buy contact data | at once |
+| `DELETE /connectors/{provider}/backfill` | cancelConnectorBackfill | Cancel a running backfill — captured rows are retained. | Change records | at once |
 | `GET /capture/activity` | listMyCaptureActivity | What the capture pipeline did with your messages in the last 24 hours. | Read records | at once |
 | `GET /capture/activity/workspace` | listWorkspaceCaptureActivity | The same window for the workspace's shared channel connections. | Read records | at once |
 | `GET /capture/traces/{id}` | readCaptureTracePipeline | The same ladder, opened from a row of the capture-activity window. | Read records | at once |
 | `GET /capture/consumer-mail-domains` | listConsumerMailDomains | The workspace's own consumer-mail domain list. | Read records | at once |
+| `POST /capture/consumer-mail-domains` | addConsumerMailDomain | Add a consumer-mail domain, or carve one out. | Change records | at once |
+| `DELETE /capture/consumer-mail-domains/{id}` | removeConsumerMailDomain | Withdraw a consumer-mail list entry (admin/ops). | Change records | at once |
 | `GET /capture/blocked-domains` | listBlockedDomains | Where each domain's company question stands. | Read records | at once |
+| `PUT /capture/blocked-domains` | setBlockedDomain | Block a domain, or unblock one. | Change records | at once |
+| `POST /capture/blocked-domains/{domain}/reopen` | reopenWithheldDomain | Ask about an undecided domain again (admin/ops). | Change records | at once |
 | `GET /capture/domain-questions` | listDomainQuestions | Review the calling reader’s undecided domains. | Read records | at once |
+| `POST /capture/domain-questions/{domain}/keep` | keepDomainQuestion | Answer an open domain question by keeping the company. | Change records | at once |
+| `POST /capture/domain-questions/{domain}/discard` | discardDomainQuestion | Answer an open domain question by excluding the domain from your own capture. | Change records | at once |
+| `POST /capture/domain-questions/{domain}/keep-vendor` | keepDomainAsVendor | Answer an open vendor question by keeping the vendor verdict. | Change records | at once |
 | `GET /capture/consumer-mail-baseline` | listConsumerMailBaseline | Search the shipped consumer-mail baseline. | Read records | at once |
 
 ## Commissions
@@ -706,16 +785,57 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /commissions` | listCommissionEntries | The commission ledger — what partners earned on won deals. | Read records | at once |
 | `GET /commissions/summary` | getCommissionSummary | What is owed, by partner and status — the open-liability figure. | Read records | at once |
 | `GET /commissions/{id}` | getCommissionEntry | One ledger entry. | Read records | at once |
+| `POST /commissions/{id}/decide` | decideCommissionEntry | Approve, pay, or void one entry. | Change records | at once |
+
+## Communication
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /communication-reviews/{id}` | getCommunicationReview | What a refused send was refused for, and for whom. | Read records | at once |
+| `POST /communication-reviews/{id}/context` | recordCommunicationContext | Answer a refusal by saying what happened away from the system. | Change records | at once |
+| `POST /communication-reviews/{id}/direct-send` | directCommunicationSend | Send a refused message anyway, on a named human's recorded decision. | Send messages | at once |
 
 ## Compliance
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `GET /data-subject-requests` | listDataSubjectRequests | List GDPR data-subject requests. | Read records | at once |
+| `POST /data-subject-requests` | createDataSubjectRequest | Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure. | Change records | at once |
+| `GET /data-subject-requests/deadline` | getDataSubjectRequestDeadline | The deadline a request would get, and the rule that sets it. | Read records | at once |
 | `GET /privacy/controller-particulars` | getControllerParticulars | What this installation says about itself in the messages it sends. | Read records | at once |
+| `GET /privacy/notice-cases` | listNoticeCases | Disclosure duties this installation owes, soonest deadline first. | Read records | at once |
+| `GET /privacy/notice-cases/{id}` | getNoticeCase | One disclosure duty. | Read records | at once |
+| `POST /privacy/notice-cases/{id}/assign` | assignNoticeCase | Give a disclosure duty an owner. | Change records | at once |
+| `GET /privacy/notice-case-reviews` | listNoticeCaseReviews | Disclosure duties this installation owes, soonest deadline first. | Read records | at once |
+| `GET /privacy/notice-case-reviews/{id}` | getNoticeCaseReview | One disclosure duty. | Read records | at once |
+| `POST /privacy/notice-case-reviews/{id}/assign` | assignNoticeCaseReview | Give a disclosure duty an owner. | Change records | at once |
+| `POST /privacy/notice-case-reviews/{id}/source` | assessNoticeSource | Confirm the source of an unassessed contact. | Change records | at once |
+| `PATCH /data-subject-requests/{id}` | updateDataSubjectRequest | Update a data-subject request's status / assignee / resolution. | Change records | at once |
 | `GET /confirm-submissions` | listConfirmSubmissions | List what subjects sent through their own confirm links. | Read records | at once |
+| `POST /confirm-submissions/{id}/resolve` | resolveConfirmSubmission | Accept or decline what a subject proposed. | Change records | at once |
+| `GET /audit-log` | listAuditLog | Read the human+agent-attributable audit log (Settings governance view). | Read records | at once |
+| `GET /records/{entity_type}/{id}/history` | getRecordHistory | Full audit history for one record, rendered as plain-language lines. | Read records | at once |
 | `GET /field-history` | getFieldHistory | One entry per field change, newest first, for the given `entity_type` + `entity_id`. | Read records | at once |
 | `GET /consent-purposes` | listConsentPurposes | List the workspace's consent purposes (e.g. transactional, marketing_email, profiling). | Read records | at once |
+| `GET /retention/restrictions` | listRestrictedActivities | List the records a statutory retention obligation is holding, and why. | Read records | at once |
+| `POST /retention/restrictions/{activityId}/pin` | pinActivityToFloor | Pin an activity to the retention floor, restricting it. Requires a stated reason; audited. | Change records | at once |
+| `GET /retention/legal-holds` | listLegalHolds | List the records a legal hold is preserving. | Read records | at once |
+| `POST /retention/legal-holds/{entityType}/{recordId}/place` | placeLegalHold | Place a legal hold on a record. Requires a stated reason; audited. | Change records | at once |
 | `GET /retention-policies` | listRetentionPolicies | List the installation's retention policies (admin/ops). | Read records | at once |
+| `GET /contacts/{id}/consent` | getContactConsent | Read a contact's per-purpose consent state plus the append-only proof log. | Read records | at once |
+| `POST /contacts/{id}/consent` | recordConsent | Grant or withdraw consent for one purpose — writes an append-only proof row. | Change records | at once |
+| `POST /contacts/{id}/consent/suppress` | suppressContact | Record that this contact asked us to stop writing to them. | Change records | at once |
+| `POST /contacts/{id}/consent/suppress/{suppressionId}/lift` | liftSuppression | Take back a stop, if you outrank the level that set it. | Change records | at once |
+| `GET /contacts/{id}/consent/stops` | listContactStops | List the stops that stand on this contact, and which ones you may take back. | Read records | at once |
+| `POST /contacts/{id}/consent/allow` | allowContact | Record a standing vouch that a machine-level refusal for one category may be overruled. | Change records | at once |
+| `POST /contacts/{id}/consent/allow/{overrideId}/revoke` | revokeOverride | Take back a standing override, if your level may revoke the one that recorded it. | Change records | at once |
+| `POST /contacts/{id}/consent/double-opt-in` | issueDoubleOptIn | Mail the subject a single-use link that confirms one marketing purpose. | Send messages | at once |
+| `GET /contacts/{id}/consent/mail-preview` | previewControllerMail | Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it. | Read records | at once |
+| `POST /contacts/{id}/consent/privacy-notice` | sendPrivacyNotice | Mail this contact the Art. 14 disclosure, which asks them for nothing. | Send messages | at once |
+| `POST /contacts/{id}/consent/confirm-request` | requestDetailsConfirmation | Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing. | Send messages | at once |
+| `POST /contacts/{id}/consent/qualifying-events` | recordQualifyingEvent | Record the exchange that makes business correspondence lawful. | Change records | at once |
+| `POST /contacts/{id}/consent/qualifying-events/{event_id}/retract` | retractQualifyingEvent | Take back an exchange a colleague recorded by hand. | Change records | at once |
+| `POST /contacts/{id}/acquisition-request/retract` | retractAcquisitionRequest | Take back the request the contact's acquisition records. | Change records | at once |
 
 ## Extensions
 
@@ -740,9 +860,13 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /imports/format` | getImportFormat | Describe the files an import takes, column by column, for this workspace. | Read records | at once |
 | `GET /imports/template` | downloadImportTemplate | Download the import template for this workspace. | Read records | at once |
 | `GET /imports/{id}` | getImportRun | Read one import run's lifecycle state. | Read records | at once |
+| `PATCH /imports/{id}` | updateImportRun | Save choices on a draft import run. | Change records | at once |
+| `POST /imports/{id}/validate` | validateImportRun | Test a draft import run against the estate. | Change records | at once |
+| `POST /imports/{id}/cancel` | cancelImportRun | Cancel a draft, a test run, or a report nobody will approve. | Change records | at once |
 | `GET /imports/{id}/report` | getImportRunReport | Read the run's report — what will happen, or what did. | Read records | at once |
 | `GET /imports/{id}/problems.csv` | downloadImportProblems | Download the run's row problems as a CSV. | Read records | at once |
 | `POST /imports/{id}/approve` | approveImportRun | Approve a validated import run and commit it. | Change records | at once |
+| `POST /imports/{id}/undo` | undoImportRun | Reverse a completed CSV import run. | Change records | at once |
 
 ## Notices
 

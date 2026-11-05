@@ -62,6 +62,19 @@ export function reasonTargetOf(
 }
 
 /**
+ * The addresses the send would add as new contacts, by the engine's settled
+ * answer. An answer still out, or one that failed, names none.
+ */
+export function newContactsOf(permission: ComposeSend["permission"]): string[] {
+  if (permission.asking || permission.unanswered) {
+    return [];
+  }
+  return (permission.preview?.recipients ?? [])
+    .filter((recipient) => recipient.new_contact === true)
+    .map((recipient) => recipient.address);
+}
+
+/**
  * What stands between the message and its send, in a band above the foot.
  * That is a reason for contact to choose, the engine's answer, a marketing
  * send to two addressees, or a refused send.
@@ -108,6 +121,7 @@ export function ComposeBlockers({
           to={fields.to}
           cc={fields.cc}
           context={send.claimedContext}
+          newContacts={newContactsOf(send.permission)}
         />
       )}
       {/* A channel reply asks no preview, so its status is only ever a

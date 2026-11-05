@@ -62,6 +62,8 @@ function inlineHTML(node: Inline): string {
   switch (node.kind) {
     case "text":
       return escapeHtml(node.text).replaceAll("\n", "<br>");
+    case "break":
+      return "<br>";
     case "code":
       return `<code>${escapeHtml(node.text)}</code>`;
     case "strong":

@@ -1736,8 +1736,8 @@ export interface paths {
          *     Anyone who can read the contact can read the recorded row. Both seats must be live
          *     members of the workspace and must differ.
          *
-         *     Recording the same pair for the same contact twice answers `409`. Recording is a
-         *     human's claim about two colleagues, so no agent tool does it.
+         *     Recording the same pair for the same contact twice answers `409`. Recording is a claim
+         *     about two colleagues, so an agent records one only when its user says it happened.
          */
         post: operations["recordIntroduction"];
         delete?: never;
@@ -3923,8 +3923,8 @@ export interface paths {
         put?: never;
         /**
          * Approve, pay, or void one entry.
-         * @description Human-only. Approving and paying commit money to a partner, and voiding takes it
-         *     back; none is a decision an assistant makes on someone's behalf.
+         * @description Approving and paying commit money to a partner, and voiding takes it back. An agent asks
+         *     its user first, and the audit row names it.
          *
          *     `void` requires a reason and writes a reversal row alongside the void, so the
          *     ledger records what was undone and why rather than losing the original.
@@ -4591,10 +4591,7 @@ export interface paths {
         /** The decisions recorded from a sales review, newest first, as tasks the reader may see. */
         get: operations["listSalesDecisions"];
         put?: never;
-        /**
-         * Record a decision from a sales review as a task on its deal. An open decision with the
-         *     same text on the same deal is returned instead of a second one.
-         */
+        /** Record a decision from a sales review as a task on its deal. An open decision with the same text on the same deal is returned instead of a second one. */
         post: operations["recordSalesDecision"];
         delete?: never;
         options?: never;
@@ -4628,13 +4625,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * The Sales review's assessment of one selection: a few sentences on what the measured
-         *     figures show, each citing the cells it rests on, and one next decision on a deal the
-         *     reader may see. Written by the model and kept per reader until the figures or the
-         *     recorded decisions move; without a model, or when the model's reply cannot be grounded,
-         *     it answers no sentences and `generated_by` says so, and the page shows its own summary.
-         */
+        /** The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see. Written by the model and kept per reader until the figures or the recorded decisions move; without a model, or when the model's reply cannot be grounded, it answers no sentences and `generated_by` says so, and the page shows its own summary. */
         post: operations["assessSalesReview"];
         delete?: never;
         options?: never;
@@ -4651,13 +4642,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * A sales initiative or a custom report proposed from a description in plain words:
-         *     the filters, metrics and charts the words name, resolved against what the reader may
-         *     use, with the phrase each came from, the questions the words leave open and the phrases
-         *     nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
-         *     a model it answers 409 `ai_not_configured`.
-         */
+        /** A sales initiative or a custom report proposed from a description in plain words: the filters, metrics and charts the words name, resolved against what the reader may use, with the phrase each came from, the questions the words leave open and the phrases nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without a model it answers 409 `ai_not_configured`. */
         post: operations["proposeReportSetup"];
         delete?: never;
         options?: never;
@@ -4672,12 +4657,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * The accounts at risk in one population: single-threaded deals, accounts in pipeline
-         *     nobody has exchanged a word with, and won accounts gone silent. Each row carries the
-         *     facts behind its verdict. Counts for every view come with each answer; rows come for
-         *     the view asked for. The thresholds are the framework's, and the answer prints them.
-         */
+        /** The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them. */
         get: operations["getAccountCoverage"];
         put?: never;
         post?: never;
@@ -6637,10 +6617,13 @@ export interface paths {
          *
          *     Two refusals are specific to naming your own addressees and your own links:
          *
-         *     - every address in `to`/`cc` must belong to a contact the sender can READ, or the send is
-         *       refused 422 `recipient_not_on_file` naming the address — a fix the composer can offer
-         *       ("attach this address to a contact"), rather than mail to a string nobody is
-         *       accountable for;
+         *     - an address in `to`/`cc` that no contact or lead holds gets a new contact first, owned by
+         *       the sender and committed before the message is checked and staged. An address a record
+         *       already holds is never filed twice, and a lead stays a lead. Every address must then
+         *       belong to a contact or lead the sender can READ, or the send is refused 422
+         *       `recipient_not_on_file` naming the address. That is an address on a record the sender
+         *       cannot see, or one no contact may be made for: an erased address, a colleague's, a
+         *       sending system's, or any new address when the sender may not create contacts;
          *     - every entry in `links` is row-scope probed, so a record the caller cannot see is
          *       refused 404 exactly as reading it directly would be.
          *
@@ -9263,7 +9246,7 @@ export interface paths {
         /**
          * Count and sample what a filter would select, before it is saved (LVS-EXT-9).
          * @description The match count and one bounded page for a candidate filter tree —
-         *     the filter a human is still editing, which nothing else in the contract
+         *     the filter a user is still editing, which nothing else in the contract
          *     can evaluate. The object list operations take flat scalar parameters and
          *     cannot express a tree; membership needs a stored list; and the filtered
          *     export is audit-logged, so driving a live recount through it would write
@@ -9272,7 +9255,7 @@ export interface paths {
          *     POST because the filter tree is a structured body, not because anything
          *     is created. Nothing is: no row, no audit entry, no outbox event. That is
          *     the property that separates this from the export, and it is deliberate —
-         *     a preview a human triggers by typing must not be indistinguishable from
+         *     a preview a user triggers by typing must not be indistinguishable from
          *     an extraction they chose to perform.
          *
          *     Row-scoped like every read: the count and the page are what THIS caller
@@ -9305,8 +9288,8 @@ export interface paths {
          * Propose filter clauses for a list described in plain words.
          * @description Reads a sentence ("companies in Germany with no activity in the last 45 days")
          *     and answers the filter tree it describes, for the builder to show as ordinary
-         *     editable clauses. Nothing is saved: a human reads the proposal, sees the match
-         *     count the preview answers for it, and presses Save themselves.
+         *     editable clauses. Nothing is saved: the reader looks at the proposal, sees the match
+         *     count the preview answers for it, and saves it themselves.
          *
          *     **The model proposes, the engine decides.** The model sees the record type,
          *     the sentence, this caller's own filter vocabulary (field names, types,
@@ -11803,8 +11786,8 @@ export interface paths {
         put?: never;
         /**
          * Keep an address or a domain out of capture.
-         * @description A `workspace` rule takes admin or ops; a `user` rule takes any human seat and names the
-         *     caller. Not retroactive: mail already captured stays. Idempotent on the folded value.
+         * @description A `workspace` rule takes admin or ops; a `user` rule takes any user or their agent and names
+         *     the caller. Not retroactive: mail already captured stays. Idempotent on the folded value.
          */
         post: operations["createCaptureExclusion"];
         delete?: never;
@@ -12080,7 +12063,7 @@ export interface paths {
         put?: never;
         /**
          * Keep one party's mail to the contacts on it.
-         * @description Any human seat, for their own mail only — the hold names the caller and binds their
+         * @description Any user or their agent, for their own mail only — the hold names the caller and binds their
          *     connections. A domain hold covers its subdomains.
          *
          *     Holds mail captured from here on. Narrowing what is ALREADY captured is a separate call:
@@ -12182,7 +12165,7 @@ export interface paths {
         put?: never;
         /**
          * Declare another address as your own.
-         * @description Takes a human seat and nothing more: claiming your own address needs no grant, and the claim
+         * @description Takes a user or their agent and nothing more: claiming your own address needs no grant, and the claim
          *     binds only your own mail. Not retroactive — mail already captured under the old reading
          *     stays, and a contact already minted from an alias stays until it is merged or removed.
          *     Idempotent on the folded value.
@@ -12456,7 +12439,8 @@ export interface paths {
          *     performed — the user removes the grant at the provider themselves. The stored credential
          *     IS deleted from the vault as part of this call, not merely retired for a later sweep.
          *     Idempotent. Already-captured activities are retained — they are real history; capture
-         *     simply stops. Human-only.
+         *     simply stops. Connecting again needs the provider's consent in a browser, so an agent asks
+         *     its user first.
          */
         post: operations["disconnectConnector"];
         delete?: never;
@@ -12495,7 +12479,7 @@ export interface paths {
          *
          *     Switched off, nothing from this mailbox is selected for the pass at all — the mail is
          *     not read for enrichment and then discarded, it is never read. Audited like every other
-         *     change to a connection. Human-only: an agent never changes a capture posture.
+         *     change to a connection.
          */
         put: operations["setConnectorSignatureEnrichment"];
         post?: never;
@@ -12580,7 +12564,7 @@ export interface paths {
         put?: never;
         /**
          * Dismiss the owner's current mailbox silence warning.
-         * @description Only the authenticated human owner's mailbox is changed. Dismissal lasts until
+         * @description Only the authenticated owner's mailbox is changed. Dismissal lasts until
          *     another mail delivery followed by three days of silence. Errors and stalled syncs
          *     cannot be dismissed. Repeating a dismissal of the same episode is harmless.
          *     The connection lifecycle audit records this setting without correspondence.
@@ -12628,8 +12612,8 @@ export interface paths {
          *     The posture governs mail captured AFTERWARDS. `apply_to_history` additionally narrows what
          *     this mailbox already brought in, which emits one `activity.updated` per row whose audience
          *     moved; it never widens, and `selected` rows are left alone. Widening history back is a
-         *     separate, deliberate call. Human-only: an agent never decides what a contact's colleagues
-         *     may read of their correspondence.
+         *     separate, deliberate call. It decides what the owner's colleagues may read of their
+         *     correspondence, so an agent asks its user first.
          */
         put: operations["setConnectorMailPosture"];
         post?: never;
@@ -12678,7 +12662,7 @@ export interface paths {
          *
          *     A null `date` clears it. Setting, moving or clearing the date completes, archives and
          *     deletes nothing: it changes which new automatic suggestions are admitted. Audited like
-         *     every other change to a connection. Human-only, like every per-mailbox setting.
+         *     every other change to a connection.
          */
         put: operations["setConnectorHistoryBaseline"];
         post?: never;
@@ -12728,9 +12712,6 @@ export interface paths {
          *     It governs what this connector creates AFTERWARDS. Records already captured keep the
          *     filing they have — refiling a year of history under a word chosen today would claim
          *     they arrived with it.
-         *
-         *     Human-only: which word a source is filed under is a decision about a shared
-         *     vocabulary, not one an agent makes as a side effect of syncing.
          */
         put: operations["setConnectorContextTag"];
         post?: never;
@@ -14186,7 +14167,7 @@ export interface paths {
         put?: never;
         /**
          * Add a consumer-mail domain, or carve one out.
-         * @description Human session only — an agent never changes a workspace-wide capture posture. `kind:
+         * @description It changes a workspace-wide capture posture, so an agent asks its user first. `kind:
          *     extra` marks a domain the baseline missed as consumer mail; any seat holding
          *     `capture_settings:create` (every seeded role but read_only) may contribute a NEW one.
          *     `kind: never` takes a domain back out of the baseline and wins over it — the only way
@@ -14254,12 +14235,11 @@ export interface paths {
          *     same answer — so it stays open until new mail arrives or somebody here answers it. Without this list those rows are invisible, and a company that never
          *     appeared looks the same as one nobody ever asked about.
          *
-         *     Every role may read the list; changing an entry demands `company:update`
-         *     (admin/ops).
+         *     Every role may read the list; changing an entry demands `company:update`.
          */
         get: operations["listBlockedDomains"];
         /**
-         * Block a domain, or unblock one (admin/ops).
+         * Block a domain, or unblock one.
          * @description `admission: suppressed` refuses the domain a company; `admission: admitted` lets it in
          *     and KEEPS it in — a human decision is sticky, so no later verdict or heuristic may
          *     re-refuse a domain a contact deliberately admitted.
@@ -14395,7 +14375,7 @@ export interface paths {
          *     It does not destroy mail already captured. Purging what a rule matched is
          *     `POST /capture/exclusions/{id}/purge`, a separate and irreversible act.
          *
-         *     Takes a human seat and nothing more, because a personal exclusion is the caller's own
+         *     Takes a user or their agent and nothing more, because a personal exclusion is the caller's own
          *     boundary. Idempotent: pressing it twice answers the rule that already exists.
          */
         post: operations["discardDomainQuestion"];
@@ -15817,8 +15797,8 @@ export interface paths {
          * @description Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
          *     when it falls due.
          *
-         *     Gated on `privacy_request` at `read` and human-only, the same gate the subject-request
-         *     queue uses. A notice case says how a named contact was obtained and whether we have told
+         *     Gated on `privacy_request` at `read`, for a user or their agent, the same gate the
+         *     subject-request queue uses. A notice case says how a named contact was obtained and whether we have told
          *     them, which is the same disclosure that queue makes about who exercised a right — so an
          *     installation that delegated its privacy inbox delegated this with it, and no second grant
          *     has to be handed out.
@@ -15951,7 +15931,7 @@ export interface paths {
         };
         /**
          * Disclosure duties this installation owes, soonest deadline first.
-         * @description Acquisition-source reviews and notice duties, under human privacy-request read authority.
+         * @description Acquisition-source reviews and notice duties, under privacy-request read authority.
          *     Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
          *     when their acquisition date is unknown, the deadline is labelled as a latest possible bound.
          *     Pages use due time for duties and recorded time for reviews, with id as the tie-breaker.
@@ -16061,7 +16041,7 @@ export interface paths {
          *     A caller holding neither door receives 404 rather than 403, because "forbidden" would
          *     confirm the id exists and disclose a message the caller may not see.
          *
-         *     Human-only. An agent that could read these would enumerate one seat's refused correspondence.
+         *     A connector is refused, because it would enumerate one seat's refused correspondence.
          */
         get: operations["getCommunicationReview"];
         put?: never;
@@ -16138,11 +16118,11 @@ export interface paths {
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
-         *     HUMAN-ONLY, AND THAT IS THE POINT. An agent running under somebody's passport inherits their
-         *     grants, so without this an agent could mint the very record that says a human decided. It
-         *     also needs the `communication_exception` object at `create`: directing a send is its own
-         *     authority, and a seat that may edit a contact has not thereby been given the right to act
-         *     against the engine's answer about them.
+         *     THE DECISION IS THE USER'S. A user's agent may carry it out, and asks that user first. The
+         *     row names that user as the one who took it on, and names the agent that acted for them. A
+         *     connector may not. It also needs the `communication_exception` object at `create`: directing
+         *     a send is its own authority, and a seat that may edit a contact has not thereby been given
+         *     the right to act against the engine's answer about them.
          *
          *     The acknowledgement is required and the explanation must say something. Both are frozen on
          *     the record once written: an account of an override that its author could improve afterwards
@@ -16672,6 +16652,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/existing-customer-notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The collection-notice declarations the existing-customer route reads.
+         * @description Needs `consent_config:read`. Live declarations first, then withdrawn ones, newest first.
+         *     UNPAGED: an installation declares a handful, one per customer group.
+         *
+         *     Where the recipient's country grants an existing-customer route (Germany, UWG §7(3)), a
+         *     marketing send to a contact without consent goes out when all of these hold: an offer
+         *     the sending entity issued was accepted, and the contact was its buyer before the
+         *     acceptance (the deal's economic buyer, or a billing contact of the offer's buyer company);
+         *     a live declaration of that entity covers the moment of acceptance (`covers_from`); the
+         *     declaration names the send's marketing purpose; and the contact has not objected. An
+         *     offer that names no issuing entity counts for none. The send then records the basis
+         *     `existing_customer_exception`.
+         */
+        get: operations["listExistingCustomerNotices"];
+        put?: never;
+        /**
+         * Declare that a group of customers was told at collection that they may object to advertising.
+         * @description Needs `consent_config:create`, and a signed-in user: an agent cannot declare evidence.
+         *     A declaration is never edited; to correct one, withdraw it and declare again.
+         *
+         *     `effective_from` may lie in the past, so customers won before the declaration was made
+         *     qualify where the notice was given then. It may not lie in the future. A sale before the
+         *     day of the declaration counts only with proof: `evidence_reference` names where the dated
+         *     proof is kept, and `evidence_dated_at` is the date it bears; no sale before that date
+         *     counts. The two are given together or not at all. `effective_until`
+         *     is exclusive and optional; without it the notice is still given. Every purpose must be a
+         *     marketing purpose. An archived legal entity is refused as 422.
+         */
+        post: operations["declareExistingCustomerNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/existing-customer-notices/{id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw a collection-notice declaration, with a reason.
+         * @description Needs `consent_config:update`. From now on no send rests on it. A send already made on
+         *     it keeps its own decision record. A declaration already withdrawn, or one that does not
+         *     exist, answers 404.
+         */
+        post: operations["withdrawExistingCustomerNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/retention/settings": {
         parameters: {
             query?: never;
@@ -16757,7 +16805,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Pin a record to the retention floor, restricting it. Requires a stated reason; audited. */
+        /** Pin an activity to the retention floor, restricting it. Requires a stated reason; audited. */
         post: operations["pinActivityToFloor"];
         delete?: never;
         options?: never;
@@ -16962,10 +17010,10 @@ export interface paths {
          *     types it, because Art. 21 gives the right to the data subject and a rep relaying the call
          *     is a courier rather than its author.
          *
-         *     **Nothing lifts it today.** No seat outranks the subject, and the subject-initiated
-         *     reversal that would let them take it back is not built yet — the preference centre writes
-         *     consent state and never touches a suppression. Record one only when the contact actually
-         *     asked for it: a mistake currently needs a database correction, not a product action.
+         *     **A mistake is corrected by an admin.** No seat outranks the subject, so a rep cannot take
+         *     one back. An admin may correct an objection a colleague recorded by mistake, with a reason
+         *     (`liftSuppression`). An objection the contact recorded themselves on a link stays until they
+         *     change it.
          *
          *     Two kinds are recordable here. `subject_request` is "stop contacting me", and it stops
          *     every category except the three the controller owes regardless of what the subject wants
@@ -17008,14 +17056,52 @@ export interface paths {
          *     admin's is liftable by an admin other than by the one who set it only through this
          *     same rule.
          *
-         *     **Nothing lifts the subject's own act.** An Art. 21 objection and a withdrawal are
-         *     theirs, not the installation's, so no seat reaches them here whatever their role.
+         *     **Nothing lifts the subject's own act.** An Art. 21 objection the contact recorded on a
+         *     link in a mail is theirs, not the installation's, so no seat reaches it here whatever
+         *     their role. One exception: an admin may correct a marketing objection a colleague
+         *     recorded by mistake. The reason is required and the audit row records the correction. The
+         *     admin makes it signed in themselves; an agent working for them cannot.
+         *
+         *     **No seat lifts a processing restriction here.** Lifting one owes the contact notice
+         *     first, and Margince sends no such notice yet.
+         *
+         *     `listContactStops` answers, per stop, whether this caller may lift it and why not.
          *
          *     A row already revoked, belonging to another subject, or never in existence all answer
          *     `404` alike: a caller learns nothing about rows they would not have been allowed to
          *     touch either way.
          */
         post: operations["liftSuppression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/stops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List the stops that stand on this contact, and which ones you may take back.
+         * @description Every live suppression the send check reads for this contact: the contact's own stops and
+         *     the stops held on one of its live addresses. Newest first.
+         *
+         *     `may_lift` is the answer `liftSuppression` would give this caller, from the same rule. An
+         *     admin may correct a marketing objection a colleague recorded by mistake (`correction`);
+         *     one the contact recorded themselves stays until they change it. No seat lifts a processing
+         *     restriction here, because lifting one owes the contact notice first and Margince sends no
+         *     such notice yet.
+         */
+        get: operations["listContactStops"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -17324,7 +17410,7 @@ export interface paths {
          *     whether an ordinary business email may be sent — which is the question the
          *     confirm-your-details flow has to answer before it can send anything at all.
          *
-         *     Human-only. An agent never asserts that a contact met somebody or rang up.
+         *     An agent asks its user first, and its row names it, because the row is evidence.
          */
         post: operations["recordQualifyingEvent"];
         delete?: never;
@@ -17355,8 +17441,8 @@ export interface paths {
          *     POST /contacts/{id}/acquisition-request/retract, for the request the contact's acquisition
          *     records. Recording the same exchange again returns the withdrawn row and does not revive it.
          *
-         *     Human-only for the reason recording is: the exchange is a human's own statement about what
-         *     a contact said, and only a human withdraws it.
+         *     Open to a user's agent as recording is, and the agent asks first: the exchange is the
+         *     user's statement about what a contact said.
          */
         post: operations["retractQualifyingEvent"];
         delete?: never;
@@ -17385,8 +17471,8 @@ export interface paths {
          *     contact was obtained, with the moment and the seat that withdrew the request. No send rests
          *     on them any more, including a message already queued on them.
          *
-         *     Human-only for the reason a hand-recorded request is: a request is a human's statement about
-         *     what a contact said, and only a human withdraws it.
+         *     Open to a user's agent as a hand-recorded request is, and the agent asks first: a request
+         *     is the user's statement about what a contact said.
          */
         post: operations["retractAcquisitionRequest"];
         delete?: never;
@@ -23299,10 +23385,8 @@ export interface paths {
          *     that `version` changes nothing and answers 200.
          *
          *     Supersede and `import_source_busy` work as they do for
-         *     `createImportRun`. This call never answers `import_agent_busy`: only a
-         *     human session calls it, and the test it queues is that human's. That
-         *     409 holds an agent to one test at a time, and an agent tests through
-         *     `createImportRun`, which documents it.
+         *     `createImportRun`, including `import_agent_busy`, which holds an agent to
+         *     one test at a time.
          */
         post: operations["validateImportRun"];
         delete?: never;
@@ -26089,7 +26173,8 @@ export interface components {
             company_name?: string;
             /**
              * @description What decided it, or — for an `undecided` domain — what stopped the machine deciding.
-             *     `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+             *     `human` decisions outrank every other. `agent`, an agent deciding for its user, outranks
+             *     every machine one. `unevidenced` means nothing the crawl
              *     found named a company; `stale_evidence` means the newest mail from the domain is too
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
@@ -26097,7 +26182,7 @@ export interface components {
              *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -30224,6 +30309,8 @@ export interface components {
         };
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
+            /** @description The live request the contact's acquisition records: they asked for a quote or a meeting, or gave permission in person. A send may rest on it with no age limit until somebody takes it back (`retractAcquisitionRequest`). Served on a read of one contact; absent when there is none or it was taken back, and on lists. */
+            readonly acquisition_request?: components["schemas"]["ContactAcquisitionRequest"];
             /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
@@ -33404,7 +33491,7 @@ export interface components {
              *     `reason_at` when the date is known.
              * @enum {string}
              */
-            reason_code: "objection" | "suppressed_objection" | "suppressed_restricted" | "suppressed_subject_request" | "suppressed_hard_bounce" | "suppressed" | "contract_notice" | "no_call_path" | "said_we_may_write" | "unconfirmed_double_opt_in" | "no_connection" | "qualifying_event" | "consent_confirmed" | "consent_withdrawn" | "no_consent_exception_not_offered" | "no_consent";
+            reason_code: "objection" | "suppressed_objection" | "suppressed_restricted" | "suppressed_subject_request" | "suppressed_hard_bounce" | "suppressed" | "contract_notice" | "no_call_path" | "said_we_may_write" | "unconfirmed_double_opt_in" | "no_connection" | "qualifying_event" | "consent_confirmed" | "consent_withdrawn" | "no_consent_exception_not_offered" | "no_consent" | "existing_customer";
             /**
              * Format: date-time
              * @description When the objection behind an `objection` reason was recorded, when the record carries it.
@@ -33420,6 +33507,12 @@ export interface components {
          *     6(1)(f) balancing accountable rather than merely asserted.
          */
         ConsentQualifyingEvent: {
+            /**
+             * Format: uuid
+             * @description Set on an exchange a colleague recorded by hand (`in_person` or `requested_by_subject`),
+             *     the one kind POST /contacts/{id}/consent/qualifying-events/{event_id}/retract takes back.
+             */
+            id?: string;
             /** @enum {string} */
             kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting" | "requested_by_subject";
             /** Format: date-time */
@@ -37007,7 +37100,7 @@ export interface components {
              * @description When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
              */
             assessed_at: string;
-            /** @description What recorded this assessment: `human` for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading. */
+            /** @description What recorded this assessment: `human` for a user, `agent` for the agent acting for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading. */
             readonly source: string;
             /** @description Who is on record as having judged it, when that is not whoever typed it in. */
             readonly source_author?: string;
@@ -39908,6 +40001,12 @@ export interface components {
              *     close: a refused `active_deal_followup` claim asks for the deal, not for consent.
              */
             requested_category?: components["schemas"]["CommunicationContext"];
+            /**
+             * @description No contact or lead holds this address yet. Sending makes a contact for it, owned by
+             *     the sender, before the message is checked, and this answer is the one that new
+             *     contact gets. Absent or false for an address a record already holds.
+             */
+            new_contact?: boolean;
             /** @description The lawful ground an allow would rest on. */
             basis?: string;
             /**
@@ -48527,6 +48626,11 @@ export interface components {
              * @default false
              */
             requires_double_opt_in: boolean;
+            /**
+             * @description What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
+             * @enum {string}
+             */
+            class?: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
             /** Format: date-time */
             created_at: string;
         };
@@ -48535,6 +48639,62 @@ export interface components {
             label: string;
             /** @default false */
             requires_double_opt_in: boolean;
+        };
+        ExistingCustomerNotice: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The sending entity that collected the addresses.
+             */
+            legal_entity_id: string;
+            /** @description Which customers the declaration covers, in words. */
+            customer_group: string;
+            /** @description How their addresses were collected, for example the web shop checkout. */
+            collection_channel: string;
+            /** @description The notice the customers saw when their address was collected. */
+            notice_text: string;
+            /** Format: date-time */
+            effective_from: string;
+            /**
+             * Format: date-time
+             * @description Exclusive end of the period. Null while the notice is still given.
+             */
+            effective_until?: string | null;
+            /** @description Where the dated proof of the notice is kept, for example an archived copy of the checkout page. */
+            evidence_reference?: string | null;
+            /**
+             * Format: date-time
+             * @description The date the proof bears.
+             */
+            evidence_dated_at?: string | null;
+            /**
+             * Format: date-time
+             * @description The first moment a sale counts: `effective_from`, but no earlier than `evidence_dated_at`, and without proof no earlier than `created_at`.
+             */
+            covers_from: string;
+            /** @description The marketing purposes that advertise goods or services like the ones these customers bought. */
+            purpose_ids: string[];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            withdrawn_at?: string | null;
+            withdrawn_reason?: string | null;
+        };
+        DeclareExistingCustomerNoticeRequest: {
+            /** Format: uuid */
+            legal_entity_id: string;
+            customer_group: string;
+            collection_channel: string;
+            notice_text: string;
+            /** Format: date-time */
+            effective_from: string;
+            /** Format: date-time */
+            effective_until?: string | null;
+            evidence_reference?: string | null;
+            /** Format: date-time */
+            evidence_dated_at?: string | null;
+            purpose_ids: string[];
         };
         /**
          * @description An authorable retention scope (GCS-PARAM-8) — a `(object_type, category)` pair the nightly
@@ -51581,6 +51741,65 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
+        /** @description A request to hear from us that the contact's acquisition records. */
+        ContactAcquisitionRequest: {
+            /** @description Which requests stand. Taking the request back withdraws all of them. */
+            kinds: ("requested_quote_or_meeting" | "in_person_permission")[];
+            /**
+             * Format: date-time
+             * @description When the earliest of them happened. Null when nobody recorded the time.
+             */
+            occurred_at?: string | null;
+        };
+        /** @description One live stop on a contact, and whether the caller may take it back. */
+        ContactStop: {
+            /**
+             * Format: uuid
+             * @description The stop. `liftSuppression` takes this id.
+             */
+            id: string;
+            /**
+             * @description `subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`. A
+             *     kind from a newer server is shown as a stop of unknown kind.
+             */
+            kind: string;
+            /**
+             * @description Whose decision the stop is. `subject` is the contact's own, whoever typed it.
+             * @enum {string}
+             */
+            authority: "machine" | "user" | "admin" | "subject";
+            /** @description The one purpose a narrow stop binds. Null for a stop on every purpose of its kind. */
+            purpose_key?: string | null;
+            /** @description The address a stop is held on. Null for a stop on the contact. */
+            address?: string | null;
+            /** @description What the colleague or the contact wrote when the stop was recorded. Null when nothing was written. */
+            reason?: string | null;
+            /** Format: date-time */
+            recorded_at: string;
+            /**
+             * @description A colleague recorded the stop. False when the contact recorded it on a link in a mail or
+             *     Margince recorded it, for example for a bounce.
+             */
+            recorded_by_colleague: boolean;
+            /** @description The colleague's current name. Null when no colleague recorded it, or their seat is gone. */
+            recorded_by_name?: string | null;
+            /** @description This caller may take the stop back now, with a reason. */
+            may_lift: boolean;
+            /**
+             * @description Taking it back corrects a stop a colleague recorded by mistake: a marketing objection,
+             *     which only an admin may correct. The audit row records the correction.
+             */
+            correction: boolean;
+            /**
+             * @description Why `may_lift` is false. `permission`: you may not change this contact, or you are not
+             *     signed in to a seat. `address`: a stop on an address clears when mail to it works
+             *     again. `restriction`: lifting it owes the contact notice first, which Margince cannot
+             *     send yet. `subject_decision`: the contact set it and only they change it. `level`: it
+             *     was recorded at your level or above. Null when `may_lift` is true.
+             * @enum {string|null}
+             */
+            lift_blocked_by?: "address" | "restriction" | "subject_decision" | "level" | "permission" | null;
+        };
         /** @description The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes. */
         RecordedOverride: {
             /**
@@ -52133,6 +52352,12 @@ export interface components {
              *     the basis needs. Never true without a basis.
              */
             replan_recommended: boolean;
+            /**
+             * @description True when the standing call this coverage reads has an open input-check finding
+             *     because the pipeline moved since it was made. Present only beside the `manager_call`
+             *     basis.
+             */
+            call_needs_review?: boolean;
         };
         TeamWeeklyStaleDeal: {
             /** Format: uuid */
@@ -58500,7 +58725,7 @@ export interface operations {
                      * @description The activity the message follows up, such as the meeting a follow-up is sent after. The writer reads it first, above the recent conversation, with the deal it is filed under. It must be an activity whose content the caller may read; any other id is `422` on `about_activity_id`, the same answer whether it does not exist or is out of reach.
                      */
                     about_activity_id?: string | null;
-                    /** @description Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address nobody on file holds. */
+                    /** @description Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address the sender cannot write to. */
                     also_to?: string[];
                 };
             };
@@ -70744,6 +70969,14 @@ export interface operations {
             query?: never;
             header?: {
                 /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+                /**
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -70868,6 +71101,14 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
                 /**
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
@@ -81975,6 +82216,90 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listExistingCustomerNotices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The declarations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ExistingCustomerNotice"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    declareExistingCustomerNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclareExistingCustomerNoticeRequest"];
+            };
+        };
+        responses: {
+            /** @description The declaration as stored. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExistingCustomerNotice"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    withdrawExistingCustomerNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The withdrawn declaration. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExistingCustomerNotice"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getRetentionSettings: {
         parameters: {
             query?: never;
@@ -82545,7 +82870,7 @@ export interface operations {
                      * @description Which stop this is. `subject_request` is "stop contacting me" and reaches every
                      *     category but the three the controller owes anyway. `marketing_objection` is
                      *     Art. 21(2), reaches marketing only, and is recorded at the subject's own
-                     *     authority so no seat can lift it.
+                     *     authority, so only an admin correcting a mistake can lift it.
                      * @enum {string}
                      */
                     kind: "subject_request" | "marketing_objection";
@@ -82605,6 +82930,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listContactStops: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stops that stand. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        stops: components["schemas"]["ContactStop"][];
+                    };
+                };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
