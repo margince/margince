@@ -181,6 +181,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.
 - [ai-certification.md](reference/ai-certification.md): which AI features each model passed. Generated.
+- [mcp-parity.md](reference/mcp-parity.md): how much of the web app an agent can do through MCP. Generated.
 - [mcp-tool-roles.md](reference/mcp-tool-roles.md): which role can use which MCP tool, measured by a test. Generated.
 - [mcp-tool-coverage.md](reference/mcp-tool-coverage.md): which MCP tools the tests use, and how they
   score. Generated.

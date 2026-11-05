@@ -93,7 +93,7 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 		if err != nil {
 			return err
 		}
-		reason, contextErr := changedScheduledContext(ctx, tx, in, claimed.CreatedAt)
+		reason, contextErr := changedScheduledContext(ctx, tx, in, origin.anchor.UUID, claimed.CreatedAt)
 		if contextErr != nil {
 			if held, known := holdReasonFor(contextErr); known {
 				out.Held = held

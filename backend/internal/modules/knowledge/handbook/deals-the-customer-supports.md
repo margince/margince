@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -80,6 +80,29 @@ Margince leaves a value alone in these cases:
 - The price is in another currency and no exchange rate is stored for it.
 - Something on the deal changed while Margince was reading it. The deal is
   read again the next night.
+
+When a check changed nothing, the deal's **Changes by Margince** card says when
+it ran and when the next one is due. The owner also sees why each value stayed
+and what came of each source: mail, meetings, calls, notes and offers. A source
+is read, private (only items not everyone may read, so they were left out), not
+read on time (the mailbox), or empty. Anyone else sees only that the check ran,
+and so does an agent acting for the owner.
+
+Margince does not read a deal with no owner, or one whose owner is not an
+active member: they left, are invited, suspended or archived. Team leads see
+these deals under **Changes by Margince on your team**, each linked, so someone
+can give it an owner.
+
+That panel's **Value moved** column is how much value each kind of change
+moved, in the base currency. An amount change moves its difference. A close as
+lost takes the deal's value out of the pipeline, and a new or reopened deal
+puts it in. A new win probability or stage moves the amount times the change
+in probability. A new close date moves nothing. An undone change counts
+nothing.
+
+Each move is valued from the deal as it was when Margince changed it, so a
+later edit does not change it. Some changes cannot be priced: an amount you may
+not see, or one with no exchange rate. The panel leaves them out and says so.
 
 A price in another currency is converted into the deal's currency at the stored
 rate, through the base currency. It is rounded to whole units. The receipt

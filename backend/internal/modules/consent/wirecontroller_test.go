@@ -9,8 +9,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// The page names the controller by the rule a mail's disclosure line uses, so
-// a name with no address is not shown as an identity on either.
+// The page names the controller by the rule a mail's disclosure line uses. So
+// a name with no address is shown as an identity on neither.
 func TestThePageAndTheMailAgreeOnWhatNamesTheController(t *testing.T) {
 	t.Parallel()
 	if got := wireController(ControllerParticulars{LegalName: "Beispiel GmbH"}); got != nil {

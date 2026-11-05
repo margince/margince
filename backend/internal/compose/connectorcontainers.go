@@ -45,7 +45,7 @@ func (h connectorHandlers) ListConnectorContainers(w http.ResponseWriter, r *htt
 		return
 	}
 	actor, ok := principal.Actor(r.Context())
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnauthorized,
 			Code:   codeUnauthorized,

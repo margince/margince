@@ -96,8 +96,9 @@ var updateRecordCopy = toolCopy{
 		"An activity moved to another day keeps its time of day unless the user names one; " +
 		`moving a date-only one, send occurred_precision "day" again, or it reads as a time.` +
 		meetingStatusRule,
-	Instead: "Use progress_deal to move a deal between stages, and relink_activity " +
-		"to change what an activity is about; neither is a field edit.",
+	Instead: "Use progress_deal to move a deal between stages, relink_activity " +
+		"to change what an activity is about, and change_compliance when a contact gave consent " +
+		"or asked to stop; none is a field edit.",
 	Retain: "Send if_version with the version you read. If the call comes back staged, keep its " +
 		"approval id to retry the same change once a human has released it.",
 }

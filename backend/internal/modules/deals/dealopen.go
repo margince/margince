@@ -54,6 +54,9 @@ type OpenSuggestedDealInput struct {
 	Amount func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (*int64, *string, error)
 	// Record writes the entry on the deal's timeline, in the same transaction.
 	Record func(ctx context.Context, tx pgx.Tx, deal, correction ids.UUID) error
+	// AsOwner binds the owner's agent as of the opening's transaction, so a
+	// role change or suspension that committed before it stops the opening.
+	AsOwner OwnerAuthorityTx
 }
 
 // OpenSuggestedDeal opens the suggested deal for the company's owner, and
@@ -68,6 +71,12 @@ func (s *Store) OpenSuggestedDeal(ctx context.Context, in OpenSuggestedDealInput
 	}
 	var opened ids.UUID
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		ctx, may, err := actAsOwnerNow(ctx, tx, in.AsOwner, func(ctx context.Context) error {
+			return RequireSuggestionDecision(ctx, false)
+		})
+		if err != nil || !may {
+			return err
+		}
 		current, ready, err := s.openableSuggestion(ctx, tx, in)
 		if err != nil || !ready {
 			return err

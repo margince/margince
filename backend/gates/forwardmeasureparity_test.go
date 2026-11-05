@@ -39,7 +39,9 @@ var forwardMeasureSites = []struct {
 	// stored row read back keeps the word it was frozen under.
 	frozen bool
 }{
-	{"the landing a read returns", []string{"components", "schemas", "ForecastLanding"}, false},
+	// A shared snapshot frozen under the retired qualified forecast lands on the
+	// measure it was frozen under.
+	{"the landing a read returns", []string{"components", "schemas", "ForecastLanding"}, true},
 	{"the stored installation setting", []string{"components", "schemas", "InstallationSettings"}, false},
 	{"the settings patch", []string{"components", "schemas", "UpdateInstallationSettingsRequest"}, false},
 	// The weekly review's FROZEN measure. It records which measure a past week

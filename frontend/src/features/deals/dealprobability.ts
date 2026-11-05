@@ -9,8 +9,8 @@ import type { MessageKey } from "../../i18n/en";
 type Deal = components["schemas"]["Deal"];
 type Source = NonNullable<Deal["win_probability_source"]>;
 
-// The contract does not say who set a probability by hand, so the words do
-// not name anybody.
+// A probability a colleague set names them where the deal says who it was;
+// these are the words when it does not.
 const SOURCE_LABEL: Record<Source, MessageKey> = {
   stage: "deal.winProbability.source.stage",
   human: "deal.winProbability.source.human",
@@ -25,14 +25,22 @@ export type ProbabilityWords = Readonly<{
   stage?: string;
 }>;
 
-/** An open deal's win probability in words, or undefined when none is known. */
+/**
+ * An open deal's win probability in words, or undefined when none is known.
+ * A probability the reader set reads as theirs, a colleague's names them.
+ */
 export function probabilityWords(
   deal: Pick<
     Deal,
-    "win_probability" | "win_probability_source" | "stage_win_probability"
+    | "win_probability"
+    | "win_probability_source"
+    | "stage_win_probability"
+    | "win_probability_set_by_user_id"
+    | "win_probability_set_by_name"
   >,
   t: Translator,
   locale: Locale,
+  viewerId?: string,
 ): ProbabilityWords | undefined {
   if (deal.win_probability == null) {
     return undefined;
@@ -41,7 +49,7 @@ export function probabilityWords(
   const overridden = source !== undefined && source !== "stage";
   return {
     value: formatPercent(deal.win_probability / 100, locale),
-    source: source && t(SOURCE_LABEL[source]),
+    source: source && sourceWords(deal, source, t, viewerId),
     stage:
       overridden && deal.stage_win_probability != null
         ? t("deal.winProbability.stageValue", {
@@ -49,6 +57,28 @@ export function probabilityWords(
           })
         : undefined,
   };
+}
+
+function sourceWords(
+  deal: Pick<
+    Deal,
+    "win_probability_set_by_user_id" | "win_probability_set_by_name"
+  >,
+  source: Source,
+  t: Translator,
+  viewerId: string | undefined,
+): string {
+  const setter = deal.win_probability_set_by_user_id;
+  if (source !== "human" || !setter) {
+    return t(SOURCE_LABEL[source]);
+  }
+  if (viewerId && setter === viewerId) {
+    return t("deal.winProbability.source.you");
+  }
+  const name = deal.win_probability_set_by_name;
+  return name
+    ? t("deal.winProbability.source.colleague", { name })
+    : t(SOURCE_LABEL[source]);
 }
 
 type Advanced = Pick<components["schemas"]["DealAdvanced"], "probability_set">;

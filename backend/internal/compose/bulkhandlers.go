@@ -41,12 +41,14 @@ func newBulkEngine(db *database.DB, gate *auth.Gate) *bulkEngine {
 // volume meter, the one the tool registry charges an agent's changed records
 // to, so the change is admitted against the counter it is paid into.
 func (s *Server) wireBulkSurface(pool *pgxpool.Pool) {
-	s.bulkHandlers = bulkHandlers{engine: newBulkEngine(InstallationDB(pool),
-		auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter)))}
+	s.bulkHandlers = bulkHandlers{
+		companyContactShareHandlers: companyContactShareHandlers{db: InstallationDB(pool), grants: identity.NewService(pool)},
+		engine:                      newBulkEngine(InstallationDB(pool), auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter))),
+	}
 }
 
-// bulkHandlers is the REST door onto the bulk-change engine.
 type bulkHandlers struct {
+	companyContactShareHandlers
 	engine *bulkEngine
 }
 

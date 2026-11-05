@@ -45,7 +45,10 @@ var readAttentionCopy = toolCopy{
 var readReportsCopy = toolCopy{
 	Purpose: "Read sales reports. standard reads the standard metrics, saved reports and their " +
 		"frozen editions, and the open partner commission liability. run runs one of the named " +
-		"reports, grouped and filtered. evidence searches the passages behind a saved run.",
+		"reports, grouped and filtered. evidence searches the passages behind a saved run. " +
+		"company_coverage names deals with one contact, companies in pipeline nobody has talked to, " +
+		"and won companies gone silent. report_run_cell_records, analytics_cell_records and " +
+		"question_card_records name the records behind one figure.",
 	Limits: "Read only. Every figure names its coverage and when it was captured; quote both. " +
 		"read_workspace topic report_vocabulary names what each run report takes.",
 	Instead: "For a written section a reader keeps, such as a board pack, use read_analytics: " +
@@ -73,8 +76,9 @@ var changeActivitiesCopy = toolCopy{
 	Limits: "relink and relink_many run at once. Tell the user before you file under a project, " +
 		"which only a member can undo from the activity. attach checks the record first; read list_documents before " +
 		"attaching the same file again.",
-	Instead: "Use schedule_meeting to book a meeting still to come, and change_state with " +
-		"move_deal when the same event moves a deal, so move and note are one change.",
+	Instead: "Use schedule_meeting to book a meeting still to come, change_state with " +
+		"move_deal when the same event moves a deal, so move and note are one change, and " +
+		"change_reports record_decision for a sales review's decision, which a note cannot track.",
 	Retain: "Keep the activity id; a relink needs it. A staged answer's approval id is what " +
 		"the retry carries.",
 }
@@ -97,7 +101,9 @@ var changeStateCopy = toolCopy{
 		"closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal " +
 		"to a stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts a " +
 		"partner program on a company, with company_id, partner_kinds and optionally " +
-		"relationship_stage, next_step and next_step_due_at.",
+		"relationship_stage, next_step and next_step_due_at. record_project_health and " +
+		"correct_project_health say how a project is going, transfer_projects hands one owner's " +
+		"projects to another, and decide_commission approves, pays or voids a commission entry.",
 	Limits: "promote needs a trigger naming the engagement; cold outreach nobody answered " +
 		"never promotes. demote needs a reason and is refused once the contact owns a deal. " +
 		"set_up_partner always waits for a human, takes no margin tier (a human sets that on the " +
@@ -121,7 +127,10 @@ var readWorkspaceCopy = toolCopy{
 		"other topics name what a tool accepts: query (find_records engine query), analytics " +
 		"(read_analytics), record_fields (create_record and update_record), list_filters " +
 		"(find_records engine list), report_vocabulary (read_reports kind run), report_blocks " +
-		"(read_analytics step compose).",
+		"(read_analytics step compose). data_subject_requests, notice_cases, audit_log, legal_holds, " +
+		"restricted_records and record_history are the privacy queues and trail. capture_senders, " +
+		"held_threads, counterparty_holds, owner_identities and contacts_awaiting_decision are the " +
+		"user's own mail decisions.",
 	Limits: "A q matching nobody answers with every colleague and a warning. A stage's semantic, " +
 		"not its name, says whether it closes a deal. None of the name topics is a " +
 		"prerequisite: each tool refuses an unknown name with the accepted list.",

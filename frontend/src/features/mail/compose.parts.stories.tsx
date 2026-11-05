@@ -28,3 +28,10 @@ export const MultipleRecipients: Story = {};
 export const CopiedRecipient: Story = {
   args: { to: ["mira@example.com"], cc: ["alex@example.com"] },
 };
+export const NewAddress: Story = {
+  args: {
+    to: ["new.buyer@example.com"],
+    context: "precontract_quote",
+    newContacts: ["new.buyer@example.com"],
+  },
+};
