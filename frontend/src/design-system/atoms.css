@@ -2028,6 +2028,19 @@ span.error-line {
   font-weight: var(--fontWeightMedium);
   font-variant-numeric: tabular-nums;
 }
+/* A lead plate heads an Analytics card: its first figure is the one the view
+   leads with, and the rest stand a step under it (statstrip.tsx `lead`). */
+.stat-strip[data-lead] .stat-card-value {
+  font: var(--fontHeadingMedium);
+  font-variant-numeric: tabular-nums;
+}
+.stat-strip[data-lead] > :first-child .stat-card-value {
+  font: var(--fontDisplayFigure);
+  font-variant-numeric: tabular-nums;
+}
+.stat-strip[data-lead] .stat-card-basis::before {
+  font: var(--fontHeadingXXSmall);
+}
 
 /* Nothing left to declare between two adjacent StatCards. A free-standing card
    already carries a border on all four sides, so a divider spelled here as a

@@ -435,7 +435,7 @@ function PipelineTotals({
       ? undefined
       : (pricedFootnote(pricedDeals, count, locale, t) ?? undefined);
   return (
-    <StatStrip>
+    <StatStrip density="plate">
       <StatCard
         narrow="row"
         label={t("analytics.openDeals")}

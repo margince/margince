@@ -5,16 +5,17 @@ import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 import { Button, Disclosure, TableScroll } from "./atoms";
 import "./report-charts.css";
 
-import type {
-  ChartProps,
-  ChartReading,
-  GroupedBarsProps,
+import type { ChartProps, GroupedBarsProps } from "./report-charts.model";
+import {
+  areaUnder,
+  chartX,
+  lineSegments,
+  readingScale,
 } from "./report-charts.model";
-import { readingScale } from "./report-charts.model";
 
 export type { ChartReading } from "./report-charts.model";
 
-function ReadingTable({
+export function ReadingTable({
   readings,
   label,
   dataLabel,
@@ -67,28 +68,6 @@ function ReadingTable({
   );
 }
 
-function lineSegments(
-  readings: readonly ChartReading[],
-  field: "value" | "comparison",
-  width: number,
-  y: (value: number) => number,
-) {
-  const lines: string[] = [];
-  let points: string[] = [];
-  readings.forEach((reading, index) => {
-    const value = reading[field];
-    if (value == null) {
-      if (points.length) lines.push(points.join(" "));
-      points = [];
-    } else points.push(`${chartX(index, readings.length, width)},${y(value)}`);
-  });
-  if (points.length) lines.push(points.join(" "));
-  return lines;
-}
-
-function chartX(index: number, count: number, width: number) {
-  return 56 + (index / Math.max(1, count - 1)) * (width - 76);
-}
 // The plot's height in viewBox units, mirrored by `.report-chart-line`.
 const LINE_HEIGHT = { default: 238, compact: 130 } as const;
 
@@ -116,6 +95,7 @@ export function CumulativeChart({
   }>) {
   const height = LINE_HEIGHT[size];
   const title = useId();
+  const area = useId();
   const plot = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(680);
   useEffect(() => {
@@ -196,12 +176,21 @@ export function CumulativeChart({
               points={points}
             />
           ))}
+          <defs>
+            <linearGradient id={area} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" className="report-chart-area-top" />
+              <stop offset="1" className="report-chart-area-foot" />
+            </linearGradient>
+          </defs>
           {lineSegments(readings, "value", width, y).map((points) => (
-            <polyline
-              key={points}
-              className="report-chart-actual"
-              points={points}
-            />
+            <g key={points}>
+              <polygon
+                className="report-chart-area"
+                fill={`url(#${area})`}
+                points={areaUnder(points, y(0))}
+              />
+              <polyline className="report-chart-actual" points={points} />
+            </g>
           ))}
           {readings.map(
             (reading, index) =>

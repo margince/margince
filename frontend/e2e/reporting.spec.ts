@@ -80,7 +80,7 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
       });
       await expect(graph).toBeVisible();
       await expect(page.locator(".stat-card-value").first()).toHaveText(
-        "216,000 EUR",
+        "€216,000",
       );
       const bounds = await page
         .locator(".report-chart-line")

@@ -55,10 +55,8 @@ const open: Metric = {
 
 it("states the period's sales and the target's own actual separately", () => {
   const [sales, target] = writtenSummary(withMetrics([won]), english);
-  expect(sales).toMatch(/^Won in .+: 300 EUR\.$/);
-  expect(target).toMatch(
-    /^Target for .+: 1,000 EUR, 50% reached with 500 EUR\.$/,
-  );
+  expect(sales).toMatch(/^Won in .+: €300\.$/);
+  expect(target).toMatch(/^Target for .+: €1,000, 50% reached with €500\.$/);
 });
 
 it("dates the forecast and the open pipeline to the day they were read", () => {
