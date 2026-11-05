@@ -18,10 +18,10 @@ func RequireOneOf(ctx context.Context, checks ...Check) error {
 		return err
 	}
 	c := Check{OneOf: checks}
-	if err := refuseBuyer(p, c.String()); err != nil {
-		return err
-	}
 	noteCheck(ctx, c)
+	if err := refuseBuyer(p, c.String()); err != nil {
+		return refusedOn(ctx, c, err)
+	}
 	if c.HeldBy(p) {
 		return nil
 	}

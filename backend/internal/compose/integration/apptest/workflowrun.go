@@ -26,9 +26,10 @@ type WorkflowRun struct {
 	At               time.Time
 }
 
-// SeedWorkflowRun records run linked the way the engine links it: handler =
-// catalog key, idempotency key suffixed with "@<automation id>". No route
-// writes a run; only the engine does, as it handles an event.
+// SeedWorkflowRun records run linked to its automation as the engine links it:
+// handler = catalog key, idempotency key suffixed with "@<automation id>". The
+// key names the run, not a lead, so it never dedupes against the engine's own.
+// No route writes a run; only the engine does, as it handles an event.
 func SeedWorkflowRun(t *testing.T, e *AppEnv, run WorkflowRun) string {
 	t.Helper()
 	runID := ids.NewV7().String()

@@ -139,12 +139,11 @@ func resolveAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID, action
 		}
 		return "", deniedChange(ctx, tx, entityType, entityID)
 	}
-	// This branch is WAIVED in backend/gates/writeauthority_test.go under
-	// readAuthorityOnAWritePath:internal/modules/activities:ensureAttachmentParentVisible,
-	// because that gate walks the call graph and cannot see which arm a caller
-	// takes. The waiver excuses the FUNCTION, so it would keep passing if the
-	// visibility probe were ever moved onto a write path — read the waiver
-	// before adding a third arm here, and revisit it rather than extend it.
+	// The visibility probe is WAIVED in backend/gates/writeauthority_test.go
+	// under readAuthorityOnAWritePath:internal/modules/activities:ensureAttachmentParentVisible.
+	// It admits only this read arm; a write reaches it only through deniedChange
+	// above, after the write is refused, to choose 403 over 404. The waiver
+	// excuses the FUNCTION, so read it before giving the probe any other write reach.
 	if action == principal.ActionRead {
 		if err := ensureAttachmentParentVisible(ctx, tx, entityType, entityID); err != nil {
 			return "", err

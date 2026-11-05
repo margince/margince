@@ -5,8 +5,10 @@ package consent
 
 import (
 	"context"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -39,4 +41,25 @@ func directableBy(ctx context.Context, refusals []RefusedRecipient) bool {
 		return false
 	}
 	return true
+}
+
+// refuseDirection is DirectSend's refusal once directableBy said no, recorded as
+// the grant the caller lacks, or as the review's own rule when no grant helps.
+func refuseDirection(ctx context.Context, refusals []RefusedRecipient) error {
+	if slices.ContainsFunc(refusals, undirectable) {
+		return auth.RefuseRow(ctx, entityCommunicationReview, apperrors.ErrPermissionDenied)
+	}
+	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
+		return err
+	}
+	if err := auth.RequireAdmin(ctx); err != nil {
+		return err
+	}
+	return auth.RefuseRow(ctx, entityCommunicationReview, apperrors.ErrPermissionDenied)
+}
+
+// undirectable reports a refusal that declares no exception anyone may take.
+func undirectable(refusal RefusedRecipient) bool {
+	return !commsauthz.HasRemedy(refusal.ReasonCode, commsauthz.RemedyException) &&
+		!commsauthz.HasRemedy(refusal.ReasonCode, commsauthz.RemedyAdminException)
 }

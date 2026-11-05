@@ -82,13 +82,31 @@ func withoutClausesNaming(field json.RawMessage, hidden []string) (json.RawMessa
 	if err := json.Unmarshal(raw, &description); err != nil {
 		return nil, err
 	}
-	names := namesAny(hidden)
-	clauses := slices.DeleteFunc(clauseEnd.Split(description, -1), names)
+	kept, removed := clausesNotNaming(description, namesAny(hidden))
+	if !removed {
+		return field, nil
+	}
 	var err error
-	if doc["description"], err = json.Marshal(strings.Join(clauses, "; ")); err != nil {
+	if doc["description"], err = json.Marshal(kept); err != nil {
 		return nil, err
 	}
 	return json.Marshal(doc)
+}
+
+// clausesNotNaming is text less each clause names matches. A kept clause keeps
+// the separator it had, so wording no hidden action touches reads as written.
+func clausesNotNaming(text string, names func(string) bool) (string, bool) {
+	var kept strings.Builder
+	removed, start := false, 0
+	for _, end := range append(clauseEnd.FindAllStringIndex(text, -1), []int{len(text), len(text)}) {
+		if names(text[start:end[0]]) {
+			removed = true
+		} else {
+			kept.WriteString(text[start:end[1]])
+		}
+		start = end[1]
+	}
+	return strings.TrimRight(kept.String(), ";, \t\n"), removed
 }
 
 // namesAny reports whether a text names any of words as a whole word.

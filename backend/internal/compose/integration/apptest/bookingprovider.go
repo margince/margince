@@ -49,16 +49,16 @@ func (b *BookingProvider) RoundTrip(r *http.Request) (*http.Response, error) {
 	if r.URL.Host != "www.googleapis.com" {
 		return b.fallback.RoundTrip(r)
 	}
+	b.mu.Lock()
+	calendar := b.calendar
+	b.mu.Unlock()
 	switch {
 	case strings.HasSuffix(r.URL.Path, "/users/me/calendarList"):
-		b.mu.Lock()
-		calendar := b.calendar
-		b.mu.Unlock()
 		return BookingProviderResponse(r, fmt.Sprintf(`{"items":[{"id":%q,"summary":"Work","accessRole":"owner","primary":true}]}`, calendar)), nil
 	case strings.HasSuffix(r.URL.Path, "/calendars/primary"):
-		return BookingProviderResponse(r, `{"id":"ada@example.com"}`), nil
+		return BookingProviderResponse(r, fmt.Sprintf(`{"id":%q}`, calendar)), nil
 	case strings.HasSuffix(r.URL.Path, "/freeBusy"):
-		return BookingProviderResponse(r, `{"calendars":{"ada@example.com":{"busy":[]}}}`), nil
+		return BookingProviderResponse(r, fmt.Sprintf(`{"calendars":{%q:{"busy":[]}}}`, calendar)), nil
 	case strings.Contains(r.URL.Path, "/events"):
 		return b.event(r)
 	default:

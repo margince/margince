@@ -85,11 +85,11 @@ func RequireAny(ctx context.Context, object string, actions ...principal.Action)
 	if err != nil {
 		return err
 	}
-	if err := refuseBuyer(p, object); err != nil {
-		return err
-	}
 	c := Check{Object: object, Actions: actions}
 	noteCheck(ctx, c)
+	if err := refuseBuyer(p, object); err != nil {
+		return refusedOn(ctx, c, err)
+	}
 	if c.HeldBy(p) {
 		return nil
 	}
@@ -118,11 +118,11 @@ func RequireAnyObject(ctx context.Context, action principal.Action) error {
 	if err != nil {
 		return err
 	}
-	if err := refuseBuyer(p, string(action)); err != nil {
-		return err
-	}
 	c := Check{Object: anyObject, Actions: []principal.Action{action}}
 	noteCheck(ctx, c)
+	if err := refuseBuyer(p, string(action)); err != nil {
+		return refusedOn(ctx, c, err)
+	}
 	if c.HeldBy(p) {
 		return nil
 	}
@@ -420,11 +420,11 @@ func RequireCoach(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := refuseBuyer(p, "coaching a colleague"); err != nil {
-		return err
-	}
 	c := Check{Object: objTeamLead, Actions: []principal.Action{principal.ActionCreate}}
 	noteCheck(ctx, c)
+	if err := refuseBuyer(p, "coaching a colleague"); err != nil {
+		return refusedOn(ctx, c, err)
+	}
 	if !leads(p, principal.ActionCreate) {
 		return refusedOn(ctx, c, fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied))
 	}
@@ -446,11 +446,11 @@ func RequireAdmin(ctx context.Context) error {
 	if !ok {
 		return fmt.Errorf("no principal in context: %w", apperrors.ErrPermissionDenied)
 	}
-	if err := refuseBuyer(p, "admin-only operation"); err != nil {
-		return err
-	}
 	c := Check{Admin: true}
 	noteCheck(ctx, c)
+	if err := refuseBuyer(p, "admin-only operation"); err != nil {
+		return refusedOn(ctx, c, err)
+	}
 	if c.HeldBy(p) {
 		return nil
 	}

@@ -135,9 +135,14 @@ func BaseLanguageForRecord(ctx context.Context, tx pgx.Tx) textlang.Lang {
 }
 
 // baseLanguageReader asks the settings read gate unrecorded. A caller it
-// refuses gets English from both readers above, as any failed read does, so the
-// call never needs the grant.
+// refuses gets English from both readers above, logged as any failed read is,
+// so the call never needs the grant.
 func baseLanguageReader(ctx context.Context) (context.Context, bool) {
 	readCtx, err := auth.Unrecorded(ctx, BaseLanguage.Object(), principal.ActionRead)
-	return readCtx, err == nil
+	if err != nil {
+		slog.WarnContext(ctx, "the installation's base language could not be read; English is used instead",
+			"reason", err)
+		return ctx, false
+	}
+	return readCtx, true
 }

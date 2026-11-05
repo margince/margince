@@ -197,7 +197,10 @@ func (r *Registry) routerSchemaFor(rt router, field string, choices []string) (r
 		return routedObject{}, err
 	}
 	var out routedObject
-	return out, json.Unmarshal(raw, &out)
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return routedObject{}, err
+	}
+	return out, nil
 }
 
 // wordingFor is a router's own argument wording less what no target takes.

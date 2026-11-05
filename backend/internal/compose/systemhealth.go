@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -65,6 +66,10 @@ func (s Server) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 		auth.Check{Object: healthReadObject, Actions: read}, auth.Check{Object: healthDataTasks, Actions: read},
 		auth.Check{Object: "embedding_reindex", Actions: read}, auth.Check{Object: "installation_settings", Actions: update},
 	); err != nil {
+		// The bare sentinel keeps the grants that open this page out of the answer.
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			err = apperrors.ErrPermissionDenied
+		}
 		httperr.Write(w, r, err)
 		return
 	}

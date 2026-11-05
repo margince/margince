@@ -441,11 +441,12 @@ test-db-up: composition ## (Re)build the migrated margince_test template the par
 test-it: composition ## Run ONE integration package (optionally RUN=Regex) on a throwaway clone: make test-it DIR=backend/internal/modules/contacts [RUN=TestName]
 	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh "$(DIR)" "$(RUN)"
 
-# The MCP role sweep: every tool and action as every seeded role. It carries
-# `integration && rolesweep`, so no merge gate runs it; scheduled.yml runs it
-# weekly. Run it after changing a tool, and with UPDATE_MCP_TOOL_ROLES=1 to
-# write mcp-tool-roles.json and toolchecks.json again.
+# The MCP role sweep: every tool and action as every seeded role. Its test
+# carries `integration && rolesweep`, so no merge gate runs it; scheduled.yml
+# runs it weekly. The extension verbs are measured first, because the sweep
+# reads their measured.json. UPDATE_MCP_TOOL_ROLES=1 writes all three files.
 test-roles: composition ## The MCP role sweep, weekly in CI: make test-roles [UPDATE_MCP_TOOL_ROLES=1] (needs db-up)
+	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh backend/internal/compose/integration/extensionrole
 	@$(GOWORK_COMPOSED) IT_TAGS=integration,rolesweep INTEGRATION_TIMEOUT=$(ROLE_SWEEP_TIMEOUT) \
 	  bash ../scripts/test-integration-one.sh backend/internal/compose/integration/toolrole
 

@@ -389,12 +389,12 @@ func resolveOwnerScope(
 			return ResolvedScope{}, err
 		}
 		if !shares {
-			return ResolvedScope{}, fmt.Errorf(
-				"that contact is not in one of your teams: %w", apperrors.ErrNotFound)
+			return ResolvedScope{}, auth.RefuseRow(ctx, measuredPopulation, fmt.Errorf(
+				"that contact is not in one of your teams: %w", apperrors.ErrNotFound))
 		}
 	default:
-		return ResolvedScope{}, fmt.Errorf(
-			"only your own records are within what you may measure: %w", apperrors.ErrNotFound)
+		return ResolvedScope{}, auth.RefuseRow(ctx, measuredPopulation, fmt.Errorf(
+			"only your own records are within what you may measure: %w", apperrors.ErrNotFound))
 	}
 	if err := requireMeasurableSeat(ctx, tx, id); err != nil {
 		return ResolvedScope{}, err

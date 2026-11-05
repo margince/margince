@@ -108,6 +108,9 @@ func TestOnlyAFileTheIntegrationTagAloneBuildsCountsAsTestCode(t *testing.T) {
 		"//go:build linux\n\npackage x\n":                           false,
 		"//go:build integration || !windows\n\npackage x\n":         false,
 		"package x\n\n//go:build integration\n":                     false,
+		"// +build integration\n\npackage x\n":                      true,
+		"// +build integration\n// +build linux\n\npackage x\n":     false,
+		"// +build integration !windows\n\npackage x\n":             false,
 	} {
 		path := filepath.Join(dir, "helper.go")
 		if err := os.WriteFile(path, []byte(header), 0o600); err != nil {
@@ -224,22 +227,40 @@ func builtOnlyForIntegration(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	for line := range strings.SplitSeq(string(src), "\n") {
+	expr, err := buildConstraint(string(src))
+	if expr == nil || err != nil {
+		return false, err
+	}
+	integration := expr.Eval(func(tag string) bool { return tag == "integration" })
+	return integration && !expr.Eval(func(string) bool { return false }), nil
+}
+
+// buildConstraint is a file's build constraint: its //go:build line, or else
+// every legacy // +build line, which Go requires all of. Nil means none.
+func buildConstraint(src string) (constraint.Expr, error) {
+	var legacy constraint.Expr
+	for line := range strings.SplitSeq(src, "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "package ") {
-			return false, nil
+			break
 		}
-		if !constraint.IsGoBuild(line) {
+		if !constraint.IsGoBuild(line) && !constraint.IsPlusBuild(line) {
 			continue
 		}
 		expr, err := constraint.Parse(line)
 		if err != nil {
-			return false, err
+			return nil, err
 		}
-		integration := expr.Eval(func(tag string) bool { return tag == "integration" })
-		return integration && !expr.Eval(func(string) bool { return false }), nil
+		if constraint.IsGoBuild(line) {
+			return expr, nil
+		}
+		if legacy == nil {
+			legacy = expr
+		} else {
+			legacy = &constraint.AndExpr{X: legacy, Y: expr}
+		}
 	}
-	return false, nil
+	return legacy, nil
 }
 
 // wallClockReads counts one parsed file's reads of the wall clock.

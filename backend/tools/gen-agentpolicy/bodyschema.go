@@ -274,8 +274,8 @@ func resolveRefs(node any, schemas map[string]any, depth int, open map[string]bo
 				}
 				continue
 			}
-			if words, isList := member.([]any); key == "enum" && isList {
-				if kept, allWords := wordsOf(words); allWords {
+			if members, isList := member.([]any); key == "enum" && isList {
+				if kept, scalar := enumValues(members); scalar {
 					out[key] = kept
 				}
 				continue
@@ -384,16 +384,17 @@ func mergeInto(into map[string]any, member any) {
 	}
 }
 
-// wordsOf is an enum's members bar null, and whether all are strings. The
-// surface's enum holds words, so an enum of numbers is not published.
+// enumValues is an enum's members bar null, and whether all are words or
+// numbers. Null leaves because the surface's schema names one type, and the
+// nullable marker already says it.
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
-func wordsOf(members []any) ([]any, bool) {
+func enumValues(members []any) ([]any, bool) {
 	kept := make([]any, 0, len(members))
 	for _, member := range members {
 		switch member.(type) {
 		case nil:
-		case string:
+		case string, int, int64, float64:
 			kept = append(kept, member)
 		default:
 			return nil, false

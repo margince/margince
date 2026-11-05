@@ -250,3 +250,15 @@ func (v withView) Spec() mcp.ToolSpec {
 	spec.UI = &mcp.ToolUI{ResourceURI: "ui://margince/drafts.html"}
 	return spec
 }
+
+func TestARouteFieldKeepsItsWordingWhereNoHiddenActionIsNamed(t *testing.T) {
+	names := namesAny([]string{"archive"})
+	if got, removed := clausesNotNaming("create opens one, update changes it; read shows it", names); removed ||
+		got != "create opens one, update changes it; read shows it" {
+		t.Errorf("no hidden action named: got %q, removed %v", got, removed)
+	}
+	got, removed := clausesNotNaming("create opens one, archive retires it; read shows it", names)
+	if want := "create opens one, read shows it"; !removed || got != want {
+		t.Errorf("got %q, removed %v; want %q", got, removed, want)
+	}
+}

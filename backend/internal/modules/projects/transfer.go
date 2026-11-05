@@ -83,7 +83,7 @@ func TransferProjectOwnershipTx(ctx context.Context, tx pgx.Tx, in TransferProje
 	err := ensureActiveOwner(ctx, tx, in.ToOwnerID)
 	// An own-scope seat's write scope holds no other seat to hand work to. Its
 	// refused handover is the scope's refusal; a wider seat's is the receiver's.
-	if p, ok := principal.Actor(ctx); ok {
+	if p, ok := principal.Actor(ctx); ok && (err == nil || errors.As(err, new(*OwnerNotActiveError))) {
 		teamScope := auth.Check{RowScope: principal.RowScopeTeam}
 		auth.RecordDecision(ctx, teamScope, err == nil || teamScope.HeldBy(p))
 	}

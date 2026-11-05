@@ -64,7 +64,7 @@ the colleague pass's subject.
      under the context `auth.Unrecorded` returns, or a role without the grant is not offered a tool it can run.
    - A tool that picks its record by an enum argument, such as `record_type`, is called again as the admin
      for each word of that enum. `tools/list` offers it to a caller who holds every check of one call that
-     ran. The matrix allows a role the call on some kind ran for.
+     ran. The matrix marks the call allowed for a role when it ran for that role on some kind.
    - A gate that hides a row that is there answers through `auth.HideRow`, so the 404 is recorded as a refusal.
      A row that is not there stays a plain 404, and fails the sweep.
    - An act only a seat short of a row scope needs goes through `auth.RequireRowScopeNarrowerThan`. Its check
@@ -76,13 +76,13 @@ the colleague pass's subject.
 4. **Run the sweep and write its files again,** from the repository root, then from `backend/`:
 
    ```sh
-   UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/extensionrole
    UPDATE_MCP_TOOL_ROLES=1 make test-roles
    go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity
    ```
 
    The integration lane shares the `margince_test` template, so run one lane at a time. Without
-   `UPDATE_MCP_TOOL_ROLES=1`, `make test-roles` checks the committed files and writes nothing.
+   `UPDATE_MCP_TOOL_ROLES=1`, `make test-roles` checks the committed files and writes nothing. It
+   measures the extension verbs first, so their `measured.json` is current when the sweep reads it.
 
 5. **Commit** `docs/reference/mcp-tool-roles.json`, `docs/reference/mcp-tool-roles.md`,
    `docs/reference/mcp-parity.json`, `docs/reference/mcp-parity.md`,

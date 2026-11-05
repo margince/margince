@@ -199,8 +199,9 @@ type meetingFacts struct {
 
 // lockMeetingFacts reads the meeting the attendee confirms, holding the row so
 // its start and agenda cannot move between the compare and the write. A row
-// that is not a meeting, or not one the attendee attends, answers 422. A row
-// with no host reads its responsibility as NULL, which is not attending.
+// that is not a meeting, or not one the attendee attends, answers 422. When the
+// host is unknown and nothing else names the attendee, the rule reads NULL, which
+// is not attending.
 func lockMeetingFacts(ctx context.Context, tx pgx.Tx, attendee, id ids.UUID) (meetingFacts, error) {
 	var (
 		kind, precision, agenda string

@@ -176,7 +176,8 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 		}
 		status = "CASE WHEN status IN ('invited','deactivated') THEN 'active' ELSE status END AS status"
 	}
-	permitted, err := assigneeAdmitted(ctx, tx, destPos, status, eligible(p, "u", arg), args)
+	predicate := eligible(p, "u", arg)
+	permitted, err := assigneeAdmitted(ctx, tx, destPos, status, predicate, args)
 	if err != nil || permitted {
 		return err
 	}
@@ -188,7 +189,8 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	var seatArgs []any
 	seatArg := func(v any) int { seatArgs = append(seatArgs, v); return len(seatArgs) }
 	seatPos := seatArg(dest)
-	if seatOK, err := assigneeAdmitted(ctx, tx, seatPos, status, eligible(consentedAssigner(p), "u", seatArg), seatArgs); err != nil {
+	seatPredicate := eligible(consentedAssigner(p), "u", seatArg)
+	if seatOK, err := assigneeAdmitted(ctx, tx, seatPos, status, seatPredicate, seatArgs); err != nil {
 		return err
 	} else if seatOK {
 		noteRefusal(ctx, assigneeRefusal)

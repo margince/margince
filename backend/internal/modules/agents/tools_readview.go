@@ -33,8 +33,8 @@ type ReadView struct {
 	Query      []ViewQuery
 }
 
-// ViewQuery is one query parameter of a view's route: its JSON type, whether
-// the route requires it, and the words or format the contract admits.
+// ViewQuery is one query parameter of a route. read_view takes its name and
+// type; a route verb also publishes whether it is required and its enum or format.
 type ViewQuery struct {
 	Name     string
 	Type     string

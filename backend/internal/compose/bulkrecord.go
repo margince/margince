@@ -151,7 +151,7 @@ func readBulkOperation(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkOperati
 		return bulkOperation{}, fmt.Errorf("read bulk change %s: %w", id, err)
 	}
 	if !mayReadBatch(ctx, op.requester) {
-		return bulkOperation{}, apperrors.ErrNotFound
+		return bulkOperation{}, auth.HideRow(ctx, "bulk_operation")
 	}
 	var named bulkParams
 	if err := json.Unmarshal(params, &named); err != nil {

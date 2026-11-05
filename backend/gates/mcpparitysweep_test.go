@@ -26,8 +26,7 @@ func sweptRep(t testing.TB, op parityOperation, verbs map[string]int, in parityI
 			op.Method, op.Path, op.Verb)
 	}
 	for _, check := range checks {
-		grant, judged := grantOfCheck(check)
-		if held, holdKnown := in.roles.holds(repRole, grant); judged && holdKnown && !held {
+		if grant, lacked := repLacks(in.roles, check); lacked {
 			if measured {
 				t.Errorf("%s %s: toolchecks.json says %s needs %s, which the rep lacks, and the role sweep measured the rep "+
 					"running it. Run the sweep again; one of its files is stale.", op.Method, op.Path, op.Verb, check)
@@ -36,6 +35,22 @@ func sweptRep(t testing.TB, op parityOperation, verbs map[string]int, in parityI
 		}
 	}
 	return measured, decidedMeasured, "", true
+}
+
+// repLacks reports whether the rep holds none of a recorded check's
+// comma-separated alternatives, and names them as grants. A check with an
+// alternative the walk cannot judge is never lacked.
+func repLacks(roles roleGrants, check string) (grants string, lacked bool) {
+	var names []string
+	for alternative := range strings.SplitSeq(check, ",") {
+		grant, judged := grantOfCheck(alternative)
+		held, known := roles.holds(repRole, grant)
+		if !judged || !known || held {
+			return "", false
+		}
+		names = append(names, grant)
+	}
+	return strings.Join(names, ","), true
 }
 
 // grantOfCheck spells a recorded check as the grant walk does. A row-scope

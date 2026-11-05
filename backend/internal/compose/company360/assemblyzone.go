@@ -32,7 +32,8 @@ func (a *assembly) installationBaseCurrency() (string, error) {
 	if a.baseCurrencyRead {
 		return a.baseCurrency, nil
 	}
-	// A caller who may not read it is withheld the money sections, not the read.
+	// A caller who may not read it loses the sections that read it: money, the
+	// state strip and the suggestions. The rest of the page still answers.
 	readCtx, err := auth.Unrecorded(a.ctx, identity.BaseCurrency.Object(), principal.ActionRead)
 	if err != nil {
 		return "", err

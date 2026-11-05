@@ -143,10 +143,14 @@ choice. `internal/modules/ai/` owns it:
   is offered only when the user holds every check its call was measured to ask
   ([mcp-tool-roles.md](../reference/mcp-tool-roles.md#what-each-call-needs)).
 
-  A router's `action` list, tier, description, arguments and result shape are cut to the actions
-  left. A router with none left is not listed. A verb with no measured row stays offered. The filter
-  changes only the list. A scheduled run may choose any tool its passport may call. The gate still
-  checks each call: its grants again, row scope and the arguments.
+  A router that picks its action from an `action` list has that list, its tier, description,
+  arguments and result shape cut to the actions left. A router that reads its action from the
+  arguments has no list to cut. It stays listed whole while one of its actions is left. A router with
+  none left is not listed, and a verb with no measured row stays offered.
+
+  The filter changes only the list. A scheduled run may choose any tool its passport's scopes and its
+  user's seat allow, whatever the user's grants. The gate still checks each call: the grants, row
+  scope and the arguments.
 
   The catalog itself: [reference/agent-tools.md](../reference/agent-tools.md).
   Connecting: [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md);
