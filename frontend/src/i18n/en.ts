@@ -7214,7 +7214,7 @@ export const en = {
   "log.body": "Details",
   "log.transcriptLabel": "Transcript",
   "log.transcriptHint":
-    "Paste from your meeting tool, such as Teams, Zoom or Meet. Speaker labels, if present, are kept.",
+    "Paste a call or meeting transcript. Speaker labels, if present, are kept.",
   "log.recordOfMeeting": "Is this the record of {subject}, {time}?",
   "log.recordOfMeetingUntitled": "the meeting",
   "log.recordOfMeetingYes": "Yes, save it on that meeting as held",
