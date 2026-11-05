@@ -255,6 +255,10 @@ Problems with single records are shown in the review of the Forecast section.
 The **Forecast** section of Analytics answers one question (where will this
 period land?) and keeps three kinds of claim apart.
 
+The forecast, the checks before the call, the deals and the charts sit on one
+sheet. **Where the period lands** and **Data and evidence checked** sit beside
+it.
+
 | Reading | What kind of claim it is |
 |---|---|
 | **Manager forecast** | Somebody's view. No forecast reads "No manager forecast submitted" |

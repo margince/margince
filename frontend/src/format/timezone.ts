@@ -61,6 +61,10 @@ import { isRealCalendarDay } from "./calendarday";
 // that, and names this comment when it does.
 export const UTC_ZONE = "UTC";
 
+// The zone the AI model rate sheet counts its effective days in: the server
+// stores and compares each price's day as a UTC date (ai/ratewrite.go).
+export const AI_RATE_DAY_ZONE = UTC_ZONE;
+
 export const FALLBACK_COMPANY_ZONE = "Europe/Berlin";
 
 // IANA zone names only (AC-DS-TZ4). Fixed offsets ("+01:00", "Etc/GMT-1")

@@ -205,6 +205,10 @@
   display: grid;
   gap: var(--gapCards);
 }
+/* Sections drawn into a sheet the page holds: the sheet spaces and rules them. */
+.reporting-results-part {
+  display: contents;
+}
 
 .reporting-written {
   max-inline-size: 72ch;

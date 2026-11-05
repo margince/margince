@@ -52,3 +52,27 @@
   margin: 0;
   padding: var(--space-3) var(--padPanel);
 }
+/* A line of words or verbs on the sheet keeps the sections' inset. */
+.analytics-sheet .reporting-written,
+.analytics-sheet .reporting-share-bar {
+  margin: 0;
+  padding: var(--space-3) var(--padPanel);
+}
+/* A notice on the sheet stands inside the sections' inset. */
+.analytics-sheet > .callout {
+  margin: var(--space-3) var(--padPanel); /* ds:ignore the sheet's section inset */
+}
+/* In the rail a plate is one column: each reading a row of its own. */
+.analytics-board-rail .stat-strip[data-density="plate"] {
+  grid-template-columns: minmax(0, 1fr);
+  background: none;
+}
+.analytics-board-rail .stat-strip[data-density="plate"] > * + * {
+  border-block-start: 1px solid var(--groundEdge);
+}
+.analytics-board-rail
+  .stat-strip[data-density="plate"]
+  .stat-card
+  .stat-card-value {
+  text-align: start;
+}

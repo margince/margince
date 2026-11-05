@@ -59,9 +59,10 @@ export function ReportingCharts({
   onApplySelection?: (selection: ReportingSelection) => void;
   // Set while the page shows the report as a role reads it.
   rolePreview?: boolean;
-  // An Analytics tab: figures on one sheet, the per-person and mix charts in
-  // the rail beside it. A saved layout keeps its own sections.
-  board?: boolean;
+  // An Analytics tab: figures on one sheet, progress to target in the rail
+  // beside it. "sheet" draws the sheet's sections alone, for a sheet the page
+  // already holds. A saved layout keeps its own sections.
+  board?: boolean | "sheet";
 }>) {
   const t = useT();
   // Every card names its metric from the catalog, so the page waits for it
@@ -82,10 +83,15 @@ export function ReportingCharts({
   return (
     <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
       {() => (
-        <div className="reporting-results">
+        <div
+          className={
+            board === "sheet" ? "reporting-results-part" : "reporting-results"
+          }
+        >
           {!placesAssessment && <WrittenSummary evaluation={evaluation} />}
           {board && !evaluation.selection.layout ? (
             <BoardResults
+              inSheet={board === "sheet"}
               evaluation={evaluation}
               charts={charts}
               withheld={withheld}
@@ -129,6 +135,7 @@ export function ReportingCharts({
 // The board form of one evaluation. Readings, charts and the metrics table make
 // one sheet; progress to target sits in the rail with anything to act on first.
 function BoardResults({
+  inSheet,
   evaluation,
   charts,
   withheld,
@@ -136,6 +143,8 @@ function BoardResults({
   onEvidence,
   onApplySelection,
 }: Readonly<{
+  // Drawn into a sheet the page holds: no rail, so every chart stays here.
+  inSheet: boolean;
   evaluation: ReportingEvaluation;
   charts: readonly ReportingChart[];
   withheld: boolean;
@@ -144,8 +153,10 @@ function BoardResults({
   onApplySelection?: (selection: ReportingSelection) => void;
 }>) {
   const t = useT();
-  const railed = charts.filter((chart) => RAIL_KINDS.has(chart.kind));
-  const sheet = charts.filter((chart) => !RAIL_KINDS.has(chart.kind));
+  const railed = inSheet
+    ? []
+    : charts.filter((chart) => RAIL_KINDS.has(chart.kind));
+  const sheet = charts.filter((chart) => !railed.includes(chart));
   // A split by group pairs with the next one; every other chart takes the row.
   const wide = wideCharts(
     sheet,
@@ -167,40 +178,39 @@ function BoardResults({
         ))}
       </>
     ) : undefined;
+  const sections = (
+    <>
+      <ResultsSummary
+        evaluation={evaluation}
+        density="plate"
+        lead={!inSheet}
+        onEvidence={onEvidence}
+      />
+      <TargetComparison evaluation={evaluation} onApply={onApplySelection} />
+      {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
+      {sheet.length > 0 && (
+        <div className="reporting-grid reporting-sheet-grid">
+          {sheet.map((chart, index) => (
+            <ChartPanel
+              key={`${chart.kind}:${chart.metric}`}
+              chart={chart}
+              wide={wide[index] === true}
+              section
+              evaluation={evaluation}
+              onEvidence={onEvidence}
+            />
+          ))}
+        </div>
+      )}
+      <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
+    </>
+  );
+  if (inSheet) return sections;
   return (
     <AnalyticsBoard
       railLabel={t("analytics.board.rail")}
       rail={rail}
-      main={
-        <AnalyticsSheet>
-          <ResultsSummary
-            evaluation={evaluation}
-            density="plate"
-            lead
-            onEvidence={onEvidence}
-          />
-          <TargetComparison
-            evaluation={evaluation}
-            onApply={onApplySelection}
-          />
-          {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
-          {sheet.length > 0 && (
-            <div className="reporting-grid reporting-sheet-grid">
-              {sheet.map((chart, index) => (
-                <ChartPanel
-                  key={`${chart.kind}:${chart.metric}`}
-                  chart={chart}
-                  wide={wide[index] === true}
-                  section
-                  evaluation={evaluation}
-                  onEvidence={onEvidence}
-                />
-              ))}
-            </div>
-          )}
-          <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
-        </AnalyticsSheet>
-      }
+      main={<AnalyticsSheet>{sections}</AnalyticsSheet>}
     />
   );
 }
