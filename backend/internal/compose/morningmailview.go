@@ -73,8 +73,12 @@ func (w *briefGenerateWorker) morningMessageItems(ctx context.Context, now time.
 			items = day.Focus.Items
 		}
 		chosen.append(items, 3, settings, w.mail.PublicBaseURL, words)
+		previous, err := w.engine.LastMailedBefore(ctx, now)
+		if err != nil {
+			return emailview.Message{}, false, nil, err
+		}
 		changes := deals.NewStore(InstallationDB(w.pool), DealsInstallation())
-		if err := chosen.appendMorningChanges(ctx, changes, now, w.mail.PublicBaseURL, words); err != nil {
+		if err := chosen.appendMorningChanges(ctx, changes, morningChangesSince(previous, now), w.mail.PublicBaseURL, words); err != nil {
 			return emailview.Message{}, false, nil, err
 		}
 	}

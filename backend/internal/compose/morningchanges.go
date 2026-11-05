@@ -28,14 +28,24 @@ const morningChangesWindow = "margince_changes_since"
 // counted and wait on Home.
 const morningChangeLines = 5
 
-// morningChangeWindow is "last night": changes older than a day were already
-// in an earlier morning.
+// morningChangeWindow is "last night" for a reader who has had no morning
+// mail yet.
 const morningChangeWindow = 24 * time.Hour
 
-// appendMorningChanges adds the reader's deals Margince changed overnight and
-// has not had accepted or undone. A deal the send basis excluded is left out.
-func (s *morningSelection) appendMorningChanges(ctx context.Context, store *deals.Store, now time.Time, base string, words mailcopy.Copy) error {
-	since := now.Add(-morningChangeWindow)
+// morningChangesSince is where "last night" starts: when the reader's previous
+// morning went out, so a change after that mail is counted however long ago it
+// was sent.
+func morningChangesSince(previous *time.Time, now time.Time) time.Time {
+	if previous == nil {
+		return now.Add(-morningChangeWindow)
+	}
+	return *previous
+}
+
+// appendMorningChanges adds the reader's deals Margince changed since the
+// previous morning and has not had accepted or undone. A deal the send basis
+// excluded is left out.
+func (s *morningSelection) appendMorningChanges(ctx context.Context, store *deals.Store, since time.Time, base string, words mailcopy.Copy) error {
 	summary, err := store.PendingChangesOwnedBy(ctx, &since)
 	if err != nil {
 		return err

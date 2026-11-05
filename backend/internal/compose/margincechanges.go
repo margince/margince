@@ -212,10 +212,9 @@ func (h marginceChangeHandlers) UndoMarginceChanges(w http.ResponseWriter, r *ht
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// undoBundle takes back one deal's changes, newest first, each in its own
-// transaction through the one reversal the single Undo uses. The caller's
-// version guards the first; each later one is checked against the version the
-// one before it left.
+// undoBundle takes back one deal's changes, newest first, in one transaction
+// through the reversal the single Undo uses. A change refused on its own is
+// kept with its reason; a refusal that holds the deal keeps every change.
 func (h marginceChangeHandlers) undoBundle(ctx context.Context, item crmcontracts.UndoMarginceChangeItem) (crmcontracts.UndoMarginceChangeResult, error) {
 	dealID := ids.UUID(item.DealId)
 	result := crmcontracts.UndoMarginceChangeResult{
@@ -225,39 +224,22 @@ func (h marginceChangeHandlers) undoBundle(ctx context.Context, item crmcontract
 	if err != nil {
 		return result, err
 	}
-	version := &item.Version
-	for i, correction := range corrections {
+	pending := make([]deals.DealCorrection, 0, len(corrections))
+	undos := make([]deals.BundleUndo, 0, len(corrections))
+	for _, correction := range corrections {
 		if correction.Reversed() {
 			result.Kept = append(result.Kept, keptChange(correction, crmcontracts.UndoMarginceChangeKeptReasonAlreadyUndone))
 			continue
 		}
-		deal, err := h.deals.RevertCorrectionConfirmed(ctx, correction.ID, version,
-			map[string]any{undidAuditLogID: correction.AuditLogID.String()},
-			derefString(item.ArchiveConfirmedFor))
-		if work, ok := errors.AsType[*deals.DealOpenUndoNeedsConfirmError](err); ok {
-			kept := keptChange(correction, crmcontracts.UndoMarginceChangeKeptReasonNeedsConfirmation)
-			kept.TeamNotes, kept.TeamTasks, kept.TeamWork = &work.Notes, &work.Tasks, &work.Work
-			result.Kept = append(result.Kept, kept)
-			continue
-		}
-		reason, refused := undoRefusal(err)
-		if !refused && err != nil {
+		pending = append(pending, correction)
+		undos = append(undos, deals.BundleUndo{
+			CorrectionID: correction.ID, Evidence: map[string]any{undidAuditLogID: correction.AuditLogID.String()},
+		})
+	}
+	if len(undos) > 0 {
+		if err := h.revertPending(ctx, item, pending, undos, &result); err != nil {
 			return result, err
 		}
-		if reason == crmcontracts.UndoMarginceChangeKeptReasonVersionSkew {
-			// The deal moved since the caller read it; every later change would
-			// be checked against a version nobody saw.
-			for _, rest := range corrections[i:] {
-				result.Kept = append(result.Kept, keptChange(rest, reason))
-			}
-			break
-		}
-		if refused {
-			result.Kept = append(result.Kept, keptChange(correction, reason))
-			continue
-		}
-		result.Undone = append(result.Undone, correction.Correction)
-		version = deal.Version
 	}
 	switch {
 	case len(result.Kept) == 0:
@@ -268,6 +250,44 @@ func (h marginceChangeHandlers) undoBundle(ctx context.Context, item crmcontract
 		result.Outcome = crmcontracts.UndoMarginceChangeResultOutcomePartlyUndone
 	}
 	return result, nil
+}
+
+// revertPending runs the deal's reversal and reports each change it undid or
+// kept.
+func (h marginceChangeHandlers) revertPending(
+	ctx context.Context, item crmcontracts.UndoMarginceChangeItem, pending []deals.DealCorrection,
+	undos []deals.BundleUndo, result *crmcontracts.UndoMarginceChangeResult,
+) error {
+	refusals, err := h.deals.RevertBundle(ctx, ids.UUID(item.DealId), item.Version, undos, derefString(item.ArchiveConfirmedFor))
+	if err != nil {
+		reason, refused := undoRefusal(err)
+		if !refused {
+			return err
+		}
+		for _, correction := range pending {
+			result.Kept = append(result.Kept, keptChange(correction, reason))
+		}
+		return nil
+	}
+	for i, refusal := range refusals {
+		correction := pending[i]
+		if refusal == nil {
+			result.Undone = append(result.Undone, correction.Correction)
+			continue
+		}
+		if work, ok := errors.AsType[*deals.DealOpenUndoNeedsConfirmError](refusal); ok {
+			kept := keptChange(correction, crmcontracts.UndoMarginceChangeKeptReasonNeedsConfirmation)
+			kept.TeamNotes, kept.TeamTasks, kept.TeamWork = &work.Notes, &work.Tasks, &work.Work
+			result.Kept = append(result.Kept, kept)
+			continue
+		}
+		reason, refused := undoRefusal(refusal)
+		if !refused {
+			return refusal
+		}
+		result.Kept = append(result.Kept, keptChange(correction, reason))
+	}
+	return nil
 }
 
 // bundleCorrections reads the named changes, newest first. A change the reader
