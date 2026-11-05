@@ -255,7 +255,7 @@ You cannot share more access than you hold.
 
 On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
 
-Margince reports how many contacts it shared and skipped. A contact you can read but cannot share is skipped. Hidden contacts are not counted. Former employees are left out. Being on the same team alone gives no new access.
+Margince reports how many contacts it shared and skipped. A contact you can read but cannot share is skipped. Hidden contacts are not counted. Contacts who left the company are left out. Being on the same team alone gives no new access.
 
 ### How do I stop sharing a record?
 To take back a share in Margince, open the record and choose **Share**. Find the colleague or team under **Shared with** and choose **Revoke**. The question says: "Revoke this access? It ends at the next request and cannot be undone." To lower write to read instead, share again with **Read**; Margince asks **Reduce access?** first.
