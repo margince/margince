@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { browserZone } from "../format/timezone";
 import { activityRequestBody, freshDraft, NO_ATTENDEES } from "./activitybody";
 
 afterEach(() => {
@@ -95,5 +96,31 @@ describe("the time a logged meeting sends", () => {
       occurred_at: "2026-01-14T12:00:00Z",
       occurred_precision: "day",
     });
+  });
+});
+
+it("files a company call on its selected deal beside attendee contacts", () => {
+  const zone = browserZone();
+  const body = activityRequestBody(
+    {
+      ...freshDraft(zone, "call"),
+      dealFiling: {
+        context: { record_type: "company", record_id: "o1", skip: false },
+        dealId: "d2",
+      },
+    },
+    "company",
+    "o1",
+    zone,
+    { contacts: [{ id: "p1", name: "Buyer" }], colleagueIds: [] },
+  );
+  expect(body.links).toEqual([
+    { entity_type: "contact", entity_id: "p1" },
+    { entity_type: "deal", entity_id: "d2" },
+  ]);
+  expect(body.deal_filing).toEqual({
+    record_type: "company",
+    record_id: "o1",
+    skip: false,
   });
 });

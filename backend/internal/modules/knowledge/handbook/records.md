@@ -278,7 +278,7 @@ On a contact's or company's **Overview**, the **Next** bar shows a task's subjec
 A mail, chat message or website form nobody has replied to shows in the record's **Next** bar for up to 7 days. **Read email** (or **Read message**, **Read form**) opens it. **Create task** makes it a task, and finishing a task for a request marks the request as done. When a late task or something else urgent is next, it is one line above the bar, and clicking the line opens it. It goes away once you reply or a task stands for it, and **Noticed** hides it in this browser.
 Also called: just in, new mail on a record, email with no reply, website form lead.
 
-One activity can link to many records at once, such as a contact and a deal. Everyone can see one you log with no links. A *captured* message with nothing to link to stays held, because nothing has judged who it belongs to.
+One activity can link to many records at once, such as a contact and a deal. Everyone can see one you log with no links. A *captured* message with nothing to link to stays held, because nothing has judged who it belongs to. A call or meeting logged from a contact or company also goes on the company's one open deal. With several open deals, choose one or **No deal**. A call with an outcome counts as contact only for **Reached** and **Put through**; a call with no outcome also counts.
 
 A meeting holds a status: **booked, held, no-show, canceled.** **Activities are never fully deleted.** If something is filed on the wrong record, the fix is **Relink**, not delete.
 

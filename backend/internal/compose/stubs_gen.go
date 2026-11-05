@@ -43,6 +43,10 @@ func (stubs) LogActivity(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 	httperr.NotImplemented(w, r, "LogActivity")
 }
 
+func (stubs) GetActivityDealFiling(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetActivityDealFilingParams) {
+	httperr.NotImplemented(w, r, "GetActivityDealFiling")
+}
+
 func (stubs) GetFollowUpSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetFollowUpSettings")
 }

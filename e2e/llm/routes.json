@@ -20,6 +20,7 @@
         "remove_team_member": "remove_team_member",
         "request_ownership": "request_ownership_transfer",
         "share": "share_record",
+        "share_contacts": "share_company_contacts",
         "unshare": "revoke_record_share",
         "update_assignment": "update_record_assignment",
         "update_member": "update_member",
@@ -382,6 +383,7 @@
     "read_details": {
       "field": "action",
       "actions": {
+        "activity_deal_filing": "get_activity_deal_filing",
         "activity_pipeline": "read_activity_pipeline_trace",
         "backfill_preview": "preview_connector_backfill",
         "capture_triage": "get_company_capture_triage",
