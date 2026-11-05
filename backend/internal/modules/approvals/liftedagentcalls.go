@@ -26,6 +26,9 @@ const liftedAgentCallReason = "an agent on its colleague's passport now runs thi
 // cursorArg names the id a withdrawal batch resumes after.
 const cursorArg = "after"
 
+// capArg names the bound an estimate counts up to.
+const capArg = "cap"
+
 // liftedAgentCallScope selects the live approvals a passport staged for a tool
 // kind that no longer waits. One a scheduled run is paused on stays: the run
 // resumes only on a decision, which a withdrawal never sends.
@@ -41,7 +44,7 @@ func EstimateLiftedAgentCalls(kinds []string) func(context.Context, datatask.Que
 		}
 		var count int64
 		err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id `+liftedAgentCallScope+` LIMIT @cap) candidates`,
-			pgx.NamedArgs{"kinds": kinds, "cap": maximum + 1}).Scan(&count)
+			pgx.NamedArgs{"kinds": kinds, capArg: maximum + 1}).Scan(&count)
 		return min(count, maximum), count > maximum, err
 	}
 }

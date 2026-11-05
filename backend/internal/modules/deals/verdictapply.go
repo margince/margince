@@ -289,7 +289,7 @@ func applyVerdictChange(
 	} else if err != nil {
 		return "", err
 	}
-	evidence := map[string]any{CorrectionKindEvidenceKey: change.Correction, "basis_owner": in.Owner.String()}
+	evidence := map[string]any{CorrectionKindEvidenceKey: change.Correction, basisOwnerKey: in.Owner.String()}
 	maps.Copy(evidence, change.Evidence)
 	if change.Correction == VerdictProbabilityCorrection {
 		if err := addProbabilityValuation(ctx, tx, in.DealID, current, evidence); err != nil {
@@ -314,13 +314,13 @@ func verdictColumns(correction string, seen, current VerdictValues) ([]string, b
 		return []string{closeDateField, provisionalField},
 			sameDate(seen.CloseDate, current.CloseDate) && seen.Provisional == current.Provisional
 	case VerdictAmountCorrection:
-		return []string{"amount_minor", "currency"},
+		return []string{amountField, currencyField},
 			sameInt64(seen.AmountMinor, current.AmountMinor) && sameString(seen.Currency, current.Currency)
 	case VerdictProbabilityCorrection:
 		return []string{winProbabilityOverrideColumn},
 			sameInt(seen.Probability, current.Probability) && sameString(seen.ProbabilitySource, current.ProbabilitySource)
 	case VerdictStageMoveCorrection:
-		return []string{"stage_id"}, seen.StageID == current.StageID
+		return []string{stageIDColumn}, seen.StageID == current.StageID
 	}
 	return nil, false
 }
@@ -342,10 +342,10 @@ func verdictPatch(patch *storekit.Patch, change VerdictChange, current VerdictVa
 			return false
 		}
 		if current.Currency == nil {
-			patch.Set("currency", nil, change.Currency)
+			patch.Set(currencyField, nil, change.Currency)
 		}
 		if current.AmountMinor == nil || *current.AmountMinor != change.AmountMinor {
-			patch.Set("amount_minor", current.AmountMinor, change.AmountMinor)
+			patch.Set(amountField, current.AmountMinor, change.AmountMinor)
 		}
 	case VerdictProbabilityCorrection:
 		if current.ProbabilitySource != nil && Source(*current.ProbabilitySource) == SourceHuman {

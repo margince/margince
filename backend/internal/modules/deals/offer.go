@@ -53,7 +53,7 @@ func (e *OfferEmptyError) Error() string { return "the offer has no line items t
 
 // FieldFault refuses sending an offer with no line items.
 func (e *OfferEmptyError) FieldFault() (field, code, message string) {
-	return "line_items", "offer_empty", e.Error()
+	return lineItemsField, "offer_empty", e.Error()
 }
 
 type CreateOfferInput struct {
@@ -126,11 +126,11 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 
 	id := ids.New[ids.OfferKind]()
 	cols, holders, args := columnValues(
-		columnValue{"id", id}, columnValue{"deal_id", dealID}, columnValue{"offer_number", number},
-		columnValue{"revision", 1}, columnValue{"status", "draft"}, columnValue{"currency", in.Currency},
-		columnValue{"buyer_company_id", in.BuyerCompanyID}, columnValue{"valid_until", in.ValidUntil},
-		columnValue{"intro_text", in.IntroText}, columnValue{"terms_text", in.TermsText},
-		columnValue{"template_id", in.TemplateID}, columnValue{"source", in.Source}, columnValue{"captured_by", by},
+		columnValue{"id", id}, columnValue{dealIDColumn, dealID}, columnValue{"offer_number", number},
+		columnValue{"revision", 1}, columnValue{offerStatusField, "draft"}, columnValue{currencyField, in.Currency},
+		columnValue{buyerCompanyColumn, in.BuyerCompanyID}, columnValue{"valid_until", in.ValidUntil},
+		columnValue{introTextColumn, in.IntroText}, columnValue{"terms_text", in.TermsText},
+		columnValue{"template_id", in.TemplateID}, columnValue{sourceColumn, in.Source}, columnValue{"captured_by", by},
 		columnValue{"legal_entity_id", entity}, columnValue{"language", in.Language},
 		columnValue{"source_commercial_revision", fromRevision})
 	if _, err := tx.Exec(ctx, `INSERT INTO offer (`+cols+`) VALUES (`+holders+`)`, args...); err != nil {
@@ -147,7 +147,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	}
 
 	auditID, err := storekit.Audit(ctx, tx, "create", "offer", id.UUID,
-		nil, map[string]any{"offer_number": number, "deal_id": dealID, "currency": in.Currency})
+		nil, map[string]any{"offer_number": number, dealIDColumn: dealID, currencyField: in.Currency})
 	if err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("audit offer create: %w", err)
 	}
@@ -169,7 +169,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 // inherits the deal's company.
 func resolveBuyerCompany(ctx context.Context, tx pgx.Tx, dealID ids.DealID, buyerCompanyID *ids.CompanyID) (*ids.CompanyID, error) {
 	if buyerCompanyID != nil {
-		if err := auth.EnsureReferenceTarget(ctx, tx, "buyer_company_id", "company", buyerCompanyID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, buyerCompanyColumn, "company", buyerCompanyID.UUID); err != nil {
 			return nil, err
 		}
 		return buyerCompanyID, nil
@@ -449,17 +449,17 @@ func offerHeaderPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer
 		p.Set("currency", current.Currency, *in.Currency)
 	}
 	if in.BuyerCompanyID != nil {
-		if err := auth.EnsureReferenceTarget(ctx, tx, "buyer_company_id", "company", in.BuyerCompanyID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, buyerCompanyColumn, "company", in.BuyerCompanyID.UUID); err != nil {
 			return nil, nil, err
 		}
-		p.Set("buyer_company_id", current.BuyerCompanyId, *in.BuyerCompanyID)
+		p.Set(buyerCompanyColumn, current.BuyerCompanyId, *in.BuyerCompanyID)
 		retired = retireRenderingOnBuyerChange(p, current, *in.BuyerCompanyID)
 	}
 	if in.ValidUntil != nil {
 		p.Set("valid_until", current.ValidUntil, *in.ValidUntil)
 	}
 	if in.IntroText != nil {
-		p.Set("intro_text", current.IntroText, *in.IntroText)
+		p.Set(introTextColumn, current.IntroText, *in.IntroText)
 	}
 	if in.TermsText != nil {
 		p.Set("terms_text", current.TermsText, *in.TermsText)

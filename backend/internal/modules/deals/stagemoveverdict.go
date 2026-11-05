@@ -75,7 +75,7 @@ func (s *Store) applyVerdictStageMove(
 	if err != nil || !installationOn {
 		return VerdictDroppedSwitch, current, err
 	}
-	edited, err := humanEditedAfter(ctx, tx, in.DealID, []string{"stage_id"}, change.NewestCitedAt)
+	edited, err := humanEditedAfter(ctx, tx, in.DealID, []string{stageIDColumn}, change.NewestCitedAt)
 	if err != nil || edited {
 		return VerdictDroppedHuman, current, err
 	}
@@ -83,7 +83,7 @@ func (s *Store) applyVerdictStageMove(
 	if err != nil || admitted != VerdictApplied {
 		return admitted, current, err
 	}
-	evidence := map[string]any{CorrectionKindEvidenceKey: VerdictStageMoveCorrection, "basis_owner": in.Owner.String()}
+	evidence := map[string]any{CorrectionKindEvidenceKey: VerdictStageMoveCorrection, basisOwnerKey: in.Owner.String()}
 	maps.Copy(evidence, change.Evidence)
 	moved, refused, err := s.advanceInSavepoint(ctx, tx, in.DealID, AdvanceDealInput{
 		ToStageID: change.ToStageID, auditEvidence: evidence,

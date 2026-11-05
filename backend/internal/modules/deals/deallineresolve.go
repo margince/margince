@@ -160,10 +160,10 @@ func insertDealLine(ctx context.Context, tx pgx.Tx, dealID ids.DealID, line deal
 		return err
 	}
 	cols, holders, args := columnValues(append(dealLineValues(line),
-		columnValue{"id", line.ID}, columnValue{"deal_id", dealID}, columnValue{"position", line.Position},
-		columnValue{"product_id", line.ProductID}, columnValue{"catalog_name", line.CatalogName},
-		columnValue{"sku", line.SKU}, columnValue{"currency", line.Currency},
-		columnValue{"component_kind", line.ComponentKind}, columnValue{"captured_by", by})...)
+		columnValue{"id", line.ID}, columnValue{dealIDColumn, dealID}, columnValue{"position", line.Position},
+		columnValue{productIDColumn, line.ProductID}, columnValue{"catalog_name", line.CatalogName},
+		columnValue{"sku", line.SKU}, columnValue{currencyField, line.Currency},
+		columnValue{componentKindColumn, line.ComponentKind}, columnValue{"captured_by", by})...)
 	if _, err := tx.Exec(ctx, `INSERT INTO deal_line_item (`+cols+`) VALUES (`+holders+`)`, args...); err != nil {
 		return fmt.Errorf("insert deal line: %w", err)
 	}
@@ -206,17 +206,28 @@ func columnValues(pairs ...columnValue) (cols, holders string, args []any) {
 	return strings.Join(names, ", "), storekit.Placeholders(args), args
 }
 
+// The deal_line_item columns more than one line writer spells. The audit image
+// keys a line under the same names.
+const (
+	lineUnitColumn         = "unit"
+	lineQuantityColumn     = "quantity"
+	lineUnitPriceColumn    = "unit_price_minor"
+	lineDiscountColumn     = "discount_pct"
+	lineTaxRateColumn      = "tax_rate"
+	lineBillingModelColumn = "billing_model"
+)
+
 // dealLineValues are the columns a seller can change on a line.
 func dealLineValues(line dealLineRow) []columnValue {
 	return []columnValue{
 		{descriptionColumn, line.Description},
-		{"unit", line.Unit},
-		{"quantity", line.Quantity},
-		{"unit_price_minor", line.UnitPriceMinor},
-		{"discount_pct", line.DiscountPct},
-		{"tax_rate", line.TaxRate},
+		{lineUnitColumn, line.Unit},
+		{lineQuantityColumn, line.Quantity},
+		{lineUnitPriceColumn, line.UnitPriceMinor},
+		{lineDiscountColumn, line.DiscountPct},
+		{lineTaxRateColumn, line.TaxRate},
 		{taxCategoryField, line.TaxCategory},
-		{"billing_model", line.BillingModel},
+		{lineBillingModelColumn, line.BillingModel},
 		{billingIntervalColumn, line.IntervalMonths},
 		{intervalCountField, line.IntervalCount},
 	}

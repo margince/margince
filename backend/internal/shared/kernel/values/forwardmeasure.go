@@ -41,17 +41,20 @@ func ForwardMeasures() []ForwardMeasure {
 	return []ForwardMeasure{MeasureLikely, MeasureWeighted, MeasureManagerCall}
 }
 
+// retiredQualifiedLikely is the retired qualified reading of MeasureLikely.
+const retiredQualifiedLikely = "qualified_likely"
+
 // RetiredForwardMeasures are the measures of the retired qualified forecast. A
 // frozen weekly review keeps the word it was read under; nothing builds them.
 func RetiredForwardMeasures() []string {
-	return []string{"qualified_likely", "qualified_weighted"}
+	return []string{retiredQualifiedLikely, "qualified_weighted"}
 }
 
 // RetiredForwardMeasure names the retired measure a stored spelling means, the
 // older qualified_commit_evidence included.
 func RetiredForwardMeasure(raw string) (string, bool) {
 	if raw == "qualified_commit_evidence" {
-		return "qualified_likely", true
+		return retiredQualifiedLikely, true
 	}
 	return raw, slices.Contains(RetiredForwardMeasures(), raw)
 }
@@ -61,7 +64,7 @@ func RetiredForwardMeasure(raw string) (string, bool) {
 var legacyForwardMeasures = map[string]ForwardMeasure{
 	"commit_evidence":           MeasureLikely,
 	"qualified_commit_evidence": MeasureLikely,
-	"qualified_likely":          MeasureLikely,
+	retiredQualifiedLikely:      MeasureLikely,
 	"qualified_weighted":        MeasureWeighted,
 }
 

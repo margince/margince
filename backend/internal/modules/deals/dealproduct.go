@@ -81,16 +81,16 @@ func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in [
 		return nil, err
 	}
 	if len(in) > 50 {
-		return nil, httperr.Validation("products", "out_of_range", "name at most fifty products on one deal")
+		return nil, httperr.Validation(productsField, "out_of_range", "name at most fifty products on one deal")
 	}
 	seen := map[openapi_types.UUID]bool{}
 	for _, row := range in {
 		if seen[row.ProductId] {
-			return nil, httperr.Validation("products", "duplicate", "name each product once")
+			return nil, httperr.Validation(productsField, "duplicate", "name each product once")
 		}
 		seen[row.ProductId] = true
 		if row.AmountMinor != nil && *row.AmountMinor < 0 {
-			return nil, httperr.Validation("products", "invalid", "an allocated amount is zero or more")
+			return nil, httperr.Validation(productsField, "invalid", "an allocated amount is zero or more")
 		}
 	}
 	var out []crmcontracts.DealProduct
@@ -108,7 +108,7 @@ func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in [
 			return err
 		}
 		if head.Mode == modeLines {
-			return &LineOwnedValueError{Field: "products"}
+			return &LineOwnedValueError{Field: productsField}
 		}
 		before, err := readDealProducts(ctx, tx, dealID)
 		if err != nil {
@@ -141,7 +141,7 @@ func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in [
 				return fmt.Errorf("write manual deal product: %w", err)
 			}
 			if tag.RowsAffected() == 0 {
-				return httperr.Validation("products", "unknown", "choose a live product")
+				return httperr.Validation(productsField, "unknown", "choose a live product")
 			}
 		}
 		out, err = readDealProducts(ctx, tx, dealID)
@@ -149,11 +149,11 @@ func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in [
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "deal", dealID.UUID,
-			map[string]any{"products": allocationImage(before)}, map[string]any{"products": allocationImage(out)})
+			map[string]any{productsField: allocationImage(before)}, map[string]any{productsField: allocationImage(out)})
 		if err != nil {
 			return fmt.Errorf("audit deal products: %w", err)
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: map[string]any{"products": allocationImage(out)}})
+		return storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: map[string]any{productsField: allocationImage(out)}})
 	})
 	return out, err
 }
@@ -195,7 +195,7 @@ func refuseOverAllocation(in []crmcontracts.DealProductInput, dealAmount *int64)
 		}
 	}
 	if total > *dealAmount {
-		return httperr.Validation("products", "exceeds_deal", "the allocated amounts add up to more than the deal's amount")
+		return httperr.Validation(productsField, "exceeds_deal", "the allocated amounts add up to more than the deal's amount")
 	}
 	return nil
 }
@@ -282,7 +282,7 @@ func readDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]crmc
 func allocationImage(products []crmcontracts.DealProduct) []map[string]any {
 	out := make([]map[string]any, 0, len(products))
 	for _, product := range products {
-		out = append(out, map[string]any{"product_id": product.ProductId.String(), "source": product.Source, "amount_minor": product.AmountMinor, "currency": product.Currency, "component_kind": product.ComponentKind})
+		out = append(out, map[string]any{productIDColumn: product.ProductId.String(), sourceColumn: product.Source, amountField: product.AmountMinor, currencyField: product.Currency, componentKindColumn: product.ComponentKind})
 	}
 	return out
 }
@@ -296,6 +296,6 @@ func noteAllocations(dealChanged map[string]any, allocated []crmcontracts.DealPr
 	if dealChanged == nil {
 		dealChanged = map[string]any{}
 	}
-	dealChanged["products"] = allocationImage(allocated)
+	dealChanged[productsField] = allocationImage(allocated)
 	return dealChanged
 }

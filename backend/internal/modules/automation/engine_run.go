@@ -387,7 +387,7 @@ func (e *WorkflowEngine) recordSkipReason(ctx context.Context, h workflow.Handle
 	if err != nil {
 		return err
 	}
-	_, err = e.claimRun(ctx, h, ev, emptyPlan, "skipped", detail)
+	_, err = e.claimRun(ctx, h, ev, emptyPlan, runSkipped, detail)
 	return err
 }
 

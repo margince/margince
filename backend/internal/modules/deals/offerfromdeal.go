@@ -38,7 +38,7 @@ func (e *OfferLinesFromDealError) Error() string {
 
 // FieldFault points at the lines.
 func (e *OfferLinesFromDealError) FieldFault() (field, code, message string) {
-	return "line_items", "offer_lines_from_deal", e.Error()
+	return lineItemsField, "offer_lines_from_deal", e.Error()
 }
 
 // DealHasNoLinesError refuses a request to copy lines from a deal without any.
@@ -107,7 +107,7 @@ func admitOfferLines(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in Creat
 		return in, nil, nil, nil
 	}
 	if len(in.LineItems) > 0 {
-		return CreateOfferInput{}, nil, nil, &LineOwnedValueError{Field: "line_items"}
+		return CreateOfferInput{}, nil, nil, &LineOwnedValueError{Field: lineItemsField}
 	}
 	if in.FromDealRevision == nil {
 		return CreateOfferInput{}, nil, nil, &RequiredFieldError{Field: fromDealRevisionField}

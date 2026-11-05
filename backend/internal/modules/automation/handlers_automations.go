@@ -286,14 +286,14 @@ func wireAutomationRun(automationID crmcontracts.Id, rec AutomationRunRecord) cr
 		Tier:         crmcontracts.AutomationRunTier(rec.Tier),
 	}
 	switch rec.Status {
-	case "failed", "blocked":
+	case "failed", runBlocked:
 		run.Reason = rec.Detail
 		code := runReasonCode(rec.Outcome(), rec.Detail)
 		run.ReasonCode = &code
-	case "skipped":
+	case runSkipped:
 		run.Reason = rec.Detail
 	}
-	if rec.Status == "requires_approval" || rec.Status == "blocked" {
+	if rec.Status == "requires_approval" || rec.Status == runBlocked {
 		approvalRequired := true
 		run.ApprovalRequired = &approvalRequired
 	}

@@ -31,7 +31,7 @@ func EstimateRetiredStageCards(ctx context.Context, q datatask.Querier, maximum 
 	}
 	var count int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id `+retiredStageCardScope+` LIMIT @cap) candidates`,
-		pgx.NamedArgs{"kind": retiredStageCardKind, "cap": maximum + 1}).Scan(&count)
+		pgx.NamedArgs{"kind": retiredStageCardKind, capArg: maximum + 1}).Scan(&count)
 	return min(count, maximum), count > maximum, err
 }
 
@@ -46,7 +46,7 @@ func ExpireRetiredStageCardsTx(ctx context.Context, tx pgx.Tx, in datatask.Batch
 		return datatask.BatchOut{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT id `+retiredStageCardScope+` AND id > @after ORDER BY id LIMIT @batch_limit`,
-		pgx.NamedArgs{"kind": retiredStageCardKind, "after": after, "batch_limit": in.Limit})
+		pgx.NamedArgs{"kind": retiredStageCardKind, cursorArg: after, "batch_limit": in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, fmt.Errorf("approvals: reading pending stage-move cards: %w", err)
 	}

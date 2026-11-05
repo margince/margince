@@ -57,6 +57,9 @@ func CountOpenRetiredReviews(ctx context.Context, q interface {
 	return count, err
 }
 
+// auditStatusKey is a row's status in its audit image.
+const auditStatusKey = "status"
+
 // CloseRetiredReviewTx closes one open deal_viability finding as cleared,
 // because no rule asks its question any more, and audits the change. A finding
 // no longer open is left as it is.
@@ -74,7 +77,7 @@ func CloseRetiredReviewTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, er
 		return false, nil
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", "assurance_exception", id,
-		map[string]any{"status": "open"}, map[string]any{"status": ExceptionConditionCleared}); err != nil {
+		map[string]any{auditStatusKey: "open"}, map[string]any{auditStatusKey: ExceptionConditionCleared}); err != nil {
 		return false, err
 	}
 	return true, nil

@@ -107,7 +107,7 @@ func (s *Store) ReviveLostDeal(ctx context.Context, in ReviveLostDealInput) (boo
 		moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
 			ToStageID: first, WonWithoutContractReason: nil,
 			auditEvidence: map[string]any{
-				"basis": in.Basis, "basis_owner": in.Owner.String(), CorrectionKindEvidenceKey: DealReviveCorrection,
+				basisKey: in.Basis, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: DealReviveCorrection,
 			},
 		}, active)
 		if err != nil {
@@ -219,6 +219,9 @@ func readLostDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID, company, owne
 	return out, nil
 }
 
+// suggestionKindKey is the kind in a suggestion's audit image.
+const suggestionKindKey = "kind"
+
 // recordRevived settles the suggestion as the reopen of the deal. Its kind
 // says so, so no reader takes it for the suggestion the deal was opened from.
 func recordRevived(ctx context.Context, tx pgx.Tx, suggestion, deal ids.UUID) error {
@@ -237,8 +240,8 @@ func recordRevived(ctx context.Context, tx pgx.Tx, suggestion, deal ids.UUID) er
 		return &SuggestionDecidedError{State: "decided"}
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", suggestionEntity, suggestion,
-		map[string]any{columnState: SuggestionOpen, "kind": SuggestionKindOpenDeal},
-		map[string]any{columnState: SuggestionAccepted, "kind": SuggestionKindRevive, "accepted_deal_id": deal})
+		map[string]any{columnState: SuggestionOpen, suggestionKindKey: SuggestionKindOpenDeal},
+		map[string]any{columnState: SuggestionAccepted, suggestionKindKey: SuggestionKindRevive, "accepted_deal_id": deal})
 	if err != nil {
 		return fmt.Errorf("deals: auditing the reopen on the suggestion: %w", err)
 	}

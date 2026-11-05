@@ -175,10 +175,10 @@ const (
 // moves the pair together and stays the way to say nobody has classified it.
 func clearableProductColumns(current crmcontracts.Product) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"sku":             {Column: "sku", Current: current.Sku},
-		descriptionColumn: {Column: descriptionColumn, Current: current.Description},
-		"component_kind":  {Column: "component_kind", Current: current.ComponentKind},
-		taxCategoryField:  {Column: taxCategoryField, Current: current.TaxCategory},
+		"sku":               {Column: "sku", Current: current.Sku},
+		descriptionColumn:   {Column: descriptionColumn, Current: current.Description},
+		componentKindColumn: {Column: componentKindColumn, Current: current.ComponentKind},
+		taxCategoryField:    {Column: taxCategoryField, Current: current.TaxCategory},
 	}
 }
 
@@ -236,9 +236,9 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 	}
 	if in.ComponentKind != nil {
 		if !slices.Contains(componentKinds, *in.ComponentKind) {
-			return nil, httperr.Validation("component_kind", "invalid", "choose software, implementation or other")
+			return nil, httperr.Validation(componentKindColumn, "invalid", "choose software, implementation or other")
 		}
-		p.Set("component_kind", current.ComponentKind, *in.ComponentKind)
+		p.Set(componentKindColumn, current.ComponentKind, *in.ComponentKind)
 	}
 	if in.TaxCategory != nil {
 		if err := checkTaxCategory(*in.TaxCategory); err != nil {

@@ -99,7 +99,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 func activityColumnImage(a crmcontracts.Activity) map[string]any {
 	return map[string]any{
 		"subject":              derefOrNil(a.Subject),
-		"body":                 derefOrNil(a.Body),
+		fieldBody:              derefOrNil(a.Body),
 		auditFieldOccurredAt:   a.OccurredAt,
 		fieldOccurredPrecision: string(a.OccurredPrecision),
 		fieldDurationSeconds:   derefOrNil(a.DurationSeconds),

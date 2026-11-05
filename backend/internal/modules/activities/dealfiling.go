@@ -108,12 +108,12 @@ func applyLoggedDealFiling(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 		return err
 	}
 	for _, link := range in.Links {
-		if link.EntityType == "deal" || link.EntityType == "project" || link.EntityType == "lead" {
+		if link.EntityType == linkEntityDeal || link.EntityType == "project" || link.EntityType == "lead" {
 			return nil
 		}
 	}
 	if in.DealFiling != nil && in.DealFiling.DealId != nil {
-		in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(*in.DealFiling.DealId)})
+		in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: linkEntityDeal, EntityID: ids.UUID(*in.DealFiling.DealId)})
 		return nil
 	}
 	if in.DealFiling != nil && in.DealFiling.Skip != nil && *in.DealFiling.Skip {
@@ -140,7 +140,7 @@ func applyLoggedDealFiling(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 		return nil
 	}
 	if options.SuggestedDealId != nil {
-		in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(*options.SuggestedDealId)})
+		in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: linkEntityDeal, EntityID: ids.UUID(*options.SuggestedDealId)})
 	}
 	return nil
 }
@@ -155,7 +155,7 @@ func validateFilingContext(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 			return nil
 		}
 	}
-	if ref.RecordType == "company" && in.dealFilingResolver != nil {
+	if ref.RecordType == linkEntityCompany && in.dealFilingResolver != nil {
 		companies, err := in.dealFilingResolver.CompaniesOfRecords(ctx, tx, in.Links)
 		if err != nil {
 			return err
@@ -178,7 +178,7 @@ func (s *Store) fileUpdatedActivity(ctx context.Context, tx pgx.Tx, current crmc
 	if current.MeetingStatus != nil {
 		filing.MeetingStatus = new(string(*current.MeetingStatus))
 	}
-	for _, kind := range []string{"deal", "project", "lead"} {
+	for _, kind := range []string{linkEntityDeal, linkEntityProject, linkEntityLead} {
 		if filed, err := hasLinkOfType(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(current.Id)), kind); err != nil || filed {
 			return current, err
 		}

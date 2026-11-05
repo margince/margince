@@ -24,6 +24,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// runBlocked and runSkipped are one word in both vocabularies: the stored status
+// and the wire outcome.
+const (
+	runBlocked = "blocked"
+	runSkipped = "skipped"
+)
+
 // runStatusByOutcome maps the contract's outcome vocabulary onto the
 // workflow_run.status set (the two differ where the wire says what the
 // user sees — "fired", "queued_for_approval" — and the row says what the
@@ -31,8 +38,8 @@ import (
 var runStatusByOutcome = map[string]string{
 	"fired":               "applied",
 	"failed":              "failed",
-	"blocked":             "blocked",
-	"skipped":             "skipped",
+	runBlocked:            runBlocked,
+	runSkipped:            runSkipped,
 	"queued_for_approval": "requires_approval",
 }
 
@@ -41,8 +48,8 @@ var runStatusByOutcome = map[string]string{
 var runOutcomeByStatus = map[string]string{
 	"applied":           "fired",
 	"failed":            "failed",
-	"blocked":           "blocked",
-	"skipped":           "skipped",
+	runBlocked:          runBlocked,
+	runSkipped:          runSkipped,
 	"requires_approval": "queued_for_approval",
 }
 
