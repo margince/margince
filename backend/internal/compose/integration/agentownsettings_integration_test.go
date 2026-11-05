@@ -40,7 +40,7 @@ func TestAnAgentChangesItsOwnUsersSettingsAndIsNamedForIt(t *testing.T) {
 	auditedBy("the display name")
 	ownAct(t, d, "save_locale", map[string]any{"request_body": AnyMap{"locale": "de"}})
 	auditedBy("the language")
-	ownAct(t, d, "save_timezone", map[string]any{"request_body": AnyMap{"timezone": "Europe/Berlin", "source": "browser"}})
+	ownAct(t, d, "save_timezone", map[string]any{"request_body": AnyMap{"timezone": "Europe/Berlin", "source": "agent"}})
 	auditedBy("the time zone")
 	var displayName, locale string
 	if err := d.e.Owner.QueryRow(t.Context(), `SELECT display_name, coalesce(locale, '') FROM app_user WHERE id = $1`, user).Scan(&displayName, &locale); err != nil {

@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -119,10 +120,13 @@ func TestTheTimezoneWriterRefusesWhatItMayNotStore(t *testing.T) {
 		t.Errorf("the refusal names %q, want timezone", field)
 	}
 	agent := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:test", UserID: user,
+		Type: principal.PrincipalAgent, ID: "agent:test", UserID: user, OnBehalfOf: user, PassportID: ids.NewV7(),
 	})
-	if _, err := svc.SaveMyTimezone(agent, "Europe/Berlin", TimezoneChosen); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("an agent: err = %v, want permission denied", err)
+	for _, source := range []TimezoneSource{TimezoneChosen, TimezoneFromBrowser} {
+		_, err := svc.SaveMyTimezone(agent, "Europe/Berlin", source)
+		if detailed, ok := errors.AsType[*httperr.DetailedError](err); !ok || detailed.Code != "agent_member_limit" {
+			t.Errorf("an agent sending source %s: err = %v, want the agent limit", source, err)
+		}
 	}
 	if err := svc.db.Tx(context.Background(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE app_user SET archived_at = now() WHERE id = $1`, user)
@@ -132,6 +136,50 @@ func TestTheTimezoneWriterRefusesWhatItMayNotStore(t *testing.T) {
 	}
 	if _, err := svc.SaveMyTimezone(ctx, "Europe/Berlin", TimezoneChosen); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an archived seat: err = %v, want not found", err)
+	}
+}
+
+// An agent repeating a browser's guess becomes its setter. An agent repeating a zone
+// the user chose leaves it theirs. Either way the answer says who set it.
+func TestAnAgentRepeatingAZoneTakesOnlyAGuess(t *testing.T) {
+	svc, ctx, user := seatChoosingALanguage(t)
+	agent := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:zone", UserID: user, OnBehalfOf: user, PassportID: ids.NewV7(),
+	})
+	if _, err := svc.SaveMyTimezone(ctx, "Europe/Berlin", TimezoneFromBrowser); err != nil {
+		t.Fatal(err)
+	}
+	seat, err := svc.SaveMyTimezone(agent, "Europe/Berlin", TimezoneFromAgent)
+	if err != nil || seat.TimezoneSetBy == nil || *seat.TimezoneSetBy != "agent:zone" || seat.TimezoneChosen {
+		t.Fatalf("the agent repeating the guess reads %+v (%v), want it named as the setter", seat, err)
+	}
+	if _, err := svc.SaveMyTimezone(ctx, "Europe/Berlin", TimezoneChosen); err != nil {
+		t.Fatal(err)
+	}
+	seat, err = svc.SaveMyTimezone(agent, "Europe/Berlin", TimezoneFromAgent)
+	if err != nil || seat.TimezoneSetBy != nil || !seat.TimezoneChosen {
+		t.Errorf("the agent repeating the user's choice reads %+v (%v), want it left as the user's", seat, err)
+	}
+}
+
+// The other self-service writers answer the seat's zone too, and who set it.
+func TestASelfServiceAnswerKeepsWhoSetTheZone(t *testing.T) {
+	svc, ctx, user := seatChoosingALanguage(t)
+	agent := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:zone", UserID: user, OnBehalfOf: user, PassportID: ids.NewV7(),
+	})
+	if _, err := svc.SaveMyTimezone(agent, "Europe/Berlin", TimezoneFromAgent); err != nil {
+		t.Fatal(err)
+	}
+	for name, save := range map[string]func() (Seat, error){
+		"language":      func() (Seat, error) { return svc.SaveMyLocale(ctx, "de") },
+		"display name":  func() (Seat, error) { return svc.SaveMyDisplayName(ctx, "Renamed") },
+		"greeting name": func() (Seat, error) { return svc.SaveMyGreetingName(ctx, new("Rena")) },
+	} {
+		seat, err := save()
+		if err != nil || seat.TimezoneSetBy == nil || *seat.TimezoneSetBy != "agent:zone" || seat.Timezone != "Europe/Berlin" {
+			t.Errorf("saving the %s answers %+v (%v)", name, seat, err)
+		}
 	}
 }
 

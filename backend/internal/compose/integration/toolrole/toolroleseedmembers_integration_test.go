@@ -43,6 +43,20 @@ func (s sweepSeed) call(method, path string, body any, headers map[string]string
 	}
 }
 
+// asCallerWhereItMay makes a record as the call's own passport. A role refused that
+// write gets the session's record, and the gate refuses its call on that one too.
+func (s sweepSeed) asCallerWhereItMay(method, path string, body integration.AnyMap) string {
+	s.t.Helper()
+	var made struct {
+		ID string `json:"id"`
+	}
+	if status := s.e.Call(s.t, method, path, body, s.pool.caller, &made); status >= 200 && status < 300 {
+		return made.ID
+	}
+	s.call(method, path, body, nil, &made)
+	return made.ID
+}
+
 func (s sweepSeed) post(path string, body integration.AnyMap) string {
 	return seededID(s.t, s.e, path, body)
 }

@@ -12668,7 +12668,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.pausedReason.listInvalid":
     "Pausiert, da der Filter der beobachteten Live-Liste nicht mehr funktioniert. Wenn du den Filter reparierst, läuft die Automatisierung nicht von selbst weiter.",
   "auto.pausedReason.passportRevoked":
-    "Die Regel wurde pausiert, da der Passport des Agenten, der sie eingerichtet hat, widerrufen wurde. Setze sie fort, dann läuft sie ohne Agenten dahinter weiter.",
+    "Der Agent, der die Regel eingerichtet hat, hat keinen Zugang mehr: Passport abgelaufen oder widerrufen, oder Verbindung beendet. Setze sie fort, dann läuft sie ohne Agenten weiter.",
+  "auto.setByYourAgent": "Von deinem Agenten",
+  "auto.setByAnAgent": "Von einem Agenten",
   "auto.pausedReason.listUnavailable":
     "Pausiert, da das zuständige Teammitglied die beobachtete Liste nicht mehr findet.",
   "auto.pausedReason.burst":
@@ -12717,8 +12719,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.action.addToShortlist": "zur Shortlist hinzufügen",
   "auto.pausedShort.listArchived": "Pausiert · Liste archiviert",
   "auto.pausedShort.listInvalid": "Pausiert · Listenfilter defekt",
-  "auto.pausedShort.passportRevoked":
-    "Pausiert · Passport des Agenten widerrufen",
+  "auto.pausedShort.passportRevoked": "Pausiert · Zugang des Agenten beendet",
   "auto.pausedShort.listUnavailable": "Pausiert · Liste nicht gefunden",
   "auto.pausedShort.burst": "Pausiert · zu viele Datensätze",
   "auto.withheld":
@@ -15256,6 +15257,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "account.timezoneLabel": "Zeitzone",
   "account.timezoneHelp":
     "Zeiten in Margince, deine buchbaren Zeiten und Mails an dich nutzen diese Zeitzone. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
+  "account.timezoneSetByAgent": "Von deinem Agenten",
   "workingHours.zoneIs": "Deine Zeiten gelten in {zone}.",
   "workingHours.changeZone": "Zeitzone ändern",
   "account.languageCard": "Sprache und Zeitzone",
@@ -19011,7 +19013,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.retryRefusedRepeats":
     "Diese Regel darf nicht zweimal ausgeführt werden, da ein erneuter Lauf ihre Aktionen wiederholen könnte.",
   "worklist.verb.retryRefusedPassportRevoked":
-    "Der Passport des Agenten, der diese Regel eingerichtet hat, wurde widerrufen. Darum ist sie pausiert. Setze sie fort, dann läuft sie ohne Agenten dahinter weiter.",
+    "Der Agent, der die Regel eingerichtet hat, hat keinen Zugang mehr, darum ist die Regel pausiert. Setze sie fort, dann läuft sie ohne Agenten weiter.",
   "worklist.verb.retryRefusedEventGone":
     "Dieser Lauf kann nicht erneut ausgeführt werden, da das auslösende Ereignis nicht mehr existiert. Zeitgesteuerte Regeln prüfen automatisch erneut.",
   "worklist.verb.acknowledgeFailed":

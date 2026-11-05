@@ -145,6 +145,12 @@ func leadSeeders(s sweepSeed) map[string]func() string {
 			s.call("DELETE", "/v1/leads/"+id, integration.AnyMap{}, pinned(versionOfLead(id)), nil)
 			return id
 		},
+		// An agent changes the terms of a live partner and makes no new one.
+		"live_partner": func() string {
+			partner := s.create["company"]()
+			s.call("PUT", "/v1/companies/"+partner+"/partner", integration.AnyMap{"partner_role": "hosting"}, nil, nil)
+			return partner
+		},
 		"partner_lead": func() string {
 			partner := s.create["company"]()
 			s.call("PUT", "/v1/companies/"+partner+"/partner", integration.AnyMap{"partner_role": "hosting"}, nil, nil)

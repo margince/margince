@@ -205,3 +205,45 @@ func TestAnAgentsDraftKeepsNoFileItsHumanCannotSee(t *testing.T) {
 		t.Errorf("the agent's draft kept %v, want no file its human cannot see", saved.Files.attachable)
 	}
 }
+
+// A new version of an agent's words keeps the files the draft holds, except one the
+// caller can no longer see. A route save that names no files keeps them too, and one
+// that names an empty list clears them.
+func TestANewVersionOfAnAgentsWordsKeepsTheDraftsFiles(t *testing.T) {
+	e := setupSend(t)
+	store := draftStore(e)
+	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
+	agent := e.asAgentFor(t, principal.RowScopeAll)
+	kept, _ := e.seedDraftFile(t, "quote.pdf")
+	gone, _ := e.seedDraftFile(t, "old.pdf")
+	first := agentDraft("First go")
+	first.AttachmentIDs = []ids.UUID{kept, gone}
+	if _, err := store.SaveAgentMailDraft(agent, anchor, first, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `UPDATE attachment SET archived_at = now() WHERE id = $1`, gone); err != nil {
+		t.Fatal(err)
+	}
+	again, err := store.SaveAgentMailDraft(agent, anchor, agentDraft("Shorter"), nil)
+	if err != nil {
+		t.Fatalf("the new words: %v", err)
+	}
+	if !slices.Equal(e.storedDraftFiles(t, again.ID), []ids.UUID{kept}) {
+		t.Errorf("the new words left files %v, want only %s", e.storedDraftFiles(t, again.ID), kept)
+	}
+	routed, err := store.SaveMailDraft(agent, anchor, agentDraft("Shorter still"), &again.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(e.storedDraftFiles(t, routed.ID), []ids.UUID{kept}) {
+		t.Errorf("a route save naming no files left %v", e.storedDraftFiles(t, routed.ID))
+	}
+	cleared := agentDraft("No files")
+	cleared.AttachmentIDs = []ids.UUID{}
+	if _, err := store.SaveMailDraft(agent, anchor, cleared, &routed.Version); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.storedDraftFiles(t, routed.ID); len(got) != 0 {
+		t.Errorf("a route save clearing the files left %v", got)
+	}
+}

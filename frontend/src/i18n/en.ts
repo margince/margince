@@ -12657,7 +12657,9 @@ export const en = {
   "auto.pausedReason.listInvalid":
     "Paused because the filter of the Live List it watches stopped working. Fixing the filter does not resume it.",
   "auto.pausedReason.passportRevoked":
-    "The agent that set this rule up had its passport revoked, so the rule stopped. Resume it to keep it running with no agent behind it.",
+    "The agent that set this rule up no longer has live access because its passport expired or was revoked, or its connection ended. Resume it to keep running without an agent.",
+  "auto.setByYourAgent": "By your agent",
+  "auto.setByAnAgent": "By an agent",
   "auto.pausedReason.listUnavailable":
     "Paused because its owner can no longer find the list it watches.",
   "auto.pausedReason.burst":
@@ -12704,7 +12706,7 @@ export const en = {
   "auto.action.addToShortlist": "add to a Shortlist",
   "auto.pausedShort.listArchived": "Paused · list archived",
   "auto.pausedShort.listInvalid": "Paused · list filter broken",
-  "auto.pausedShort.passportRevoked": "Paused · agent’s passport revoked",
+  "auto.pausedShort.passportRevoked": "Paused · agent’s access ended",
   "auto.pausedShort.listUnavailable": "Paused · list not found",
   "auto.pausedShort.burst": "Paused · too many records",
   "auto.withheld": "Configured automations are hidden for your role.",
@@ -15172,6 +15174,7 @@ export const en = {
   "account.timezoneLabel": "Time zone",
   "account.timezoneHelp":
     "Times in Margince, your bookable hours and mail sent to you use this time zone. Saved to your account, so it follows you to every device you sign in on.",
+  "account.timezoneSetByAgent": "By your agent",
   "workingHours.zoneIs": "Your hours are read in {zone}.",
   "workingHours.changeZone": "Change time zone",
   "account.languageCard": "Language and time zone",
@@ -18828,7 +18831,7 @@ export const en = {
   "worklist.verb.retryRefusedRepeats":
     "This rule is not allowed to run twice, so a rerun could repeat its actions.",
   "worklist.verb.retryRefusedPassportRevoked":
-    "The agent that set this rule up had its passport revoked, so the rule is paused. Resume it to keep it running with no agent behind it.",
+    "The agent that set this rule up no longer has live access, so the rule is paused. Resume it to keep it running with no agent behind it.",
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",

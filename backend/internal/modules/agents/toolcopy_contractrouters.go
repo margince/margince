@@ -29,13 +29,14 @@ var changeAccessCopy = toolCopy{
 }
 
 var changeOffersCopy = toolCopy{
-	Purpose: "Work the commercial paper around a deal: send, accept, reject, render or regenerate an " +
+	Purpose: "Work the commercial paper around a deal: send, accept, reject or render an " +
 		"offer; record, change, renew, cancel or archive a contract; and run a deal room's documents, " +
 		"access and expiry.",
-	Limits: "Sending an offer fixes its version and its exchange rate from then on. Inviting a buyer " +
-		"into a deal room sends mail, so it is send_outbound's deal_room_invite.",
-	Instead: "Use change_record_parts to change an offer's line items, and change_state to move the " +
-		"deal itself.",
+	Limits: "Sending an offer fixes its version and its exchange rate from then on. What a buyer reads " +
+		"in a deal room reaches them at once, so inviting them, writing to them, adding or changing a " +
+		"document, editing the room's words, setting its expiry and resuming it are send_outbound's.",
+	Instead: "Use change_record_parts to change an offer's line items, change_state to move the " +
+		"deal itself, and run_research to regenerate an offer.",
 }
 
 var changeRelationshipsCopy = toolCopy{
@@ -120,6 +121,7 @@ var runResearchCopy = toolCopy{
 	Purpose: "Run AI work for the user: ask about a company, refresh a company's brief, dossier, growth " +
 		"fit or scan or a contact's brief, research a contact, make today's morning brief, ask a knowledge " +
 		"corpus, write the sales review's assessment, propose a report or filter from a description, " +
+		"draft an introduction, regenerate an offer, propose a deal's roles, talk through a site read, " +
 		"read a photo of business cards into proposals, build the user's voice, preview the Home repair, " +
 		"buy a contact's details from the data provider, rebuild the search index, or bring in old mail.",
 	Limits: "Each call spends AI budget, and research asks an outside provider, so the passport needs " +

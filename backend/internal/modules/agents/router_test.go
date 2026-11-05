@@ -576,7 +576,7 @@ func TestARoutersActionsAreOfferedAtTheTierAColleaguesAgentIsAdmittedOn(t *testi
 	}
 }
 
-// A router names only its actions that run at once and cannot be undone. A
+// A router names only its actions that run at once and need the user's yes. A
 // client asks the user before those, and not before the others.
 func TestARouterAsksTheUserFirstOnlyForActionsItCannotUndo(t *testing.T) {
 	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
@@ -597,13 +597,13 @@ func TestARouterAsksTheUserFirstOnlyForActionsItCannotUndo(t *testing.T) {
 		t.Fatal("the router is not registered")
 	}
 	described := DescribeForClient(spec)
-	if !strings.Contains(described, "the action archive cannot be undone") {
+	if !strings.Contains(described, "for the action archive") {
 		t.Errorf("the router does not ask first for archive: %s", described)
 	}
 	if strings.Contains(described, "the actions ") {
 		t.Errorf("the router asks first for rename, which can be undone: %s", described)
 	}
-	if strings.Contains(described, "merge cannot be undone") {
+	if strings.Contains(described, "merge,") {
 		t.Errorf("the router asks first for merge, which a human already approves: %s", described)
 	}
 }

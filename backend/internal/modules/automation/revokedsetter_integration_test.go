@@ -13,7 +13,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -196,13 +198,7 @@ func TestAUsersOwnRuleIgnoresARevokedPassport(t *testing.T) {
 // A seeded rule belongs to the product. An agent enabling one leaves no setter on it.
 func TestAnAgentEnablingASeededRuleLeavesNoSetter(t *testing.T) {
 	r := newSetterRig(t)
-	id := ids.New[ids.AutomationKind]()
-	r.fx.exec(t, `INSERT INTO automation (id, key, name, trigger, action, enabled)
-		VALUES ($1, $2, $2, '{"event_type":"test"}', '{"kind":"test"}', false)`, id, stageChangeNotifyName)
-	current, err := r.store.Get(r.user(), id)
-	if err != nil {
-		t.Fatal(err)
-	}
+	current := r.seededRule(t, stageChangeNotifyName)
 	r.enable(r.agent(), t, current)
 	if _, _, setter := r.ruleState(t, current); setter != nil {
 		t.Errorf("the seeded rule names passport %s", *setter)
@@ -253,9 +249,89 @@ func TestAnAgentsRuleFromASeededKeyNamesItsPassport(t *testing.T) {
 	if _, _, setter := r.ruleState(t, rule); setter == nil || *setter != r.passport.String() {
 		t.Errorf("the rule names passport %v, want %s", setter, r.passport)
 	}
+	running := r.enable(r.agent(), t, rule)
 	off := false
-	if _, err := r.store.Update(r.agent(), rule.ID, UpdateAutomationInput{Enabled: &off, IfVersion: &rule.Version}); err != nil && !errors.Is(err, apperrors.ErrVersionSkew) {
+	if _, err := r.store.Update(r.agent(), rule.ID, UpdateAutomationInput{Enabled: &off, IfVersion: &running.Version}); err != nil {
 		t.Errorf("the agent pausing its own rule answered %v", err)
+	}
+	if enabled, _, _ := r.ruleState(t, rule); enabled {
+		t.Error("the agent's pause left its own rule running")
+	}
+}
+
+// seededRule is an unowned row of a seeded key, as the product starts it.
+func (r *setterRig) seededRule(t *testing.T, key string) Automation {
+	t.Helper()
+	id := ids.New[ids.AutomationKind]()
+	r.fx.exec(t, `INSERT INTO automation (id, key, name, trigger, action, enabled)
+		VALUES ($1, $2, $2, '{"event_type":"test"}', '{"kind":"test"}', false)`, id, key)
+	rule, err := r.store.Get(r.user(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rule
+}
+
+// An agent does not change who owns a rule. So it never takes a seeded rule as its
+// own user's, and the seeded limits keep holding.
+func TestAnAgentDoesNotTakeASeededRuleAsItsOwn(t *testing.T) {
+	r := newSetterRig(t)
+	rule := r.seededRule(t, stageChangeNotifyName)
+	me := ids.From[ids.UserKind](r.fx.rep1)
+	_, err := r.store.Update(r.agent(), rule.ID, UpdateAutomationInput{OwnerID: &me})
+	if detailed, ok := errors.AsType[*httperr.DetailedError](err); !ok || detailed.Code != "agent_hands_on_no_rule" {
+		t.Errorf("an agent naming its own user as the owner answered %v", err)
+	}
+	if n := r.fx.count(t, `SELECT count(*) FROM automation WHERE id = $1 AND owner_id IS NULL`, rule.ID); n != 1 {
+		t.Error("the seeded rule gained an owner")
+	}
+}
+
+// The agent's enable is what turns a draft starter on, and the starter spends a model
+// call each time it fires. Revoking the agent's passport stops that spend.
+func TestAnAgentEnablingADraftStarterIsItsSetter(t *testing.T) {
+	r := newSetterRig(t)
+	rule := r.seededRule(t, "post_meeting_recap")
+	ctx := r.agent()
+	actor, _ := principal.Actor(ctx)
+	actor.Scopes = principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite, principal.ScopeEnrich)
+	r.enable(principal.WithActor(ctx, actor), t, rule)
+	if _, _, setter := r.ruleState(t, rule); setter == nil || *setter != r.passport.String() {
+		t.Errorf("the started rule names passport %v, want %s", setter, r.passport)
+	}
+}
+
+// An edit that names a running rule's status claims nothing: the rule stays the
+// user's unless the agent is what turned it on.
+func TestAnAgentEditingAUsersRunningRuleDoesNotBecomeItsSetter(t *testing.T) {
+	r := newSetterRig(t)
+	rule := r.ruleBy(r.user(), t)
+	on, renamed := true, "Renamed by the agent"
+	if _, err := r.store.Update(r.agent(), rule.ID, UpdateAutomationInput{Enabled: &on, Name: &renamed, IfVersion: &rule.Version}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, setter := r.ruleState(t, rule); setter != nil {
+		t.Errorf("the user's rule names passport %s after the agent's edit", *setter)
+	}
+	r.revoke(t)
+	r.fire(t)
+	if enabled, _, _ := r.ruleState(t, rule); !enabled || *r.applied != 1 {
+		t.Errorf("the user's rule reads enabled %t after %d firings", enabled, *r.applied)
+	}
+}
+
+// An agent turning a rule back on, after someone paused it, stands behind it.
+func TestAnAgentResumingAPausedRuleBecomesItsSetter(t *testing.T) {
+	r := newSetterRig(t)
+	rule := r.ruleBy(r.user(), t)
+	off := false
+	paused, err := r.store.Update(r.user(), rule.ID, UpdateAutomationInput{Enabled: &off, IfVersion: &rule.Version})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.enable(r.agent(), t, paused)
+	if _, _, setter := r.ruleState(t, rule); setter == nil || *setter != r.passport.String() {
+		t.Errorf("the resumed rule names passport %v, want %s", setter, r.passport)
 	}
 }
 
@@ -336,5 +412,40 @@ func TestARuleTakenOverWhileItIsBeingPausedFires(t *testing.T) {
 	}
 	if *r.applied != 1 {
 		t.Errorf("the rule fired %d times, want 1", *r.applied)
+	}
+}
+
+// A passport with no grant runs out at its own expiry. The rule pauses at its next
+// firing without running, the audit row says why, and the owner is told.
+func TestARuleStopsWithoutFiringOnceItsSettersPassportExpires(t *testing.T) {
+	r := newSetterRig(t)
+	rule := r.ruleBy(r.agent(), t)
+	r.fire(t)
+	r.engine.SetClock(func() time.Time { return clocktest.Now(t).Add(48 * time.Hour) })
+	r.fire(t)
+	if *r.applied != 1 {
+		t.Errorf("the rule fired %d times after its passport expired, want it stopped at 1", *r.applied)
+	}
+	enabled, reason, _ := r.ruleState(t, rule)
+	if enabled || reason == nil || *reason != PausedPassportRevoked {
+		t.Errorf("the rule reads enabled %t, reason %v", enabled, reason)
+	}
+	if got := r.fx.count(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND after->>'setter_passport_id_state' = 'expired'`, rule.ID); got != 1 {
+		t.Errorf("%d audit rows name the expiry, want 1", got)
+	}
+	if len(r.notices.told) != 1 || r.notices.told[0] != r.fx.rep1 {
+		t.Errorf("the notices went to %v, want the owner", r.notices.told)
+	}
+}
+
+// A revocation's audit row keeps saying so, whatever the clock reads.
+func TestARevokedSettersPauseAuditsItAsRevoked(t *testing.T) {
+	r := newSetterRig(t)
+	rule := r.ruleBy(r.agent(), t)
+	r.revoke(t)
+	r.engine.SetClock(func() time.Time { return clocktest.Now(t).Add(48 * time.Hour) })
+	r.fire(t)
+	if got := r.fx.count(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND after->>'setter_passport_id_state' = 'revoked'`, rule.ID); got != 1 {
+		t.Errorf("%d audit rows name the revocation, want 1", got)
 	}
 }

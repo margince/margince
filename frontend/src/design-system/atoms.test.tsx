@@ -800,6 +800,13 @@ function declarations(css: string, selector: string): string {
   return css.slice(at, css.indexOf("}", at));
 }
 
+it("keeps a badge in a form stack as wide as its words", () => {
+  const css = readFileSync(join(here, "atoms.css"), "utf8");
+  expect(declarations(css, ".form-stack > .badge")).toMatch(
+    /align-self:\s*flex-start/,
+  );
+});
+
 it("stretches the door over the card and rings the card it opens", () => {
   const css = readFileSync(join(here, "atoms.css"), "utf8");
 
