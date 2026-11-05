@@ -617,8 +617,8 @@ describe("the overnight question", () => {
   });
 });
 
-// An AI tool is a hint beside mail: the row opens the Settings picker in a
-// drawer, says when one is connected, and is gone where none can connect.
+// An AI tool is a hint beside mail. The row opens the Settings picker in a
+// drawer and says when one is connected. It is gone where none can connect.
 describe("the AI tool row", () => {
   const passports = (connected: boolean) => () =>
     jsonResponse({

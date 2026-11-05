@@ -36,8 +36,8 @@ import { downloadBytes } from "../lib/download";
 import { useViewerZone } from "../lib/viewerzone";
 import "./connect-ai-tool.css";
 
-// The page's first task for a reader who is not a developer: which AI, where
-// they use it, then only the steps for that one pair.
+// The page's first task for a reader who is not a developer. It asks which AI
+// and where it is used, then shows only that pair's steps.
 export function ConnectAiToolCard() {
   const t = useT();
   return (
@@ -209,8 +209,8 @@ function LocalPath({
   );
 }
 
-// Any tool that adds a remote MCP server: the three facts every one asks for,
-// and the two ways out when a tool cannot use one of them.
+// Any tool that adds a remote MCP server gets the three facts each one asks for.
+// Two captions cover a tool that cannot use one of them.
 function OtherPath({ mcpUrl }: Readonly<{ mcpUrl: string }>) {
   const t = useT();
   return (
