@@ -27,7 +27,7 @@ catalog puts the one operation its verb serves. A verb that serves none, or seve
 
 Regenerate from the repository root, then from `backend/`:
 
-    UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/toolrole RUN=TestTheToolRoleMatrixIsPublished
+    UPDATE_MCP_TOOL_ROLES=1 make test-roles
     go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity
 
 A call that reaches no verdict fails the first command; fix it as

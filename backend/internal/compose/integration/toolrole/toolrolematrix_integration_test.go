@@ -5,8 +5,8 @@
 
 // Package toolrole holds the MCP role sweep and the tests that hold tools/list
 // to its answers. The sweep calls every tool and action as every seeded role,
-// which takes minutes. It is a test binary of its own, so that time counts
-// against its own per-package timeout in the integration lane.
+// which takes minutes. Its files carry the rolesweep tag, so the weekly
+// scheduled lane runs it (make test-roles) and the per-PR lane does not.
 package toolrole
 
 import (
@@ -20,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -30,95 +29,6 @@ const (
 	// toolRoleCallsPerPassport stays under a passport's per-window call budget.
 	toolRoleCallsPerPassport = 80
 )
-
-// TestTheToolRoleMatrixIsPublished measures, for every seeded role, which tools
-// a passport on that role is refused, and holds docs/reference/mcp-tool-roles.json
-// to the answer. The roles come from the database and the tools from the registry,
-// so neither is a second list. A cell holds what the gate says, not what the seed
-// document claims.
-func TestTheToolRoleMatrixIsPublished(t *testing.T) {
-	recorded := newToolCheckRecorder()
-	d := toolRoleApp(t, "tool-role-matrix", compose.WithToolChecksRecordedForTest(recorded.note))
-	calls := toolRoleCalls(compose.NewRegistry(nil, compose.SendPath{}).Specs(), routeShapes())
-	if len(calls) == 0 {
-		t.Fatal("the registry serves no tool, so this measured nothing")
-	}
-	holdEveryFixtureNamesACall(t, calls)
-	roles := apptest.SeededRoles(t, d.E)
-	if len(roles) == 0 {
-		t.Fatal("the database seeds no role, so this measured nothing")
-	}
-
-	verdicts := map[string]toolRoleVerdicts{}
-	measured := newToolChecksMeasure()
-	elsewhere := measuredElsewhere(t, roles)
-	for verb, row := range elsewhere {
-		measured.control[verb] = agents.ToolChecksRow{Checks: row.Checks}
-	}
-	for _, call := range calls {
-		if row, ok := elsewhere[call.verb]; ok {
-			verdicts[call.row] = row.toolRoleVerdicts
-		}
-	}
-	seats := roleSeats(t, d.E, roles)
-	swept := make([][]sweptCall, len(seats))
-	eachSeat(t, "roles", seats, func(t *testing.T, i int, seat roleSeat) {
-		swept[i] = sweepSeat(t, seat, recorded, calls, elsewhere)
-	})
-	if t.Failed() {
-		return
-	}
-	// Merged in the roles' order, so the files read the same however the
-	// passes interleaved.
-	for i, seat := range seats {
-		for _, c := range swept[i] {
-			if c.ran {
-				measured.add(c.call.verb, seat.role.Key == "admin", c.run, c.got)
-			}
-			row := verdicts[c.call.row]
-			if len(c.releaseRefused) > 0 {
-				row.Refused = append(row.Refused, seat.role.Key)
-			} else {
-				row.record(seat.role.Key, c.got, c.run.Refused)
-			}
-			verdicts[c.call.row] = row
-		}
-	}
-	measureEveryKind(t, seats, recorded, measured, kindVariants(t, withoutVerbs(calls, elsewhere), seedableKinds(t, d.E)), verdicts)
-	colleague := crossOwnerPass(t, d.E, seats, calls)
-	if t.Failed() {
-		return
-	}
-
-	holdTheMeasurementHasTeeth(t, roles, len(calls), verdicts)
-	doc, open := toolRolesDocument(roles, calls, verdicts, colleague)
-	if len(open) > 0 {
-		t.Errorf("%d cells reached no verdict. Each must run, or be refused by a gate:\n%s", len(open), strings.Join(open, "\n"))
-	}
-	rows, partial := measured.rows()
-	holdTheToolChecksTable(t, provenBy(rows, roles, calls, verdicts), partial)
-	rendered, err := json.MarshalIndent(doc, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	rendered = append(rendered, '\n')
-	if os.Getenv("UPDATE_MCP_TOOL_ROLES") != "" {
-		if err := os.WriteFile(toolRolesFile, rendered, 0o600); err != nil {
-			t.Fatal(err)
-		}
-		return
-	}
-	committed, err := os.ReadFile(toolRolesFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(committed) != string(rendered) {
-		t.Errorf("%s is not what the roles are refused. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/toolrole RUN=TestTheToolRoleMatrixIsPublished, then go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity", toolRolesFile)
-	}
-	// The listing reads the checks this binary embeds, which the sweep above
-	// held to what it measured.
-	t.Run("cells", func(t *testing.T) { holdCellsAreOffered(t, d, toolRoleUser) })
-}
 
 // extensionRoleFile holds the verbs that need a composed extension unit. They
 // are measured in a test binary of their own. A registered unit holds for the

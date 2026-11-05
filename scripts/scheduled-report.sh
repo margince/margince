@@ -418,6 +418,23 @@ elif [[ "${BACKEND_CLOCK_RESULT:-}" = "success" ]]; then
   resolve "the backend suite's verdict depends on the calendar"
 fi
 
+if [[ "${ROLE_SWEEP_RESULT:-}" = "failure" ]]; then
+  report "the MCP role sweep disagrees with the committed matrix" "priority: high,area: agents-mcp,bug" \
+"\`make test-roles\` failed on the scheduled run of \`main\`: $RUN_URL
+
+A role's cell, a tool's checks, or a cell no gate decides changed since the
+matrix was committed. Every tool and action was called as every seeded role, and
+the answers no longer equal \`docs/reference/mcp-tool-roles.json\` or
+\`backend/internal/modules/agents/toolchecks.json\`. tools/list reads that table,
+so an agent may be offered a tool its user is refused, or not offered one it may use.
+
+Treat it as a red \`main\`: claim it with a \`claim: main-red\` pull request first.
+Read the failing lines, then follow docs/how-to/prove-a-tool-in-the-role-matrix.md."\
+    || unreported=1
+elif [[ "${ROLE_SWEEP_RESULT:-}" = "success" ]]; then
+  resolve "the MCP role sweep disagrees with the committed matrix"
+fi
+
 if [[ "${STORIES_RESULT:-}" = "failure" ]]; then
   report "a story does not render clean on main" "priority: normal,area: ci-tests,bug" \
 "\`make fe-uat ARGS=--all-stories\` failed on the scheduled run of \`main\`: $RUN_URL

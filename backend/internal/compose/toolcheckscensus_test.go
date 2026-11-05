@@ -13,7 +13,7 @@ import (
 
 // toolChecksRerun is what to do about a row that is missing or stale.
 const toolChecksRerun = "add the seed or fixture its call needs in backend/internal/compose/integration/toolrole*, then run " +
-	"UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/toolrole RUN=TestTheToolRoleMatrixIsPublished"
+	"UPDATE_MCP_TOOL_ROLES=1 make test-roles"
 
 // Every verb the registry serves to an agent holds a row in the checks table
 // the binary embeds. The table holds no row for a verb no longer served.

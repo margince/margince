@@ -1,24 +1,19 @@
 <!-- prose:plain -->
 # Test the MCP surface end to end with a real assistant
 
-Find out whether a real assistant (Claude, GPT or Mistral) can do the daily jobs of a user
-through the MCP surface of Margince. It must also say true things while it works. `make e2e-llm` starts its own stack,
-and fills it with test data. It gives a real model the scenario prompts under `e2e/llm/scenarios/`, and grades what the
-model called and what it said. The results go to
-[reference/mcp-tool-coverage.md](../reference/mcp-tool-coverage.md).
+Find out whether a real assistant (Claude, GPT or Mistral) can do the daily jobs of a user through the MCP surface of Margince.
+It must also say true things while it works. `make e2e-llm` starts its own stack, and fills it with test data. It gives a real
+model the scenario prompts under `e2e/llm/scenarios/`, and grades what the model called and what it said. The results go to [reference/mcp-tool-coverage.md](../reference/mcp-tool-coverage.md).
 
-This is the **lane that costs money**, and you turn it on yourself. Every run uses real model tokens on your own
-credentials. The Go tests pin payloads and errors for free. This lane answers
-the question they cannot: whether a model can use the surface. To add a case, read [add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md).
+This is the **lane that costs money**, and you turn it on yourself. Every run uses real model tokens on your own credentials.
+The Go tests pin payloads and errors for free. This lane answers the question they cannot: whether a model can use the surface. To add a case, read [add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md).
 
 > **Start free.** `make test-e2e-llm-check` needs no key, network or stack. It
 > runs the checker, the recorded verdicts of the judge and the unit tests of the bridge,
 > against stand-ins in the same program. Run it after any change under `e2e/llm/`.
 
-See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red
-result), and [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface under
-test). The lane of [certify-an-ai-model.md](certify-an-ai-model.md) is a different one: one
-AI feature, one model. The `e2e-llm` row of
+See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red result), and [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface under
+test). The lane of [certify-an-ai-model.md](certify-an-ai-model.md) is a different one: one AI feature, one model. The `e2e-llm` row of
 [reference/make-targets.md](../reference/make-targets.md) lists every setting. [test-the-rest-surface-end-to-end.md](test-the-rest-surface-end-to-end.md) runs the same scenarios through the REST API.
 
 ## 1. Choose the assistant and how to reach it
@@ -348,3 +343,8 @@ The weekly scheduled run opens a pull request with its own verdicts, which say `
 `make check` fails while the page and the committed verdicts do not agree. Delete a
 verdict you do not want to publish, such as a degraded run, or a run to try something.
 Do not leave it next to the others without a commit.
+
+## 9. Run the role sweep with every pass
+
+A pass also needs `make test-roles` green. It calls every tool and action as every seeded role, costs no tokens and needs `make db-up`.
+It checks `mcp-tool-roles.json`, `mcp-tool-roles.md` and `toolchecks.json`. A difference means a role is allowed or refused a call it was not before, so `tools/list` offers it the wrong tools: follow [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md). `make e2e-llm` does not run it, as that lane costs money; the weekly scheduled run does both.

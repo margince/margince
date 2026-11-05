@@ -1,7 +1,8 @@
 <!-- prose:plain -->
 # Prove a tool in the role matrix
 
-Use this page when a new or changed MCP tool or router action turns one of five tests red:
+Use this page when a new or changed MCP tool or router action turns one of these tests red. The first three
+run on every PR. The last two are the role sweep, which runs weekly and with `make test-roles`.
 
 - `TestEveryServedVerbHasItsToolChecksRow` in `backend/internal/compose/toolcheckscensus_test.go`. It runs in
   `make check` with no database, and holds `backend/internal/modules/agents/toolchecks.json` to the tools the
@@ -9,13 +10,22 @@ Use this page when a new or changed MCP tool or router action turns one of five 
 - `TestTheMCPParityCatalogIsPublished` in `backend/gates/`. It draws
   [mcp-tool-roles.md](../reference/mcp-tool-roles.md) in the catalog's groups, and fails where the two files the
   sweep writes disagree about the `rep` role.
-- The role sweep in `backend/internal/compose/integration/toolrole/`, a test binary of its own. It calls every
-  tool and action as each seeded role and writes [mcp-tool-roles.json](../reference/mcp-tool-roles.json) and
-  `toolchecks.json`.
-- The sweep's `cells` check, after the sweep. It holds each seeded role's `tools/list` to the ✓ cells of the
-  committed matrix: no ✗ call is offered and every ✓ call is.
-- `TestToolsListAgreesWithTheGateForAnOperatorsRoles`, beside the sweep. It holds an operator's own roles'
+- `TestToolsListOffersEachSeededRoleItsAllowedCells` in `backend/internal/compose/integration/toolrole/`.
+  It holds each seeded role's `tools/list` to the ✓ cells of the committed matrix: no ✗ call is offered and
+  every ✓ call is. It also fails when the matrix and the database name other roles.
+- `TestTheToolRoleMatrixIsPublished` in the same folder. It calls every tool and action as each seeded role and
+  writes [mcp-tool-roles.json](../reference/mcp-tool-roles.json) and `toolchecks.json`.
+- `TestToolsListAgreesWithTheGateForAnOperatorsRoles`, beside it. It holds an operator's own roles'
   `tools/list` to the gate.
+
+The two sweep tests carry `//go:build integration && rolesweep`, so the per-PR lane does not build them. They
+take longer than one shard of that lane may run. `scheduled.yml` runs `make test-roles` every Monday. A red
+weekly run files an issue, and it is a red `main`: claim it first, as
+[claim-a-red-main.md](claim-a-red-main.md) says.
+
+The sweep uses no model and no network, so the author runs it. A PR that adds or changes a tool, a gate or a
+role runs `make test-roles`. Its body carries the command and its pass line, or the diff the sweep wrote. The
+weekly run is only the backup.
 
 Every cell is a ✓ or a ✗: the call ran for the role, or a gate refused it. A cell that is neither fails the
 sweep. A refusal counts only where a gate in `platform/auth` recorded refusing that role in that call. The gate
@@ -67,11 +77,12 @@ the colleague pass's subject.
 
    ```sh
    UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/extensionrole
-   UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/toolrole RUN=TestTheToolRoleMatrixIsPublished
+   UPDATE_MCP_TOOL_ROLES=1 make test-roles
    go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity
    ```
 
-   The integration lane shares the `margince_test` template, so run one lane at a time.
+   The integration lane shares the `margince_test` template, so run one lane at a time. Without
+   `UPDATE_MCP_TOOL_ROLES=1`, `make test-roles` checks the committed files and writes nothing.
 
 5. **Commit** `docs/reference/mcp-tool-roles.json`, `docs/reference/mcp-tool-roles.md`,
    `docs/reference/mcp-parity.json`, `docs/reference/mcp-parity.md`,

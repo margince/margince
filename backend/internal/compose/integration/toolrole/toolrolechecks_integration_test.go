@@ -181,7 +181,7 @@ func holdTheToolChecksTable(t *testing.T, measured map[string]agents.ToolChecksR
 		t.Fatal(err)
 	}
 	if string(committed) != string(rendered) {
-		t.Errorf("%s is not what the admin calls were asked. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/toolrole RUN=TestTheToolRoleMatrixIsPublished", toolChecksFile)
+		t.Errorf("%s is not what the admin calls were asked. Run: UPDATE_MCP_TOOL_ROLES=1 make test-roles", toolChecksFile)
 	}
 }
 

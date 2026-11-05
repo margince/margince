@@ -27,16 +27,19 @@ type listingPass struct {
 	run  func(t *testing.T)
 }
 
-// A passport is offered a tool or action when, and only when, the gate admits
-// its user to it. A test of its own, so the lane can run it on another shard
-// than the matrix sweep. The roles are an operator's own. One is a copy of rep
-// that may create tags and may not update deals. One lacks two checks only
-// some paths of a tool ask: a company create, and the installation settings
-// read. The last member holds rep and ops, whose grants merge to the widest.
-func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
-	recorded := newToolCheckRecorder()
-	d := toolRoleApp(t, "tool-role-listing", compose.WithToolChecksRecordedForTest(recorded.note))
-	eachSeat(t, "listing", nil, nil, operatorListings(t, d, recorded)...)
+// A passport on each seeded role is offered the cells the published matrix
+// allows that role, and the matrix names every seeded role. It runs on every
+// PR, so a tools/list change shows against the committed matrix at once.
+func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
+	d := toolRoleApp(t, "tool-role-cells")
+	var keys []string
+	for _, role := range apptest.SeededRoles(t, d.E) {
+		keys = append(keys, role.Key)
+	}
+	if doc := publishedMatrix(t); !slices.Equal(doc.Roles, keys) {
+		t.Errorf("%s publishes the roles %v and the database seeds %v", toolRolesFile, doc.Roles, keys)
+	}
+	holdCellsAreOffered(t, d, "tool-role-cells@fable.test")
 }
 
 // operatorListings are the holdings the test above checks, one pass each.
