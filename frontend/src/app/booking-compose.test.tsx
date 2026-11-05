@@ -2,14 +2,14 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { bookingContact, bookingSlots } from "../../testing/book.testkit";
-import { BookingReview } from "../booking/booking-review";
+import { BookingReview } from "../features/booking/booking-review";
 import {
   activity202,
   jsonResponse,
   render,
   stubRoutes,
-} from "./compose.testkit";
+} from "../features/mail/compose.testkit";
+import { bookingContact, bookingSlots } from "../testing/book.testkit";
 
 afterEach(() => {
   cleanup();
