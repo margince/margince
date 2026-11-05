@@ -68,7 +68,7 @@ export function useRunAsOwnerOptions(enabled = true): UserOptions {
     useRoster("user", enabled),
     (entry) =>
       mayOwnRecords(entry) &&
-      "assignable" in entry &&
+      "display_name" in entry &&
       entry.assignable !== false,
   );
 }
