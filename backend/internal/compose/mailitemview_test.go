@@ -121,6 +121,7 @@ func TestEveryMailedWorkItemLinksIntoMargince(t *testing.T) {
 		want string
 	}{
 		{"a meeting outcome opens beside Home", crmcontracts.WorklistItem{Id: activity.String(), Source: crmcontracts.WorklistItemSourceMeetingOutcome, Subject: subject(crmcontracts.AttentionSubjectTypeActivity, activity)}, base + "/#/home?focus=meeting_outcome-" + activity.String()},
+		{"a meeting opens beside Home", crmcontracts.WorklistItem{Id: activity.String(), Source: crmcontracts.WorklistItemSourceMeeting, Subject: subject(crmcontracts.AttentionSubjectTypeDeal, deal)}, base + "/#/home?focus=meeting-" + activity.String()},
 		{"a task opens its own read", crmcontracts.WorklistItem{Id: activity.String(), Source: crmcontracts.WorklistItemSourceTask, Subject: subject(crmcontracts.AttentionSubjectTypeDeal, deal)}, base + "/#/home?task=" + activity.String()},
 		{"a deal row opens the deal", crmcontracts.WorklistItem{Id: "row", Source: crmcontracts.WorklistItemSourceDealAtRisk, Subject: subject(crmcontracts.AttentionSubjectTypeDeal, deal)}, base + "/#/deals/" + deal.String()},
 		{"a row without a record opens beside Home", crmcontracts.WorklistItem{Id: "row", Source: crmcontracts.WorklistItemSourceBounce}, base + "/#/home?focus=bounce-row"},

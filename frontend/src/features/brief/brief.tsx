@@ -41,7 +41,13 @@ import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
 import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
-import { dayRows, FOCUS_PARAM, focusKey, rowByKey } from "./brief.focuslink";
+import {
+  dayRows,
+  FOCUS_PARAM,
+  focusKey,
+  rowByKey,
+  useStaleFocusCleared,
+} from "./brief.focuslink";
 import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
 import { homeJourneyMarks } from "./brief.journey";
@@ -212,7 +218,8 @@ function PersonalMorning({
   const rows = dayRows(day, query.data?.pages);
   // A row named by the address opens as a click on it does; mail links there.
   const linkedFocus = params.get(FOCUS_PARAM);
-  const context = rowByKey(rows, selected || linkedFocus);
+  const context = rowByKey(rows, linkedFocus || selected);
+  useStaleFocusCleared(linkedFocus, context, query.isSuccess);
   // A task named by the address, as a reminder notification opens it. It
   // opens whether or not the day lists it, and writes only where a row the
   // reader holds offers `complete`.

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useEffect } from "react";
+import { replaceDial } from "../../lib/urlstate";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 
 /**
@@ -31,4 +33,18 @@ export function rowByKey(
   key: string | undefined,
 ): WorklistItem | undefined {
   return key ? rows.find((item) => focusKey(item) === key) : undefined;
+}
+
+/**
+ * Clear a focus dial whose row the loaded day no longer lists, so a later
+ * refresh that lists it again does not open it unasked.
+ */
+export function useStaleFocusCleared(
+  key: string | undefined,
+  found: WorklistItem | undefined,
+  loaded: boolean,
+): void {
+  useEffect(() => {
+    if (key && loaded && !found) replaceDial(FOCUS_PARAM, undefined);
+  }, [key, found, loaded]);
 }

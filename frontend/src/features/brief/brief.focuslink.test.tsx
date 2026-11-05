@@ -40,7 +40,7 @@ it("opens the named row beside the day, and closing clears the address", async (
   expect(screen.queryByRole("dialog")).toBeNull();
 });
 
-it("opens nothing for a row the day no longer lists", async () => {
+it("opens nothing for a row the day no longer lists, and clears the address", async () => {
   window.location.hash = "#/home?focus=meeting-gone";
   stubApi({ "GET /worklist": () => jsonResponse(readingsDay()) });
   render(<BriefScreen />);
@@ -49,4 +49,5 @@ it("opens nothing for a row the day no longer lists", async () => {
     await screen.findAllByText("Weber GmbH · quarterly review"),
   ).not.toHaveLength(0);
   expect(screen.queryByRole("dialog")).toBeNull();
+  await waitFor(() => expect(window.location.hash).not.toContain("focus="));
 });
