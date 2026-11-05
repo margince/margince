@@ -39,13 +39,14 @@ export {
 
 import { useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
 import { ArchivedSwitch, Toolbar, VIEW_MENU } from "./listtoolbar";
-import type { ViewRow } from "./listviewmenu";
+import type { ViewRow, ViewToggle } from "./listviewmenu";
 
 export { Menu, useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
-export type { ViewRow } from "./listviewmenu";
+export type { ViewRow, ViewToggle } from "./listviewmenu";
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 const NO_ROWS: readonly ViewRow[] = [];
+const NO_TOGGLES: readonly ViewToggle[] = [];
 
 export function ListSurface({
   title,
@@ -66,6 +67,7 @@ export function ListSurface({
   layout,
   viewRows = NO_ROWS,
   displayRows = NO_ROWS,
+  displayToggles = NO_TOGGLES,
   changed = false,
   tools,
   saveView,
@@ -127,6 +129,8 @@ export function ListSurface({
   viewRows?: readonly ViewRow[];
   /** The body's presentation dials, as the View panel's last rows. */
   displayRows?: readonly ViewRow[];
+  /** The body's two-state dials, after Show archived in the panel's end group. */
+  displayToggles?: readonly ViewToggle[];
   /** The list departs from every view it offers; View carries a dot. */
   changed?: boolean;
   /**
@@ -196,6 +200,7 @@ export function ListSurface({
           layout={layout}
           viewRows={viewRows}
           displayRows={displayRows}
+          displayToggles={displayToggles}
           changed={changed}
           tools={tools}
           saveView={saveView}

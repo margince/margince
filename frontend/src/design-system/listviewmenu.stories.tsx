@@ -3,8 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { viewMenuName } from "../testing/listview.names";
 import { playOpenView, playOpenViewStep } from "../testing/listview.play";
 import { Button, SegmentedControl } from "./atoms";
 import { type ListChip, ListSurface } from "./listsurface";
@@ -219,6 +220,40 @@ export const FiltersStepOpen: Story = {
   play: async ({ canvasElement }) => {
     await playOpenViewStep(canvasElement, "Filters");
   },
+};
+
+// An applied filter stands in the Filters step with its value; its own step
+// opens on that value and ends with Delete filter.
+async function openAppliedOwner(canvasElement: HTMLElement) {
+  const step = within(await playOpenViewStep(canvasElement, "Filters"));
+  const owner = await step.findByRole("button", {
+    name: "Owner, Lena Brandt, changed",
+  });
+  await waitFor(() => expect(owner).toBeVisible());
+  await userEvent.click(owner);
+  const panel = within(
+    await screen.findByRole("dialog", { name: viewMenuName() }),
+  );
+  const values = within(await panel.findByRole("group", { name: "Owner" }));
+  await expect(
+    values.getByRole("radio", { name: "Lena Brandt" }),
+  ).toBeChecked();
+  await expect(
+    values.getByRole("button", { name: "Delete filter" }),
+  ).toBeVisible();
+}
+
+export const AppliedFilterStep: Story = {
+  render: () => <Surface initialFilters={{ owner: "u1" }} />,
+  play: async ({ canvasElement }) => openAppliedOwner(canvasElement),
+};
+
+export const PhoneAppliedFilterStep: Story = {
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <Surface initialFilters={{ owner: "u1" }} />,
+  play: async ({ canvasElement }) => openAppliedOwner(canvasElement),
 };
 
 // On a phone the panel is a sheet over the page, headed View.

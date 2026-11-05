@@ -66,13 +66,17 @@ const SORT_OPTIONS: readonly SortOption[] = [
 
 /** The surface with every dial it can carry, driving its own state. */
 function Surface({
+  chips = CHIPS,
   initialSort = "",
   initialFilters = {},
   changed = false,
+  onChipChange,
 }: Readonly<{
+  chips?: readonly ListChip[];
   initialSort?: string;
   initialFilters?: Readonly<Record<string, string>>;
   changed?: boolean;
+  onChipChange?: (key: string, value: string) => void;
 }>) {
   const [sort, setSort] = useState(initialSort);
   const [chosen, setChosen] = useState(initialFilters);
@@ -83,11 +87,12 @@ function Surface({
       search={{ value: search, onChange: setSearch }}
       sort={{ value: sort, onChange: setSort }}
       sortOptions={SORT_OPTIONS}
-      chips={CHIPS}
+      chips={chips}
       chosen={chosen}
-      onChipChange={(key, value) =>
-        setChosen((prev) => ({ ...prev, [key]: value }))
-      }
+      onChipChange={(key, value) => {
+        onChipChange?.(key, value);
+        setChosen((prev) => ({ ...prev, [key]: value }));
+      }}
       archived={{ checked: archived, onChange: setArchived }}
       changed={changed}
       saveView={<button type="button">Save view</button>}
@@ -176,7 +181,7 @@ it("presses Show archived on and off from its row", async () => {
 });
 
 // A row that opens a subset says so, and the level it opens says how to leave.
-it("steps into an attribute and back out to the search it came from", async () => {
+it("steps into an attribute and back out to its row", async () => {
   const user = userEvent.setup();
   render(<Surface />);
 
@@ -194,9 +199,8 @@ it("steps into an attribute and back out to the search it came from", async () =
   expect(screen.queryByPlaceholderText("Search attributes")).toBeNull();
 
   await user.click(back);
-  const search = screen.getByPlaceholderText("Search attributes");
-  expect(search).toHaveFocus();
-  expect(screen.getByRole("button", { name: "Owner" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Status" })).toHaveFocus();
+  expect(screen.getByPlaceholderText("Search attributes")).toBeTruthy();
 });
 
 // The step replaced the row the reader pressed, so Back hands focus to it.
@@ -214,7 +218,7 @@ it("hands focus to the step's way back, and back to the row that opened it", asy
   expect(screen.getByRole("button", { name: /^Sort,/ })).toHaveFocus();
 });
 
-it("applies a picked value, returns to the rows, and stands the filter under the search", async () => {
+it("applies a picked value, returns to its row, and stands the filter under the search", async () => {
   const user = userEvent.setup();
   render(<Surface />);
 
@@ -222,10 +226,9 @@ it("applies a picked value, returns to the rows, and stands the filter under the
   await user.click(within(menu).getByRole("button", { name: "Status" }));
   await user.click(screen.getByRole("radio", { name: "Open" }));
 
-  const filters = screen.getByRole("button", {
-    name: "Filters, Status, changed",
-  });
-  expect(filters).toHaveFocus();
+  expect(
+    screen.getByRole("button", { name: "Status, Open, changed" }),
+  ).toHaveFocus();
   const applied = screen.getByRole("group", { name: "Status: Open" });
   expect(
     precedes(screen.getByRole("searchbox", { name: "Search" }), applied),
@@ -234,15 +237,18 @@ it("applies a picked value, returns to the rows, and stands the filter under the
   expect(screen.queryByRole("button", { name: "Add filter" })).toBeNull();
 });
 
-it("offers only the attributes not applied yet", async () => {
+it("lists every attribute, an applied one with its value and a dot", async () => {
   const user = userEvent.setup();
   render(<Surface initialFilters={{ status: "open" }} />);
 
   const menu = await openViewStep(user, "Filters");
-  expect(within(menu).queryByRole("button", { name: "Status" })).toBeNull();
-  expect(within(menu).getByRole("button", { name: "Owner" })).toBeTruthy();
+  const status = within(menu).getByRole("button", {
+    name: "Status, Open, changed",
+  });
+  expect(status.querySelector(".lt-vdot")).not.toBeNull();
+  const owner = within(menu).getByRole("button", { name: "Owner" });
+  expect(owner.querySelector(".lt-vdot")).toBeNull();
 });
-
 it("draws no applied-filter row while nothing applies", () => {
   const { container } = render(<Surface />);
   expect(container.querySelector(".lt-applied")).toBeNull();
@@ -406,4 +412,110 @@ it("names what the counted rows belong to, before the order", () => {
   expect(
     screen.getByText("1 to 2 of 2 deals in Sales, sorted by Value"),
   ).toBeTruthy();
+});
+
+it("changes an applied filter in place, under the same key and condition", async () => {
+  const user = userEvent.setup();
+  const writes: [string, string][] = [];
+  render(
+    <Surface
+      initialFilters={{ status: "open" }}
+      onChipChange={(key, value) => writes.push([key, value])}
+    />,
+  );
+
+  const menu = await openViewStep(user, "Filters");
+  await user.click(
+    within(menu).getByRole("button", { name: "Status, Open, changed" }),
+  );
+  const panel = within(await openView(user));
+  const step = within(panel.getByRole("group", { name: "Status" }));
+  expect(step.getByRole("radio", { name: "Open" })).toBeChecked();
+  await user.click(step.getByRole("radio", { name: "Won" }));
+
+  expect(writes).toEqual([["status", "won"]]);
+  expect(
+    screen.getByRole("button", { name: "Status, Won, changed" }),
+  ).toHaveFocus();
+  const applied = screen.getByRole("group", { name: "Status: Won" });
+  expect(within(applied).getByRole("button", { name: "is" })).toBeTruthy();
+});
+
+const CLOSE_DATE: ListChip = {
+  key: "close",
+  label: "Close date",
+  allLabel: "Any date",
+  options: [],
+  editor: () => <p>Pick a range</p>,
+  appliedName: "This month",
+};
+
+it.each([
+  ["its any option", "status", "Status, Open, changed", "Any status"],
+  ["Delete filter", "status", "Status, Open, changed", "Delete filter"],
+  [
+    "Delete filter, with no any option",
+    "close",
+    "Close date, This month, changed",
+    "Delete filter",
+  ],
+])(
+  "takes a filter off from its value step by %s",
+  async (_how, key, row, press) => {
+    const user = userEvent.setup();
+    const writes: [string, string][] = [];
+    render(
+      <Surface
+        chips={[...CHIPS, CLOSE_DATE]}
+        initialFilters={{ status: "open", close: "2026-11" }}
+        onChipChange={(changed, value) => writes.push([changed, value])}
+      />,
+    );
+
+    const menu = await openViewStep(user, "Filters");
+    await user.click(within(menu).getByRole("button", { name: row }));
+    const panel = within(await openView(user));
+    const step = panel.getByRole("group", { name: row.split(",")[0] });
+    await user.click(
+      within(step).getByRole(press === "Delete filter" ? "button" : "radio", {
+        name: press,
+      }),
+    );
+
+    expect(writes).toEqual([[key, ""]]);
+    const label = row.split(",")[0];
+    expect(screen.getByRole("button", { name: label })).toHaveFocus();
+    expect(
+      screen.queryByRole("group", { name: new RegExp(`^${label}:`) }),
+    ).toBeNull();
+  },
+);
+
+it("puts a value step's search above its options and its any option", async () => {
+  const user = userEvent.setup();
+  const team: ListChip = {
+    key: "team",
+    label: "Team",
+    allLabel: "Any team",
+    options: [{ value: "t1", label: "North" }],
+    filterable: true,
+  };
+  render(<Surface chips={[team]} />);
+
+  const menu = await openViewStep(user, "Filters");
+  await user.click(within(menu).getByRole("button", { name: "Team" }));
+  const step = within(await openView(user)).getByRole("group", {
+    name: "Team",
+  });
+
+  expect(
+    precedes(
+      within(step).getByRole("textbox", { name: "Search Team values" }),
+      within(step).getByRole("radio", { name: "Any team" }),
+    ),
+  ).toBe(true);
+  // A filter that does not apply has nothing to delete.
+  expect(
+    within(step).queryByRole("button", { name: "Delete filter" }),
+  ).toBeNull();
 });

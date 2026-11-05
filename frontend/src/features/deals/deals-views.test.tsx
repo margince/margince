@@ -303,7 +303,7 @@ describe("a saved view over the deals board", () => {
     expect(screen.queryByText(/1 deals/)).toBeNull();
   });
 
-  // Columns and Density change only the grid, so on the board they would do nothing.
+  // Columns and Compact change only the grid, so on the board they would do nothing.
   it("offers no display dial on the board, and one on the table", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", stubBackend({ deals: [deal({})] }));
@@ -311,13 +311,11 @@ describe("a saved view over the deals board", () => {
     await screen.findByText("Fleet retrofit");
     const panel = await openView(user);
 
-    expect(
-      within(panel).queryByRole("button", { name: /^Density,/ }),
-    ).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Compact" })).toBeNull();
 
     await user.click(within(panel).getByRole("button", { name: "Table" }));
     expect(
-      await within(panel).findByRole("button", { name: /^Density,/ }),
+      await within(panel).findByRole("button", { name: "Compact" }),
     ).toBeTruthy();
   });
 });

@@ -54,6 +54,7 @@ function ToolbarHost({
       archived={{ checked: archived, onChange: setArchived }}
       viewRows={[]}
       displayRows={[]}
+      displayToggles={[]}
       changed={Object.values(chosen).some(Boolean)}
       openMenu={openMenu}
       setOpenMenu={setOpenMenu}

@@ -35,7 +35,7 @@ export async function openView(
 
 /**
  * Opens the View panel and the step of one dial ("Filters", "Sort",
- * "Columns", "Density", or a screen's own row), and returns that step.
+ * "Columns", or a screen's own row), and returns that step.
  */
 export async function openViewStep(
   user: Presser,

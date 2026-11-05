@@ -1,4 +1,4 @@
-import { ChevronRight, MoreVertical } from "lucide-react";
+import { MoreVertical } from "lucide-react";
 import {
   type ComponentProps,
   Fragment,
@@ -14,118 +14,144 @@ import { Radio } from "./atoms";
 import { ChipValueList } from "./listfiltervalues";
 import { Menu } from "./listmenu";
 import type { FilterRowSegment, ListChip } from "./listsurface.dials";
-import { ViewStep } from "./listviewmenu";
+import { ValueRow, ViewStep } from "./listviewmenu";
 import "./listtable.css";
 
-/** The attributes not yet applied, then the picked one's values; a pick applies
- * the value and returns to the panel's rows. */
+/** Every attribute, an applied one showing its value, then the picked one's
+ * values; a pick or a delete returns to the attributes. */
 export function FilterStep({
   chips,
   chosen,
-  onChipChange,
-  onRemember,
+  labelFor,
+  onPick,
+  onDelete,
   back,
 }: Readonly<{
   chips: readonly ListChip[];
   chosen: Readonly<Record<string, string>>;
-  onChipChange?: (key: string, value: string) => void;
-  /** Reports the label a value was picked under, for a searched chip. */
-  onRemember: (key: string, value: string, label: string) => void;
+  /** The label a searched value was picked under, while it still applies. */
+  labelFor: (key: string, value: string) => string | undefined;
+  onPick: (key: string, value: string, label: string) => void;
+  onDelete: (key: string) => void;
   back: () => void;
 }>) {
   const t = useT();
   const [attributeKey, setAttributeKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const wrap = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
-  // Set only by a step between the two levels, so arriving from the panel's
-  // rows leaves focus where the panel put it.
-  const stepped = useRef(false);
+  // The attribute whose values were opened; null until the reader steps in,
+  // so arriving from the panel's rows leaves focus where the panel put it.
+  const cameFrom = useRef<string | null>(null);
 
-  // Going in, focus moves to the way back. Coming back, it returns to the
-  // search the attribute was chosen from.
+  // Going in, focus moves to the way back. Coming out, it returns to the
+  // attribute's row, so the next filter is one move away.
   useEffect(() => {
-    if (!stepped.current) {
+    const key = cameFrom.current;
+    if (key === null) {
       return;
     }
-    stepped.current = false;
-    if (attributeKey === null) {
-      searchRef.current?.focus();
+    const root = wrap.current;
+    if (attributeKey !== null) {
+      root?.querySelector<HTMLButtonElement>(".lt-mback")?.focus();
       return;
     }
-    wrap.current?.querySelector<HTMLButtonElement>(".lt-mback")?.focus();
+    cameFrom.current = null;
+    [...(root?.querySelectorAll<HTMLElement>("[data-filter-row]") ?? [])]
+      .find((row) => row.dataset.filterRow === key)
+      ?.focus();
   }, [attributeKey]);
 
-  // An applied filter is its own row under the search (FilterRow) and changes
-  // there. So this step offers only the attributes not yet applied.
-  const addable = chips.filter((chip) => !chosen[chip.key]);
-  const attribute = addable.find((chip) => chip.key === attributeKey);
+  const enter = (key: string) => {
+    cameFrom.current = key;
+    setAttributeKey(key);
+  };
+  const leave = () => setAttributeKey(null);
+  const attribute = chips.find((chip) => chip.key === attributeKey);
   const words = searchWords(query);
-  const narrowed = addable.filter((chip) =>
-    holdsEveryWord(words, [chip.label]),
-  );
+  const narrowed = chips.filter((chip) => holdsEveryWord(words, [chip.label]));
 
-  return (
-    <div ref={wrap}>
-      {attribute ? (
+  if (attribute) {
+    const value = chosen[attribute.key] ?? "";
+    return (
+      <div ref={wrap}>
         <ViewStep
           head={attribute.label}
-          back={{
-            label: t("table.filterBack"),
-            onBack: () => {
-              stepped.current = true;
-              setAttributeKey(null);
-            },
-          }}
+          back={{ label: t("table.filterBack"), onBack: leave }}
         >
           <ChipValueList
             chip={attribute}
-            value={chosen[attribute.key] ?? ""}
-            onPick={(value, label) => {
-              onRemember(attribute.key, value, label);
-              onChipChange?.(attribute.key, value);
-              back();
+            value={value}
+            onPick={(picked, label) => {
+              onPick(attribute.key, picked, label);
+              leave();
             }}
           />
-        </ViewStep>
-      ) : (
-        <ViewStep
-          head={t("table.filters")}
-          back={{ label: t("list.viewMenuBack"), onBack: back }}
-        >
-          <label className="lt-fsearch">
-            <span className="sr-only">{t("table.filterSearch")}</span>
-            <input
-              ref={searchRef}
-              className="lt-fsearch-input"
-              value={query}
-              placeholder={t("table.filterSearch")}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          {narrowed.map((chip) => (
-            <button
-              type="button"
-              key={chip.key}
-              className="lt-mi"
-              onClick={() => {
-                stepped.current = true;
-                setAttributeKey(chip.key);
+          {value && (
+            <DeleteFilter
+              onDelete={() => {
+                onDelete(attribute.key);
+                leave();
               }}
-            >
-              {chip.label}
-              {/* This row opens the attribute's own values rather than
-                  picking one, and the glyph is all that says so. */}
-              <ChevronRight
-                strokeWidth={1.8}
-                aria-hidden="true"
-                className="lt-caret lt-mi-more"
-              />
-            </button>
-          ))}
+            />
+          )}
         </ViewStep>
-      )}
+      </div>
+    );
+  }
+  return (
+    <div ref={wrap}>
+      <ViewStep
+        head={t("table.filters")}
+        back={{ label: t("list.viewMenuBack"), onBack: back }}
+      >
+        <label className="lt-fsearch">
+          <span className="sr-only">{t("table.filterSearch")}</span>
+          <input
+            className="lt-fsearch-input"
+            value={query}
+            placeholder={t("table.filterSearch")}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+        {narrowed.map((chip) => {
+          const value = chosen[chip.key] ?? "";
+          return (
+            <ValueRow
+              key={chip.key}
+              label={chip.label}
+              value={
+                value
+                  ? appliedLabel(chip, value, labelFor(chip.key, value))
+                  : undefined
+              }
+              changed={value !== ""}
+              data-filter-row={chip.key}
+              onClick={() => enter(chip.key)}
+            />
+          );
+        })}
+      </ViewStep>
     </div>
+  );
+}
+
+/** The words an applied value reads as, wherever the filter stands. */
+function appliedLabel(
+  chip: ListChip,
+  value: string,
+  pickedLabel: string | undefined,
+): string {
+  const active = chip.options.find((option) => option.value === value);
+  return active?.label ?? pickedLabel ?? chip.appliedName ?? value;
+}
+
+/** Delete filter, in an applied row's menu and at the end of its value step. */
+function DeleteFilter({ onDelete }: Readonly<{ onDelete: () => void }>) {
+  const t = useT();
+  return (
+    <button type="button" className="lt-mi" onClick={onDelete}>
+      {t("table.deleteFilter")}
+    </button>
   );
 }
 
@@ -209,8 +235,7 @@ export function FilterRow({
   menuHost?: HTMLElement | null;
 }>) {
   const t = useT();
-  const active = chip.options.find((option) => option.value === value);
-  const valueLabel = active?.label ?? pickedLabel ?? chip.appliedName ?? value;
+  const valueLabel = appliedLabel(chip, value, pickedLabel);
   return (
     <fieldset className="lt-frow" aria-label={`${chip.label}: ${valueLabel}`}>
       <span className="lt-frow-attr">{chip.label}</span>
@@ -254,9 +279,7 @@ export function FilterRow({
           head={chip.label}
           align="right"
         >
-          <button type="button" className="lt-mi" onClick={onDelete}>
-            {t("table.deleteFilter")}
-          </button>
+          <DeleteFilter onDelete={onDelete} />
         </HostedMenu>
       </span>
     </fieldset>

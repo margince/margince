@@ -2,7 +2,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { Checkbox } from "./atoms";
 import type { ListColumn } from "./listcolumn";
-import type { ViewRow } from "./listviewmenu";
+import type { ViewRow, ViewToggle } from "./listviewmenu";
 import { useSortableRows } from "./sortablelist";
 
 type ColumnDials<Row> = Readonly<{
@@ -16,34 +16,29 @@ type ColumnDials<Row> = Readonly<{
   onReorder?: (keys: string[]) => void;
 }>;
 
-/** The grid's presentation dials as View rows: which optional columns stand
- * where, and how tight the rows are. */
+/** The grid's presentation dials in View. Which optional columns stand where
+ * is a row with a step; whether the rows are compact is a toggle. */
 export function useDisplayRows<Row>({
   dense,
   onDense,
   ...columns
-}: ColumnDials<Row> &
-  Readonly<{ dense: boolean; onDense: () => void }>): ViewRow[] {
+}: ColumnDials<Row> & Readonly<{ dense: boolean; onDense: () => void }>): {
+  rows: ViewRow[];
+  toggles: ViewToggle[];
+} {
   const t = useT();
   const { locale } = useLocale();
   const { optional, hidden } = columns;
-  const density: ViewRow = {
-    key: "density",
-    label: t("table.density"),
-    value: dense ? t("table.compact") : t("table.comfortable"),
-    changed: dense,
-    step: () => (
-      // A choice the reader may turn back at once, so the step stays open.
-      <Checkbox
-        className="lt-mi"
-        checked={dense}
-        label={t("table.compact")}
-        onChange={onDense}
-      />
-    ),
-  };
+  const toggles: ViewToggle[] = [
+    {
+      key: "compact",
+      label: t("table.compact"),
+      checked: dense,
+      onChange: onDense,
+    },
+  ];
   if (optional.length === 0) {
-    return [density];
+    return { rows: [], toggles };
   }
   const shown = optional.filter((column) => !hidden.has(column.key)).length;
   const moved = optional.some(
@@ -52,19 +47,17 @@ export function useDisplayRows<Row>({
   const toggled = optional.some(
     (column) => hidden.has(column.key) !== (column.initiallyHidden ?? false),
   );
-  return [
-    {
-      key: "columns",
-      label: t("table.columns"),
-      value: t("table.columnsShown", {
-        shown: formatNumber(shown, locale),
-        total: formatNumber(optional.length, locale),
-      }),
-      changed: moved || toggled,
-      step: () => <ColumnsStep {...columns} />,
-    },
-    density,
-  ];
+  const columnsRow: ViewRow = {
+    key: "columns",
+    label: t("table.columns"),
+    value: t("table.columnsShown", {
+      shown: formatNumber(shown, locale),
+      total: formatNumber(optional.length, locale),
+    }),
+    changed: moved || toggled,
+    step: () => <ColumnsStep {...columns} />,
+  };
+  return { rows: [columnsRow], toggles };
 }
 
 function ColumnsStep<Row>({

@@ -34,6 +34,14 @@ export type ViewRow = Readonly<{
   changed?: boolean;
 }>;
 
+/** A dial with two states, drawn as a pressed row in the panel's end group. */
+export type ViewToggle = Readonly<{
+  key: string;
+  label: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}>;
+
 /** Every dial of a list behind one View button. A row opens its dial's step in
  * place of the rows, so the panel never holds a second panel. */
 export function ListViewMenu({
@@ -43,7 +51,7 @@ export function ListViewMenu({
   changed,
   layout,
   rows,
-  archived,
+  toggles = [],
   footer,
 }: Readonly<{
   open: boolean;
@@ -54,7 +62,7 @@ export function ListViewMenu({
   /** How the body is drawn (Table or Board), above the rows. */
   layout?: ReactNode;
   rows: readonly ViewRow[];
-  archived?: { checked: boolean; onChange: (next: boolean) => void };
+  toggles?: readonly ViewToggle[];
   footer?: ReactNode;
 }>) {
   const t = useT();
@@ -127,7 +135,13 @@ export function ListViewMenu({
                   <DialRow key={dial.key} dial={dial} onEnter={enter} />
                 ))}
               </div>
-              {archived && <ArchivedRow archived={archived} />}
+              {toggles.length > 0 && (
+                <div className="lt-vgroup">
+                  {toggles.map((toggle) => (
+                    <ToggleRow key={toggle.key} toggle={toggle} />
+                  ))}
+                </div>
+              )}
               {footer && <div className="lt-vfoot">{footer}</div>}
             </>
           )}
@@ -141,29 +155,51 @@ function DialRow({
   dial,
   onEnter,
 }: Readonly<{ dial: ViewRow; onEnter: (key: string) => void }>) {
+  return (
+    <ValueRow
+      label={dial.label}
+      value={dial.value}
+      changed={dial.changed}
+      data-view-row={dial.key}
+      onClick={() => onEnter(dial.key)}
+    />
+  );
+}
+
+/** A row that opens a step: its name, what it holds now, and a dot while that
+ * is off its default. */
+export function ValueRow({
+  label,
+  value,
+  changed = false,
+  onClick,
+  ...marker
+}: Readonly<{
+  label: string;
+  value?: string;
+  changed?: boolean;
+  onClick: () => void;
+  [data: `data-${string}`]: string;
+}>) {
   const t = useT();
-  const name = [
-    dial.label,
-    dial.value,
-    dial.changed ? t("list.viewMenuChanged") : null,
-  ]
-    .filter((part) => part !== null)
+  const name = [label, value, changed ? t("list.viewMenuChanged") : undefined]
+    .filter((part) => part !== undefined && part !== "")
     .join(", ");
   return (
     <button
       type="button"
       className="lt-mi lt-vrow"
-      data-view-row={dial.key}
+      {...marker}
       // The visible words in their order, with the pause between them that two
       // boxes side by side give the eye.
       aria-label={name}
-      onClick={() => onEnter(dial.key)}
+      onClick={onClick}
     >
       <span className="lt-vrow-label">
-        {dial.label}
-        {dial.changed && <span className="lt-vdot" />}
+        {label}
+        {changed && <span className="lt-vdot" />}
       </span>
-      <span className="lt-vrow-value">{dial.value}</span>
+      {value && <span className="lt-vrow-value">{value}</span>}
       <ChevronRight
         strokeWidth={1.8}
         aria-hidden="true"
@@ -223,34 +259,26 @@ function useCloseOnFocusOut(
 }
 
 // A filter over a list is a pressed button (README), in the rows' shape.
-function ArchivedRow({
-  archived,
-}: Readonly<{
-  archived: { checked: boolean; onChange: (next: boolean) => void };
-}>) {
+function ToggleRow({ toggle }: Readonly<{ toggle: ViewToggle }>) {
   const t = useT();
   return (
-    <div className="lt-vgroup">
-      <button
-        type="button"
-        className="lt-mi lt-vrow lt-vtoggle"
-        aria-pressed={archived.checked}
-        onClick={() => archived.onChange(!archived.checked)}
-      >
-        <span className="lt-vrow-label">{t("list.showArchived")}</span>
-        {/* The pressed state already says this to a screen reader. */}
-        <span className="lt-vrow-value" aria-hidden="true">
-          {archived.checked
-            ? t("list.showArchivedOn")
-            : t("list.showArchivedOff")}
-        </span>
-        <Check
-          strokeWidth={1.8}
-          aria-hidden="true"
-          className={`lt-caret lt-mi-more${archived.checked ? "" : " lt-vcheck-off"}`}
-        />
-      </button>
-    </div>
+    <button
+      type="button"
+      className="lt-mi lt-vrow lt-vtoggle"
+      aria-pressed={toggle.checked}
+      onClick={() => toggle.onChange(!toggle.checked)}
+    >
+      <span className="lt-vrow-label">{toggle.label}</span>
+      {/* The pressed state already says this to a screen reader. */}
+      <span className="lt-vrow-value" aria-hidden="true">
+        {toggle.checked ? t("list.viewToggleOn") : t("list.viewToggleOff")}
+      </span>
+      <Check
+        strokeWidth={1.8}
+        aria-hidden="true"
+        className={`lt-caret lt-mi-more${toggle.checked ? "" : " lt-vcheck-off"}`}
+      />
+    </button>
   );
 }
 

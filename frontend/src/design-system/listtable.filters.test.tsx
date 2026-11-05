@@ -160,7 +160,7 @@ describe("the Filters step", () => {
     expect(condition).toBeChecked();
   });
 
-  it("offers only the attributes that do not apply yet", async () => {
+  it("offers every attribute, an applied one with its value", async () => {
     render(
       <ListTable
         rows={[]}
@@ -178,9 +178,9 @@ describe("the Filters step", () => {
       }),
     ).toBeTruthy();
     const step = within(await openViewStep(userEvent, "Filters"));
-    // Status already carries its own row, so the step offers only what is not
-    // applied yet.
-    expect(step.queryByText("Status")).toBeNull();
+    expect(
+      step.getByRole("button", { name: /^Status, .+, changed$/ }),
+    ).toBeTruthy();
     expect(step.getByRole("button", { name: "Priority" })).toBeTruthy();
   });
 });

@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { labelled, viewMenuName } from "../testing/listview.names";
+import { viewMenuName } from "../testing/listview.names";
 import { playOpenView, playOpenViewStep } from "../testing/listview.play";
 import type { ListColumn } from "./listcolumn";
 import { useDisplayRows } from "./listdisplaymenu";
@@ -30,7 +30,7 @@ function DisplayPanel({ columns }: Readonly<{ columns: readonly string[] }>) {
   );
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set(["owner"]));
   const [dense, setDense] = useState(false);
-  const rows = useDisplayRows({
+  const { rows, toggles } = useDisplayRows({
     optional: order,
     declared: columns,
     hidden,
@@ -52,6 +52,7 @@ function DisplayPanel({ columns }: Readonly<{ columns: readonly string[] }>) {
       filterCount={0}
       changed={false}
       rows={rows}
+      toggles={toggles}
     />
   );
 }
@@ -84,17 +85,22 @@ export const ColumnsStep: Story = {
   },
 };
 
-export const DensityStep: Story = {
+// Compact is a toggle at the panel's end: a pressed row that reads On or Off.
+export const CompactToggle: Story = {
   play: async ({ canvasElement }) => {
-    const step = within(await playOpenViewStep(canvasElement, "Density"));
-    const compact = step.getByRole("checkbox", { name: "Compact" });
+    const panel = within(await playOpenView(canvasElement));
+    const compact = await panel.findByRole("button", { name: "Compact" });
+    await waitFor(() => expect(compact).toBeVisible());
+    await expect(compact).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(compact);
-    await waitFor(() => expect(compact).toBeChecked());
+    await waitFor(() =>
+      expect(compact).toHaveAttribute("aria-pressed", "true"),
+    );
   },
 };
 
-// Off their defaults, Columns and Density carry a dot, said as "changed".
-export const ChangedDials: Story = {
+// Off its default, Columns carries a dot, said as "changed".
+export const ChangedColumns: Story = {
   play: async ({ canvasElement }) => {
     const columns = within(await playOpenViewStep(canvasElement, "Columns"));
     await userEvent.click(columns.getByRole("checkbox", { name: "Owner" }));
@@ -102,32 +108,20 @@ export const ChangedDials: Story = {
     const panel = within(
       await screen.findByRole("dialog", { name: viewMenuName() }),
     );
-    await userEvent.click(
-      panel.getByRole("button", { name: labelled("Density") }),
-    );
-    const density = within(
-      await panel.findByRole("group", { name: "Density" }),
-    );
-    await userEvent.click(density.getByRole("checkbox", { name: "Compact" }));
-    await userEvent.click(density.getByRole("button", { name: /^Density/ }));
     const changed = await panel.findByRole("button", {
       name: "Columns, 3 of 3, changed",
     });
     await waitFor(() => expect(changed).toBeVisible());
-    await expect(
-      panel.getByRole("button", { name: "Density, Compact, changed" }),
-    ).toBeVisible();
   },
 };
 
-// A grid with no optional column offers density alone.
-export const DensityOnly: Story = {
+// A grid with no optional column offers the Compact toggle alone.
+export const CompactOnly: Story = {
   args: { columns: [] },
   play: async ({ canvasElement }) => {
     const panel = within(await playOpenView(canvasElement));
-    await expect(
-      panel.getByRole("button", { name: "Density, Comfortable" }),
-    ).toBeVisible();
+    const compact = await panel.findByRole("button", { name: "Compact" });
+    await waitFor(() => expect(compact).toBeVisible());
     await expect(panel.queryByRole("button", { name: /^Columns/ })).toBeNull();
   },
 };

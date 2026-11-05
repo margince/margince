@@ -11,7 +11,7 @@ import {
   type SortControl,
   type SortOption,
 } from "./listsurface.dials";
-import { ListViewMenu, type ViewRow } from "./listviewmenu";
+import { ListViewMenu, type ViewRow, type ViewToggle } from "./listviewmenu";
 
 export const VIEW_MENU = "view";
 
@@ -26,6 +26,7 @@ export function Toolbar({
   layout,
   viewRows,
   displayRows,
+  displayToggles,
   changed,
   tools,
   saveView,
@@ -42,6 +43,7 @@ export function Toolbar({
   layout?: ReactNode;
   viewRows: readonly ViewRow[];
   displayRows: readonly ViewRow[];
+  displayToggles: readonly ViewToggle[];
   changed: boolean;
   tools?: ReactNode;
   saveView?: ReactNode;
@@ -59,8 +61,11 @@ export function Toolbar({
     const remembered = picked[key];
     return remembered && remembered[0] === value ? remembered[1] : undefined;
   };
-  const remember = (key: string, value: string, label: string) =>
+  const applyFilter = (key: string, value: string, label: string) => {
     setPicked((prev) => ({ ...prev, [key]: [value, label] }));
+    onChipChange?.(key, value);
+  };
+  const deleteFilter = (key: string) => onChipChange?.(key, "");
 
   const rows: ViewRow[] = [...viewRows];
   if (chips.length > 0) {
@@ -77,8 +82,9 @@ export function Toolbar({
         <FilterStep
           chips={chips}
           chosen={chosen}
-          onChipChange={onChipChange}
-          onRemember={remember}
+          labelFor={labelFor}
+          onPick={applyFilter}
+          onDelete={deleteFilter}
           back={back}
         />
       ),
@@ -94,9 +100,16 @@ export function Toolbar({
     });
   }
   rows.push(...displayRows);
+  // Which rows exist before how they are drawn, as in the rows above.
+  const toggles: ViewToggle[] = [
+    ...(archived
+      ? [{ key: "archived", label: t("list.showArchived"), ...archived }]
+      : []),
+    ...displayToggles,
+  ];
   const hasPanel =
     rows.length > 0 ||
-    archived !== undefined ||
+    toggles.length > 0 ||
     layout !== undefined ||
     saveView !== undefined;
 
@@ -125,7 +138,7 @@ export function Toolbar({
           changed={changed}
           layout={layout}
           rows={rows}
-          archived={archived}
+          toggles={toggles}
           footer={saveView}
         />
       )}
@@ -145,12 +158,11 @@ export function Toolbar({
                   setOpenMenu(openMenu === key ? null : key);
                 }}
                 onPick={(value, label) => {
-                  remember(chip.key, value, label);
-                  onChipChange?.(chip.key, value);
+                  applyFilter(chip.key, value, label);
                   setOpenMenu(null);
                 }}
                 onDelete={() => {
-                  onChipChange?.(chip.key, "");
+                  deleteFilter(chip.key);
                   setOpenMenu(null);
                 }}
                 menuHost={menuHost}

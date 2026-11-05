@@ -44,13 +44,6 @@ function FilterValueList({
       : chip.options;
   return (
     <>
-      <Radio
-        className="lt-mi"
-        name={group}
-        checked={!value}
-        label={chip.allLabel}
-        onChange={() => onPick("", chip.allLabel)}
-      />
       {chip.filterable && (
         <label className="lt-fsearch">
           <span className="sr-only">
@@ -64,6 +57,13 @@ function FilterValueList({
           />
         </label>
       )}
+      <Radio
+        className="lt-mi"
+        name={group}
+        checked={!value}
+        label={chip.allLabel}
+        onChange={() => onPick("", chip.allLabel)}
+      />
       {chip.filterable && shown.length === 0 && (
         <p className="lt-fvalue-status">{t("table.filterNoMatches")}</p>
       )}
@@ -111,13 +111,6 @@ function AsyncFilterValueList({
 
   return (
     <>
-      <Radio
-        className="lt-mi"
-        name={group}
-        checked={!value}
-        label={chip.allLabel}
-        onChange={() => onPick("", chip.allLabel)}
-      />
       <label className="lt-fsearch">
         <span className="sr-only">
           {t("table.filterValueSearch", { filter: chip.label })}
@@ -129,6 +122,13 @@ function AsyncFilterValueList({
           onChange={(event) => setQuery(event.target.value)}
         />
       </label>
+      <Radio
+        className="lt-mi"
+        name={group}
+        checked={!value}
+        label={chip.allLabel}
+        onChange={() => onPick("", chip.allLabel)}
+      />
       {!query && (
         <p className="lt-fvalue-status">{t("table.filterTypeToSearch")}</p>
       )}

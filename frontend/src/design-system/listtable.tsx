@@ -354,7 +354,7 @@ export function ListTable<Row>({
     scroller,
   );
   const frozen = useFrozenEdge(scroller, shown.length, display.dense);
-  const displayRows = useDisplayRows({
+  const displayDials = useDisplayRows({
     optional: placed.filter((column) => !column.fixed),
     declared: columns.flatMap((column) => (column.fixed ? [] : [column.key])),
     onReorder: order.onReorder,
@@ -413,7 +413,8 @@ export function ListTable<Row>({
       viewRows={viewRows}
       // Both dials describe the grid, and a body that draws its own
       // presentation would show controls that do nothing.
-      displayRows={bodyOwnsPaging ? undefined : displayRows}
+      displayRows={bodyOwnsPaging ? undefined : displayDials.rows}
+      displayToggles={bodyOwnsPaging ? undefined : displayDials.toggles}
       changed={changed}
       tools={tools}
       saveView={saveView}
