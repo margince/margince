@@ -10729,6 +10729,150 @@ func (e DealLineTaxCategory) Valid() bool {
 	}
 }
 
+// Defines values for DealMarginceCheckSkipped.
+const (
+	DealMarginceCheckSkippedNoEvidence  DealMarginceCheckSkipped = "no_evidence"
+	DealMarginceCheckSkippedSwitchedOff DealMarginceCheckSkipped = "switched_off"
+)
+
+// Valid indicates whether the value is a known member of the DealMarginceCheckSkipped enum.
+func (e DealMarginceCheckSkipped) Valid() bool {
+	switch e {
+	case DealMarginceCheckSkippedNoEvidence:
+		return true
+	case DealMarginceCheckSkippedSwitchedOff:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealMarginceCheckOutcomeKind.
+const (
+	DealMarginceCheckOutcomeKindAmount      DealMarginceCheckOutcomeKind = "amount"
+	DealMarginceCheckOutcomeKindCloseDate   DealMarginceCheckOutcomeKind = "close_date"
+	DealMarginceCheckOutcomeKindProbability DealMarginceCheckOutcomeKind = "probability"
+	DealMarginceCheckOutcomeKindStage       DealMarginceCheckOutcomeKind = "stage"
+)
+
+// Valid indicates whether the value is a known member of the DealMarginceCheckOutcomeKind enum.
+func (e DealMarginceCheckOutcomeKind) Valid() bool {
+	switch e {
+	case DealMarginceCheckOutcomeKindAmount:
+		return true
+	case DealMarginceCheckOutcomeKindCloseDate:
+		return true
+	case DealMarginceCheckOutcomeKindProbability:
+		return true
+	case DealMarginceCheckOutcomeKindStage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealMarginceCheckOutcomeWhy.
+const (
+	DealMarginceCheckOutcomeWhyAcceptedOffer        DealMarginceCheckOutcomeWhy = "accepted_offer"
+	DealMarginceCheckOutcomeWhyAlreadyRight         DealMarginceCheckOutcomeWhy = "already_right"
+	DealMarginceCheckOutcomeWhyChangedWhileChecking DealMarginceCheckOutcomeWhy = "changed_while_checking"
+	DealMarginceCheckOutcomeWhyKeptYourEdit         DealMarginceCheckOutcomeWhy = "kept_your_edit"
+	DealMarginceCheckOutcomeWhyNoOwner              DealMarginceCheckOutcomeWhy = "no_owner"
+	DealMarginceCheckOutcomeWhyNoRate               DealMarginceCheckOutcomeWhy = "no_rate"
+	DealMarginceCheckOutcomeWhyNotSure              DealMarginceCheckOutcomeWhy = "not_sure"
+	DealMarginceCheckOutcomeWhyOther                DealMarginceCheckOutcomeWhy = "other"
+	DealMarginceCheckOutcomeWhyOutsideLimits        DealMarginceCheckOutcomeWhy = "outside_limits"
+	DealMarginceCheckOutcomeWhyOwnerCannotEdit      DealMarginceCheckOutcomeWhy = "owner_cannot_edit"
+	DealMarginceCheckOutcomeWhyStageRules           DealMarginceCheckOutcomeWhy = "stage_rules"
+	DealMarginceCheckOutcomeWhySwitchedOff          DealMarginceCheckOutcomeWhy = "switched_off"
+	DealMarginceCheckOutcomeWhyUndoHold             DealMarginceCheckOutcomeWhy = "undo_hold"
+)
+
+// Valid indicates whether the value is a known member of the DealMarginceCheckOutcomeWhy enum.
+func (e DealMarginceCheckOutcomeWhy) Valid() bool {
+	switch e {
+	case DealMarginceCheckOutcomeWhyAcceptedOffer:
+		return true
+	case DealMarginceCheckOutcomeWhyAlreadyRight:
+		return true
+	case DealMarginceCheckOutcomeWhyChangedWhileChecking:
+		return true
+	case DealMarginceCheckOutcomeWhyKeptYourEdit:
+		return true
+	case DealMarginceCheckOutcomeWhyNoOwner:
+		return true
+	case DealMarginceCheckOutcomeWhyNoRate:
+		return true
+	case DealMarginceCheckOutcomeWhyNotSure:
+		return true
+	case DealMarginceCheckOutcomeWhyOther:
+		return true
+	case DealMarginceCheckOutcomeWhyOutsideLimits:
+		return true
+	case DealMarginceCheckOutcomeWhyOwnerCannotEdit:
+		return true
+	case DealMarginceCheckOutcomeWhyStageRules:
+		return true
+	case DealMarginceCheckOutcomeWhySwitchedOff:
+		return true
+	case DealMarginceCheckOutcomeWhyUndoHold:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealMarginceCheckSourceSource.
+const (
+	DealMarginceCheckSourceSourceCalls    DealMarginceCheckSourceSource = "calls"
+	DealMarginceCheckSourceSourceMail     DealMarginceCheckSourceSource = "mail"
+	DealMarginceCheckSourceSourceMeetings DealMarginceCheckSourceSource = "meetings"
+	DealMarginceCheckSourceSourceNotes    DealMarginceCheckSourceSource = "notes"
+	DealMarginceCheckSourceSourceOffers   DealMarginceCheckSourceSource = "offers"
+)
+
+// Valid indicates whether the value is a known member of the DealMarginceCheckSourceSource enum.
+func (e DealMarginceCheckSourceSource) Valid() bool {
+	switch e {
+	case DealMarginceCheckSourceSourceCalls:
+		return true
+	case DealMarginceCheckSourceSourceMail:
+		return true
+	case DealMarginceCheckSourceSourceMeetings:
+		return true
+	case DealMarginceCheckSourceSourceNotes:
+		return true
+	case DealMarginceCheckSourceSourceOffers:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealMarginceCheckSourceState.
+const (
+	DealMarginceCheckSourceStateNone        DealMarginceCheckSourceState = "none"
+	DealMarginceCheckSourceStatePrivate     DealMarginceCheckSourceState = "private"
+	DealMarginceCheckSourceStateRead        DealMarginceCheckSourceState = "read"
+	DealMarginceCheckSourceStateUnavailable DealMarginceCheckSourceState = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the DealMarginceCheckSourceState enum.
+func (e DealMarginceCheckSourceState) Valid() bool {
+	switch e {
+	case DealMarginceCheckSourceStateNone:
+		return true
+	case DealMarginceCheckSourceStatePrivate:
+		return true
+	case DealMarginceCheckSourceStateRead:
+		return true
+	case DealMarginceCheckSourceStateUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealProductComponentKind.
 const (
 	DealProductComponentKindImplementation DealProductComponentKind = "implementation"
@@ -22321,6 +22465,27 @@ func (e TeamExceptionKind) Valid() bool {
 	case TeamExceptionKindTeamExceptionRevenueAtRisk:
 		return true
 	case TeamExceptionKindTeamExceptionUnassigned:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamMarginceOwnerlessDealReason.
+const (
+	TeamMarginceOwnerlessDealReasonDepartedOwner TeamMarginceOwnerlessDealReason = "departed_owner"
+	TeamMarginceOwnerlessDealReasonInactiveOwner TeamMarginceOwnerlessDealReason = "inactive_owner"
+	TeamMarginceOwnerlessDealReasonNoOwner       TeamMarginceOwnerlessDealReason = "no_owner"
+)
+
+// Valid indicates whether the value is a known member of the TeamMarginceOwnerlessDealReason enum.
+func (e TeamMarginceOwnerlessDealReason) Valid() bool {
+	switch e {
+	case TeamMarginceOwnerlessDealReasonDepartedOwner:
+		return true
+	case TeamMarginceOwnerlessDealReasonInactiveOwner:
+		return true
+	case TeamMarginceOwnerlessDealReasonNoOwner:
 		return true
 	default:
 		return false
@@ -44049,9 +44214,65 @@ type DealMarginceChanges struct {
 	// Changes The deal's changes, newest first.
 	Changes []Receipt `json:"changes"`
 
+	// LastCheck Margince's latest nightly reading of the deal, present on the first page only when that
+	// reading changed nothing. Every reader of the deal sees when it was and when the next one
+	// is due. Only the owner it was made for, signed in as themselves, reads why and which
+	// sources it read. For anyone else, an agent acting for the owner included, `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
+	// reasons come from the deal's mail and meetings.
+	LastCheck *DealMarginceCheck `json:"last_check,omitempty"`
+
 	// NextCursor Where the next page starts; absent on the last page.
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
+
+// DealMarginceCheck Margince's latest nightly reading of the deal, present on the first page only when that
+// reading changed nothing. Every reader of the deal sees when it was and when the next one
+// is due. Only the owner it was made for, signed in as themselves, reads why and which
+// sources it read. For anyone else, an agent acting for the owner included, `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
+// reasons come from the deal's mail and meetings.
+type DealMarginceCheck struct {
+	CheckedAt time.Time `json:"checked_at"`
+
+	// Explained Whether the caller may read why.
+	Explained bool `json:"explained"`
+
+	// NextCheckAt When the clock alone makes the deal due again, the day after its close date. Absent when only new evidence or a changed field does.
+	NextCheckAt *time.Time                 `json:"next_check_at,omitempty"`
+	Outcomes    []DealMarginceCheckOutcome `json:"outcomes"`
+
+	// Skipped Why no model was asked. `switched_off` is every switch off; `no_evidence` is no mail, meeting, call or note every member may read.
+	Skipped *DealMarginceCheckSkipped `json:"skipped,omitempty"`
+	Sources []DealMarginceCheckSource `json:"sources"`
+}
+
+// DealMarginceCheckSkipped Why no model was asked. `switched_off` is every switch off; `no_evidence` is no mail, meeting, call or note every member may read.
+type DealMarginceCheckSkipped string
+
+// DealMarginceCheckOutcome One change Margince weighed and did not make.
+type DealMarginceCheckOutcome struct {
+	Kind DealMarginceCheckOutcomeKind `json:"kind"`
+	Why  DealMarginceCheckOutcomeWhy  `json:"why"`
+}
+
+// DealMarginceCheckOutcomeKind defines model for DealMarginceCheckOutcome.Kind.
+type DealMarginceCheckOutcomeKind string
+
+// DealMarginceCheckOutcomeWhy defines model for DealMarginceCheckOutcome.Why.
+type DealMarginceCheckOutcomeWhy string
+
+// DealMarginceCheckSource One source and what the reading made of it. `private` is a source whose only items on
+// the deal are ones not every member may read, so they were left out. `unavailable` is a
+// mailbox that was not read on time.
+type DealMarginceCheckSource struct {
+	Source DealMarginceCheckSourceSource `json:"source"`
+	State  DealMarginceCheckSourceState  `json:"state"`
+}
+
+// DealMarginceCheckSourceSource defines model for DealMarginceCheckSource.Source.
+type DealMarginceCheckSourceSource string
+
+// DealMarginceCheckSourceState defines model for DealMarginceCheckSource.State.
+type DealMarginceCheckSourceState string
 
 // DealNextBestActionEvidence defines model for DealNextBestActionEvidence.
 type DealNextBestActionEvidence struct {
@@ -60890,8 +61111,23 @@ type TeamMarginceChangeGroup struct {
 	// Undone Of those deals, how many had the change undone.
 	Undone int `json:"undone"`
 
+	// Unvalued Of these deals, how many moved a value this total leaves out: the amount is masked
+	// for the caller, no exchange rate is stored, or a probability change was written
+	// before Margince kept the amount it was valued from.
+	Unvalued int `json:"unvalued"`
+
 	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
 	ValueBaseMinor int64 `json:"value_base_minor"`
+
+	// ValueMovedBaseMinor How much value these changes moved, in the base currency's minor units. Each deal's
+	// changes of this kind net out first and the group adds the size of each net move.
+	// An amount change moves its difference; a close as lost takes the deal's value out
+	// of the pipeline and an opened or revived deal puts it in; a probability change or a
+	// stage move moves the amount times the change in win probability; a close date moves
+	// nothing. Each move is valued from the deal as it stood when the change was made, so
+	// a later edit does not rewrite it. An undone change adds nothing. A deal whose move
+	// cannot be valued adds nothing and counts in `unvalued`.
+	ValueMovedBaseMinor int64 `json:"value_moved_base_minor"`
 }
 
 // TeamMarginceChangeRow defines model for TeamMarginceChangeRow.
@@ -60903,6 +61139,9 @@ type TeamMarginceChangeRow struct {
 	// client draws the summary alone rather than inventing something to open.
 	Change  Receipt            `json:"change"`
 	OwnerId openapi_types.UUID `json:"owner_id"`
+
+	// ValueMovedBaseMinor The value this change moved, signed, as the group counts it. Absent for a change that moves no value or one the caller may not price.
+	ValueMovedBaseMinor *int64 `json:"value_moved_base_minor,omitempty"`
 }
 
 // TeamMarginceChanges defines model for TeamMarginceChanges.
@@ -60910,12 +61149,42 @@ type TeamMarginceChanges struct {
 	AsOf         time.Time                 `json:"as_of"`
 	BaseCurrency string                    `json:"base_currency"`
 	Groups       []TeamMarginceChangeGroup `json:"groups"`
-	Rows         []TeamMarginceChangeRow   `json:"rows"`
-	Since        time.Time                 `json:"since"`
+
+	// Ownerless Open deals Margince leaves alone because they have no live owner: no owner, or an
+	// owner who left, is invited, suspended or archived. Every such deal the nightly check
+	// skips, read under the caller's row scope, the largest value first, at most 200. They
+	// wait for somebody to assign an owner; this list does not follow `since`.
+	Ownerless []TeamMarginceOwnerlessDeal `json:"ownerless"`
+
+	// OwnerlessTruncated True when more ownerless deals exist than were returned.
+	OwnerlessTruncated bool                    `json:"ownerless_truncated"`
+	Rows               []TeamMarginceChangeRow `json:"rows"`
+	Since              time.Time               `json:"since"`
 
 	// Truncated True when more rows exist than were returned. The groups are never cut.
 	Truncated bool `json:"truncated"`
 }
+
+// TeamMarginceOwnerlessDeal defines model for TeamMarginceOwnerlessDeal.
+type TeamMarginceOwnerlessDeal struct {
+	DealId   openapi_types.UUID `json:"deal_id"`
+	DealName string             `json:"deal_name"`
+
+	// OwnerId The owner who is not live; absent for an unowned deal.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// OwnerName The name of the owner who is not live; absent for an unowned deal or an archived owner.
+	OwnerName *string `json:"owner_name,omitempty"`
+
+	// Reason `departed_owner` left; `inactive_owner` is invited, suspended or archived.
+	Reason TeamMarginceOwnerlessDealReason `json:"reason"`
+
+	// ValueBaseMinor The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate, or the caller's mask withholds it.
+	ValueBaseMinor *int64 `json:"value_base_minor,omitempty"`
+}
+
+// TeamMarginceOwnerlessDealReason `departed_owner` left; `inactive_owner` is invited, suspended or archived.
+type TeamMarginceOwnerlessDealReason string
 
 // TeamWeekReach Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
 // answered by the rule that endpoint is served on. `every_team` for a seat holding

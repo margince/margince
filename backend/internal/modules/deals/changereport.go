@@ -195,6 +195,10 @@ type TeamChangeGroup struct {
 	// ValueBaseMinor sums the changed deals' value in the base currency over
 	// the deals that have one.
 	ValueBaseMinor int64
+	// ValueMovedBaseMinor sums the size of each deal's net move in this kind.
+	ValueMovedBaseMinor int64
+	// Unvalued counts the deals whose move could not be valued.
+	Unvalued int
 }
 
 // TeamChangeReport is what Margince changed on a team's deals in a window.
@@ -202,7 +206,10 @@ type TeamChangeReport struct {
 	BaseCurrency string
 	Groups       []TeamChangeGroup
 	Rows         []CorrectionReceipt
-	Truncated    bool
+	// Moved is the value each row's change moved, by audit row. A change
+	// that moves no value, or one the reader may not price, has no entry.
+	Moved     map[ids.UUID]int64
+	Truncated bool
 }
 
 // teamRowCap bounds the rows of one team report. The groups are counted in
@@ -279,8 +286,10 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 		if err != nil {
 			return fmt.Errorf("deals: reading the team's changes: %w", err)
 		}
-		out.Rows, err = pgx.CollectRows(rows, scanCorrectionReceipt)
-		return err
+		if out.Rows, err = pgx.CollectRows(rows, scanCorrectionReceipt); err != nil {
+			return err
+		}
+		return addMoves(ctx, tx, NewFXRates(base, s.clock()), filter, &out)
 	})
 	if err != nil {
 		return TeamChangeReport{}, err
@@ -291,9 +300,10 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 	return out, nil
 }
 
-// readerOf is the seat reading; a caller with no seat reads no reason.
-func readerOf(ctx context.Context) ids.UUID {
-	if actor, ok := principal.Actor(ctx); ok {
+// ReaderOf is the human reading, whom a reason may reach. An agent, even one
+// acting for that human, and a caller with no seat read none.
+func ReaderOf(ctx context.Context) ids.UUID {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalHuman {
 		return actor.UserID
 	}
 	return ids.Nil
