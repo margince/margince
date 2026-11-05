@@ -299,13 +299,17 @@ func discardComposedDraftTx(ctx context.Context, tx pgx.Tx, draftID ids.UUID, or
 	if draftID.IsZero() || !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
 		return nil
 	}
+	return discardComposedDraftForAuthorTx(ctx, tx, draftID, origin, actor.UserID)
+}
+
+func discardComposedDraftForAuthorTx(ctx context.Context, tx pgx.Tx, draftID ids.UUID, origin SendOrigin, author ids.UUID) error {
 	types, anchorIDs := origin.draftAnchors()
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	_, err := deleteDrafts(ctx, tx, fmt.Sprintf(`
 		id = $%d AND author_id = $%d
 		AND (anchor_type, anchor_id) IN (SELECT * FROM unnest($%d::text[], $%d::uuid[]))`,
-		arg(draftID), arg(actor.UserID), arg(types), arg(anchorIDs)), args)
+		arg(draftID), arg(author), arg(types), arg(anchorIDs)), args)
 	return err
 }
 
