@@ -346,6 +346,12 @@ export function CompanyActionBadges({
           recordId={company.id}
           disabledReasonId={refusedByState}
         />
+        <ShareAction
+          contactsOnly
+          recordType="company"
+          recordId={company.id}
+          disabledReasonId={refusedByState}
+        />
         {/* The audit spine: who changed this record and when. It reads as an
             inspection of the record rather than part of its story, so it sits
             with the other rare verbs instead of beside the account's own
