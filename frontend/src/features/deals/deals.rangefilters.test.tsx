@@ -152,7 +152,9 @@ describe("the deal list's commercial filters", () => {
     renderBar({ baseCurrency: "" });
     const step = await openViewStep(userEvent.setup(), "Filters");
     expect(within(step).queryByRole("button", { name: "Value" })).toBeNull();
-    expect(within(step).getByRole("button", { name: "Currency" })).toBeTruthy();
+    expect(
+      within(step).getByRole("button", { name: "Currency" }),
+    ).toBeInTheDocument();
   });
 
   it.each([
@@ -171,7 +173,7 @@ describe("the deal list's commercial filters", () => {
         expect(within(step).queryByRole("button", { name })).toBeNull();
       }
       for (const name of kept) {
-        expect(within(step).getByRole("button", { name })).toBeTruthy();
+        expect(within(step).getByRole("button", { name })).toBeInTheDocument();
       }
     },
   );

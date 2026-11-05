@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { holdsEveryWord, searchWords } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
@@ -29,7 +30,6 @@ import {
   walkedTo,
 } from "./suggestlist";
 import "./listpopover.css";
-import { holdsEveryWord, searchWords } from "../format/collate";
 
 export type ListPopoverOption = Readonly<{
   id: string;
@@ -137,8 +137,8 @@ export function ListPopover({
   );
 }
 
-/** A non-modal `Popover`, or below the fold a drawer `Modal` headed by `title`:
- * a panel anchored to a thumb-sized trigger leaves no room for the keyboard. */
+/** A non-modal `Popover`, or below the fold a drawer `Modal` headed by `title`.
+ * There a panel anchored to a small trigger leaves no room for the keyboard. */
 export function PopoverSheet({
   label,
   title,

@@ -39,7 +39,11 @@ import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import { LeadBulkBar } from "./leadbulk";
 import { useLeadSettings } from "./leadhandling";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
@@ -257,10 +261,8 @@ function LeadsWorkbench({
             mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })
           )
         }
-        // The board renders INSIDE the surface, so the search, the chips and
-        // the saved views stay above it. A board that replaced the surface
-        // took the filter bar with it, leaving the reader looking at a
-        // narrowed answer with no way to see or change what narrowed it.
+        // The board renders inside the surface, so the toolbar stays above it:
+        // a narrowed answer always shows the way to change what narrowed it.
         body={
           view === "board" && refused.length === 0 ? (
             <LeadBoard
@@ -491,6 +493,7 @@ function LeadsWorkbench({
           />
         }
         saveView={<SaveViewAction resource="leads" query={state.query} />}
+        notice={<SavedViewsFailure resource="leads" />}
       />
     </>
   );

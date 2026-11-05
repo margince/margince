@@ -1,8 +1,7 @@
 import { Search } from "lucide-react";
-import { type ReactNode, useState } from "react";
-import { useT } from "../i18n";
+import { type ReactNode, useRef, useState } from "react";
+import { type Translator, useT } from "../i18n";
 import { useFoldedViewport } from "../lib/viewport";
-import { Checkbox } from "./atoms";
 import { FilterRow, FilterStep } from "./listfilter";
 import { SortStep, sortSummary } from "./listsort";
 import {
@@ -11,7 +10,12 @@ import {
   type SortControl,
   type SortOption,
 } from "./listsurface.dials";
-import { ListViewMenu, type ViewRow, type ViewToggle } from "./listviewmenu";
+import {
+  ListViewMenu,
+  ToggleRow,
+  type ViewRow,
+  type ViewToggle,
+} from "./listviewmenu";
 
 export const VIEW_MENU = "view";
 
@@ -30,6 +34,7 @@ export function Toolbar({
   changed,
   tools,
   saveView,
+  notice,
   openMenu,
   setOpenMenu,
 }: Readonly<{
@@ -39,7 +44,7 @@ export function Toolbar({
   chips: readonly ListChip[];
   chosen: Readonly<Record<string, string>>;
   onChipChange?: (key: string, value: string) => void;
-  archived?: { checked: boolean; onChange: (next: boolean) => void };
+  archived?: Archived;
   layout?: ReactNode;
   viewRows: readonly ViewRow[];
   displayRows: readonly ViewRow[];
@@ -47,6 +52,7 @@ export function Toolbar({
   changed: boolean;
   tools?: ReactNode;
   saveView?: ReactNode;
+  notice?: ReactNode;
   openMenu: string | null;
   setOpenMenu: (next: string | null) => void;
 }>) {
@@ -66,6 +72,16 @@ export function Toolbar({
     onChipChange?.(key, value);
   };
   const deleteFilter = (key: string) => onChipChange?.(key, "");
+  const root = useRef<HTMLDivElement>(null);
+  // A closing menu takes focus with it. So a chip's pick or delete hands focus
+  // on: to the first of `rows` that is drawn, else to View.
+  const focusApplied = (...rows: number[]) => {
+    const drawn = root.current?.querySelectorAll<HTMLElement>(
+      ".lt-applied .lt-frow-value",
+    );
+    const row = rows.map((index) => drawn?.[index]).find(Boolean);
+    (row ?? root.current?.querySelector<HTMLElement>(".lt-vtrigger"))?.focus();
+  };
 
   const rows: ViewRow[] = [...viewRows];
   if (chips.length > 0) {
@@ -95,16 +111,15 @@ export function Toolbar({
       key: "sort",
       label: t("table.sort"),
       value: sortSummary(sort, sortOptions, t),
-      changed: sort.value !== (sort.initial ?? ""),
+      // "Default order" is the server's own, so it carries no dot.
+      changed: sort.value !== "" && sort.value !== (sort.initial ?? ""),
       step: () => <SortStep sort={sort} options={sortOptions} />,
     });
   }
   rows.push(...displayRows);
   // Which rows exist before how they are drawn, as in the rows above.
   const toggles: ViewToggle[] = [
-    ...(archived
-      ? [{ key: "archived", label: t("list.showArchived"), ...archived }]
-      : []),
+    ...(archived ? [archivedToggle(archived, t)] : []),
     ...displayToggles,
   ];
   const hasPanel =
@@ -114,7 +129,7 @@ export function Toolbar({
     saveView !== undefined;
 
   return (
-    <div className="lt-tools">
+    <div className="lt-tools" ref={root}>
       {search && (
         <label className="lt-search">
           <Search size={13} strokeWidth={1.6} aria-hidden="true" />
@@ -143,10 +158,11 @@ export function Toolbar({
         />
       )}
       {tools}
+      <div className="lt-notice">{notice}</div>
       {applied.length > 0 && (
         <AppliedFilters>
           {(menuHost) =>
-            applied.map((chip) => (
+            applied.map((chip, index) => (
               <FilterRow
                 key={chip.key}
                 chip={chip}
@@ -160,10 +176,12 @@ export function Toolbar({
                 onPick={(value, label) => {
                   applyFilter(chip.key, value, label);
                   setOpenMenu(null);
+                  focusApplied(index);
                 }}
                 onDelete={() => {
                   deleteFilter(chip.key);
                   setOpenMenu(null);
+                  focusApplied(index + 1, index - 1);
                 }}
                 menuHost={menuHost}
               />
@@ -190,17 +208,14 @@ function AppliedFilters({
   );
 }
 
-export function ArchivedSwitch({
-  archived,
-}: Readonly<{
-  archived: { checked: boolean; onChange: (next: boolean) => void };
-}>) {
+type Archived = { checked: boolean; onChange: (next: boolean) => void };
+
+function archivedToggle(archived: Archived, t: Translator): ViewToggle {
+  return { key: "archived", label: t("list.showArchived"), ...archived };
+}
+
+/** Show archived for a list with no View panel, as the panel draws it. */
+export function ArchivedSwitch({ archived }: Readonly<{ archived: Archived }>) {
   const t = useT();
-  return (
-    <Checkbox
-      checked={archived.checked}
-      label={t("list.showArchived")}
-      onChange={(event) => archived.onChange(event.target.checked)}
-    />
-  );
+  return <ToggleRow toggle={archivedToggle(archived, t)} />;
 }

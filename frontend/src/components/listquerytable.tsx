@@ -66,6 +66,7 @@ export function ListTable<Row>({
   layout,
   viewRows,
   saveView,
+  notice,
   emptyNote,
   scopeKey,
   body,
@@ -142,6 +143,8 @@ export function ListTable<Row>({
   viewRows?: readonly ViewRow[];
   /** Save view and Manage views, in the View panel's footer. */
   saveView?: ReactNode;
+  /** A line under the search; see `ListSurface`. */
+  notice?: ReactNode;
   /**
    * What the empty table says under its generic line, when this screen knows
    * why it is empty. Example: a "Mine" view for a reader who owns nothing,
@@ -382,6 +385,7 @@ export function ListTable<Row>({
       viewRows={viewRows}
       changed={changed}
       saveView={saveView}
+      notice={notice}
       search={
         searchable
           ? {

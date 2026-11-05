@@ -1,8 +1,5 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   cleanup,
   render as rtlRender,
@@ -14,7 +11,6 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { rulesIn } from "../testing/css";
 import { precedes } from "../testing/domorder";
 import {
   openView,
@@ -32,8 +28,6 @@ import { Modal } from "./modal";
 
 // The toolbar as a reader meets it: the search, View and its panel's rows and
 // steps, and the applied filters under the search.
-
-const here = dirname(fileURLToPath(import.meta.url));
 
 afterEach(cleanup);
 
@@ -68,12 +62,15 @@ const SORT_OPTIONS: readonly SortOption[] = [
 function Surface({
   chips = CHIPS,
   initialSort = "",
+  opensOn,
   initialFilters = {},
   changed = false,
   onChipChange,
 }: Readonly<{
   chips?: readonly ListChip[];
   initialSort?: string;
+  /** The order the list opens on (`sort.initial`). */
+  opensOn?: string;
   initialFilters?: Readonly<Record<string, string>>;
   changed?: boolean;
   onChipChange?: (key: string, value: string) => void;
@@ -85,7 +82,7 @@ function Surface({
   return (
     <ListSurface
       search={{ value: search, onChange: setSearch }}
-      sort={{ value: sort, onChange: setSort }}
+      sort={{ value: sort, onChange: setSort, initial: opensOn }}
       sortOptions={SORT_OPTIONS}
       chips={chips}
       chosen={chosen}
@@ -120,7 +117,6 @@ it("names on View how many filters apply and that the list left its view", async
   const view = await viewButton();
   expect(view).toHaveAccessibleName("View, 2 filters, changed");
   expect(view.querySelector(".optioncount")).toHaveTextContent("2");
-  expect(view.querySelector(".lt-vdot")).toBeTruthy();
 
   cleanup();
   render(<Surface />);
@@ -153,13 +149,15 @@ it("flips the sort from its step and says so on the row", async () => {
 
   const step = await openViewStep(user, "Sort");
   await user.click(within(step).getByRole("radio", { name: /^Created/ }));
-  await user.click(within(step).getByRole("button", { name: /^Sort Back/ }));
+  await user.click(
+    within(step).getByRole("button", { name: "Sort, back to view options" }),
+  );
 
   expect(
     screen.getByRole("button", {
       name: "Sort, Created, ascending, changed",
     }),
-  ).toBeTruthy();
+  ).toBeInTheDocument();
 });
 
 // It widens the list as a filter narrows it, so it is a pressed button and
@@ -186,21 +184,17 @@ it("steps into an attribute and back out to its row", async () => {
   render(<Surface />);
 
   const menu = await openViewStep(user, "Filters");
-  const row = within(menu).getByRole("button", { name: "Status" });
-  expect(row.querySelector(".lucide-chevron-right")).toBeTruthy();
-
-  await user.click(row);
+  await user.click(within(menu).getByRole("button", { name: "Status" }));
   // The visible word first: a reader speaking what they see says "Status".
   const back = screen.getByRole("button", {
-    name: /^Status Back to all filters$/,
+    name: "Status, back to all filters",
   });
   expect(back).toHaveFocus();
-  expect(back.querySelector(".lucide-chevron-left")).toBeTruthy();
   expect(screen.queryByPlaceholderText("Search attributes")).toBeNull();
 
   await user.click(back);
   expect(screen.getByRole("button", { name: "Status" })).toHaveFocus();
-  expect(screen.getByPlaceholderText("Search attributes")).toBeTruthy();
+  expect(screen.getByPlaceholderText("Search attributes")).toBeInTheDocument();
 });
 
 // The step replaced the row the reader pressed, so Back hands focus to it.
@@ -210,7 +204,7 @@ it("hands focus to the step's way back, and back to the row that opened it", asy
 
   await openViewStep(user, "Sort");
   const back = screen.getByRole("button", {
-    name: /^Sort Back to view options$/,
+    name: "Sort, back to view options",
   });
   expect(back).toHaveFocus();
 
@@ -242,12 +236,12 @@ it("lists every attribute, an applied one with its value and a dot", async () =>
   render(<Surface initialFilters={{ status: "open" }} />);
 
   const menu = await openViewStep(user, "Filters");
-  const status = within(menu).getByRole("button", {
-    name: "Status, Open, changed",
-  });
-  expect(status.querySelector(".lt-vdot")).not.toBeNull();
-  const owner = within(menu).getByRole("button", { name: "Owner" });
-  expect(owner.querySelector(".lt-vdot")).toBeNull();
+  expect(
+    within(menu).getByRole("button", { name: "Status, Open, changed" }),
+  ).toBeInTheDocument();
+  expect(
+    within(menu).getByRole("button", { name: "Owner" }),
+  ).toBeInTheDocument();
 });
 it("draws no applied-filter row while nothing applies", () => {
   const { container } = render(<Surface />);
@@ -358,38 +352,43 @@ it("keeps the whole count sentence, read before the header's verbs", () => {
   ).toBe(true);
 });
 
-// A list with nothing to count, or still loading, keeps no empty line under
-// its tabs. The sheet hides an empty count, and an empty count is what draws.
-it("draws no count line while there is nothing to count", () => {
-  const { container, rerender } = render(
-    <ListSurface
-      views={[{ label: "All" }]}
-      count={<CountLine unit="leads" first={1} last={0} total={0} />}
-      action={<button type="button">New lead</button>}
-    >
-      <p>rows</p>
-    </ListSurface>,
-  );
-  const count = () => container.querySelector(".lt-count");
-  expect(count()).toBeEmptyDOMElement();
-
-  rerender(
+// Whether the line is drawn follows the count's state. Its height while
+// pending is measured in a browser (List surface, Count holds its line).
+it("draws the count line as it last settled while a count is pending", () => {
+  const surface = (count: ReactNode, pending: boolean) => (
     <LocaleProvider initial="en">
-      <ListSurface views={[{ label: "All" }]} count={false}>
+      <ListSurface
+        views={[{ label: "All" }]}
+        count={count}
+        countPending={pending}
+      >
         <p>rows</p>
       </ListSurface>
-    </LocaleProvider>,
+    </LocaleProvider>
   );
-  expect(count()).toBeEmptyDOMElement();
+  const { container, rerender } = rtlRender(surface(undefined, true));
+  const line = () => container.querySelector(".lt-count");
+  expect(line()).toBeEmptyDOMElement();
 
-  const sheet = readFileSync(join(here, "listtable.css"), "utf8");
-  expect(
-    rulesIn(sheet).some(
-      (rule) =>
-        rule.selector.trim() === ".lt-count:empty" &&
-        /display:\s*none/.test(rule.body),
-    ),
-  ).toBe(true);
+  rerender(surface("1 to 25 of 40 leads", false));
+  expect(line()).toHaveTextContent("1 to 25 of 40 leads");
+  rerender(surface(undefined, true));
+  expect(line()).toBeEmptyDOMElement();
+
+  rerender(surface(undefined, false));
+  expect(line()).toBeNull();
+  rerender(surface(undefined, true));
+  expect(line()).toBeNull();
+});
+
+it("says nothing for a settled list with no rows and no order", () => {
+  render(<CountLine unit="leads" first={1} last={0} total={0} />);
+  expect(document.body).toHaveTextContent(/^$/);
+  cleanup();
+  render(
+    <CountLine unit="leads" first={1} last={0} total={0} sortedBy="Name" />,
+  );
+  expect(document.body).toHaveTextContent("Sorted by Name");
 });
 
 it("names what the counted rows belong to, before the order", () => {
@@ -411,7 +410,7 @@ it("names what the counted rows belong to, before the order", () => {
   );
   expect(
     screen.getByText("1 to 2 of 2 deals in Sales, sorted by Value"),
-  ).toBeTruthy();
+  ).toBeInTheDocument();
 });
 
 it("changes an applied filter in place, under the same key and condition", async () => {
@@ -438,7 +437,9 @@ it("changes an applied filter in place, under the same key and condition", async
     screen.getByRole("button", { name: "Status, Won, changed" }),
   ).toHaveFocus();
   const applied = screen.getByRole("group", { name: "Status: Won" });
-  expect(within(applied).getByRole("button", { name: "is" })).toBeTruthy();
+  expect(
+    within(applied).getByRole("button", { name: "is" }),
+  ).toBeInTheDocument();
 });
 
 const CLOSE_DATE: ListChip = {
@@ -510,7 +511,7 @@ it("puts a value step's search above its options and its any option", async () =
 
   expect(
     precedes(
-      within(step).getByRole("textbox", { name: "Search Team values" }),
+      within(step).getByRole("searchbox", { name: "Search Team values" }),
       within(step).getByRole("radio", { name: "Any team" }),
     ),
   ).toBe(true);
@@ -518,4 +519,137 @@ it("puts a value step's search above its options and its any option", async () =
   expect(
     within(step).queryByRole("button", { name: "Delete filter" }),
   ).toBeNull();
+});
+
+// "Default order" is the server's own. A shared link with no sort arrives on
+// it, and a row that read "Default order, changed" would contradict itself.
+it.each([
+  ["the server's order", "", "Sort, Default order"],
+  ["the order it opens on", "-created_at", "Sort, Created, descending"],
+  ["another named order", "name", "Sort, Name, ascending, changed"],
+])(
+  "marks Sort changed only on a named order it did not open on: %s",
+  async (_case, value, name) => {
+    const user = userEvent.setup();
+    render(<Surface initialSort={value} opensOn="-created_at" />);
+    const panel = await openView(user);
+    expect(
+      within(panel).getByRole("button", { name: /^Sort,/ }),
+    ).toHaveAccessibleName(name);
+  },
+);
+
+// The menu that took the pick or the delete closes. Focus must not fall to the
+// page: it stays on the chip, goes to the next one, or goes to View.
+it("keeps focus on a chip's value after a pick from its menu", async () => {
+  const user = userEvent.setup();
+  render(<Surface initialFilters={{ status: "open" }} />);
+  const applied = screen.getByRole("group", { name: "Status: Open" });
+  await user.click(within(applied).getByRole("button", { name: "Open" }));
+  await user.click(screen.getByRole("radio", { name: "Won" }));
+
+  const changed = screen.getByRole("group", { name: "Status: Won" });
+  expect(within(changed).getByRole("button", { name: "Won" })).toHaveFocus();
+});
+
+it("hands focus to the next chip after a delete, and to View once none is left", async () => {
+  const user = userEvent.setup();
+  render(<Surface initialFilters={{ status: "open", owner: "u1" }} />);
+  const deleteFrom = async (filter: string) => {
+    await user.click(
+      screen.getByRole("button", {
+        name: `More actions for the ${filter} filter`,
+      }),
+    );
+    const menu = screen
+      .getAllByRole("group", { name: filter })
+      .find((group) => group.classList.contains("open"));
+    if (menu === undefined) throw new Error(`no open ${filter} menu`);
+    await user.click(
+      within(menu).getByRole("button", { name: "Delete filter" }),
+    );
+  };
+
+  await deleteFrom("Status");
+  const owner = screen.getByRole("group", { name: "Owner: Ada" });
+  expect(within(owner).getByRole("button", { name: "Ada" })).toHaveFocus();
+
+  await deleteFrom("Owner");
+  expect(await viewButton()).toHaveFocus();
+});
+
+// A list with no View panel draws Show archived as the panel does: one
+// pressed button, never a checkbox.
+it("draws a bare list's Show archived as a pressed button", async () => {
+  const user = userEvent.setup();
+  function Bare() {
+    const [checked, setChecked] = useState(false);
+    return (
+      <ListSurface bare archived={{ checked, onChange: setChecked }}>
+        <p>rows</p>
+      </ListSurface>
+    );
+  }
+  render(<Bare />);
+
+  expect(screen.queryByRole("checkbox")).toBeNull();
+  const archived = screen.getByRole("button", { name: "Show archived" });
+  expect(archived).toHaveAttribute("aria-pressed", "false");
+  await user.click(archived);
+  expect(archived).toHaveAttribute("aria-pressed", "true");
+});
+
+// A short list turns bare when Show archived goes off. The panel the reader
+// pressed it in stays until they close it, and focus then finds the switch.
+it("keeps the panel open while the list turns bare under it", async () => {
+  const user = userEvent.setup();
+  function ShortList() {
+    const [checked, setChecked] = useState(true);
+    return (
+      <ListSurface
+        bare={!checked}
+        search={{ value: "", onChange: () => undefined }}
+        archived={{ checked, onChange: setChecked }}
+      >
+        <p>rows</p>
+      </ListSurface>
+    );
+  }
+  render(<ShortList />);
+
+  const panel = await openView(user);
+  await user.click(
+    within(panel).getByRole("button", { name: "Show archived" }),
+  );
+  expect(screen.getByRole("dialog")).toBe(panel);
+  expect(
+    within(panel).getByRole("button", { name: "Show archived" }),
+  ).toHaveAttribute("aria-pressed", "false");
+
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.queryByRole("searchbox")).toBeNull();
+  expect(screen.getByRole("button", { name: "Show archived" })).toHaveFocus();
+});
+
+// A failed read the dials depend on is said on the toolbar, outside the
+// panel, so the reader sees it without opening View.
+it("stands a notice on its own line under the search, outside View", () => {
+  render(
+    <ListSurface
+      search={{ value: "", onChange: () => undefined }}
+      sort={{ value: "", onChange: () => undefined }}
+      sortOptions={SORT_OPTIONS}
+      notice={<p role="alert">Saved views did not load</p>}
+    >
+      <p>rows</p>
+    </ListSurface>,
+  );
+
+  const notice = screen.getByRole("alert");
+  expect(notice.closest(".lt-tools")).not.toBeNull();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(
+    precedes(screen.getByRole("searchbox", { name: "Search" }), notice),
+  ).toBe(true);
 });

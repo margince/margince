@@ -1,8 +1,9 @@
-import { type ReactNode, useRef } from "react";
+import { type ComponentProps, type ReactNode, useRef } from "react";
 import { AnsweredSearch } from "./answeredsearch";
 import { EmptyState, useScrollRegion } from "./atoms";
 import {
   CountLine,
+  countSays,
   type ListChip,
   ListSurface,
   type ListView,
@@ -71,6 +72,16 @@ function BulkBar<Row>({
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
+/** The table's range line, or none while it is pending or has nothing to say. */
+function rangeLine(
+  pending: boolean,
+  line: ComponentProps<typeof CountLine>,
+): ReactNode {
+  return !pending && countSays(line.total, line.sortedBy) ? (
+    <CountLine {...line} />
+  ) : undefined;
+}
+
 export function ListTable<Row>({
   title,
   bodyCount,
@@ -113,6 +124,7 @@ export function ListTable<Row>({
   viewRows,
   changed,
   saveView,
+  notice,
   body,
   bodyOwnsPaging = false,
   selection,
@@ -299,11 +311,18 @@ export function ListTable<Row>({
   problem?: ReactNode;
   /** Names this table for the column widths it remembers between visits. */
   widthsKey?: string;
+  /** A verb that is not a dial, at the toolbar's end; see `ListSurface`. */
   tools?: ReactNode;
+  /** Table or Board, at the top of the View panel; see `ListSurface`. */
   layout?: ReactNode;
+  /** The screen's own dials in the View panel; see `ListSurface`. */
   viewRows?: readonly ViewRow[];
+  /** The list departs from every view it offers; see `ListSurface`. */
   changed?: boolean;
+  /** Save view and Manage views, in the View panel's footer. */
   saveView?: ReactNode;
+  /** A line under the search; see `ListSurface`. */
+  notice?: ReactNode;
 }>) {
   const display = useColumnDisplay(columns);
   const order = useColumnOrder(widthsKey);
@@ -386,20 +405,19 @@ export function ListTable<Row>({
       count={
         bodyOwnsPaging
           ? bodyCount
-          : !pending && (
-              <CountLine
-                unit={unit}
-                first={paging.from + 1}
-                last={paging.from + paging.pageRows.length}
-                total={serverTotal ?? rows.length}
-                // "Loaded so far" is the caveat for a number the client
-                // counted itself; an exact total needs none.
-                more={hasMore && serverTotal === undefined}
-                scope={countScope}
-                sortedBy={sortedColumn(columns, sort)?.header}
-              />
-            )
+          : rangeLine(pending, {
+              unit,
+              first: paging.from + 1,
+              last: paging.from + paging.pageRows.length,
+              total: serverTotal ?? rows.length,
+              // "Loaded so far" is the caveat for a number the client
+              // counted itself; an exact total needs none.
+              more: hasMore && serverTotal === undefined,
+              scope: countScope,
+              sortedBy: sortedColumn(columns, sort)?.header,
+            })
       }
+      countPending={!bodyOwnsPaging && pending}
       action={action}
       caption={caption}
       search={search}
@@ -418,6 +436,7 @@ export function ListTable<Row>({
       changed={changed}
       tools={tools}
       saveView={saveView}
+      notice={notice}
       footer={
         <>
           {footer && <div className="lt-agg">{footer}</div>}

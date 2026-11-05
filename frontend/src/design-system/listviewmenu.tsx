@@ -11,6 +11,7 @@ import {
   type ReactNode,
   type RefObject,
   useEffect,
+  useEffectEvent,
   useRef,
   useState,
 } from "react";
@@ -67,7 +68,6 @@ export function ListViewMenu({
 }>) {
   const t = useT();
   const [stepKey, setStepKey] = useState<string | null>(null);
-  const cameFrom = useRef<string | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const anchor = useRef<HTMLSpanElement>(null);
   useCloseOnFocusOut(open, anchor, body, () => onOpenChange(false));
@@ -75,31 +75,12 @@ export function ListViewMenu({
   if (!open && stepKey !== null) {
     setStepKey(null);
   }
-
-  // A step replaces the pressed control: focus goes to its way back, and on
-  // Back to the row that opened it. A close leaves focus to the trigger's owner.
-  useEffect(() => {
-    const key = cameFrom.current;
-    if (key === null) {
-      return;
-    }
-    const root = body.current;
-    if (open && stepKey !== null) {
-      root?.querySelector<HTMLElement>(".lt-mback")?.focus();
-      return;
-    }
-    cameFrom.current = null;
-    if (open) {
-      [...(root?.querySelectorAll<HTMLElement>("[data-view-row]") ?? [])]
-        .find((row) => row.dataset.viewRow === key)
-        ?.focus();
-    }
-  }, [open, stepKey]);
+  const arrive = useStepFocus(body, stepKey, "data-view-row", open);
 
   const row = rows.find((candidate) => candidate.key === stepKey);
   const back = () => setStepKey(null);
   const enter = (key: string) => {
-    cameFrom.current = key;
+    arrive(key);
     setStepKey(key);
   };
 
@@ -190,8 +171,7 @@ export function ValueRow({
       type="button"
       className="lt-mi lt-vrow"
       {...marker}
-      // The visible words in their order, with the pause between them that two
-      // boxes side by side give the eye.
+      // The visible words in order, with commas between the name and value.
       aria-label={name}
       onClick={onClick}
     >
@@ -227,6 +207,41 @@ export function ViewStep({
 }
 
 /**
+ * Focus for a level whose rows give way to a step. Entering moves it to the
+ * step's Back, and leaving returns it to the row that opened the step.
+ * Returns what a row's press calls before it opens its step.
+ */
+export function useStepFocus(
+  root: RefObject<HTMLElement | null>,
+  step: string | null,
+  rowAttribute: `data-${string}`,
+  shown = true,
+): (key: string) => void {
+  // Null until a row is pressed, so a level drawn fresh leaves focus alone.
+  const cameFrom = useRef<string | null>(null);
+  useEffect(() => {
+    const key = cameFrom.current;
+    if (key === null) {
+      return;
+    }
+    const scope = root.current;
+    if (shown && step !== null) {
+      scope?.querySelector<HTMLElement>(".lt-mback")?.focus();
+      return;
+    }
+    cameFrom.current = null;
+    if (shown) {
+      [...(scope?.querySelectorAll<HTMLElement>(`[${rowAttribute}]`) ?? [])]
+        .find((row) => row.getAttribute(rowAttribute) === key)
+        ?.focus();
+    }
+  }, [root, step, rowAttribute, shown]);
+  return (key) => {
+    cameFrom.current = key;
+  };
+}
+
+/**
  * Tab past the panel's last control would leave the popover open over a page
  * the reader has left. So focus landing outside it closes it.
  */
@@ -236,6 +251,7 @@ function useCloseOnFocusOut(
   body: RefObject<HTMLElement | null>,
   close: () => void,
 ) {
+  const leave = useEffectEvent(close);
   useEffect(() => {
     if (!open) {
       return;
@@ -251,15 +267,16 @@ function useCloseOnFocusOut(
       ) {
         return;
       }
-      close();
+      leave();
     };
     document.addEventListener("focusin", onFocus);
     return () => document.removeEventListener("focusin", onFocus);
-  }, [open, anchor, body, close]);
+  }, [open, anchor, body]);
 }
 
-// A filter over a list is a pressed button (README), in the rows' shape.
-function ToggleRow({ toggle }: Readonly<{ toggle: ViewToggle }>) {
+/** A filter over a list is a pressed button (README), in the rows' shape;
+ * a list with no panel draws it alone. */
+export function ToggleRow({ toggle }: Readonly<{ toggle: ViewToggle }>) {
   const t = useT();
   return (
     <button
@@ -282,10 +299,8 @@ function ToggleRow({ toggle }: Readonly<{ toggle: ViewToggle }>) {
   );
 }
 
-/**
- * The trigger's face. The count and the dot are drawn for the eye and said in
- * one hidden line. So the name reads "View, 2 filters, changed" in one piece.
- */
+/** The trigger's face: the count and dot are hidden from a screen reader,
+ * and one hidden line names it "View, 2 filters, changed". */
 function ViewLabel({
   filterCount,
   changed,

@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -93,7 +94,9 @@ describe("DealsScreen", () => {
     vi.stubGlobal("fetch", stubBackend([deal({})]));
     render(<DealsScreen />);
     await showLayout(userEvent.setup(), "Table");
-    expect(await screen.findByText(/^1 to 1 of 1 deals in Sales/)).toBeTruthy();
+    expect(
+      await screen.findByText(/^1 to 1 of 1 deals in Sales/),
+    ).toBeInTheDocument();
   });
 
   // A view saved on the deals list is a server row, and the tab rail has to

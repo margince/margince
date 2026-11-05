@@ -24,7 +24,11 @@ import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { useSavedViews } from "../../lib/savedviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import { useProjectCreateForm } from "./projects.create";
 import {
   PHASE_LABEL,
@@ -153,13 +157,11 @@ export function ProjectsScreen() {
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
   const createAction = !state.isPending && <NewProjectAction />;
-  // The first-run plate: nothing exists yet, and nothing is narrowing the
-  // list. A filtered-empty list is the table's own case — it already knows to
-  // offer the way back — and a list that is empty because a reader typed a
-  // search must not be told the product has no projects. A saved view is
-  // reachable only from the table's rail, so the plate waits for the views
-  // read to confirm there is none; an unanswered or failed read keeps the
-  // table, where SaveViewAction says what went wrong.
+  // The first-run plate: nothing exists yet, and nothing narrows the list. A
+  // filtered-empty list is the table's own case, and a typed search must not be
+  // told the product has no projects. A saved view is reachable only from the
+  // rail, so the plate waits until the views read confirms there is none. An
+  // unanswered or failed read keeps the table, where SavedViewsFailure says why.
   const firstRun =
     !state.isPending &&
     !state.isError &&
@@ -242,6 +244,7 @@ export function ProjectsScreen() {
           lastActivityColumn<Project>(t, locale, readerZone),
         ]}
         saveView={<SaveViewAction resource="projects" query={state.query} />}
+        notice={<SavedViewsFailure resource="projects" />}
         rowKey={(project) => project.id}
         rowRoute={(project) => ({ screen: "projects", id: project.id })}
         dataViews={savedViews}

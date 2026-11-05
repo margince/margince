@@ -38,6 +38,23 @@ it("keeps the aside off the page until the trigger is pressed", async () => {
   expect(screen.getByRole("button").getAttribute("aria-expanded")).toBe("true");
 });
 
+// An id the page does not hold is an invalid reference (axe
+// aria-valid-attr-value), and the panel is drawn only while open.
+it("points the trigger at its panel only while the panel is drawn", async () => {
+  render(<Popover label="How it stands">Two of three are late.</Popover>);
+  const trigger = screen.getByRole("button", { name: "How it stands" });
+  expect(trigger.hasAttribute("aria-controls")).toBe(false);
+
+  await userEvent.click(trigger);
+  const panelId = trigger.getAttribute("aria-controls");
+  expect(document.getElementById(panelId ?? "")?.textContent).toBe(
+    "Two of three are late.",
+  );
+
+  await userEvent.click(trigger);
+  expect(trigger.hasAttribute("aria-controls")).toBe(false);
+});
+
 // The panel is portalled to the body, so it is nowhere near its trigger in the
 // tree. It has to say what it is an aside TO, or a screen reader meets a
 // paragraph belonging to nothing.

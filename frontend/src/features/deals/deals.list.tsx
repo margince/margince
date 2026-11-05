@@ -36,7 +36,11 @@ import { throwProblem, unwrap } from "../../lib/problem";
 import { useReReadMeWhen } from "../../lib/refusedfilters";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import {
   type ClosedDeal,
@@ -431,6 +435,7 @@ export function DealsScreen({
         layout={layout}
         viewRows={viewRows}
         saveView={saveView}
+        notice={<SavedViewsFailure resource="deals" />}
         body={boardBody}
         bodyOwnsPaging={boardBody !== undefined}
         countScope={effectivePipeline?.name}

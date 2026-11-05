@@ -2,15 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { ListQuery } from "../../components/listquery";
+import { ListSurface } from "../../design-system/listsurface";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { SaveViewAction } from "./savedviews";
+import { SavedViewsFailure, SaveViewAction } from "./savedviews";
 
 // A saved view is per-user list state, by name: saved beside a list's own
 // tools through the catalog's one naming dialog, and managed from the same
@@ -139,12 +140,30 @@ export const ManagingViews: Story = {
   },
 };
 
+// The failure stands on the toolbar under the search, seen without opening
+// View, and it names the saved views beside the dials it sits among.
 export const TheRailFailedToLoad: Story = {
-  // The notice names the saved views, since the panel holds many dials.
   render: () => {
     routes({
       "GET /views": () => jsonResponse({ title: "Server error" }, 500),
     });
-    return <SaveViewAction resource="contacts" query={NARROWED} />;
+    return (
+      <ListSurface
+        search={{ value: "", onChange: () => undefined }}
+        saveView={<SaveViewAction resource="contacts" query={NARROWED} />}
+        notice={<SavedViewsFailure resource="contacts" />}
+      >
+        <p>Rows</p>
+      </ListSurface>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const failed = await canvas.findByRole("region", { name: "Saved views" });
+    await expect(failed.closest(".lt-tools")).not.toBeNull();
+    await expect(
+      within(failed).getByRole("button", { name: "Retry" }),
+    ).toBeVisible();
+    await expect(canvas.queryByRole("dialog")).toBeNull();
   },
 };

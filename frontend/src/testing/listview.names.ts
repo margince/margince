@@ -12,6 +12,11 @@ export function labelled(label: string): RegExp {
   return new RegExp(`^${escaped(label)}(,|$)`);
 }
 
+/** The Filters row of the View panel, and the step it opens. */
+export function filtersStepName(locale: Locale = "en"): string {
+  return catalogs[locale]["table.filters"];
+}
+
 /** The View button, and the panel it opens, in the reader's language. */
 export function viewMenuName(locale: Locale = "en"): RegExp {
   return labelled(catalogs[locale]["list.viewMenu"]);

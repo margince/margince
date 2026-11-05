@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -272,8 +273,8 @@ describe("a saved view over the deals board", () => {
     render(<DealsScreen />);
 
     // The head sums the column counts, and the report measures every column.
-    expect(await screen.findByText("7 deals in Sales")).toBeTruthy();
-    expect(screen.getByText("7 deals")).toBeTruthy();
+    expect(await screen.findByText("7 deals in Sales")).toBeInTheDocument();
+    expect(screen.getByText("7 deals")).toBeInTheDocument();
     expect(screen.getByText("€7,000")).toBeTruthy();
 
     // Archived deals are reachable from the board, not only from the table: a
@@ -284,8 +285,8 @@ describe("a saved view over the deals board", () => {
     );
     expect(screen.queryByText("€7,000")).toBeNull();
     expect(screen.queryByText(/^7 deals/)).toBeNull();
-    expect(await screen.findByText("2 deals in Sales")).toBeTruthy();
-    expect(screen.getByText("2 deals")).toBeTruthy();
+    expect(await screen.findByText("2 deals in Sales")).toBeInTheDocument();
+    expect(screen.getByText("2 deals")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Loaded deals only. Totals are unavailable while archived deals are included.",
@@ -299,8 +300,8 @@ describe("a saved view over the deals board", () => {
     vi.stubGlobal("fetch", stubBackend({ deals: [deal({})] }));
     render(<DealsScreen />);
 
-    expect(await screen.findByText("1 deal in Sales")).toBeTruthy();
-    expect(screen.getByText("1 deal")).toBeTruthy();
+    expect(await screen.findByText("1 deal in Sales")).toBeInTheDocument();
+    expect(screen.getByText("1 deal")).toBeInTheDocument();
     expect(screen.queryByText(/1 deals/)).toBeNull();
   });
 
@@ -317,7 +318,7 @@ describe("a saved view over the deals board", () => {
     await user.click(within(panel).getByRole("button", { name: "Table" }));
     expect(
       await within(panel).findByRole("button", { name: "Compact" }),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 });
 

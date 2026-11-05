@@ -490,11 +490,13 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
 
     await showLayout(userEvent.setup(), "Board");
 
-    expect(screen.getByRole("searchbox")).toBeTruthy();
+    expect(
+      screen.getByRole("searchbox", { name: "Search" }),
+    ).toBeInTheDocument();
     // And it admits there is more than it is showing.
     expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
     // The dials the board obeys are still a press away.
-    expect(await openViewStep(userEvent, "Filters")).toBeTruthy();
+    expect(await openViewStep(userEvent, "Filters")).toBeInTheDocument();
   });
 
   it("edits a lead field from its row, sending If-Match", async () => {

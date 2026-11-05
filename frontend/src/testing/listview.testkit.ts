@@ -6,6 +6,9 @@ import type { UserEvent } from "@testing-library/user-event";
 import { catalogs, type Locale } from "../i18n";
 import { labelled, viewMenuName } from "./listview.names";
 
+// More Back presses than any panel has levels means the panel is stuck.
+const DEEPEST_STEP = 4;
+
 // A list's dials are all behind its View button. A test reaches a dial the
 // way a reader does: View, then the dial's row, then the step it opens.
 
@@ -34,6 +37,28 @@ export async function openView(
 }
 
 /**
+ * Presses Back until the panel shows its rows, or until `until` finds what it
+ * wants, and returns what `until` found last.
+ */
+export async function walkBack<T>(
+  panel: HTMLElement,
+  user: Presser,
+  until: () => T | null = () => null,
+): Promise<T | null> {
+  for (let presses = 0; presses <= DEEPEST_STEP; presses++) {
+    const found = until();
+    const back = panel.querySelector<HTMLElement>(".lt-mback");
+    if (found !== null || back === null) {
+      return found;
+    }
+    await user.click(back);
+  }
+  throw new Error(
+    `the View panel still had a Back after ${DEEPEST_STEP} presses`,
+  );
+}
+
+/**
  * Opens the View panel and the step of one dial ("Filters", "Sort",
  * "Columns", or a screen's own row), and returns that step.
  */
@@ -46,13 +71,15 @@ export async function openViewStep(
   const panel = await openView(user, scope, locale);
   const name = labelled(step);
   // A panel left on another step walks back to its rows first.
-  let row = within(panel).queryByRole("button", { name });
-  let back = panel.querySelector<HTMLElement>(".lt-mback");
-  while (row === null && back !== null) {
-    await user.click(back);
-    row = within(panel).queryByRole("button", { name });
-    back = panel.querySelector<HTMLElement>(".lt-mback");
-  }
+  // Back's name opens on its step's name too, so only a row will do.
+  const row = await walkBack(
+    panel,
+    user,
+    () =>
+      within(panel)
+        .queryAllByRole("button", { name })
+        .find((button) => !button.classList.contains("lt-mback")) ?? null,
+  );
   if (row === null) {
     throw new Error(`the View panel has no ${step} row`);
   }

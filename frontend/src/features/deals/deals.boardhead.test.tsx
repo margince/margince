@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { focusManager } from "@tanstack/react-query";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -139,7 +140,7 @@ describe("the deals board's counts", () => {
 
     expect(
       await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 
   // A zero over a column still reading would say the stage is empty.
@@ -216,7 +217,7 @@ describe("the deals board's counts", () => {
 
     expect(
       await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 
   // The cards a failed re-read left may no longer be all the column holds.
@@ -245,7 +246,7 @@ describe("the deals board's counts", () => {
     expect(within(column("s1")).getByText("Fleet one")).toBeTruthy();
     expect(
       await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 });
 

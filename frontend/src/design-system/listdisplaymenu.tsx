@@ -77,7 +77,7 @@ function ColumnsStep<Row>({
     optional,
     columnKey,
     onReorder && {
-      onReorder: (keys) => onReorder(keys),
+      onReorder,
       labels: {
         handle: (column, position, count) =>
           t("table.columnHandle", {

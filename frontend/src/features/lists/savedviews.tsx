@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Bookmark } from "lucide-react";
-import type { ListQuery, SavedViewTab } from "../../components/listquery";
+import {
+  isNarrowed,
+  type ListQuery,
+  type SavedViewTab,
+} from "../../components/listquery";
 import { NamePrompt } from "../../design-system/nameprompt";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
@@ -180,38 +184,45 @@ function SaveViewButton({
   );
 }
 
-/** Save view only for a narrowed list, since the default is the All tab. A
- * failed views read shows its error, since an empty rail would claim none. */
-export function SaveViewAction({
+/** A failed views read, on the toolbar where it is seen without opening View:
+ * an empty rail would claim the reader saved none. */
+export function SavedViewsFailure({
   resource,
-  query,
-}: Readonly<{ resource: ViewResource; query: ListQuery }>) {
+}: Readonly<{ resource: ViewResource }>) {
   const t = useT();
   // The same query the rail reads, so this costs no second request: one read of
   // /views answers both, and the rail cannot be shown as loaded here and failed
   // there.
   const views = useSavedViews(resource);
-  const narrowed =
-    Boolean(query.q) ||
-    Boolean(query.sort) ||
-    query.includeArchived ||
-    Object.values(query.filters).some(Boolean);
+  if (!views.isError) {
+    return null;
+  }
+  return (
+    <SurfaceState
+      loadingLabel={t("views.rail")}
+      state="failed"
+      label={t("views.rail")}
+      // Read by the `empty` arm alone, which this call never reaches. A failed
+      // read has no answer to what there is none of.
+      emptyLabel={t("common.empty")}
+      detail={{ onRetry: () => void views.refetch() }}
+    >
+      {null}
+    </SurfaceState>
+  );
+}
+
+/** Save view only for a narrowed list, since the default is the All tab. */
+export function SaveViewAction({
+  resource,
+  query,
+}: Readonly<{ resource: ViewResource; query: ListQuery }>) {
+  const views = useSavedViews(resource);
   return (
     <>
-      {views.isError && (
-        <SurfaceState
-          loadingLabel={t("views.rail")}
-          state="failed"
-          label={t("views.rail")}
-          // Read by the `empty` arm alone, which this call never reaches: what
-          // there is none of is not a question a failed read has an answer to.
-          emptyLabel={t("common.empty")}
-          detail={{ onRetry: () => void views.refetch() }}
-        >
-          {null}
-        </SurfaceState>
+      {isNarrowed(query) && (
+        <SaveViewButton resource={resource} query={query} />
       )}
-      {narrowed && <SaveViewButton resource={resource} query={query} />}
       {/* Beside Save, because it is the same set of the reader's own views:
           a tab can be pressed but not named or removed, so this is the only
           place a view that has served its purpose can go. */}

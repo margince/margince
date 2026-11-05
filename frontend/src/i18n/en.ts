@@ -3346,7 +3346,7 @@ export const en = {
   "list.viewToggleOn": "On",
   "list.viewToggleOff": "Off",
   "list.viewMenu": "View",
-  "list.viewMenuBack": "Back to view options",
+  "list.viewMenuBack": "back to view options",
   "list.viewMenuChanged": "changed",
   "list.viewMenuFilters_one": "{count} filter",
   "list.viewMenuFilters_other": "{count} filters",
@@ -3408,7 +3408,7 @@ export const en = {
   "table.filterSearching": "Searching…",
   "table.filterSearchFailed": "Search failed. Retry.",
   "table.filterNoMatches": "No matches.",
-  "table.filterBack": "Back to all filters",
+  "table.filterBack": "back to all filters",
 
   "contacts.name": "Name",
   "contacts.email": "Email",

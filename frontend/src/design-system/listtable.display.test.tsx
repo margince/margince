@@ -17,7 +17,7 @@ import { precedes } from "../testing/domorder";
 import { openView, openViewStep } from "../testing/listview.testkit";
 import { type ListColumn, ListTable } from "./listtable";
 
-// The Columns and Density rows: how the grid is drawn, not what is in it.
+// The Columns row and the Compact toggle: how the grid is drawn, not what is in it.
 
 afterEach(cleanup);
 
@@ -57,7 +57,9 @@ describe("the Columns row and the Compact toggle", () => {
     const user = userEvent.setup();
     grid();
     const panel = within(await openView(user));
-    expect(panel.getByRole("button", { name: "Columns, 1 of 1" })).toBeTruthy();
+    expect(
+      panel.getByRole("button", { name: "Columns, 1 of 1" }),
+    ).toBeInTheDocument();
     expect(panel.getByRole("button", { name: "Compact" })).toHaveAttribute(
       "aria-pressed",
       "false",
@@ -67,7 +69,7 @@ describe("the Columns row and the Compact toggle", () => {
     grid(identityOnly);
     const bare = within(await openView(user));
     expect(bare.queryByRole("button", { name: /^Columns/ })).toBeNull();
-    expect(bare.getByRole("button", { name: "Compact" })).toBeTruthy();
+    expect(bare.getByRole("button", { name: "Compact" })).toBeInTheDocument();
   });
 
   // Which rows exist reads before how they are drawn.
@@ -88,7 +90,7 @@ describe("the Columns row and the Compact toggle", () => {
       precedes(panel.getByRole("button", { name: "Show archived" }), compact),
     ).toBe(true);
     expect(compact).not.toHaveTextContent("On");
-    expect(compact.querySelector(".lt-vdot")).toBeNull();
+    expect(compact).toHaveAccessibleName("Compact");
     expect(table()).not.toHaveClass("dense");
 
     await user.click(compact);
@@ -146,22 +148,22 @@ describe("a display dial off its default", () => {
     grid(more);
     const panel = within(await openView(user));
     expect(
-      panel
-        .getByRole("button", { name: "Columns, 1 of 2" })
-        .querySelector(".lt-vdot"),
-    ).toBeNull();
+      panel.getByRole("button", { name: "Columns, 1 of 2" }),
+    ).toBeInTheDocument();
 
     let step = within(await openViewStep(user, "Columns"));
     await user.click(step.getByRole("checkbox", { name: "Note" }));
     await user.click(step.getByRole("button", { name: /^Columns/ }));
     expect(
       panel.getByRole("button", { name: "Columns, 2 of 2, changed" }),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
 
     step = within(await openViewStep(user, "Columns"));
     await user.click(step.getByRole("checkbox", { name: "Note" }));
     await user.click(step.getByRole("button", { name: /^Columns/ }));
-    expect(panel.getByRole("button", { name: "Columns, 1 of 2" })).toBeTruthy();
+    expect(
+      panel.getByRole("button", { name: "Columns, 1 of 2" }),
+    ).toBeInTheDocument();
 
     step = within(await openViewStep(user, "Columns"));
     step.getByRole("button", { name: "Move Value, 1 of 2" }).focus();
@@ -169,6 +171,6 @@ describe("a display dial off its default", () => {
     await user.click(step.getByRole("button", { name: /^Columns/ }));
     expect(
       panel.getByRole("button", { name: "Columns, 1 of 2, changed" }),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 });

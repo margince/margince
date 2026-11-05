@@ -204,7 +204,7 @@ describe("the Sort step", () => {
     const panel = within(await openView(userEvent));
     expect(
       panel.getByRole("button", { name: "Sort, Default order" }),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
 
     rerender(
       <LocaleProvider initial="en">
@@ -221,7 +221,7 @@ describe("the Sort step", () => {
       panel.getByRole("button", {
         name: "Sort, Value, descending, changed",
       }),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 
   // ONE order at a time, so the entries are RADIOS: a box is the shape of a set

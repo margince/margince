@@ -168,7 +168,6 @@ describe("a query dial off its default", () => {
         row.getAttribute("aria-label"),
       ),
     ).toEqual(["Filters, None", "Sort, Created, descending"]);
-    expect(panel.querySelector(".lt-vdot")).toBeNull();
   });
 
   it("marks Filters while one applies, and Sort off the list's own order", async () => {
@@ -180,9 +179,7 @@ describe("a query dial off its default", () => {
       "Filters, Status, changed",
       "Sort, Name, ascending, changed",
     ]) {
-      expect(
-        panel.getByRole("button", { name }).querySelector(".lt-vdot"),
-      ).not.toBeNull();
+      expect(panel.getByRole("button", { name })).toBeInTheDocument();
     }
   });
 });
@@ -233,6 +230,8 @@ describe("a dialog a step raises", () => {
     await user.click(screen.getByRole("button", { name: "5 November" }));
 
     expect(await viewButton()).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("group", { name: "Close date" })).toBeTruthy();
+    expect(
+      screen.getByRole("group", { name: "Close date" }),
+    ).toBeInTheDocument();
   });
 });

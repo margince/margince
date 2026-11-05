@@ -2339,8 +2339,8 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
             await panel.locator(`[data-view-row="${step}"]`).click();
             await expect(panel.locator(".lt-vstep")).toBeVisible();
           }
-          // A pointer left over a row starts that row's hover transition
-          // after the settle has looked.
+          // Off the panel first: a row under the pointer would start its hover
+          // fade after the settle, and the scan would read it mid-fade.
           await page.mouse.move(0, 0);
           await settleAnimations(page);
           await expectNoAaViolations(

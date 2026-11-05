@@ -30,7 +30,11 @@ import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
 import { useViewerZone } from "../../lib/viewerzone";
 import { VCardImportAction, VCardImportPage } from "../import/vcard-import";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import { ContactCreateActions } from "./contactcreate";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
@@ -202,6 +206,7 @@ function ContactsList() {
           createdColumn<Contact>(t, locale, readerZone),
         ]}
         saveView={<SaveViewAction resource="contacts" query={state.query} />}
+        notice={<SavedViewsFailure resource="contacts" />}
         rowKey={(contact) => contact.id}
         rowRoute={(contact) => ({ screen: "contacts", id: contact.id })}
         selection={selection}

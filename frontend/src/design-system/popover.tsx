@@ -189,7 +189,8 @@ export function Popover({
         reasonId={reasonId}
         aria-haspopup={dialog ? "dialog" : undefined}
         aria-expanded={open}
-        aria-controls={panelId}
+        // Only a panel on the page can be named; a closed one is not drawn.
+        aria-controls={open ? panelId : undefined}
         onClick={press}
         {...(onHover ? hover : {})}
       >

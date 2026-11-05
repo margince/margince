@@ -35,6 +35,7 @@ import {
 } from "./listqueryparams";
 
 export {
+  isNarrowed,
   LIST_PAGE_SIZES,
   type ListQuery,
   listFetchLimit,

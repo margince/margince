@@ -12,7 +12,12 @@ import {
 import { Button } from "./atoms";
 import { IconAction } from "./iconaction";
 import { Menu, useCloseOnEscape } from "./listmenu";
-import { CountLine, ListSurface, type ListView } from "./listsurface";
+import {
+  CountLine,
+  countSays,
+  ListSurface,
+  type ListView,
+} from "./listsurface";
 
 // The surface's header when its sentence is longer than the row: German runs
 // the count a third longer than English, and a list with six saved views and
@@ -132,25 +137,87 @@ export const GermanCountPhone: Story = {
   play: async ({ canvasElement }) => nothingPushedOut(canvasElement),
 };
 
-// Nothing to count: the header keeps no empty line under the tabs.
-export const NothingToCountPhone: Story = {
-  name: "Nothing to count, phone",
+// A list whose count comes back with each search. The surface's caller answers
+// a search only when the story's own button says so, so a play can measure the
+// pending moment.
+function SearchedSurface() {
+  const [query, setQuery] = useState("");
+  const [pending, setPending] = useState(true);
+  const [rows, setRows] = useState(0);
+  return (
+    <>
+      <ListSurface
+        title="Leads"
+        views={VIEWS}
+        count={
+          pending || !countSays(rows) ? undefined : (
+            <CountLine unit="Leads" first={1} last={rows} total={rows} />
+          )
+        }
+        countPending={pending}
+        action={<Button>Neuer Lead</Button>}
+        search={{
+          value: query,
+          onChange: (next) => {
+            setQuery(next);
+            setPending(true);
+          },
+        }}
+      >
+        <p>Zeilen</p>
+      </ListSurface>
+      <Button
+        onClick={() => {
+          setRows(query.includes("nichts") ? 0 : 25);
+          setPending(false);
+        }}
+      >
+        Antworten
+      </Button>
+    </>
+  );
+}
+
+function toolbarTop(canvasElement: HTMLElement): number {
+  const tools = canvasElement.querySelector(".lt-tools");
+  if (!(tools instanceof HTMLElement)) {
+    throw new Error("the list surface drew no toolbar");
+  }
+  return tools.getBoundingClientRect().top;
+}
+
+// The count has its own line on a phone. While a search is pending that line
+// keeps its place, so the toolbar under it never moves. A settled list with
+// nothing to count draws no line at all.
+export const CountHoldsItsLinePhone: Story = {
+  name: "Count holds its line, phone",
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: () => (
-    <ListSurface
-      title="Leads"
-      views={VIEWS}
-      count={<CountLine unit="Leads" first={1} last={0} total={0} />}
-      action={<Button>Neuer Lead</Button>}
-    >
-      <p>Zeilen</p>
-    </ListSurface>
-  ),
+  render: () => <SearchedSurface />,
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("button", { name: "Alle" });
-    const count = canvasElement.querySelector(".lt-count");
-    await expect(count?.getClientRects().length).toBe(0);
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Alle" });
+    const answer = canvas.getByRole("button", { name: "Antworten" });
+    const loading = toolbarTop(canvasElement);
+    await userEvent.click(answer);
+    await canvas.findByText("Leads 1 bis 25 von 25");
+    await expect(toolbarTop(canvasElement)).toBe(loading);
+
+    await userEvent.type(canvas.getByRole("searchbox"), "a");
+    await waitFor(() =>
+      expect(canvasElement.querySelector(".lt-count")).toBeEmptyDOMElement(),
+    );
+    await expect(toolbarTop(canvasElement)).toBe(loading);
+    await userEvent.click(answer);
+    await canvas.findByText("Leads 1 bis 25 von 25");
+    await expect(toolbarTop(canvasElement)).toBe(loading);
+
+    await userEvent.type(canvas.getByRole("searchbox"), " nichts");
+    await userEvent.click(answer);
+    await waitFor(() =>
+      expect(canvasElement.querySelector(".lt-count")).toBeNull(),
+    );
+    await expect(toolbarTop(canvasElement)).toBeLessThan(loading);
   },
 };
 

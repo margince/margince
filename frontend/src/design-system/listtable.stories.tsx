@@ -219,7 +219,7 @@ export const SortedByAMenu: Story = {
 };
 
 // The Columns step: each optional column's tick and the grip that moves it.
-export const DisplayMenuOpen: Story = {
+export const ColumnsStepOpen: Story = {
   name: "Columns step open",
   render: () => <Surface rows={companies(12)} />,
   play: openStep("Columns"),
@@ -249,7 +249,9 @@ export const FilterAttributeStep: Story = {
     await userEvent.click(
       await body.findByRole("button", { name: "Industry" }),
     );
-    await body.findByRole("button", { name: /Industry Back to all filters/ });
+    await body.findByRole("button", {
+      name: "Industry, back to all filters",
+    });
   },
 };
 
@@ -580,9 +582,9 @@ export const ShortListEmpty: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("No companies yet.")).toBeVisible();
     await expect(canvas.queryByRole("columnheader")).toBeNull();
-    await expect(
-      canvas.getByRole("checkbox", { name: "Show archived" }),
-    ).toBeVisible();
+    const archived = canvas.getByRole("button", { name: "Show archived" });
+    await expect(archived).toBeVisible();
+    await expect(archived).toHaveAttribute("aria-pressed", "false");
     await expect(canvas.queryByRole("searchbox")).toBeNull();
   },
 };

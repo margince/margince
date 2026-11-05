@@ -22,6 +22,19 @@ export type ListQuery = {
   perPage: number;
 };
 
+/**
+ * Whether the reader has narrowed the list: what Save view offers to keep.
+ * The page size is how much shows, not which rows.
+ */
+export function isNarrowed(query: ListQuery): boolean {
+  return (
+    Boolean(query.q) ||
+    Boolean(query.sort) ||
+    query.includeArchived ||
+    Object.values(query.filters).some(Boolean)
+  );
+}
+
 /** The page sizes the footer offers; the first is the default. */
 export const LIST_PAGE_SIZES = [25, 50, 100] as const;
 

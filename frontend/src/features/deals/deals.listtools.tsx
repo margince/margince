@@ -12,6 +12,7 @@ import {
 import { searchCompanies } from "../../components/filterreference";
 import {
   type FilterSpec,
+  isNarrowed,
   LIST_PAGE_SIZES,
   type ListQuery,
   listPageOf,
@@ -69,21 +70,6 @@ function setOrClearFilter(
     }
     return { ...q, filters: next };
   });
-}
-
-// Whether the reader has narrowed this list themselves.
-//
-// The question `SaveViewAction` asks before it offers to save. It is asked here
-// because the pipeline is folded into the saved query without making the query
-// look narrowed. A pipeline is always selected, so counting it would offer to
-// save the default list.
-function narrowsTheDealList(query: ListQuery): boolean {
-  return (
-    Boolean(query.q) ||
-    Boolean(query.sort) ||
-    query.includeArchived ||
-    Object.values(query.filters).some(Boolean)
-  );
 }
 
 // The stage and company filters. The stage list is loaded whole already (a
@@ -390,7 +376,7 @@ export function savableDealQuery(
   query: ListQuery,
   pipelineId: string,
 ): ListQuery {
-  return narrowsTheDealList(query)
+  return isNarrowed(query)
     ? { ...query, filters: { ...query.filters, pipeline_id: pipelineId } }
     : query;
 }

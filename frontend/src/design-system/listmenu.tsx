@@ -36,20 +36,24 @@ export function MenuHead({
   back,
 }: Readonly<{
   head: string;
-  /** The level above. The face stays the step's name; the label says "back" to
-   * a reader who cannot see the arrow. */
+  /** The level above. The face stays the step's name; the label, a clause
+   * after it ("back to all filters"), says "back" to one who cannot see the arrow. */
   back?: { label: string; onBack: () => void };
 }>) {
   if (!back) {
     return <div className="lt-mhead">{head}</div>;
   }
   return (
-    <button type="button" className="lt-mhead lt-mback" onClick={back.onBack}>
+    <button
+      type="button"
+      className="lt-mhead lt-mback"
+      // Opens on the visible name, so a reader speaking what they see can say
+      // "Status" (WCAG 2.5.3); the clause after it says where Back goes.
+      aria-label={`${head}, ${back.label}`}
+      onClick={back.onBack}
+    >
       <ChevronLeft className="lt-caret" strokeWidth={1.8} aria-hidden="true" />
       {head}
-      {/* Beside the visible name, never an `aria-label` over it: a reader
-          speaking what they see says "Status" (WCAG 2.5.3). */}
-      <span className="sr-only"> {back.label}</span>
     </button>
   );
 }
@@ -131,8 +135,8 @@ export function useCloseOnOutsideClick(close: () => void) {
   }, []);
 }
 
-// A date field's calendar, opened from a menu or the View panel, is a portalled
-// modal whose presses belong beneath it. A modal holding a list is a page.
+// A press in a calendar modal raised from a menu or the View panel belongs to
+// that menu. A modal that holds a list of its own does not.
 function inPopupOfAMenu(target: Element): boolean {
   const modal = target.closest('[aria-modal="true"]');
   return (

@@ -10,7 +10,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListQuery } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
-import { listStateOf, SaveViewAction, useSavedViewTabs } from "./savedviews";
+import {
+  listStateOf,
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "./savedviews";
 
 afterEach(cleanup);
 
@@ -254,16 +259,15 @@ describe("saved views", () => {
   it("says the saved views failed to load rather than showing an empty rail", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", viewsFailingOnce());
-    wrap(<SaveViewAction resource="companies" query={narrowed} />);
+    wrap(<SavedViewsFailure resource="companies" />);
 
     // An empty rail claims the reader has saved nothing. A failed read knows
     // no such thing, and the retry is what makes it a failure rather than an
     // absence.
     const failed = await screen.findByText("This section did not load.");
     expect(failed).toBeTruthy();
-    // And it says WHICH section. The notice lands in the list's tools slot
-    // beside Columns and Compact, where an unnamed "this section" could be any
-    // of the three.
+    // And it says which section: on the toolbar beside the search and View, an
+    // unnamed "this section" could be either.
     expect(
       screen.getByRole("region", { name: "Saved views" }).contains(failed),
     ).toBe(true);

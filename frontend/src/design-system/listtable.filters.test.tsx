@@ -176,12 +176,12 @@ describe("the Filters step", () => {
       within(panel).getByRole("button", {
         name: "Filters, Status, changed",
       }),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
     const step = within(await openViewStep(userEvent, "Filters"));
     expect(
       step.getByRole("button", { name: /^Status, .+, changed$/ }),
     ).toBeTruthy();
-    expect(step.getByRole("button", { name: "Priority" })).toBeTruthy();
+    expect(step.getByRole("button", { name: "Priority" })).toBeInTheDocument();
   });
 });
 

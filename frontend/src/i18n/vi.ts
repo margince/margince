@@ -3306,7 +3306,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "list.viewToggleOn": "Bật",
   "list.viewToggleOff": "Tắt",
   "list.viewMenu": "Chế độ xem",
-  "list.viewMenuBack": "Quay lại tùy chọn xem",
+  "list.viewMenuBack": "quay lại tùy chọn xem",
   "list.viewMenuChanged": "đã thay đổi",
   "list.viewMenuFilters_one": "{count} bộ lọc",
   "list.viewMenuFilters_other": "{count} bộ lọc",
@@ -3363,7 +3363,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.filterSearching": "Đang tìm…",
   "table.filterSearchFailed": "Tìm kiếm không thành công. Thử lại.",
   "table.filterNoMatches": "Không có kết quả.",
-  "table.filterBack": "Quay lại tất cả bộ lọc",
+  "table.filterBack": "quay lại tất cả bộ lọc",
 
   "contacts.name": "Tên",
   "contacts.email": "Email",

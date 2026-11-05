@@ -74,7 +74,7 @@
   background: var(--groundHover);
   color: var(--textPrimary);
 }
-/* The view in use, and Show archived while on, take the pressed filter pill's
+/* The view in use, and a toggle row while on, take the pressed filter pill's
    neutral pair (filterpills.css): the accent is kept for the row's action. */
 .lt-vtab.on,
 .lt-vtoggle[aria-pressed="true"] {
@@ -99,14 +99,12 @@
 .lt-count {
   flex: 1 1 auto;
   min-width: 0;
+  /* Holds its line while a count is pending, so the toolbar under it stays. */
+  min-block-size: 1lh;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: end;
-}
-/* No count (loading, or nothing to count) leaves no empty line under the tabs. */
-.lt-count:empty {
-  display: none;
 }
 
 .lt-actions {
@@ -241,15 +239,23 @@
   flex: 1 1 100%;
   min-inline-size: 0;
 }
+/* A notice is a line of its own under the search, and no notice is no line. */
+.lt-notice {
+  display: contents;
+}
+.lt-notice > * {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
 .lt-applied-rows {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-/* THE VIEW PANEL: the menu anatomy's rows, in a popover from the fold up and
-   in the drawer below it. The surface pays only the block inset and each band
-   pays the inline one, so a band's rule runs the panel's whole width. */
+/* THE VIEW PANEL: menu rows, in a popover above the fold and a drawer below it.
+   The panel sets only the block padding and each band its own inline padding,
+   so the rule between two bands spans the panel's whole width. */
 .popover-panel.lt-vpopover {
   --vpanel-inset: var(--controlGap);
   inline-size: 20rem;
@@ -277,9 +283,14 @@
 .lt-vlayout {
   padding: var(--controlGap) calc(var(--vpanel-inset) + var(--space-2));
 }
-/* On the pressed chip fill the value takes the row's ink, the pair measured. */
+/* On a pressed row's chip fill the value takes the row's ink, whose contrast
+   holds there; the quieter ink does not. */
 .lt-vtoggle[aria-pressed="true"] .lt-vrow-value {
   color: var(--textPrimary);
+}
+/* Standing alone on a bare list's toolbar, it is as wide as its words. */
+.lt-tools > .lt-vtoggle {
+  inline-size: auto;
 }
 /* Off keeps the check's column, so On and Off rows line up. */
 .lt-vcheck-off {
@@ -694,11 +705,13 @@
    as two rows of navigation rather than one row with more in it. `min-width: 0`
    is what lets it shrink below its content; without it a flex item refuses to.
    The scrollbar is hidden because the row is short and a bar under it would
-   read as a rule. */
+   read as a rule.
+
+   The verbs are one menu here, and it keeps the tabs' line: the tabs take what
+   the title and the menu leave, and the count drops to its own line. */
 @media (max-width: 1100px) {
   .lt-views {
-    /* No grow: the room the tabs leave is the count's. */
-    flex: 0 1 auto;
+    flex: 1 1 0;
     min-width: 0;
     position: relative;
     overflow-x: auto;
@@ -710,14 +723,6 @@
   .lt-vtab {
     flex: 0 0 auto;
     white-space: nowrap;
-  }
-}
-
-/* The verbs are one menu below 1100px, and it keeps the tabs' line: the tabs
-   take what the title and the menu leave, and the count drops to its own line. */
-@media (max-width: 1100px) {
-  .lt-views {
-    flex: 1 1 0;
   }
   .lt-head-end {
     display: contents;
@@ -1460,7 +1465,7 @@
      primary action stays beside it, which is what keeps a three-view list
      (contacts, deals) at the height it already had.
 
-     The rules that do it are in the 1100px blocks above, which cover this
+     The rules that do it are in the 1100px block above, which covers this
      width too. */
 
   /* The applied filters are ONE line that scrolls sideways, each row whole. */
@@ -1483,6 +1488,11 @@
   }
   .lt-applied .lt-frow > .lt-menu-wrap:has(> .lt-frow-value) {
     max-inline-size: none;
+  }
+  /* A long value is cut short, so the row's "⋮" stays on screen; the
+     truncation tip and the row's name carry the whole value. */
+  .lt-applied .lt-frow-value {
+    max-inline-size: 45vw;
   }
   .lt-applied .lt-frow-valuetext {
     white-space: nowrap;

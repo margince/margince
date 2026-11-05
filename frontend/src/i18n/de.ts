@@ -3409,7 +3409,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.viewToggleOn": "An",
   "list.viewToggleOff": "Aus",
   "list.viewMenu": "Ansicht",
-  "list.viewMenuBack": "Zurück zu den Ansichtsoptionen",
+  "list.viewMenuBack": "zurück zu den Ansichtsoptionen",
   "list.viewMenuChanged": "geändert",
   "list.viewMenuFilters_one": "{count} Filter",
   "list.viewMenuFilters_other": "{count} Filter",
@@ -3467,7 +3467,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.filterSearching": "Wird gesucht…",
   "table.filterSearchFailed": "Suche fehlgeschlagen. Bitte versuche es erneut.",
   "table.filterNoMatches": "Keine Treffer.",
-  "table.filterBack": "Zurück zu allen Filtern",
+  "table.filterBack": "zurück zu allen Filtern",
 
   "contacts.name": "Name",
   "contacts.email": "E-Mail",

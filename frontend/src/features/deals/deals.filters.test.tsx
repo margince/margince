@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -65,10 +66,8 @@ describe("DealsScreen filters", () => {
     await screen.findByText("Fleet retrofit");
     const panel = within(await openView(user));
     expect(
-      panel
-        .getByRole("button", { name: "Pipeline, Sales" })
-        .querySelector(".lt-vdot"),
-    ).toBeNull();
+      panel.getByRole("button", { name: "Pipeline, Sales" }),
+    ).toBeInTheDocument();
 
     const step = within(await openViewStep(user, "Pipeline"));
     await user.click(step.getByRole("radio", { name: "Renewals" }));
@@ -76,7 +75,7 @@ describe("DealsScreen filters", () => {
 
     expect(
       await panel.findByRole("button", { name: "Pipeline, Renewals, changed" }),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 
   // The board always shows one pipeline, so an unset choice would fall straight

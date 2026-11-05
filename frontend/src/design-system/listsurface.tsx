@@ -1,9 +1,10 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useNarrowViewport } from "../lib/viewport";
 import { OverflowMenu } from "./atoms";
+import { useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
 import {
   type ListChip,
   type ListView,
@@ -12,6 +13,8 @@ import {
   type SortOption,
   sortDirection,
 } from "./listsurface.dials";
+import { ArchivedSwitch, Toolbar, VIEW_MENU } from "./listtoolbar";
+import type { ViewRow, ViewToggle } from "./listviewmenu";
 import "./listtable.css";
 import { Heading } from "./heading";
 import { useTruncationTooltip } from "./tooltip";
@@ -26,6 +29,9 @@ import { useTruncationTooltip } from "./tooltip";
 // not an identity, which is why a tab carries its own `id` for the caller that
 // has to remember which view is lit across a rename or an insertion.
 
+export { Menu, useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
+export type { ViewRow, ViewToggle } from "./listviewmenu";
+
 // The dials' vocabulary is declared in the leaf beside this file; a caller that
 // has always imported it from here goes on doing so.
 export {
@@ -36,13 +42,6 @@ export {
   type SortOption,
   sortDirection,
 };
-
-import { useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
-import { ArchivedSwitch, Toolbar, VIEW_MENU } from "./listtoolbar";
-import type { ViewRow, ViewToggle } from "./listviewmenu";
-
-export { Menu, useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
-export type { ViewRow, ViewToggle } from "./listviewmenu";
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 const NO_ROWS: readonly ViewRow[] = [];
@@ -55,6 +54,7 @@ export function ListSurface({
   activeView = 0,
   onViewChange,
   count,
+  countPending = false,
   action,
   caption,
   search,
@@ -71,6 +71,7 @@ export function ListSurface({
   changed = false,
   tools,
   saveView,
+  notice,
   children,
   footer,
 }: Readonly<{
@@ -96,8 +97,13 @@ export function ListSurface({
   views?: readonly ListView[];
   activeView?: number;
   onViewChange?: (index: number) => void;
-  /** The reader's-eye summary line — the table's range, the board's deal count. */
+  /**
+   * The reader's-eye summary line: the table's range, the board's deal count.
+   * Omitted when the list has nothing to say, and then no line is drawn.
+   */
   count?: ReactNode;
+  /** A count is on its way: its line stays as it last settled. */
+  countPending?: boolean;
   /** The one primary action for this surface, e.g. "New contact". */
   action?: ReactNode;
   /**
@@ -140,6 +146,11 @@ export function ListSurface({
   tools?: ReactNode;
   /** Save view and Manage views, in the View panel's footer. */
   saveView?: ReactNode;
+  /**
+   * A line of its own under the search, for what the dials depend on and
+   * could not get: a failed saved-views read, with its Retry.
+   */
+  notice?: ReactNode;
   /** The body: a scrolling table, a Kanban board, whatever this surface holds. */
   children: ReactNode;
   /** Under the body — the table's pager, or nothing at all. */
@@ -152,10 +163,40 @@ export function ListSurface({
   useCloseOnEscape(openMenu === VIEW_MENU ? null : openMenu, () =>
     setOpenMenu(null),
   );
+  // A list can turn short under an open panel. It keeps its toolbar until the
+  // panel closes, so the panel never vanishes under the reader.
+  const chromeless = bare && openMenu === null;
+  const root = useRef<HTMLDivElement>(null);
+  const focused = useRef<Element | null>(null);
+  useEffect(() => {
+    const element = root.current;
+    const remember = (event: FocusEvent) => {
+      focused.current = event.target instanceof Element ? event.target : null;
+    };
+    element?.addEventListener("focusin", remember);
+    return () => element?.removeEventListener("focusin", remember);
+  }, []);
+  // The toolbar and the bare switch swap whole, so focus taken with one goes
+  // to the other's control for the same dials.
+  useEffect(() => {
+    const lost = focused.current;
+    if (
+      lost === null ||
+      lost.isConnected ||
+      document.activeElement !== document.body
+    ) {
+      return;
+    }
+    root.current
+      ?.querySelector<HTMLElement>(
+        chromeless ? ".lt-tools .lt-vtoggle" : ".lt-tools .lt-vtrigger",
+      )
+      ?.focus();
+  }, [chromeless]);
 
   return (
-    <div className="lt">
-      {(!bare || title || views.length > 0 || action) && (
+    <div className="lt" ref={root}>
+      {(!chromeless || title || views.length > 0 || action) && (
         <div className="lt-head">
           {title && (
             // Out of the tab order; a press that takes its own button away
@@ -180,7 +221,9 @@ export function ListSurface({
             </div>
           )}
           <div className="lt-head-end">
-            {!bare && <HeadCount>{count}</HeadCount>}
+            {!chromeless && (
+              <HeadCount pending={countPending}>{count}</HeadCount>
+            )}
             <HeadActions>{action}</HeadActions>
           </div>
         </div>
@@ -188,7 +231,7 @@ export function ListSurface({
 
       {caption && <p className="lt-caption">{caption}</p>}
 
-      {!bare && (
+      {!chromeless && (
         <Toolbar
           search={search}
           sort={sort}
@@ -204,11 +247,12 @@ export function ListSurface({
           changed={changed}
           tools={tools}
           saveView={saveView}
+          notice={notice}
           openMenu={openMenu}
           setOpenMenu={setOpenMenu}
         />
       )}
-      {bare && archived && (
+      {chromeless && archived && (
         <div className="lt-tools">
           <ArchivedSwitch archived={archived} />
         </div>
@@ -259,16 +303,34 @@ function HeadActions({ children }: Readonly<{ children: ReactNode }>) {
  * tabs and verbs are what a reader presses (listtable.css `.lt-head-end`). It
  * arrives as a node, so the truncation tip reads the words the node rendered.
  */
-function HeadCount({ children }: Readonly<{ children: ReactNode }>) {
+function HeadCount({
+  pending,
+  children,
+}: Readonly<{ pending: boolean; children: ReactNode }>) {
+  const says =
+    children !== undefined && children !== null && children !== false;
+  // A first load holds the line, since most lists have rows to count.
+  const [held, setHeld] = useState(true);
+  if (!pending && held !== says) {
+    setHeld(says);
+  }
   const [text, setText] = useState("");
   const tip = useTruncationTooltip<HTMLSpanElement>(text);
   useEffect(() => setText(tip.ref.current?.textContent ?? ""));
+  if (!(pending ? held : says)) {
+    return null;
+  }
   return (
     <span className="lt-count" ref={tip.ref} {...tip.trigger}>
       {children}
       {tip.tip}
     </span>
   );
+}
+
+/** Whether `CountLine` has words: rows to count, or an order to name. */
+export function countSays(total: number, sortedBy?: string): boolean {
+  return total > 0 || Boolean(sortedBy);
 }
 
 /**
@@ -302,6 +364,9 @@ export function CountLine({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  if (!countSays(total, sortedBy)) {
+    return null;
+  }
   // All three figures are magnitudes in ONE sentence ("1–25 of 1,234 rows"), so
   // they group together or the line reads as two notations at once.
   const range = {

@@ -9,7 +9,8 @@ import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import type { ListChip } from "../design-system/listsurface";
 import { LocaleProvider } from "../i18n";
-import { openView, openViewStep } from "../testing/listview.testkit";
+import { filtersStepName } from "../testing/listview.names";
+import { openView, openViewStep, walkBack } from "../testing/listview.testkit";
 import {
   type FilterSpec,
   type ListPage,
@@ -104,7 +105,7 @@ export async function openFilterValues(
   attribute: string,
   scope?: HTMLElement,
 ): Promise<HTMLElement> {
-  const step = await openViewStep(user, "Filters", scope);
+  const step = await openViewStep(user, filtersStepName(), scope);
   await user.click(within(step).getByRole("button", { name: attribute }));
   return screen.findByRole("group", { name: attribute });
 }
@@ -116,11 +117,7 @@ export async function showLayout(
 ): Promise<void> {
   const panel = await openView(user);
   // A panel left on a step walks back to its rows, where the switch stands.
-  let back = panel.querySelector<HTMLElement>(".lt-mback");
-  while (back !== null) {
-    await user.click(back);
-    back = panel.querySelector<HTMLElement>(".lt-mback");
-  }
+  await walkBack(panel, user);
   await user.click(within(panel).getByRole("button", { name: layout }));
   await user.keyboard("{Escape}");
 }

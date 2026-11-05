@@ -50,6 +50,7 @@ function FilterValueList({
             {t("table.filterValueSearch", { filter: chip.label })}
           </span>
           <input
+            type="search"
             className="lt-fsearch-input"
             value={query}
             placeholder={t("table.filterValueSearch", { filter: chip.label })}
@@ -116,6 +117,7 @@ function AsyncFilterValueList({
           {t("table.filterValueSearch", { filter: chip.label })}
         </span>
         <input
+          type="search"
           className="lt-fsearch-input"
           value={query}
           placeholder={t("table.filterValueSearch", { filter: chip.label })}

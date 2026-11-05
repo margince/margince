@@ -61,7 +61,8 @@
 .sortable-handle:not([aria-disabled="true"]) {
   cursor: grab;
 }
-.sortable-handle.is-carried {
+/* While any row is carried, every grip of that list reads the closed hand. */
+.is-sorting .sortable-handle:not([aria-disabled="true"]) {
   cursor: grabbing;
 }
 .sortable-handle[aria-disabled="true"] {

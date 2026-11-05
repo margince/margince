@@ -1,12 +1,5 @@
 import { MoreVertical } from "lucide-react";
-import {
-  type ComponentProps,
-  Fragment,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { type ComponentProps, Fragment, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { holdsEveryWord, searchWords } from "../format/collate";
 import { useT } from "../i18n";
@@ -14,8 +7,9 @@ import { Radio } from "./atoms";
 import { ChipValueList } from "./listfiltervalues";
 import { Menu } from "./listmenu";
 import type { FilterRowSegment, ListChip } from "./listsurface.dials";
-import { ValueRow, ViewStep } from "./listviewmenu";
+import { useStepFocus, ValueRow, ViewStep } from "./listviewmenu";
 import "./listtable.css";
+import { useTruncationTooltip } from "./tooltip";
 
 /** Every attribute, an applied one showing its value, then the picked one's
  * values; a pick or a delete returns to the attributes. */
@@ -39,30 +33,10 @@ export function FilterStep({
   const [attributeKey, setAttributeKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const wrap = useRef<HTMLDivElement>(null);
-  // The attribute whose values were opened; null until the reader steps in,
-  // so arriving from the panel's rows leaves focus where the panel put it.
-  const cameFrom = useRef<string | null>(null);
-
-  // Going in, focus moves to the way back. Coming out, it returns to the
-  // attribute's row, so the next filter is one move away.
-  useEffect(() => {
-    const key = cameFrom.current;
-    if (key === null) {
-      return;
-    }
-    const root = wrap.current;
-    if (attributeKey !== null) {
-      root?.querySelector<HTMLButtonElement>(".lt-mback")?.focus();
-      return;
-    }
-    cameFrom.current = null;
-    [...(root?.querySelectorAll<HTMLElement>("[data-filter-row]") ?? [])]
-      .find((row) => row.dataset.filterRow === key)
-      ?.focus();
-  }, [attributeKey]);
+  const arrive = useStepFocus(wrap, attributeKey, "data-filter-row");
 
   const enter = (key: string) => {
-    cameFrom.current = key;
+    arrive(key);
     setAttributeKey(key);
   };
   const leave = () => setAttributeKey(null);
@@ -107,6 +81,7 @@ export function FilterStep({
         <label className="lt-fsearch">
           <span className="sr-only">{t("table.filterSearch")}</span>
           <input
+            type="search"
             className="lt-fsearch-input"
             value={query}
             placeholder={t("table.filterSearch")}
@@ -236,6 +211,8 @@ export function FilterRow({
 }>) {
   const t = useT();
   const valueLabel = appliedLabel(chip, value, pickedLabel);
+  const { ref, trigger, tip } =
+    useTruncationTooltip<HTMLButtonElement>(valueLabel);
   return (
     <fieldset className="lt-frow" aria-label={`${chip.label}: ${valueLabel}`}>
       <span className="lt-frow-attr">{chip.label}</span>
@@ -248,12 +225,15 @@ export function FilterRow({
         <button
           type="button"
           className="lt-frow-seg lt-frow-value"
+          ref={ref}
+          {...trigger}
           aria-expanded={openSegment === "value"}
           onClick={() => onToggleSegment("value")}
         >
           <span className="lt-frow-valuetext">
             <WholeWords text={valueLabel} />
           </span>
+          {tip}
         </button>
         <HostedMenu
           host={menuHost}
