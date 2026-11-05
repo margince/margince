@@ -61,16 +61,11 @@ func main() {
 	case *verifyInputs:
 		mode = modeVerifyInputs
 	}
-	root := *rootPath
-	if *instancePath != "" {
-		tree, err := prepareInstanceTree(*instancePath, *treePath)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "gen-composition:", err)
-			os.Exit(1)
-		}
-		root = tree
+	root, err := compositionRoot(*rootPath, *instancePath, *treePath)
+	if err == nil {
+		err = run(root, mode)
 	}
-	if err := run(root, mode); err != nil {
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "gen-composition:", err)
 		os.Exit(1)
 	}

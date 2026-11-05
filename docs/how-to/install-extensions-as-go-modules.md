@@ -55,10 +55,11 @@ together and composes it:
 go tool gen-composition -instance .
 ```
 
-It downloads the three core modules at the versions `go.mod` requires, inside the instance's module, so its
-`go.sum` and the checksum database verify them, and the composition stub at the same commit. It lays them out in
-`.margince/core` as this repository is laid out, and fetches again only when the version moves. Then it composes,
-exactly as `make composition` does here, with the instance's `go.mod` as the instance.
+It downloads the three core modules at the versions `go.mod` requires. The download runs inside the instance's
+module, so its `go.sum` and the checksum database check them. It also downloads the `composition` stub at the
+same commit. It puts the modules in `.margince/core` the way this repository has them, and fetches again only
+when the version moves. Then it composes, as `make composition` does here, with the instance's `go.mod` as the
+instance.
 
 Build the binaries in the composed workspace, as this repository's own lanes do:
 

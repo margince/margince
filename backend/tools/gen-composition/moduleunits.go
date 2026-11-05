@@ -170,16 +170,11 @@ func fetchUnits(root string) error {
 	return nil
 }
 
-// dropReplaces removes a downloaded unit's replace lines from its copy. Go
-// never applies a dependency's replace, but the composed workspace would. A
-// path like ../../backend points nowhere from the copy and conflicts with the
-// workspace's own backend.
-//
-// A copy that requires the backend gets ONE replace back: onto the tree's own
-// backend, as a unit under extensions/ has. A released unit requires the
-// backend at whatever version it was cut against (core's own units at the zero
-// pseudo-version), and nothing else in the workspace says that version is the
-// backend member.
+// dropReplaces removes a downloaded unit's replace lines from its copy: the
+// composed workspace would apply them, and ../../backend points nowhere from
+// there. A copy that requires the backend gets one replace back, onto the
+// tree's backend. Its require names the version it was cut against, and
+// nothing else maps that version onto the workspace member.
 func dropReplaces(goModPath, backendDir string) error {
 	raw, err := os.ReadFile(goModPath) // #nosec G304 -- the go.mod of a copy this run made
 	if err != nil {

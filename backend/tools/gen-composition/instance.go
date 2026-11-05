@@ -26,9 +26,10 @@ import (
 //
 //	go tool gen-composition -instance .
 //
-// The command fetches each of those modules at the version the instance
-// requires, inside the instance's module so its go.sum verifies them, puts the
-// core tree together and composes it. The client fetches nothing by hand.
+// The command downloads each of those modules at the version the instance
+// requires. It runs inside the instance's module, so its go.sum checks them.
+// Then it puts the core tree together and composes it. The client fetches
+// nothing by hand.
 const (
 	coreRootModule  = "github.com/margince/margince"
 	coreToolsModule = "github.com/margince/margince/backend/tools"
@@ -36,6 +37,15 @@ const (
 	// unchanged require does not fetch and copy the tree again.
 	treeMarkerFile = ".margince-core"
 )
+
+// compositionRoot is the tree to compose: -root, or with -instance the core
+// tree that instance requires.
+func compositionRoot(rootPath, instancePath, treePath string) (string, error) {
+	if instancePath == "" {
+		return rootPath, nil
+	}
+	return prepareInstanceTree(instancePath, treePath)
+}
 
 // instanceGoModOverride names the instance's go.mod when -instance is given;
 // a core checkout reads its own instance/ instead.
@@ -137,9 +147,9 @@ func requiredCoreVersions(goModPath string) (map[string]string, error) {
 	return versions, nil
 }
 
-// oneCoreCommit maps each downloaded core module to its folder and refuses
+// oneCoreCommit maps each downloaded core module to its folder. It refuses
 // versions built from different commits: the web app, the backend and the
-// composer are released together and only work together.
+// composer only work together.
 func oneCoreCommit(downloaded []downloadedModule, required map[string]string) (map[string]string, string, error) {
 	dirs := map[string]string{}
 	commits := map[string]string{}
@@ -186,10 +196,10 @@ func sameCommit(a, b string) bool {
 	return n >= 12 && a[:n] == b[:n]
 }
 
-// realAbs is path made absolute with every symlink resolved. The composer
-// writes relative links and workspace paths between the tree and the units,
-// and pnpm resolves a unit's node_modules links from where the files really
-// are, so a path through a symlink would climb the wrong number of levels.
+// realAbs is path made absolute, with every symlink resolved. The composer
+// writes relative paths between the tree and the units. pnpm resolves a unit's
+// node_modules links from where its files really are. Through a symlink, those
+// paths would climb the wrong number of levels.
 func realAbs(path string) (string, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
