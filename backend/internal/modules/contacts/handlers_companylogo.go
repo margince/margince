@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/assetrev"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -45,7 +46,7 @@ import (
 // this in one reader's own browser, but a logo they were shown before their
 // access was withdrawn should not be renderable from that cache indefinitely.
 // A day costs nothing — every repeat within a working session is already free.
-const logoCacheControl = "private, max-age=86400, immutable"
+const logoCacheControl = assetrev.CacheControl
 
 // logoWriteBackTimeout bounds the write-back below, the same shape
 // ai.flushDetached gives its own post-response write: generous for one small
@@ -93,9 +94,7 @@ func (h Handlers) streamLogoKey(w http.ResponseWriter, r *http.Request, id crmco
 	// decode and a per-pixel scan on bytes it will throw away.
 	etag := `"` + logoRevisionDigest(key) + `"`
 	if httperr.IfNoneMatchHit(r, etag) {
-		w.Header().Set("ETag", etag)
-		w.Header().Set("Cache-Control", cacheControl)
-		w.WriteHeader(http.StatusNotModified)
+		httperr.WriteNotModified(w, etag, cacheControl)
 		return
 	}
 	// Decided BEFORE the object is opened: a legacy reader that opened the
@@ -193,20 +192,11 @@ func (h Handlers) streamLegacyLogo(w http.ResponseWriter, r *http.Request, compa
 // writeLogo sends one mark's bytes under the headers every logo response
 // carries, whichever path produced them.
 func writeLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, etag string, body io.ReadCloser, size int64, cacheControl string) {
-	// These bytes were normalized from a third-party website's asset, and three
-	// things keep that from mattering at the response. The media type is fixed
-	// rather than read back from the object's metadata — the contract declares
-	// this endpoint image/png and every stored object is this server's own PNG
-	// re-encode, so nothing a site influenced decides how its bytes are
-	// interpreted. Then the type cannot be sniffed into something active, and
-	// the document that renders can reach nothing.
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	w.Header().Set("Cache-Control", cacheControl)
-	w.Header().Set("ETag", etag)
-	httperr.StreamObject(w, r, httperr.StreamedObject{
-		ContentType: imagenorm.ContentType, Inline: true, Size: size,
-		Body: body,
+	// These bytes were normalized from a third-party website's asset. Every
+	// stored object is this server's own PNG, so the type is fixed to it.
+	httperr.StreamOwnImage(w, r, httperr.OwnImage{
+		ContentType: imagenorm.ContentType, ETag: etag, CacheControl: cacheControl,
+		Size: size, Body: body,
 	}, "company logo "+id.String())
 }
 

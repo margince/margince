@@ -1667,7 +1667,6 @@ weak
 web
 webassembly
 webhook
-webp
 week
 well
 were

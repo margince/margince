@@ -26755,6 +26755,48 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /users/{id}/avatar:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: getUserAvatar
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Stream a colleague's profile picture.
+      description: |
+        The bytes behind `User.avatar_url` and `SeatName.avatar_url`: always `image/png`,
+        this server's own re-encode, whatever the source was. Any member may read any
+        colleague's picture, as any member may read the roster.
+
+        404 when the seat has no picture, is archived, or does not exist; a client draws
+        initials for all three alike. 501 when the deployment has no object store configured.
+
+        The URL names one revision of the picture, so the answer may be cached for a day
+        without asking again; `If-None-Match` with the `ETag` answers 304.
+      parameters:
+        - name: v
+          in: query
+          required: false
+          description: The revision token `avatar_url` carries. The server ignores it; it keeps a browser cache from serving a replaced picture.
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: The picture's bytes.
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '304': { description: The client already holds this revision. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501':
+          description: The deployment has no object store configured, so no picture can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /users/{id}/role:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -33488,6 +33530,80 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /me/avatar:
+    post:
+      tags: [Identity]
+      operationId: uploadMyAvatar
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Upload your own profile picture.
+      description: |
+        Always the CALLER's own picture, never anybody else's: there is no id to pass.
+        Colleagues see it beside your name wherever the app draws you.
+
+        Multipart upload with one `file` part. PNG, JPEG and WebP are accepted; anything
+        else, SVG and GIF included, is refused as 415. The image is cropped to a centred
+        square and re-encoded as this server's own PNG of at most 512px, so what
+        `avatar_url` serves is never the uploaded bytes.
+
+        Which picture a seat shows: an uploaded one, else the picture of the Google
+        account the member signs in with, else no picture and the client draws initials.
+        An upload replaces either, and is the only way back to a picture after a delete.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: The caller's seat, carrying the `avatar_url` the upload now answers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415':
+          description: The upload is not a PNG, JPEG or WebP image this server can read.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501':
+          description: The deployment has no object store configured, so no picture can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [Identity]
+      operationId: deleteMyAvatar
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Take your own profile picture off for good.
+      description: |
+        The seat shows initials from now on, whether the picture was uploaded or came from
+        the Google account. A later Google sign-in does not bring the Google picture back;
+        only a new upload does.
+
+        Removing a picture the seat does not have is not an error: the seat still shows
+        initials from then on.
+      responses:
+        '200':
+          description: The caller's seat, with no `avatar_url`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /me/ai-activity:
     get:
@@ -60046,6 +60162,12 @@ components:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
         display_name: { type: string }
+        avatar_url:
+          type: string
+          description: >
+            Where the client fetches this seat's profile picture (`getUserAvatar`), absent when
+            the seat has none and the client draws initials. The URL changes whenever the
+            picture does.
         greeting_name:
           type: [string, 'null']
           maxLength: 100
@@ -60203,6 +60325,9 @@ components:
       properties:
         id: { type: string, format: uuid }
         display_name: { type: string }
+        avatar_url:
+          type: string
+          description: Where the client fetches this colleague's profile picture, absent when they have none. As `User.avatar_url`.
         departed:
           type: boolean
           description: >

@@ -43511,6 +43511,10 @@ components:
         id: {type: string, format: uuid}
         email: {type: string, format: email}
         display_name: {type: string}
+        avatar_url:
+          type: string
+          description: >-
+            Where the client fetches this seat's profile picture (`getUserAvatar`), absent when the seat has none and the client draws initials. The URL changes whenever the picture does.
         greeting_name:
           type: [string, 'null']
           maxLength: 100
@@ -43600,6 +43604,9 @@ components:
       properties:
         id: {type: string, format: uuid}
         display_name: {type: string}
+        avatar_url:
+          type: string
+          description: Where the client fetches this colleague's profile picture, absent when they have none. As `User.avatar_url`.
         departed:
           type: boolean
           description: >-

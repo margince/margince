@@ -71,7 +71,7 @@ func deleteUnreferencedLogo(ctx context.Context, blob blobstore.Store, log *slog
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), logoReclaimBudget)
 	defer cancel()
 	if err := blob.Delete(ctx, *key); err != nil {
-		log.WarnContext(ctx, "reclaiming an unreferenced logo object failed",
+		log.WarnContext(ctx, "reclaiming an unreferenced image object failed",
 			"subject", subject, "key", *key, "err", err)
 	}
 }

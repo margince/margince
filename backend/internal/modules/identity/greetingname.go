@@ -90,9 +90,9 @@ func (s *Service) SaveMyGreetingName(ctx context.Context, raw *string) (Seat, er
 		// a deactivation committing between this read and the UPDATE would
 		// leave an audit row for a change that did not happen.
 		if err := tx.QueryRow(ctx,
-			`SELECT email, display_name, COALESCE(locale, ''), greeting_name
+			`SELECT email, display_name, COALESCE(locale, ''), greeting_name, avatar_object_key
 			   FROM app_user WHERE id = $1 AND `+LiveMemberSQL("")+` FOR UPDATE`,
-			human).Scan(&seat.Email, &seat.DisplayName, &seat.Locale, &before); err != nil {
+			human).Scan(&seat.Email, &seat.DisplayName, &seat.Locale, &before, &seat.AvatarKey); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}

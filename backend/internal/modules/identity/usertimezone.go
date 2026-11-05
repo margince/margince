@@ -89,9 +89,9 @@ func writeTimezoneTx(ctx context.Context, tx pgx.Tx, user ids.UserID, zone strin
 	var locale, before, setByBefore *string
 	var chosenBefore bool
 	if err := tx.QueryRow(ctx, `
-		SELECT email, display_name, locale, greeting_name, timezone, timezone_chosen, timezone_set_by
+		SELECT email, display_name, locale, greeting_name, timezone, timezone_chosen, timezone_set_by, avatar_object_key
 		  FROM app_user WHERE id = $1 AND `+LiveMemberSQL("")+` FOR UPDATE`,
-		user).Scan(&seat.Email, &seat.DisplayName, &locale, &seat.GreetingName, &before, &chosenBefore, &setByBefore); err != nil {
+		user).Scan(&seat.Email, &seat.DisplayName, &locale, &seat.GreetingName, &before, &chosenBefore, &setByBefore, &seat.AvatarKey); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Seat{}, apperrors.ErrNotFound
 		}

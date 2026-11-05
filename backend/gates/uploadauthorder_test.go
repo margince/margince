@@ -55,8 +55,9 @@ var multipartParsers = []string{"ParseMultipartForm", "MultipartReader"}
 // stale the way any claim does — which is why an entry no parse reaches is
 // reported below rather than left to sit.
 var uploadParseAuthorizedByCaller = map[string]string{
-	"decodeCompanyLogoUpload": "its only caller, uploadCompanyMark, reads the anchor company " +
-		"first, and GetAnchorCompany requires company.read",
+	"readImageUpload": "its callers ask first: uploadCompanyMark reads the anchor company, which " +
+		"requires company.read; UploadLegalEntityLogo asks EnsureLegalEntityLogoWritable, which requires " +
+		"legal_entity.update; UploadMyAvatar requires a human seat, the only principal that may set its picture",
 	"readImportUpload": "its only caller, stageImportSource, requires import_run.create before it calls this",
 	"readCardPhotoUpload": "its only caller, ImportCardPhoto, requires contact.create and contact.update " +
 		"before it calls this",
