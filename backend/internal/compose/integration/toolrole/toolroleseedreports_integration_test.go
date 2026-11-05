@@ -174,11 +174,11 @@ func toolRoleBatchSeeders(t *testing.T, e *apptest.AppEnv) []batchSeed {
 		items := map[string][]string{}
 		for kind, ofKind := range deals {
 			for _, deal := range ofKind {
-				i := slices.IndexFunc(assembled.Items, func(item apptest.BriefItem) bool { return item.DealId == deal })
+				i := slices.IndexFunc(assembled.Items, func(item apptest.BriefItem) bool { return item.DealID == deal })
 				if i < 0 {
 					t.Fatalf("the brief ranks %d items and none for deal %s: %+v", len(assembled.Items), deal, assembled.Items)
 				}
-				items[kind] = append(items[kind], assembled.Items[i].Id)
+				items[kind] = append(items[kind], assembled.Items[i].ID)
 			}
 		}
 		for _, item := range items["snoozed_brief_item"] {

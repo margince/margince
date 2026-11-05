@@ -29,6 +29,7 @@ const (
 // and the suite would test the unconfigured path instead.
 type DiscardingMailer struct{}
 
+// Send accepts the message and delivers nothing.
 func (DiscardingMailer) Send(context.Context, string, string, string) error { return nil }
 
 // AskedAboutTheDeal plants the contact's own enquiry about a deal. It is mail

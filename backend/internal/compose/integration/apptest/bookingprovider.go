@@ -41,6 +41,7 @@ func (b *BookingProvider) SetCalendar(id string) {
 	b.calendar = id
 }
 
+// RoundTrip answers Google's hosts from memory and sends the rest on.
 func (b *BookingProvider) RoundTrip(r *http.Request) (*http.Response, error) {
 	if r.URL.Host == "oauth2.googleapis.com" {
 		return BookingProviderResponse(r, `{"access_token":"fixture-access","refresh_token":"fixture-refresh","scope":"https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events.owned"}`), nil

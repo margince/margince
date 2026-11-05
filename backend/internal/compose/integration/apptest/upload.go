@@ -27,7 +27,6 @@ func PostUpload(t *testing.T, e *AppEnv, path string, headers map[string]string,
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	//nolint:bodyclose // CloseBody closes it in the deferred call below, which the checker cannot follow across the helper.
 	resp, err := e.Client.Do(req)
 	if err != nil {
 		t.Fatalf("uploading: %v", err)

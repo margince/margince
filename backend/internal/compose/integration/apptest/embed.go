@@ -84,8 +84,10 @@ func InsertOnlyRunner(t *testing.T) *jobs.Runner {
 // is decided by the corpus rather than by the installation.
 type AskableEmbedder struct{}
 
+// EmbedIdentity reports a bound four-wide model.
 func (AskableEmbedder) EmbedIdentity() (string, int) { return "fake/http@4", 4 }
 
+// Embed answers one unit vector per input.
 func (AskableEmbedder) Embed(_ context.Context, req model.EmbedRequest) (model.Embeddings, error) {
 	vectors := make([][]float32, len(req.Inputs))
 	for i := range vectors {

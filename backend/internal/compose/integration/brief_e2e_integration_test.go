@@ -67,13 +67,13 @@ func TestMorningBriefHTTPSurface(t *testing.T) {
 	// The rep's own item marks acted; a second mark is a conflict, never a
 	// silent overwrite.
 	var acted apptest.BriefItem
-	if status := e.Call(t, "POST", "/v1/brief/items/"+item.Id+"/act", nil, nil, &acted); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/brief/items/"+item.ID+"/act", nil, nil, &acted); status != http.StatusOK {
 		t.Fatalf("mark own item acted = %d, want 200", status)
 	}
 	if acted.State != "acted" {
 		t.Fatalf("marked item state = %q, want acted", acted.State)
 	}
-	if status := e.Call(t, "POST", "/v1/brief/items/"+item.Id+"/dismiss", nil, nil, nil); status != http.StatusConflict {
+	if status := e.Call(t, "POST", "/v1/brief/items/"+item.ID+"/dismiss", nil, nil, nil); status != http.StatusConflict {
 		t.Fatalf("double mark = %d, want 409", status)
 	}
 
@@ -86,14 +86,14 @@ func TestMorningBriefHTTPSurface(t *testing.T) {
 func assertSnoozeHidesItem(t *testing.T, e *apptest.AppEnv, toSnooze apptest.BriefItem) {
 	t.Helper()
 	past := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
-	if status := e.Call(t, "POST", "/v1/brief/items/"+toSnooze.Id+"/snooze",
+	if status := e.Call(t, "POST", "/v1/brief/items/"+toSnooze.ID+"/snooze",
 		AnyMap{"snoozed_until": past}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("snooze into the past = %d, want 422", status)
 	}
 
 	until := time.Now().UTC().Add(48 * time.Hour).Format(time.RFC3339)
 	var snoozed apptest.BriefItem
-	if status := e.Call(t, "POST", "/v1/brief/items/"+toSnooze.Id+"/snooze",
+	if status := e.Call(t, "POST", "/v1/brief/items/"+toSnooze.ID+"/snooze",
 		AnyMap{"snoozed_until": until}, nil, &snoozed); status != http.StatusOK {
 		t.Fatalf("snooze = %d, want 200", status)
 	}
@@ -106,7 +106,7 @@ func assertSnoozeHidesItem(t *testing.T, e *apptest.AppEnv, toSnooze apptest.Bri
 		t.Fatalf("GET /v1/brief after snooze = %d, want 200", status)
 	}
 	for _, it := range afterSnooze.Items {
-		if it.Id == toSnooze.Id {
+		if it.ID == toSnooze.ID {
 			t.Fatal("the home read still shows a mid-snooze item — it must hide until snoozed_until passes")
 		}
 	}
@@ -124,7 +124,7 @@ func assertSnoozeHidesItem(t *testing.T, e *apptest.AppEnv, toSnooze apptest.Bri
 func assertUnsnoozeReturnsItem(t *testing.T, e *apptest.AppEnv, snoozed apptest.BriefItem) {
 	t.Helper()
 	var back apptest.BriefItem
-	if status := e.Call(t, "POST", "/v1/brief/items/"+snoozed.Id+"/unsnooze",
+	if status := e.Call(t, "POST", "/v1/brief/items/"+snoozed.ID+"/unsnooze",
 		nil, nil, &back); status != http.StatusOK {
 		t.Fatalf("unsnooze = %d, want 200", status)
 	}
@@ -140,7 +140,7 @@ func assertUnsnoozeReturnsItem(t *testing.T, e *apptest.AppEnv, snoozed apptest.
 	}
 	var found bool
 	for _, it := range afterUnsnooze.Items {
-		if it.Id == snoozed.Id {
+		if it.ID == snoozed.ID {
 			found = true
 		}
 	}
@@ -150,7 +150,7 @@ func assertUnsnoozeReturnsItem(t *testing.T, e *apptest.AppEnv, snoozed apptest.
 
 	// And pressing it twice is refused rather than silently stamping the row
 	// again, which is what makes the control safe on a stale screen.
-	if status := e.Call(t, "POST", "/v1/brief/items/"+snoozed.Id+"/unsnooze",
+	if status := e.Call(t, "POST", "/v1/brief/items/"+snoozed.ID+"/unsnooze",
 		nil, nil, nil); status != http.StatusConflict {
 		t.Fatalf("second unsnooze = %d, want 409", status)
 	}
@@ -161,7 +161,7 @@ func assertUnsnoozeReturnsItem(t *testing.T, e *apptest.AppEnv, snoozed apptest.
 func findBriefItem(t *testing.T, items []apptest.BriefItem, dealID string) apptest.BriefItem {
 	t.Helper()
 	for _, item := range items {
-		if item.DealId == dealID {
+		if item.DealID == dealID {
 			return item
 		}
 	}

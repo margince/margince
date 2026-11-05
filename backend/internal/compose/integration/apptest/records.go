@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // CreateDealClosingThisWeek seeds one open deal that closes in three days, so
@@ -30,24 +31,52 @@ import (
 func CreateDealClosingThisWeek(t *testing.T, e *AppEnv, stages SeededStages, name string) string {
 	t.Helper()
 	var created struct {
-		Id string `json:"id"`
+		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/deals", map[string]any{
-		"name":                name,
-		"pipeline_id":         stages.PipelineID,
-		"stage_id":            stages.Open,
-		"expected_close_date": time.Now().UTC().AddDate(0, 0, 3).Format("2006-01-02"),
-		"source":              "manual",
+	if status := e.Call(t, "POST", "/v1/deals", dealCreate{
+		Name: name, PipelineID: stages.PipelineID, StageID: stages.Open,
+		ExpectedCloseDate: time.Now().UTC().AddDate(0, 0, 3).Format("2006-01-02"),
+		Source:            provenance.RecordSourceManual,
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create deal %q status = %d", name, status)
 	}
-	return created.Id
+	return created.ID
+}
+
+type dealCreate struct {
+	Name              string `json:"name"`
+	PipelineID        string `json:"pipeline_id"`
+	StageID           string `json:"stage_id"`
+	ExpectedCloseDate string `json:"expected_close_date"`
+	Source            string `json:"source"`
+}
+
+type companyCreate struct {
+	Source      string          `json:"source"`
+	DisplayName string          `json:"display_name"`
+	Domains     []companyDomain `json:"domains,omitempty"`
+}
+
+type companyDomain struct {
+	Domain    string `json:"domain"`
+	IsPrimary bool   `json:"is_primary"`
+}
+
+type contactCreate struct {
+	FullName string `json:"full_name"`
+	Source   string `json:"source"`
+}
+
+type employmentCreate struct {
+	Kind      string `json:"kind"`
+	ContactID string `json:"contact_id"`
+	CompanyID string `json:"company_id"`
 }
 
 // BriefItem is one item of a seat's brief as the route answers it.
 type BriefItem struct {
-	Id           string   `json:"id"`
-	DealId       string   `json:"deal_id"`
+	ID           string   `json:"id"`
+	DealID       string   `json:"deal_id"`
 	Rank         int      `json:"rank"`
 	EvidenceIds  []string `json:"evidence_ids"`
 	State        string   `json:"state"`
@@ -61,16 +90,16 @@ func SeedScoutedNamed(t *testing.T, e *AppEnv, companyName, contactName string) 
 	var company, contact, source struct {
 		ID ids.UUID `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/companies", map[string]any{"source": "manual", "display_name": companyName}, nil, &company); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/companies", companyCreate{Source: provenance.RecordSourceManual, DisplayName: companyName}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company = %d %v", status, company)
 	}
 	companyID = company.ID.String()
-	if status := e.Call(t, "POST", "/v1/contacts", map[string]any{"full_name": contactName, "source": "manual"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", contactCreate{FullName: contactName, Source: provenance.RecordSourceManual}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}
 	contactID := contact.ID.String()
-	if status := e.Call(t, "POST", "/v1/relationships", map[string]any{
-		"kind": "employment", "contact_id": contactID, "company_id": companyID, "source": "manual",
+	if status := e.Call(t, "POST", "/v1/relationships", employmentCreate{
+		Kind: "employment", ContactID: contactID, CompanyID: companyID,
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create employment = %d", status)
 	}
@@ -121,17 +150,15 @@ func SeedCompanyPair(t *testing.T, e *AppEnv, stem, incumbentDomain, dupDomain s
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/companies", map[string]any{
-		"source":       "manual",
-		"display_name": stem + " GmbH",
-		"domains":      []map[string]any{{"domain": incumbentDomain, "is_primary": true}},
+	if status := e.Call(t, "POST", "/v1/companies", companyCreate{
+		Source: provenance.RecordSourceManual, DisplayName: stem + " GmbH",
+		Domains: []companyDomain{{Domain: incumbentDomain, IsPrimary: true}},
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("incumbent create → %d, want 201", status)
 	}
-	if status := e.Call(t, "POST", "/v1/companies", map[string]any{
-		"source":       "manual",
-		"display_name": stem + " Inc",
-		"domains":      []map[string]any{{"domain": dupDomain, "is_primary": true}},
+	if status := e.Call(t, "POST", "/v1/companies", companyCreate{
+		Source: provenance.RecordSourceManual, DisplayName: stem + " Inc",
+		Domains: []companyDomain{{Domain: dupDomain, IsPrimary: true}},
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("fuzzy create must still 201, got %d", status)
 	}
