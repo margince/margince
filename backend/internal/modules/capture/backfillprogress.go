@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -139,7 +140,7 @@ func (c *pageProgress) counted(ctx context.Context, outcome EnsureOutcome) {
 		// nearly every message.
 		return
 	}
-	countCtx, cancel := detachedWrite(ctx)
+	countCtx, cancel := detachedWrite(database.WithoutTransactionGuard(ctx))
 	defer cancel()
 	var err error
 	for attempt := range countAttempts {
@@ -319,26 +320,13 @@ func (c *pageProgress) persist(ctx context.Context, pacing flushPacing) {
 		"backfill_id", c.backfillID, "err", err)
 }
 
-// flushBackfillProgress stores the running page's tally on the run row.
-//
-// It also promotes a 'queued' run to 'running', because by the time a page has
-// walked a message the run demonstrably IS running — leaving it queued would
-// put "Import queued" above a set of numbers that are climbing.
-//
-// It carries BOTH fences the commit carries, for the same reasons. The live
-// states, so a run someone cancelled — or one a fault already ended — is not
-// resurrected by a page that has not noticed yet. And the connection
-// generation, so a page still walking the account the connection was rebound
-// away from cannot report that account's mail as this run's progress: the
-// commit will refuse the same page and cancel the run, and until it does the
-// screen must not show work that is about to be thrown away.
+// flushBackfillProgress reports only the admitted run and its unchanged connection generation.
 func (r *Registry) flushBackfillProgress(ctx context.Context, backfillID ids.UUID, generation int, t pageTally) error {
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE capture_backfill
-			SET inflight_scanned = $2, inflight_captured = $3, inflight_skipped = $4,
-			    status = CASE WHEN status = 'queued' THEN 'running' ELSE status END
-			WHERE id = $1 AND status IN ('queued','running')
+			SET inflight_scanned = $2, inflight_captured = $3, inflight_skipped = $4
+			WHERE id = $1 AND status = 'running'
 			  AND EXISTS (SELECT 1 FROM capture_connection c
 			              WHERE c.id = capture_backfill.connection_id AND c.generation = $5)`,
 			backfillID, t.scanned, t.captured, t.skipped, generation)

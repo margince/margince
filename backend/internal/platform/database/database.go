@@ -197,7 +197,7 @@ func WithWorkspaceTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) er
 	// and every store beneath it lands here; joining that snapshot is what
 	// makes the composition cost one transaction instead of forty.
 	if tx, joined := snapshotOf(ctx); joined {
-		return fn(tx)
+		return guardedTransaction(ctx, tx, fn)
 	}
 	return runTx(ctx, pool, fn)
 }
@@ -313,7 +313,7 @@ func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn f
 	//craft:ignore swallowed-errors rollback after commit is a designed no-op; on the error path the fn error supersedes it
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if err := fn(tx); err != nil {
+	if err := guardedTransaction(ctx, tx, fn); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)

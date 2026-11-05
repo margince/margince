@@ -458,8 +458,17 @@ func TestBackfillYieldsSurviveACancelUnderTheRunningPage(t *testing.T) {
 	if status != "cancelled" {
 		t.Fatalf("status = %s, want cancelled", status)
 	}
-	if contacts != 2 || companies != 1 {
-		t.Fatalf("after a mid-page cancel contacts_created=%d companies_created=%d, want 2/1 — the rows exist and no retry will offer them again", contacts, companies)
+	if contacts != 1 || companies != 1 {
+		t.Fatalf("after a mid-page cancel contacts_created=%d companies_created=%d, want 1/1 for the message committed before cancellation", contacts, companies)
+	}
+	var later int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(e.Admin(), `SELECT count(*) FROM contact_email WHERE lower(email)='dave@globex.example' AND archived_at IS NULL`).Scan(&later)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if later != 0 {
+		t.Fatal("the cancelled page created a later counterparty")
 	}
 }
 

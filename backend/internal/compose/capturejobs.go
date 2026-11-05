@@ -12,7 +12,6 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -219,148 +217,6 @@ func (w *captureDigestWorker) digestWorkspace(ctx context.Context, workspace ids
 		clock = time.Now
 	}
 	return w.registry.BuildDigests(principal.WithWorkspaceID(ctx, workspace), clock().UTC())
-}
-
-// CaptureBackfillArgs pages ONE bounded backfill run (ADR-0063). Unique by
-// args while incomplete: start and any retry converge on one job.
-type CaptureBackfillArgs struct {
-	Workspace  ids.UUID `json:"workspace_id"`
-	BackfillID string   `json:"backfill_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (CaptureBackfillArgs) Kind() string { return "capture_backfill" }
-
-// WorkspaceID binds this backfill run to its tenant (jobs.WorkspaceScoped).
-func (a CaptureBackfillArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// captureBackfillWorker pages a run to completion, yielding between pages
-// (snooze) so a long mailbox never monopolizes a worker slot. A page error
-// returns nil after the engine recorded it — the run row owns its state.
-type captureBackfillWorker struct {
-	registry *capture.Registry
-	log      *slog.Logger
-}
-
-// backfillPagesPerTick bounds how many pages one Work invocation walks before
-// yielding. ONE page: a page is up to 100 messages fetched serially, each a
-// full RAW download of a real email (megabytes for a photo), so a page can
-// take minutes on a live mailbox. Committing after every page and snoozing
-// means each page runs under a FRESH job context — a slow page can never
-// starve the next of its deadline — and the meter climbs per page.
-const backfillPagesPerTick = 1
-
-// backfillPageYield is the snooze between two good pages.
-const backfillPageYield = time.Second
-
-func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[CaptureBackfillArgs]) error {
-	bfID, err := ids.Parse(job.Args.BackfillID)
-	if err != nil {
-		return jobs.FaultContext(ctx, fmt.Errorf("capture_backfill: backfill id: %w", err))
-	}
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	wsCtx = capturemetrics.WithRun(wsCtx)
-	for range backfillPagesPerTick {
-		done, completed, retryAfter, err := w.registry.RunBackfillStep(wsCtx, bfID)
-		if retryAfter > 0 {
-			// The provider asked us to wait, and the run is still live with its
-			// cursor intact. The row classifies the fault and counts it toward its
-			// own give-up cap; River owns the redelivery, so a snooze — not a
-			// silent stop — is what keeps the import alive across an outage.
-			w.log.WarnContext(ctx, "capture backfill page deferred", "backfill", job.Args.BackfillID,
-				"retry_after", retryAfter, "err", err, rateLimitAttr(err))
-			capturemetrics.ObserveDeferral(wsCtx, retryAfter, err)
-			return river.JobSnooze(retryAfter)
-		}
-		if err != nil {
-			// A fault no delay repairs, so the job stops here: the engine has
-			// ended the run and put the class on the row — on a context detached
-			// from this job, because the job context dying mid-page is itself the
-			// commonest fault — and the log carries the detail.
-			w.log.WarnContext(ctx, "capture backfill page failed", "backfill", job.Args.BackfillID, "err", err)
-			if w.resumedMeanwhile(wsCtx, bfID) {
-				capturemetrics.ObserveResumed(wsCtx, backfillPageYield)
-				return river.JobSnooze(backfillPageYield)
-			}
-			return nil
-		}
-		if completed {
-			// The connect-time import just closed: build today's digest for
-			// THIS workspace now, so the morning screen reflects the
-			// freshly-imported history instead of waiting for the nightly
-			// pass. Best-effort — a failed enqueue never fails the backfill,
-			// which the nightly run still covers.
-			w.enqueueDigest(ctx, job.Args)
-		}
-		if done {
-			return nil
-		}
-	}
-	capturemetrics.ObservePacing(wsCtx, backfillPageYield)
-	return river.JobSnooze(backfillPageYield)
-}
-
-// resumedMeanwhile says the run this job just ended was reopened.
-//
-// A human pressing Continue reopens the same run, and its enqueue is unique
-// against this job while it is still running — so the start can land on a job
-// that is about to return, and the reopened run would wait for the nightly
-// reconcile with nothing paging it. The job comes back in a second for it
-// instead. Only a QUEUED run counts: a run left running because a write failed
-// is the reconcile's, and snoozing on it would loop every second. A read that
-// fails answers false and the job ends as before.
-func (w *captureBackfillWorker) resumedMeanwhile(ctx context.Context, bfID ids.UUID) bool {
-	reopened, err := w.registry.BackfillReopened(ctx, bfID)
-	return err == nil && reopened
-}
-
-// enqueueDigest offers a same-day digest build for THIS workspace through the
-// ambient River client; the digest worker rebuilds the day idempotently
-// (as-of-now truths).
-//
-// THE PASS, because there is no longer a child to prefer to it. This argued the
-// opposite until ADR-0103 collapsed the digest pair: the intent here is local —
-// one tenant just imported its history — and a fleet fan-out would have run
-// every workspace in the installation for it, N times over if N tenants
-// finished together. There is one kind now, so "local" is not something the
-// enqueue can express any more.
-//
-// What that costs is bounded by the same invariant the collapse rests on: an
-// installation holds one active workspace (identity.InstallationWorkspace
-// refuses more), so the pass covers exactly the tenant that finished. On a
-// fleet it would also re-walk the others, each a re-build of a day they already
-// have — the digest is idempotent over as-of-now truths, which is what made the
-// pair affordable to collapse in the first place.
-//
-// oneOffPassOpts carries the queue the contract declares for the kind, and
-// states there why a one-off deliberately takes neither the sweep tag nor the
-// active-state uniqueness a scheduled tick carries. The second matters here in
-// particular: a digest already RUNNING may have snapshotted the workspace
-// BEFORE this backfill's rows landed, and deduping against it would drop the
-// freshly-imported history off the morning screen until the nightly pass.
-//
-// The Safely variant is deliberate: the plain ClientFromContext PANICS when
-// there is no client, and a best-effort enqueue must degrade rather than crash
-// the pager. River puts the client in every Work context, so its absence means
-// this method was reached from somewhere that is not a running job — which is
-// worth a line, because silently returning is indistinguishable from having
-// enqueued. Neither branch fails the backfill: the nightly pass still covers
-// the workspace, and a completed import is not undone by a missing digest.
-func (w *captureBackfillWorker) enqueueDigest(ctx context.Context, args CaptureBackfillArgs) {
-	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
-	if err != nil {
-		w.log.WarnContext(ctx, "capture backfill: no River client in context, so the same-day digest was not enqueued",
-			"backfill", args.BackfillID, "err", err)
-		return
-	}
-	child := CaptureDigestArgs{}
-	if _, err := client.Insert(ctx, child, oneOffPassOpts(child.Kind())); err != nil {
-		w.log.WarnContext(ctx, "capture backfill: digest enqueue failed",
-			"backfill", args.BackfillID, "err", err)
-	}
 }
 
 // CounterpartyVerdictArgs runs one counterparty-verdict pass (ADR-0072/A118 §4).

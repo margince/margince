@@ -12,6 +12,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -37,12 +38,12 @@ func (h backfillHandlers) begin(ctx context.Context, ws ids.UUID, provider strin
 		func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
 			enqueueErr = h.inserter.EnqueueTx(ctx, tx, CaptureBackfillArgs{
 				Workspace: ws, BackfillID: backfillID.String(),
-			}, &river.InsertOpts{
+			}, jobs.QueuedAs[CaptureBackfillArgs](&river.InsertOpts{
 				// One attempt: the backfill row owns the outcome (api/jobs.yaml), and
 				// a River retry would re-page a run the engine already ended.
 				MaxAttempts: rowOwnedMaxAttempts,
 				UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-			})
+			}))
 			return enqueueErr
 		})
 	if enqueueErr != nil {

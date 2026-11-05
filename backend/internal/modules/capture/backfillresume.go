@@ -72,7 +72,7 @@ func resumeFailedBackfillTx(ctx context.Context, tx pgx.Tx, connID ids.UUID, win
 	err := tx.QueryRow(ctx, `
 		UPDATE capture_backfill
 		   SET status = 'queued', completed_at = NULL, consecutive_failures = 0,
-		       last_error_class = NULL, window_restarts = 0`+resetInflightProgress+`
+		       last_error_class = NULL, window_restarts = 0`+clearBackfillAdmission+resetInflightProgress+`
 		 WHERE id = (
 		         SELECT b.id FROM capture_backfill b
 		           JOIN capture_connection c ON c.id = b.connection_id

@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "3d5afd557a321574839b4b6ba3a9213c833caaaf1dc81836e852b98b4dd52da5"
+const JobContractHash = "be8cc73ca0fff1f456d1d5552fe7d87c33d22235e5952da34242d72d10344aca"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -183,22 +183,22 @@ var specs = map[string]Spec{
 		Kind:         "capture_backfill",
 		GoType:       "CaptureBackfillArgs",
 		Role:         Worker,
-		Queue:        "default",
+		Queue:        "mail_history",
 		Timeout:      TimeoutPolicy{Fixed: 8 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"GmailRegistry"}},
-		Fault:        FaultPolicy{NilAfterLogging: "the backfill ROW owns the outcome: RunBackfillStep ends the run and records the fault class on the row against its own give-up cap, on a context detached from the job because the job context dying mid-page is the commonest fault. A River retry would re-page a run the engine already ended."},
-		Args:         []ArgField{{Name: "BackfillID"}, {Name: "Workspace"}},
+		Fault:        FaultPolicy{NilAfterLogging: "the backfill ROW owns the outcome: RunBackfillExecution ends the run and records the fault class on the row against its own give-up cap, on a context detached from the job because the job context dying mid-page is the commonest fault. A River retry would re-page a run the engine already ended."},
+		Args:         []ArgField{{Name: "BackfillID"}, {Name: "ExecutionGeneration", Scalar: true, Reason: "A monotonic execution number fences replaced paging jobs and carries no mail content."}, {Name: "Workspace"}},
 	},
 	"capture_backfill_reconcile": {
 		Kind:         "capture_backfill_reconcile",
 		GoType:       "CaptureBackfillReconcileArgs",
 		Role:         Worker,
 		Fleet:        true,
-		Queue:        "default",
+		Queue:        "mail_admission",
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{Fixed: 24 * time.Hour},
+		Cadence:      Cadence{Fixed: 15 * time.Second},
 		Registration: Registration{When: []string{"GmailRegistry"}},
 	},
 	"capture_classify": {
@@ -1096,6 +1096,8 @@ var queues = map[string]int{
 	"geocode":           1,
 	"import_check":      2,
 	"import_write":      1,
+	"mail_admission":    1,
+	"mail_history":      2,
 	"privacy_retention": 2,
 	"rate_refresh":      2,
 	"technical_lookup":  1,

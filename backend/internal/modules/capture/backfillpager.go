@@ -46,7 +46,7 @@ import (
 // It is always 0 alongside a terminal outcome. err carries the fault detail
 // either way — the run row records only its class, the caller's log owns the
 // rest.
-func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (done, completed bool, retryAfter time.Duration, err error) {
+func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID) (done, completed bool, retryAfter time.Duration, err error) {
 	var (
 		connID        ids.UUID
 		name          string
@@ -80,19 +80,19 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 		// Terminally fail the run like every sibling execution-phase error —
 		// returning bare would strand it queued/running, blocking every future
 		// StartBackfill for the connection and never surfacing as failed.
-		return true, false, 0, r.failBackfill(ctx, backfillID, err)
+		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
 	bf, ok := supportsBackfill(c)
 	if !ok {
-		return true, false, 0, r.failBackfill(ctx, backfillID, ErrBackfillUnsupported)
+		return true, false, 0, errors.Join(ErrBackfillUnsupported, r.failBackfill(ctx, backfillID, ErrBackfillUnsupported))
 	}
 	runCtx, err := r.connectorContext(ctx, name, grantedBy)
 	if err != nil {
-		return true, false, 0, r.failBackfill(ctx, backfillID, err)
+		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
 	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
 	if err != nil {
-		return true, false, 0, r.failBackfill(ctx, backfillID, err)
+		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
 
 	pageToken, err := backfillPageCursor(cursor)
@@ -152,15 +152,15 @@ func (r *Registry) recordPageFault(ctx context.Context, backfillID ids.UUID, cau
 	if !retriesPage(class) {
 		return true, false, 0, errors.Join(cause, r.failBackfill(ctx, backfillID, cause))
 	}
-	failures, live, countErr := r.countBackfillFailure(ctx, backfillID, class)
+	failures, live, countErr := r.countBackfillFailure(ctx, backfillID, class, cause)
 	if countErr != nil {
-		// The ladder write is what leaves a live run resumable, so a run whose
-		// ladder cannot be written must not be left live: the caller stops paging
-		// after this, and a live run nobody pages sits behind
-		// uq_capture_backfill_live answering 409 to every later start, with nothing
-		// a human can clear. End it on the class the page actually failed with.
-		return true, false, 0, errors.Join(cause, countErr, r.failBackfill(ctx, backfillID, cause))
+		if errors.Is(countErr, apperrors.ErrConflict) {
+			return true, false, 0, errors.Join(cause, countErr)
+		}
+		// A rolled-back successor leaves this execution retryable; admission recovery also repairs it.
+		return false, false, backfillRetryDelay(max(1, failures), cause), errors.Join(cause, countErr)
 	}
+
 	if !live {
 		// The run reached a terminal state under us (a cancel, most likely).
 		// There is nothing left to retry and nothing left to fail.
@@ -198,18 +198,24 @@ func (r *Registry) restartWindowWalk(ctx context.Context, backfillID ids.UUID, c
 			UPDATE capture_backfill
 			   SET cursor = NULL, scanned = 0, captured = 0, skipped = 0, failed = 0,
 			       consecutive_failures = consecutive_failures + 1, last_error_class = $2,
-			       window_restarts = window_restarts + 1`+resetInflightProgress+`,
-			       status = CASE WHEN status = 'queued' THEN 'running' ELSE status END
-			 WHERE id = $1 AND status IN ('queued','running') AND window_restarts < $3`,
+			       window_restarts = window_restarts + 1`+resetInflightProgress+`
+			 WHERE id = $1 AND status = 'running' AND window_restarts < $3`,
 			backfillID, string(classHistoryGone), maxWindowRestarts)
 		restarted = tag.RowsAffected() > 0
-		return err
+		if err != nil {
+			return err
+		}
+		if restarted {
+			return rescheduleBackfillTx(writeCtx, tx, backfillID, time.Second)
+		}
+		return nil
 	})
 	if err != nil || !restarted {
 		// Either the write failed, or this run already walked its window again
 		// once (or ended under us — failBackfill then matches nothing).
 		return true, false, 0, errors.Join(cause, err, r.failBackfill(ctx, backfillID, cause))
 	}
+	markBackfillScheduled(ctx)
 	return false, false, time.Second, cause
 }
 
@@ -223,18 +229,15 @@ func (r *Registry) restartWindowWalk(ctx context.Context, backfillID ids.UUID, c
 // that deadline as its own unreachable — so this write would fail on the very
 // context that produced the fault it is recording, and the run would keep a
 // ladder that never climbs and a retry nobody scheduled.
-func (r *Registry) countBackfillFailure(ctx context.Context, backfillID ids.UUID, class errorClass) (failures int, live bool, err error) {
+func (r *Registry) countBackfillFailure(ctx context.Context, backfillID ids.UUID, class errorClass, cause error) (failures int, live bool, err error) {
 	countCtx, cancel := detachedWrite(ctx)
 	defer cancel()
 	err = r.db.Tx(countCtx, func(tx pgx.Tx) error {
-		// A run whose FIRST page fails transiently is still a run that started:
-		// leaving it 'queued' would misreport a live import as one never begun.
 		scanErr := tx.QueryRow(countCtx, `
 			UPDATE capture_backfill
-			SET consecutive_failures = consecutive_failures + 1, last_error_class = $2`+resetInflightProgress+`,
-			    status = CASE WHEN status = 'queued' THEN 'running' ELSE status END
-			WHERE id = $1 AND status IN ('queued','running')
-			RETURNING consecutive_failures`, backfillID, string(class)).Scan(&failures)
+			SET consecutive_failures = consecutive_failures + 1, last_error_class = $2, backoff_is_mailbox_scoped = $3`+resetInflightProgress+`
+			WHERE id = $1 AND status = 'running'
+			RETURNING consecutive_failures`, backfillID, string(class), mailboxScopedBackoff(cause)).Scan(&failures)
 		if errors.Is(scanErr, pgx.ErrNoRows) {
 			return nil
 		}
@@ -242,8 +245,14 @@ func (r *Registry) countBackfillFailure(ctx context.Context, backfillID ids.UUID
 			return scanErr
 		}
 		live = true
+		if failures < backfillMaxConsecutiveFailures {
+			return rescheduleBackfillTx(countCtx, tx, backfillID, backfillRetryDelay(failures, cause))
+		}
 		return nil
 	})
+	if err == nil && live && failures < backfillMaxConsecutiveFailures {
+		markBackfillScheduled(ctx)
+	}
 	return failures, live, err
 }
 
@@ -302,11 +311,11 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 	var rowsAffected int64
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var cur []byte
-		statusExpr := "CASE WHEN status = 'queued' THEN 'running' ELSE status END"
-		terminal := ""
+		statusExpr := columnStatus
+		terminal := ", backoff_is_mailbox_scoped = false"
 		if finishing {
 			statusExpr = "'done'"
-			terminal = ", completed_at = now()"
+			terminal = ", completed_at = now()" + clearBackfillAdmission
 		} else {
 			cur = []byte(fmt.Sprintf(`{"page_token":%q}`, res.NextToken))
 		}
@@ -318,7 +327,7 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 			SET cursor = $2, scanned = scanned + $3, captured = captured + $4, skipped = skipped + $5,
 			    failed = failed + $7, consecutive_failures = 0`+resetInflightProgress+`,
 			    status = `+statusExpr+terminal+`
-			WHERE id = $1 AND status IN ('queued','running')
+			WHERE id = $1 AND status = 'running'
 			  AND EXISTS (SELECT 1 FROM capture_connection c
 			              WHERE c.id = capture_backfill.connection_id AND c.generation = $6)`,
 			backfillID, cur, res.Scanned, res.Captured, res.Skipped, generation, res.Failed)
@@ -330,7 +339,7 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 			if finishing {
 				return reconcileBackfillCreationsTx(ctx, tx, backfillID)
 			}
-			return nil
+			return rescheduleBackfillTx(ctx, tx, backfillID, time.Second)
 		}
 		// Zero rows is either a run someone already ended (a no-op below) or a
 		// run whose connection changed under it. The second case has to end the
@@ -341,12 +350,15 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 		// kept, counterparty yields included: they exist, and a replay never
 		// offers them to the resolver again.
 		_, err = tx.Exec(ctx, `
-			UPDATE capture_backfill SET status = 'cancelled', completed_at = now()`+resetInflightProgress+`
-			WHERE id = $1 AND status IN ('queued','running')`, backfillID)
+			UPDATE capture_backfill SET status = 'cancelled', completed_at = now()`+clearBackfillAdmission+resetInflightProgress+`
+			WHERE id = $1 AND status = 'running'`, backfillID)
 		return err
 	})
 	if err != nil {
 		return false, false, err
+	}
+	if !finishing && rowsAffected > 0 {
+		markBackfillScheduled(ctx)
 	}
 	return finishing || rowsAffected == 0, finishing && rowsAffected == 1, nil
 }
@@ -375,8 +387,8 @@ func (r *Registry) failBackfill(ctx context.Context, backfillID ids.UUID, cause 
 	defer cancel()
 	return r.db.Tx(failCtx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(failCtx, `
-			UPDATE capture_backfill SET status = 'error', last_error_class = $2, completed_at = now()`+resetInflightProgress+`
-			WHERE id = $1 AND status IN ('queued','running')`, backfillID, string(class))
+			UPDATE capture_backfill SET status = 'error', last_error_class = $2, completed_at = now()`+clearBackfillAdmission+resetInflightProgress+`
+			WHERE id = $1 AND status = 'running'`, backfillID, string(class))
 		return err
 	})
 }

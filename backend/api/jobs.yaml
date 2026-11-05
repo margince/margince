@@ -94,6 +94,12 @@ queues:
     max_workers: 1
     reason: Bounded database corrections run apart from interactive jobs and serialize across processes with a database lock.
   default: {max_workers: 5}
+  mail_admission:
+    max_workers: 1
+    reason: Admission recovery must run while every history reader is waiting on a provider.
+  mail_history:
+    max_workers: 2
+    reason: History pages wait on providers and must leave short maintenance jobs able to run.
   comms_send:
     max_workers: 3
     reason: >-
@@ -363,46 +369,26 @@ kinds:
     role: worker
     fleet: true
     go_type: CaptureBackfillReconcileArgs
-    queue: default
+    queue: mail_admission
     timeout: 2m
     opts_owner: caller
-    cadence: 24h
+    cadence: 15s
     registration: {when: [GmailRegistry], absent: registers_nothing}
     reason: >-
-      The nightly pass ADR-0063 called for and nobody built: it puts a paging
-      job back behind every backfill run that is still live.
-
-      IT EXISTS BECAUSE TWO CORRECT DECISIONS MEET BADLY. capture_backfill is
-      inserted with one attempt, because the run ROW owns the outcome and a
-      River retry would re-page a run the engine already ended; and a run is
-      protected by a unique index over the connection while it is queued or
-      running, so one import cannot start on top of another. If that single
-      attempt is ever lost to something the engine never sees — a worker killed
-      mid-page, a rescue, a queue that dropped it — the row stays live with no
-      job behind it, and the index then refuses every future StartBackfill for
-      that connection. The import stops and the only symptom is a contact who
-      cannot start one.
-
-      It re-enqueues rather than deciding anything: the insert carries the same
-      ByArgs uniqueness the start does, so a run whose job is alive dedupes onto
-      it and a run whose job is gone gets a new one. Nightly rather than
-      minutely because the failure it repairs is rare and its cost is a delay,
-      not a loss — and a pass that ran often enough to notice quickly would
-      spend its every tick confirming that nothing was wrong.
-
-      Two minutes bounds an enumeration and an insert per live run. It does no
-      paging itself: the job it queues does that, under its own eight.
+      Restore durable paging jobs and admit queued imports without exceeding
+      the installation budget. Ownership comes from advisory locks and execution
+      generations, so a delayed job or an old timestamp never proves an owner died.
 
   capture_backfill:
     role: worker
     go_type: CaptureBackfillArgs
-    queue: default
+    queue: mail_history
     timeout: 8m
     opts_owner: caller
     registration: {when: [GmailRegistry], absent: registers_nothing}
     fault:
       nil_after_logging: >-
-        the backfill ROW owns the outcome: RunBackfillStep ends the run and
+        the backfill ROW owns the outcome: RunBackfillExecution ends the run and
         records the fault class on the row against its own give-up cap, on a
         context detached from the job because the job context dying mid-page
         is the commonest fault. A River retry would re-page a run the engine
@@ -410,6 +396,7 @@ kinds:
     args:
       Workspace: id
       BackfillID: id
+      ExecutionGeneration: {scalar: true, reason: "A monotonic execution number fences replaced paging jobs and carries no mail content."}
     reason: >-
       One page of up to 100 large real messages fetched serially over the
       network, then a snooze. Without the headroom the job context dies mid-page

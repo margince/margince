@@ -11,6 +11,7 @@ import (
 
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
@@ -37,6 +38,7 @@ func (w sessionBudgetWorker[T]) Work(ctx context.Context, job *river.Job[T]) err
 	if w.slots != nil {
 		ctx = context.WithValue(ctx, sessionBudgetKey{}, w.slots)
 	}
+	ctx = database.WithSessionBudget(ctx, takeSessionSlot)
 	return jobs.FaultForKind(ctx, job.Args.Kind(), w.work.Work(ctx, job))
 }
 

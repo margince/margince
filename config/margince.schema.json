@@ -548,6 +548,22 @@
             "type": "string"
           }
         },
+        "history_concurrency": {
+          "description": "Limit on history imports running at once across the installation. Use the same value in every process.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 1
+        },
+        "history_hold": {
+          "description": "Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
+        },
         "mail_sharing": {
           "description": "Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it.",
           "type": [

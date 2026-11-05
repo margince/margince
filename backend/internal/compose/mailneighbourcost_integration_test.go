@@ -22,9 +22,9 @@ import (
 //nolint:tagliatelle // PostgreSQL EXPLAIN defines these JSON keys.
 type neighbourPlanNode struct {
 	Relation    string              `json:"Relation Name"`
-	Rows        int                 `json:"Actual Rows"`
-	Filtered    int                 `json:"Rows Removed by Filter"`
-	Loops       int                 `json:"Actual Loops"`
+	Rows        float64             `json:"Actual Rows"`
+	Filtered    float64             `json:"Rows Removed by Filter"`
+	Loops       float64             `json:"Actual Loops"`
 	SharedHits  int                 `json:"Shared Hit Blocks"`
 	SharedReads int                 `json:"Shared Read Blocks"`
 	Plans       []neighbourPlanNode `json:"Plans"`
@@ -36,8 +36,8 @@ type neighbourExplanation struct {
 	ExecutionMS float64           `json:"Execution Time"`
 }
 
-func (p neighbourPlanNode) activityRows() int {
-	rows := 0
+func (p neighbourPlanNode) activityRows() float64 {
+	rows := 0.0
 	if p.Relation == "activity" {
 		rows = (p.Rows + p.Filtered) * p.Loops
 	}
@@ -61,8 +61,26 @@ func (p *neighbourPlanTx) Query(ctx context.Context, sql string, args ...any) (p
 
 func TestMailNeighboursSeekPastUnrelatedHistory(t *testing.T) {
 	e := integration.SetupSearch(t)
+	// A stale all-null thread statistic must not send point lookups through the partial thread index.
+	if _, err := e.Owner.Exec(e.Admin(), `INSERT INTO activity (kind,source,captured_by)
+ SELECT 'email','manual','test:neighbour-index' FROM generate_series(1,10000)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Owner.Exec(e.Admin(), "ANALYZE activity"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Owner.Exec(e.Admin(), `DELETE FROM activity WHERE captured_by='test:neighbour-index'`); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := e.Owner.Exec(e.Admin(), "ANALYZE activity,activity_identity,activity_mail_reference"); err != nil {
 		t.Fatal(err)
+	}
+	var nullFraction float64
+	if err := e.Owner.QueryRow(e.Admin(), `SELECT null_frac FROM pg_stats WHERE schemaname=current_schema() AND tablename='activity' AND attname='thread_key'`).Scan(&nullFraction); err != nil {
+		t.Fatal(err)
+	}
+	if nullFraction != 1 {
+		t.Fatalf("thread_key null fraction=%v want=1", nullFraction)
 	}
 	var candidates []ids.ActivityID
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -130,8 +148,11 @@ func checkNeighbourPlan(t *testing.T, e *integration.SearchEnv, tx pgx.Tx, candi
 		t.Fatalf("plans=%d want=1", len(plans))
 	}
 
-	if visited := plans[0].Plan.activityRows(); visited > 10 {
-		t.Fatalf("neighbour lookup visited %d activity rows for three candidates: %s", visited, measured.plan)
+	if visited := plans[0].Plan.activityRows(); visited > float64(3+len(candidates)) {
+		t.Fatalf("neighbour lookup visited %.2f activity rows for three candidates: %s", visited, measured.plan)
+	}
+	if buffers := plans[0].Plan.SharedHits + plans[0].Plan.SharedReads; buffers > 100 {
+		t.Fatalf("neighbour lookup used %d shared buffers for three candidates", buffers)
 	}
 	t.Logf("statistics=%s unrelated_messages=10000 shared_hits=%d shared_reads=%d execution_ms=%.3f plan=%s", statistics, plans[0].Plan.SharedHits, plans[0].Plan.SharedReads, plans[0].ExecutionMS, measured.plan)
 	return nil

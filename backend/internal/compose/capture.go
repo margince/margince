@@ -100,7 +100,9 @@ type CaptureConfig struct {
 	// resolved against its default by CaptureConfigFromDeploy. Zero is no cap,
 	// which is both the shipped behaviour and what the zero-value
 	// constructions below mean.
-	MaxBackfillMonths int
+	MaxBackfillMonths  int
+	HistoryConcurrency int
+	HistoryHold        bool
 	// Now is the clock the deal question judges a mail's currentness by. Nil
 	// is the wall clock.
 	Now func() time.Time
@@ -177,6 +179,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 		// leaves the product's own ceiling, which is what an enumerate-only
 		// construction and every deployment that has not set one get.
 		WithMaxBackfillMonths(cfg.MaxBackfillMonths).
+		WithBackfillAdmission(cfg.HistoryConcurrency, cfg.HistoryHold).
 		// The digest's projects section is answered here because its reads
 		// span the deals module's tables (digestprojects.go).
 		WithDigestProjects(digestProjectsSource)

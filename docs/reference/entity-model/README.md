@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4301 |
+| Columns | 4306 |
 | Foreign keys | 591 |
 | Owning areas | 38 |
 
@@ -200,7 +200,7 @@ erDiagram
 | [`capture_answered_sweep_cursor`](capture.md#capture_answered_sweep_cursor) | capture | 3 | 0 |
 | [`capture_auto_enrich_budget`](capture.md#capture_auto_enrich_budget) | capture | 2 | 0 |
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
-| [`capture_backfill`](capture.md#capture_backfill) | capture | 25 | 2 |
+| [`capture_backfill`](capture.md#capture_backfill) | capture | 30 | 2 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
 | [`capture_connection`](capture.md#capture_connection) | capture | 30 | 2 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |

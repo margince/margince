@@ -1870,7 +1870,10 @@ public.capture_auto_enrich_state.next_attempt_at timestamp with time zone gen=- 
 public.capture_auto_enrich_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_auto_enrich_state_pkey CREATE UNIQUE INDEX capture_auto_enrich_state_pkey ON public.capture_auto_enrich_state USING btree (company_id)
 public.capture_backfill acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_backfill.admission_slot integer gen=- def=-
 public.capture_backfill.after_date date NOT NULL gen=- def=-
+public.capture_backfill.backoff_is_mailbox_scoped boolean NOT NULL gen=- def=false
+public.capture_backfill.capture_backfill_admission_slot_check CHECK ((admission_slot > 0))
 public.capture_backfill.capture_backfill_connection_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
 public.capture_backfill.capture_backfill_pkey PRIMARY KEY (id)
 public.capture_backfill.capture_backfill_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'error'::text, 'cancelled'::text])))
@@ -1884,6 +1887,9 @@ public.capture_backfill.contacts_created integer NOT NULL gen=- def=0
 public.capture_backfill.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_backfill.cursor jsonb gen=- def=-
 public.capture_backfill.dedupe_candidates integer NOT NULL gen=- def=0
+public.capture_backfill.execution_due_at timestamp with time zone gen=- def=-
+public.capture_backfill.execution_generation bigint NOT NULL gen=- def=0
+public.capture_backfill.execution_owner_pid integer gen=- def=-
 public.capture_backfill.failed integer NOT NULL gen=- def=0
 public.capture_backfill.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_backfill.inflight_captured integer NOT NULL gen=- def=0
@@ -8927,6 +8933,7 @@ public.uq_brief_item_run_deal CREATE UNIQUE INDEX uq_brief_item_run_deal ON publ
 public.uq_brief_item_run_rank CREATE UNIQUE INDEX uq_brief_item_run_rank ON public.brief_item USING btree (brief_run_id, rank)
 public.uq_brief_run_user_day CREATE UNIQUE INDEX uq_brief_run_user_day ON public.brief_run USING btree (user_id, local_day)
 public.uq_bulk_operation_undo_of CREATE UNIQUE INDEX uq_bulk_operation_undo_of ON public.bulk_operation USING btree (undo_of) WHERE (undo_of IS NOT NULL)
+public.uq_capture_backfill_admission_slot CREATE UNIQUE INDEX uq_capture_backfill_admission_slot ON public.capture_backfill USING btree (admission_slot) WHERE ((status = 'running'::text) AND (admission_slot IS NOT NULL))
 public.uq_capture_backfill_live CREATE UNIQUE INDEX uq_capture_backfill_live ON public.capture_backfill USING btree (connection_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
 public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value) NULLS NOT DISTINCT
 public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain)

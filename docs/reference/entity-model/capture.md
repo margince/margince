@@ -118,12 +118,14 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_backfill
 
-25 columns · primary key `(id)` · referenced by 2 foreign keys
+30 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `admission_slot` | `integer` |  |  |
 | `after_date` | `date` | yes |  |
+| `backoff_is_mailbox_scoped` | `boolean`, default `false` | yes |  |
 | `captured` | `integer`, default `0` | yes |  |
 | `companies_created` | `integer`, default `0` | yes |  |
 | `completed_at` | `timestamp with time zone` |  |  |
@@ -132,6 +134,9 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `contacts_created` | `integer`, default `0` | yes |  |
 | `cursor` | `jsonb` |  |  |
 | `dedupe_candidates` | `integer`, default `0` | yes |  |
+| `execution_due_at` | `timestamp with time zone` |  |  |
+| `execution_generation` | `bigint`, default `0` | yes |  |
+| `execution_owner_pid` | `integer` |  |  |
 | `failed` | `integer`, default `0` | yes |  |
 | `inflight_captured` | `integer`, default `0` | yes |  |
 | `inflight_scanned` | `integer`, default `0` | yes |  |
@@ -156,6 +161,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `capture_backfill_admission_slot_check`: `CHECK ((admission_slot > 0))`
 - `capture_backfill_status_check`: `CHECK ((status = ANY (ARRAY['queued', 'running', 'done', 'error', 'cancelled'])))`
 - `capture_backfill_window_months_check`: `CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 36, 60, 84, 120])))`
 
@@ -163,6 +169,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_backfill_pkey`: `unique, btree (id)`
 - `idx_capture_backfill_conn`: `btree (connection_id, created_at DESC)`
+- `uq_capture_backfill_admission_slot`: `unique, btree (admission_slot) WHERE ((status = 'running') AND (admission_slot IS NOT NULL))`
 - `uq_capture_backfill_live`: `unique, btree (connection_id) WHERE (status = ANY (ARRAY['queued', 'running']))`
 
 **Triggers**

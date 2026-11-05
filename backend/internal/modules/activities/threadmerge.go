@@ -59,7 +59,7 @@ func MailNeighboursTx(
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	selfPos, messagePos, referencesPos := arg(self), arg(messageID), arg(referenced)
 	identityPos, sourcePos := arg(IdentityKindMail), arg(connector.EmailSourceSystem)
-	// Keep candidate lookups indexed even before newly populated reference tables have statistics.
+	// Fence point probes from flattening; apply row filters outside so stale statistics cannot favor a partial index.
 	query := fmt.Sprintf(`
   WITH candidates AS (
    SELECT activity_id AS id FROM activity_identity
@@ -76,10 +76,10 @@ func MailNeighboursTx(
   )
   SELECT a.id FROM candidates c
   JOIN LATERAL (
-   SELECT id FROM activity WHERE id = c.id
-    AND id <> $%[7]d AND archived_at IS NULL AND thread_key IS NOT NULL
+   SELECT id, archived_at, thread_key FROM activity WHERE id = c.id
    OFFSET 0
-  ) a ON true`,
+  ) a ON true
+  WHERE a.id <> $%[7]d AND a.archived_at IS NULL AND a.thread_key IS NOT NULL`,
 		identityPos, referencesPos, sourcePos, referencesPos, messagePos, messagePos, selfPos)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {

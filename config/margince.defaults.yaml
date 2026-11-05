@@ -85,6 +85,8 @@ capture:
   confidentiality_pass_cap: 40
   freemail_extra: null
   freemail_never: null
+  history_concurrency: 1
+  history_hold: false
   mail_sharing: true
   mail_sync_interval_seconds: 120
   max_backfill_months: 0

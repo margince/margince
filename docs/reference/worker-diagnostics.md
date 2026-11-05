@@ -166,3 +166,34 @@ The byte budget counts input, not all process memory. The parser and Go runtime 
 and the runtime may keep freed bytes before returning them to the system. Use
 [the mail import profile](../how-to/profile-mail-import.md) with the pool and other jobs running
 before changing how many imports run together.
+
+## Mail import queue
+
+`capture.history_concurrency` bounds running history imports across the installation, with a default
+of one. Every process must use the same value. Requests beyond that budget stay `queued` and read no
+mail. `capture.history_hold` accepts requests but starts no new page. Both keys are listed in
+[configuration](configuration.md).
+
+The admission pass has its own worker queue, so provider calls cannot fill its worker slots.
+It runs every 15 seconds and restores work only after the old page's database locks are free.
+Each page has an `execution_generation`. Its `cursor`, retry deadline and next River job commit
+together. An older job cannot write the newer page's counts or mail. The page checks its locks once
+a second so a lost connection or a cancelled run stops provider work.
+
+A lower limit returns extra imports to `queued` after their current pages release their locks.
+Their saved progress and provider retry deadlines remain in place. A mailbox-only quota wait can return its
+slot to another ready import. Shared or unknown limits keep the slot. A queued import cannot start
+before its retry deadline.
+
+When a run ends, its slot is offered to the next request. Smaller known imports go first;
+requests waiting an hour move first in age order. The history queue's worker count also limits how
+many pages can run at once; raising the admission limit does not add workers.
+
+Apply the schema changes before the new worker. Stop older history workers and let their current
+pages finish before starting the new workers. Existing jobs with no `execution_generation` become
+admission requests. Never run old and new history workers together.
+
+To return to an older binary, hold new pages and drain the history workers first. Keep the added
+columns, saved progress and queued River jobs. An older binary does not serve the new queues, but its old
+reconcile pass can create paging jobs with no admission limit. Keep history imports disabled while
+running an older binary. Return to the new workers before resuming queued imports.
