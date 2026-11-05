@@ -3184,6 +3184,8 @@ export const en = {
   "rel.addStakeholder": "Add stakeholder",
   "rel.dealStakeholders": "Stakeholders",
   "rel.dealStakeholdersEmpty": "No stakeholders on this deal",
+  "rel.employerUnavailable":
+    "Employer details are unavailable. Type to search all open deals.",
   "rel.kind": "Kind",
   "rel.saveDone": "Relationship saved",
   "rel.role": "Role",
