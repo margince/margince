@@ -36,11 +36,12 @@ the one in `CLA.md`.
 
 ## `cache-warm.yml`
 
-The only writer of the Go build cache. A red or cancelled run makes the next lane slower, and costs
-nothing else. It is a separate workflow because a merge queue build cannot fill the cache.
-`actions/cache` scopes a write to the branch that writes plus the default branch, and a queue ref
-does not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
-for why it runs on a schedule and not on each push.
+The only writer of the Go build cache and of the golangci analysis cache, and one of the writers of
+the gate binaries. A red or cancelled run makes the next lane slower, and costs nothing else. It is a
+separate workflow because a merge queue build cannot fill the cache. `actions/cache` scopes a write
+to the branch that writes plus the default branch, and a queue ref does not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
+for why it runs on a schedule and not on each push. Why `ci.yml` saves neither lint cache: [The lint
+caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-only).
 
 ## `merge-attest.yml`
 
