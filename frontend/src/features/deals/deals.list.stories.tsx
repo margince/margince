@@ -34,7 +34,8 @@ const deal = {
 };
 
 // The board is the list surface's body, so the rail, count and dials stand
-// above it as above the table: both views read one query.
+// above it as above the table. Without them, a reader cannot see or undo what
+// narrowed the pipeline.
 const boardStages = [
   {
     id: "s1",
@@ -227,8 +228,9 @@ function boardWithTwoPipelines() {
 }
 
 // The surface fades in from nothing, so the count is waited for, not read once.
+// It is the stage report's 7 + 2, not the cards drawn.
 async function expectCountLine(canvasElement: HTMLElement) {
-  const count = await within(canvasElement).findByText("3 deals in Sales");
+  const count = await within(canvasElement).findByText("9 deals in Sales");
   await waitFor(() => expect(count).toBeVisible());
 }
 

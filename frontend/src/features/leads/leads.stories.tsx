@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { standardViews } from "../../components/recordlist";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -512,6 +513,7 @@ export const LeadPresentationComponents: Story = {
           <StatusBadge status="contacted" />
         </div>
         <LeadBoard
+          query={UNNARROWED_LIST_QUERY}
           rows={[
             { ...lead, status: "new", score: 82 },
             {

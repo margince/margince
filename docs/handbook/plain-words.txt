@@ -812,7 +812,6 @@ owner
 owner's
 owners
 ownership
-owner’s
 package
 page
 paid
