@@ -20,12 +20,12 @@ import { useDealChoice } from "./composedeal";
 import { type ComposeDock, ComposeDockContext } from "./composedockcontext";
 import { useComposeFields } from "./composefields";
 import { useAccountRecipient, useComposeRecords } from "./composefiling";
+import { groundingOf } from "./composelinks";
 import { useRecipientOffer } from "./composerecipientoffer";
 import type { RelinkKind } from "./composerelink";
 import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
-
 import { ScheduleDialog } from "./composeschedule";
-import { groundingOf, sendWording, useComposeSend } from "./composesend";
+import { sendWording, useComposeSend } from "./composesend";
 import {
   useAnswerTarget,
   useConversationSwitch,
