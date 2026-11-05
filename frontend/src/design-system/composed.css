@@ -23,6 +23,7 @@
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
+  position: relative;
   overflow-x: auto;
   padding-bottom: var(--space-2);
 }
