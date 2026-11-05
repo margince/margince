@@ -1418,6 +1418,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.industry": "Branche",
   "reporting.allIndustries": "Alle Branchen",
   "reporting.valueBasis": "Wertbasis",
+  "reporting.filtersMore": "Filter",
+  "reporting.filtersActive": "Filter · {active}",
   "reporting.basis.all": "Gesamter Wert",
   "reporting.basis.software": "Nur Software",
   "reporting.basis.implementation": "Nur Umsetzung",
@@ -7373,7 +7375,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftGoneBody":
     "Der Entwurf wurde dort gesendet oder gelöscht. Beim Speichern bleibt der Text auf dem Bildschirm als neuer Entwurf erhalten.",
   "compose.savedDraftFailed":
-    "Der Entwurf konnte nicht gespeichert werden. Speichere den Entwurf erneut oder schließe den Dialog noch einmal, um den Text zu verwerfen.",
+    "Der Entwurf wurde nicht gespeichert. Wähle „Erneut versuchen“ oder schließe noch einmal, um den Text zu verwerfen.",
+  "compose.savedDraftAutosaveFailed":
+    "Das Speichern des Entwurfs wurde nicht abgeschlossen. Es wird erneut versucht, sobald du weiterschreibst oder wieder online bist.",
+  "compose.savedDraftAutosaveRefused":
+    "Der Entwurf wurde nicht gespeichert. Wähle „Erneut versuchen“ oder schreibe weiter, um es erneut zu versuchen.",
+  "compose.savedDraftFilesUnavailable_one":
+    "{count} Datei konnte nicht wiederhergestellt werden.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} Dateien konnten nicht wiederhergestellt werden.",
+  "compose.sendWaitsForAddress":
+    "Korrigiere oder entferne den Text, der keine E-Mail-Adresse ist.",
+  "compose.notAnAddress_one":
+    "Keine E-Mail-Adresse: {parts}. Korrigiere oder entferne sie.",
+  "compose.notAnAddress_other":
+    "Keine E-Mail-Adressen: {parts}. Korrigiere oder entferne sie.",
   "compose.savedDraftLoad": "Gespeicherte Fassung laden",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":
@@ -8016,6 +8032,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.deliveryCoversAll":
     "Diese Zahlen umfassen jedes Projekt, das du lesen kannst.",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
+  "analytics.board.rail": "Ausblick und nächste Schritte",
   "analytics.attentionNoOwner": "Kein Verantwortlicher",
   "analytics.attentionOutOfDate": "veraltet, seit der Prüfung geändert",
   "analytics.attentionAtStake": "{amount} betroffen",
@@ -14653,6 +14670,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Die Abschlusschance, ab der ein offener Deal mit bestätigtem Abschlussdatum als wahrscheinlich zählt.",
   "forecast.landing": "Erwartetes Ergebnis",
+  "forecast.landingSection": "Wo der Zeitraum landet",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingUnrecorded": "Nicht erfasst",
   "forecast.basis.likely": "Gewonnen + wahrscheinliche Deals",
@@ -14671,6 +14689,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.callBelowLine":
     "Unter den bereits gewonnenen {won}, wie erfasst gezeigt",
   "forecast.model.quarter": "Modelliertes Quartalsergebnis",
+  "forecast.model.short": "Mittlere 80 % der Ergebnisse",
   "forecast.model.month": "Modelliertes Monatsergebnis",
   "forecast.model.week": "Modelliertes Wochenergebnis",
   "forecast.model.value": "{low} bis {high}",
@@ -17320,7 +17339,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "richtext.bulletList": "Aufzählung",
   "richtext.numberList": "Nummerierte Liste",
   "richtext.link": "Link",
-  "richtext.linkPrompt": "Link-URL (leer lassen, um den Link zu entfernen)",
+  "richtext.linkAdd": "Link einfügen",
+  "richtext.linkEdit": "Link bearbeiten",
+  "richtext.linkAddress": "Web- oder E-Mail-Adresse",
+  "richtext.linkPlaceholder": "example.com oder name@example.com",
+  "richtext.linkApply": "Anwenden",
+  "richtext.linkRemove": "Link entfernen",
+  "richtext.linkRefused":
+    "Das ist keine Web- oder E-Mail-Adresse. Gib eine ein, etwa example.com oder name@example.com.",
   "contact.composer.intentAgenda":
     "eine Agenda für den anstehenden Termin vorschlagen",
   "contact.composer.intentReply":
@@ -20574,6 +20600,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.shortfall": "Erwartete Lücke {amount}",
   "analytics.hero.surplus": "Erwarteter Überschuss {amount}",
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
+  "analytics.hero.ofTarget": "Ziel von {target}",
+  "analytics.hero.short": "{amount} unter Ziel",
+  "analytics.hero.over": "{amount} über Ziel",
+  "analytics.trajectory.label": "Gewonnener Umsatz im Zeitraum",
+  "analytics.trajectory.today": "Heute · {date}",
+  "analytics.trajectory.through": "Bis {date}",
+  "analytics.trajectory.target": "Ziel {amount}",
+  "analytics.trajectory.projection": "{amount} erwartet",
+  "analytics.trajectory.range": "Modellierter Abschluss",
   "analytics.overview.more": "Mehr",
   "analytics.outlook.valuedCount": "{included} von {eligible} mit Wert",
   "analytics.outlook.periodPipeline":
@@ -20583,6 +20618,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.outlook.team": "Ausblick zur Teamakquise",
   "analytics.outlook.prospecting": "Akquiseausblick",
   "analytics.outlook.records": "Zugehörige Datensätze anzeigen",
+  "analytics.outlook.more": "Ganzen Ausblick lesen",
   "analytics.assessment.refresh": "Einschätzung erneuern",
   "analytics.assessment.retry": "Erneut versuchen",
   "analytics.assessment.evidenceTitle": "Worauf die Einschätzung beruht",

@@ -62,6 +62,7 @@ export function MetricReading({
   id,
   label,
   detail,
+  basis,
   narrow = "row",
   onEvidence,
 }: Readonly<{
@@ -69,6 +70,8 @@ export function MetricReading({
   id: Metric["id"];
   label?: string;
   detail?: ReactNode;
+  // What the figure rests on, folded behind its receipt.
+  basis?: ReactNode;
   narrow?: Parameters<typeof StatCard>[0]["narrow"];
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
@@ -82,6 +85,7 @@ export function MetricReading({
     <StatCard
       narrow={narrow}
       label={label ?? metricName(id)}
+      basis={basis}
       value={
         hidden
           ? t("analytics.prospect.withheld")

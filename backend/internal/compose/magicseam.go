@@ -202,7 +202,7 @@ func (g undoGrants) holds(ctx context.Context, row AuditRow) bool {
 	key := row.EntityType + "/" + string(grant)
 	held, asked := g[key]
 	if !asked {
-		held = auth.Require(ctx, row.EntityType, grant) == nil
+		held = auth.Allows(ctx, row.EntityType, grant)
 		g[key] = held
 	}
 	return held

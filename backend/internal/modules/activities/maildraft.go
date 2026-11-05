@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // MailDraftAnchor is what the composer opened against.
@@ -46,6 +47,11 @@ type MailDraftContent struct {
 	Subject  string
 	Body     string
 	HTMLBody string
+	// AttachmentIDs, Context and Schedule are what the send would be asked
+	// for. A saved draft holds only files its author could attach when it saved.
+	AttachmentIDs []ids.UUID
+	Context       commsauthz.Category
+	Schedule      *SendSchedule
 }
 
 // MailDraft is one saved draft.
@@ -60,6 +66,8 @@ type MailDraft struct {
 	// Grounding lists the records an agent wrote these words from. It outlives
 	// the author's edits, because edited words still rest on what they read.
 	Grounding []MailDraftAnchor
+	// Files is what the reader may attach of the chosen files; only a read or a save resolves it.
+	Files     resolvedFiles
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -78,7 +86,8 @@ const (
 )
 
 const mailDraftColumns = `id, anchor_type, anchor_id, to_addresses, cc_addresses, bcc_addresses,
-	subject, body, html_body, version, agent_drafted, grounding, created_at, updated_at`
+	subject, body, html_body, version, agent_drafted, grounding, attachment_ids,
+	communication_context, scheduled_at, scheduled_tz, created_at, updated_at`
 
 // InvalidMailDraftError refuses a draft the store will not keep.
 type InvalidMailDraftError struct {
@@ -136,6 +145,9 @@ func (s *Store) GetMailDraft(ctx context.Context, anchor MailDraftAnchor) (MailD
 	if discarded {
 		return MailDraft{}, apperrors.ErrNotFound
 	}
+	if out.Files, err = s.draftFilesOf(ctx, out.Content.AttachmentIDs); err != nil {
+		return MailDraft{}, err
+	}
 	return out, nil
 }
 
@@ -149,11 +161,11 @@ func (s *Store) SaveMailDraft(ctx context.Context, anchor MailDraftAnchor, conte
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return MailDraft{}, err
 	}
-	content = canonicalDraft(content)
-	if err := validateDraft(anchor, content); err != nil {
+	author, err := draftAuthor(ctx)
+	if err != nil {
 		return MailDraft{}, err
 	}
-	author, err := draftAuthor(ctx)
+	content, files, err := s.prepareDraft(ctx, anchor, content)
 	if err != nil {
 		return MailDraft{}, err
 	}
@@ -169,21 +181,28 @@ func (s *Store) SaveMailDraft(ctx context.Context, anchor MailDraftAnchor, conte
 		out, err = replaceMailDraft(ctx, tx, author, anchor, content, *expected)
 		return err
 	})
-	return out, err
+	if err != nil {
+		return MailDraft{}, err
+	}
+	out.Files = files
+	return out, nil
 }
 
 func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, content MailDraftContent) (MailDraft, error) {
+	at, tz := draftScheduleColumns(content.Schedule)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	query := fmt.Sprintf(`
 		INSERT INTO mail_draft (id, author_id, anchor_type, anchor_id, to_addresses, cc_addresses,
-		                        bcc_addresses, subject, body, html_body)
-		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)
+		                        bcc_addresses, subject, body, html_body, attachment_ids,
+		                        communication_context, scheduled_at, scheduled_tz)
+		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)
 		ON CONFLICT (author_id, anchor_type, anchor_id) DO NOTHING
 		RETURNING `+mailDraftColumns,
 		arg(ids.NewV7()), arg(author), arg(string(anchor.Type)), arg(anchor.ID),
 		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
-		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)))
+		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
+		arg(content.AttachmentIDs), arg(nullableText(string(content.Context))), arg(at), arg(tz))
 	row := tx.QueryRow(ctx, query, args...)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
@@ -201,17 +220,20 @@ func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Mai
 }
 
 func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, content MailDraftContent, expected int64) (MailDraft, error) {
+	at, tz := draftScheduleColumns(content.Schedule)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	query := fmt.Sprintf(`
 		UPDATE mail_draft
 		   SET to_addresses = $%d, cc_addresses = $%d, bcc_addresses = $%d,
-		       subject = $%d, body = $%d, html_body = $%d,
+		       subject = $%d, body = $%d, html_body = $%d, attachment_ids = $%d,
+		       communication_context = $%d, scheduled_at = $%d, scheduled_tz = $%d,
 		       version = version + 1, agent_drafted = false, updated_at = now()
 		 WHERE author_id = $%d AND anchor_type = $%d AND anchor_id = $%d AND version = $%d
 		RETURNING `+mailDraftColumns,
 		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
 		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
+		arg(content.AttachmentIDs), arg(nullableText(string(content.Context))), arg(at), arg(tz),
 		arg(author), arg(string(anchor.Type)), arg(anchor.ID), arg(expected))
 	row := tx.QueryRow(ctx, query, args...)
 	saved, err := scanMailDraft(row)
@@ -378,7 +400,7 @@ func draftAuthor(ctx context.Context) (ids.UUID, error) {
 	return actor.UserID, nil
 }
 
-func validateDraft(anchor MailDraftAnchor, content MailDraftContent) error {
+func validateDraft(anchor MailDraftAnchor, content MailDraftContent, now time.Time) error {
 	if err := checkDraftAnchor(anchor); err != nil {
 		return err
 	}
@@ -398,7 +420,7 @@ func validateDraft(anchor MailDraftAnchor, content MailDraftContent) error {
 	if utf8.RuneCountInString(content.Subject) > maxDraftSubject {
 		return &InvalidMailDraftError{Field: fieldSubject, Reason: fmt.Sprintf("is longer than %d characters", maxDraftSubject)}
 	}
-	return nil
+	return validateDraftSending(content, now)
 }
 
 // canonicalDraft keeps each address the way the send path compares it, so
@@ -449,10 +471,14 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 		anchorType string
 		html       *string
 		grounding  []draftGround
+		claimed    *string
+		at         *time.Time
+		tz         *string
 	)
 	err := row.Scan(&out.ID, &anchorType, &out.Anchor.ID, &out.Content.To, &out.Content.Cc,
 		&out.Content.Bcc, &out.Content.Subject, &out.Content.Body, &html, &out.Version,
-		&out.AgentDrafted, &grounding, &out.CreatedAt, &out.UpdatedAt)
+		&out.AgentDrafted, &grounding, &out.Content.AttachmentIDs, &claimed, &at, &tz,
+		&out.CreatedAt, &out.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MailDraft{}, apperrors.ErrNotFound
 	}
@@ -465,6 +491,10 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 	}
 	for _, ground := range grounding {
 		out.Grounding = append(out.Grounding, MailDraftAnchor(ground))
+	}
+	out.Content.Context = commsauthz.Category(orEmpty(claimed))
+	if at != nil && tz != nil {
+		out.Content.Schedule = &SendSchedule{At: *at, TZ: *tz}
 	}
 	return out, nil
 }

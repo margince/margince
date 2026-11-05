@@ -288,6 +288,24 @@ it("keeps edits made while the selected email's AI draft is in flight", async ()
   expect(messageText("Body")).toBe("My answer written while waiting");
 });
 
+it("frees Send once a switch leaves the reply whose Cc held refused text", async () => {
+  const user = userEvent.setup();
+  setup();
+  await pick(user, /Pricing/);
+  await screen.findByDisplayValue("Re: Pricing");
+  await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+  await user.type(screen.getByRole("combobox", { name: "Cc" }), "nope{Enter}");
+  const send = () =>
+    screen.getByRole<HTMLButtonElement>("button", { name: "Send" });
+  expect(send().disabled).toBe(true);
+
+  await pick(user, /Re: Delivery/);
+  await screen.findByDisplayValue("Re: Delivery");
+
+  expect(send().disabled).toBe(false);
+  expect(screen.queryByText(/Not an email address/)).toBeNull();
+});
+
 it("preserves recipient choices and instructions separately for each reply", async () => {
   const user = userEvent.setup();
   setup();
