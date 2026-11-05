@@ -129,7 +129,7 @@ func (e *qualifyingEnv) verdictSince(t *testing.T, since time.Time) Verdict {
 	var out Verdict
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = VerdictForContact(e.ctx, tx, e.contact.String(), e.correspondence, since, MarketingContext{})
+		out, err = GuardVerdictForContact(e.ctx, tx, e.contact.String(), e.correspondence, since, MarketingContext{})
 		return err
 	}); err != nil {
 		t.Fatalf("reading the verdict: %v", err)

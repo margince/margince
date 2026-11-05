@@ -174,6 +174,12 @@ func (s *Store) allowAdmittedTx(
 	if err != nil {
 		return ids.UUID{}, err
 	}
+	// The vouch serves the reps of the recorder's own entity and no other, so
+	// a colleague of another legal entity never sends on it.
+	entity, err := sendingEntityTx(ctx, tx, senderOf(ctx))
+	if err != nil {
+		return ids.UUID{}, err
+	}
 
 	// ON CONFLICT DO NOTHING would be wrong here too: a second vouch is a
 	// second occasion somebody decided to overrule the engine, possibly for a
@@ -182,10 +188,10 @@ func (s *Store) allowAdmittedTx(
 	var overrideID ids.UUID
 	if err = tx.QueryRow(ctx, `
 		INSERT INTO communication_override
-		    (`+sub.column+`, category, reason, decided_by_level, captured_by)
-		VALUES ($1, $2, $3, $4, $5)
+		    (`+sub.column+`, category, reason, decided_by_level, captured_by, legal_entity_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id`,
-		sub.id, in.Category, in.Reason, string(level), by).Scan(&overrideID); err != nil {
+		sub.id, in.Category, in.Reason, string(level), by, entity).Scan(&overrideID); err != nil {
 		return ids.UUID{}, fmt.Errorf("consent: recording the override: %w", err)
 	}
 

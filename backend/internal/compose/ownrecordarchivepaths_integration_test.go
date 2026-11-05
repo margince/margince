@@ -121,7 +121,7 @@ func TestACompanyAnotherOwnersDealNamesIsAManagersToArchive(t *testing.T) {
 }
 
 // An owner change that commits while the owner's archive waits on the row is
-// read by that archive: it runs on the authority the row holds when written.
+// read by that archive. It runs on the authority the row holds when written.
 func TestAnArchiveWaitingOnAnOwnerChangeReadsTheNewOwner(t *testing.T) {
 	e := integration.Setup(t)
 	rep := ownerRep(e, e.Rep1)

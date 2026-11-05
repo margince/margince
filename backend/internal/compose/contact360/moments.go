@@ -112,7 +112,7 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 		return err
 	}
 	moment := said.deriveMomentPast(ctx, now, out, dismissed, said.proposer(ctx, out, followUps, dismissed))
-	momentaction.Withhold(ctx, string(said.Lang()), &moment)
+	momentaction.WithholdContact(ctx, string(said.Lang()), &moment, out.Contact.Attachable != nil && *out.Contact.Attachable)
 	out.Moment = &moment
 	return nil
 }

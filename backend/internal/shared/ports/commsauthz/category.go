@@ -141,3 +141,10 @@ func (c Category) ServesTheSubject() bool {
 // written carries its original category forward, so the column must accept the
 // whole vocabulary even though this door will not write every member of it.
 func (c Category) KnownForOverride() bool { return c.Valid() && !c.ServesTheSubject() }
+
+// MarketingPurposeClasses are the purpose classes whose withdrawal stops
+// marketing. Consent reads a withdrawal through them, and privacy keeps one on
+// the subject's addresses when it anonymizes the record.
+func MarketingPurposeClasses() []string {
+	return []string{"marketing", "phone_outreach"}
+}

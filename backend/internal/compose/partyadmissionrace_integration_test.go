@@ -12,6 +12,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -96,5 +98,47 @@ func TestAnOlderAdmissionCannotRetireNewerSourceEvidence(t *testing.T) {
 	}
 	if e.WsCount(t, `SELECT count(*) FROM contact_email WHERE lower(email)='bob@buyer.test'`) != 1 {
 		t.Fatal("recovery duplicated or lost the recipient")
+	}
+}
+
+// authorityBeforeRecords counts the record locks the first in-transaction
+// authority read finds its transaction already holding.
+type authorityBeforeRecords struct {
+	capture.PartyAuthority
+	once     sync.Once
+	read     bool
+	rowLocks int
+	err      error
+}
+
+func (a *authorityBeforeRecords) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	a.once.Do(func() {
+		a.read = true
+		a.err = tx.QueryRow(ctx, `SELECT count(*) FROM pg_locks WHERE pid = pg_backend_pid()
+			AND locktype = 'relation' AND mode IN ('RowShareLock', 'RowExclusiveLock')`).Scan(&a.rowLocks)
+	})
+	return a.PartyAuthority.EffectiveAuthorityTx(ctx, tx, user)
+}
+
+// A member's removal takes the authorization lock and then locks that member's
+// records. Admission reads authority before it locks a record, so the two
+// cannot wait on each other in a cycle.
+func TestPartyAdmissionReadsAuthorityBeforeItLocksARecord(t *testing.T) {
+	e := integration.Setup(t)
+	captured := newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil)
+	ref := capturePartiesMailUsing(t, e, captured, partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")
+	authority := &authorityBeforeRecords{PartyAuthority: identity.NewServiceFor(e.DB())}
+	sink := newCaptureSink(e.Pool, CaptureConfig{}).WithPartyAuthority(authority)
+	if err := sink.AdmitActivityParties(threadConnectorCtx(e, e.AdminUser), ids.From[ids.ActivityKind](ref.ID)); err != nil {
+		t.Fatal(err)
+	}
+	if !authority.read || authority.err != nil {
+		t.Fatalf("admission read authority in its transaction: %v (%v)", authority.read, authority.err)
+	}
+	if authority.rowLocks != 0 {
+		t.Errorf("the authority read came after %d record locks, want none", authority.rowLocks)
+	}
+	if e.WsCount(t, `SELECT count(*) FROM contact_email WHERE lower(email)='bob@buyer.test'`) != 1 {
+		t.Fatal("admission did not file the recipient")
 	}
 }

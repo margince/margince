@@ -77,14 +77,15 @@ func OfferCreationInput(raw []byte) (CreateOfferInput, error) {
 		return CreateOfferInput{}, err
 	}
 	in := CreateOfferInput{
-		Currency:       req.Currency,
-		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
-		IntroText:      req.IntroText,
-		TermsText:      req.TermsText,
-		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
-		LegalEntityID:  idArg[ids.LegalEntityKind](req.LegalEntityId),
-		Language:       req.Language,
-		Source:         source,
+		Currency:         req.Currency,
+		BuyerCompanyID:   idArg[ids.CompanyKind](req.BuyerCompanyId),
+		IntroText:        req.IntroText,
+		TermsText:        req.TermsText,
+		TemplateID:       idArg[ids.OfferTemplateKind](req.TemplateId),
+		LegalEntityID:    idArg[ids.LegalEntityKind](req.LegalEntityId),
+		Language:         req.Language,
+		Source:           source,
+		FromDealRevision: req.FromDealRevision,
 	}
 	if req.ValidUntil != nil {
 		v := req.ValidUntil.Format("2006-01-02")

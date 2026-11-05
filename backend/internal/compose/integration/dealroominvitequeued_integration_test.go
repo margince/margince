@@ -45,8 +45,8 @@ func (silentMailer) Send(ctx context.Context, _, _, _ string) error {
 	return ctx.Err()
 }
 
-// A relay that does not answer holds the invite for the wait and no longer:
-// the invite then reads as not emailed, and the roster as failed.
+// A relay that does not answer holds the invite for the wait and no longer.
+// The invite then reads as not emailed, and the roster as failed.
 func TestAnInviteStopsWaitingForASilentRelay(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithDealRoomInviteMail(silentMailer{}),

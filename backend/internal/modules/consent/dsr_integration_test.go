@@ -278,9 +278,8 @@ func TestFulfillErasureHTTPRefusesAnUnresolvableSubject(t *testing.T) {
 }
 
 // TestFulfillErasureHTTPRefusesTypedAnswer proves the erase never runs when
-// the officer typed an answer: an erasure is answered from a fixed list by the
-// erasure itself, so text is refused on resolution before EraseContact is
-// called, never thrown away after it.
+// the officer typed an answer. An erasure answers from its own fixed list, so
+// typed text is refused before EraseContact is called, not thrown away after.
 func TestFulfillErasureHTTPRefusesTypedAnswer(t *testing.T) {
 	e := setupDSR(t)
 	req := e.mustCreate(t, "erasure", ids.NewV7().String())

@@ -1322,6 +1322,812 @@
       ]
     },
     {
+      "tool": "change_attention",
+      "action": "visit_list",
+      "verb": "visit_list",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "add_consumer_mail_domain",
+      "verb": "add_consumer_mail_domain",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "add_counterparty_hold",
+      "verb": "add_counterparty_hold",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "add_exclusion",
+      "verb": "add_capture_exclusion",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "add_owner_identity",
+      "verb": "add_owner_identity",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "add_workspace_email_domain",
+      "verb": "add_workspace_email_domain",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "archive_corpus",
+      "verb": "archive_corpus",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "cancel_backfill",
+      "verb": "cancel_connector_backfill",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "cancel_import_run",
+      "verb": "cancel_import_run",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "create_corpus",
+      "verb": "create_corpus",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "change_capture",
+      "action": "discard_domain",
+      "verb": "discard_domain_question",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "disconnect_channel",
+      "verb": "disconnect_channel",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "disconnect_mailbox",
+      "verb": "disconnect_connector",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "dismiss_mailbox_silence",
+      "verb": "dismiss_connector_silence",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "keep_domain_as_company",
+      "verb": "keep_domain_as_company",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "keep_domain_as_vendor",
+      "verb": "keep_domain_as_vendor",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "lift_counterparty_hold",
+      "verb": "lift_counterparty_hold",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "lift_exclusion",
+      "verb": "lift_capture_exclusion",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "remove_consumer_mail_domain",
+      "verb": "remove_consumer_mail_domain",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "change_capture",
+      "action": "remove_workspace_email_domain",
+      "verb": "remove_workspace_email_domain",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "change_capture",
+      "action": "reopen_domain",
+      "verb": "reopen_withheld_domain",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "restore_owner_identity",
+      "verb": "restore_owner_identity",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "set_blocked_domain",
+      "verb": "set_blocked_domain",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "set_context_tag",
+      "verb": "set_connector_context_tag",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "set_history_baseline",
+      "verb": "set_connector_history_baseline",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "set_mail_posture",
+      "verb": "set_connector_mail_posture",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "set_sender_decision",
+      "verb": "set_capture_sender_decision",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "set_signature_enrichment",
+      "verb": "set_connector_signature_enrichment",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "share_counterparty_hold_history",
+      "verb": "share_counterparty_hold_history",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "change_capture",
+      "action": "undo_import_run",
+      "verb": "undo_import_run",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "update_corpus",
+      "verb": "update_corpus",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "update_import_run",
+      "verb": "update_import_run",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "validate_import_run",
+      "verb": "validate_import_run",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "withdraw_owner_identity",
+      "verb": "withdraw_owner_identity",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "withdraw_sender_decision",
+      "verb": "withdraw_capture_sender_decision",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "allow_contact",
+      "verb": "allow_contact",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "change_compliance",
+      "action": "assign_notice_case",
+      "verb": "assign_notice_case",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "assign_notice_case_review",
+      "verb": "assign_notice_case_review",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "confirm_notice_source",
+      "verb": "confirm_notice_source",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "lift_suppression",
+      "verb": "lift_contact_suppression",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "open_data_subject_request",
+      "verb": "open_data_subject_request",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "change_compliance",
+      "action": "pin_activity_to_floor",
+      "verb": "pin_activity_to_floor",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "place_legal_hold",
+      "verb": "place_legal_hold",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "record_communication_context",
+      "verb": "record_communication_context",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "record_consent",
+      "verb": "record_consent",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "record_qualifying_event",
+      "verb": "record_qualifying_event",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "resolve_confirm_submission",
+      "verb": "resolve_confirm_submission",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "retract_acquisition_request",
+      "verb": "retract_acquisition_request",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "retract_qualifying_event",
+      "verb": "retract_qualifying_event",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "revoke_override",
+      "verb": "revoke_contact_override",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_compliance",
+      "action": "suppress_contact",
+      "verb": "suppress_contact",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "change_compliance",
+      "action": "update_data_subject_request",
+      "verb": "update_data_subject_request",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin"
+      ]
+    },
+    {
       "tool": "change_lists",
       "verb": "change_lists",
       "allowed_for": [],
@@ -1339,6 +2145,22 @@
       "tool": "change_offers",
       "action": "accept_offer",
       "verb": "accept_offer",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_offers",
+      "action": "add_deal_line",
+      "verb": "add_deal_line",
       "allowed_for": [],
       "refused_for": [
         "read_only"
@@ -1463,6 +2285,22 @@
     },
     {
       "tool": "change_offers",
+      "action": "refresh_offer_from_deal",
+      "verb": "refresh_offer_from_deal",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_offers",
       "action": "regenerate_offer",
       "verb": "regenerate_offer",
       "allowed_for": [],
@@ -1490,6 +2328,21 @@
         "management",
         "manager",
         "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_offers",
+      "action": "remove_deal_line",
+      "verb": "remove_deal_line",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
         "rep"
       ]
     },
@@ -1670,6 +2523,22 @@
     },
     {
       "tool": "change_offers",
+      "action": "update_deal_line",
+      "verb": "update_deal_line",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_offers",
       "action": "update_room",
       "verb": "update_deal_room",
       "allowed_for": [],
@@ -1704,6 +2573,22 @@
       "tool": "change_offers",
       "action": "update_room_participant",
       "verb": "update_deal_room_participant",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_offers",
+      "action": "use_deal_estimate",
+      "verb": "use_deal_estimate",
       "allowed_for": [],
       "refused_for": [
         "read_only"
@@ -1984,6 +2869,115 @@
     },
     {
       "tool": "change_reports",
+      "action": "archive_report",
+      "verb": "archive_reporting_report",
+      "allowed_for": [],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "create_forecast_share",
+      "verb": "create_forecast_share",
+      "allowed_for": [
+        "admin",
+        "management",
+        "ops"
+      ],
+      "refused_for": [
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "change_reports",
+      "action": "create_initiative",
+      "verb": "create_sales_initiative",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "create_report",
+      "verb": "create_reporting_report",
+      "allowed_for": [],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "create_schedule",
+      "verb": "create_reporting_schedule",
+      "allowed_for": [],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "create_target",
+      "verb": "create_reporting_target",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "discard_draft",
+      "verb": "discard_reporting_report_draft",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
       "action": "draft",
       "verb": "draft_report",
       "allowed_for": [],
@@ -1995,6 +2989,268 @@
         "admin",
         "management",
         "manager",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "freeze_edition",
+      "verb": "freeze_reporting_edition",
+      "allowed_for": [],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "launch_initiative",
+      "verb": "launch_sales_initiative",
+      "allowed_for": [],
+      "refused_for": [
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "publish_draft",
+      "verb": "publish_reporting_report_draft",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "publish_framework",
+      "verb": "publish_reporting_framework",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "record_decision",
+      "verb": "record_sales_decision",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "record_decision_outcome",
+      "verb": "record_sales_decision_outcome",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "record_forecast_call",
+      "verb": "record_forecast_call",
+      "allowed_for": [],
+      "refused_for": [
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "replace_initiative_members",
+      "verb": "replace_sales_initiative_members",
+      "allowed_for": [],
+      "refused_for": [
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "resolve_input_check",
+      "verb": "resolve_input_check",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "restore_revision",
+      "verb": "restore_reporting_report_revision",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "retry_execution",
+      "verb": "retry_reporting_execution",
+      "allowed_for": [],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "revoke_forecast_share",
+      "verb": "revoke_forecast_share",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "start_input_check",
+      "verb": "start_forecast_assurance_run",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "update_initiative",
+      "verb": "update_sales_initiative",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "update_report",
+      "verb": "update_reporting_report",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "update_schedule",
+      "verb": "update_reporting_schedule",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_reports",
+      "action": "update_target",
+      "verb": "update_reporting_target",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
         "rep"
       ]
     },
@@ -2012,6 +3268,21 @@
       ],
       "unproven_for": [
         "admin"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "archive_saved_view",
+      "verb": "archive_saved_view",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
       ]
     },
     {
@@ -2158,6 +3429,21 @@
         "admin",
         "ops"
       ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "create_saved_view",
+      "verb": "create_saved_view",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_settings",
@@ -2525,6 +3811,21 @@
       ]
     },
     {
+      "tool": "change_settings",
+      "action": "update_saved_view",
+      "verb": "update_saved_view",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
       "tool": "change_state",
       "action": "accept_partner_lead",
       "verb": "accept_partner_lead",
@@ -2569,6 +3870,38 @@
         "ops",
         "read_only",
         "rep"
+      ]
+    },
+    {
+      "tool": "change_state",
+      "action": "correct_project_health",
+      "verb": "correct_project_health_assessment",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_state",
+      "action": "decide_commission",
+      "verb": "decide_commission_entry",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops"
       ]
     },
     {
@@ -2747,6 +4080,22 @@
     },
     {
       "tool": "change_state",
+      "action": "record_project_health",
+      "verb": "create_project_health_assessment",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_state",
       "action": "reopen_lead",
       "verb": "reopen_lead",
       "allowed_for": [],
@@ -2820,6 +4169,22 @@
         "manager",
         "ops",
         "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_state",
+      "action": "transfer_projects",
+      "verb": "transfer_project_ownership",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
         "rep"
       ]
     },
@@ -3352,8 +4717,38 @@
     },
     {
       "tool": "read_details",
+      "action": "backfill_preview",
+      "verb": "preview_connector_backfill",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
       "action": "capture_triage",
       "verb": "get_company_capture_triage",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "communication_review",
+      "verb": "get_communication_review",
       "allowed_for": [],
       "refused_for": [],
       "unproven_for": [
@@ -3487,8 +4882,53 @@
     },
     {
       "tool": "read_details",
+      "action": "contact_consent",
+      "verb": "get_contact_consent",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_details",
+      "action": "contact_consent_guard",
+      "verb": "get_contact_consent_guard",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_details",
       "action": "contact_profile_fields",
       "verb": "get_contact_profile_fields",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_details",
+      "action": "contact_stops",
+      "verb": "list_contact_stops",
       "allowed_for": [
         "admin",
         "management",
@@ -3517,6 +4957,21 @@
     },
     {
       "tool": "read_details",
+      "action": "controller_mail_preview",
+      "verb": "preview_controller_mail",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
       "action": "deal_legal_reviews",
       "verb": "list_deal_legal_reviews",
       "allowed_for": [],
@@ -3529,6 +4984,21 @@
         "read_only",
         "rep"
       ]
+    },
+    {
+      "tool": "read_details",
+      "action": "deal_lines",
+      "verb": "read_deal_lines",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -3669,6 +5139,21 @@
       "tool": "read_details",
       "action": "field_history",
       "verb": "get_field_history",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "filter_preview",
+      "verb": "preview_filter",
       "allowed_for": [],
       "refused_for": [],
       "unproven_for": [
@@ -4091,6 +5576,38 @@
       ],
       "refused_for": [],
       "unproven_for": []
+    },
+    {
+      "tool": "read_details",
+      "action": "notice_case",
+      "verb": "get_notice_case",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "notice_case_review",
+      "verb": "get_notice_case_review",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin"
+      ]
     },
     {
       "tool": "read_details",
@@ -4639,6 +6156,21 @@
     },
     {
       "tool": "read_reports",
+      "action": "analytics_cell_records",
+      "verb": "explain_analytics_cell",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_reports",
       "action": "analytics_context",
       "verb": "get_analytics_context",
       "allowed_for": [
@@ -4656,6 +6188,21 @@
       "tool": "read_reports",
       "action": "analytics_schema",
       "verb": "get_analytics_schema",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_reports",
+      "action": "company_coverage",
+      "verb": "get_company_coverage",
       "allowed_for": [
         "admin",
         "management",
@@ -4699,6 +6246,21 @@
     },
     {
       "tool": "read_reports",
+      "action": "question_card_records",
+      "verb": "explain_reporting_question_card",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_reports",
       "action": "reader_preview",
       "verb": "preview_reporting_report_as_role",
       "allowed_for": [],
@@ -4714,8 +6276,39 @@
     },
     {
       "tool": "read_reports",
+      "action": "report_revisions",
+      "verb": "list_reporting_report_revisions",
+      "allowed_for": [],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_reports",
       "action": "report_run",
       "verb": "get_report_run",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_reports",
+      "action": "report_run_cell_records",
+      "verb": "explain_report_run_cell",
       "allowed_for": [],
       "refused_for": [],
       "unproven_for": [
@@ -5250,6 +6843,22 @@
     },
     {
       "tool": "read_workspace",
+      "action": "audit_log",
+      "verb": "list_audit_log",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_workspace",
       "action": "automation_runs",
       "verb": "list_automation_runs",
       "allowed_for": [],
@@ -5298,6 +6907,21 @@
       "tool": "read_workspace",
       "action": "capture_exclusions",
       "verb": "list_capture_exclusions",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "capture_senders",
+      "verb": "list_capture_senders",
       "allowed_for": [
         "admin",
         "management",
@@ -5461,6 +7085,21 @@
     },
     {
       "tool": "read_workspace",
+      "action": "contacts_awaiting_decision",
+      "verb": "list_capture_contacts_awaiting_decision",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_workspace",
       "action": "controller_particulars",
       "verb": "get_controller_particulars",
       "allowed_for": [
@@ -5518,6 +7157,52 @@
         "read_only",
         "rep"
       ]
+    },
+    {
+      "tool": "read_workspace",
+      "action": "counterparty_holds",
+      "verb": "list_capture_counterparty_holds",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "data_subject_request_deadline",
+      "verb": "get_data_subject_request_deadline",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
+      "action": "data_subject_requests",
+      "verb": "list_data_subject_requests",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -5643,6 +7328,21 @@
     },
     {
       "tool": "read_workspace",
+      "action": "held_threads",
+      "verb": "list_held_threads",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_workspace",
       "action": "import_runs",
       "verb": "list_import_runs",
       "allowed_for": [
@@ -5732,6 +7432,22 @@
         "read_only",
         "rep"
       ]
+    },
+    {
+      "tool": "read_workspace",
+      "action": "legal_holds",
+      "verb": "list_legal_holds",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -5857,8 +7573,55 @@
     },
     {
       "tool": "read_workspace",
+      "action": "notice_case_reviews",
+      "verb": "list_notice_case_reviews",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "notice_cases",
+      "verb": "list_notice_cases",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_workspace",
       "action": "notification_preferences",
       "verb": "list_notification_preferences",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "owner_identities",
+      "verb": "list_capture_owner_identities",
       "allowed_for": [
         "admin",
         "management",
@@ -5948,6 +7711,21 @@
     },
     {
       "tool": "read_workspace",
+      "action": "record_history",
+      "verb": "get_record_history",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
       "action": "report_blocks",
       "verb": "describe_report_blocks",
       "allowed_for": [
@@ -5974,6 +7752,22 @@
         "rep"
       ],
       "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "restricted_records",
+      "verb": "list_restricted_activities",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
       "unproven_for": []
     },
     {
@@ -6281,6 +8075,36 @@
     },
     {
       "tool": "run_research",
+      "action": "ask_corpus",
+      "verb": "ask_knowledge_corpus",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "run_research",
+      "action": "assess_sales_review",
+      "verb": "assess_sales_review",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "run_research",
       "action": "generate_brief",
       "verb": "generate_morning_brief",
       "allowed_for": [
@@ -6293,6 +8117,37 @@
       ],
       "refused_for": [],
       "unproven_for": []
+    },
+    {
+      "tool": "run_research",
+      "action": "propose_filter",
+      "verb": "propose_filter",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "run_research",
+      "action": "propose_report_setup",
+      "verb": "propose_report_setup",
+      "allowed_for": [],
+      "refused_for": [
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager"
+      ]
     },
     {
       "tool": "run_research",
@@ -6385,6 +8240,21 @@
       "unproven_for": []
     },
     {
+      "tool": "run_research",
+      "action": "start_backfill",
+      "verb": "start_connector_backfill",
+      "allowed_for": [],
+      "refused_for": [],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
       "tool": "schedule_meeting",
       "action": "invite",
       "verb": "invite_meeting",
@@ -6450,6 +8320,54 @@
       "tool": "send_outbound",
       "action": "deal_room_resend",
       "verb": "resend_deal_room_invitation",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "send_outbound",
+      "action": "details_confirmation",
+      "verb": "request_details_confirmation",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
+    },
+    {
+      "tool": "send_outbound",
+      "action": "direct_send",
+      "verb": "direct_communication_send",
+      "allowed_for": [],
+      "refused_for": [
+        "ops",
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "rep"
+      ]
+    },
+    {
+      "tool": "send_outbound",
+      "action": "double_opt_in",
+      "verb": "issue_double_opt_in",
       "allowed_for": [],
       "refused_for": [
         "read_only"
@@ -6536,6 +8454,22 @@
       ],
       "refused_for": [],
       "unproven_for": []
+    },
+    {
+      "tool": "send_outbound",
+      "action": "privacy_notice",
+      "verb": "send_privacy_notice",
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ]
     },
     {
       "tool": "send_outbound",

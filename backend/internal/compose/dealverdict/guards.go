@@ -131,11 +131,17 @@ func decideProbability(in Input, state State, action Action, change *deals.Verdi
 	}
 	// Lowering is free. A raise stops at the stage's own probability, so no
 	// mail can talk a deal above what its stage says.
-	if action.Probability > in.Probability && action.Probability > in.StageProbability {
+	if action.Probability > raiseCeiling(in) {
 		return DroppedAboveStage
 	}
 	change.Probability = action.Probability
 	return ""
+}
+
+// raiseCeiling is the highest probability a raise may reach: the stage's own,
+// or the deal's current one where that is already higher.
+func raiseCeiling(in Input) int {
+	return max(in.Probability, in.StageProbability)
 }
 
 // editedAfter reports whether a colleague wrote the correction's field after

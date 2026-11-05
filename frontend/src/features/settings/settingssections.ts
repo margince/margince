@@ -219,6 +219,7 @@ export const SETTINGS_SECTIONS = {
   automations: ["auto.instances", "auto.catalog"],
   privacy: [
     "settings.purposes",
+    "privacy.customerNotices",
     "retention.title",
     "privacy.requestsPanel",
     "notice.title",

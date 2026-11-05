@@ -69,7 +69,7 @@ var (
 
 // bookkeeping are the tables a write lands in to record the erasure rather
 // than to erase anything. The report projection fence is one generation
-// counter that marks report caches stale; bumping it erases nothing, and
+// counter that marks report caches stale. Bumping it erases nothing, and
 // counting it would make every erasure look as if it found something.
 var bookkeeping = map[string]bool{
 	storekit.TableAudit: true, "event_outbox": true, "report_projection_fence": true,

@@ -67,8 +67,8 @@ func (w *closeDateSweepWorker) Work(ctx context.Context, _ *river.Job[CloseDateS
 
 // closeDateWorkspaceWorker runs one workspace's pass.
 // closeDateSweepActor is the principal the nightly close-date sweep runs as.
-// Every row it writes is attributed to it, the corrector's audit entries for
-// the dates it moves included.
+// Its run ledger and its corrections to unowned deals are attributed to it. A
+// correction to an owned deal is written by Margince acting for the owner.
 //
 // Declared rather than typed at the call site because the suite asserting that
 // attribution names the same principal the worker binds. Two hand-typed copies

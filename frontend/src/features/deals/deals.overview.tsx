@@ -6,6 +6,7 @@ import {
   OverviewList,
   OverviewRow,
 } from "../../design-system/overviewcard";
+import { formatMoney } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { tasksPeek } from "../../lib/standingpeeks";
@@ -16,6 +17,7 @@ import { DealBrief } from "./deal360/dealbrief";
 import { DealCommitmentsCard } from "./deal360/dealcommitments";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { DealHowItStands } from "./deal360/dealhowitstands";
+import { useDealLines } from "./deal360/deallines";
 import { DealMarginceChangesCard } from "./deal360/dealmarginchanges";
 import { offerRow, otherOpenTaskRows } from "./deal360/dealoverviewrows";
 import { DealProductsCard } from "./deal360/dealproducts";
@@ -35,6 +37,7 @@ export function OffersPanel({
   locale,
   dealCurrency,
   refusedReasonId,
+  fromLines,
   onCreate,
 }: Readonly<{
   offers: readonly Offer[] | undefined;
@@ -48,14 +51,19 @@ export function OffersPanel({
   // it does not. The server hangs a new offer off the deal through the deal's
   // own write gate. So the control is refused by the same fact as Edit.
   refusedReasonId?: string;
-  onCreate: (currency: string) => void;
+  // A deal priced from its lines makes an offer from them, at this revision,
+  // once every line has a quantity and a price. Absent for any other deal.
+  fromLines?: { revision: number; currency: string | null; complete: boolean };
+  onCreate: (currency: string, fromRevision?: number) => void;
 }>) {
   const t = useT();
   const zone = useViewerZone();
   const currencyReasonId = useId();
+  const currency = fromLines ? fromLines.currency : dealCurrency;
   // The sentence for an unpriced deal closes the card, so the link keeps its
   // place beside the title; the refused link points at it.
-  const needsCurrency = !dealCurrency;
+  const needsCurrency =
+    !currency || (fromLines !== undefined && !fromLines.complete);
   return (
     <OverviewCard
       title={t("deal.offers")}
@@ -70,8 +78,8 @@ export function OffersPanel({
             refusedReasonId ?? (needsCurrency ? currencyReasonId : undefined)
           }
           onClick={() => {
-            if (dealCurrency) {
-              onCreate(dealCurrency);
+            if (currency) {
+              onCreate(currency, fromLines?.revision);
             }
           }}
         >
@@ -81,7 +89,11 @@ export function OffersPanel({
       empty={offers ? t("deal.offersEmpty") : undefined}
       foot={
         needsCurrency ? (
-          <span id={currencyReasonId}>{t("deal.offerNeedsCurrency")}</span>
+          <span id={currencyReasonId}>
+            {fromLines
+              ? t("deal.offerNeedsCompleteLines")
+              : t("deal.offerNeedsCurrency")}
+          </span>
         ) : undefined
       }
     >
@@ -133,7 +145,7 @@ export function DealOverviewPane({
   inputs: DealStandingInputs;
   creatingOffer: boolean;
   locale: Locale;
-  onCreateOffer: (currency: string) => void;
+  onCreateOffer: (currency: string, fromRevision?: number) => void;
   /** Whether the deal takes no field write at all: archived, or not this
    * caller's to write. This is not `advanceRefused`, which also refuses a
    * closed deal: correcting the brief of a deal won last week is an ordinary
@@ -163,6 +175,7 @@ export function DealOverviewPane({
   const plural = usePlural();
   const zone = useViewerZone();
   const { deal, offers, coverage, activities, card } = inputs;
+  const lines = useDealLines(deal.id).data;
   // The task the bar names is not one of the others.
   const shown = (card?.next?.evidence ?? []).flatMap((row) =>
     row.activity_id ? [row.activity_id] : [],
@@ -220,6 +233,15 @@ export function DealOverviewPane({
             locale={locale}
             dealCurrency={deal.currency ?? null}
             refusedReasonId={refusedReasonId}
+            fromLines={
+              lines?.mode === "lines"
+                ? {
+                    revision: lines.commercial_revision,
+                    currency: lines.currency ?? null,
+                    complete: lines.complete,
+                  }
+                : undefined
+            }
             onCreate={onCreateOffer}
           />
           {!deal.archived_at && (
@@ -247,6 +269,11 @@ export function DealOverviewPane({
             <DealProductsCard
               dealId={deal.id}
               currency={deal.currency ?? null}
+              typedAmount={
+                deal.amount_minor != null && deal.currency
+                  ? formatMoney(deal.amount_minor, deal.currency, locale)
+                  : null
+              }
               refusedReasonId={refusedReasonId}
             />
           )}

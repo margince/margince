@@ -377,8 +377,10 @@ deps:
     # completed outcome into "cancelled".
     # reviewoutcomes_test.go reads assurance.ReviewOutcomes so the answer sheet
     # offers the outcomes the server accepts without copying its catalog.
+    # frontendrunreasons_test.go reads automation.RunReasonCodes and holds them
+    # to the browser's words, as frontendapprovalkinds_test.go does for approvals.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, webforms, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy, assurance]
+    mayDependOn: [contracts, compose, ai, collections, webforms, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy, assurance, automation]
     canUse: [yaml, jsonschema]
   cmd:
     mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]

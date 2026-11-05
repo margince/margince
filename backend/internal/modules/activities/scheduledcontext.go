@@ -17,7 +17,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-func changedScheduledContext(ctx context.Context, tx pgx.Tx, in SendEmailInput, created time.Time) (string, error) {
+func changedScheduledContext(ctx context.Context, tx pgx.Tx, in SendEmailInput, anchor ids.UUID, created time.Time) (string, error) {
+	replied, err := pursuitPausedByReply(ctx, tx, in, anchor, created)
+	if err != nil {
+		return "", err
+	}
+	if replied {
+		return HeldRecipientReplied, nil
+	}
 	if in.Context != commsauthz.CategoryRequestedFollowup || in.Evidence.ActivityID.IsZero() {
 		return "", nil
 	}

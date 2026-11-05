@@ -4,7 +4,7 @@
 // What the due-date picker can hand the writer. The picker sends only a day its
 // own parser read, so the parser is where a year typo is refused.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { snoozedDueAt } from "../../components/taskactions";
 import { calendarDay, dueInstant } from "../../format/calendarday";
 import { parseTypedDate } from "../../format/datepattern";
@@ -35,6 +35,8 @@ describe("the days a task may be moved to", () => {
 // skipped the 29th entirely and the task they meant to see that day was never
 // on it.
 describe("snoozing a task by a day", () => {
+  beforeEach(() => vi.setSystemTime(new Date("2026-01-01T10:00:00Z")));
+  afterEach(() => vi.useRealTimers());
   it("lands on the next calendar day across spring forward", () => {
     // 2026-03-28 23:59:59 Berlin. The next day is the 29th, the day the clocks
     // move — an hour shorter, and still one day away.
@@ -80,6 +82,18 @@ describe("snoozing a task by a day", () => {
     ).toEqual({
       due_at: "2026-10-25T14:00:00.000Z",
       due_has_time: true,
+    });
+  });
+
+  it.each([
+    ["2025-12-20T14:00:00Z", true, "2026-01-02T14:00:00.000Z"],
+    ["2026-01-01T14:00:00Z", true, "2026-01-02T14:00:00.000Z"],
+    ["2026-01-08T14:00:00Z", true, "2026-01-09T14:00:00.000Z"],
+    ["2025-12-20T22:59:59Z", false, "2026-01-02T22:59:59.000Z"],
+  ])("moves %s at least to tomorrow", (from, hasTime, expected) => {
+    expect(snoozedDueAt(from, hasTime, "Europe/Berlin")).toEqual({
+      due_at: expected,
+      due_has_time: hasTime,
     });
   });
 

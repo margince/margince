@@ -5,31 +5,21 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // verdictEvidenceHolds asks, under the deal row lock, whether the evidence
-// the verdict was decided on is still the deal's. The owner must still be a
-// member and the checksum must not have moved. No offer may have been
-// accepted since. Every cited activity must still be linked, live and
-// readable by everyone.
+// the verdict was decided on is still the deal's. The checksum must not have
+// moved. No offer may have been accepted since. Every cited activity must
+// still be linked, live and readable by everyone.
 func verdictEvidenceHolds(
 	ctx context.Context, tx pgx.Tx, c verdictCandidate, read dealVerdictRead, changes []deals.VerdictChange,
 ) (bool, error) {
-	if _, _, err := identity.EffectiveAuthorityTx(ctx, tx, c.owner); err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return false, nil
-		}
-		return false, err
-	}
 	cited := citedActivities(changes)
 	var checksum string
 	var accepted, eligible int

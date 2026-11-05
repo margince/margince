@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -45,7 +46,8 @@ type marginceChangeHandlers struct {
 	teammates interface {
 		LiveTeammatesOfCaller(ctx context.Context) ([]attention.TeamMember, bool, error)
 	}
-	now func() time.Time
+	seatNames *identity.Service
+	now       func() time.Time
 }
 
 func newMarginceChangeHandlers(pool *pgxpool.Pool) marginceChangeHandlers {
@@ -53,6 +55,7 @@ func newMarginceChangeHandlers(pool *pgxpool.Pool) marginceChangeHandlers {
 		pool:      pool,
 		deals:     deals.NewStore(InstallationDB(pool), DealsInstallation()),
 		teammates: newTeammatesSeam(pool),
+		seatNames: identity.NewService(pool),
 		now:       func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -102,6 +105,12 @@ func (h marginceChangeHandlers) ListDealMarginceChanges(w http.ResponseWriter, r
 		return
 	}
 	out := crmcontracts.DealMarginceChanges{Changes: changes}
+	if after == nil {
+		if out.LastCheck, err = latestCheck(r.Context(), InstallationDB(h.pool), ids.UUID(id)); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+	}
 	if more {
 		last := rows[len(rows)-1]
 		next := encodeChangeCursor(deals.ChangeCursor{AppliedAt: last.AppliedAt, AuditLogID: last.AuditLogID})
@@ -144,10 +153,15 @@ func (h marginceChangeHandlers) GetTeamMarginceChanges(w http.ResponseWriter, r 
 		Groups: make([]crmcontracts.TeamMarginceChangeGroup, 0, len(report.Groups)),
 		Rows:   make([]crmcontracts.TeamMarginceChangeRow, 0, len(report.Rows)),
 	}
+	if out.Ownerless, out.OwnerlessTruncated, err = h.ownerless(ctx); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	for _, g := range report.Groups {
 		out.Groups = append(out.Groups, crmcontracts.TeamMarginceChangeGroup{
 			OwnerId: openapi_types.UUID(g.OwnerID), OwnerName: names[g.OwnerID], Kind: g.Kind,
-			Deals: g.Deals, Undone: g.Undone, ValueBaseMinor: g.ValueBaseMinor,
+			Deals: g.Deals, Undone: g.Undone, ValueBaseMinor: g.ValueBaseMinor, ValueMovedBaseMinor: g.ValueMovedBaseMinor,
+			Unvalued: g.Unvalued,
 		})
 	}
 	changes, err := h.changeReceipts(ctx, report.Rows)
@@ -159,9 +173,48 @@ func (h marginceChangeHandlers) GetTeamMarginceChanges(w http.ResponseWriter, r 
 		if row.OwnerID == nil {
 			continue
 		}
-		out.Rows = append(out.Rows, crmcontracts.TeamMarginceChangeRow{OwnerId: openapi_types.UUID(*row.OwnerID), Change: changes[i]})
+		wired := crmcontracts.TeamMarginceChangeRow{OwnerId: openapi_types.UUID(*row.OwnerID), Change: changes[i]}
+		if moved, ok := report.Moved[row.AuditLogID]; ok {
+			wired.ValueMovedBaseMinor = &moved
+		}
+		out.Rows = append(out.Rows, wired)
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// ownerless lists the open deals with no live owner the caller may read,
+// naming each owner who is no longer live.
+func (h marginceChangeHandlers) ownerless(ctx context.Context) ([]crmcontracts.TeamMarginceOwnerlessDeal, bool, error) {
+	found, cut, err := h.deals.OwnerlessDeals(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	var departed []ids.UserID
+	for _, d := range found {
+		if d.OwnerID != nil {
+			departed = append(departed, ids.From[ids.UserKind](*d.OwnerID))
+		}
+	}
+	names, err := h.seatNames.SeatNames(ctx, departed)
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]crmcontracts.TeamMarginceOwnerlessDeal, 0, len(found))
+	for _, d := range found {
+		wired := crmcontracts.TeamMarginceOwnerlessDeal{
+			DealId: openapi_types.UUID(d.DealID.UUID), DealName: d.DealName,
+			Reason: crmcontracts.TeamMarginceOwnerlessDealReason(d.Reason), ValueBaseMinor: d.ValueBaseMinor,
+		}
+		if d.OwnerID != nil {
+			owner := openapi_types.UUID(*d.OwnerID)
+			wired.OwnerId = &owner
+			if name, ok := names[*d.OwnerID]; ok {
+				wired.OwnerName = &name
+			}
+		}
+		out = append(out, wired)
+	}
+	return out, cut, nil
 }
 
 // changeReceipts draws report rows as receipts with their review state. An
@@ -212,10 +265,9 @@ func (h marginceChangeHandlers) UndoMarginceChanges(w http.ResponseWriter, r *ht
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// undoBundle takes back one deal's changes, newest first, each in its own
-// transaction through the one reversal the single Undo uses. The caller's
-// version guards the first; each later one is checked against the version the
-// one before it left.
+// undoBundle takes back one deal's changes, newest first, in one transaction
+// through the reversal the single Undo uses. A change refused on its own is
+// kept with its reason; a refusal that holds the deal keeps every change.
 func (h marginceChangeHandlers) undoBundle(ctx context.Context, item crmcontracts.UndoMarginceChangeItem) (crmcontracts.UndoMarginceChangeResult, error) {
 	dealID := ids.UUID(item.DealId)
 	result := crmcontracts.UndoMarginceChangeResult{
@@ -225,39 +277,22 @@ func (h marginceChangeHandlers) undoBundle(ctx context.Context, item crmcontract
 	if err != nil {
 		return result, err
 	}
-	version := &item.Version
-	for i, correction := range corrections {
+	pending := make([]deals.DealCorrection, 0, len(corrections))
+	undos := make([]deals.BundleUndo, 0, len(corrections))
+	for _, correction := range corrections {
 		if correction.Reversed() {
 			result.Kept = append(result.Kept, keptChange(correction, crmcontracts.UndoMarginceChangeKeptReasonAlreadyUndone))
 			continue
 		}
-		deal, err := h.deals.RevertCorrectionConfirmed(ctx, correction.ID, version,
-			map[string]any{undidAuditLogID: correction.AuditLogID.String()},
-			derefString(item.ArchiveConfirmedFor))
-		if work, ok := errors.AsType[*deals.DealOpenUndoNeedsConfirmError](err); ok {
-			kept := keptChange(correction, crmcontracts.UndoMarginceChangeKeptReasonNeedsConfirmation)
-			kept.TeamNotes, kept.TeamTasks, kept.TeamWork = &work.Notes, &work.Tasks, &work.Work
-			result.Kept = append(result.Kept, kept)
-			continue
-		}
-		reason, refused := undoRefusal(err)
-		if !refused && err != nil {
+		pending = append(pending, correction)
+		undos = append(undos, deals.BundleUndo{
+			CorrectionID: correction.ID, Evidence: map[string]any{undidAuditLogID: correction.AuditLogID.String()},
+		})
+	}
+	if len(undos) > 0 {
+		if err := h.revertPending(ctx, item, pending, undos, &result); err != nil {
 			return result, err
 		}
-		if reason == crmcontracts.UndoMarginceChangeKeptReasonVersionSkew {
-			// The deal moved since the caller read it; every later change would
-			// be checked against a version nobody saw.
-			for _, rest := range corrections[i:] {
-				result.Kept = append(result.Kept, keptChange(rest, reason))
-			}
-			break
-		}
-		if refused {
-			result.Kept = append(result.Kept, keptChange(correction, reason))
-			continue
-		}
-		result.Undone = append(result.Undone, correction.Correction)
-		version = deal.Version
 	}
 	switch {
 	case len(result.Kept) == 0:
@@ -268,6 +303,57 @@ func (h marginceChangeHandlers) undoBundle(ctx context.Context, item crmcontract
 		result.Outcome = crmcontracts.UndoMarginceChangeResultOutcomePartlyUndone
 	}
 	return result, nil
+}
+
+// revertPending runs the deal's reversal and reports each change it undid or
+// kept. A change with a refusal of its own keeps that reason when the deal as
+// a whole was held; the others take the deal's.
+func (h marginceChangeHandlers) revertPending(
+	ctx context.Context, item crmcontracts.UndoMarginceChangeItem, pending []deals.DealCorrection,
+	undos []deals.BundleUndo, result *crmcontracts.UndoMarginceChangeResult,
+) error {
+	reversal, err := h.deals.RevertBundle(ctx, ids.UUID(item.DealId), item.Version, undos, derefString(item.ArchiveConfirmedFor))
+	if err == nil {
+		err = reversal.Abort
+	}
+	var dealReason crmcontracts.UndoMarginceChangeKeptReason
+	if err != nil {
+		reason, refused := undoRefusal(err)
+		if !refused {
+			return err
+		}
+		dealReason = reason
+	}
+	for i, correction := range pending {
+		refusal := reversal.Refusals[i]
+		switch {
+		case refusal != nil:
+			kept, err := ownRefusal(correction, refusal)
+			if err != nil {
+				return err
+			}
+			result.Kept = append(result.Kept, kept)
+		case dealReason != "":
+			result.Kept = append(result.Kept, keptChange(correction, dealReason))
+		default:
+			result.Undone = append(result.Undone, correction.Correction)
+		}
+	}
+	return nil
+}
+
+// ownRefusal names why one change was kept on its own account.
+func ownRefusal(correction deals.DealCorrection, refusal error) (crmcontracts.UndoMarginceChangeKept, error) {
+	if work, ok := errors.AsType[*deals.DealOpenUndoNeedsConfirmError](refusal); ok {
+		kept := keptChange(correction, crmcontracts.UndoMarginceChangeKeptReasonNeedsConfirmation)
+		kept.TeamNotes, kept.TeamTasks, kept.TeamWork = &work.Notes, &work.Tasks, &work.Work
+		return kept, nil
+	}
+	reason, refused := undoRefusal(refusal)
+	if !refused {
+		return crmcontracts.UndoMarginceChangeKept{}, refusal
+	}
+	return keptChange(correction, reason), nil
 }
 
 // bundleCorrections reads the named changes, newest first. A change the reader

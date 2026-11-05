@@ -1,6 +1,7 @@
 import { Link } from "lucide-react";
 import { type Ref, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import { RecordMeetingOutcome } from "../../components/meetingoutcome";
 import { Badge, Button, type ButtonVariant } from "../../design-system/atoms";
 import {
@@ -24,10 +25,9 @@ import { useLocale, useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCopyBookingLink } from "../../lib/bookinglinkcopy";
-import { useCanWrite } from "../../lib/capability";
+import { useCan } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
-import { useMe } from "../../lib/session";
 import { HeldMeetingsTable } from "./contactmeetings.held";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
@@ -198,10 +198,11 @@ export function ContactMeetingsTab({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const canBook = useCanWrite("activity", "create");
-  // Only a reader who may book reads the proposals: the list answers 403 to
-  // anyone else, and the section they fill is theirs alone.
-  const proposals = useMeetingProposals(canBook ? view?.contact.id : undefined);
+  const canReadActivity = useCan("activity", "read");
+  // Reading past proposals does not attach anything to the contact.
+  const proposals = useMeetingProposals(
+    canReadActivity ? view?.contact.id : undefined,
+  );
   const listed = useRecordTimeline("contact", view?.contact.id ?? "", {
     filters: MEETINGS_ONLY,
     enabled: view !== undefined && !omitted(view, "activities"),
@@ -259,7 +260,6 @@ export function ContactMeetingsTab({
         <MeetingsToolbar
           view={view}
           loading={loading}
-          canBook={canBook}
           copied={copied}
           bookButton={bookButton}
         />
@@ -383,13 +383,11 @@ function NextMeeting({
 function MeetingsToolbar({
   view,
   loading,
-  canBook,
   copied,
   bookButton,
 }: Readonly<{
   view?: Contact360;
   loading: boolean;
-  canBook: boolean;
   copied: CopiedLink;
   bookButton: Ref<HTMLButtonElement>;
 }>) {
@@ -398,12 +396,7 @@ function MeetingsToolbar({
   return (
     <PanelBody className="pe-meetings-toolbar">
       <div className="pe-meetings-verbs">
-        <BookMeeting
-          view={view}
-          loading={loading}
-          canBook={canBook}
-          ref={bookButton}
-        />
+        <BookMeeting view={view} loading={loading} ref={bookButton} />
         {bookingLink.url && (
           <Button onClick={bookingLink.copy.copy}>
             <Link aria-hidden="true" />
@@ -429,25 +422,20 @@ function MeetingsToolbar({
 function BookMeeting({
   view,
   loading,
-  canBook,
   ref,
 }: Readonly<{
   view?: Contact360;
   loading: boolean;
-  canBook: boolean;
   ref: Ref<HTMLButtonElement>;
 }>) {
   const t = useT();
-  const me = useMe();
-  const grantKnown = me.data?.authorization !== undefined;
+  const gate = useActivityGate(view?.contact ?? null, "scheduling.bookRefused");
   return (
     <Button
       ref={ref}
       variant="primary"
-      disabled={loading || !view || !grantKnown}
-      reason={
-        view && grantKnown && !canBook ? t("scheduling.bookRefused") : undefined
-      }
+      disabled={loading || !view || gate.pending}
+      reason={gate.refusalKey ? t(gate.refusalKey) : undefined}
       onClick={() => {
         if (view)
           navigate({ screen: "book", id: `contact-${view.contact.id}` });

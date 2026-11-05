@@ -39,7 +39,7 @@ const DealCloseLostKind = "deal_close_lost"
 // decided approval does not.
 func IsCorrectionReceiptKind(kind string) bool {
 	switch kind {
-	case CloseDateCorrectionKind, DealCloseLostKind, VerdictAmountCorrection, VerdictProbabilityCorrection,
+	case CloseDateCorrectionKind, VerdictCloseDateCorrection, DealCloseLostKind, VerdictAmountCorrection, VerdictProbabilityCorrection,
 		DealStageMoveKind, DealOpenKind, DealReviveKind:
 		return true
 	}
@@ -67,6 +67,9 @@ type CloseLostInput struct {
 	StillDue func(ctx context.Context, tx pgx.Tx) (bool, error)
 	// Record writes the entry on the deal's timeline, in the close's transaction.
 	Record func(ctx context.Context, tx pgx.Tx, correction ids.UUID) error
+	// AsOwner binds the owner's agent as of the close's transaction, so a
+	// role change or suspension that committed before the close stops it.
+	AsOwner OwnerAuthorityTx
 }
 
 // CloseAsLost closes one open deal as lost for its owner, and reports whether
@@ -82,33 +85,44 @@ func (s *Store) CloseAsLost(ctx context.Context, in CloseLostInput) (bool, error
 	}
 	var closed bool
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		due, err := s.closeStillDue(ctx, tx, in)
-		if err != nil || !due {
+		actor, ok, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
+		if err != nil || !ok {
 			return err
 		}
-		lost, code, err := lostStageAndCode(ctx, tx, in)
-		if err != nil || lost.IsZero() {
-			return err
-		}
-		reason := in.Reason
-		// The target is a lost stage, so the move claims no win.
-		moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
-			ToStageID: lost, LostReason: &reason, LostReasonCode: code, WonWithoutContractReason: nil,
-			auditEvidence: map[string]any{
-				"basis": in.Reason, "basis_owner": in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
-			},
-		}, active)
-		if err != nil {
-			return err
-		}
-		correction, err := recordStageCorrection(ctx, tx, in.DealID, moved, CloseLostCorrection)
-		if err != nil {
-			return err
-		}
-		closed = true
-		return in.Record(ctx, tx, correction)
+		closed, err = s.closeAsLostTx(actor, tx, in, active)
+		return err
 	})
 	return closed, err
+}
+
+func (s *Store) closeAsLostTx(ctx context.Context, tx pgx.Tx, in CloseLostInput, active []fieldcatalog.Column) (bool, error) {
+	due, err := s.closeStillDue(ctx, tx, in)
+	if err != nil || !due {
+		return false, err
+	}
+	lost, code, err := lostStageAndCode(ctx, tx, in)
+	if err != nil || lost.IsZero() {
+		return false, err
+	}
+	reason := in.Reason
+	// The target is a lost stage, so the move claims no win.
+	moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
+		ToStageID: lost, LostReason: &reason, LostReasonCode: code, WonWithoutContractReason: nil,
+		auditEvidence: map[string]any{
+			"basis": in.Reason, "basis_owner": in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
+		},
+	}, active)
+	if err != nil {
+		return false, err
+	}
+	correction, err := recordStageCorrection(ctx, tx, in.DealID, moved, CloseLostCorrection)
+	if err != nil {
+		return false, err
+	}
+	if err := in.Record(ctx, tx, correction); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // CorrectionKindEvidenceKey names, in a Margince change's audit evidence, which
@@ -240,7 +254,7 @@ func (s *Store) revertStageCorrection(
 // that move is still the deal's newest.
 func stageMoveToReverse(ctx context.Context, tx pgx.Tx, c DealCorrection, movedSince string) (ids.StageID, error) {
 	if c.StageHistoryID == nil {
-		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince}
+		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince, MovedSince: true}
 	}
 	var newest ids.UUID
 	var from *ids.UUID
@@ -251,13 +265,13 @@ func stageMoveToReverse(ctx context.Context, tx pgx.Tx, c DealCorrection, movedS
 		                 ORDER BY h.changed_at DESC, h.id DESC LIMIT 1) latest
 		 WHERE closing.id = $1 AND closing.deal_id = $2`, *c.StageHistoryID, c.DealID).Scan(&newest, &from)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince}
+		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince, MovedSince: true}
 	}
 	if err != nil {
 		return ids.StageID{}, fmt.Errorf("deals: reading the stage move to undo: %w", err)
 	}
 	if newest != *c.StageHistoryID || from == nil {
-		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince}
+		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince, MovedSince: true}
 	}
 	return ids.StageID{UUID: *from}, nil
 }
