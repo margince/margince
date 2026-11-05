@@ -31,7 +31,7 @@ func TestNarrowingAMessagesAudienceTakesItsWordsOffTheStoredFinding(t *testing.T
 	const quoted = "wants to see a sample of the driver reports"
 	lane := &quotingLane{messageID: message.String(), quote: quoted}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
+	svc := scanClocked(e, lane, &queued, databaseClock(t))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	done := readOnce(rep, t, svc, company, &queued)
