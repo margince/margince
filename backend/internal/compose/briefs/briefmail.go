@@ -166,8 +166,8 @@ func (e *BriefEngine) MailFailed(ctx context.Context, runID ids.UUID, cause stri
 }
 
 // LastMailedBefore is when the reader's latest morning edition before now
-// went to the relay, or nil when none has. A failed attempt reached nobody, so
-// it does not count.
+// was claimed for the relay, or nil when none was. A recorded failure does not
+// count. The claim is the last mark of a send the row keeps.
 func (e *BriefEngine) LastMailedBefore(ctx context.Context, now time.Time) (*time.Time, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, err

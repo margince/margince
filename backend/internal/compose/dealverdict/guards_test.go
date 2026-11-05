@@ -257,6 +257,13 @@ func TestAQuoteWithSeveralNumbersNamesThePriceByItsCurrency(t *testing.T) {
 		"60,000 for 2027, billed in USD",
 		"2027 USD 60,000",
 		"60,000 USD for 2027, paid in EUR",
+		"40 seats at 1,000 EUR each",
+		"40 Lizenzen zu je 1.000 EUR",
+		"40 Lizenzen à 1.000 EUR pro Monat",
+		"12 months at 5,000 USD/month",
+		"now 50k; the old budget was 60,000 USD",
+		"the old budget was 50k; now 60,000 USD",
+		"60,000 USD now, 45.000 last year",
 	} {
 		if minor, currency, ok := quotedPrice(quote); ok {
 			t.Errorf("quotedPrice(%q) = %d %s; want none", quote, minor, currency)
@@ -371,5 +378,25 @@ func TestAQuotedPriceWithCentsIsKeptExactly(t *testing.T) {
 	}
 	if got[0].Change == nil || got[0].Change.AmountMinor != 4_999_950 {
 		t.Fatalf("change = %+v, want 49,999.50 USD", got[0].Change)
+	}
+}
+
+func TestAQuoteOfAUnitPriceOrTwoBudgetsSetsNoAmount(t *testing.T) {
+	t.Parallel()
+	for quote, proposed := range map[string]Action{
+		"40 seats at 1,000 EUR each":                 amountAction(1_000, "EUR", "40 seats at 1,000 EUR each"),
+		"now 50k; the old budget was 60,000 USD":     amountAction(60_000, "USD", "now 50k; the old budget was 60,000 USD"),
+		"the old budget was 50k; now 60,000 USD":     amountAction(60_000, "USD", "the old budget was 50k; now 60,000 USD"),
+		"the old budget was 60,000 USD; now 50k USD": amountAction(50_000, "USD", "the old budget was 60,000 USD; now 50k USD"),
+	} {
+		in := guardInput()
+		in.Activities[0].Body = "From the buyer: " + quote + "."
+		got, err := Decide(in, guardState(), Payload{Actions: []Action{proposed}}, fixedRates{"EUR": rate(1, 0), "USD": rate(922, -3)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got[0].Outcome != DroppedAmountMismatch {
+			t.Errorf("amount from %q = %q, want %q", quote, got[0].Outcome, DroppedAmountMismatch)
+		}
 	}
 }

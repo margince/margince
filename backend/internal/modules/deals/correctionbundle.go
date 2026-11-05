@@ -26,25 +26,32 @@ type BundleUndo struct {
 	Evidence     map[string]any
 }
 
+// BundleReversal is what one deal's Undo did. Refusals holds one entry per
+// correction: nil where undone, else the refusal that kept that one. Abort is
+// a refusal that held the whole deal, such as a stale version or a stage move
+// made since. Then nothing on the deal changed. The refusals already known
+// still name their own changes.
+type BundleReversal struct {
+	Refusals []error
+	Abort    error
+}
+
 // RevertBundle takes back one deal's corrections in one transaction, in the
-// order given, through the reversal the single Undo uses. It answers one
-// error per correction: nil where undone, else the refusal that kept it. A
-// stale ifVersion or a stage move made since holds the whole deal: it comes
-// back as the error, and nothing on the deal changes.
+// order given, through the reversal the single Undo uses.
 func (s *Store) RevertBundle(
 	ctx context.Context, dealID ids.UUID, ifVersion int64, undos []BundleUndo, archiveConfirmedFor string,
-) ([]error, error) {
+) (BundleReversal, error) {
+	out := BundleReversal{Refusals: make([]error, len(undos))}
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
-		return nil, err
+		return out, err
 	}
 	// Before the transaction, as on the single path: the catalog reads
 	// through its own connection.
 	active, err := s.activeColumns(ctx)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
-	kept := make([]error, len(undos))
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
+	out.Abort = s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := lockBundle(ctx, tx, dealID, undos); err != nil {
 			return err
 		}
@@ -64,14 +71,11 @@ func (s *Store) RevertBundle(
 			if err != nil && !keepsOneChange(err) {
 				return err
 			}
-			kept[i] = err
+			out.Refusals[i] = err
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return kept, nil
+	return out, nil
 }
 
 // lockBundle takes every named correction of the deal, then the deal.

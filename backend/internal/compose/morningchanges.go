@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/emailview"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
@@ -32,13 +33,32 @@ const morningChangeLines = 5
 // mail yet.
 const morningChangeWindow = 24 * time.Hour
 
-// morningChangesSince is where "last night" starts: when the reader's previous
-// morning went out. A change after that mail is counted, however old the mail.
+// morningCorrectionJobs are the jobs that write the changes the morning
+// counts. The close-date sweep runs the verdict and the silent close; the deal
+// scout opens and reopens deals.
+var morningCorrectionJobs = []string{CloseDateSweepArgs{}.Kind(), DealScoutArgs{}.Kind()}
+
+// morningChangeOverlap is the longest a correction writer's transaction can
+// stay open: the longest timeout of those jobs.
+func morningChangeOverlap() time.Duration {
+	var longest time.Duration
+	for _, kind := range morningCorrectionJobs {
+		if spec, ok := jobs.SpecFor(kind); ok {
+			longest = max(longest, spec.Timeout.Duration())
+		}
+	}
+	return longest
+}
+
+// morningChangesSince is where "last night" starts: the reader's previous
+// morning mail, less the overlap. A change stamped before that mail can commit
+// after it, and the overlap keeps it in this morning. Such a change may show
+// in two mornings; one accepted or undone shows in neither.
 func morningChangesSince(previous *time.Time, now time.Time) time.Time {
 	if previous == nil {
 		return now.Add(-morningChangeWindow)
 	}
-	return *previous
+	return previous.Add(-morningChangeOverlap())
 }
 
 // appendMorningChanges adds the reader's deals Margince changed since the

@@ -28,6 +28,13 @@ var (
 	quotedCodeAtEnd   = regexp.MustCompile(`\b[A-Z]{3}$`)
 	quotedCodeAtStart = regexp.MustCompile(`^[A-Z]{3}\b`)
 	currencySymbol    = map[string]string{"€": "EUR", "$": "USD", "£": "GBP", "¥": "JPY"}
+	// quotedUnit marks a price per unit, in the guards' languages: each, per
+	// or a slash before a unit, German je and pro, Vietnamese mỗi.
+	quotedUnit = regexp.MustCompile(`(?i)\b(?:each|per|je|pro)\b|mỗi|/\s*\pL`)
+	// quotedThousands and quotedSuffix mark a figure that reads as money:
+	// grouped thousands, or a k or m right after it.
+	quotedThousands = regexp.MustCompile(`^\d{1,3}(?:[.,\x{00a0} ]\d{3})+`)
+	quotedSuffix    = regexp.MustCompile(`^[kKmM](?:\PL|$)`)
 )
 
 // quotedPrice is the one price a quote states, in exact minor units, and its
@@ -58,18 +65,29 @@ func quotedPrice(quote string) (int64, string, bool) {
 
 // priceNumber is where the price's number stands in the quote. That is its
 // only number, or of several the one a currency touches: "60,000 USD for 2027".
+// Several numbers with a unit price ("1,000 EUR each") or with two figures
+// that read as money ("now 50k; it was 60,000 USD") name no one price.
 func priceNumber(quote string) (int, int, bool) {
 	numbers := quotedNumber.FindAllStringIndex(quote, -1)
 	if len(numbers) == 1 {
 		return numbers[0][0], numbers[0][1], true
 	}
+	if quotedUnit.MatchString(quote) {
+		return 0, 0, false
+	}
 	var priced [][]int
+	money := 0
 	for _, number := range numbers {
-		if touchesCurrency(quote[:number[0]], quote[number[1]:]) {
+		before, text, after := quote[:number[0]], quote[number[0]:number[1]], quote[number[1]:]
+		touches := touchesCurrency(before, after)
+		if touches {
 			priced = append(priced, number)
 		}
+		if touches || quotedThousands.MatchString(text) || quotedSuffix.MatchString(after) {
+			money++
+		}
 	}
-	if len(priced) != 1 {
+	if len(priced) != 1 || money != 1 {
 		return 0, 0, false
 	}
 	return priced[0][0], priced[0][1], true

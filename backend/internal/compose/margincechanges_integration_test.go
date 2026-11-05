@@ -392,7 +392,10 @@ func (l bundleLane) Complete(ctx context.Context, req model.Request) (model.Resp
 	return model.Response{Text: string(text)}, err
 }
 
-func TestAnUndoRefusedForTheStageLeavesTheWholeDealAsItWas(t *testing.T) {
+// setupBundle is a deal Margince moved, re-dated and gave a probability in one
+// night.
+func setupBundle(t *testing.T) *stageMoveEnv {
+	t.Helper()
 	v := setupStageMove(t)
 	v.pass = newDealVerdictPass(v.Pool, bundleLane{move: v.move, date: v.lane.date}, slog.New(slog.DiscardHandler))
 	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
@@ -400,10 +403,21 @@ func TestAnUndoRefusedForTheStageLeavesTheWholeDealAsItWas(t *testing.T) {
 	if n := v.WsCount(t, `SELECT count(*) FROM deal_correction WHERE deal_id = $1`, v.deal); n != 3 {
 		t.Fatalf("corrections = %d, want the move, the probability and the date (outcomes %s)", n, v.outcomes(t))
 	}
+	return v
+}
+
+// moveOn is a colleague moving the deal past the stage Margince moved it to.
+func (v *stageMoveEnv) moveOn(t *testing.T) {
+	t.Helper()
 	later := nextOpenStage(t, v.dealVerdictEnv, v.next)
 	if _, err := v.Deals.AdvanceDeal(v.owner(t), ids.From[ids.DealKind](v.deal), deals.AdvanceDealInput{ToStageID: later}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestAnUndoRefusedForTheStageLeavesTheWholeDealAsItWas(t *testing.T) {
+	v := setupBundle(t)
+	v.moveOn(t)
 	h := newMarginceChangeHandlers(v.Pool)
 	summary, err := h.deals.PendingChangesOwnedBy(v.owner(t), nil)
 	if err != nil || len(summary.Bundles) != 1 || len(summary.Bundles[0].AuditLogIDs) != 3 {
@@ -435,6 +449,39 @@ func TestAnUndoRefusedForTheStageLeavesTheWholeDealAsItWas(t *testing.T) {
 	}
 }
 
+func TestAChangeKeptForItsOwnReasonKeepsItWhenTheDealIsHeld(t *testing.T) {
+	v := setupBundle(t)
+	v.accept(t, v.deal, deals.VerdictProbabilityCorrection)
+	v.moveOn(t)
+	version, err := strconv.ParseInt(v.field(t, "version"), 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var audits []openapi_types.UUID
+	for _, id := range strings.Split(v.WsScalar(t, `SELECT string_agg(audit_log_id::text, ',') FROM deal_correction WHERE deal_id = $1`, v.deal), ",") {
+		audits = append(audits, openapi_types.UUID(ids.MustParse(id)))
+	}
+	result, err := newMarginceChangeHandlers(v.Pool).undoBundle(v.owner(t), crmcontracts.UndoMarginceChangeItem{
+		DealId: openapi_types.UUID(v.deal), Version: version, AuditLogIds: audits,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]crmcontracts.UndoMarginceChangeKeptReason{
+		deals.VerdictProbabilityCorrection: crmcontracts.UndoMarginceChangeKeptReasonAccepted,
+		deals.VerdictCloseDateCorrection:   crmcontracts.UndoMarginceChangeKeptReasonChangedSince,
+		deals.VerdictStageMoveCorrection:   crmcontracts.UndoMarginceChangeKeptReasonChangedSince,
+	}
+	if result.Outcome != crmcontracts.UndoMarginceChangeResultOutcomeRefused || len(result.Kept) != len(want) {
+		t.Fatalf("undo = %+v, want all three kept", result)
+	}
+	for _, kept := range result.Kept {
+		if kept.Kind == nil || kept.Reason != want[*kept.Kind] {
+			t.Errorf("kept %v for %s, want %s", kept.Kind, kept.Reason, want[derefString(kept.Kind)])
+		}
+	}
+}
+
 // mailedMorning records a morning edition sent to the owner at at, through the
 // brief engine's own claim.
 func (v *dealVerdictEnv) mailedMorning(t *testing.T, at time.Time) {
@@ -458,6 +505,7 @@ func TestLastNightStartsWhenThePreviousMorningWasSent(t *testing.T) {
 		counted bool
 	}{
 		{"a morning sent after the changes", time.Hour, 2 * time.Hour, false},
+		{"a morning sent while a change could still commit", time.Minute, 2 * time.Hour, true},
 		{"a morning sent before the changes, read 30 hours later", -time.Hour, 30 * time.Hour, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
