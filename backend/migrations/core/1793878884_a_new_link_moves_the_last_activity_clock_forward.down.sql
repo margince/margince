@@ -25,4 +25,5 @@ END;
 $$;
 
 DROP FUNCTION IF EXISTS advance_last_activity(regclass, uuid, timestamptz);
+DROP FUNCTION IF EXISTS last_activity_of_company_activity(uuid, uuid);
 DROP FUNCTION IF EXISTS last_activity_of_activity(uuid);

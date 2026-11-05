@@ -43,11 +43,13 @@ var recencyFloor = []string{
 	"last_activity_of_company",
 	"last_activity_of_project",
 	"last_activity_of_activity",
+	"last_activity_of_company_activity",
 }
 
 // recencyFunctionRe finds a recency function's definition or its drop, by the
-// prefix every one carries. A dropped function is not live, so it leaves the census.
-var recencyFunctionRe = regexp.MustCompile(`(CREATE (?:OR REPLACE )?|DROP )FUNCTION\s+(?:IF EXISTS\s+)?(last_activity_of_\w+)`)
+// prefix every one carries. A dropped function is not live, so it leaves the
+// census. Case and line breaks are free in SQL, so neither may hide one.
+var recencyFunctionRe = regexp.MustCompile(`(?i)(CREATE\s+(?:OR\s+REPLACE\s+)?|DROP\s+)FUNCTION\s+(?:IF\s+EXISTS\s+)?(last_activity_of_\w+)`)
 
 const remediationOrigin = "system_remediation"
 
@@ -129,8 +131,8 @@ func currentRecencyBodies(t *testing.T) map[string]string {
 		// In statement order, so a file that drops one function and creates
 		// another leaves the census as the database does.
 		for _, m := range recencyFunctionRe.FindAllStringSubmatchIndex(string(raw), -1) {
-			name := string(raw[m[4]:m[5]])
-			if strings.HasPrefix(string(raw[m[2]:m[3]]), "DROP") {
+			name := strings.ToLower(string(raw[m[4]:m[5]]))
+			if strings.EqualFold(string(raw[m[2]:m[2]+4]), "DROP") {
 				delete(bodies, name)
 				continue
 			}
@@ -142,12 +144,12 @@ func currentRecencyBodies(t *testing.T) map[string]string {
 	return bodies
 }
 
-var funcHeadRe = regexp.MustCompile(`CREATE (?:OR REPLACE )?FUNCTION\s+(\w+)`)
+var funcHeadRe = regexp.MustCompile(`(?i)CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(\w+)`)
 
 // extractFunctionBody returns the text between the function's $$ delimiters.
 func extractFunctionBody(sql, name string) (string, bool) {
 	for _, m := range funcHeadRe.FindAllStringSubmatchIndex(sql, -1) {
-		if sql[m[2]:m[3]] != name {
+		if !strings.EqualFold(sql[m[2]:m[3]], name) {
 			continue
 		}
 		rest := sql[m[1]:]
@@ -162,6 +164,28 @@ func extractFunctionBody(sql, name string) (string, bool) {
 		return rest[open+2 : open+2+end], true
 	}
 	return "", false
+}
+
+// The census and the body reader take any spelling SQL does, so a replacement
+// written in lower case or across lines still counts as the live body.
+func TestTheRecencyCensusReadsEverySpelling(t *testing.T) {
+	t.Parallel()
+	for _, sql := range []string{
+		"CREATE OR REPLACE FUNCTION last_activity_of_x() AS $$body$$",
+		"create or replace function LAST_ACTIVITY_OF_X() as $$body$$",
+		"CREATE OR\nREPLACE\n  FUNCTION last_activity_of_x() AS $$body$$",
+		"create function last_activity_of_x() as $$body$$",
+	} {
+		if !recencyFunctionRe.MatchString(sql) {
+			t.Errorf("the census does not see %q", sql)
+		}
+		if body, ok := extractFunctionBody(sql, "last_activity_of_x"); !ok || body != "body" {
+			t.Errorf("reading %q gave %q, %v, want its body", sql, body, ok)
+		}
+	}
+	if m := recencyFunctionRe.FindStringSubmatch("drop\nfunction if  exists last_activity_of_x(uuid)"); m == nil {
+		t.Error("the census does not see a lower-case drop across lines")
+	}
 }
 
 func sortStrings(s []string) {

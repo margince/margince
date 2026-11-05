@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -82,5 +83,49 @@ func TestALinkMovesTheClockForwardWithoutFoldingTheHistory(t *testing.T) {
 	if onContact, onProject := clocks(); !onContact.Equal(refolded) || !onProject.Equal(refolded) {
 		t.Errorf("after unlinking the newest note the clocks read %v and %v, want both refolded to %v",
 			onContact, onProject, refolded)
+	}
+}
+
+// A contact's current employer counts only what was sent while they worked
+// there, so a new link advances that clock by the rule a refold reads. A note
+// filed on the account itself carries no such bound.
+func TestALinkAdvancesAnEmployerOnlyInsideTheEmployment(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Newco", nil)
+	contact := e.SeedContact(t, "Ann", nil)
+	contactID, companyID := ids.From[ids.ContactKind](contact), ids.From[ids.CompanyKind](company)
+	started := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID, StartedAt: &started, Source: "manual",
+	}); err != nil {
+		t.Fatalf("recording the employment: %v", err)
+	}
+	note := func(when time.Time, links ...activities.ActivityLinkInput) {
+		t.Helper()
+		subject := "touch"
+		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "note", Subject: &subject, OccurredAt: &when, Source: "manual", Links: links,
+		}); err != nil {
+			t.Fatalf("logging a note: %v", err)
+		}
+	}
+	onContact := activities.ActivityLinkInput{EntityType: "contact", EntityID: contact}
+	onCompany := activities.ActivityLinkInput{EntityType: "company", EntityID: company}
+
+	note(started.Add(-48*time.Hour), onContact)
+	if got := companyClock(t, e, company); got != nil {
+		t.Fatalf("company clock = %v from a note before the employment began, want none", got)
+	}
+
+	filed := started.Add(-24 * time.Hour)
+	note(filed, onContact, onCompany)
+	if got := companyClock(t, e, company); got == nil || !got.Equal(filed) {
+		t.Fatalf("company clock = %v, want %v from a note filed on the account", got, filed)
+	}
+
+	inside := started.Add(24 * time.Hour)
+	note(inside, onContact)
+	if got := companyClock(t, e, company); got == nil || !got.Equal(inside) {
+		t.Fatalf("company clock = %v, want %v from a note inside the employment", got, inside)
 	}
 }
