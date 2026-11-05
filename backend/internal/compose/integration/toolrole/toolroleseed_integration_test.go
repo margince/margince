@@ -69,13 +69,19 @@ var lateKinds = map[string]bool{
 	"anchor_logo": true, "live_channel": true, "channel_conversation": true,
 	"agent_withdrawn_owner_identity": true,
 	"idle_input_check":               true, "finished_site_read": true, "review_template": true,
+	"custom_field": true, "picklist_field": true, "pipeline_order": true,
+	"voice_profile": true, "no_voice_profile": true, "onboarding_state": true, "ai_budget": true,
+	"voice_build": true, "voice_source": true, "voice_ready": true,
 }
 
-// installationKinds are the late kinds the installation has one of, so a call
-// taking one runs alone.
+// installationKinds are the late kinds that make a call run alone. Each is what
+// the installation has one of, or a state only the admin may seed.
 var installationKinds = map[string]bool{
 	"anchor_logo": true, "live_channel": true, "channel_conversation": true,
 	"idle_input_check": true, "finished_site_read": true, "review_template": true,
+	"custom_field": true, "picklist_field": true, "pipeline_order": true, "no_voice_profile": true,
+	"voice_profile": true, "ai_budget": true, "onboarding_state": true,
+	"voice_build": true, "voice_source": true, "voice_ready": true,
 }
 
 // toolRoleSeeders makes one record of each kind a call can take. An owner, when
@@ -204,14 +210,19 @@ func liveVoiceProfile(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
 	var live struct {
 		Data []struct {
-			ID string `json:"id"`
+			ID      string `json:"id"`
+			OwnerID string `json:"owner_id"`
 		} `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/voice-profiles", nil, nil, &live); status != http.StatusOK {
 		t.Fatalf("listing voice profiles → %d", status)
 	}
-	if len(live.Data) > 0 {
-		return live.Data[0].ID
+	// A wider seat lists its colleagues' profiles too.
+	me := apptest.SessionUserID(t, e)
+	for _, profile := range live.Data {
+		if profile.OwnerID == me {
+			return profile.ID
+		}
 	}
 	return seededID(t, e, "/v1/voice-profiles", integration.AnyMap{})
 }

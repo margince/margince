@@ -22,7 +22,7 @@ import (
 func stateSeeders(s sweepSeed) map[string]func() string {
 	seeders := map[string]func() string{}
 	for _, group := range []func(sweepSeed) map[string]func() string{
-		memberSeeders, accessSeeders, salesSeeders, leadSeeders, roomSeeders, workSeeders, meetingSeeders, reportSeeders, companySeeders, weeklySeeders, captureSeeders, complianceSeeders, reportingSeeders, projectSeeders,
+		memberSeeders, accessSeeders, salesSeeders, leadSeeders, roomSeeders, workSeeders, meetingSeeders, reportSeeders, companySeeders, weeklySeeders, captureSeeders, complianceSeeders, reportingSeeders, projectSeeders, setupSeeders,
 	} {
 		maps.Copy(seeders, group(s))
 	}
@@ -68,7 +68,8 @@ func salesSeeders(s sweepSeed) map[string]func() string {
 		"open_stage": func() string {
 			var pipelines struct {
 				Data []struct {
-					Stages []struct {
+					IsDefault bool `json:"is_default"`
+					Stages    []struct {
 						ID       string `json:"id"`
 						Semantic string `json:"semantic"`
 					} `json:"stages"`
@@ -78,7 +79,7 @@ func salesSeeders(s sweepSeed) map[string]func() string {
 			first := apptest.DefaultPipeline(s.t, s.e).Open
 			for _, pipeline := range pipelines.Data {
 				for _, stage := range pipeline.Stages {
-					if stage.Semantic == "open" && stage.ID != first {
+					if pipeline.IsDefault && stage.Semantic == "open" && stage.ID != first {
 						return stage.ID
 					}
 				}

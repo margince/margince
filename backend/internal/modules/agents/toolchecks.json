@@ -197,16 +197,16 @@
     },
     "archive_record": {
       "checks": [
-        "activity.delete|update,company.delete,company.read",
-        "activity.delete|update,company.delete,contact.delete,deal.delete|update,offer.delete,project.delete",
-        "activity.delete|update,company.delete,contact.delete,offer.delete,project.delete,project.read",
-        "activity.delete|update,company.delete,deal.delete|update,offer.delete,relationship.read",
-        "activity.delete|update,company.delete,offer.delete,project.read,relationship.read",
-        "activity.read,company.delete,company.read",
-        "activity.read,company.delete,contact.delete,deal.delete|update,offer.delete,project.delete",
-        "activity.read,company.delete,contact.delete,offer.delete,project.delete,project.read",
-        "activity.read,company.delete,deal.delete|update,offer.delete,relationship.read",
-        "activity.read,company.delete,offer.delete,project.read,relationship.read"
+        "activity.delete|update,company.delete,company.read,product.delete",
+        "activity.delete|update,company.delete,contact.delete,deal.delete|update,offer.delete,product.delete,project.delete",
+        "activity.delete|update,company.delete,contact.delete,offer.delete,product.delete,project.delete,project.read",
+        "activity.delete|update,company.delete,deal.delete|update,offer.delete,product.delete,relationship.read",
+        "activity.delete|update,company.delete,offer.delete,product.delete,project.read,relationship.read",
+        "activity.read,company.delete,company.read,product.delete",
+        "activity.read,company.delete,contact.delete,deal.delete|update,offer.delete,product.delete,project.delete",
+        "activity.read,company.delete,contact.delete,offer.delete,product.delete,project.delete,project.read",
+        "activity.read,company.delete,deal.delete|update,offer.delete,product.delete,relationship.read",
+        "activity.read,company.delete,offer.delete,product.delete,project.read,relationship.read"
       ]
     },
     "archive_record_assignment": {
@@ -505,7 +505,8 @@
     },
     "create_automation": {
       "checks": [
-        "automation.create"
+        "automation.create",
+        "lead.update"
       ]
     },
     "create_contract": {
@@ -673,6 +674,7 @@
     },
     "create_stage": {
       "checks": [
+        "deal.read",
         "pipeline.update"
       ]
     },
@@ -1717,12 +1719,16 @@
     },
     "import_linkedin_connections": {
       "checks": [
-        "contact.create"
+        "company.read",
+        "contact.create",
+        "contact.read",
+        "relationship.read"
       ]
     },
     "import_vcards": {
       "checks": [
         "contact.create",
+        "contact.read",
         "contact.update"
       ]
     },
@@ -2372,6 +2378,7 @@
       "checks": [
         "ai_budget.read",
         "ai_budget.update",
+        "ai_diagnostics.read",
         "ai_routing.read"
       ]
     },
@@ -2390,7 +2397,8 @@
     },
     "preview_automation": {
       "checks": [
-        "automation.read"
+        "automation.read",
+        "lead.read"
       ]
     },
     "preview_connector_backfill": {
@@ -2513,7 +2521,9 @@
       ]
     },
     "propose_fx_rate_refresh": {
-      "checks": []
+      "checks": [
+        "fx_rate.create|update"
+      ]
     },
     "propose_report_setup": {
       "checks": [
@@ -2701,14 +2711,14 @@
     },
     "read_record": {
       "checks": [
-        "activity.read,company.read,deal_room.read,lead.read",
-        "activity.read,company.read,deal_room.update,lead.read",
-        "activity.read,contact.read,deal_room.read,lead.read,offer.read,project.read",
-        "activity.read,contact.read,deal_room.update,lead.read,offer.read,project.read",
-        "activity.read,deal.read,deal_room.read,lead.read,offer.read,relationship.read",
-        "activity.read,deal.read,deal_room.update,lead.read,offer.read,relationship.read",
-        "activity.read,deal_room.read,lead.read,offer.read,project.read,relationship.read",
-        "activity.read,deal_room.update,lead.read,offer.read,project.read,relationship.read"
+        "activity.read,company.read,deal_room.read,lead.read,product.read",
+        "activity.read,company.read,deal_room.update,lead.read,product.read",
+        "activity.read,contact.read,deal_room.read,lead.read,offer.read,product.read,project.read",
+        "activity.read,contact.read,deal_room.update,lead.read,offer.read,product.read,project.read",
+        "activity.read,deal.read,deal_room.read,lead.read,offer.read,product.read,relationship.read",
+        "activity.read,deal.read,deal_room.update,lead.read,offer.read,product.read,relationship.read",
+        "activity.read,deal_room.read,lead.read,offer.read,product.read,project.read,relationship.read",
+        "activity.read,deal_room.update,lead.read,offer.read,product.read,project.read,relationship.read"
       ]
     },
     "read_recovery_health": {
@@ -2953,11 +2963,13 @@
     },
     "reorder_pipelines": {
       "checks": [
+        "deal.read",
         "pipeline.update"
       ]
     },
     "reorder_stages": {
       "checks": [
+        "deal.read",
         "pipeline.update"
       ]
     },
@@ -3028,6 +3040,8 @@
     },
     "resend_member_invite": {
       "checks": [
+        "user_admin.create|update",
+        "user_admin.read|create|update|delete",
         "user_admin.update"
       ]
     },
@@ -3085,6 +3099,7 @@
     },
     "restore_pipeline": {
       "checks": [
+        "deal.read",
         "pipeline.update"
       ]
     },
@@ -3316,7 +3331,8 @@
     },
     "set_ai_model_rate": {
       "checks": [
-        "ai_model_rate.create|update"
+        "ai_model_rate.create|update",
+        "ai_model_rate.update"
       ]
     },
     "set_ai_price_sync": {
@@ -3354,7 +3370,9 @@
     },
     "set_fx_rate": {
       "checks": [
-        "fx_rate.create|update"
+        "fx_rate.create|update",
+        "fx_rate.update",
+        "installation_settings.read"
       ]
     },
     "set_lead_manual_signal": {
@@ -3432,7 +3450,9 @@
       ]
     },
     "sync_finance_source": {
-      "checks": []
+      "checks": [
+        "integrations.update"
+      ]
     },
     "take_over_conversation_claim": {
       "checks": [
@@ -3618,6 +3638,7 @@
     },
     "update_pipeline": {
       "checks": [
+        "deal.read",
         "pipeline.update"
       ]
     },
@@ -3695,6 +3716,7 @@
     },
     "update_stage": {
       "checks": [
+        "deal.read",
         "pipeline.update"
       ]
     },
@@ -3710,6 +3732,7 @@
     },
     "update_voice_profile": {
       "checks": [
+        "voice_profile.read",
         "voice_profile.update"
       ]
     },
@@ -3719,16 +3742,20 @@
       ]
     },
     "update_web_form": {
-      "checks": []
+      "checks": [
+        "integrations.update"
+      ]
     },
     "upload_company_logo": {
       "checks": [
-        "admin"
+        "admin",
+        "company.update"
       ]
     },
     "upload_company_logo_icon": {
       "checks": [
-        "admin"
+        "admin",
+        "company.update"
       ]
     },
     "upload_corpus_document": {
@@ -3738,6 +3765,7 @@
     },
     "upload_legal_entity_logo": {
       "checks": [
+        "legal_entity.read",
         "legal_entity.update"
       ]
     },

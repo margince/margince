@@ -47,8 +47,8 @@ func listPipelines(t *testing.T, e *AppEnv) pipelineListing {
 	return pipelines
 }
 
-// DiscoverSeededPipeline asserts the bootstrap seeded exactly one default
-// pipeline with its six stages and resolves the semantic stage ids.
+// DiscoverSeededPipeline asserts the bootstrap seeded one default pipeline, and
+// no other, with its six stages, and resolves the semantic stage ids.
 func DiscoverSeededPipeline(t *testing.T, e *AppEnv) SeededStages {
 	t.Helper()
 	pipelines := listPipelines(t, e)

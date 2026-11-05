@@ -78,7 +78,8 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 		compose.WithAssuranceRun(jobs), compose.WithKnowledgeIngest(jobs), compose.WithCaptureTrace(true),
 		compose.WithListsEnabled(true), compose.WithOperatorMail(apptest.DiscardingMailer{}),
 		compose.WithFilterProposals(sweepLane{reply: sweepFilterReply}), compose.WithCorpusAsk(apptest.AskableEmbedder{}, nil, apptest.QuietAskLog()), compose.WithReportSetup(sweepLane{reply: sweepSetupReply}), compose.WithVatChecking(jobs),
-		compose.WithProvider(providers, vault, jobs),
+		compose.WithProvider(providers, vault, jobs), compose.WithSchemaPool(integration.SchemaPool(t)),
+		compose.WithRateRefresh(jobs), compose.WithFinanceSources(jobs),
 	}, more...), "read", "write", "send", "draft", "enrich")
 	// The VAT queue binds the stores compose builds anywhere in the process.
 	t.Cleanup(func() { compose.BindVatChecking(nil) })

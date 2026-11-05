@@ -118,7 +118,9 @@ var aloneVerbs = map[string]bool{
 	"put_anchor_company": true, "update_activity_review_template": true,
 	"delete_anchor_company_logo": true, "delete_anchor_company_logo_icon": true, "delete_legal_entity_logo": true,
 	"update_contact_case_settings": true, "update_follow_up_settings": true, "update_lead_settings": true,
-	"update_legal_review_settings": true,
+	"update_legal_review_settings": true, "upload_company_logo": true, "upload_company_logo_icon": true,
+	"create_pipeline": true, "archive_pipeline": true, "restore_pipeline": true, "reorder_pipelines": true, "update_pipeline": true,
+	"create_custom_field": true, "update_custom_field_options": true, "start_search_reindex": true, "set_fx_rate": true, "set_ai_model_rate": true, "record_tax_rate": true,
 }
 
 // runsAlone is whether call changes or reads what the installation has one of:
