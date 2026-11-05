@@ -21,7 +21,7 @@ func settleRuleOwner(ctx context.Context, tx pgx.Tx, before Automation, in Updat
 		if before.OwnerID != nil {
 			current = &before.OwnerID.UUID
 		}
-		if err := auth.EnsureOwnerHandOn(ctx, tx, current, in.OwnerID); err != nil {
+		if err := auth.EnsureRunAsOwnerHandOn(ctx, tx, current, in.OwnerID); err != nil {
 			return ids.Nil, err
 		}
 	}
