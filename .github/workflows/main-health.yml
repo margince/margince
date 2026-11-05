@@ -86,7 +86,8 @@ jobs:
       - name: Gate binaries on PATH
         uses: ./.github/actions/gate-binaries
         with:
-          save: "true"
+          # A dispatch from another branch would save an entry only it can read.
+          save: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && 'true' || 'false' }}
       - name: Backend merge gate (make check-backend)
         working-directory: .
         env:

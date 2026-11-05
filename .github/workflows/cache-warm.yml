@@ -137,6 +137,11 @@ jobs:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
           restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
+      # Anything in the cache newer than this stamp was written by a lint run.
+      - name: Stamp the restored golangci-lint analysis cache
+        run: |
+          mkdir -p ~/.cache/golangci-lint
+          touch "$RUNNER_TEMP/golangci-restored.stamp"
       - name: Compile what the gate compiles (make check-backend)
         working-directory: .
         env:
@@ -144,10 +149,20 @@ jobs:
           CONTRACT_BREAKING_REQUIRE_BASE: "1"
           MIGRATION_VERSIONS_REQUIRE_BASE: "1"
         run: make check-backend
-      # !cancelled(), for the reason given on the build cache save below. The
-      # census does not hold this one back: golangci replays no test result.
-      - name: Refresh the golangci-lint analysis cache
+      # A red check-backend can stop before lint runs, and then the cache is the
+      # one restored above: saving it again would only spend quota.
+      - name: Check whether lint wrote to the golangci-lint analysis cache
+        id: golangci-wrote
         if: ${{ !cancelled() }}
+        run: |
+          if [ -n "$(find ~/.cache/golangci-lint -type f -newer "$RUNNER_TEMP/golangci-restored.stamp" -print -quit)" ]; then
+            echo "wrote=true" >> "$GITHUB_OUTPUT"
+          fi
+      # !cancelled(), for the reason given on the build cache save below: a red
+      # lint still analysed the tree. The census does not hold this one back,
+      # because golangci replays no test result.
+      - name: Refresh the golangci-lint analysis cache
+        if: ${{ !cancelled() && steps.golangci-wrote.outputs.wrote == 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/golangci-lint

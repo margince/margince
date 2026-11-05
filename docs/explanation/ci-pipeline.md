@@ -417,14 +417,15 @@ and there it pushes out the `main` entries that every PR loads.
 
 | Cache | Key | Saved by |
 |---|---|---|
-| Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss |
+| Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss on `main` |
 | golangci analysis, `~/.cache/golangci-lint` | [`golangci-cache-key`](../../.github/actions/golangci-cache-key/action.yml): `go.mod`, `go.sum`, both lint configs, then the commit | `cache-warm.yml` job `plain` |
 
 - **The gate binaries key reads the recipe.** An edit elsewhere in `backend/Makefile` keeps the
   key, and a new tool or pin in `make tools` changes it.
-- **The golangci entry is saved under `!cancelled()`**, as the build cache is. A red gate still
-  read the whole tree. The census does not hold this entry back, because golangci replays no test
-  result.
+- **Only a lint run saves the golangci entry.** A step stamps the cache after the
+  restore. The save runs under `!cancelled()`, and only if a cache file is newer than the stamp. A
+  red lint run still saves, because it read the whole tree. A run that stopped before lint saves
+  nothing. The census does not hold this entry back, because golangci replays no test result.
 - **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
   entry until `cache-warm` runs after the merge.
 
