@@ -2350,6 +2350,11 @@
         "privacy_request.update"
       ]
     },
+    "open_deal_room_thread": {
+      "checks": [
+        "deal_room.update"
+      ]
+    },
     "open_forecast_share": {
       "checks": [
         "forecast.read"
@@ -3030,6 +3035,11 @@
       "checks": [
         "sales_initiative.read",
         "sales_initiative.update"
+      ]
+    },
+    "reply_deal_room_thread": {
+      "checks": [
+        "deal_room.update"
       ]
     },
     "request_attachment_access": {

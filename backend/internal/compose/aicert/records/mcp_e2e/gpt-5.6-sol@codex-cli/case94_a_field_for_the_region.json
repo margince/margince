@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 0,
+  "passed": 2,
   "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -12,10 +12,10 @@
   "search": "semantic",
   "self_judged": false,
   "usage": {
-    "input_tokens": 91997,
-    "output_tokens": 4680,
+    "input_tokens": 101741,
+    "output_tokens": 4928,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 822400,
+    "cache_read_input_tokens": 1051520,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null

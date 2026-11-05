@@ -39,7 +39,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 372 | 371✓ 1✗ | 345✓ 27✗ | 346✓ 26✗ | 345✓ 27✗ | 175✓ 197✗ | 315✓ 57✗ |
+| [Business operations](#business-operations) | 374 | 373✓ 1✗ | 347✓ 27✗ | 348✓ 26✗ | 347✓ 27✗ | 175✓ 199✗ | 317✓ 57✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 41 | 41✓ 0✗ | 23✓ 18✗ | 23✓ 18✗ | 27✓ 14✗ | 8✓ 33✗ | 22✓ 19✗ |
 | [Capture and connectors](#capture-and-connectors) | 38 | 38✓ 0✗ | 32✓ 6✗ | 32✓ 6✗ | 38✓ 0✗ | 26✓ 12✗ | 31✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 38 | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 34✓ 4✗ | 38✓ 0✗ |
@@ -67,7 +67,6 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_relationships.cancel_intro_request` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_relationships.complete_intro_request` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_relationships.decide_intro_request` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `change_relationships.draft_intro_note` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_relationships.record_introduction` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_relationships.record_promise` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_relationships.request_intro` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -83,6 +82,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_details.intro_requests` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.relationship_nudge` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_relationships.contact_id` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `run_research.draft_intro_note` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `run_research.enrich_contact_from_provider` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `run_research.read_card_photo` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `run_research.refresh_contact_brief` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -97,7 +97,6 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_attention.dismiss_company_suggestion` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_attention.restore_company_suggestion` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_relationships.check_vat` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `change_relationships.draft_intro_request` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_relationships.link_contacts` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_settings.upsert_partner` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_state.set_up_partner` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -114,6 +113,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_details.offered_values` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_relationships.company_id` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `run_research.ask_about_company` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `run_research.draft_intro_request` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `run_research.refresh_company_brief` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `run_research.refresh_dossier` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `run_research.refresh_growth_fit` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -135,7 +135,6 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_offers.use_deal_estimate` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_state.correct_close_day` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_state.move_deal` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `change_state.propose_deal_roles` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_state.review_outcome` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `draft_outbound.slipping_deals` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_attention.at_risk` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -148,26 +147,29 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_details.pending_margince_changes` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.win_evidence` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_relationships.deal_id` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `run_research.propose_deal_roles` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 
 ### Deal rooms
 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
-| `change_offers.add_room_document` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_offers.archive_room` | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
 | `change_offers.close_room` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_offers.pause_room` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `change_offers.remove_room_document` | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
 | `change_offers.resolve_room_thread` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `change_offers.resume_room` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_offers.revoke_room_participant` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `change_offers.set_room_expiry` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `change_offers.update_room` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `change_offers.update_room_document` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_offers.update_room_participant` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `read_details.deal_room_brief` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `send_outbound.add_room_document` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `send_outbound.deal_room_invite` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `send_outbound.deal_room_resend` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `send_outbound.open_room_thread` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `send_outbound.remove_room_document` | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
+| `send_outbound.reply_room_thread` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `send_outbound.resume_room` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `send_outbound.set_room_expiry` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `send_outbound.update_room` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `send_outbound.update_room_document` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 
 ### Legal reviews
 
@@ -250,11 +252,11 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 |---|---|---|---|---|---|---|
 | `change_offers.accept_offer` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_offers.refresh_offer_from_deal` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `change_offers.regenerate_offer` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_offers.reject_offer` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_offers.render_offer` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_offers.send_offer` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `read_details.offer_pdf` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `run_research.regenerate_offer` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 
 ### Contracts
 
@@ -691,7 +693,6 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
-| `change_settings.ask_site_read` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.legal_entity_logo` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.site_read_logo` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.anchor_company_context` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -701,6 +702,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_workspace.legal_entity` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.legal_entity_members` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.onboarding_company_proposal` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `run_research.ask_site_read` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### Products and offer templates
 
@@ -1028,8 +1030,8 @@ Each role below reads fewer rows than all. Every granted seat reads a company, c
 
 | Role | not_found | other | ran | refused | Calls that ran |
 |---|---|---|---|---|---|
-| manager | 1 | 1 | 95 | 49 | <details><summary>95</summary>`bulk_update_records` `change_access.request_ownership` `change_access.share_contacts` `change_access.withdraw_ownership_offer` `change_access.withdraw_ownership_request` `change_activities.check_new_send` `change_activities.relink` `change_activities.relink_many` `change_activities.save_draft` `change_attention.acknowledge_company_view` `change_attention.acknowledge_contact_view` `change_attention.dismiss_company_suggestion` `change_attention.dismiss_contact_moment` `change_attention.dismiss_deal_move` `change_attention.dismiss_nudge` `change_attention.dismiss_nudges` `change_attention.reopen_rows` `change_attention.restore_company_suggestion` `change_attention.restore_contact_moment` `change_attention.restore_deal_move` `change_attention.restore_nudge` `change_compliance.record_consent` `change_offers.record_contract` `change_relationships.draft_intro_note` `change_relationships.draft_intro_request` `change_relationships.link_contacts` `change_relationships.record_introduction` `change_relationships.request_intro` `change_relationships.restore_profile_field` `change_reports.record_decision` `change_state.demote` `change_state.link_lead_company` `change_state.reopen_lead` `change_state.review_outcome` `draft_outbound.one_message` `list_documents.list` `read_context.catch_up` `read_context.meeting` `read_details.activity_deal_filing` `read_details.capture_triage` `read_details.company_brief` `read_details.company_contracts` `read_details.company_linkedin_reach` `read_details.company_logo` `read_details.company_logo_icon` `read_details.company_scan` `read_details.contact_brief` `read_details.contact_consent` `read_details.contact_consent_guard` `read_details.contact_profile_fields` `read_details.contact_stops` `read_details.controller_mail_preview` `read_details.deal_legal_reviews` `read_details.deal_lines` `read_details.deal_margince_changes` `read_details.deal_products` `read_details.dossier` `read_details.enrichment_run` `read_details.evidence` `read_details.field_history` `read_details.growth_fit` `read_details.intro_requests` `read_details.lead_promotion_preview` `read_details.lead_score` `read_details.lead_signals` `read_details.link_candidates` `read_details.meeting_proposals` `read_details.offered_values` `read_details.ownership_offer` `read_details.ownership_request` `read_details.relationship_nudge` `read_details.win_evidence` `read_project.handoff` `read_project.overview` `read_record` `read_relationships.company_id` `read_relationships.contact_id` `read_relationships.deal_id` `read_reports.question_card_records` `read_tags.record` `read_workspace.record_history` `run_research.ask_about_company` `run_research.enrich_contact_from_provider` `run_research.refresh_company_brief` `run_research.refresh_contact_brief` `run_research.refresh_dossier` `run_research.refresh_growth_fit` `run_research.refresh_scan` `run_research.research_contact` `schedule_meeting.invite` `send_outbound.details_confirmation` `send_outbound.double_opt_in` `send_outbound.email_new` `send_outbound.meeting_proposal` `send_outbound.privacy_notice`</details> |
-| rep | 1 | 1 | 95 | 49 | <details><summary>95</summary>`bulk_update_records` `change_access.request_ownership` `change_access.share_contacts` `change_access.withdraw_ownership_offer` `change_access.withdraw_ownership_request` `change_activities.check_new_send` `change_activities.relink` `change_activities.relink_many` `change_activities.save_draft` `change_attention.acknowledge_company_view` `change_attention.acknowledge_contact_view` `change_attention.dismiss_company_suggestion` `change_attention.dismiss_contact_moment` `change_attention.dismiss_deal_move` `change_attention.dismiss_nudge` `change_attention.dismiss_nudges` `change_attention.reopen_rows` `change_attention.restore_company_suggestion` `change_attention.restore_contact_moment` `change_attention.restore_deal_move` `change_attention.restore_nudge` `change_compliance.record_consent` `change_offers.record_contract` `change_relationships.draft_intro_note` `change_relationships.draft_intro_request` `change_relationships.link_contacts` `change_relationships.record_introduction` `change_relationships.request_intro` `change_relationships.restore_profile_field` `change_reports.record_decision` `change_state.demote` `change_state.link_lead_company` `change_state.reopen_lead` `change_state.review_outcome` `draft_outbound.one_message` `list_documents.list` `read_context.catch_up` `read_context.meeting` `read_details.activity_deal_filing` `read_details.capture_triage` `read_details.company_brief` `read_details.company_contracts` `read_details.company_linkedin_reach` `read_details.company_logo` `read_details.company_logo_icon` `read_details.company_scan` `read_details.contact_brief` `read_details.contact_consent` `read_details.contact_consent_guard` `read_details.contact_profile_fields` `read_details.contact_stops` `read_details.controller_mail_preview` `read_details.deal_legal_reviews` `read_details.deal_lines` `read_details.deal_margince_changes` `read_details.deal_products` `read_details.dossier` `read_details.enrichment_run` `read_details.evidence` `read_details.field_history` `read_details.growth_fit` `read_details.intro_requests` `read_details.lead_promotion_preview` `read_details.lead_score` `read_details.lead_signals` `read_details.link_candidates` `read_details.meeting_proposals` `read_details.offered_values` `read_details.ownership_offer` `read_details.ownership_request` `read_details.relationship_nudge` `read_details.win_evidence` `read_project.handoff` `read_project.overview` `read_record` `read_relationships.company_id` `read_relationships.contact_id` `read_relationships.deal_id` `read_reports.question_card_records` `read_tags.record` `read_workspace.record_history` `run_research.ask_about_company` `run_research.enrich_contact_from_provider` `run_research.refresh_company_brief` `run_research.refresh_contact_brief` `run_research.refresh_dossier` `run_research.refresh_growth_fit` `run_research.refresh_scan` `run_research.research_contact` `schedule_meeting.invite` `send_outbound.details_confirmation` `send_outbound.double_opt_in` `send_outbound.email_new` `send_outbound.meeting_proposal` `send_outbound.privacy_notice`</details> |
+| manager | 1 | 1 | 95 | 49 | <details><summary>95</summary>`bulk_update_records` `change_access.request_ownership` `change_access.share_contacts` `change_access.withdraw_ownership_offer` `change_access.withdraw_ownership_request` `change_activities.check_new_send` `change_activities.relink` `change_activities.relink_many` `change_activities.save_draft` `change_attention.acknowledge_company_view` `change_attention.acknowledge_contact_view` `change_attention.dismiss_company_suggestion` `change_attention.dismiss_contact_moment` `change_attention.dismiss_deal_move` `change_attention.dismiss_nudge` `change_attention.dismiss_nudges` `change_attention.reopen_rows` `change_attention.restore_company_suggestion` `change_attention.restore_contact_moment` `change_attention.restore_deal_move` `change_attention.restore_nudge` `change_compliance.record_consent` `change_offers.record_contract` `change_relationships.link_contacts` `change_relationships.record_introduction` `change_relationships.request_intro` `change_relationships.restore_profile_field` `change_reports.record_decision` `change_state.demote` `change_state.link_lead_company` `change_state.reopen_lead` `change_state.review_outcome` `draft_outbound.one_message` `list_documents.list` `read_context.catch_up` `read_context.meeting` `read_details.activity_deal_filing` `read_details.capture_triage` `read_details.company_brief` `read_details.company_contracts` `read_details.company_linkedin_reach` `read_details.company_logo` `read_details.company_logo_icon` `read_details.company_scan` `read_details.contact_brief` `read_details.contact_consent` `read_details.contact_consent_guard` `read_details.contact_profile_fields` `read_details.contact_stops` `read_details.controller_mail_preview` `read_details.deal_legal_reviews` `read_details.deal_lines` `read_details.deal_margince_changes` `read_details.deal_products` `read_details.dossier` `read_details.enrichment_run` `read_details.evidence` `read_details.field_history` `read_details.growth_fit` `read_details.intro_requests` `read_details.lead_promotion_preview` `read_details.lead_score` `read_details.lead_signals` `read_details.link_candidates` `read_details.meeting_proposals` `read_details.offered_values` `read_details.ownership_offer` `read_details.ownership_request` `read_details.relationship_nudge` `read_details.win_evidence` `read_project.handoff` `read_project.overview` `read_record` `read_relationships.company_id` `read_relationships.contact_id` `read_relationships.deal_id` `read_reports.question_card_records` `read_tags.record` `read_workspace.record_history` `run_research.ask_about_company` `run_research.draft_intro_note` `run_research.draft_intro_request` `run_research.enrich_contact_from_provider` `run_research.refresh_company_brief` `run_research.refresh_contact_brief` `run_research.refresh_dossier` `run_research.refresh_growth_fit` `run_research.refresh_scan` `run_research.research_contact` `schedule_meeting.invite` `send_outbound.details_confirmation` `send_outbound.double_opt_in` `send_outbound.email_new` `send_outbound.meeting_proposal` `send_outbound.privacy_notice`</details> |
+| rep | 1 | 1 | 95 | 49 | <details><summary>95</summary>`bulk_update_records` `change_access.request_ownership` `change_access.share_contacts` `change_access.withdraw_ownership_offer` `change_access.withdraw_ownership_request` `change_activities.check_new_send` `change_activities.relink` `change_activities.relink_many` `change_activities.save_draft` `change_attention.acknowledge_company_view` `change_attention.acknowledge_contact_view` `change_attention.dismiss_company_suggestion` `change_attention.dismiss_contact_moment` `change_attention.dismiss_deal_move` `change_attention.dismiss_nudge` `change_attention.dismiss_nudges` `change_attention.reopen_rows` `change_attention.restore_company_suggestion` `change_attention.restore_contact_moment` `change_attention.restore_deal_move` `change_attention.restore_nudge` `change_compliance.record_consent` `change_offers.record_contract` `change_relationships.link_contacts` `change_relationships.record_introduction` `change_relationships.request_intro` `change_relationships.restore_profile_field` `change_reports.record_decision` `change_state.demote` `change_state.link_lead_company` `change_state.reopen_lead` `change_state.review_outcome` `draft_outbound.one_message` `list_documents.list` `read_context.catch_up` `read_context.meeting` `read_details.activity_deal_filing` `read_details.capture_triage` `read_details.company_brief` `read_details.company_contracts` `read_details.company_linkedin_reach` `read_details.company_logo` `read_details.company_logo_icon` `read_details.company_scan` `read_details.contact_brief` `read_details.contact_consent` `read_details.contact_consent_guard` `read_details.contact_profile_fields` `read_details.contact_stops` `read_details.controller_mail_preview` `read_details.deal_legal_reviews` `read_details.deal_lines` `read_details.deal_margince_changes` `read_details.deal_products` `read_details.dossier` `read_details.enrichment_run` `read_details.evidence` `read_details.field_history` `read_details.growth_fit` `read_details.intro_requests` `read_details.lead_promotion_preview` `read_details.lead_score` `read_details.lead_signals` `read_details.link_candidates` `read_details.meeting_proposals` `read_details.offered_values` `read_details.ownership_offer` `read_details.ownership_request` `read_details.relationship_nudge` `read_details.win_evidence` `read_project.handoff` `read_project.overview` `read_record` `read_relationships.company_id` `read_relationships.contact_id` `read_relationships.deal_id` `read_reports.question_card_records` `read_tags.record` `read_workspace.record_history` `run_research.ask_about_company` `run_research.draft_intro_note` `run_research.draft_intro_request` `run_research.enrich_contact_from_provider` `run_research.refresh_company_brief` `run_research.refresh_contact_brief` `run_research.refresh_dossier` `run_research.refresh_growth_fit` `run_research.refresh_scan` `run_research.research_contact` `schedule_meeting.invite` `send_outbound.details_confirmation` `send_outbound.double_opt_in` `send_outbound.email_new` `send_outbound.meeting_proposal` `send_outbound.privacy_notice`</details> |
 
 | Answer | Meaning |
 |---|---|
@@ -1061,7 +1063,6 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Contacts and relationships | `change_relationships.cancel_intro_request` | `cancel_intro_request` | `introduction.read` `introduction.update` |
 | Contacts and relationships | `change_relationships.complete_intro_request` | `complete_intro_request` | `introduction.read` `introduction.update` |
 | Contacts and relationships | `change_relationships.decide_intro_request` | `decide_intro_request` | `introduction.read` `introduction.update` |
-| Contacts and relationships | `change_relationships.draft_intro_note` | `draft_intro_note` | `activity.read` `contact.read` `relationship.read` |
 | Contacts and relationships | `change_relationships.record_introduction` | `record_introduction` | `contact.read` `introduction.create` `introduction.read` |
 | Contacts and relationships | `change_relationships.record_promise` | `record_conversation_claim` | `contact.update` |
 | Contacts and relationships | `change_relationships.request_intro` | `create_intro_request` | `contact.read` `introduction.create` `introduction.read` |
@@ -1077,6 +1078,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Contacts and relationships | `read_details.intro_requests` | `list_intro_requests` | `introduction.read` |
 | Contacts and relationships | `read_details.relationship_nudge` | `get_relationship_nudge` | `contact.read` |
 | Contacts and relationships | `read_relationships.contact_id` | `who_knows` | `contact.read` |
+| Contacts and relationships | `run_research.draft_intro_note` | `draft_intro_note` | `activity.read` `contact.read` `relationship.read` |
 | Contacts and relationships | `run_research.enrich_contact_from_provider` | `enrich_contact_from_provider` | `company.read` `contact.update` |
 | Contacts and relationships | `run_research.read_card_photo` | `read_card_photo` | `contact.create` `contact.read` `contact.update` |
 | Contacts and relationships | `run_research.refresh_contact_brief` | `regenerate_contact_brief` | `activity.read` `company.read` `contact.read` `deal.read` `project.read` `relationship.read` |
@@ -1086,7 +1088,6 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Companies | `change_attention.dismiss_company_suggestion` | `dismiss_company_suggestion` | `activity.read` `company.read` `contact.read` `installation_settings.read` `relationship.read` |
 | Companies | `change_attention.restore_company_suggestion` | `restore_company_suggestion` | `company.read` |
 | Companies | `change_relationships.check_vat` | `request_company_vat_check` | `company.update` |
-| Companies | `change_relationships.draft_intro_request` | `draft_intro_request` | `activity.read` `company.read` `contact.read` `relationship.read` |
 | Companies | `change_relationships.link_contacts` | `link_company_contacts` | `company.read` `contact.read` `contact.update` `relationship.create` `relationship.read` |
 | Companies | `change_settings.upsert_partner` | `upsert_partner` | `company.update` |
 | Companies | `change_state.set_up_partner` | `set_up_partner` | `company.read` `company.update` `partner.read` |
@@ -1103,6 +1104,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Companies | `read_details.offered_values` | `list_company_offered_values` | `company.read` |
 | Companies | `read_relationships.company_id` | `intro_path_to` | `company.read` `contact.read` `relationship.read` |
 | Companies | `run_research.ask_about_company` | `ask_about_company` | `activity.read` `company.read` `contact.read` `deal.read` `list.read` `project.read` `relationship.read` `tag.read` |
+| Companies | `run_research.draft_intro_request` | `draft_intro_request` | `activity.read` `company.read` `contact.read` `relationship.read` |
 | Companies | `run_research.refresh_company_brief` | `regenerate_company_brief` | `activity.read` `company.read` `contact.read` `deal.read` `list.read` `project.read` `relationship.read` `tag.read` |
 | Companies | `run_research.refresh_dossier` | `refresh_company_dossier` | `company.read` `contact.read` `relationship.read` |
 | Companies | `run_research.refresh_growth_fit` | `refresh_company_growth_fit` | `company.read` `contact.read` `relationship.read` |
@@ -1119,7 +1121,6 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Deals | `change_offers.use_deal_estimate` | `use_deal_estimate` | `deal.update` |
 | Deals | `change_state.correct_close_day` | `correct_deal_close_day` | `company.read` `deal.update` `installation_settings.read` `project.read` |
 | Deals | `change_state.move_deal` | `progress_deal` | `company.read` `deal.read` `deal.update` `installation_settings.read` `project.read` |
-| Deals | `change_state.propose_deal_roles` | `propose_deal_roles` | `contact.read` `deal.read` `deal.update` `relationship.create` `relationship.read` |
 | Deals | `change_state.review_outcome` | `create_deal_outcome_review` | `activity.create` `activity.read` `deal.read` |
 | Deals | `draft_outbound.slipping_deals` | `draft_follow_ups_for` | `company.read` `deal.read` `installation_settings.read` `project.read` |
 | Deals | `read_attention.at_risk` | `at_risk_relationships` | `company.read` `contact.read` `deal.read` `project.read` `relationship.read` |
@@ -1132,21 +1133,24 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Deals | `read_details.pending_margince_changes` | `get_pending_margince_changes` | `deal.read` |
 | Deals | `read_details.win_evidence` | `get_deal_win_evidence` | `deal.read` |
 | Deals | `read_relationships.deal_id` | `company_coverage` | `contact.read` `deal.read` `relationship.read` |
-| Deal rooms | `change_offers.add_room_document` | `add_deal_room_document` | `deal_room.create` |
+| Deals | `run_research.propose_deal_roles` | `propose_deal_roles` | `contact.read` `deal.read` `deal.update` `relationship.create` `relationship.read` |
 | Deal rooms | `change_offers.archive_room` | `archive_deal_room` | `deal_room.delete` |
 | Deal rooms | `change_offers.close_room` | `close_deal_room` | `deal_room.update` |
 | Deal rooms | `change_offers.pause_room` | `pause_deal_room` | `deal_room.update` |
-| Deal rooms | `change_offers.remove_room_document` | `remove_deal_room_document` | `deal_room.delete` |
 | Deal rooms | `change_offers.resolve_room_thread` | `resolve_deal_room_thread` | `deal_room.update` |
-| Deal rooms | `change_offers.resume_room` | `resume_deal_room` | `deal_room.update` |
 | Deal rooms | `change_offers.revoke_room_participant` | `revoke_deal_room_participant` | `deal_room.update` |
-| Deal rooms | `change_offers.set_room_expiry` | `set_deal_room_expiry` | `deal_room.update` |
-| Deal rooms | `change_offers.update_room` | `update_deal_room` | `deal_room.update` |
-| Deal rooms | `change_offers.update_room_document` | `update_deal_room_document` | `deal_room.update` |
 | Deal rooms | `change_offers.update_room_participant` | `update_deal_room_participant` | `deal_room.update` |
 | Deal rooms | `read_details.deal_room_brief` | `get_deal_room_brief` | `deal_room.read` |
+| Deal rooms | `send_outbound.add_room_document` | `add_deal_room_document` | `deal_room.create` |
 | Deal rooms | `send_outbound.deal_room_invite` | `invite_deal_room_participant` | `deal_room.update` |
 | Deal rooms | `send_outbound.deal_room_resend` | `resend_deal_room_invitation` | `deal_room.update` |
+| Deal rooms | `send_outbound.open_room_thread` | `open_deal_room_thread` | `deal_room.update` |
+| Deal rooms | `send_outbound.remove_room_document` | `remove_deal_room_document` | `deal_room.delete` |
+| Deal rooms | `send_outbound.reply_room_thread` | `reply_deal_room_thread` | `deal_room.update` |
+| Deal rooms | `send_outbound.resume_room` | `resume_deal_room` | `deal_room.update` |
+| Deal rooms | `send_outbound.set_room_expiry` | `set_deal_room_expiry` | `deal_room.update` |
+| Deal rooms | `send_outbound.update_room` | `update_deal_room` | `deal_room.update` |
+| Deal rooms | `send_outbound.update_room_document` | `update_deal_room_document` | `deal_room.update` |
 | Legal reviews | `change_state.decide_legal_review` | `decide_legal_review` | `legal_review.read` `legal_review.update` |
 | Legal reviews | `change_state.request_legal_review` | `request_legal_review` | `activity.read` `company.read` `contact.read` `deal.read` `deal.update` `installation_settings.read` `offer.read` `project.read` |
 | Legal reviews | `change_state.withdraw_legal_review` | `withdraw_legal_review` | `deal.update` |
@@ -1204,11 +1208,11 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Scheduling and bookings | `send_outbound.meeting_proposal` | `create_meeting_proposal` | `activity.create` `activity.read` |
 | Offers | `change_offers.accept_offer` | `accept_offer` | `company.read` `deal.update` `offer.update` |
 | Offers | `change_offers.refresh_offer_from_deal` | `refresh_offer_from_deal` | `company.read` `offer.update` |
-| Offers | `change_offers.regenerate_offer` | `regenerate_offer` | `company.read` `offer.create` `offer.update` |
 | Offers | `change_offers.reject_offer` | `reject_offer` | `company.read` `offer.update` |
 | Offers | `change_offers.render_offer` | `render_offer` | `company.read` `installation_settings.read` `offer.read` `offer.update` |
 | Offers | `change_offers.send_offer` | `send_offer` | `company.read` `installation_settings.read` `offer.update` |
 | Offers | `read_details.offer_pdf` | `download_offer_pdf` | `company.read` `offer.read` |
+| Offers | `run_research.regenerate_offer` | `regenerate_offer` | `company.read` `offer.create` `offer.update` |
 | Contracts | `change_offers.archive_contract` | `archive_contract` | `contract.delete` |
 | Contracts | `change_offers.cancel_contract` | `cancel_contract` | `company.read` `contract.update` `deal.read` `project.read` |
 | Contracts | `change_offers.record_contract` | `create_contract` | `company.read` `contract.create` `deal.read` `project.read` |
@@ -1519,7 +1523,6 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Sales lists and reasons | `read_workspace.lead_signal_catalog` | `get_lead_signal_catalog` |  |
 | Sales rules and templates | `read_workspace.contact_case_settings` | `get_contact_case_settings` | `installation_settings.read` |
 | Sales rules and templates | `read_workspace.legal_review_settings` | `get_legal_review_settings` | `installation_settings.read` |
-| Your company and legal entities | `change_settings.ask_site_read` | `message_anchor_company_site_read` | `company.read` |
 | Your company and legal entities | `read_details.legal_entity_logo` | `get_legal_entity_logo` | `legal_entity.read` |
 | Your company and legal entities | `read_details.site_read_logo` | `read_site_read_logo` | `company.read` |
 | Your company and legal entities | `read_workspace.anchor_company_context` | `get_anchor_company_context` | `company.read` |
@@ -1529,6 +1532,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Your company and legal entities | `read_workspace.legal_entity` | `get_legal_entity` | `legal_entity.read` |
 | Your company and legal entities | `read_workspace.legal_entity_members` | `list_legal_entity_members` | `legal_entity.read` |
 | Your company and legal entities | `read_workspace.onboarding_company_proposal` | `read_onboarding_company_proposal` | `company.read` |
+| Your company and legal entities | `run_research.ask_site_read` | `message_anchor_company_site_read` | `company.read` |
 | Products and offer templates | `change_settings.put_product_translation` | `put_product_translation` | `product.update` |
 | Products and offer templates | `read_details.product_translations` | `list_product_translations` | `product.read` |
 | Exchange, tax and model rates | `read_workspace.fx_rate_currencies` | `list_fx_rate_currencies` | `deal.read` |

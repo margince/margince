@@ -195,7 +195,6 @@
       "actions": {
         "accept_offer": "accept_offer",
         "add_deal_line": "add_deal_line",
-        "add_room_document": "add_deal_room_document",
         "archive_contract": "archive_contract",
         "archive_room": "archive_deal_room",
         "cancel_contract": "cancel_contract",
@@ -203,23 +202,17 @@
         "pause_room": "pause_deal_room",
         "record_contract": "create_contract",
         "refresh_offer_from_deal": "refresh_offer_from_deal",
-        "regenerate_offer": "regenerate_offer",
         "reject_offer": "reject_offer",
         "remove_deal_line": "remove_deal_line",
-        "remove_room_document": "remove_deal_room_document",
         "render_offer": "render_offer",
         "renew_contract": "renew_contract",
         "resolve_room_thread": "resolve_deal_room_thread",
-        "resume_room": "resume_deal_room",
         "revoke_room_participant": "revoke_deal_room_participant",
         "send_offer": "send_offer",
         "set_contract_status": "change_contract_status",
         "set_deal_products": "replace_deal_products",
-        "set_room_expiry": "set_deal_room_expiry",
         "update_contract": "update_contract",
         "update_deal_line": "update_deal_line",
-        "update_room": "update_deal_room",
-        "update_room_document": "update_deal_room_document",
         "update_room_participant": "update_deal_room_participant",
         "use_deal_estimate": "use_deal_estimate"
       }
@@ -233,8 +226,6 @@
         "check_vat": "request_company_vat_check",
         "complete_intro_request": "complete_intro_request",
         "decide_intro_request": "decide_intro_request",
-        "draft_intro_note": "draft_intro_note",
-        "draft_intro_request": "draft_intro_request",
         "link_contacts": "link_company_contacts",
         "record_introduction": "record_introduction",
         "record_promise": "record_conversation_claim",
@@ -287,7 +278,6 @@
         "archive_saved_view": "archive_saved_view",
         "archive_stage": "archive_stage",
         "archive_web_form": "archive_web_form",
-        "ask_site_read": "message_anchor_company_site_read",
         "confirm_site_read": "confirm_anchor_company_site_read",
         "control_data_task": "control_data_task",
         "create_acquisition_source": "create_acquisition_source",
@@ -374,7 +364,6 @@
         "move_deal": "progress_deal",
         "move_project": "advance_project_phase",
         "promote": "promote_lead",
-        "propose_deal_roles": "propose_deal_roles",
         "publish_contact": "publish_captured_contact",
         "qualify": "qualify_lead",
         "record_project_health": "create_project_health_assessment",
@@ -748,11 +737,15 @@
       "actions": {
         "ask_about_company": "ask_about_company",
         "ask_corpus": "ask_knowledge_corpus",
+        "ask_site_read": "message_anchor_company_site_read",
         "assess_sales_review": "assess_sales_review",
         "build_voice_profile": "build_voice_profile",
+        "draft_intro_note": "draft_intro_note",
+        "draft_intro_request": "draft_intro_request",
         "enrich_contact_from_provider": "enrich_contact_from_provider",
         "generate_brief": "generate_morning_brief",
         "preview_home_repair": "preview_home_repair",
+        "propose_deal_roles": "propose_deal_roles",
         "propose_filter": "propose_filter",
         "propose_report_setup": "propose_report_setup",
         "read_card_photo": "read_card_photo",
@@ -761,6 +754,7 @@
         "refresh_dossier": "refresh_company_dossier",
         "refresh_growth_fit": "refresh_company_growth_fit",
         "refresh_scan": "ensure_company_scan",
+        "regenerate_offer": "regenerate_offer",
         "research_contact": "run_contact_research",
         "start_backfill": "start_connector_backfill",
         "start_search_reindex": "start_search_reindex"
@@ -775,6 +769,7 @@
     "send_outbound": {
       "field": "as",
       "actions": {
+        "add_room_document": "add_deal_room_document",
         "change_invitation": "change_meeting_invitation",
         "chat_reply": "send_message",
         "deal_room_invite": "invite_deal_room_participant",
@@ -787,9 +782,16 @@
         "invite_member": "invite_user",
         "meeting_proposal": "create_meeting_proposal",
         "my_signature": "save_my_email_signature",
+        "open_room_thread": "open_deal_room_thread",
         "privacy_notice": "send_privacy_notice",
+        "remove_room_document": "remove_deal_room_document",
+        "reply_room_thread": "reply_deal_room_thread",
         "resend_member_invite": "resend_member_invite",
-        "signature_template": "save_email_signature_template"
+        "resume_room": "resume_deal_room",
+        "set_room_expiry": "set_deal_room_expiry",
+        "signature_template": "save_email_signature_template",
+        "update_room": "update_deal_room",
+        "update_room_document": "update_deal_room_document"
       }
     }
   }

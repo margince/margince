@@ -8,8 +8,9 @@ package gates
 // Every test that builds a git repository keeps the caller's git config out of it.
 //
 // A global commit.gpgsign otherwise fails the fixture's commits on a developer's
-// machine while CI stays green. Shell tests source scripts/lib-git-fixture.sh;
-// tests in other languages set GIT_CONFIG_GLOBAL in the environment they hand git.
+// machine while CI stays green. Shell tests source scripts/lib-git-fixture.sh
+// before any git call, since an exported GIT_DIR steers every one. Other tests
+// hand git GIT_CONFIG_GLOBAL and GIT_CONFIG_SYSTEM.
 //
 // Blind spots: a subcommand held in a variable, and a git call split over lines.
 // A test file outside the naming conventions below is not read.
@@ -38,7 +39,10 @@ var argBuildsGitRepo = regexp.MustCompile(`["'` + "`" + `](-c\s+\S+\s+)*(init|co
 // never does is not building a repository, whatever its strings say.
 var spawnsGit = regexp.MustCompile(`\b(Command|CommandContext|execFileSync|execFile|spawnSync|spawn|execSync|execa)\(\s*(\w+,\s*)?["'` + "`" + `]git\b`)
 
-var sourcesGitFixtureLib = regexp.MustCompile(`(^|\s)(source|\.)\s+\S*lib-git-fixture\.sh\b`)
+// shellCallsGit matches git started as a shell command, not the word in prose.
+var shellCallsGit = regexp.MustCompile(`(^|[;&|(` + "`" + `!{]|\b(if|then|else|elif|do|while|until)\s)\s*git\s`)
+
+var sourcesGitFixtureLib = regexp.MustCompile(`(^|\s)(source|\.)\s+.*lib-git-fixture\.sh\b`)
 
 func isShellTest(base string) bool {
 	return strings.HasSuffix(base, ".sh") && (strings.HasPrefix(base, "test-") || strings.HasSuffix(base, ".test.sh"))
@@ -73,36 +77,41 @@ func TestEveryTestThatBuildsAGitRepoIgnoresTheCallersGitConfig(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading %s: %v", file.path, err)
 		}
+		shell := isShellTest(base)
+		if !shell && !spawnsGit.Match(raw) {
+			continue
+		}
 		buildsGitRepo := argBuildsGitRepo
-		if isShellTest(base) {
+		if shell {
 			buildsGitRepo = shellBuildsGitRepo
 		}
-		builds, sources := false, false
+		builds, sources, calledGitFirst, setsGlobal, setsSystem := false, false, false, false, false
 		for line := range strings.SplitSeq(string(raw), "\n") {
 			code := strings.TrimSpace(line)
 			if isCommentLine(code) {
 				continue
 			}
+			calledGitFirst = calledGitFirst || (!sources && shellCallsGit.MatchString(code))
 			builds = builds || buildsGitRepo.MatchString(code)
 			sources = sources || sourcesGitFixtureLib.MatchString(code)
-		}
-		if !isShellTest(base) && !spawnsGit.Match(raw) {
-			builds = false
+			setsGlobal = setsGlobal || strings.Contains(code, "GIT_CONFIG_GLOBAL")
+			setsSystem = setsSystem || strings.Contains(code, "GIT_CONFIG_SYSTEM")
 		}
 		switch {
 		case !builds:
-		case isShellTest(base):
+		case shell:
 			shellBuilders++
-			if !sources {
-				t.Errorf("%s builds a git repository but does not source %s: the fixture then "+
-					"inherits the caller's git config, and a global commit.gpgsign or hooks path "+
-					"fails the test on a developer's machine. Add `source \"$(pwd)/%s\"` before the first git call.",
-					file.path, gitFixtureLib, gitFixtureLib)
+			if !sources || calledGitFirst {
+				t.Errorf("%s builds a git repository but does not source %s before its first git call: "+
+					"the fixture then inherits the caller's git config and GIT_DIR, and a global "+
+					"commit.gpgsign or hooks path fails the test on a developer's machine. Source it "+
+					"from the script's own directory, not from a path git answered.",
+					file.path, gitFixtureLib)
 			}
 		default:
 			otherBuilders++
-			if !strings.Contains(string(raw), "GIT_CONFIG_GLOBAL") {
-				t.Errorf("%s builds a git repository but never sets GIT_CONFIG_GLOBAL: the fixture then "+
+			if !setsGlobal || !setsSystem {
+				t.Errorf("%s builds a git repository but does not set both GIT_CONFIG_GLOBAL and GIT_CONFIG_SYSTEM: the fixture then "+
 					"inherits the caller's git config, and a global commit.gpgsign fails the test on a "+
 					"developer's machine. Hand git an environment with GIT_CONFIG_GLOBAL=/dev/null and "+
 					"GIT_CONFIG_SYSTEM=/dev/null, as %s does for the shell tests.", file.path, gitFixtureLib)

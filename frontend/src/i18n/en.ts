@@ -3347,6 +3347,14 @@ export const en = {
   "list.headActions": "More actions",
   "list.search": "Search",
   "list.showArchived": "Show archived",
+  "list.viewToggleOn": "On",
+  "list.viewToggleOff": "Off",
+  "list.viewMenu": "View",
+  "list.viewMenuBack": "back to view options",
+  "list.viewMenuChanged": "changed",
+  "list.viewMenuFilters_one": "{count} filter",
+  "list.viewMenuFilters_other": "{count} filters",
+  "list.viewMenuNone": "None",
   "list.loadMore": "Load more",
   "scrollSentinel.loading": "Loading more…",
   "scrollSentinel.failed": "Could not load more.",
@@ -3368,15 +3376,14 @@ export const en = {
   "table.rowsPerPage": "Rows per page",
   "table.perPage": "{count} per page",
   "table.sortedBy": "sorted by {column}",
-  "table.shownColumns": "Shown columns",
-  "table.display": "Display",
-  "table.density": "Density",
   "table.compact": "Compact",
+  "table.filters": "Filters",
+  "table.columns": "Columns",
+  "table.columnsShown": "{shown} of {total}",
+  "table.sortValue": "{column}, {direction}",
   "table.columnHandle": "Move {name}, {position} of {total}",
   "table.columnMoved": "{name} moved to {position} of {total}",
   "table.sort": "Sort",
-  "table.sortNamed": "Sort: {column}",
-  "table.sortMenu": "Sort by",
   "table.sortDefault": "Default order",
   "table.sortAscending": "ascending",
   "table.sortDescending": "descending",
@@ -3386,6 +3393,7 @@ export const en = {
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
+  "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "contacts",
   "unit.companies": "companies",
   "unit.deals": "deals",
@@ -3394,9 +3402,7 @@ export const en = {
   "unit.partners": "partners",
   "unit.products": "products",
   "unit.offerTemplates": "offer templates",
-  "table.filter": "Filter",
   "table.filterSearch": "Search attributes",
-  "table.addFilter": "Add filter",
   "table.filterIs": "is",
   "table.filterCondition": "Condition",
   "table.filterMore": "More actions for the {filter} filter",
@@ -3406,7 +3412,7 @@ export const en = {
   "table.filterSearching": "Searching…",
   "table.filterSearchFailed": "Search failed. Retry.",
   "table.filterNoMatches": "No matches.",
-  "table.filterBack": "Back to all filters",
+  "table.filterBack": "back to all filters",
 
   "contacts.name": "Name",
   "contacts.email": "Email",
@@ -3431,6 +3437,7 @@ export const en = {
   // lands beside the list's own tools, and "this section did not load" under a
   // toolbar says nothing about WHICH section.
   "views.rail": "Saved views",
+  "views.loadFailed": "Saved views did not load.",
   "views.manage": "Manage views",
   "views.none": "No saved views",
   "views.rename": "Rename",
@@ -6164,6 +6171,8 @@ export const en = {
   "deal.correctCloseDayConfirm": "Save close day",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "{count} deal in {pipeline}",
+  "deals.countInPipeline_other": "{count} deals in {pipeline}",
   "deals.filterStalled": "Stalled only",
   // Both reasons say "loaded only" rather than naming the sum alone: with no
   // server aggregate the column's figure is the cards LOADED, and the board
@@ -12772,7 +12781,9 @@ export const en = {
   "auto.pausedReason.listInvalid":
     "Paused because the filter of the Live List it watches stopped working. Fixing the filter does not resume it.",
   "auto.pausedReason.passportRevoked":
-    "The agent that set this rule up had its passport revoked, so the rule stopped. Resume it to keep it running with no agent behind it.",
+    "The agent that set this rule up no longer has live access because its passport expired or was revoked, or its connection ended. Resume it to keep running without an agent.",
+  "auto.setByYourAgent": "By your agent",
+  "auto.setByAnAgent": "By an agent",
   "auto.pausedReason.listUnavailable":
     "Paused because its owner can no longer find the list it watches.",
   "auto.pausedReason.burst":
@@ -12819,7 +12830,7 @@ export const en = {
   "auto.action.addToShortlist": "add to a Shortlist",
   "auto.pausedShort.listArchived": "Paused · list archived",
   "auto.pausedShort.listInvalid": "Paused · list filter broken",
-  "auto.pausedShort.passportRevoked": "Paused · agent’s passport revoked",
+  "auto.pausedShort.passportRevoked": "Paused · agent’s access ended",
   "auto.pausedShort.listUnavailable": "Paused · list not found",
   "auto.pausedShort.burst": "Paused · too many records",
   "auto.withheld": "Configured automations are hidden for your role.",
@@ -15294,6 +15305,7 @@ export const en = {
   "account.timezoneLabel": "Time zone",
   "account.timezoneHelp":
     "Times in Margince, your bookable hours and mail sent to you use this time zone. Saved to your account, so it follows you to every device you sign in on.",
+  "account.timezoneSetByAgent": "By your agent",
   "workingHours.zoneIs": "Your hours are read in {zone}.",
   "workingHours.changeZone": "Change time zone",
   "account.languageCard": "Language and time zone",
@@ -19112,7 +19124,7 @@ export const en = {
   "worklist.verb.retryRefusedRepeats":
     "This rule is not allowed to run twice, so a rerun could repeat its actions.",
   "worklist.verb.retryRefusedPassportRevoked":
-    "The agent that set this rule up had its passport revoked, so the rule is paused. Resume it to keep it running with no agent behind it.",
+    "The agent that set this rule up no longer has live access, so the rule is paused. Resume it to keep it running with no agent behind it.",
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",

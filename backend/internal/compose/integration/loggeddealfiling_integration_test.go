@@ -291,7 +291,7 @@ func TestDealFilingRefusesAnUnrelatedCompanyContext(t *testing.T) {
 }
 
 // requireFilingFault logs in and wants one deal_filing refusal with this code.
-func (w *loggedDealWorld) requireFilingFault(t *testing.T, ctx context.Context, in activities.LogActivityInput, code string) {
+func (w *loggedDealWorld) requireFilingFault(ctx context.Context, t *testing.T, in activities.LogActivityInput, code string) {
 	t.Helper()
 	_, _, err := w.store.LogActivity(ctx, in)
 	fault, ok := errors.AsType[*httperr.DetailedError](err)
@@ -311,7 +311,7 @@ func TestDealFilingRefusesAChosenDealOfAnotherCompany(t *testing.T) {
 	in.DealFiling = &crmcontracts.ActivityDealFiling{
 		RecordType: "contact", RecordId: crmcontracts.Id(w.contact.UUID), DealId: new(crmcontracts.Id(w.deals[1])),
 	}
-	w.requireFilingFault(t, w.Admin(), in, "unrelated_deal")
+	w.requireFilingFault(w.Admin(), t, in, "unrelated_deal")
 }
 
 // A filing named on a meeting that was not held is refused, never dropped.
@@ -321,7 +321,7 @@ func TestDealFilingRefusesAMeetingNotHeld(t *testing.T) {
 	in := w.call(at)
 	in.Kind, in.CallOutcome, in.MeetingStatus = "meeting", nil, new("booked")
 	in.DealFiling = &crmcontracts.ActivityDealFiling{RecordType: "contact", RecordId: crmcontracts.Id(w.contact.UUID)}
-	w.requireFilingFault(t, w.Admin(), in, "meeting_not_held")
+	w.requireFilingFault(w.Admin(), t, in, "meeting_not_held")
 }
 
 // An import stays unfiled by itself, and a filing somebody names on it lands.

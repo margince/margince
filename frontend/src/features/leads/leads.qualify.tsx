@@ -21,7 +21,7 @@ import { leadIdentityName } from "../../format/leadname";
 import { toMinorUnits } from "../../format/minorunits";
 import { useLocale, useT } from "../../i18n";
 import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
-import { usePipelines } from "../../lib/pipelines.queries";
+import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -234,8 +234,7 @@ function QualificationForm({
   const [note, setNote] = useState("");
   const typedCompany = preview.data?.typed_company;
 
-  const defaultPipeline =
-    pipelines.data?.find((p) => p.is_default) ?? pipelines.data?.[0];
+  const defaultPipeline = defaultPipelineOf(pipelines.data ?? []);
   const chosenPipeline =
     pipelines.data?.find((p) => p.id === pipelineId) ?? defaultPipeline;
   const stages = openStagesOf(chosenPipeline);

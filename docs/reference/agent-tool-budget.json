@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39153,
+    "tokens": 39316,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 815
+    "mean_tool_tokens": 818
   },
   "agents": [
     {
@@ -100,20 +100,20 @@
       "tokens": 1898
     },
     {
-      "name": "change_state",
-      "tokens": 1883
-    },
-    {
       "name": "find_records",
       "tokens": 1874
     },
     {
+      "name": "change_state",
+      "tokens": 1872
+    },
+    {
       "name": "change_settings",
-      "tokens": 1721
+      "tokens": 1710
     },
     {
       "name": "send_outbound",
-      "tokens": 1473
+      "tokens": 1680
     },
     {
       "name": "change_reports",
@@ -148,28 +148,28 @@
       "tokens": 811
     },
     {
-      "name": "create_record",
-      "tokens": 805
-    },
-    {
       "name": "bulk_update_records",
       "tokens": 798
+    },
+    {
+      "name": "create_record",
+      "tokens": 795
     },
     {
       "name": "read_lists",
       "tokens": 788
     },
     {
-      "name": "change_offers",
-      "tokens": 757
+      "name": "run_research",
+      "tokens": 776
     },
     {
       "name": "change_access",
       "tokens": 706
     },
     {
-      "name": "run_research",
-      "tokens": 680
+      "name": "change_offers",
+      "tokens": 678
     },
     {
       "name": "update_record",
@@ -201,7 +201,7 @@
     },
     {
       "name": "change_relationships",
-      "tokens": 502
+      "tokens": 472
     },
     {
       "name": "decide_approvals",

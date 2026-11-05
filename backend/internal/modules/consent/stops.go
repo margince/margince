@@ -47,9 +47,10 @@ func (s *Store) ListStops(ctx context.Context, contactID ids.ContactID) ([]crmco
 			       live.address, live.pinned, cp.key, live.origin, live.origin_source, u.display_name
 			  FROM live
 			  LEFT JOIN consent_purpose cp ON cp.id = live.purpose_id
-			  LEFT JOIN app_user u ON live.origin = $2 || u.id::text
+			  LEFT JOIN passport p ON live.origin = $3 || p.id::text
+			  LEFT JOIN app_user u ON live.origin = $2 || u.id::text OR u.id = p.on_behalf_of
 			 ORDER BY live.recorded_at DESC, live.id`,
-			contactID, principal.HumanIDPrefix)
+			contactID, principal.HumanIDPrefix, passportAgentPrefix)
 		if err != nil {
 			return fmt.Errorf("consent: reading the contact's stops: %w", err)
 		}
@@ -95,7 +96,7 @@ func scanStop(row pgx.CollectableRow, caller lifter, admitted bool) (crmcontract
 		Address:             address,
 		Reason:              reasonFromSource(source),
 		RecordedAt:          recordedAt,
-		RecordedByColleague: strings.HasPrefix(origin, principal.HumanIDPrefix),
+		RecordedByColleague: recordedForASeat(origin),
 		RecordedByName:      name,
 		MayLift:             verdict.may,
 		Correction:          verdict.correction,

@@ -10,12 +10,17 @@ package activities
 
 import (
 	"context"
+	"errors"
+	"os"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -203,5 +208,125 @@ func TestAnAgentsDraftKeepsNoFileItsHumanCannotSee(t *testing.T) {
 	}
 	if len(saved.Files.attachable) != 0 || len(e.storedDraftFiles(t, saved.ID)) != 0 {
 		t.Errorf("the agent's draft kept %v, want no file its human cannot see", saved.Files.attachable)
+	}
+}
+
+// A new version of an agent's words keeps the files the draft holds. A route save
+// replaces the whole draft, so one that names no files clears them.
+func TestANewVersionOfAnAgentsWordsKeepsTheDraftsFiles(t *testing.T) {
+	e := setupSend(t)
+	store := draftStore(e)
+	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
+	agent := e.asAgentFor(t, principal.RowScopeAll)
+	kept, _ := e.seedDraftFile(t, "quote.pdf")
+	first := agentDraft("First go")
+	first.AttachmentIDs = []ids.UUID{kept}
+	if _, err := store.SaveAgentMailDraft(agent, anchor, first, nil); err != nil {
+		t.Fatal(err)
+	}
+	again, err := store.SaveAgentMailDraft(agent, anchor, agentDraft("Shorter"), nil)
+	if err != nil {
+		t.Fatalf("the new words: %v", err)
+	}
+	if !slices.Equal(e.storedDraftFiles(t, again.ID), []ids.UUID{kept}) || !slices.Equal(attachedIDs(again.Files), []ids.UUID{kept}) {
+		t.Errorf("the new words left files %v, answered %v, want %s", e.storedDraftFiles(t, again.ID), attachedIDs(again.Files), kept)
+	}
+	routed, err := store.SaveMailDraft(agent, anchor, agentDraft("Shorter still"), &again.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := e.storedDraftFiles(t, routed.ID); len(got) != 0 {
+		t.Errorf("a route save naming no files left %v", got)
+	}
+}
+
+// A file the draft holds that its author can no longer see stays held through new
+// words, and no read shows it.
+func TestAHeldFileNowHiddenStaysOutOfTheRead(t *testing.T) {
+	e := setupSend(t)
+	store := draftStore(e)
+	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
+	agent := e.asAgentFor(t, principal.RowScopeOwn)
+	kept, _ := e.seedDraftFile(t, "kept.pdf")
+	hidden, hiddenParent := e.seedDraftFile(t, "hidden.pdf")
+	first := agentDraft("First go")
+	first.AttachmentIDs = []ids.UUID{kept, hidden}
+	if _, err := store.SaveAgentMailDraft(agent, anchor, first, nil); err != nil {
+		t.Fatal(err)
+	}
+	e.linkToContactOwnedBy(t, hiddenParent, e.other)
+	again, err := store.SaveAgentMailDraft(agent, anchor, agentDraft("Shorter"), nil)
+	if err != nil {
+		t.Fatalf("the new words: %v", err)
+	}
+	read, err := store.GetMailDraft(agent, anchor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored := e.storedDraftFiles(t, again.ID); !slices.Equal(stored, []ids.UUID{kept, hidden}) {
+		t.Errorf("the draft stores files %v, want both it held, %s and %s", stored, kept, hidden)
+	}
+	if got := attachedIDs(read.Files); !slices.Equal(got, []ids.UUID{kept}) || !slices.Equal(attachedIDs(again.Files), []ids.UUID{kept}) {
+		t.Errorf("the draft reads files %v and answered %v, want only %s", got, attachedIDs(again.Files), kept)
+	}
+}
+
+// New words read the files the draft holds under the row's lock. So files another
+// save put there while this one waited are the files the new version keeps.
+func TestNewWordsKeepTheFilesASaveMeanwhileLeft(t *testing.T) {
+	e := setupSend(t)
+	store := draftStore(e)
+	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
+	agent := e.asAgentFor(t, principal.RowScopeAll)
+	first, _ := e.seedDraftFile(t, "first.pdf")
+	newer, _ := e.seedDraftFile(t, "newer.pdf")
+	draft := agentDraft("First go")
+	draft.AttachmentIDs = []ids.UUID{first}
+	saved, err := store.SaveAgentMailDraft(agent, anchor, draft, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	saver, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := saver.Close(context.Background()); err != nil {
+			t.Errorf("closing the saver: %v", err)
+		}
+	})
+	meanwhile, err := saver.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pid int32
+	if err := meanwhile.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := meanwhile.Exec(context.Background(), `UPDATE mail_draft SET attachment_ids = $2 WHERE id = $1`, saved.ID, []ids.UUID{newer}); err != nil {
+		t.Fatal(err)
+	}
+	returned := make(chan struct{})
+	var regenerated error
+	go func() {
+		defer close(returned)
+		_, regenerated = store.SaveAgentMailDraft(agent, anchor, agentDraft("Shorter"), nil)
+	}()
+	t.Cleanup(func() {
+		if err := meanwhile.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("releasing the held row: %v", err)
+		}
+		<-returned
+	})
+	testdb.AwaitQueuedBehind(t, e.owner, pid, 1, returned, "the new words")
+	if err := meanwhile.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	<-returned
+	if regenerated != nil {
+		t.Fatal(regenerated)
+	}
+	if got := e.storedDraftFiles(t, saved.ID); !slices.Equal(got, []ids.UUID{newer}) {
+		t.Errorf("the new words left files %v, want the newer save's %s", got, newer)
 	}
 }

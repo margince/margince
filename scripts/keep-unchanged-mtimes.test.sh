@@ -18,32 +18,37 @@ fail() { echo "FAIL: $*" >&2; FAILURES=$((FAILURES + 1)); }
 
 mtime() { perl -MTime::HiRes=stat -e 'printf "%.6f\n", (stat $ARGV[0])[9]' "$1"; }
 
-repo="$TMP/repo"
+# Quote and dollar in the checkout path: the tool must hand it to git as one
+# argument, or its view of what is dirty goes wrong.
+repo="$TMP/re\"po\$x"
 git init -q "$repo"
 cd "$repo"
 printf 'same\n' > same.txt
 printf 'old\n' > changed.txt
 printf 'edited\n' > edited.txt
+# git reads a path that opens with a quote as a C-quoted string.
+printf 'quoted\n' > '"quoted.txt'
 git add -A
 git -c user.email=t@example.com -c user.name=t commit -qm base
 # A time far in the past, so "kept" and "rewritten now" cannot be confused.
 touch -t 200001010000 same.txt changed.txt edited.txt
 old="$(mtime same.txt)"
 printf 'edited by hand\n' > edited.txt
+touch -t 200001010001 edited.txt
 edited_at="$(mtime edited.txt)"
-sleep 1
 
 regenerate() {
 	printf 'same\n' > same.txt
 	printf 'new\n' > changed.txt
 	# Back to the committed bytes, which are NOT the bytes the last test run read.
 	printf 'edited\n' > edited.txt
+	printf 'quoted\n' > '"quoted.txt'
 	printf 'x\n' > untracked.txt
 }
 snapshot="$TMP/snapshot"
 "$TOOL" save "$snapshot"
 regenerate
-"$TOOL" restore "$snapshot"
+"$TOOL" restore "$snapshot" || fail "restore failed on the tree it saved"
 [[ "$(mtime same.txt)" == "$old" ]] ||
 	fail "a file rewritten with its own bytes got a new mtime; Go would re-run every test that reads it"
 [[ "$(mtime changed.txt)" != "$old" ]] ||

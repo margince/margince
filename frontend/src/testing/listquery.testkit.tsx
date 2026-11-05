@@ -1,8 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type RenderResult, render as rtlRender } from "@testing-library/react";
+import {
+  type RenderResult,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
+import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import type { ListChip } from "../design-system/listsurface";
-import { LocaleProvider } from "../i18n";
 import {
   type FilterSpec,
   type ListPage,
@@ -12,7 +16,11 @@ import {
   type SavedViewTab,
   useListQuery,
   type ViewSpec,
-} from "./listquery";
+} from "../components/listquery";
+import type { ListChip } from "../design-system/listsurface";
+import { LocaleProvider } from "../i18n";
+import { filtersStepName, labelled } from "./listview.names";
+import { openView, openViewStep, walkBack } from "./listview.testkit";
 
 export function render(ui: ReactNode): RenderResult {
   const client = new QueryClient({
@@ -89,4 +97,29 @@ export function ListTableHarness({
       scopeKey={scopeKey}
     />
   );
+}
+
+/** Opens View, its Filters step and one attribute's values, and returns those. */
+export async function openFilterValues(
+  user: Pick<UserEvent, "click">,
+  attribute: string,
+  scope?: HTMLElement,
+): Promise<HTMLElement> {
+  const step = await openViewStep(user, filtersStepName(), scope);
+  await user.click(
+    within(step).getByRole("button", { name: labelled(attribute) }),
+  );
+  return screen.findByRole("group", { name: attribute });
+}
+
+/** Draws the list as `layout` through View's switch, then closes the panel. */
+export async function showLayout(
+  user: Pick<UserEvent, "click" | "keyboard">,
+  layout: string,
+): Promise<void> {
+  const panel = await openView(user);
+  // A panel left on a step walks back to its rows, where the switch stands.
+  await walkBack(panel, user);
+  await user.click(within(panel).getByRole("button", { name: layout }));
+  await user.keyboard("{Escape}");
 }

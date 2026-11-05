@@ -51,7 +51,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /contacts/{id}/research/save` | saveContactResearch | Save the research claims a human accepted, and only those. | Change records | at once |
 | `POST /contacts/{id}/moment/dismiss` | dismissContactMoment | Hide this moment for me until its evidence changes. | Change records | at once |
 | `DELETE /contacts/{id}/moment/dismiss` | restoreContactMoment | Show a dismissed moment again, the undo behind "Not now". | Change records | at once |
-| `POST /contacts/{id}/intro-note-draft` | draftIntroNote | Draft the forwardable note a colleague can paste into their own introduction. | Change records | at once |
+| `POST /contacts/{id}/intro-note-draft` | draftIntroNote | Draft the forwardable note a colleague can paste into their own introduction. | Buy contact data | at once |
 | `GET /contacts/{id}/graph` | getContactGraph | Who around this contact could open a door, and through whom. | Read records | at once |
 | `GET /contacts/{id}/intro-requests` | listIntroRequests | The asks about this contact that the caller is party to. | Read records | at once |
 | `POST /contacts/{id}/intro-requests` | createIntroRequest | Ask a colleague to introduce you to this contact. | Change records | at once |
@@ -102,7 +102,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /companies/{id}/360` | getCompany360 | The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps. | Read records | at once |
 | `GET /companies/{id}/intro-paths` | listIntroPaths | The colleagues who could introduce you at this company, warmest first. | Read records | at once |
 | `GET /companies/{id}/graph` | getCompanyGraph | The account's connections one hop out — its contacts, its open deals and their stakeholders, its parent, children and partner companies. | Read records | at once |
-| `POST /companies/{id}/intro-request-draft` | draftIntroRequest | Draft the message asking a colleague to introduce you. | Change records | at once |
+| `POST /companies/{id}/intro-request-draft` | draftIntroRequest | Draft the message asking a colleague to introduce you. | Buy contact data | at once |
 | `GET /companies/{id}/coverage` | getCompanyCoverage | How well this account is covered — who answers, who is missing from the buying team, and the warmest way in. | Read records | at once |
 | `GET /companies/{id}/contacts` | listCompanyContacts | The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account. | Read records | at once |
 | `POST /companies/{id}/share-contacts` | shareCompanyContacts | Share the company's current contacts with a person or team. | Change records | at once |
@@ -159,7 +159,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /company/context` | getAnchorCompanyContext | The deterministic, typed context assembled from the anchor company. | Read records | at once |
 | `GET /company/site-reads/{readId}` | getAnchorCompanySiteRead | Read the latest progressive onboarding dossier and its grounded draft findings. | Read records | at once |
 | `GET /company/site-reads/{readId}/logo` | getAnchorCompanySiteReadLogo | Stream the mark a website read resolved, before anything adopts it. | Read records | at once |
-| `POST /company/site-reads/{readId}/messages` | messageAnchorCompanySiteRead | Ask Margince about a website read and receive reviewable company-field suggestions. | Change records | at once |
+| `POST /company/site-reads/{readId}/messages` | messageAnchorCompanySiteRead | Ask Margince about a website read and receive reviewable company-field suggestions. | Buy contact data | at once |
 | `POST /company/site-reads/{readId}/confirm` | confirmAnchorCompanySiteRead | Confirm a selected onboarding draft into the anchor company atomically. | Change records | at once |
 | `PATCH /companies/{id}/profile-fields/{field}` | updateCompanyProfileField | State or correct a profile field — the canonical value changes, the machine's proposal survives. | Change records | at once |
 | `POST /companies/{id}/profile-fields/{field}/confirm` | confirmCompanyProfileField | Confirm a profile field without changing its value. | Change records | at once |
@@ -228,12 +228,12 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /deal-rooms` | listDealRooms | List Deal Rooms (live by default; cursor-paginated). | Read records | at once |
 | `POST /deal-rooms` | createDealRoom | Open a Deal Room on a deal. | Change records | at once |
 | `GET /deal-rooms/{id}` | getDealRoom | Get a Deal Room by id. | Read records | at once |
-| `PATCH /deal-rooms/{id}` | updateDealRoom | Edit a Deal Room's title and welcome message (partial). | Change records | at once |
+| `PATCH /deal-rooms/{id}` | updateDealRoom | Edit a Deal Room's title and welcome message (partial). | Send messages | at once |
 | `DELETE /deal-rooms/{id}` | archiveDealRoom | Archive a Deal Room, ending buyer access. | Change records | at once |
 | `POST /deal-rooms/{id}/pause` | pauseDealRoom | Pause buyer access without ending it. | Change records | at once |
-| `POST /deal-rooms/{id}/resume` | resumeDealRoom | Resume a paused Deal Room. | Change records | at once |
+| `POST /deal-rooms/{id}/resume` | resumeDealRoom | Resume a paused Deal Room. | Send messages | at once |
 | `POST /deal-rooms/{id}/close` | closeDealRoom | Freeze the room's content, keeping buyer access. | Change records | at once |
-| `PUT /deal-rooms/{id}/expiry` | setDealRoomExpiry | Set or clear when buyer access lapses. | Change records | at once |
+| `PUT /deal-rooms/{id}/expiry` | setDealRoomExpiry | Set or clear when buyer access lapses. | Send messages | at once |
 | `GET /deal-rooms/{id}/brief` | getDealRoomBrief | A short written brief of what the room's buyers did and what is waiting on the seller. | Read records | at once |
 | `GET /deal-rooms/{id}/participants` | listDealRoomParticipants | List the contacts admitted to a room. | Read records | at once |
 | `POST /deal-rooms/{id}/participants` | inviteDealRoomParticipant | Admit a named contact to the room. | Send messages | at once |
@@ -241,12 +241,12 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /deal-rooms/{id}/participants/{participantId}/resend` | resendDealRoomInvitation | Issue a fresh credential, retiring the previous one. | Send messages | at once |
 | `POST /deal-rooms/{id}/participants/{participantId}/revoke` | revokeDealRoomParticipant | Take a contact's access away. | Change records | at once |
 | `GET /deal-rooms/{id}/documents` | listDealRoomDocuments | List the documents a room puts in front of its buyer. | Read records | at once |
-| `POST /deal-rooms/{id}/documents` | addDealRoomDocument | Put an attachment of the deal in front of the buyer. | Change records | at once |
-| `PATCH /deal-rooms/{id}/documents/{documentId}` | updateDealRoomDocument | Rename, regroup or reorder a room document. | Change records | at once |
-| `DELETE /deal-rooms/{id}/documents/{documentId}` | removeDealRoomDocument | Take a document out of the room. | Change records | at once |
+| `POST /deal-rooms/{id}/documents` | addDealRoomDocument | Put an attachment of the deal in front of the buyer. | Send messages | at once |
+| `PATCH /deal-rooms/{id}/documents/{documentId}` | updateDealRoomDocument | Rename, regroup or reorder a room document. | Send messages | at once |
+| `DELETE /deal-rooms/{id}/documents/{documentId}` | removeDealRoomDocument | Take a document out of the room. | Send messages | at once |
 | `GET /deal-rooms/{id}/threads` | listDealRoomThreads | The room's conversation — every thread with its comments. | Read records | at once |
-| `POST /deal-rooms/{id}/threads` | openDealRoomThread | Open a thread as the seller's side — a question on a document, or a room-level update. | Change records | at once |
-| `POST /deal-rooms/{id}/threads/{threadId}/comments` | replyDealRoomThread | Reply in a thread as the seller's side. | Change records | at once |
+| `POST /deal-rooms/{id}/threads` | openDealRoomThread | Open a thread as the seller's side — a question on a document, or a room-level update. | Send messages | at once |
+| `POST /deal-rooms/{id}/threads/{threadId}/comments` | replyDealRoomThread | Reply in a thread as the seller's side. | Send messages | at once |
 | `POST /deal-rooms/{id}/threads/{threadId}/resolve` | resolveDealRoomThread | Close a thread — the seller's side saying the point is settled. | Change records | at once |
 | `GET /deals/{id}/outcome-reviews` | listDealOutcomeReviews | The reviews written about this deal's closings. | Read records | at once |
 | `POST /deals/{id}/outcome-reviews` | createDealOutcomeReview | Write a review of how this deal's current closing went. | Change records | at once |
@@ -255,7 +255,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `DELETE /deals/{id}/move/dismiss` | restoreDealMove | Put a set-aside move back on the deal card, the undo behind "Not now". | Change records | at once |
 | `GET /deals/{id}/coverage` | getDealCoverage | Who covers this deal, and what is wrong with how it is covered. | Read records | at once |
 | `GET /deals/{id}/commitments` | getDealCommitments | What the customer committed to that this deal waits on. | Read records | at once |
-| `POST /deals/{id}/role-proposals` | proposeDealRoles | Read the buying roles out of what this deal's contacts have written. | Change records | at once |
+| `POST /deals/{id}/role-proposals` | proposeDealRoles | Read the buying roles out of what this deal's contacts have written. | Buy contact data | at once |
 
 ## Pipelines
 
@@ -985,7 +985,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /offers/{id}/send` | sendOffer | Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot). | Change records | at once |
 | `POST /offers/{id}/accept` | acceptOffer | Record the buyer's acceptance — syncs the deal's amount from the offer's gross. | Change records | at once |
 | `POST /offers/{id}/reject` | rejectOffer | Record the buyer's decline (sent → rejected; emits offer.rejected). | Change records | at once |
-| `POST /offers/{id}/regenerate` | regenerateOffer | Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal. | Change records | at once |
+| `POST /offers/{id}/regenerate` | regenerateOffer | Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal. | Buy contact data | at once |
 | `POST /offers/{id}/render` | renderOffer | Render the offer's branded PDF (sets pdf_asset_ref). | Change records | at once |
 | `GET /offers/{id}/pdf` | downloadOfferPdf | Download the offer's most recently rendered PDF. | Read records | at once |
 

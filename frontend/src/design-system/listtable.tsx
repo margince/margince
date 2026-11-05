@@ -2,11 +2,12 @@ import { type ReactNode, useRef } from "react";
 import { AnsweredSearch } from "./answeredsearch";
 import { EmptyState, useScrollRegion } from "./atoms";
 import {
-  CountLine,
   type ListChip,
   ListSurface,
   type ListView,
+  rangeLine,
   type SortControl,
+  type ViewRow,
 } from "./listsurface";
 import {
   useColumnDisplay,
@@ -33,6 +34,7 @@ export type {
   ListView,
   SortControl,
   SortOption,
+  ViewRow,
 } from "./listsurface";
 export { widthWorthAdopting } from "./listtable.layout";
 export { narrowingSignature } from "./listtable.paging";
@@ -51,7 +53,7 @@ export { narrowingSignature } from "./listtable.paging";
 // Generic on purpose: nothing here knows what a CRM record is, which is why
 // contacts, companies, leads, deals, products and partners share it.
 import type { ListColumn, ListSelection } from "./listcolumn";
-import { DisplayMenu } from "./listdisplaymenu";
+import { useDisplayRows } from "./listdisplaymenu";
 import { EmptyRow, GridBody, ListGrid } from "./listgrid";
 
 export type { ListColumn, ListSelection } from "./listcolumn";
@@ -69,9 +71,19 @@ function BulkBar<Row>({
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
+// A narrowed list with no rows may get its count back with the next answer.
+function holdsCount(
+  pending: boolean,
+  narrowed: boolean,
+  rows: number,
+): boolean {
+  return pending || (narrowed && rows === 0);
+}
+
 export function ListTable<Row>({
   title,
   bodyCount,
+  countScope,
   rows,
   columns,
   rowKey,
@@ -106,7 +118,11 @@ export function ListTable<Row>({
   problem,
   widthsKey,
   tools,
+  layout: viewLayout,
+  viewRows,
+  changed,
   saveView,
+  notice,
   body,
   bodyOwnsPaging = false,
   selection,
@@ -143,6 +159,8 @@ export function ListTable<Row>({
    * Ignored unless `bodyOwnsPaging`: otherwise the table's own range is true.
    */
   bodyCount?: ReactNode;
+  /** What the table's count names its rows as part of; see `CountLine`'s `scope`. */
+  countScope?: string;
   onRowClick?: (row: Row) => void;
   /**
    * Where this row lives, as a URL. Turns the identity cell into a link, so a
@@ -291,11 +309,18 @@ export function ListTable<Row>({
   problem?: ReactNode;
   /** Names this table for the column widths it remembers between visits. */
   widthsKey?: string;
-  /** After the Display menu: a caller's own view-switch or picker, e.g. deals'
-   * board/table toggle. A Save view goes in `saveView`, which stands after. */
+  /** A verb that is not a dial, at the toolbar's end; see `ListSurface`. */
   tools?: ReactNode;
-  /** Handed to the surface's own last slot; see `ListSurface`. */
+  /** Table or Board, at the top of the View panel; see `ListSurface`. */
+  layout?: ReactNode;
+  /** The screen's own dials in the View panel; see `ListSurface`. */
+  viewRows?: readonly ViewRow[];
+  /** The list departs from every view it offers; see `ListSurface`. */
+  changed?: boolean;
+  /** Save view and Manage views, in the View panel's footer. */
   saveView?: ReactNode;
+  /** A line under the search; see `ListSurface`. */
+  notice?: ReactNode;
 }>) {
   const display = useColumnDisplay(columns);
   const order = useColumnOrder(widthsKey);
@@ -346,6 +371,12 @@ export function ListTable<Row>({
     scroller,
   );
   const frozen = useFrozenEdge(scroller, shown.length, display.dense);
+  const displayDials = useDisplayRows({
+    optional: placed.filter((column) => !column.fixed),
+    declared: columns.flatMap((column) => (column.fixed ? [] : [column.key])),
+    onReorder: order.onReorder,
+    ...display,
+  });
   const short =
     hideShortChrome &&
     !pending &&
@@ -372,18 +403,20 @@ export function ListTable<Row>({
       count={
         bodyOwnsPaging
           ? bodyCount
-          : !pending && (
-              <CountLine
-                unit={unit}
-                first={paging.from + 1}
-                last={paging.from + paging.pageRows.length}
-                total={serverTotal ?? rows.length}
-                // "Loaded so far" is the caveat for a number the client
-                // counted itself; an exact total needs none.
-                more={hasMore && serverTotal === undefined}
-                sortedBy={sortedColumn(columns, sort)?.header}
-              />
-            )
+          : rangeLine(pending, {
+              unit,
+              first: paging.from + 1,
+              last: paging.from + paging.pageRows.length,
+              total: serverTotal ?? rows.length,
+              // "Loaded so far" is the caveat for a number the client
+              // counted itself; an exact total needs none.
+              more: hasMore && serverTotal === undefined,
+              scope: countScope,
+              sortedBy: sortedColumn(columns, sort)?.header,
+            })
+      }
+      holdCount={
+        !bodyOwnsPaging && holdsCount(pending, narrowedBy(dials), rows.length)
       }
       action={action}
       caption={caption}
@@ -394,27 +427,16 @@ export function ListTable<Row>({
       chosen={chosen}
       onChipChange={onChipChange}
       archived={archived}
-      tools={
-        <>
-          {/* Both of the Display menu's dials describe the grid. A body that
-              draws its own presentation would show controls that do nothing,
-              so they are withheld with the count line and the pager. */}
-          {tools}
-        </>
-      }
-      displayMenu={
-        bodyOwnsPaging
-          ? undefined
-          : (menu) => (
-              <DisplayMenu
-                optional={placed.filter((column) => !column.fixed)}
-                onReorder={order.onReorder}
-                {...display}
-                {...menu}
-              />
-            )
-      }
+      layout={viewLayout}
+      viewRows={viewRows}
+      // Both dials describe the grid, and a body that draws its own
+      // presentation would show controls that do nothing.
+      displayRows={bodyOwnsPaging ? undefined : displayDials.rows}
+      displayToggles={bodyOwnsPaging ? undefined : displayDials.toggles}
+      changed={changed}
+      tools={tools}
       saveView={saveView}
+      notice={notice}
       footer={
         <>
           {footer && <div className="lt-agg">{footer}</div>}

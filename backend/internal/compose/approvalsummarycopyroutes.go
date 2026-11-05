@@ -141,6 +141,8 @@ var routeVerbsGerman = map[string]string{
 	"request_ownership_transfer":         "Übergabe eines Datensatzes anfragen",
 	"reschedule_scheduled_send":          "Geplanten Versand verschieben",
 	"resend_deal_room_invitation":        "Einladung in den Deal-Raum erneut senden",
+	"open_deal_room_thread":              "Thread im Deal Room eröffnen",
+	"reply_deal_room_thread":             "Im Thread des Deal Rooms antworten",
 	"resolve_deal_room_thread":           "Gesprächsfaden im Deal-Raum abschließen",
 	"restore_company_suggestion":         "Zurückgestellten Vorschlag zurückholen",
 	"restore_contact_moment":             "Ausgeblendeten Hinweis zurückholen",

@@ -17,8 +17,8 @@ The last count answers the question of parity with the web app, so it leads this
 
 | Of the operations the web app calls | Count |
 |---|---:|
-| Open, and the agent does not ask first | 638 |
-| Open, and the agent asks first | 87 |
+| Open, and the agent does not ask first | 628 |
+| Open, and the agent asks first | 97 |
 | Pending | 0 |
 | Covered by another tool | 15 |
 | Closed for security | 109 |
@@ -46,8 +46,8 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 
 | Group | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| [Business operations](#business-operations) | 567 | 528 | 33 | 0 | 17 | 22 | 475 | 94.3% | 93.1% |
-| [Compliance and privacy](#compliance-and-privacy) | 58 | 42 | 14 | 0 | 16 | 0 | 43 | 72.0% | 72.4% |
+| [Business operations](#business-operations) | 567 | 528 | 41 | 0 | 17 | 22 | 475 | 94.3% | 93.1% |
+| [Compliance and privacy](#compliance-and-privacy) | 58 | 42 | 19 | 0 | 16 | 0 | 43 | 72.0% | 72.4% |
 | [Capture and connectors](#capture-and-connectors) | 49 | 40 | 9 | 0 | 9 | 0 | 48 | 81.2% | 81.6% |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 84 | 67 | 4 | 0 | 12 | 5 | 67 | 83.5% | 79.7% |
 | [Admin settings](#admin-settings) | 157 | 117 | 31 | 0 | 40 | 0 | 145 | 76.5% | 74.5% |
@@ -67,7 +67,7 @@ The daily sales work: records, deals, activities, offers, reports and lists.
 | Companies | 58 | 55 | 2 | 0 | 2 | 1 | 48 | 93.7% | 94.8% |
 | Partners | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 100.0% | 100.0% |
 | Deals | 39 | 36 | 0 | 0 | 1 | 2 | 30 | 96.6% | 92.3% |
-| Deal rooms | 24 | 23 | 3 | 0 | 1 | 0 | 21 | 95.2% | 95.8% |
+| Deal rooms | 24 | 23 | 11 | 0 | 1 | 0 | 21 | 95.2% | 95.8% |
 | Legal reviews | 6 | 6 | 0 | 0 | 0 | 0 | 6 | 100.0% | 100.0% |
 | Leads | 18 | 16 | 0 | 0 | 0 | 2 | 17 | 88.2% | 88.8% |
 | Activities, mail and tasks | 41 | 38 | 0 | 0 | 2 | 1 | 38 | 92.1% | 92.6% |
@@ -97,10 +97,10 @@ Consent, privacy requests, notices, retention and the audit trail.
 
 | Area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Consent and communication review | 25 | 21 | 12 | 0 | 4 | 0 | 20 | 80.0% | 84.0% |
-| Data subject requests | 5 | 4 | 1 | 0 | 1 | 0 | 4 | 100.0% | 80.0% |
+| Consent and communication review | 25 | 21 | 14 | 0 | 4 | 0 | 20 | 80.0% | 84.0% |
+| Data subject requests | 5 | 4 | 2 | 0 | 1 | 0 | 4 | 100.0% | 80.0% |
 | Privacy notices and controller details | 10 | 8 | 1 | 0 | 2 | 0 | 5 | 80.0% | 80.0% |
-| Retention and legal holds | 12 | 6 | 0 | 0 | 6 | 0 | 9 | 44.4% | 50.0% |
+| Retention and legal holds | 12 | 6 | 2 | 0 | 6 | 0 | 9 | 44.4% | 50.0% |
 | Audit log and record history | 4 | 3 | 0 | 0 | 1 | 0 | 4 | 75.0% | 75.0% |
 | Data exports | 2 | 0 | 0 | 0 | 2 | 0 | 1 | 0.0% | 0.0% |
 

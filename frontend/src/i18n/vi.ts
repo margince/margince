@@ -3307,6 +3307,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "list.headActions": "Thao tác khác",
   "list.search": "Tìm kiếm",
   "list.showArchived": "Hiển thị mục trong kho lưu trữ",
+  "list.viewToggleOn": "Bật",
+  "list.viewToggleOff": "Tắt",
+  "list.viewMenu": "Chế độ xem",
+  "list.viewMenuBack": "quay lại tùy chọn xem",
+  "list.viewMenuChanged": "đã thay đổi",
+  "list.viewMenuFilters_one": "{count} bộ lọc",
+  "list.viewMenuFilters_other": "{count} bộ lọc",
+  "list.viewMenuNone": "Không có",
   "list.loadMore": "Tải thêm",
   "scrollSentinel.loading": "Đang tải thêm…",
   "scrollSentinel.failed": "Không tải thêm được.",
@@ -3323,15 +3331,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.rowsPerPage": "Số dòng mỗi trang",
   "table.perPage": "{count} dòng/trang",
   "table.sortedBy": "sắp xếp theo {column}",
-  "table.shownColumns": "Cột hiển thị",
-  "table.display": "Hiển thị",
-  "table.density": "Mật độ",
   "table.compact": "Thu gọn",
+  "table.filters": "Bộ lọc",
+  "table.columns": "Cột",
+  "table.columnsShown": "{shown} trên {total}",
+  "table.sortValue": "{column} {direction}",
   "table.columnHandle": "Di chuyển {name}, vị trí {position} trên {total}",
   "table.columnMoved": "Đã chuyển {name} đến vị trí {position} trên {total}",
   "table.sort": "Sắp xếp",
-  "table.sortNamed": "Sắp xếp: {column}",
-  "table.sortMenu": "Sắp xếp theo",
   "table.sortDefault": "Thứ tự mặc định",
   "table.sortAscending": "tăng dần",
   "table.sortDescending": "giảm dần",
@@ -3341,6 +3348,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "Đã tải {first} đến {last} trong {count} {unit}",
+  "table.rangeIn": "{range} thuộc {scope}",
   "unit.contacts": "liên hệ",
   "unit.companies": "công ty",
   "unit.deals": "deal",
@@ -3349,9 +3357,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "unit.partners": "đối tác",
   "unit.products": "sản phẩm",
   "unit.offerTemplates": "mẫu báo giá",
-  "table.filter": "Bộ lọc",
   "table.filterSearch": "Tìm thuộc tính",
-  "table.addFilter": "Thêm bộ lọc",
   "table.filterIs": "là",
   "table.filterCondition": "Điều kiện",
   "table.filterMore": "Thao tác khác cho bộ lọc {filter}",
@@ -3361,7 +3367,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.filterSearching": "Đang tìm…",
   "table.filterSearchFailed": "Tìm kiếm không thành công. Thử lại.",
   "table.filterNoMatches": "Không có kết quả.",
-  "table.filterBack": "Quay lại tất cả bộ lọc",
+  "table.filterBack": "quay lại tất cả bộ lọc",
 
   "contacts.name": "Tên",
   "contacts.email": "Email",
@@ -3383,6 +3389,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "views.saveTitle": "Lưu chế độ xem này",
   "views.name": "Tên",
   "views.rail": "Chế độ xem đã lưu",
+  "views.loadFailed": "Không thể tải các chế độ xem đã lưu.",
   "views.manage": "Quản lý chế độ xem",
   "views.none": "Chưa có chế độ xem đã lưu",
   "views.rename": "Đổi tên",
@@ -6042,6 +6049,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.correctCloseDayConfirm": "Lưu ngày chốt",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "{count} deal trong {pipeline}",
+  "deals.countInPipeline_other": "{count} deal trong {pipeline}",
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.totalsOwnerNotMeasurable":
     "Chỉ hiển thị deal đã tải. Chỉ quản trị viên cấp được quyền xem tổng của người chịu trách nhiệm này.",
@@ -12452,7 +12461,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.pausedReason.listInvalid":
     "Đã tạm dừng vì bộ lọc của danh sách tự cập nhật mà tự động hóa theo dõi đã ngừng hoạt động. Sửa bộ lọc không làm tự động hóa tiếp tục.",
   "auto.pausedReason.passportRevoked":
-    "Passport của trợ lý AI đã thiết lập quy tắc này đã bị thu hồi nên quy tắc đã tạm dừng. Hãy tiếp tục để quy tắc chạy mà không còn trợ lý AI nào đứng sau.",
+    "Trợ lý AI đã thiết lập quy tắc này không còn quyền truy cập vì passport hết hạn hoặc bị thu hồi, hoặc kết nối đã kết thúc. Hãy tiếp tục để quy tắc chạy không cần trợ lý AI.",
+  "auto.setByYourAgent": "Do trợ lý AI của bạn",
+  "auto.setByAnAgent": "Do một trợ lý AI",
   "auto.pausedReason.listUnavailable":
     "Đã tạm dừng vì người phụ trách tự động hóa không còn tìm thấy danh sách được theo dõi.",
   "auto.pausedReason.burst":
@@ -12502,7 +12513,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.pausedShort.listArchived": "Đã tạm dừng · danh sách đã lưu trữ",
   "auto.pausedShort.listInvalid": "Đã tạm dừng · bộ lọc danh sách bị lỗi",
   "auto.pausedShort.passportRevoked":
-    "Đã tạm dừng · passport của trợ lý AI bị thu hồi",
+    "Đã tạm dừng · trợ lý AI hết quyền truy cập",
   "auto.pausedShort.listUnavailable": "Đã tạm dừng · không tìm thấy danh sách",
   "auto.pausedShort.burst": "Đã tạm dừng · quá nhiều hồ sơ",
   "auto.withheld": "Tự động hóa đã cấu hình bị ẩn với vai trò này.",
@@ -14992,6 +15003,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "account.timezoneLabel": "Múi giờ",
   "account.timezoneHelp":
     "Thời gian trong Margince, giờ nhận đặt lịch của bạn và thư gửi cho bạn dùng múi giờ này. Được lưu vào tài khoản của bạn, nên áp dụng trên mọi thiết bị bạn đăng nhập.",
+  "account.timezoneSetByAgent": "Do trợ lý AI của bạn",
   "workingHours.zoneIs": "Giờ của bạn tính theo {zone}.",
   "workingHours.changeZone": "Đổi múi giờ",
   "account.languageCard": "Ngôn ngữ và múi giờ",
@@ -18827,7 +18839,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.retryRefusedRepeats":
     "Quy tắc này không được phép chạy hai lần, nên chạy lại có thể lặp lại các thao tác của quy tắc.",
   "worklist.verb.retryRefusedPassportRevoked":
-    "Passport của trợ lý AI thiết lập quy tắc này đã bị thu hồi nên quy tắc đang tạm dừng. Hãy tiếp tục để quy tắc chạy mà không còn trợ lý AI nào đứng sau.",
+    "Trợ lý AI đã thiết lập quy tắc này không còn quyền truy cập nên quy tắc đang tạm dừng. Hãy tiếp tục để quy tắc chạy không cần trợ lý AI.",
   "worklist.verb.retryRefusedEventGone":
     "Sự kiện kích hoạt không còn tồn tại, nên không thể chạy lại. Quy tắc theo lịch sẽ tự kiểm tra lại.",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem. Thử lại.",

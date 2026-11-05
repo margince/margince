@@ -218,27 +218,6 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 			return `{"record_type":"offer","fields":{"deal_id":"` + primary.String() + `","currency":"EUR"}}`
 		},
 	},
-	"openDealRoomThread": {
-		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
-			return doorRequest(http.MethodPost, "/v1/deal-rooms/"+primary.String()+"/threads", primary, `{"body":"Questions?"}`)
-		},
-		args: func(primary, _ ids.UUID) string {
-			return `{"record_type":"deal_room_thread","fields":{"deal_room_id":"` + primary.String() + `","body":"Questions?"}}`
-		},
-	},
-	"replyDealRoomThread": {
-		rest: func(primary, secondary ids.UUID) (*http.Request, []byte) {
-			req, body := doorRequest(http.MethodPost,
-				"/v1/deal-rooms/"+primary.String()+"/threads/"+secondary.String()+"/comments", primary, `{"body":"Yes"}`)
-			chi.RouteContext(req.Context()).URLParams.Add("threadId", secondary.String())
-			return req, body
-		},
-		args: func(primary, secondary ids.UUID) string {
-			return `{"record_type":"deal_room_comment","fields":{"deal_room_id":"` + primary.String() +
-				`","thread_id":"` + secondary.String() + `","body":"Yes"}}`
-		},
-	},
-
 	"createContact": createDoors("contacts", "contact", `{"full_name":"Ada Lovelace"}`),
 	"createCompany": createDoors("companies", "company", `{"display_name":"Acme"}`),
 	"createDeal": createDoors("deals", "deal", `{"name":"Acme renewal",`+

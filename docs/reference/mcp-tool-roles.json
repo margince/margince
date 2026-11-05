@@ -2596,21 +2596,6 @@
     },
     {
       "tool": "change_offers",
-      "action": "add_room_document",
-      "verb": "add_deal_room_document",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "rep"
-      ],
-      "refused_for": [
-        "read_only"
-      ]
-    },
-    {
-      "tool": "change_offers",
       "action": "archive_contract",
       "verb": "archive_contract",
       "allowed_for": [
@@ -2720,21 +2705,6 @@
     },
     {
       "tool": "change_offers",
-      "action": "regenerate_offer",
-      "verb": "regenerate_offer",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "rep"
-      ],
-      "refused_for": [
-        "read_only"
-      ]
-    },
-    {
-      "tool": "change_offers",
       "action": "reject_offer",
       "verb": "reject_offer",
       "allowed_for": [
@@ -2766,21 +2736,6 @@
         "manager": "refused",
         "rep": "refused"
       }
-    },
-    {
-      "tool": "change_offers",
-      "action": "remove_room_document",
-      "verb": "remove_deal_room_document",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops"
-      ],
-      "refused_for": [
-        "read_only",
-        "rep"
-      ]
     },
     {
       "tool": "change_offers",
@@ -2816,21 +2771,6 @@
       "tool": "change_offers",
       "action": "resolve_room_thread",
       "verb": "resolve_deal_room_thread",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "rep"
-      ],
-      "refused_for": [
-        "read_only"
-      ]
-    },
-    {
-      "tool": "change_offers",
-      "action": "resume_room",
-      "verb": "resume_deal_room",
       "allowed_for": [
         "admin",
         "management",
@@ -2908,21 +2848,6 @@
     },
     {
       "tool": "change_offers",
-      "action": "set_room_expiry",
-      "verb": "set_deal_room_expiry",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "rep"
-      ],
-      "refused_for": [
-        "read_only"
-      ]
-    },
-    {
-      "tool": "change_offers",
       "action": "update_contract",
       "verb": "update_contract",
       "allowed_for": [
@@ -2954,36 +2879,6 @@
         "manager": "refused",
         "rep": "refused"
       }
-    },
-    {
-      "tool": "change_offers",
-      "action": "update_room",
-      "verb": "update_deal_room",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "rep"
-      ],
-      "refused_for": [
-        "read_only"
-      ]
-    },
-    {
-      "tool": "change_offers",
-      "action": "update_room_document",
-      "verb": "update_deal_room_document",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "rep"
-      ],
-      "refused_for": [
-        "read_only"
-      ]
     },
     {
       "tool": "change_offers",
@@ -3134,42 +3029,6 @@
       "refused_for": [
         "read_only"
       ]
-    },
-    {
-      "tool": "change_relationships",
-      "action": "draft_intro_note",
-      "verb": "draft_intro_note",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "read_only",
-        "rep"
-      ],
-      "refused_for": [],
-      "colleague_record": {
-        "manager": "ran",
-        "rep": "ran"
-      }
-    },
-    {
-      "tool": "change_relationships",
-      "action": "draft_intro_request",
-      "verb": "draft_intro_request",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "read_only",
-        "rep"
-      ],
-      "refused_for": [],
-      "colleague_record": {
-        "manager": "ran",
-        "rep": "ran"
-      }
     },
     {
       "tool": "change_relationships",
@@ -3827,20 +3686,6 @@
         "read_only",
         "rep"
       ]
-    },
-    {
-      "tool": "change_settings",
-      "action": "ask_site_read",
-      "verb": "message_anchor_company_site_read",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "read_only",
-        "rep"
-      ],
-      "refused_for": []
     },
     {
       "tool": "change_settings",
@@ -5087,25 +4932,6 @@
       "tool": "change_state",
       "action": "promote",
       "verb": "promote_lead",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "rep"
-      ],
-      "refused_for": [
-        "read_only"
-      ],
-      "colleague_record": {
-        "manager": "refused",
-        "rep": "refused"
-      }
-    },
-    {
-      "tool": "change_state",
-      "action": "propose_deal_roles",
-      "verb": "propose_deal_roles",
       "allowed_for": [
         "admin",
         "management",
@@ -9628,6 +9454,20 @@
     },
     {
       "tool": "run_research",
+      "action": "ask_site_read",
+      "verb": "message_anchor_company_site_read",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "run_research",
       "action": "assess_sales_review",
       "verb": "assess_sales_review",
       "allowed_for": [
@@ -9654,6 +9494,42 @@
       "refused_for": [
         "read_only"
       ]
+    },
+    {
+      "tool": "run_research",
+      "action": "draft_intro_note",
+      "verb": "draft_intro_note",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
+      }
+    },
+    {
+      "tool": "run_research",
+      "action": "draft_intro_request",
+      "verb": "draft_intro_request",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
+      }
     },
     {
       "tool": "run_research",
@@ -9702,6 +9578,25 @@
         "read_only",
         "rep"
       ]
+    },
+    {
+      "tool": "run_research",
+      "action": "propose_deal_roles",
+      "verb": "propose_deal_roles",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
+      "colleague_record": {
+        "manager": "refused",
+        "rep": "refused"
+      }
     },
     {
       "tool": "run_research",
@@ -9839,6 +9734,21 @@
     },
     {
       "tool": "run_research",
+      "action": "regenerate_offer",
+      "verb": "regenerate_offer",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "run_research",
       "action": "research_contact",
       "verb": "run_contact_research",
       "allowed_for": [
@@ -9903,6 +9813,21 @@
         "manager": "ran",
         "rep": "ran"
       }
+    },
+    {
+      "tool": "send_outbound",
+      "action": "add_room_document",
+      "verb": "add_deal_room_document",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "send_outbound",
@@ -10101,6 +10026,21 @@
     },
     {
       "tool": "send_outbound",
+      "action": "open_room_thread",
+      "verb": "open_deal_room_thread",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "send_outbound",
       "action": "privacy_notice",
       "verb": "send_privacy_notice",
       "allowed_for": [
@@ -10120,6 +10060,36 @@
     },
     {
       "tool": "send_outbound",
+      "action": "remove_room_document",
+      "verb": "remove_deal_room_document",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops"
+      ],
+      "refused_for": [
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "send_outbound",
+      "action": "reply_room_thread",
+      "verb": "reply_deal_room_thread",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "send_outbound",
       "action": "resend_member_invite",
       "verb": "resend_member_invite",
       "allowed_for": [
@@ -10135,6 +10105,36 @@
     },
     {
       "tool": "send_outbound",
+      "action": "resume_room",
+      "verb": "resume_deal_room",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "send_outbound",
+      "action": "set_room_expiry",
+      "verb": "set_deal_room_expiry",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "send_outbound",
       "action": "signature_template",
       "verb": "save_email_signature_template",
       "allowed_for": [
@@ -10146,6 +10146,36 @@
         "manager",
         "read_only",
         "rep"
+      ]
+    },
+    {
+      "tool": "send_outbound",
+      "action": "update_room",
+      "verb": "update_deal_room",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "send_outbound",
+      "action": "update_room_document",
+      "verb": "update_deal_room_document",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
       ]
     },
     {

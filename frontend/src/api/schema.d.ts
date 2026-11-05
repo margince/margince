@@ -3238,9 +3238,10 @@ export interface paths {
          *     set here — ADR-0079 replaced it, because what a company IS to us is multi-valued.)
          *     Company identity is never duplicated. Admin write.
          *
-         *     An agent asks its user first, and is refused `margin_tier` (422) for the reason
+         *     An agent asks its user first, and is refused `margin_tier` (403) for the reason
          *     `decideCommissionEntry` is human-only: it is the rate the commission ledger multiplies a
-         *     won deal by, so it sets what a partner is paid on every future deal.
+         *     won deal by, so it sets what a partner is paid on every future deal. An agent changes the
+         *     terms of a live partner only (403 otherwise): `setUpPartner` is how it proposes a new one.
          */
         put: operations["upsertPartner"];
         post?: never;
@@ -7955,8 +7956,9 @@ export interface paths {
          *       synthesizes its trigger id per evaluation pass and never stages it, so those are
          *       unreplayable by construction. Nothing is lost: the schedule re-examines the same
          *       condition on its own next pass.
-         *     - `passport_revoked` — the agent that set the rule up lost its passport, so the rule
-         *       is paused. A user resuming it makes it their own.
+         *     - `passport_revoked` — the agent that set the rule up no longer has a live passport or
+         *       connection, whether revoked or expired, so the rule is paused. A user resuming it makes
+         *       it their own. The audit row of the pause says which it was.
          *
          *     A retry is a NEW firing with its own run record, so the history shows both the
          *     failure and what followed it. Retrying a run whose retry also failed is allowed and
@@ -11950,7 +11952,8 @@ export interface paths {
         /**
          * Lift an exclusion.
          * @description A workspace rule by admin or ops; a user rule by the user it names. Mail from the address or
-         *     domain is captured again from the next message on; nothing already dropped comes back.
+         *     domain is captured again from the next message on; nothing already dropped comes back. An
+         *     agent lifts only a rule an agent added, and a user's rule answers `409`.
          */
         delete: operations["deleteCaptureExclusion"];
         options?: never;
@@ -12274,7 +12277,8 @@ export interface paths {
          *     Lifting widens NOTHING already captured. Mail held while the hold stood was held for a
          *     reason that was true at the time, and re-opening a year of correspondence as a side effect
          *     of tidying a list is not something anybody asked for. New mail from that party is captured
-         *     under the mailbox's ordinary posture again.
+         *     under the mailbox's ordinary posture again. An agent lifts only a hold an agent added, and a
+         *     user's hold answers `409`.
          */
         delete: operations["deleteCaptureCounterpartyHold"];
         options?: never;
@@ -19326,12 +19330,11 @@ export interface paths {
         head?: never;
         /**
          * Edit a Deal Room's title and welcome message (partial).
-         * @description Edits the WORKING copy only. A live room keeps serving its last published
-         *     release until a human publishes again, so changing the title or welcome text
-         *     here never changes what a buyer is currently reading.
+         * @description The buyer reads the new title and welcome text as soon as they are saved, so an
+         *     agent spends `send` on it.
          *
          *     `state` is not editable — it moves through the lifecycle operations
-         *     (publish/pause/resume/close).
+         *     (pause/resume/close).
          */
         patch: operations["updateDealRoom"];
         trace?: never;
@@ -19430,7 +19433,8 @@ export interface paths {
          * Set or clear when buyer access lapses.
          * @description Null clears the bound, leaving access open until the room is closed or
          *     archived. A past instant is accepted and takes effect immediately — that is
-         *     how access is cut short without ending the room.
+         *     how access is cut short without ending the room. It decides how long a buyer can
+         *     read the room, so an agent spends `send` on it.
          */
         put: operations["setDealRoomExpiry"];
         post?: never;
@@ -19664,8 +19668,8 @@ export interface paths {
          * Put an attachment of the deal in front of the buyer.
          * @description The attachment must be filed on THIS room's deal (`entity_type: deal`, the
          *     room's `deal_id`); any other id is 404. The attachment row is the exact
-         *     version the buyer will be shown. Editorial: the buyer sees it at the next
-         *     publish. Refused once the room can no longer reach a buyer.
+         *     version the buyer will be shown. The buyer sees it at once, so an agent spends
+         *     `send` on it. Refused once the room can no longer reach a buyer.
          */
         post: operations["addDealRoomDocument"];
         delete?: never;
@@ -19691,15 +19695,14 @@ export interface paths {
         /**
          * Take a document out of the room.
          * @description Marks the entry removed; the attachment itself is untouched. The buyer stops
-         *     seeing it at the next publish — a release already published keeps naming it,
-         *     because that release is what they were shown.
+         *     seeing it at once, so an agent spends `send` on it.
          */
         delete: operations["removeDealRoomDocument"];
         options?: never;
         head?: never;
         /**
          * Rename, regroup or reorder a room document.
-         * @description Editorial, like adding one — the buyer sees the change at the next publish.
+         * @description The buyer reads the change at once, like adding one, so an agent spends `send` on it.
          */
         patch: operations["updateDealRoomDocument"];
         trace?: never;
@@ -19723,7 +19726,8 @@ export interface paths {
         put?: never;
         /**
          * Open a thread as the seller's side — a question on a document, or a room-level update.
-         * @description The first comment is the body. Refused once the room can no longer reach a
+         * @description The first comment is the body. The buyer reads it at once, so an agent spends
+         *     `send` on it. Refused once the room can no longer reach a
          *     buyer (closed, expired, archived): `409 deal_room_content_not_editable`. A
          *     document thread is pinned to the document's current version.
          */
@@ -19749,8 +19753,8 @@ export interface paths {
         put?: never;
         /**
          * Reply in a thread as the seller's side.
-         * @description Refused on a resolved thread (`409 deal_room_thread_resolved`: open a new
-         *     thread instead) and in a room that can no longer reach a buyer
+         * @description The buyer reads it at once, so an agent spends `send` on it. Refused on a resolved
+         *     thread (`409 deal_room_thread_resolved`: open a new thread instead) and in a room that can no longer reach a buyer
          *     (`409 deal_room_content_not_editable`).
          */
         post: operations["replyDealRoomThread"];
@@ -44836,8 +44840,10 @@ export interface components {
             greeting_name?: string | null;
             /** @description The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
             timezone?: string;
-            /** @description Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster. */
+            /** @description Whether the user chose `timezone` themselves, rather than the app storing the browser's guess or an agent setting it. Present on the caller's own seat; absent on the roster. */
             timezone_chosen?: boolean;
+            /** @description The agent that set `timezone` for this user, as its `captured_by` stamp. Present on the caller's own seat while the zone is the agent's; absent once the user chooses, and on the roster. */
+            timezone_set_by?: string;
             /**
              * @description The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
              *     Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
@@ -51263,10 +51269,15 @@ export interface components {
              */
             owner_id?: string | null;
             /**
-             * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the passport of the agent that set the rule up was revoked. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
+             * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
              * @enum {string|null}
              */
             paused_reason?: "list_archived" | "list_invalid" | "list_unavailable" | "burst" | "passport_revoked" | null;
+            /**
+             * Format: uuid
+             * @description The passport of the agent that turned this rule on, which the rule stops with. Null for a rule a user runs. It names the credential and grants nothing: `captured_by` shows the same id on what an agent writes.
+             */
+            setter_passport_id?: string | null;
             params: {
                 [key: string]: unknown;
             };
@@ -51408,7 +51419,8 @@ export interface components {
              *     means nobody has established that running this handler twice is safe.
              *     `trigger_event_unavailable` means the event cannot be rebuilt, which is
              *     permanent for a scheduled firing rather than a condition that clears.
-             *     `passport_revoked` means the rule stopped with the passport that set it up.
+             *     `passport_revoked` means the rule stopped with the agent that set it up, whose passport
+             *     or connection was revoked or expired.
              * @enum {string}
              */
             refusal?: "not_failed" | "repeats_its_effect" | "trigger_event_unavailable" | "passport_revoked";
@@ -52325,7 +52337,7 @@ export interface components {
             body: string;
             /** @description Only with a document. Marks the thread as one the seller still owes an answer on. */
             required_change?: boolean;
-            /** @description Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product. */
+            /** @description Provenance. A user's client names it on the seller edge. An agent that omits it records `agent`, and a buyer's comment always records the credential. */
             source?: string;
             /**
              * Format: uuid
@@ -52345,6 +52357,7 @@ export interface components {
         };
         PostDealRoomCommentRequest: {
             body: string;
+            /** @description Provenance. A user's client names it on the seller edge. An agent that omits it records `agent`, and a buyer's comment always records the credential. */
             source?: string;
             /**
              * Format: uuid
@@ -52898,11 +52911,11 @@ export interface components {
             /** Format: date-time */
             recorded_at: string;
             /**
-             * @description A colleague recorded the stop. False when the contact recorded it on a link in a mail or
-             *     Margince recorded it, for example for a bounce.
+             * @description A colleague recorded the stop, by hand or through their agent. False when the contact recorded
+             *     it on a link in a mail or Margince recorded it, for example for a bounce.
              */
             recorded_by_colleague: boolean;
-            /** @description The colleague's current name. Null when no colleague recorded it, or their seat is gone. */
+            /** @description The colleague's current name, the user an agent acted for included. Null when no colleague recorded it, or their seat is gone. */
             recorded_by_name?: string | null;
             /** @description This caller may take the stop back now, with a reason. */
             may_lift: boolean;
@@ -62499,6 +62512,7 @@ export interface operations {
                     "application/json": components["schemas"]["Partner"];
                 };
             };
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
@@ -68723,6 +68737,8 @@ export interface operations {
             /**
              * @description `code: version_skew` — the draft is not at the version you last read: another
              *     composer saved or discarded it, or one exists and you sent no `If-Match`.
+             *     `code: own_draft_waiting` — an agent's save, where the user keeps a draft of their
+             *     own here; the agent leaves it to them.
              */
             409: {
                 headers: {
@@ -68763,6 +68779,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -78050,6 +78067,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -78332,6 +78350,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

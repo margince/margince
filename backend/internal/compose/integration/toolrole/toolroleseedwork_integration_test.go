@@ -8,6 +8,7 @@ package toolrole
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -62,6 +63,19 @@ func workSeeders(s sweepSeed) map[string]func() string {
 			s.call("PUT", "/v1/mail-drafts", integration.AnyMap{"anchor_type": "company", "anchor_id": company}, nil, &draft)
 			s.pool.note(draft.ID, "anchor", company)
 			return draft.ID
+		},
+		// An agent discards only its own draft, so it is saved as the call's own passport.
+		// A role that may make no company has no draft to name, and the gate refuses
+		// its call before the row is read.
+		"agent_mail_draft": func() string {
+			var anchor struct {
+				ID string `json:"id"`
+			}
+			company := integration.AnyMap{"source": "manual", "display_name": "Role sweep " + ids.NewV7().String()}
+			if status := s.e.Call(s.t, "POST", "/v1/companies", company, nil, &anchor); status != http.StatusCreated {
+				return ids.NewV7().String()
+			}
+			return s.asCallerWhereItMay("PUT", "/v1/mail-drafts", integration.AnyMap{"anchor_type": "company", "anchor_id": anchor.ID})
 		},
 		// Only a mailbox's capture records which seat imported a thread.
 		"captured_thread": func() string {
