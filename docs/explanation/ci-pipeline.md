@@ -430,7 +430,7 @@ and there it pushes out the `main` entries that every PR loads.
 - `lint-cache.yml` also saves the golangci entry, after each push to `main` or `develop` that changes Go
   files. A cold pass costs about 39 minutes of CPU. `internal/compose` imports every module, so an entry
   many merges old lints close to cold. The job runs `make lint` on the pushed tree, from the entry of the
-  push before. golangci loads the whole tree and keeps the result of each package whose inputs did not
+  push before. Lint loads the whole tree and keeps the result of each package whose inputs did not
   change. The job then deletes the older entries of its branch, so `main` and `develop` hold one each.
 - **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
   entry until `cache-warm` runs after the merge.
