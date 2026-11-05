@@ -8,9 +8,11 @@ The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals
 
 Every Margince list screen has the same three rows. The header row holds the view tabs (such as **All** and **Mine**), the count ("1 to 25 of 200 contacts") and the create button. On a phone drag the tabs left or right. The toolbar row holds the **Search** box and one **View** button. The rows sit under it, with **Previous**, **Next** and **Rows per page** at the bottom. Click a row to open the record.
 
-**View** opens a panel: a small window on a computer, a full screen on a phone. On **Deals** and **Leads** the **Table** / **Board** switch is at the top. Then comes one row for each setting, with its value: **Pipeline** (Deals, with several pipelines), **Filters**, **Sort**, **Columns** and **Density**. Press a row to open it, and **Back to view options** returns. Next comes **Show archived**, then **Save view** and **Manage views** at the bottom. Every change applies at once and stays in the address.
+**View** opens a panel: a small window on a computer, a full screen on a phone. On **Deals** and **Leads** the **Table** / **Board** switch is at the top. Then comes one row for each setting: **Pipeline** (Deals, with several pipelines), **Filters**, **Sort** and **Columns**. Each row shows its value now, and a dot when it is not at the list's default. Press a row to open its step, and press the step's name at the top to go back. Next come **Show archived** and **Compact**, which are On or Off.
 
-The button shows how many filters apply, such as "2 filters". It shows a dot when the list no longer matches the view tab you picked. Filters you applied show as chips in one row under the search. Press a chip to change it, or press its **⋮** button and choose **Delete filter**. You add a filter in **View** → **Filters**.
+**Save view** and **Manage views** are at the bottom. Every change applies at once and stays in the address.
+
+The button shows how many filters apply, such as "2 filters". It shows a dot when the list no longer matches the view tab you picked. Filters you applied show as chips in one row under the search. Press a chip to change it, or press its **⋮** button and choose **Delete filter**. You add a filter in **View** → **Filters**, which lists every filter. A filter already applied opens on its value and ends with **Delete filter**.
 
 What each list offers:
 
@@ -51,7 +53,7 @@ A row must match every filter, and each filter holds one value.
 Also called: narrow down, refine, facet, filter by.
 
 ### How do I clear all the filters on a list?
-To clear the filters on a Margince list, delete each filter chip with its **⋮** button → **Delete filter**, or press **All** in the view tabs. When nothing matches, the list says "No contacts match these filters." (or companies, leads, deals). It shows a **Clear filters** button, which removes every filter at once.
+To clear the filters on a Margince list, delete each filter chip with its **⋮** button → **Delete filter**. Or press **All** in the view tabs. When nothing matches, the list says "No contacts match these filters." (or companies, leads, deals). It shows a **Clear filters** button, which removes every filter at once.
 On the **Mine** tab, an empty list says "No contacts owned by you." with **Show all**, which removes only the owner filter.
 Also called: reset filters, show everything again, remove filter.
 
@@ -120,10 +122,10 @@ Also called: closing this quarter, filter by close date, deals due to close, exp
 ## Sorting a list and choosing columns
 ### How do I sort a list, such as deals by value?
 To sort deals by value in Margince, open **Deals**, switch to **Table**, and click the **Value** heading. Or press **View** → **Sort** and pick **Value**. The biggest deal comes first. Deals in other currencies are compared in your base currency: a closed deal at the rate it closed at, an open one at today's rate. A deal whose currency has no rate yet comes last. Every list sorts the same way.
-1. Click a column heading, or press **View** → **Sort** and pick it under **Sort by**.
+1. Click a column heading, or press **View** → **Sort** and pick it in the **Sort** step.
 2. Click it again to switch between ascending and descending order.
 3. The **Sort** row then names it, for example "Value", and the count line adds "sorted by Value".
-4. **Default order** under **Sort by** goes back to the list's own order.
+4. **Default order**, first in the **Sort** step, goes back to the order the list has when no sort is picked.
 Also called: order by, biggest deals first, sort by amount, sort A to Z, newest first.
 
 ### Which columns can I sort by?
@@ -140,16 +142,15 @@ Also called: sort options, order by column.
 To switch between table and board in Margince, open **Deals** or **Leads**, press **View**, and pick **Table** or **Board** at the top of the panel.
 - **Deals** opens on **Board**: one column for each stage of the pipeline shown, and you drag a card to move the deal. See [The pipeline](the-pipeline.md).
 - **Leads** opens on **Table**. Its **Board** has a column for each status, and you drag a card between New, Contacted and Engaged.
-Filters and search still work on the board. When every match of a search is in a column off screen, the board names those columns and moves to the first one. Ticking many rows, **Columns**, **Density** and **Save view** are on the table only.
+Filters and search still work on the board. When every match of a search is in a column off screen, the board names those columns and moves to the first one. Ticking many rows, **Columns**, **Compact** and **Save view** are on the table only.
 Also called: kanban, pipeline view, list view, card view.
 
 ### How do I hide columns or make the table more compact?
-To choose columns or row size in a Margince list, press **View** → **Columns** or **View** → **Density**.
+To choose columns or row size in a Margince list, press **View** → **Columns**, or press **View** and then **Compact**.
 1. Under **Columns**, untick a column to hide it. The name column always stays. On **Filters and views**, every field of the record type is here. Only the first six start ticked.
-2. Under **Density**, pick **Compact** for smaller rows.
-3. Drag the side of a column heading to make it wider or narrower.
-4. To move a column, drag the handle beside its name under **Columns**. With the keyboard, press ↑ or ↓ on the handle.
-Your browser keeps how wide each column is and the order of the columns for next time. Hidden columns and density are not saved in a view.
+2. Press **View**, then **Compact**, to turn smaller rows On or Off.
+3. Drag the side of a column heading to make it wider or narrower. To move a column, drag the handle beside its name under **Columns**. With the keyboard, press ↑ or ↓ on the handle.
+Your browser keeps how wide each column is and the order of the columns for next time. Hidden columns and **Compact** are not saved in a view.
 Also called: add column, remove column, reorder columns, change table layout.
 
 ### How do I show more rows per page?
@@ -167,7 +168,7 @@ Also called: show deleted, find an archived contact, closed records, inactive.
 
 ## Views
 
-A view in Margince is a tab in a list's header row that sets the list's filters and order in one press. Each list has its own views, such as **All** and **Mine**, and you can add your own with **Save view**. A saved view keeps the search text, the filters, the sort, **Show archived** and the rows per page. It does not keep hidden columns or density.
+A view in Margince is a tab in a list's header row that sets the list's filters and order in one press. Each list has its own views, such as **All** and **Mine**, and you can add your own with **Save view**. A saved view keeps the search text, the filters, the sort, **Show archived** and the rows per page. It does not keep hidden columns or **Compact**.
 
 **Saved views are yours.** A view you save is private: colleagues do not see it, and you cannot see theirs. To give colleagues the same set of records, build the filter on **Filters and views** and save it as a **Live List**. You share that with a team or with everyone. See [Live Lists and Shortlists](#live-lists-and-shortlists).
 
