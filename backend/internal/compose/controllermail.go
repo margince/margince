@@ -31,8 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -193,7 +191,9 @@ func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Re
 	if rendered.Language == "" && rendered.HTMLBody == "" {
 		return rendered, body, nil
 	}
-	brand, err := config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
+	// The same name product mail is headed by (mailletterhead.go). The logo is
+	// not attached on this lane yet, so the name heads the notice alone.
+	brand, _, err := letterheadNameTx(ctx, tx)
 	if err != nil {
 		return consent.Rendered{}, "", err
 	}

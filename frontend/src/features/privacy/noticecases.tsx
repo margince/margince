@@ -30,12 +30,12 @@ import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { formatDate } from "../../format/format";
 import { useNow } from "../../format/now";
-import { viewerZone } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
 import { problemMessageOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ControllerMailDialog } from "./controllermail";
 import {
   acquisitionCaption,
@@ -276,7 +276,7 @@ function NoticeTable({
   const t = useT();
   const { locale } = useLocale();
   // A statutory deadline, read on the viewer's own calendar day.
-  const tz = viewerZone();
+  const tz = useViewerZone();
   const columns: DataTableColumn<NoticeCase>[] = [
     {
       key: "contact",

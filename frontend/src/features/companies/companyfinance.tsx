@@ -13,7 +13,6 @@ import { formatDate, formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { BillingContactsPanel } from "../projects/billingcontacts";
 import { RecentInvoices } from "./financeinvoices";
 import { OverdueLead } from "./financeoverdue";
@@ -22,6 +21,7 @@ import { OverdueLead } from "./financeoverdue";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./companytabs.css";
 
 // The finance card: does this customer actually pay us, and on time?
@@ -108,7 +108,7 @@ export function CompanyFinanceCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const query = useFinanceSummary(companyId);
 
   if (!hasFinance(lifecycle)) {
@@ -179,7 +179,7 @@ export function CompanyFinanceCard({
             detail={{
               onRetry: () => void query.refetch(),
               staleAsOf: summary.last_synced_at
-                ? formatDate(summary.last_synced_at, locale, recordZone)
+                ? formatDate(summary.last_synced_at, locale, readerZone)
                 : undefined,
             }}
           >
@@ -268,15 +268,15 @@ function FinanceBody({ summary }: Readonly<{ summary: FinanceSummary }>) {
 function CoveragePeriod({ summary }: Readonly<{ summary: FinanceSummary }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   if (!summary.coverage_start || !summary.coverage_end) {
     return null;
   }
   return (
     <p className="fin-coverage t-caption">
       {t("finance.coveragePeriod", {
-        from: formatDate(summary.coverage_start, locale, recordZone),
-        to: formatDate(summary.coverage_end, locale, recordZone),
+        from: formatDate(summary.coverage_start, locale, readerZone),
+        to: formatDate(summary.coverage_end, locale, readerZone),
       })}
     </p>
   );
@@ -352,7 +352,7 @@ function PaymentBehaviour({ summary }: Readonly<{ summary: FinanceSummary }>) {
 function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   if (!summary.provider) {
     return null;
   }
@@ -362,7 +362,7 @@ function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
       {summary.last_synced_at
         ? t("finance.syncedFrom", {
             provider: summary.provider,
-            when: formatDate(summary.last_synced_at, locale, recordZone),
+            when: formatDate(summary.last_synced_at, locale, readerZone),
           })
         : t("finance.fromNeverSynced", { provider: summary.provider })}
     </p>

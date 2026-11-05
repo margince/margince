@@ -24,6 +24,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// quietRelay takes every mail and keeps none, for suites that only ask whether
+// a verb was offered and accepted.
+type quietRelay struct{}
+
+func (quietRelay) Send(context.Context, string, string, string) error { return nil }
+
+// mailingRoster is the handlers of an installation that can mail a link, so
+// resend_invite is offered at all.
+func mailingRoster(e *revocationEnv) Handlers {
+	return NewHandlers(e.svc).WithPasswordReset(quietRelay{}).WithPasswordLinkBase("https://crm.example.test")
+}
+
 // rosterActions reads the management roster through the handler, as caller.
 func rosterActions(t *testing.T, e *revocationEnv, h Handlers, caller Identity) map[ids.UUID][]crmcontracts.UserAllowedActions {
 	t.Helper()
@@ -108,14 +120,14 @@ func assertOfferAgrees(t *testing.T, e *revocationEnv, h Handlers, caller Identi
 		t.Errorf("%s on %s: withheld, and the handler changed the member (%d)", action, name, code)
 	case !listed && accepted && action == actionHandOver:
 		t.Errorf("%s on %s: withheld, and the gate admitted it", action, name)
-	case !listed && accepted && action == actionIssuePasswordLink:
+	case !listed && accepted && (action == actionIssuePasswordLink || action == actionResendInvite):
 		t.Errorf("%s on %s: withheld, and the handler minted a link", action, name)
 	}
 }
 
 func TestTheRosterOffersADelegatedAdministratorExactlyTheVerbsTheHandlersAccept(t *testing.T) {
 	e := setupRevocationEnv(t, "allowed-actions")
-	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
+	h := mailingRoster(e)
 	delegate := e.customRole(t, "Member admin", "rep", map[string]storedGrant{objectUserAdmin: fullGrant})
 	repCopy := e.customRole(t, "Rep copy", "rep", nil)
 	auditor := e.customRole(t, "Auditor", "rep", map[string]storedGrant{"audit_log": {Read: true}})
@@ -123,7 +135,7 @@ func TestTheRosterOffersADelegatedAdministratorExactlyTheVerbsTheHandlersAccept(
 
 	// Each verb gets its own caller and targets: every verb it admits changes
 	// the member, and the next verb must meet the member as the offer saw it.
-	for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionDeactivate, actionReactivate, actionHandOver} {
+	for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionResendInvite, actionDeactivate, actionReactivate, actionHandOver} {
 		tag := string(action)
 		caller := e.seat(t, "delegate-"+tag, delegate)
 		deactivated := e.seat(t, "gone-"+tag, "rep")
@@ -188,11 +200,11 @@ func TestTheRosterOffersNoPasswordLinkWithoutABaseURL(t *testing.T) {
 // verb opens, and the handlers agree for the ones it does not.
 func TestTheRosterOffersOnlyTheVerbsTheCallerHolds(t *testing.T) {
 	e := setupRevocationEnv(t, "allowed-verbs")
-	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
+	h := mailingRoster(e)
 	repCopy := e.customRole(t, "Rep copy", "rep", nil)
 	for verb, want := range map[string][]memberAction{
 		"delete": {actionDeactivate},
-		"update": {actionChangeRole, actionIssuePasswordLink, actionHandOver, actionEdit},
+		"update": {actionChangeRole, actionIssuePasswordLink, actionResendInvite, actionHandOver, actionEdit},
 	} {
 		grant := storedGrant{Read: true, Delete: verb == "delete", Update: verb == "update"}
 		caller := e.seat(t, "holder-"+verb, e.customRole(t, "Holds "+verb, "rep", map[string]storedGrant{objectUserAdmin: grant}))
@@ -205,7 +217,7 @@ func TestTheRosterOffersOnlyTheVerbsTheCallerHolds(t *testing.T) {
 		if !slices.Equal(got, want) {
 			t.Errorf("a %s holder is offered %v on a rep, want %v", verb, got, want)
 		}
-		for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionDeactivate, actionHandOver} {
+		for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionResendInvite, actionDeactivate, actionHandOver} {
 			assertOfferAgrees(t, e, h, caller, offered, action, "a rep", target.UserID, repCopy)
 		}
 	}

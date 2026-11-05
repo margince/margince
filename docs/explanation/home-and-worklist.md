@@ -183,6 +183,11 @@ Mail a sending system wrote is left out of the waiting lane and its tail, unless
 the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
 The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
 
+Mail that carried a List-Unsubscribe header (`bulk_mail_attested`) waits only once a human took it on as a request.
+An `asks_us` verdict from the classifier alone does not put a newsletter on the lane (`owedSQL` in
+`modules/activities/answered.go`). Our own newsletter waits on no reply, and a newsletter on a thread answers nothing,
+because the follow-up rule reads `relstrength.WrittenByHumanSQL`.
+
 Approvals are not read on in the tail. The approval engine counts them under the lane's own query, so a cut lane
 still states their exact total. The list never shows the rows past the lane's cut. A team page states no approval total,
 because the count does not judge by the team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions stay a floor until they join the tail.
@@ -267,7 +272,7 @@ A stalled deal keeps its future date while its forecast category drops one step.
 date still needs enough observed history before it can be replaced. Only a replaced date is
 provisional; a future date a human set stays theirs.
 
-`setCloseDate` and `setForecastCategory` in `closedatecorrect.go` write only a real change. The sweep sees a quiet deal again every night. Without that guard, the audit log would show a forecast that moves each night while it stands
+`setCloseDate` in `closedatecorrect.go` and `setWinProbability` in `winprobability.go` write only a real change. The sweep sees a quiet deal again every night. Without that guard, the audit log would show a forecast that moves each night while it stands
 still.
 
 **Accept** (`acceptAppliedDealChange`, `changeacceptance.go`) records an audited review of a close date

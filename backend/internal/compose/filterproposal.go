@@ -77,7 +77,7 @@ func (h filterProposalHandlers) withFilterProposalLane(lane completer) filterPro
 
 func (h filterProposalHandlers) ProposeFilter(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -194,12 +194,12 @@ func (h filterProposalHandlers) vocabulary(ctx context.Context, resource string)
 }
 
 // language is the reader's own interface language when the client sent it, and
-// the installation's base language otherwise.
+// the language they chose for their seat otherwise.
 func (h filterProposalHandlers) language(ctx context.Context, locale *crmcontracts.FilterProposalRequestLocale) string {
 	if locale != nil {
 		return string(*locale)
 	}
-	return identity.BaseLanguageForPrompt(ctx, h.pool)
+	return identity.ReaderLanguageForPrompt(ctx, h.pool)
 }
 
 func wireProposal(

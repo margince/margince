@@ -7,7 +7,7 @@ import {
   formatNumber,
   ordinalNumber,
 } from "../format/format";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { useLocale } from "../i18n";
 import { Badge, Button, OverflowMenu } from "./atoms";
 import { Avatar } from "./avatar";
@@ -97,7 +97,8 @@ const columns = [
     key: "created",
     header: "Created",
     holds: "date" as const,
-    cell: (row: Company) => formatDateAbbrev(row.createdAt, "en", viewerZone()),
+    cell: (row: Company) =>
+      formatDateAbbrev(row.createdAt, "en", browserZone()),
   },
 ];
 
@@ -239,9 +240,23 @@ export const SortedByAMenu: Story = {
 // optional columns are one question to a reader — both answer "show me more of
 // this at once" — and each group is named a rung under the menu's own head, so
 // the panel reads as one question in two parts rather than as three headings.
+// Each optional column carries a grip that moves it.
 export const DisplayMenuOpen: Story = {
   render: () => <Surface rows={companies(12)} />,
   play: openMenu(/^Display$/),
+};
+
+// A column moved by its grip: the second optional column, taken up one place
+// from the keyboard. The grid's headers follow the menu's order.
+export const ColumnMoved: Story = {
+  render: () => <Surface rows={companies(12)} />,
+  play: async (context) => {
+    await openMenu(/^Display$/)(context);
+    const page = within(context.canvasElement);
+    const grips = await page.findAllByRole("button", { name: /^Move / });
+    grips[1]?.focus();
+    await userEvent.keyboard("{ArrowUp}");
+  },
 };
 
 // The filter menu's SECOND step, which is the half a list of attributes cannot

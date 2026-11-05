@@ -10,7 +10,7 @@ import { useLocale, useT } from "../../i18n";
 import { CLAIM_SETTLED_KEYS, taskWriteKeys } from "../../lib/activitykeys";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { worklistKey } from "../../lib/workkeys";
 
 /**
@@ -72,7 +72,7 @@ export type TakenOver = { name: string | null; at: string };
 export function TakenOverLine({ takenBy }: Readonly<{ takenBy: TakenOver }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const date = formatDayMonth(takenBy.at, locale, zone);
   return (
     <span className="pe-loop-quote t-caption">

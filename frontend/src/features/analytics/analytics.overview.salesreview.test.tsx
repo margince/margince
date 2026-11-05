@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -90,7 +90,7 @@ describe("the lead and its readings", () => {
     expect(cards).toHaveLength(4);
     for (const label of [
       "Sales won",
-      "Won + confirmed commit",
+      "Won + Likely deals",
       "Modelled quarter finish",
       "Pipeline due this quarter",
     ])
@@ -240,10 +240,14 @@ describe("the composition of the expected finish", () => {
           }),
     );
     const summary = await readings();
-    expect(await summary.findByText("15 of 18 valued")).toBeVisible();
+    expect(await summary.findByText(/15 of 18 valued/)).toBeVisible();
+    const pipeline = summary
+      .getByText("Pipeline due this quarter")
+      .closest<HTMLElement>(".stat-card");
+    if (!pipeline) throw new Error("missing pipeline card");
     await userEvent
       .setup({ delay: null })
-      .click(summary.getByRole("button", { name: "Evidence" }));
+      .click(within(pipeline).getByRole("button", { name: "Evidence" }));
     expect(
       await screen.findByText(
         "Counts 15 of the 18 open deals the forecast considered.",

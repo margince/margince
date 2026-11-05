@@ -27,7 +27,6 @@ var dealFilterOperands = map[string]string{
 	filterAcquisitionSource:  "referral",
 	filterCommercialMotion:   "new_business",
 	filterCompanyID:          filterOperandID,
-	filterForecastCategory:   "commit",
 	filterOwnerID:            filterOperandID,
 	filterPartnerAttribution: "sourced",
 	filterPartnerCompanyID:   filterOperandID,
@@ -38,6 +37,8 @@ var dealFilterOperands = map[string]string{
 	filterStageID:            filterOperandID,
 	filterStalled:            "false",
 	filterStatus:             "open",
+	filterWinProbabilityMin:  "60",
+	filterWinProbabilityMax:  "90",
 	filterTag:                filterOperandID,
 	filterTagMode:            "all",
 	filterOwnerTeamID:        filterOperandID,
@@ -75,10 +76,10 @@ func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 	}{
 		{datasource.EntityDeal, []string{
 			"acquisition_source", "close_from", "close_to", "commercial_motion", "company_id", "country",
-			"currency", "forecast_category", "include_archived", "list_id", "owner_id", "owner_team_id",
+			"currency", "include_archived", "list_id", "owner_id", "owner_team_id",
 			"partner_attribution", "partner_company_id", "partner_sourced", "pipeline_id", "priority",
 			"project_id", "sort", "source_id", "source_system", "stage_id", "stalled", "status", "tag_id",
-			"tag_mode", "unassigned", "value_max", "value_min",
+			"tag_mode", "unassigned", "value_max", "value_min", "win_probability_max", "win_probability_min",
 		}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {

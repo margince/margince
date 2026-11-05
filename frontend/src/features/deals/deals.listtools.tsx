@@ -34,11 +34,11 @@ import {
   VIEW_PARAM,
 } from "../../lib/deals.queries";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
-import { useRecordZone } from "../../lib/recordzone";
 import { heldRefusedDials } from "../../lib/refusedfilters";
 import { useMe } from "../../lib/session";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealBulkBar } from "./dealbulk";
 import type { Deal, Pipeline, Stage } from "./deals";
@@ -426,7 +426,7 @@ export function useDealChips({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   // A company this reader may not search for is not looked up either.
   const companyName = useAppliedCompanyName(
     withheld.has("company_id") ? undefined : query.filters.company_id,

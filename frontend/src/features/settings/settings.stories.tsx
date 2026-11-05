@@ -6,7 +6,11 @@ import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
 import type { SettingsPageId } from "../../lib/settingscatalog";
 import { readingsDay } from "../../testing/brief.fixtures";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import {
+  FIXTURE_TIMEZONE,
+  type GrantSpec,
+  meFixture,
+} from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -135,7 +139,7 @@ const WORKING_HOURS: RouteMap = {
         start_time: "09:00",
         end_time: "17:00",
         days: [1, 2, 3, 4, 5],
-        timezone: meFixture().user.timezone,
+        timezone: FIXTURE_TIMEZONE,
       },
     }),
 };
@@ -251,13 +255,6 @@ export const AiAccessDevelopersOpen: Story = {
   play: async ({ canvasElement }) => openDevelopers(canvasElement),
 };
 
-export const AiAccessCodingAgents: Story = {
-  name: "AI access — coding agents",
-  render: tab("agents", aiAccessRoutes),
-  play: async ({ canvasElement }) =>
-    openDevelopers(canvasElement, "Coding agents"),
-};
-
 export const AiAccessAgentRules: Story = {
   name: "AI access — agent rules",
   render: tab("agents", aiAccessRoutes),
@@ -265,16 +262,14 @@ export const AiAccessAgentRules: Story = {
     openDevelopers(canvasElement, "Agent rules"),
 };
 
-// The connector switched off: the picker and the coding-agents card both say so
-// and say what still works. It is the state a default install is in.
+// The connector switched off: the picker says so and what still works. It is
+// the state a default install is in.
 export const AiAccessConnectorOff: Story = {
   name: "AI access — connector off",
   render: tab("agents", {
     ...aiAccessRoutes,
     "GET /.well-known/oauth-protected-resource": connectorOff,
   }),
-  play: async ({ canvasElement }) =>
-    openDevelopers(canvasElement, "Coding agents"),
 };
 
 // The row's menu opens the revoke confirm, left open here so the guarded

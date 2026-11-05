@@ -184,7 +184,6 @@ type sharedForecast struct {
 	ScopeKind    string `json:"scope_kind"`
 	WonMinor     int64  `json:"won_minor"`
 	EvidenceMin  int64  `json:"evidence_minor"`
-	BestCase     int64  `json:"best_case_minor"`
 	OpenMinor    int64  `json:"open_minor"`
 	WeightedMin  int64  `json:"weighted_minor"`
 	EligibleN    int    `json:"eligible_count"`

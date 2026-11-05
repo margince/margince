@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -49,7 +49,7 @@ To connect your calendar to Margince, tick **Calendar** when you connect your Go
 1. Open **Settings**, then **Connections**.
 2. For a new account, choose **Connect Google** or **Connect Microsoft 365** and keep **Calendar** ticked.
 3. For an account already connected with mail only, choose **Connect calendar** in its **Calendar** row. Or choose **Change what it brings in** in the account's menu.
-4. Approve access on the provider's screen. With Mail and Calendar both ticked, the provider asks twice: once for mail, then once for your calendar.
+4. Approve access on the provider's screen. Google asks once for **Mail** and **Calendar** added together, and Microsoft 365 asks once for each.
 If the calendar is refused, mail still connects and the note says so, with **Connect calendar** to try again.
 A calendar brings meetings from 90 days back to one year from now, and the window moves forward on its own. There is no history import for a calendar.
 Also called: calendar sync, sync meetings, link my agenda.
@@ -118,6 +118,7 @@ When emails stop coming into Margince, open **Settings → Connections** and rea
 - **Needs reconnect**: "The provider rejected the stored credentials. Reconnect to resume." Press **Reconnect** and approve access again.
 - **Needs attention**: the line under it says why. When the provider is slowed down or unreachable, Margince tries again on its own. If it stays, choose **Disconnect** in the account's menu, then connect again.
 - **Not connected**: connect again with **Connect** on the row, or **Add account**.
+- **Your role cannot record activities**: your role cannot capture mail. Ask them to change it. Capture starts again by itself.
 Also called: mailbox not syncing, emails stopped coming in, Gmail disconnected, sync broken.
 
 ### How do I reconnect a mailbox?

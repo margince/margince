@@ -151,6 +151,13 @@ func (p *preflightEnv) transmit(t *testing.T, deliveryID ids.UUID, stampAs strin
 // transmitted NOTHING rather than merely to have been recorded.
 func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs string) (comms.Outcome, sentMail, *gmail.Connector) {
 	t.Helper()
+	return p.dispatchOnceWith(t, deliveryID, stampAs, nil)
+}
+
+// dispatchOnceWith is dispatchOnce with a send policy chain. A case passes one
+// when something must happen between the consent gate and the wire.
+func (p *preflightEnv) dispatchOnceWith(t *testing.T, deliveryID ids.UUID, stampAs string, policies []comms.SendPolicy) (comms.Outcome, sentMail, *gmail.Connector) {
+	t.Helper()
 	var captured sentMail
 	stub := gmailSendStub(t, &captured, stampAs)
 
@@ -188,7 +195,7 @@ func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs s
 		// byte read a message with attachments would reach.
 		compose.NewSendAttachmentAuthority(p.Pool, nil),
 		consent.NewGate(consent.NewStore(compose.InstallationDB(p.Pool))),
-		nil, time.Now, 24*time.Hour, 10,
+		policies, time.Now, 24*time.Hour, 10,
 	)
 	// A job carries no session. The scope comes from the composition rather
 	// than being rebuilt here: it binds the system actor and the correlation id

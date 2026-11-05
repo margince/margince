@@ -40,7 +40,7 @@ const (
 // submitter. A handoff with no event by as_of has no row.
 func handoffCycleSQL(b *reportingBindings, at time.Time) string {
 	return `FROM sdr_handoff h
- JOIN LATERAL (SELECT e.occurred_at,e.submitter_id_at_change,e.to_status FROM sdr_handoff_event e
+ JOIN LATERAL (SELECT e.occurred_at,e.submitter_id_at_change,e.to_status,e.reason_id FROM sdr_handoff_event e
  WHERE e.handoff_id=h.id AND e.occurred_at<=` + b.add(at) + ` -- occurred_at raw: a handoff event's instant, not an activity day
  ORDER BY e.occurred_at DESC,e.id DESC LIMIT 1) cycle ON true
  LEFT JOIN app_user r ON r.id=h.assigned_to`
@@ -244,7 +244,7 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
  h.assigned_to,COALESCE(r.display_name,''),COALESCE(` + identity.LiveMemberSQL("r") + `,false),reason.label
  ` + handoffCycleSQL(&b, at) + `
  LEFT JOIN lead l ON l.id=h.lead_id LEFT JOIN contact c ON c.id=h.contact_id
- LEFT JOIN sdr_handoff_reason reason ON reason.id=h.reason_id AND cycle.to_status=` + b.add(contacts.HandoffRecycled) + `
+ LEFT JOIN sdr_handoff_reason reason ON reason.id=cycle.reason_id AND cycle.to_status=` + b.add(contacts.HandoffRecycled) + `
  CROSS JOIN LATERAL (SELECT ` + subject + ` AS kind) sv
  WHERE cycle.to_status=` + b.add(p.status) + ` AND ` + orUnnarrowed(population) + page + `
  ORDER BY cycle.occurred_at,h.id LIMIT ` + b.add(limit+1)

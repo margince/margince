@@ -11,7 +11,6 @@ import { QueryStates } from "../../design-system/querystates";
 import { RecordBack } from "../../design-system/recordview";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useMemberNames } from "../../lib/membernames";
@@ -23,6 +22,7 @@ import {
   IMPORT_TEMPLATE_SUBPAGE,
   settingsHref,
 } from "../../lib/settingsrouting";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ImportDropzone } from "./import.files";
 import { ImportRefusal, UndoConfirm } from "./import.notices";
 import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
@@ -196,6 +196,7 @@ function starterOf(run: ImportRun): string | undefined {
 // The runs made so far, newest first. Undo is offered on a complete run only:
 // every other state either is still moving or has nothing left to reverse.
 function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -250,7 +251,7 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
             {
               key: "date",
               header: t("import.recent.col.date"),
-              render: (one) => formatDate(one.created_at, locale, viewerZone()),
+              render: (one) => formatDate(one.created_at, locale, readerZone),
             },
             {
               key: "file",

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { formatDateTime } from "../format/format";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { translate } from "../i18n";
 import { row } from "../testing/worklist.testkit";
 import { whenText } from "./worklistcopy";
 import { scheduledText } from "./worklistheld";
 
-const zone = viewerZone();
+const zone = browserZone();
 
 const t = (key: "worklist.when.scheduled", values: { when: string }) =>
   translate("en", key, values);

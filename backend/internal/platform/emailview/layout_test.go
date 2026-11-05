@@ -21,7 +21,7 @@ func weekWithItems() Content {
 
 func TestAnItemTakesOnlyItsOwnLinkAndTheMessageKeepsItsButton(t *testing.T) {
 	main, footer := renderBlocks(weekWithItems().Blocks, "")
-	if !strings.Contains(main, `href="https://example.test/#deal/1"`) || !strings.Contains(main, "Reply →") {
+	if !strings.Contains(main, `href="https://example.test/#deal/1"`) || !strings.Contains(main, "Reply →") || !strings.Contains(main, ">Fleet renewal</a>") {
 		t.Fatal("the item lost its own link or verb")
 	}
 	button := regexp.MustCompile(`<a href="https://example.test/#weekly" class="c-textOnAccentControl"[^>]*>Open the week<`)
@@ -43,7 +43,7 @@ func TestNoElementCarriesTwoClassAttributes(t *testing.T) {
 	body.Facts(Fact{Label: "New deals", Value: "5"})
 	body.Note("Expires Friday.", Info)
 	body.Append(weekWithItems())
-	rendered := Render(body.Message("Week", "en", ""))
+	rendered := Render(body.Message("Week", "en", ""), Letterhead{})
 	doubled := regexp.MustCompile(`<[a-z0-9]+[^>]*\sclass="[^"]*"[^>]*\sclass="`)
 	if found := doubled.FindString(rendered); found != "" {
 		t.Fatalf("a second class attribute is ignored, so its dark or narrow rule never applies: %s", found)
@@ -88,8 +88,8 @@ func TestATrailingActionWithoutALinkLeavesTheButtonToTheLastLinkedOne(t *testing
 }
 
 func TestDarkReadersGetTheDarkShadow(t *testing.T) {
-	rendered := Render(weekWithItems().Message("Week", "en", ""))
-	if !strings.Contains(rendered, ".sh-shadow-rest{box-shadow:"+tokens[shadowRest].Dark) || !strings.Contains(rendered, `class="bg-pane bd-paneEdge sh-shadow-rest"`) {
+	rendered := Render(weekWithItems().Message("Week", "en", ""), Letterhead{})
+	if !strings.Contains(rendered, ".sh-shadow-rest{box-shadow:"+mailCSS(tokens[shadowRest].Dark)) || !strings.Contains(rendered, `class="bg-pane bd-paneEdge sh-shadow-rest"`) {
 		t.Fatal("the card's shadow keeps its light value in dark mode")
 	}
 }

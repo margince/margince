@@ -11,7 +11,7 @@ import {
   dealCloseOutcome,
 } from "../../lib/approvalpreview";
 import type { MagicLine } from "../../lib/magic.queries";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Preview = components["schemas"]["ApprovalPreview"];
 
@@ -30,7 +30,7 @@ export function MagicApproval({
 }: Readonly<{ line: MagicLine; subject: ReactNode; action: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const preview = line.approval_preview;
   if (!preview) return null;
   const display = commercialPreviewDisplay(

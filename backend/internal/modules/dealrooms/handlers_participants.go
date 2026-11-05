@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func participantPathID(id openapi_types.UUID) ids.DealRoomParticipantID {
@@ -125,10 +126,20 @@ func (h Handlers) issuedBody(r *http.Request, issued IssuedInvitation) crmcontra
 	}
 	return crmcontracts.DealRoomInvitationIssued{
 		Participant:         issued.Participant,
-		Credential:          issued.Credential,
+		Credential:          credentialFor(r, issued.Credential),
 		CredentialExpiresAt: issued.ExpiresAt,
 		Queued:              queued,
 	}
+}
+
+// credentialFor is the buyer's link as the caller may see it. An agent never
+// holds it, since the link signs in to the room as the buyer. It learns only
+// whether the mail was queued.
+func credentialFor(r *http.Request, credential string) string {
+	if p, ok := principal.Actor(r.Context()); ok && p.Type == principal.PrincipalAgent {
+		return ""
+	}
+	return credential
 }
 
 // recordSendOutcome stamps what the relay did onto the invitation.

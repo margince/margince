@@ -165,7 +165,46 @@ func TestANotYetForOneRecipientHoldsUntilWeWriteToAnyRecipientAgain(t *testing.T
 	}
 }
 
-func TestAnAgentReadingTheWorklistIsAskedNothing(t *testing.T) {
+// A user's agent reads the question its user reads, and their Not yet holds for
+// it as it does on the contact page.
+func TestAUsersAgentIsAskedAsTheyAreAndSharesTheirNotYet(t *testing.T) {
+	e := integration.Setup(t)
+	p := seedPromiseThread(t, e)
+	task := promiseTask(t, e, p)
+	logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
+	at := p.sentAt.AddDate(0, 0, 7)
+	agent := e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms)
+	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
+	question := func() *crmcontracts.WorklistMayBeDone {
+		t.Helper()
+		day, err := service.Worklist(agent, "mine", "", ids.UUID{}, 100, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, row := range day.Queue {
+			if row.Source == "task" && row.Id == task.String() {
+				return row.MayBeDone
+			}
+		}
+		t.Fatal("the promise task is not on the agent's Worklist")
+		return nil
+	}
+	asked := question()
+	if asked == nil {
+		t.Fatal("the agent's Worklist did not ask what its user's asks")
+	}
+	if err := pageAsOf(e, at).DismissMoment(e.Admin(), p.contact, crmcontracts.DismissContactMomentRequest{
+		ClaimKey: asked.ClaimKey, EvidenceFingerprint: asked.EvidenceFingerprint,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if again := question(); again != nil {
+		t.Errorf("the agent's Worklist asked again after its user's Not yet: %+v", again)
+	}
+}
+
+// Automatic work has no user to answer for.
+func TestAutomaticWorkReadingTheWorklistIsAskedNothing(t *testing.T) {
 	e := integration.Setup(t)
 	p := seedPromiseThread(t, e)
 	task := promiseTask(t, e, p)
@@ -186,7 +225,7 @@ func TestAnAgentReadingTheWorklistIsAskedNothing(t *testing.T) {
 	}
 	for _, row := range day.Queue {
 		if row.Id == task.String() && row.MayBeDone != nil {
-			t.Fatalf("an agent was asked a question only a human answers: %+v", row.MayBeDone)
+			t.Fatalf("automatic work was asked a question only a user answers: %+v", row.MayBeDone)
 		}
 	}
 }

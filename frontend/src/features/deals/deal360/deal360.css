@@ -114,3 +114,19 @@
   outline: var(--focus-ring);
   border-radius: var(--r-xs);
 }
+
+/* The products a writer is setting: a name, its amount and its remove verb. */
+.deal-products-edit {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deal-products-edit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+}

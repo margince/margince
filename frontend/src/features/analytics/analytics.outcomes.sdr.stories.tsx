@@ -68,31 +68,53 @@ const waiting: Page = {
   next_cursor: "cursor-2",
 };
 
-/** Two handoffs waiting, with a further page behind "Show more". */
-export const HandoffsWaiting: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": meRoute({ lead: ["read"], report_definition: ["read"] }),
-      "GET /analytics/metrics": () => jsonResponse(reportingSectionsCatalog),
-      "GET /analytics/evaluate": () => jsonResponse(reportingStoryEvaluation),
-      "GET /analytics/sdr-summary": () => jsonResponse(summary),
-      "GET /analytics/sdr-summary/handoffs": () => jsonResponse(waiting),
-      "GET /analytics/sdr-summary/meetings": () =>
-        jsonResponse({
-          as_of: AS_OF,
-          window: {
-            start_at: AS_OF,
-            end_at: "2026-10-04T22:00:00Z",
-            timezone: REPORTING_FIXTURE_ZONE,
-          },
-          rows: [],
-        }),
-      "GET /worklist": () => jsonResponse(QUIET_DAY),
-    });
-    return (
-      <StoryProviders>
-        <MySdrWork self={SELF} locale="en" />
-      </StoryProviders>
-    );
-  },
+const lastPage = {
+  as_of: AS_OF,
+  rows: [
+    {
+      id: "h-3",
+      waiting_since: "2026-09-21T12:00:00Z",
+      resubmitted: false,
+      restricted: true,
+    },
+  ],
+  next_cursor: null,
+};
+
+/** Two handoffs waiting, with a last page behind "Show more". */
+function handoffsWaiting() {
+  let served = 0;
+  installFetchStub({
+    "GET /me": meRoute({ lead: ["read"], report_definition: ["read"] }),
+    "GET /analytics/metrics": () => jsonResponse(reportingSectionsCatalog),
+    "GET /analytics/evaluate": () => jsonResponse(reportingStoryEvaluation),
+    "GET /analytics/sdr-summary": () => jsonResponse(summary),
+    "GET /analytics/sdr-summary/handoffs": () => {
+      served += 1;
+      return jsonResponse(served === 1 ? waiting : lastPage);
+    },
+    "GET /analytics/sdr-summary/meetings": () =>
+      jsonResponse({
+        as_of: AS_OF,
+        window: {
+          start_at: AS_OF,
+          end_at: "2026-10-04T22:00:00Z",
+          timezone: REPORTING_FIXTURE_ZONE,
+        },
+        rows: [],
+      }),
+    "GET /worklist": () => jsonResponse(QUIET_DAY),
+  });
+  return (
+    <StoryProviders>
+      <MySdrWork self={SELF} locale="en" />
+    </StoryProviders>
+  );
+}
+
+export const HandoffsWaiting: Story = { render: handoffsWaiting };
+
+export const HandoffsWaitingDark: Story = {
+  globals: { theme: "dark" },
+  render: handoffsWaiting,
 };

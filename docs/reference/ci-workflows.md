@@ -15,7 +15,8 @@ workflow is outside the gate:
 | `closing-declaration.yml` | pull request events | No |
 | `docs-describing.yml` | pull request events | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
-| `main-health.yml` | `main` every two hours, manual dispatch | No |
+| `main-health.yml` | `main-health-pace.yml`, `main` every six hours, manual dispatch | No |
+| `main-health-pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
 | `release.yml` | manual dispatch only | No |
@@ -159,7 +160,14 @@ and holds only `issues: write`.
 
 ## `main-health.yml`
 
-Runs on `main` every two hours.
+Runs on `main` while commits are landing, with at least two hours between two runs.
+
+The GitHub scheduler can start a cron run hours behind its time, or not at all. It keeps no record
+of a run it did not start. So `main-health-pace.yml` runs on every push to `main` and starts this
+workflow when the newest run is at least two hours old
+([`scripts/main-health-pace.sh`](../../scripts/main-health-pace.sh), `make test-main-health-pace`).
+A cron line every six hours remains for a quiet `main`, when no push comes.
+
 Each run covers these lanes:
 
 - the backend gate;
@@ -336,9 +344,12 @@ Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#w
 Runs at once: `draft` and `docker-image` each carry a group that cancels, so an older bake stops. `publish`
 carries a group that queues runs and does not cancel. A publish that has started always runs to the end,
 and a publish that still waits when a newer one comes gives up its place. That way only one
-publish runs at a time, but in no set order. Nothing on this path refuses an old version. So a new
-run, or a dispatch of an older commit, can still publish after a newer one
-([#1810](https://github.com/margince/margince/issues/1810)).
+publish runs at a time, but in no set order.
+
+The workflow does not check the order itself. The dist service does. It refuses `publish-release` for a
+version that is not newer than its newest published one. It also refuses the same version a second time.
+So a new run of an old build fails at the publish step. A dispatch of an older commit fails there too,
+instead of landing after a newer release.
 
 ## `release-tag.yml`
 

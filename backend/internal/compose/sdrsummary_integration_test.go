@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -280,8 +281,8 @@ func TestSdrSummaryWithoutAHandoffWorkflowReadsNoHandoffs(t *testing.T) {
 		status string
 		offset time.Duration
 	}{{"booked", 48 * time.Hour}, {"booked", -48 * time.Hour}, {"canceled", 72 * time.Hour}} {
-		activity := e.seedID(t, `INSERT INTO activity(id,kind,subject,meeting_status,occurred_at,host_user_id,source,captured_by) VALUES($1,'meeting','Discovery',$2,$3,$4,'manual',$5)`,
-			meeting.status, f.at.Add(meeting.offset), e.Rep1, "human:"+e.Rep1.String())
+		activity := e.seedID(t, `INSERT INTO activity(id,kind,subject,meeting_status,occurred_at,host_user_id,source,captured_by,created_at) VALUES($1,'meeting','Discovery',$2,$3,$4,'manual',$5,$6)`,
+			meeting.status, f.at.Add(meeting.offset), e.Rep1, "human:"+e.Rep1.String(), f.at)
 		if _, err := e.Pool.Exec(context.Background(), `INSERT INTO activity_link(activity_id,entity_type,contact_id) VALUES($1,'contact',$2)`, activity, contact); err != nil {
 			t.Fatal(err)
 		}
@@ -399,5 +400,52 @@ func TestSdrSummaryCountsAtTheInstantItIsAskedFor(t *testing.T) {
 		crmcontracts.GetSdrSummaryParams{ScopeKind: &kind, ScopeId: &id, AsOf: &future})
 	if w.Code != http.StatusUnprocessableEntity {
 		t.Errorf("a future as_of answered %d, want 422", w.Code)
+	}
+}
+
+// A returned row names the reason of the round it is in, so a later recycle
+// does not rewrite what the seat was told at an earlier instant.
+func TestAReturnedHandoffNamesTheReasonOfItsRoundAtAsOf(t *testing.T) {
+	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
+	rows, err := f.e.Pool.Query(context.Background(), `SELECT id,label FROM sdr_handoff_reason WHERE applies_to='recycled' AND active ORDER BY sort_order LIMIT 2`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type reason struct {
+		ID    ids.UUID
+		Label string
+	}
+	reasons, err := pgx.CollectRows(rows, pgx.RowToStructByPos[reason])
+	if err != nil || len(reasons) != 2 {
+		t.Fatalf("the fixture needs two recycle reasons: %v, %v", reasons, err)
+	}
+	handoff := f.submit(t, "Twice returned", &f.ae)
+	recycle := func(why ids.UUID) {
+		t.Helper()
+		f.at = f.at.Add(time.Hour)
+		if err := f.handoffs.DecideHandoff(f.ctx, handoff, contacts.HandoffDecision{Status: contacts.HandoffRecycled, ReasonID: &why}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	recycle(reasons[0].ID)
+	firstRound := f.at
+	f.at = f.at.Add(time.Hour)
+	if err := f.handoffs.ResubmitHandoff(f.ctx, handoff, nil); err != nil {
+		t.Fatal(err)
+	}
+	recycle(reasons[1].ID)
+
+	kind := crmcontracts.ListSdrWaitingHandoffsParamsScopeKindOwner
+	id := openapi_types.UUID(f.e.Rep1)
+	state := crmcontracts.ListSdrWaitingHandoffsParamsStateReturned
+	var page crmcontracts.SdrWaitingHandoffPage
+	body := sdrServe(f.ctx, t, f.e, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
+		h.ListSdrWaitingHandoffs(w, r, crmcontracts.ListSdrWaitingHandoffsParams{ScopeKind: &kind, ScopeId: &id, State: &state, AsOf: &firstRound})
+	}, f.at)
+	if err := json.Unmarshal(body, &page); err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Rows) != 1 || page.Rows[0].Reason == nil || *page.Rows[0].Reason != reasons[0].Label {
+		t.Fatalf("the first round's row = %+v, want the reason %q", page.Rows, reasons[0].Label)
 	}
 }

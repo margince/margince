@@ -69,7 +69,7 @@ func TestUnsetMeasureLandsQualifiedUnderEnforcement(t *testing.T) {
 	v := enforcedViability(t)
 
 	landing, readings := v.landing(t)
-	if landing.Measure != forecasting.MeasureQualifiedCommitEvidence || landing.AmountMinor != 100_000 {
+	if landing.Measure != forecasting.MeasureQualifiedLikely || landing.AmountMinor != 100_000 {
 		t.Fatalf("with no measure saved the landing is %d on %s, want 100000 on qualified commit "+
 			"evidence: the silent deal stays out", landing.AmountMinor, landing.Measure)
 	}

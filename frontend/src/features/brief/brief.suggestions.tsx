@@ -17,8 +17,8 @@ import { PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type MorningBrief,
   type MorningBriefItem,
@@ -40,6 +40,7 @@ export function BriefSuggestions() {
 }
 
 function StoredSuggestions() {
+  const readerZone = useViewerZone();
   const query = useMorningBrief();
   const t = useT();
   const { locale } = useLocale();
@@ -51,7 +52,7 @@ function StoredSuggestions() {
         ) : (
           <>
             <p className="t-caption">
-              {formatDateTime(run.generated_at, locale, viewerZone())}
+              {formatDateTime(run.generated_at, locale, readerZone)}
             </p>
             <RunSuggestions run={run} />
           </>
@@ -167,6 +168,7 @@ function StoredSuggestion({
   item,
   run,
 }: Readonly<{ item: MorningBriefItem; run: MorningBrief }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -181,7 +183,7 @@ function StoredSuggestion({
           </p>
           {run.annotated_at && (
             <p className="t-caption">
-              {formatDateTime(run.annotated_at, locale, viewerZone())}
+              {formatDateTime(run.annotated_at, locale, readerZone)}
             </p>
           )}
         </PanelRow>

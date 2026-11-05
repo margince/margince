@@ -35,28 +35,37 @@ function FirstPage() {
   );
 }
 
-/** A first page with a further one behind it. */
-export const AFurtherPage: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /analytics/sdr-summary/handoffs": () =>
-        jsonResponse({
-          as_of: "2026-09-21T12:00:00Z",
-          rows: [
-            {
-              id: "h-1",
-              waiting_since: "2026-09-18T12:00:00Z",
-              resubmitted: false,
-              restricted: true,
-            },
-          ],
-          next_cursor: "cursor-2",
-        }),
-    });
-    return (
-      <StoryProviders>
-        <FirstPage />
-      </StoryProviders>
-    );
-  },
+/** A first page with a further one behind it, which ends the list. */
+function aFurtherPage() {
+  let served = 0;
+  installFetchStub({
+    "GET /analytics/sdr-summary/handoffs": () => {
+      served += 1;
+      const first = served === 1;
+      return jsonResponse({
+        as_of: "2026-09-21T12:00:00Z",
+        rows: [
+          {
+            id: first ? "h-1" : "h-2",
+            waiting_since: "2026-09-18T12:00:00Z",
+            resubmitted: false,
+            restricted: true,
+          },
+        ],
+        next_cursor: first ? "cursor-2" : null,
+      });
+    },
+  });
+  return (
+    <StoryProviders>
+      <FirstPage />
+    </StoryProviders>
+  );
+}
+
+export const AFurtherPage: Story = { render: aFurtherPage };
+
+export const AFurtherPageDark: Story = {
+  globals: { theme: "dark" },
+  render: aFurtherPage,
 };

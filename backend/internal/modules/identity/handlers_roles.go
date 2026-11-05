@@ -20,7 +20,7 @@ import (
 
 // ListRoles (GET /roles): the editor's read.
 func (h Handlers) ListRoles(w http.ResponseWriter, r *http.Request, params crmcontracts.ListRolesParams) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -71,7 +71,7 @@ func (h Handlers) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request, key
 
 // ListAssignableRoles (GET /users/assignable-roles).
 func (h Handlers) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -82,7 +82,9 @@ func (h Handlers) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
 	}
 	roles := make([]crmcontracts.AssignableRole, 0, len(rows))
 	for _, row := range rows {
-		roles = append(roles, crmcontracts.AssignableRole{Key: row.Key, Name: row.Name, IsSystem: row.IsSystem})
+		roles = append(roles, crmcontracts.AssignableRole{
+			Key: row.Key, Name: row.Name, IsSystem: row.IsSystem, CapturesMail: row.CapturesMail,
+		})
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AssignableRoleDirectory{Roles: roles})

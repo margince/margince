@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { formatMoneyCompact } from "../../format/format";
+import { formatAnalyticsMoney } from "../../format/format";
 import { translate } from "../../i18n";
 import { en } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
@@ -161,7 +161,7 @@ describe("the seat's figures against its own targets", () => {
     expect(text).toContain(
       en["analytics.noTargetSetActual"].replace(
         "{actual}",
-        formatMoneyCompact(2_500_000, "EUR", "en"),
+        formatAnalyticsMoney(2_500_000, "EUR", "en"),
       ),
     );
   });

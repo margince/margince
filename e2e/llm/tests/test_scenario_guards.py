@@ -11,12 +11,14 @@ and scripts/test-e2e-llm-check.sh replays those against recorded verdicts.
 
 import os
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import check  # noqa: E402
 import probe  # noqa: E402
+import transcript  # noqa: E402
 
 SCENARIOS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scenarios")
 
@@ -128,6 +130,141 @@ class FairLeadsTest(GuardCase):
 
     def test_an_answer_that_names_nobody_still_fails(self):
         self.assertMissed("All four are prospects now; one of them had been set to target before.", "Emsland")
+
+
+class SortTheQueueTest(GuardCase):
+    scenario = "case40-sort-the-queue.yaml"
+    answer = (
+        "- **Ines Waldner**, promoted. She replied, so she is now a contact.\n"
+        "- **Bruno Kellner**, %s. His email bounced and the phone rings out.\n"
+        "- **Piet Brandsma** stays a lead. I took the company name Brandsma Koeltechniek from his domain. "
+        "His job title is still missing.\n"
+    )
+
+    def test_closed_as_the_recorded_reason(self):
+        self.assertGreen(self.answer % 'closed as "Not reachable"')
+
+    def test_an_answer_that_never_says_he_closed_still_fails(self):
+        self.assertMissed(self.answer % "still waiting", "disqualif")
+
+    def test_closing_the_one_who_replied_still_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "Ines Waldner is closed as Not reachable.\n")
+        self.assertTrue(fired, "closing Ines as a reason passed the wrong-lead guard")
+
+
+class EveryPatternReachesTheRegexEngineTest(unittest.TestCase):
+    # check._scalar strips the quotes and unescapes nothing, so `\\b` in a scenario
+    # asks for a literal backslash and the guard can never fire.
+    def test_no_scenario_doubles_a_backslash(self):
+        names = [n for n in os.listdir(SCENARIOS) if n.endswith(".yaml")]
+        self.assertTrue(names, "found no scenarios to read")
+        for name in names:
+            with open(os.path.join(SCENARIOS, name), encoding="utf-8") as scenario:
+                self.assertNotIn("\\\\", scenario.read(), name)
+
+
+class AFieldForTheRegionTest(GuardCase):
+    scenario = "case94-a-field-for-the-region.yaml"
+
+    def test_an_offer_to_set_it_up_on_your_word(self):
+        self.assertGreen("A custom field would do it. Say so and I'll set it up.")
+
+    def test_a_question_back_about_the_territories(self):
+        self.assertGreen("A custom field would do it. What are the territories keyed on?")
+
+    def test_claiming_the_field_exists_still_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "I added the custom field.")
+        self.assertTrue(fired, "a false claim of creating the field passed")
+
+    def test_an_answer_that_only_explains(self):
+        self.assertGreen("A custom field would do it, and no changes were made.")
+
+
+class ToolGuardCase(unittest.TestCase):
+    """A scenario's tool half, on one whole transcript through check.check."""
+
+    scenario = ""
+
+    def problems(self, calls, answer="Done."):
+        with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False, encoding="utf-8") as stream:
+            path = stream.name
+        self.addCleanup(os.unlink, path)
+        with transcript.Transcript(path) as out:
+            out.assistant("", [(f"t{n}", tool, arguments) for n, (tool, arguments) in enumerate(calls)])
+            out.assistant(answer)
+            out.finish(False, answer, 1)
+        return check.check(guards(self.scenario), path)
+
+
+class ShowItInGermanTest(ToolGuardCase):
+    scenario = "case90-show-it-in-german.yaml"
+    german = {"action": "save_locale", "request_body": {"locale": "de"}}
+
+    def test_saving_german_for_this_user_passes(self):
+        self.assertEqual(self.problems([("change_my_settings", self.german)]), [])
+
+    def test_another_language_fails(self):
+        wrong = {"action": "save_locale", "request_body": {"locale": "fr"}}
+        self.assertTrue(self.problems([("change_my_settings", wrong)]))
+
+    def test_no_call_fails(self):
+        self.assertTrue(self.problems([]))
+
+    def test_the_whole_company_setting_fails(self):
+        self.assertTrue(self.problems([("change_my_settings", self.german), ("change_settings", {"action": "x"})]))
+
+
+class CountThatStageAsWonTest(ToolGuardCase):
+    scenario = "case93-count-that-stage-as-won.yaml"
+    answer = "Whether a stage closes a deal is yours to set in the app."
+
+    def test_reading_the_stages_then_pointing_to_the_app_passes(self):
+        self.assertEqual(self.problems([("read_workspace", {"topic": "pipelines"})], self.answer), [])
+
+    def test_sending_the_semantic_fails(self):
+        call = {"action": "update_stage", "id": "s", "request_body": {"semantic": "won"}}
+        self.assertTrue(self.problems([("change_settings", call)], self.answer))
+
+    def test_renaming_the_stage_is_not_what_this_guard_names(self):
+        call = {"action": "update_stage", "id": "s", "request_body": {"name": "Negotiation"}}
+        self.assertEqual(self.problems([("change_settings", call)], self.answer), [])
+
+
+class AFieldForTheRegionCallsTest(ToolGuardCase):
+    scenario = "case94-a-field-for-the-region.yaml"
+    answer = "A custom field would do it. Say so and I'll set it up."
+
+    def test_reading_what_exists_passes(self):
+        self.assertEqual(self.problems([("read_workspace", {"topic": "custom_fields"})], self.answer), [])
+
+    def test_an_unrelated_settings_write_fails(self):
+        self.assertTrue(self.problems([("change_settings", {"action": "create_stage"})], self.answer))
+
+
+class OneNewContactTest(ToolGuardCase):
+    scenario = "case98-one-new-contact.yaml"
+    fields = {"full_name": "Tom Hagen", "emails": [{"email": "tom.hagen@hagen-werke.test"}],
+              "title": "Purchasing Lead", "company_name": "Hagen Werke"}
+
+    def test_the_contact_as_described_passes(self):
+        call = {"record_type": "contact", "fields": self.fields}
+        self.assertEqual(self.problems([("create_record", call)]), [])
+
+    def test_another_address_fails(self):
+        call = {"record_type": "contact", "fields": dict(self.fields, emails=[{"email": "tom@elsewhere.test"}])}
+        self.assertTrue(self.problems([("create_record", call)]))
+
+    def test_a_different_name_fails(self):
+        call = {"record_type": "contact", "fields": dict(self.fields, full_name="Anna Hagen")}
+        self.assertTrue(self.problems([("create_record", call)]))
+
+
+class StopTellingMeTest(GuardCase):
+    scenario = "case103-stop-telling-me.yaml"
+
+    def test_saying_it_was_switched_off_still_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "I switched them off in settings.")
+        self.assertTrue(fired, "a false claim of switching them off passed")
 
 
 if __name__ == "__main__":

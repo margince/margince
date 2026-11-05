@@ -59,6 +59,7 @@ type importRunDTO struct {
 	Checkpoint int    `json:"checkpoint"`
 	Error      string `json:"error"`
 	Version    int    `json:"version"`
+	DraftStep  string `json:"draft_step"`
 	// Released is the run's source_released.
 	Released     bool   `json:"source_released"`
 	OnBrokenLink string `json:"on_broken_link"`
