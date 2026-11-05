@@ -2933,6 +2933,8 @@ export const en = {
     "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
+  "contact.attachRefused":
+    "You can only read this contact. Ask its owner for write access.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
@@ -4222,6 +4224,48 @@ export const en = {
   "deal.products.alreadyListed": "Already listed",
   "deal.products.fromOffer": "From the offer",
   "deal.products.setByHand": "Set by hand",
+  "deal.lines.empty":
+    "No products yet. Add a product or a custom item to price this deal.",
+  "deal.lines.edit": "Edit products",
+  "deal.lines.start": "Price from products",
+  "deal.lines.notWritable": "You cannot change this deal’s products.",
+  "deal.lines.withheld": "Your role does not show this deal’s value.",
+  "deal.lines.committedNet": "Net value: {amount}, without tax",
+  "deal.lines.incomplete":
+    "Pricing incomplete. Known so far: {known}. Still missing: {missing}.",
+  "deal.lines.missing.lines": "a product",
+  "deal.lines.missing.quantity": "a quantity",
+  "deal.lines.missing.unitPrice": "a price",
+  "deal.lines.missing.billing": "one-time or recurring",
+  "deal.lines.missing.term": "the number of periods",
+  "deal.lines.missing.taxRate": "a tax rate",
+  "deal.lines.description": "Description",
+  "deal.lines.quantity": "Quantity",
+  "deal.lines.price": "Selling price",
+  "deal.lines.remove": "Remove {name}",
+  "deal.lines.editTitle": "Products and services",
+  "deal.lines.save": "Save products",
+  "deal.lines.intro":
+    "The deal’s value is the net of these lines, without tax. An offer copies them later.",
+  "deal.lines.replacesEstimate":
+    "Saving replaces the typed value of {amount}. The old value stays in the history.",
+  "deal.lines.partlySaved":
+    "{saved} of {total} changes were saved. The next one failed: {reason}",
+  "deal.lines.addProduct": "Add a product",
+  "deal.lines.customItem": "Custom item",
+  "deal.lines.addCustom": "Add item",
+  "deal.offerNeedsCompleteLines":
+    "Give every product a quantity and a price first. An offer copies the deal’s products.",
+  "offer.moneyWithheld":
+    "Your role does not show this deal’s value, so the offer’s prices are hidden.",
+  "offer.fromDeal.title": "Made from the deal’s products",
+  "offer.fromDeal.stale": "The deal changed since this offer was created",
+  "offer.fromDeal.body":
+    "Change the products on the deal. The offer’s lines follow only when you refresh the draft.",
+  "offer.fromDeal.revise":
+    "A sent offer stays as it was. Regenerate a revision to offer the new terms.",
+  "offer.fromDeal.editDeal": "Edit deal products",
+  "offer.fromDeal.refresh": "Refresh from deal",
   "deal.commitments.title": "Customer commitments",
   "deal.commitments.empty":
     "The customer has no open commitments on this deal.",
@@ -18478,9 +18522,64 @@ export const en = {
   "changes.team.owner": "Owner",
   "changes.team.kind": "Change",
   "changes.team.deals": "Deals",
-  "changes.team.value": "Value",
   "changes.team.undone": "Undone",
   "changes.team.truncated": "List truncated. More changes exist.",
+  "changes.team.valueMoved": "Value moved",
+  "changes.team.ownerless.title":
+    "Deals Margince leaves alone until someone owns them",
+  "changes.team.ownerless.deal": "Deal",
+  "changes.team.ownerless.reason": "Why",
+  "changes.team.ownerless.value": "Value",
+  "changes.team.ownerless.no_owner": "No owner",
+  "changes.team.ownerless.departed_owner": "{name} left",
+  "changes.team.ownerless.departed_unnamed": "The owner left",
+  "changes.team.ownerless.inactive_owner": "{name} is not active",
+  "changes.team.ownerless.inactive_unnamed": "The owner is not active",
+  "changes.check.why.owner_cannot_edit":
+    "the owner may no longer change the deal",
+  "changes.team.unvalued":
+    "Value moved leaves out changes Margince could not price: an amount you may not see, a missing exchange rate, or an older probability change.",
+  "changes.team.ownerless.truncated":
+    "List truncated. More deals have no owner.",
+  "changes.check.title":
+    "Margince checked this deal on {date} and changed nothing",
+  "changes.check.ownerOnly": "Only the deal’s owner sees why",
+  "changes.check.next":
+    "Next check on {date}, or sooner when something new arrives",
+  "changes.check.nextOnNews": "Next check when something new arrives",
+  "changes.check.outcome": "{kind}: {why}",
+  "changes.check.sources": "Sources: {list}",
+  "changes.check.skipped.switched_off":
+    "Your switches are off, so Margince did not read the deal",
+  "changes.check.skipped.no_evidence":
+    "No mail, meeting, call or note that everyone may read",
+  "changes.check.kind.close_date": "Close date",
+  "changes.check.kind.amount": "Amount",
+  "changes.check.kind.probability": "Probability",
+  "changes.check.kind.stage": "Stage",
+  "changes.check.why.switched_off": "your switch is off",
+  "changes.check.why.kept_your_edit": "your own edit stays",
+  "changes.check.why.not_sure": "not sure enough",
+  "changes.check.why.outside_limits": "outside the limits Margince may set",
+  "changes.check.why.changed_while_checking":
+    "the deal changed during the check",
+  "changes.check.why.undo_hold":
+    "you undid the last change, so Margince waits for news",
+  "changes.check.why.already_right": "already right",
+  "changes.check.why.accepted_offer": "the accepted offer sets it",
+  "changes.check.why.no_rate": "no exchange rate for the currency",
+  "changes.check.why.no_owner": "the owner left",
+  "changes.check.why.stage_rules": "the stage’s exit criteria do not allow it",
+  "changes.check.why.other": "a rule held it back",
+  "changes.check.source.mail": "mail",
+  "changes.check.source.meetings": "meetings",
+  "changes.check.source.calls": "calls",
+  "changes.check.source.notes": "notes",
+  "changes.check.source.offers": "offers",
+  "changes.check.state.read": "{source} read",
+  "changes.check.state.private": "{source} private, left out",
+  "changes.check.state.unavailable": "{source} not read on time",
+  "changes.check.state.none": "no {source}",
   "worklist.handled.truncated": "List truncated. More items exist.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Done by",

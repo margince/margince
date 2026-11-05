@@ -2931,6 +2931,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền sửa công ty này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "record.actionRefused":
     "Bạn không có quyền dùng mục này. Liên hệ quản trị viên để được cấp thêm quyền.",
+  "contact.attachRefused":
+    "Bạn chỉ có quyền xem liên hệ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
   "record.logActivityRefused":
     "Bạn không có quyền ghi nhận hoạt động trên hồ sơ này.",
   "record.share": "Chia sẻ",
@@ -4144,6 +4146,50 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.products.alreadyListed": "Đã có trong danh sách",
   "deal.products.fromOffer": "Từ báo giá",
   "deal.products.setByHand": "Tự đặt",
+  "deal.lines.empty":
+    "Chưa có sản phẩm. Thêm sản phẩm hoặc mục riêng để định giá giao dịch này.",
+  "deal.lines.edit": "Sửa sản phẩm",
+  "deal.lines.start": "Định giá theo sản phẩm",
+  "deal.lines.notWritable":
+    "Bạn không thể thay đổi sản phẩm của giao dịch này.",
+  "deal.lines.withheld":
+    "Vai trò của bạn không hiển thị giá trị của giao dịch này.",
+  "deal.lines.committedNet": "Giá trị ròng: {amount}, chưa gồm thuế",
+  "deal.lines.incomplete":
+    "Giá chưa đầy đủ. Đã biết: {known}. Còn thiếu: {missing}.",
+  "deal.lines.missing.lines": "một sản phẩm",
+  "deal.lines.missing.quantity": "số lượng",
+  "deal.lines.missing.unitPrice": "giá",
+  "deal.lines.missing.billing": "một lần hay định kỳ",
+  "deal.lines.missing.term": "số kỳ",
+  "deal.lines.missing.taxRate": "thuế suất",
+  "deal.lines.description": "Mô tả",
+  "deal.lines.quantity": "Số lượng",
+  "deal.lines.price": "Giá bán",
+  "deal.lines.remove": "Xóa {name}",
+  "deal.lines.editTitle": "Sản phẩm và dịch vụ",
+  "deal.lines.save": "Lưu sản phẩm",
+  "deal.lines.intro":
+    "Giá trị giao dịch là tổng ròng của các mục này, chưa gồm thuế. Báo giá sẽ sao chép chúng sau.",
+  "deal.lines.replacesEstimate":
+    "Khi lưu, giá trị đã nhập {amount} sẽ được thay thế. Giá trị cũ vẫn còn trong lịch sử.",
+  "deal.lines.partlySaved":
+    "Đã lưu {saved} trên {total} thay đổi. Thay đổi tiếp theo không thành công: {reason}",
+  "deal.lines.addProduct": "Thêm sản phẩm",
+  "deal.lines.customItem": "Mục riêng",
+  "deal.lines.addCustom": "Thêm mục",
+  "deal.offerNeedsCompleteLines":
+    "Trước hết hãy nhập số lượng và giá cho mọi sản phẩm. Báo giá sao chép sản phẩm của giao dịch.",
+  "offer.moneyWithheld":
+    "Vai trò của bạn không hiển thị giá trị của giao dịch này, nên giá trong báo giá bị ẩn.",
+  "offer.fromDeal.title": "Tạo từ sản phẩm của giao dịch",
+  "offer.fromDeal.stale": "Giao dịch đã thay đổi kể từ khi tạo báo giá này",
+  "offer.fromDeal.body":
+    "Hãy sửa sản phẩm trên giao dịch. Các mục của báo giá chỉ thay đổi khi bạn cập nhật bản nháp.",
+  "offer.fromDeal.revise":
+    "Báo giá đã gửi giữ nguyên. Hãy tạo phiên bản mới để báo các điều khoản mới.",
+  "offer.fromDeal.editDeal": "Sửa sản phẩm của giao dịch",
+  "offer.fromDeal.refresh": "Cập nhật từ giao dịch",
   "deal.commitments.title": "Cam kết của khách hàng",
   "deal.commitments.empty":
     "Khách hàng không có cam kết nào đang mở cho deal này.",
@@ -18195,9 +18241,66 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.team.owner": "Phụ trách",
   "changes.team.kind": "Thay đổi",
   "changes.team.deals": "Giao dịch",
-  "changes.team.value": "Giá trị",
   "changes.team.undone": "Đã hoàn tác",
   "changes.team.truncated": "Danh sách đã bị cắt bớt. Vẫn còn thay đổi khác.",
+  "changes.team.valueMoved": "Giá trị đã dịch chuyển",
+  "changes.team.ownerless.title":
+    "Giao dịch Margince để yên cho đến khi có thành viên phụ trách",
+  "changes.team.ownerless.deal": "Giao dịch",
+  "changes.team.ownerless.reason": "Lý do",
+  "changes.team.ownerless.value": "Giá trị",
+  "changes.team.ownerless.no_owner": "Không có thành viên phụ trách",
+  "changes.team.ownerless.departed_owner": "{name} đã rời đi",
+  "changes.team.ownerless.departed_unnamed": "Thành viên phụ trách đã rời đi",
+  "changes.team.ownerless.inactive_owner": "{name} không còn hoạt động",
+  "changes.team.ownerless.inactive_unnamed":
+    "Thành viên phụ trách không còn hoạt động",
+  "changes.check.why.owner_cannot_edit":
+    "thành viên phụ trách không còn được sửa giao dịch",
+  "changes.team.unvalued":
+    "Giá trị đã dịch chuyển bỏ qua các thay đổi Margince không định giá được: giá trị bạn không được xem, thiếu tỷ giá, hoặc thay đổi xác suất cũ.",
+  "changes.team.ownerless.truncated":
+    "Danh sách đã bị cắt bớt. Vẫn còn giao dịch khác không có thành viên phụ trách.",
+  "changes.check.title":
+    "Margince đã kiểm tra giao dịch này vào {date} và không thay đổi gì",
+  "changes.check.ownerOnly": "Chỉ thành viên phụ trách giao dịch thấy lý do",
+  "changes.check.next":
+    "Lần kiểm tra tiếp theo vào {date}, hoặc sớm hơn khi có thông tin mới",
+  "changes.check.nextOnNews": "Lần kiểm tra tiếp theo khi có thông tin mới",
+  "changes.check.outcome": "{kind}: {why}",
+  "changes.check.sources": "Nguồn: {list}",
+  "changes.check.skipped.switched_off":
+    "Các công tắc của bạn đang tắt, nên Margince không đọc giao dịch",
+  "changes.check.skipped.no_evidence":
+    "Không có email, cuộc họp, cuộc gọi hay ghi chú nào mà mọi thành viên được đọc",
+  "changes.check.kind.close_date": "Ngày chốt",
+  "changes.check.kind.amount": "Giá trị",
+  "changes.check.kind.probability": "Xác suất",
+  "changes.check.kind.stage": "Giai đoạn",
+  "changes.check.why.switched_off": "công tắc của bạn đang tắt",
+  "changes.check.why.kept_your_edit": "giữ thay đổi của chính bạn",
+  "changes.check.why.not_sure": "chưa đủ chắc chắn",
+  "changes.check.why.outside_limits": "vượt quá giới hạn Margince được đặt",
+  "changes.check.why.changed_while_checking":
+    "giao dịch đã thay đổi trong lúc kiểm tra",
+  "changes.check.why.undo_hold":
+    "bạn đã hoàn tác thay đổi trước, nên Margince chờ thông tin mới",
+  "changes.check.why.already_right": "đã đúng",
+  "changes.check.why.accepted_offer":
+    "báo giá đã được chấp nhận quyết định giá trị này",
+  "changes.check.why.no_rate": "không có tỷ giá cho loại tiền này",
+  "changes.check.why.no_owner": "thành viên phụ trách đã rời đi",
+  "changes.check.why.stage_rules": "tiêu chí rời giai đoạn không cho phép",
+  "changes.check.why.other": "một quy tắc đã ngăn lại",
+  "changes.check.source.mail": "email",
+  "changes.check.source.meetings": "cuộc họp",
+  "changes.check.source.calls": "cuộc gọi",
+  "changes.check.source.notes": "ghi chú",
+  "changes.check.source.offers": "báo giá",
+  "changes.check.state.read": "đã đọc {source}",
+  "changes.check.state.private": "{source} riêng tư, đã bỏ qua",
+  "changes.check.state.unavailable": "{source} chưa được đọc kịp thời",
+  "changes.check.state.none": "không có {source}",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "receipt.detail.summary": "Chi tiết",
   "receipt.detail.by": "Người làm",

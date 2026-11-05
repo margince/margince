@@ -3018,6 +3018,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
+  "contact.attachRefused":
+    "Du kannst diesen Kontakt nur lesen. Frage die verantwortliche Person nach Schreibzugriff.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -4255,6 +4257,48 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.products.alreadyListed": "Bereits aufgeführt",
   "deal.products.fromOffer": "Aus dem Angebot",
   "deal.products.setByHand": "Selbst festgelegt",
+  "deal.lines.empty":
+    "Noch keine Produkte. Füge ein Produkt oder eine eigene Position hinzu, um den Deal zu bepreisen.",
+  "deal.lines.edit": "Produkte bearbeiten",
+  "deal.lines.start": "Aus Produkten bepreisen",
+  "deal.lines.notWritable": "Du kannst die Produkte dieses Deals nicht ändern.",
+  "deal.lines.withheld": "Deine Rolle zeigt den Wert dieses Deals nicht.",
+  "deal.lines.committedNet": "Nettowert: {amount}, ohne Steuer",
+  "deal.lines.incomplete":
+    "Preis unvollständig. Bisher bekannt: {known}. Es fehlt noch: {missing}.",
+  "deal.lines.missing.lines": "ein Produkt",
+  "deal.lines.missing.quantity": "eine Menge",
+  "deal.lines.missing.unitPrice": "ein Preis",
+  "deal.lines.missing.billing": "einmalig oder wiederkehrend",
+  "deal.lines.missing.term": "die Anzahl der Zeiträume",
+  "deal.lines.missing.taxRate": "ein Steuersatz",
+  "deal.lines.description": "Beschreibung",
+  "deal.lines.quantity": "Menge",
+  "deal.lines.price": "Verkaufspreis",
+  "deal.lines.remove": "{name} entfernen",
+  "deal.lines.editTitle": "Produkte und Leistungen",
+  "deal.lines.save": "Produkte speichern",
+  "deal.lines.intro":
+    "Der Wert des Deals ist der Nettobetrag dieser Positionen, ohne Steuer. Ein Angebot übernimmt sie später.",
+  "deal.lines.replacesEstimate":
+    "Speichern ersetzt den eingegebenen Wert von {amount}. Der alte Wert bleibt im Verlauf.",
+  "deal.lines.partlySaved":
+    "{saved} von {total} Änderungen wurden gespeichert. Die nächste schlug fehl: {reason}",
+  "deal.lines.addProduct": "Produkt hinzufügen",
+  "deal.lines.customItem": "Eigene Position",
+  "deal.lines.addCustom": "Position hinzufügen",
+  "deal.offerNeedsCompleteLines":
+    "Gib zuerst jedem Produkt eine Menge und einen Preis. Ein Angebot übernimmt die Produkte des Deals.",
+  "offer.moneyWithheld":
+    "Deine Rolle zeigt den Wert dieses Deals nicht, daher sind die Preise des Angebots ausgeblendet.",
+  "offer.fromDeal.title": "Aus den Produkten des Deals erstellt",
+  "offer.fromDeal.stale": "Der Deal hat sich seit diesem Angebot geändert",
+  "offer.fromDeal.body":
+    "Ändere die Produkte im Deal. Die Positionen des Angebots folgen erst, wenn du den Entwurf aktualisierst.",
+  "offer.fromDeal.revise":
+    "Ein gesendetes Angebot bleibt, wie es war. Erstelle eine neue Fassung, um die neuen Bedingungen anzubieten.",
+  "offer.fromDeal.editDeal": "Produkte des Deals bearbeiten",
+  "offer.fromDeal.refresh": "Aus dem Deal aktualisieren",
   "deal.commitments.title": "Zusagen des Kunden",
   "deal.commitments.empty":
     "Der Kunde hat zu diesem Deal keine offenen Zusagen.",
@@ -18670,9 +18714,68 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.team.owner": "Zuständig",
   "changes.team.kind": "Änderung",
   "changes.team.deals": "Deals",
-  "changes.team.value": "Wert",
   "changes.team.undone": "Rückgängig",
   "changes.team.truncated": "Liste gekürzt. Es gibt weitere Änderungen.",
+  "changes.team.valueMoved": "Bewegter Wert",
+  "changes.team.ownerless.title":
+    "Deals, die Margince liegen lässt, bis jemand sie übernimmt",
+  "changes.team.ownerless.deal": "Deal",
+  "changes.team.ownerless.reason": "Grund",
+  "changes.team.ownerless.value": "Wert",
+  "changes.team.ownerless.no_owner": "Niemand zuständig",
+  "changes.team.ownerless.departed_owner": "{name} ist gegangen",
+  "changes.team.ownerless.departed_unnamed":
+    "Das zuständige Mitglied ist gegangen",
+  "changes.team.ownerless.inactive_owner": "{name} ist nicht aktiv",
+  "changes.team.ownerless.inactive_unnamed":
+    "Das zuständige Mitglied ist nicht aktiv",
+  "changes.check.why.owner_cannot_edit":
+    "das zuständige Mitglied darf den Deal nicht mehr ändern",
+  "changes.team.unvalued":
+    "Der bewegte Wert lässt Änderungen aus, die Margince nicht bewerten konnte: einen Betrag, den du nicht sehen darfst, einen fehlenden Wechselkurs oder eine ältere Änderung der Wahrscheinlichkeit.",
+  "changes.team.ownerless.truncated":
+    "Liste gekürzt. Für weitere Deals ist niemand zuständig.",
+  "changes.check.title":
+    "Margince hat diesen Deal am {date} geprüft und nichts geändert",
+  "changes.check.ownerOnly": "Den Grund sieht nur das zuständige Mitglied",
+  "changes.check.next":
+    "Nächste Prüfung am {date} oder früher, wenn etwas Neues kommt",
+  "changes.check.nextOnNews": "Nächste Prüfung, wenn etwas Neues kommt",
+  "changes.check.outcome": "{kind}: {why}",
+  "changes.check.sources": "Quellen: {list}",
+  "changes.check.skipped.switched_off":
+    "Deine Schalter sind aus, darum hat Margince den Deal nicht gelesen",
+  "changes.check.skipped.no_evidence":
+    "Keine E-Mail, kein Termin, kein Anruf und keine Notiz, die alle lesen dürfen",
+  "changes.check.kind.close_date": "Abschlussdatum",
+  "changes.check.kind.amount": "Betrag",
+  "changes.check.kind.probability": "Wahrscheinlichkeit",
+  "changes.check.kind.stage": "Phase",
+  "changes.check.why.switched_off": "dein Schalter ist aus",
+  "changes.check.why.kept_your_edit": "deine eigene Änderung bleibt",
+  "changes.check.why.not_sure": "nicht sicher genug",
+  "changes.check.why.outside_limits":
+    "außerhalb der Grenzen, die Margince setzen darf",
+  "changes.check.why.changed_while_checking":
+    "der Deal hat sich während der Prüfung geändert",
+  "changes.check.why.undo_hold":
+    "du hast die letzte Änderung rückgängig gemacht, darum wartet Margince auf Neues",
+  "changes.check.why.already_right": "stimmt schon",
+  "changes.check.why.accepted_offer": "das angenommene Angebot legt es fest",
+  "changes.check.why.no_rate": "kein Wechselkurs für die Währung",
+  "changes.check.why.no_owner": "das zuständige Mitglied ist gegangen",
+  "changes.check.why.stage_rules":
+    "die Ausstiegskriterien der Phase erlauben es nicht",
+  "changes.check.why.other": "eine Regel hat es verhindert",
+  "changes.check.source.mail": "E-Mails",
+  "changes.check.source.meetings": "Termine",
+  "changes.check.source.calls": "Anrufe",
+  "changes.check.source.notes": "Notizen",
+  "changes.check.source.offers": "Angebote",
+  "changes.check.state.read": "{source} gelesen",
+  "changes.check.state.private": "{source} privat, ausgelassen",
+  "changes.check.state.unavailable": "{source} nicht rechtzeitig gelesen",
+  "changes.check.state.none": "keine {source}",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Ausgeführt von",

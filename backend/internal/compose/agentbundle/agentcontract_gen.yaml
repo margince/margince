@@ -3842,6 +3842,12 @@ paths:
       operationId: replaceDealProducts
       security: [{bearerAuth: []}]
       summary: Set a deal's products by hand, replacing every allocation it had.
+      description: |-
+        A deal in `lines` mode takes its products from its lines and refuses a hand-set list (422 `deal_has_lines`).
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       requestBody:
         required: true
         content:
@@ -3856,12 +3862,146 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/{id}/lines:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealLines
+      security: [{bearerAuth: []}]
+      summary: The products and services a deal sells, and the value they add up to.
       description: |-
-        Set a deal's products by hand, replacing every allocation it had.
+        A deal in `lines` mode takes its value from these lines: `amount_minor` on the deal is the
+        committed net, excluding tax, and `expected_arr_minor` the annual recurring value. A deal in
+        `estimate` or `legacy` mode keeps a value a human typed or an accepted offer set, and has no lines.
+        A reader the deal's amount is masked from reads the lines without any price or figure.
+      responses:
+        '200':
+          description: The deal's lines and their totals.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealCommercial'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    post:
+      tags: [Deals]
+      operationId: addDealLine
+      security: [{bearerAuth: []}]
+      summary: Add a product or a custom item to a deal; the deal's value follows its lines.
+      description: |-
+        The first line puts the deal in `lines` mode. A deal that holds a typed value is refused
+        (422 `estimate_present`) unless the request says `replace_estimate: true`; the old value then
+        stays in the deal's history and is not added to the lines. `expected_revision` is the
+        `commercial_revision` the caller last read; another one answers 409 `version_skew`.
 
         Needs the passport permission Change records.
 
         Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AddDealLineRequest'}
+      responses:
+        '200':
+          description: The deal's lines and totals after the write.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealCommercial'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/{id}/lines/{lineId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: lineId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    patch:
+      tags: [Deals]
+      operationId: updateDealLine
+      security: [{bearerAuth: []}]
+      summary: Change one line of a deal; omit a field to leave it as it is, send null to clear it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateDealLineRequest'}
+      responses:
+        '200':
+          description: The deal's lines and totals after the write.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealCommercial'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: |-
+        Change one line of a deal; omit a field to leave it as it is, send null to clear it.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+    delete:
+      tags: [Deals]
+      operationId: removeDealLine
+      security: [{bearerAuth: []}]
+      summary: Remove one line of a deal. The last line removed leaves the deal unpriced, in `lines` mode.
+      parameters:
+        - name: expected_revision
+          in: query
+          required: true
+          schema: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: The deal's lines and totals after the write.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealCommercial'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: |-
+        Remove one line of a deal. The last line removed leaves the deal unpriced, in `lines` mode.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+  /deals/{id}/lines/estimate:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: useDealEstimate
+      security: [{bearerAuth: []}]
+      summary: Return a deal with no lines to a typed estimate.
+      description: |-
+        Refused while the deal holds a line (422 `deal_has_lines`). The deal then has no value until
+        somebody types one; an old estimate is not brought back.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DealRevisionRequest'}
+      responses:
+        '200':
+          description: The deal's commercial state after the write.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealCommercial'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /analytics/initiatives:
     get:
       tags: [Reports]
@@ -18098,6 +18238,37 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+  /offers/{id}/refresh-from-deal:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Offers]
+      operationId: refreshOfferFromDeal
+      summary: Replace a draft offer's lines with the deal's current lines; the header stays.
+      description: |-
+        Only a draft made from a deal's lines can be refreshed. `expected_revision` is the deal's
+        `commercial_revision` the caller reviewed; another one answers 409 `version_skew`. A sent
+        offer is a document and is never refreshed: regenerate a revision instead.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DealRevisionRequest'}
+      responses:
+        '200':
+          description: The refreshed draft offer.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Offer'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /offers/{id}/send:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -25960,6 +26131,11 @@ components:
           readOnly: true
           description: >-
             Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
+        attachable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether this caller may attach an activity or meeting to this live contact. Computed with the same row-scope and write-share predicate the attach gate uses. A read-only share grants no attach right. Activity creation also needs its own object permission. Absent means no attach right; the server rechecks every write.
         writable:
           type: boolean
           readOnly: true
@@ -31584,8 +31760,9 @@ components:
       properties:
         product_id: {type: string, format: uuid}
         product_name: {type: string}
-        source: {type: string, enum: [offer, manual], description: '`offer` is derived from the accepted offer; `manual` was set by hand on the deal.'}
-        amount_minor: {type: [integer, 'null'], format: int64, description: 'The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it.'}
+        source: {type: string, enum: [offer, manual, line], description: '`offer` is derived from the accepted offer; `manual` was set by hand on the deal; `line` is the sum of the deal''s own lines for the product.'}
+        amount_minor: {type: [integer, 'null'], format: int64, description: 'The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it. For a `line` row, the committed net of its lines, null while one of them is incomplete.'}
+        known_amount_minor: {type: [integer, 'null'], format: int64, description: 'For a `line` row, the part of the value already known. Null on other rows.'}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'The classification of the product when the allocation was written.'}
         updated_at: {type: string, format: date-time}
@@ -31611,6 +31788,109 @@ components:
           type: array
           maxItems: 50
           items: {$ref: '#/components/schemas/DealProductInput'}
+      additionalProperties: false
+    DealLine:
+      type: object
+      description: |-
+        One product or custom item a deal sells. A product line copies the product's name, unit, price,
+        tax and billing once, when it is added; a later catalogue edit does not change it. A figure is
+        null while an input it needs is unknown. A reader the deal's amount is masked from gets no
+        number at all: no quantity, price, discount, tax rate, billing period, term or figure.
+      required: [id, position, description, unit, currency, discount_pct, missing, version, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        position: {type: integer}
+        product_id: {type: [string, 'null'], format: uuid, description: Null on a custom item.}
+        catalog_name: {type: [string, 'null'], description: The product's name when the line was added.}
+        sku: {type: [string, 'null']}
+        description: {type: string}
+        unit: {type: string}
+        quantity: {type: [number, 'null'], format: double, description: 'Up to 3 decimal places, greater than 0. Null while unknown.'}
+        unit_price_minor: {type: [integer, 'null'], format: int64, description: 'The selling price in minor units of `currency`. Null while unknown, or masked.'}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        discount_pct: {type: [number, 'null'], format: double, description: 'Null for a masked reader.'}
+        tax_rate: {type: [number, 'null'], format: double, description: 'The typed rate, or the rate the tax rate sheet holds today for `tax_category`. Null when the sheet has none.'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null]}
+        billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Null means nobody has classified the line yet, which leaves the deal''s value incomplete.'}
+        billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null]}
+        interval_count: {type: [integer, 'null'], minimum: 1, description: 'How many billing periods are committed. Recurring lines only.'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null]}
+        line_net_minor: {type: [integer, 'null'], format: int64, readOnly: true, description: 'Net per billing period after the discount.'}
+        committed_net_minor: {type: [integer, 'null'], format: int64, readOnly: true, description: 'Net times the committed periods; one period for a one-time line.'}
+        arr_minor: {type: [integer, 'null'], format: int64, readOnly: true}
+        missing: {type: array, items: {type: string, enum: [quantity, unit_price, billing_model, interval_count, tax_rate]}, description: What the line still needs before its figures are complete.}
+        version: {$ref: '#/components/schemas/RowVersion'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+      additionalProperties: false
+    DealCommercial:
+      type: object
+      description: |-
+        A deal's commercial state. In `lines` mode the deal's value is `committed_net_minor`: net,
+        excluding tax, with each recurring line counted for its committed periods. It is null until
+        every line is complete; `known_committed_net_minor` is the part already known.
+      required: [deal_id, mode, commercial_revision, lines, complete, missing, money_withheld, writable]
+      properties:
+        deal_id: {type: string, format: uuid}
+        mode: {type: string, enum: [estimate, lines, legacy], description: '`estimate` is a value a human typed, `lines` the sum of the lines, `legacy` a deal from before deals had lines.'}
+        amount_basis: {type: [string, 'null'], enum: [lines_net_committed, offer_gross, estimate, unknown, null], description: 'What the deal''s amount means. Null while the deal has no amount.'}
+        commercial_revision: {type: integer, format: int64, description: Counts the accepted changes to the lines. Send it back as `expected_revision`.}
+        currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
+        lines: {type: array, items: {$ref: '#/components/schemas/DealLine'}}
+        committed_net_minor: {type: [integer, 'null'], format: int64}
+        known_committed_net_minor: {type: [integer, 'null'], format: int64}
+        arr_minor: {type: [integer, 'null'], format: int64}
+        tax_minor: {type: [integer, 'null'], format: int64, description: 'Tax on the committed net, at today''s rates. An offer takes the rate of its send day.'}
+        gross_minor: {type: [integer, 'null'], format: int64}
+        complete: {type: boolean}
+        missing: {type: array, items: {type: string, enum: [lines, quantity, unit_price, billing_model, interval_count, tax_rate]}}
+        money_withheld: {type: boolean, description: 'The deal''s amount is masked from this reader, so every price and figure is null.'}
+        writable: {type: boolean, description: Whether this reader may change the lines now.}
+      additionalProperties: false
+    AddDealLineRequest:
+      type: object
+      required: [expected_revision]
+      description: |-
+        With `product_id` the line copies the product's name, unit, price, tax category and billing;
+        anything sent here is used instead. A product priced in another currency needs an explicit
+        `unit_price_minor` (422 `product_currency_mismatch`). Without `product_id`, `description` is required.
+      properties:
+        expected_revision: {type: integer, format: int64, minimum: 0}
+        replace_estimate: {type: boolean, description: 'Replace the value a human typed with the lines. Required while the deal holds one.'}
+        currency: {type: string, pattern: '^[A-Z]{3}$', description: 'The currency of the lines. Defaults to the deal''s; required on a deal with none. Every line of a deal shares one.'}
+        product_id: {type: [string, 'null'], format: uuid}
+        description: {type: [string, 'null']}
+        unit: {type: [string, 'null']}
+        quantity: {type: [number, 'null'], format: double, description: '> 0, up to 3 decimal places. Omit while unknown.'}
+        unit_price_minor: {type: [integer, 'null'], format: int64, minimum: 0}
+        discount_pct: {type: [number, 'null'], format: double, minimum: 0, maximum: 100}
+        tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: 'A typed rate. Refused together with `tax_category`.'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null]}
+        billing_model: {type: [string, 'null'], enum: [one_time, recurring, null]}
+        billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null]}
+        interval_count: {type: [integer, 'null'], minimum: 1}
+      additionalProperties: false
+    UpdateDealLineRequest:
+      type: object
+      required: [expected_revision]
+      properties:
+        expected_revision: {type: integer, format: int64, minimum: 0}
+        description: {type: string}
+        unit: {type: string}
+        quantity: {type: [number, 'null'], format: double}
+        unit_price_minor: {type: [integer, 'null'], format: int64, minimum: 0}
+        discount_pct: {type: number, format: double, minimum: 0, maximum: 100}
+        tax_rate: {type: number, format: double, minimum: 0, description: A typed rate. It drops the line's tax category.}
+        tax_category: {type: string, enum: [standard, reduced, exempt], description: Take the rate from the tax rate sheet. It drops a typed rate.}
+        billing_model: {type: [string, 'null'], enum: [one_time, recurring, null]}
+        billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null]}
+        interval_count: {type: [integer, 'null'], minimum: 1}
+      additionalProperties: false
+    DealRevisionRequest:
+      type: object
+      required: [expected_revision]
+      properties:
+        expected_revision: {type: integer, format: int64, minimum: 0, description: The deal's `commercial_revision` the caller last read.}
       additionalProperties: false
     Relationship:
       type: object
@@ -44605,6 +44885,7 @@ components:
         line_tax_minor: {type: integer, format: int64, readOnly: true, description: 'round — server-computed.'}
         line_total_minor: {type: integer, format: int64, readOnly: true, description: line_net + line_tax — server-computed.}
         evidence: {type: [object, 'null'], additionalProperties: true, description: '{snippet, source_id} when AI-drafted; an AI-drafted line without evidence is omitted.'}
+        source_deal_line_id: {type: [string, 'null'], format: uuid, readOnly: true, description: The deal line this line was copied from.}
         price_grounded: {type: boolean, readOnly: true, default: true, description: 'false only for an AI-proposed line whose price could not be grounded in conversation evidence or the rate card (unit_price_minor is 0 in that case: a sentinel, never a guessed value); true for every human-entered or grounded line.'}
         version: {$ref: '#/components/schemas/RowVersion'}
         created_at: {type: string, format: date-time}
@@ -44612,7 +44893,7 @@ components:
     Offer:
       type: object
       description: A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
-      required: [id, deal_id, offer_number, revision, status, currency, net_minor, tax_minor, gross_minor, line_items, source, captured_by, created_at, updated_at]
+      required: [id, deal_id, offer_number, revision, status, currency, line_items, source, captured_by, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         deal_id: {type: string, format: uuid}
@@ -44652,7 +44933,7 @@ components:
         valid_until: {type: [string, 'null'], format: date}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
-        net_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line nets; derived, never client-set.'}
+        net_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line nets; derived, never client-set. Absent when money_withheld.'}
         tax_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line taxes; derived, never client-set.'}
         gross_minor: {type: integer, format: int64, readOnly: true, description: 'net + tax; derived, never client-set.'}
         arr_minor: {type: integer, format: int64, readOnly: true, description: 'The annualized NET value of this offer''s recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.'}
@@ -44682,6 +44963,8 @@ components:
           type: array
           readOnly: true
           items: {$ref: '#/components/schemas/OfferLineItem'}
+        money_withheld: {type: boolean, readOnly: true, description: 'True for a reader the deal''s amount is masked from. Such a reader gets no totals, no lines, no exchange rate and no PDF: the offer states the deal''s amount by another name.'}
+        source_commercial_revision: {type: [integer, 'null'], format: int64, readOnly: true, description: 'The deal''s `commercial_revision` the lines were copied from. Such an offer''s lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: Server-stamped from the authenticated principal; never client-supplied.}
         version: {$ref: '#/components/schemas/RowVersion'}
@@ -44751,6 +45034,14 @@ components:
         line_items:
           type: [array, 'null']
           items: {$ref: '#/components/schemas/OfferLineItemInput'}
+        from_deal_revision:
+          type: [integer, 'null']
+          format: int64
+          minimum: 0
+          description: |-
+            Copy the deal's lines at this `commercial_revision` into the offer. Required for a deal in
+            `lines` mode, which refuses `line_items`, and refused for any other deal. Another revision
+            answers 409 `version_skew`. The currency must be the deal's.
         source: {type: string}
       additionalProperties: false
     UpdateOfferRequest:
@@ -47313,9 +47604,55 @@ components:
           items: {$ref: '#/components/schemas/Receipt'}
           description: The deal's changes, newest first.
         next_cursor: {type: string, description: Where the next page starts; absent on the last page.}
+        last_check: {$ref: '#/components/schemas/DealMarginceCheck'}
+    DealMarginceCheck:
+      type: object
+      description: |-
+        Margince's latest nightly reading of the deal, present on the first page only when that
+        reading changed nothing. Every reader of the deal sees when it was and when the next one
+        is due. Only the owner it was made for, signed in as themselves, reads why and which
+        sources it read. For anyone else, an agent acting for the owner included, `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
+        reasons come from the deal's mail and meetings.
+      required: [checked_at, explained, outcomes, sources]
+      properties:
+        checked_at: {type: string, format: date-time}
+        next_check_at:
+          type: string
+          format: date-time
+          description: When the clock alone makes the deal due again, the day after its close date. Absent when only new evidence or a changed field does.
+        explained: {type: boolean, description: Whether the caller may read why.}
+        skipped:
+          type: string
+          enum: [switched_off, no_evidence]
+          description: Why no model was asked. `switched_off` is every switch off; `no_evidence` is no mail, meeting, call or note every member may read.
+        outcomes:
+          type: array
+          items: {$ref: '#/components/schemas/DealMarginceCheckOutcome'}
+        sources:
+          type: array
+          items: {$ref: '#/components/schemas/DealMarginceCheckSource'}
+    DealMarginceCheckOutcome:
+      type: object
+      description: One change Margince weighed and did not make.
+      required: [kind, why]
+      properties:
+        kind: {type: string, enum: [close_date, amount, probability, stage]}
+        why:
+          type: string
+          enum: [switched_off, kept_your_edit, not_sure, outside_limits, changed_while_checking, undo_hold, already_right, accepted_offer, no_rate, no_owner, owner_cannot_edit, stage_rules, other]
+    DealMarginceCheckSource:
+      type: object
+      description: |-
+        One source and what the reading made of it. `private` is a source whose only items on
+        the deal are ones not every member may read, so they were left out. `unavailable` is a
+        mailbox that was not read on time.
+      required: [source, state]
+      properties:
+        source: {type: string, enum: [mail, meetings, calls, notes, offers]}
+        state: {type: string, enum: [read, private, unavailable, none]}
     TeamMarginceChanges:
       type: object
-      required: [as_of, since, base_currency, groups, rows, truncated]
+      required: [as_of, since, base_currency, groups, rows, truncated, ownerless, ownerless_truncated]
       properties:
         as_of: {type: string, format: date-time}
         since: {type: string, format: date-time}
@@ -47327,9 +47664,34 @@ components:
           type: array
           items: {$ref: '#/components/schemas/TeamMarginceChangeRow'}
         truncated: {type: boolean, description: True when more rows exist than were returned. The groups are never cut.}
+        ownerless:
+          type: array
+          description: |-
+            Open deals Margince leaves alone because they have no live owner: no owner, or an
+            owner who left, is invited, suspended or archived. Every such deal the nightly check
+            skips, read under the caller's row scope, the largest value first, at most 200. They
+            wait for somebody to assign an owner; this list does not follow `since`.
+          items: {$ref: '#/components/schemas/TeamMarginceOwnerlessDeal'}
+        ownerless_truncated: {type: boolean, description: True when more ownerless deals exist than were returned.}
+    TeamMarginceOwnerlessDeal:
+      type: object
+      required: [deal_id, deal_name, reason]
+      properties:
+        deal_id: {type: string, format: uuid}
+        deal_name: {type: string}
+        reason:
+          type: string
+          enum: [no_owner, departed_owner, inactive_owner]
+          description: '`departed_owner` left; `inactive_owner` is invited, suspended or archived.'
+        owner_id: {type: string, format: uuid, description: The owner who is not live; absent for an unowned deal.}
+        owner_name: {type: string, description: 'The name of the owner who is not live; absent for an unowned deal or an archived owner.'}
+        value_base_minor:
+          type: integer
+          format: int64
+          description: The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate, or the caller's mask withholds it.
     TeamMarginceChangeGroup:
       type: object
-      required: [owner_id, owner_name, kind, deals, undone, value_base_minor]
+      required: [owner_id, owner_name, kind, deals, undone, value_base_minor, value_moved_base_minor, unvalued]
       properties:
         owner_id: {type: string, format: uuid}
         owner_name: {type: string}
@@ -47340,12 +47702,34 @@ components:
           type: integer
           format: int64
           description: The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+        value_moved_base_minor:
+          type: integer
+          format: int64
+          description: |-
+            How much value these changes moved, in the base currency's minor units. Each deal's
+            changes of this kind net out first and the group adds the size of each net move.
+            An amount change moves its difference; a close as lost takes the deal's value out
+            of the pipeline and an opened or revived deal puts it in; a probability change or a
+            stage move moves the amount times the change in win probability; a close date moves
+            nothing. Each move is valued from the deal as it stood when the change was made, so
+            a later edit does not rewrite it. An undone change adds nothing. A deal whose move
+            cannot be valued adds nothing and counts in `unvalued`.
+        unvalued:
+          type: integer
+          description: |-
+            Of these deals, how many moved a value this total leaves out: the amount is masked
+            for the caller, no exchange rate is stored, or a probability change was written
+            before Margince kept the amount it was valued from.
     TeamMarginceChangeRow:
       type: object
       required: [owner_id, change]
       properties:
         owner_id: {type: string, format: uuid}
         change: {$ref: '#/components/schemas/Receipt'}
+        value_moved_base_minor:
+          type: integer
+          format: int64
+          description: The value this change moved, signed, as the group counts it. Absent for a change that moves no value or one the caller may not price.
     MagicUndo:
       type: object
       description: |-

@@ -107,6 +107,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml ExistingCustomerNotice.evidence_dated_at":               "the date an admin reads off the proof of a collection notice, not an activity time",
 	"api/crm.yaml DeclareExistingCustomerNoticeRequest.evidence_dated_at": "the same proof date, as the admin enters it",
 	"api/crm.yaml ExistingCustomerNotice.withdrawn_at":                    "when an admin withdrew a collection-notice declaration, the row's own instant",
+	"api/crm.yaml DealMarginceCheck.next_check_at":                        "the day after the deal's close date, when the nightly check is due again, not an activity time",
 	"api/crm.yaml ConsentQualifyingEvent.occurred_at": "the proof a consent guard holds in consent_qualifying_event; no client draws it, " +
 		"and the guard measures it against windows of 90 days and more, which a date's hours do not move",
 	"api/crm.yaml QualifyingEventRecord.occurred_at":             "a qualifying exchange a rep stated, stored in consent_qualifying_event, not an activity",

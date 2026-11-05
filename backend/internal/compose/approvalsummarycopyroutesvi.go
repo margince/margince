@@ -280,4 +280,9 @@ var routeVerbsVietnamese = map[string]string{
 	"create_saved_view":                  "Lưu chế độ xem",
 	"update_saved_view":                  "Cập nhật chế độ xem đã lưu",
 	"archive_saved_view":                 "Lưu trữ chế độ xem đã lưu",
+	"add_deal_line":                      "Thêm sản phẩm hoặc mục vào giao dịch",
+	"refresh_offer_from_deal":            "Cập nhật bản nháp báo giá từ giao dịch",
+	"remove_deal_line":                   "Xóa một mục của giao dịch",
+	"update_deal_line":                   "Sửa một mục của giao dịch",
+	"use_deal_estimate":                  "Dùng lại giá trị ước tính cho giao dịch",
 }

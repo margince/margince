@@ -153,7 +153,7 @@ func (v *dealVerdictEnv) field(t *testing.T, column string) string {
 func (v *dealVerdictEnv) outcomes(t *testing.T) string {
 	t.Helper()
 	return v.WsScalar(t, `SELECT string_agg(a->>'kind' || '=' || (a->>'outcome'), ',' ORDER BY a->>'kind')
-		FROM assurance_deal_receipt r, jsonb_array_elements(r.verdict_actions) a WHERE r.deal_id = $1`, v.deal)
+		FROM assurance_deal_receipt r, jsonb_array_elements(r.verdict_actions->'actions') a WHERE r.deal_id = $1`, v.deal)
 }
 
 func (v *dealVerdictEnv) undo(t *testing.T, correction string) {

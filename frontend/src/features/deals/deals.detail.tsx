@@ -226,11 +226,15 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
     },
   });
   const createOffer = useMutation({
-    mutationFn: async (currency: string) => {
+    mutationFn: async (input: { currency: string; fromRevision?: number }) => {
       return unwrap(
         await api.POST("/deals/{id}/offers", {
           params: { path: { id } },
-          body: { currency, source: "manual" },
+          body: {
+            currency: input.currency,
+            source: "manual",
+            from_deal_revision: input.fromRevision,
+          },
         }),
       );
     },
@@ -379,7 +383,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     }
                     creatingOffer={createOffer.isPending}
                     locale={locale}
-                    onCreateOffer={(currency) => createOffer.mutate(currency)}
+                    onCreateOffer={(currency, fromRevision) =>
+                      createOffer.mutate({ currency, fromRevision })
+                    }
                     readOnly={readOnly}
                     refusedReasonId={refusedReasonId}
                     dealApprovals={dealApprovals}

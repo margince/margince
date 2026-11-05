@@ -427,8 +427,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
 | `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
-| `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
+| `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
 | `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
@@ -457,8 +457,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_capture` | 1.00 | 2 | `case82_keep_that_newsletter_out` |
 | `change_attention` | 1.00 | 2 | `case70_clear_my_notices` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
-| `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
+| `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
 | `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `change_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |

@@ -4492,9 +4492,91 @@ export interface paths {
          *     alone. Product bookings and the commercial mix read these allocations.
          */
         get: operations["listDealProducts"];
-        /** Set a deal's products by hand, replacing every allocation it had. */
+        /**
+         * Set a deal's products by hand, replacing every allocation it had.
+         * @description A deal in `lines` mode takes its products from its lines and refuses a hand-set list (422 `deal_has_lines`).
+         */
         put: operations["replaceDealProducts"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The products and services a deal sells, and the value they add up to.
+         * @description A deal in `lines` mode takes its value from these lines: `amount_minor` on the deal is the
+         *     committed net, excluding tax, and `expected_arr_minor` the annual recurring value. A deal in
+         *     `estimate` or `legacy` mode keeps a value a human typed or an accepted offer set, and has no lines.
+         *     A reader the deal's amount is masked from reads the lines without any price or figure.
+         */
+        get: operations["getDealLines"];
+        put?: never;
+        /**
+         * Add a product or a custom item to a deal; the deal's value follows its lines.
+         * @description The first line puts the deal in `lines` mode. A deal that holds a typed value is refused
+         *     (422 `estimate_present`) unless the request says `replace_estimate: true`; the old value then
+         *     stays in the deal's history and is not added to the lines. `expected_revision` is the
+         *     `commercial_revision` the caller last read; another one answers 409 `version_skew`.
+         */
+        post: operations["addDealLine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/lines/{lineId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                lineId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove one line of a deal. The last line removed leaves the deal unpriced, in `lines` mode. */
+        delete: operations["removeDealLine"];
+        options?: never;
+        head?: never;
+        /** Change one line of a deal; omit a field to leave it as it is, send null to clear it. */
+        patch: operations["updateDealLine"];
+        trace?: never;
+    };
+    "/deals/{id}/lines/estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Return a deal with no lines to a typed estimate.
+         * @description Refused while the deal holds a line (422 `deal_has_lines`). The deal then has no value until
+         *     somebody types one; an old estimate is not brought back.
+         */
+        post: operations["useDealEstimate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19887,6 +19969,31 @@ export interface paths {
         patch: operations["updateOfferLineItem"];
         trace?: never;
     };
+    "/offers/{id}/refresh-from-deal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace a draft offer's lines with the deal's current lines; the header stays.
+         * @description Only a draft made from a deal's lines can be refreshed. `expected_revision` is the deal's
+         *     `commercial_revision` the caller reviewed; another one answers 409 `version_skew`. A sent
+         *     offer is a document and is never refreshed: regenerate a revision instead.
+         */
+        post: operations["refreshOfferFromDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/offers/{id}/send": {
         parameters: {
             query?: never;
@@ -30336,6 +30443,8 @@ export interface components {
              * @enum {string}
              */
             readonly visibility?: "workspace" | "owner";
+            /** @description Whether this caller may attach an activity or meeting to this live contact. Computed with the same row-scope and write-share predicate the attach gate uses. A read-only share grants no attach right. Activity creation also needs its own object permission. Absent means no attach right; the server rechecks every write. */
+            readonly attachable?: boolean;
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
             /** @description Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
@@ -36079,15 +36188,20 @@ export interface components {
             product_id: string;
             product_name: string;
             /**
-             * @description `offer` is derived from the accepted offer; `manual` was set by hand on the deal.
+             * @description `offer` is derived from the accepted offer; `manual` was set by hand on the deal; `line` is the sum of the deal's own lines for the product.
              * @enum {string}
              */
-            source: "offer" | "manual";
+            source: "offer" | "manual" | "line";
             /**
              * Format: int64
-             * @description The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it.
+             * @description The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it. For a `line` row, the committed net of its lines, null while one of them is incomplete.
              */
             amount_minor?: number | null;
+            /**
+             * Format: int64
+             * @description For a `line` row, the part of the value already known. Null on other rows.
+             */
+            known_amount_minor?: number | null;
             currency?: string | null;
             /**
              * @description The classification of the product when the allocation was written.
@@ -36111,6 +36225,197 @@ export interface components {
         };
         ReplaceDealProductsRequest: {
             products: components["schemas"]["DealProductInput"][];
+        };
+        /**
+         * @description One product or custom item a deal sells. A product line copies the product's name, unit, price,
+         *     tax and billing once, when it is added; a later catalogue edit does not change it. A figure is
+         *     null while an input it needs is unknown. A reader the deal's amount is masked from gets no
+         *     number at all: no quantity, price, discount, tax rate, billing period, term or figure.
+         */
+        DealLine: {
+            /** Format: uuid */
+            id: string;
+            position: number;
+            /**
+             * Format: uuid
+             * @description Null on a custom item.
+             */
+            product_id?: string | null;
+            /** @description The product's name when the line was added. */
+            catalog_name?: string | null;
+            sku?: string | null;
+            description: string;
+            unit: string;
+            /**
+             * Format: double
+             * @description Up to 3 decimal places, greater than 0. Null while unknown.
+             */
+            quantity?: number | null;
+            /**
+             * Format: int64
+             * @description The selling price in minor units of `currency`. Null while unknown, or masked.
+             */
+            unit_price_minor?: number | null;
+            currency: string;
+            /**
+             * Format: double
+             * @description Null for a masked reader.
+             */
+            discount_pct: number | null;
+            /**
+             * Format: double
+             * @description The typed rate, or the rate the tax rate sheet holds today for `tax_category`. Null when the sheet has none.
+             */
+            tax_rate?: number | null;
+            /** @enum {string|null} */
+            tax_category?: "standard" | "reduced" | "exempt" | null;
+            /**
+             * @description Null means nobody has classified the line yet, which leaves the deal's value incomplete.
+             * @enum {string|null}
+             */
+            billing_model?: "one_time" | "recurring" | null;
+            /** @enum {integer|null} */
+            billing_interval_months?: 1 | 3 | 6 | 12 | null;
+            /** @description How many billing periods are committed. Recurring lines only. */
+            interval_count?: number | null;
+            /** @enum {string|null} */
+            component_kind?: "software" | "implementation" | "other" | null;
+            /**
+             * Format: int64
+             * @description Net per billing period after the discount.
+             */
+            readonly line_net_minor?: number | null;
+            /**
+             * Format: int64
+             * @description Net times the committed periods; one period for a one-time line.
+             */
+            readonly committed_net_minor?: number | null;
+            /** Format: int64 */
+            readonly arr_minor?: number | null;
+            /** @description What the line still needs before its figures are complete. */
+            missing: ("quantity" | "unit_price" | "billing_model" | "interval_count" | "tax_rate")[];
+            version: components["schemas"]["RowVersion"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
+         * @description A deal's commercial state. In `lines` mode the deal's value is `committed_net_minor`: net,
+         *     excluding tax, with each recurring line counted for its committed periods. It is null until
+         *     every line is complete; `known_committed_net_minor` is the part already known.
+         */
+        DealCommercial: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * @description `estimate` is a value a human typed, `lines` the sum of the lines, `legacy` a deal from before deals had lines.
+             * @enum {string}
+             */
+            mode: "estimate" | "lines" | "legacy";
+            /**
+             * @description What the deal's amount means. Null while the deal has no amount.
+             * @enum {string|null}
+             */
+            amount_basis?: "lines_net_committed" | "offer_gross" | "estimate" | "unknown" | null;
+            /**
+             * Format: int64
+             * @description Counts the accepted changes to the lines. Send it back as `expected_revision`.
+             */
+            commercial_revision: number;
+            currency?: string | null;
+            lines: components["schemas"]["DealLine"][];
+            /** Format: int64 */
+            committed_net_minor?: number | null;
+            /** Format: int64 */
+            known_committed_net_minor?: number | null;
+            /** Format: int64 */
+            arr_minor?: number | null;
+            /**
+             * Format: int64
+             * @description Tax on the committed net, at today's rates. An offer takes the rate of its send day.
+             */
+            tax_minor?: number | null;
+            /** Format: int64 */
+            gross_minor?: number | null;
+            complete: boolean;
+            missing: ("lines" | "quantity" | "unit_price" | "billing_model" | "interval_count" | "tax_rate")[];
+            /** @description The deal's amount is masked from this reader, so every price and figure is null. */
+            money_withheld: boolean;
+            /** @description Whether this reader may change the lines now. */
+            writable: boolean;
+        };
+        /**
+         * @description With `product_id` the line copies the product's name, unit, price, tax category and billing;
+         *     anything sent here is used instead. A product priced in another currency needs an explicit
+         *     `unit_price_minor` (422 `product_currency_mismatch`). Without `product_id`, `description` is required.
+         */
+        AddDealLineRequest: {
+            /** Format: int64 */
+            expected_revision: number;
+            /** @description Replace the value a human typed with the lines. Required while the deal holds one. */
+            replace_estimate?: boolean;
+            /** @description The currency of the lines. Defaults to the deal's; required on a deal with none. Every line of a deal shares one. */
+            currency?: string;
+            /** Format: uuid */
+            product_id?: string | null;
+            description?: string | null;
+            unit?: string | null;
+            /**
+             * Format: double
+             * @description > 0, up to 3 decimal places. Omit while unknown.
+             */
+            quantity?: number | null;
+            /** Format: int64 */
+            unit_price_minor?: number | null;
+            /** Format: double */
+            discount_pct?: number | null;
+            /**
+             * Format: double
+             * @description A typed rate. Refused together with `tax_category`.
+             */
+            tax_rate?: number | null;
+            /** @enum {string|null} */
+            tax_category?: "standard" | "reduced" | "exempt" | null;
+            /** @enum {string|null} */
+            billing_model?: "one_time" | "recurring" | null;
+            /** @enum {integer|null} */
+            billing_interval_months?: 1 | 3 | 6 | 12 | null;
+            interval_count?: number | null;
+        };
+        UpdateDealLineRequest: {
+            /** Format: int64 */
+            expected_revision: number;
+            description?: string;
+            unit?: string;
+            /** Format: double */
+            quantity?: number | null;
+            /** Format: int64 */
+            unit_price_minor?: number | null;
+            /** Format: double */
+            discount_pct?: number;
+            /**
+             * Format: double
+             * @description A typed rate. It drops the line's tax category.
+             */
+            tax_rate?: number;
+            /**
+             * @description Take the rate from the tax rate sheet. It drops a typed rate.
+             * @enum {string}
+             */
+            tax_category?: "standard" | "reduced" | "exempt";
+            /** @enum {string|null} */
+            billing_model?: "one_time" | "recurring" | null;
+            /** @enum {integer|null} */
+            billing_interval_months?: 1 | 3 | 6 | 12 | null;
+            interval_count?: number | null;
+        };
+        DealRevisionRequest: {
+            /**
+             * Format: int64
+             * @description The deal's `commercial_revision` the caller last read.
+             */
+            expected_revision: number;
         };
         /**
          * @description The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
@@ -51451,6 +51756,11 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /**
+             * Format: uuid
+             * @description The deal line this line was copied from.
+             */
+            readonly source_deal_line_id?: string | null;
+            /**
              * @description false only for an AI-proposed line whose price could not be grounded in conversation evidence or the rate card (unit_price_minor is 0 in that case: a sentinel, never a guessed value); true for every human-entered or grounded line.
              * @default true
              */
@@ -51512,19 +51822,19 @@ export interface components {
             terms_text?: string | null;
             /**
              * Format: int64
-             * @description Σ line nets; derived, never client-set.
+             * @description Σ line nets; derived, never client-set. Absent when money_withheld.
              */
-            readonly net_minor: number;
+            readonly net_minor?: number;
             /**
              * Format: int64
              * @description Σ line taxes; derived, never client-set.
              */
-            readonly tax_minor: number;
+            readonly tax_minor?: number;
             /**
              * Format: int64
              * @description net + tax; derived, never client-set.
              */
-            readonly gross_minor: number;
+            readonly gross_minor?: number;
             /**
              * Format: int64
              * @description The annualized NET value of this offer's recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.
@@ -51565,6 +51875,13 @@ export interface components {
                 }[];
             } | null;
             readonly line_items: components["schemas"]["OfferLineItem"][];
+            /** @description True for a reader the deal's amount is masked from. Such a reader gets no totals, no lines, no exchange rate and no PDF: the offer states the deal's amount by another name. */
+            readonly money_withheld?: boolean;
+            /**
+             * Format: int64
+             * @description The deal's `commercial_revision` the lines were copied from. Such an offer's lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.
+             */
+            readonly source_commercial_revision?: number | null;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -51686,6 +52003,13 @@ export interface components {
             /** @description The language new lines take product names in. Unset is the entity's, else the template's. */
             language?: string;
             line_items?: components["schemas"]["OfferLineItemInput"][] | null;
+            /**
+             * Format: int64
+             * @description Copy the deal's lines at this `commercial_revision` into the offer. Required for a deal in
+             *     `lines` mode, which refuses `line_items`, and refused for any other deal. Another revision
+             *     answers 409 `version_skew`. The currency must be the deal's.
+             */
+            from_deal_revision?: number | null;
             source: string;
         };
         /** @description Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422). */
@@ -55703,6 +56027,50 @@ export interface components {
             changes: components["schemas"]["Receipt"][];
             /** @description Where the next page starts; absent on the last page. */
             next_cursor?: string;
+            last_check?: components["schemas"]["DealMarginceCheck"];
+        };
+        /**
+         * @description Margince's latest nightly reading of the deal, present on the first page only when that
+         *     reading changed nothing. Every reader of the deal sees when it was and when the next one
+         *     is due. Only the owner it was made for, signed in as themselves, reads why and which
+         *     sources it read. For anyone else, an agent acting for the owner included, `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
+         *     reasons come from the deal's mail and meetings.
+         */
+        DealMarginceCheck: {
+            /** Format: date-time */
+            checked_at: string;
+            /**
+             * Format: date-time
+             * @description When the clock alone makes the deal due again, the day after its close date. Absent when only new evidence or a changed field does.
+             */
+            next_check_at?: string;
+            /** @description Whether the caller may read why. */
+            explained: boolean;
+            /**
+             * @description Why no model was asked. `switched_off` is every switch off; `no_evidence` is no mail, meeting, call or note every member may read.
+             * @enum {string}
+             */
+            skipped?: "switched_off" | "no_evidence";
+            outcomes: components["schemas"]["DealMarginceCheckOutcome"][];
+            sources: components["schemas"]["DealMarginceCheckSource"][];
+        };
+        /** @description One change Margince weighed and did not make. */
+        DealMarginceCheckOutcome: {
+            /** @enum {string} */
+            kind: "close_date" | "amount" | "probability" | "stage";
+            /** @enum {string} */
+            why: "switched_off" | "kept_your_edit" | "not_sure" | "outside_limits" | "changed_while_checking" | "undo_hold" | "already_right" | "accepted_offer" | "no_rate" | "no_owner" | "owner_cannot_edit" | "stage_rules" | "other";
+        };
+        /**
+         * @description One source and what the reading made of it. `private` is a source whose only items on
+         *     the deal are ones not every member may read, so they were left out. `unavailable` is a
+         *     mailbox that was not read on time.
+         */
+        DealMarginceCheckSource: {
+            /** @enum {string} */
+            source: "mail" | "meetings" | "calls" | "notes" | "offers";
+            /** @enum {string} */
+            state: "read" | "private" | "unavailable" | "none";
         };
         TeamMarginceChanges: {
             /** Format: date-time */
@@ -55714,6 +56082,37 @@ export interface components {
             rows: components["schemas"]["TeamMarginceChangeRow"][];
             /** @description True when more rows exist than were returned. The groups are never cut. */
             truncated: boolean;
+            /**
+             * @description Open deals Margince leaves alone because they have no live owner: no owner, or an
+             *     owner who left, is invited, suspended or archived. Every such deal the nightly check
+             *     skips, read under the caller's row scope, the largest value first, at most 200. They
+             *     wait for somebody to assign an owner; this list does not follow `since`.
+             */
+            ownerless: components["schemas"]["TeamMarginceOwnerlessDeal"][];
+            /** @description True when more ownerless deals exist than were returned. */
+            ownerless_truncated: boolean;
+        };
+        TeamMarginceOwnerlessDeal: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /**
+             * @description `departed_owner` left; `inactive_owner` is invited, suspended or archived.
+             * @enum {string}
+             */
+            reason: "no_owner" | "departed_owner" | "inactive_owner";
+            /**
+             * Format: uuid
+             * @description The owner who is not live; absent for an unowned deal.
+             */
+            owner_id?: string;
+            /** @description The name of the owner who is not live; absent for an unowned deal or an archived owner. */
+            owner_name?: string;
+            /**
+             * Format: int64
+             * @description The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate, or the caller's mask withholds it.
+             */
+            value_base_minor?: number;
         };
         UndoMarginceChangeItem: {
             /** Format: uuid */
@@ -55762,11 +56161,34 @@ export interface components {
              * @description The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
              */
             value_base_minor: number;
+            /**
+             * Format: int64
+             * @description How much value these changes moved, in the base currency's minor units. Each deal's
+             *     changes of this kind net out first and the group adds the size of each net move.
+             *     An amount change moves its difference; a close as lost takes the deal's value out
+             *     of the pipeline and an opened or revived deal puts it in; a probability change or a
+             *     stage move moves the amount times the change in win probability; a close date moves
+             *     nothing. Each move is valued from the deal as it stood when the change was made, so
+             *     a later edit does not rewrite it. An undone change adds nothing. A deal whose move
+             *     cannot be valued adds nothing and counts in `unvalued`.
+             */
+            value_moved_base_minor: number;
+            /**
+             * @description Of these deals, how many moved a value this total leaves out: the amount is masked
+             *     for the caller, no exchange rate is stored, or a probability change was written
+             *     before Margince kept the amount it was valued from.
+             */
+            unvalued: number;
         };
         TeamMarginceChangeRow: {
             /** Format: uuid */
             owner_id: string;
             change: components["schemas"]["Receipt"];
+            /**
+             * Format: int64
+             * @description The value this change moved, signed, as the group counts it. Absent for a change that moves no value or one the caller may not price.
+             */
+            value_moved_base_minor?: number;
         };
         /**
          * @description Whether this change can be taken back, and why not when it cannot.
@@ -63425,6 +63847,156 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getDealLines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's lines and their totals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealCommercial"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    addDealLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddDealLineRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal's lines and totals after the write. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealCommercial"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    removeDealLine: {
+        parameters: {
+            query: {
+                expected_revision: number;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                lineId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's lines and totals after the write. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealCommercial"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateDealLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                lineId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDealLineRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal's lines and totals after the write. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealCommercial"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    useDealEstimate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealRevisionRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal's commercial state after the write. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealCommercial"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -87852,6 +88424,45 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    refreshOfferFromDeal: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealRevisionRequest"];
+            };
+        };
+        responses: {
+            /** @description The refreshed draft offer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Offer"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

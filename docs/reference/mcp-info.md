@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 47 |
 | Resources | 13 |
-| Tool catalog | 206.5 KB |
+| Tool catalog | 207.0 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 54176 |
+| Approx. wire tokens | 54294 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 46.3 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.2 KB | 23% | Yes, every step |
-| Input schemas | 100.4 KB | 48% | Yes, every step |
+| Input schemas | 100.9 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 5% | Partly |
-| **Description + input schema** | **148.6 KB** | **71%** | **the recurring cost** |
+| **Description + input schema** | **149.1 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -72,7 +72,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 865 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 799 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
-| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 628 |
+| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 741 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 494 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1255 |
@@ -93,7 +93,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1707 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1713 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 901 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
@@ -2223,6 +2223,7 @@ themselves; requires passport scope "write".)
       "description": "Which act to run; read_workspace topic actions lists each action's body",
       "enum": [
         "accept_offer",
+        "add_deal_line",
         "add_room_document",
         "archive_contract",
         "archive_room",
@@ -2230,8 +2231,10 @@ themselves; requires passport scope "write".)
         "close_room",
         "pause_room",
         "record_contract",
+        "refresh_offer_from_deal",
         "regenerate_offer",
         "reject_offer",
+        "remove_deal_line",
         "remove_room_document",
         "render_offer",
         "renew_contract",
@@ -2243,9 +2246,11 @@ themselves; requires passport scope "write".)
         "set_deal_products",
         "set_room_expiry",
         "update_contract",
+        "update_deal_line",
         "update_room",
         "update_room_document",
-        "update_room_participant"
+        "update_room_participant",
+        "use_deal_estimate"
       ],
       "type": "string"
     },
@@ -2253,8 +2258,12 @@ themselves; requires passport scope "write".)
       "description": "remove_room_document, update_room_document only",
       "type": "string"
     },
+    "expected_revision": {
+      "description": "remove_deal_line only",
+      "type": "integer"
+    },
     "id": {
-      "description": "accept_offer, add_room_document, archive_contract, archive_room, cancel_contract, close_room, pause_room, regenerate_offer, reject_offer, remove_room_document, render_offer, renew_contract, resolve_room_thread, resume_room, revoke_room_participant, send_offer, set_contract_status, set_deal_products, set_room_expiry, update_contract, update_room, update_room_document, update_room_participant only",
+      "description": "accept_offer, add_deal_line, add_room_document, archive_contract, archive_room, cancel_contract, close_room, pause_room, refresh_offer_from_deal, regenerate_offer, reject_offer, remove_deal_line, remove_room_document, render_offer, renew_contract, resolve_room_thread, resume_room, revoke_room_participant, send_offer, set_contract_status, set_deal_products, set_room_expiry, update_contract, update_deal_line, update_room, update_room_document, update_room_participant, use_deal_estimate only",
       "type": "string"
     },
     "idempotency_key": {
@@ -2263,15 +2272,19 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "if_version": {
-      "description": "accept_offer, archive_room, cancel_contract, reject_offer, remove_room_document, renew_contract, send_offer, set_contract_status, set_room_expiry, update_contract, update_room, update_room_document only: The version the caller read; the write is refused as skew if the record moved since",
+      "description": "accept_offer, archive_room, cancel_contract, refresh_offer_from_deal, reject_offer, remove_room_document, renew_contract, send_offer, set_contract_status, set_room_expiry, update_contract, update_room, update_room_document only: The version the caller read; the write is refused as skew if the record moved since",
       "type": "integer"
+    },
+    "lineId": {
+      "description": "remove_deal_line, update_deal_line only",
+      "type": "string"
     },
     "participantId": {
       "description": "revoke_room_participant, update_room_participant only",
       "type": "string"
     },
     "request_body": {
-      "description": "add_room_document, cancel_contract, record_contract, reject_offer, renew_contract, set_contract_status, set_deal_products, set_room_expiry, update_contract, update_room, update_room_document, update_room_participant only: The request body of addDealRoomDocument",
+      "description": "add_deal_line, add_room_document, cancel_contract, record_contract, refresh_offer_from_deal, reject_offer, renew_contract, set_contract_status, set_deal_products, set_room_expiry, update_contract, update_deal_line, update_room, update_room_document, update_room_participant, use_deal_estimate only: The request body of addDealLine",
       "type": "object"
     },
     "threadId": {
@@ -8155,6 +8168,7 @@ fields.
         "contract",
         "controller_mail_preview",
         "deal_legal_reviews",
+        "deal_lines",
         "deal_margince_changes",
         "deal_products",
         "deal_room_brief",
@@ -8289,7 +8303,7 @@ fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
+      "description": "activity_pipeline, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
       "type": "string"
     },
     "kind": {

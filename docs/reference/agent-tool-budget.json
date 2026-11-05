@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 47,
     "system_frame_tokens": 592,
-    "tokens": 35704,
+    "tokens": 35823,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 759
+    "mean_tool_tokens": 761
   },
   "agents": [
     {
@@ -105,7 +105,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 1707
+      "tokens": 1713
     },
     {
       "name": "send_outbound",
@@ -160,12 +160,12 @@
       "tokens": 770
     },
     {
-      "name": "change_access",
-      "tokens": 656
+      "name": "change_offers",
+      "tokens": 741
     },
     {
-      "name": "change_offers",
-      "tokens": 628
+      "name": "change_access",
+      "tokens": 656
     },
     {
       "name": "update_record",

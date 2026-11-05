@@ -102,7 +102,10 @@ func (s *Store) ListDealOffers(ctx context.Context, dealID ids.DealID, in ListDe
 		if err := withholdUnreadableBuyer(ctx, tx, offers); err != nil {
 			return err
 		}
-		return attachOfferLines(ctx, tx, offers)
+		if err := attachOfferLines(ctx, tx, offers); err != nil {
+			return err
+		}
+		return withholdOfferMoney(ctx, tx, offers)
 	})
 	if offers == nil {
 		offers = []crmcontracts.Offer{}
@@ -159,7 +162,7 @@ func attachOfferLines(ctx context.Context, tx pgx.Tx, offers []crmcontracts.Offe
 const offerColumns = `id, deal_id, offer_number, revision, status, currency,
 	buyer_company_id, buyer_snapshot, issuer_snapshot, valid_until, intro_text, terms_text,
 	net_minor, tax_minor, gross_minor, fx_rate_to_base::text, fx_rate_date, pdf_asset_ref,
-	template_id, accepted_at, source, captured_by, version, created_at, updated_at, archived_at, legal_entity_id, language`
+	template_id, accepted_at, source, captured_by, version, created_at, updated_at, archived_at, legal_entity_id, language, source_commercial_revision`
 
 // withholdUnreadableBuyer removes an offer's buyer company from the
 // response when the caller could not open that company.
@@ -269,7 +272,11 @@ func readOfferWithLines(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived
 	}
 	offer.ArrMinor = &recurring.ArrMinor
 	offer.NetTcvMinor = &recurring.NetTcvMinor
-	return offer, nil
+	one := []crmcontracts.Offer{offer}
+	if err := withholdOfferMoney(ctx, tx, one); err != nil {
+		return crmcontracts.Offer{}, err
+	}
+	return one[0], nil
 }
 
 // recurringInputsOf turns the read lines back into what the recurring engine
@@ -317,7 +324,7 @@ func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 	err := row.Scan(&id, &dealID, &offerNumber, &revision, &status, &o.Currency,
 		&buyerCompanyID, &buyerSnapshot, &issuerSnapshot, &validUntil, &o.IntroText, &o.TermsText,
 		&netMinor, &taxMinor, &grossMinor, &o.FxRateToBase, &fxRateDate, &o.PdfAssetRef,
-		&templateID, &o.AcceptedAt, &o.Source, &capturedBy, &version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &legalEntityID, &o.Language)
+		&templateID, &o.AcceptedAt, &o.Source, &capturedBy, &version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &legalEntityID, &o.Language, &o.SourceCommercialRevision)
 	if err != nil {
 		return o, err
 	}
@@ -350,7 +357,7 @@ func readOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) ([]crmc
 	rows, err := tx.Query(ctx,
 		`SELECT id, position, product_id, description, unit, quantity::text, unit_price_minor,
 		        discount_pct::text, tax_rate::text, evidence, price_grounded, version, created_at, updated_at,
-		        billing_model, billing_interval_months, interval_count, tax_category
+		        billing_model, billing_interval_months, interval_count, tax_category, source_deal_line_id
 		 FROM offer_line_item WHERE offer_id = $1 ORDER BY position, id`, offerID)
 	if err != nil {
 		return nil, fmt.Errorf("read offer lines: %w", err)
@@ -369,7 +376,7 @@ func readOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) ([]crmc
 		var billingModel, taxCategory *string
 		if err := rows.Scan(&id, &l.Position, &productID, &l.Description, &l.Unit, &quantity,
 			&l.UnitPriceMinor, &discount, &taxRate, &evidence, &priceGrounded, &version, &l.CreatedAt, &l.UpdatedAt,
-			&billingModel, &l.BillingIntervalMonths, &l.IntervalCount, &taxCategory); err != nil {
+			&billingModel, &l.BillingIntervalMonths, &l.IntervalCount, &taxCategory, &l.SourceDealLineId); err != nil {
 			return nil, err
 		}
 		if billingModel != nil {

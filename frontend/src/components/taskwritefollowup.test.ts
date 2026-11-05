@@ -18,9 +18,9 @@ const movedTask: components["schemas"]["Activity"] = {
   offers_email: false,
   is_done: false,
   source: "manual",
-  captured_by: "human:user-1",
+  captured_by: "human:rep-1",
   created_at: "2026-11-01T10:00:00Z",
-  updated_at: "2026-11-01T10:00:00Z",
+  updated_at: "2026-11-05T10:00:00Z",
 };
 
 test("moving a task updates its queue and focus without touching reconnections or another source", async () => {

@@ -388,6 +388,9 @@ func (s *Store) buildStageAdvance(ctx context.Context, tx pgx.Tx, id ids.DealID,
 		if err := ensureWinEvidence(ctx, tx, id, in); err != nil {
 			return nil, "", err
 		}
+		if err := ensureLinesPricedToWin(ctx, tx, id); err != nil {
+			return nil, "", err
+		}
 	}
 	p, status, err := s.stageTransitionPatch(ctx, tx, current, in, semantic)
 	if err != nil {
