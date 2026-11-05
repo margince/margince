@@ -388,6 +388,9 @@ jobs:
           # lint's new-from-merge-base all diff against origin/main — a shallow
           # checkout has no base ref and would silently disarm them.
           fetch-depth: 0
+          # A merge base needs only commits; the few old files a gate reads
+          # (base crm.yaml, the base tree pkg-freeze checks out) come on demand.
+          filter: blob:none
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
@@ -485,6 +488,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+          filter: blob:none
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
@@ -546,8 +550,9 @@ jobs:
           # migration replay seeds from, so it must not be hand-editable. They
           # FAIL on a shallow checkout rather than degrading to an empty cohort,
           # because a gate that quietly checks nothing looks exactly like a
-          # passing one.
+          # passing one. It reads one old file, so blobs come on demand.
           fetch-depth: 0
+          filter: blob:none
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
@@ -618,8 +623,9 @@ jobs:
         with:
           persist-credentials: false
           # The comment checks judge the lines added since origin/main, which a
-          # shallow checkout does not have.
+          # shallow checkout does not have. The diff reads only changed files.
           fetch-depth: 0
+          filter: blob:none
       - name: craft static (strict — blocker + major)
         working-directory: .
         run: make craft-static
@@ -839,8 +845,9 @@ jobs:
           persist-credentials: false
           # SBOM_VERSION is the release tag when HEAD sits exactly on one
           # (`git describe --tags --exact-match`), else the full revision —
-          # resolving that needs the tags and history.
+          # resolving that needs the tags and history, but no old file.
           fetch-depth: 0
+          filter: blob:none
       # A scan that read part of pnpm-lock.yaml writes a valid SBOM that grant
       # passes, and only the census inside `make sbom` tells it apart. Planted
       # lockfiles, read by the real pinned YAML reader, and short SBOMs prove it
@@ -966,6 +973,7 @@ jobs:
         with:
           persist-credentials: false
           # Full history so SonarCloud can attribute blame / compute new code.
+          # Not blobless: blame reads every old version of each file it scans.
           fetch-depth: 0
       # Coverage the integration + frontend + extension-reference jobs already
       # produced. Each download is guarded on its producer having run (a
