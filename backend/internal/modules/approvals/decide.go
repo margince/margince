@@ -213,11 +213,6 @@ func readToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.
 	if err != nil {
 		return row{}, err
 	}
-	if by == decidedBySystem {
-		if err := stillOnAutomatic(ctx, tx, p, a); err != nil {
-			return row{}, err
-		}
-	}
 	visible, err := decidable(ctx, tx, p, a)
 	switch {
 	case err != nil:
@@ -231,8 +226,8 @@ func readToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.
 }
 
 func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
-	// An automatic apply binds the owner before the row lock: the bind waits
-	// for authorization changes, and removing a member locks their records.
+	// An automatic apply binds the owner, reads the mode and holds the target
+	// before the row lock (bindUnderPolicy has the lock order).
 	if by == decidedBySystem {
 		var err error
 		if ctx, p, err = bindUnderPolicy(ctx, tx, id); err != nil {

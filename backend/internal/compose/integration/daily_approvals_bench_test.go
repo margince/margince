@@ -74,7 +74,7 @@ func seedDailyApprovals(t *testing.T, e *apptest.AppEnv, seats Seats, scale floa
 			id := stageDailyCloseDate(sweep, t, svc, deal, i)
 			switch {
 			case i < applied:
-				made.toApply = append(made.toApply, dailyApply{agent, dailyRepPolicy(users, repID), id})
+				made.toApply = append(made.toApply, dailyApply{agent, dailyRepPolicy{users: users, rep: repID, deal: deal}, id})
 			case i < applied+expired:
 				if _, err := e.Owner.Exec(ctx, `UPDATE approval SET expires_at = now() - interval '1 hour' WHERE id = $1`, id); err != nil {
 					t.Fatalf("expiring close-date card %s: %v", id, err)
@@ -120,15 +120,26 @@ func dailyRepAgent(t *testing.T, users *identity.Service, ws, rep ids.UUID) cont
 	return withDailyRepAgent(principal.WithCorrelationID(ctx, ids.NewV7()), rep, rbac, seat)
 }
 
-// dailyRepPolicy binds the rep's agent with the grants it holds in tx.
-func dailyRepPolicy(users *identity.Service, rep ids.UUID) approvals.PolicyActor {
-	return func(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
-		rbac, seat, err := users.EffectiveAuthorityTx(ctx, tx, rep)
-		if err != nil {
-			return nil, false, err
-		}
-		return withDailyRepAgent(ctx, rep, rbac, seat), true, nil
+// dailyRepPolicy acts for the rep on one of their deals, bound in each of
+// the apply's transactions.
+type dailyRepPolicy struct {
+	users *identity.Service
+	rep   ids.UUID
+	deal  ids.UUID
+}
+
+func (d dailyRepPolicy) Bind(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
+	rbac, seat, err := d.users.EffectiveAuthorityTx(ctx, tx, d.rep)
+	if err != nil {
+		return nil, false, err
 	}
+	return withDailyRepAgent(ctx, d.rep, rbac, seat), true, nil
+}
+
+func (d dailyRepPolicy) HoldTarget(ctx context.Context, tx pgx.Tx) (bool, error) {
+	var owner *ids.UUID
+	err := tx.QueryRow(ctx, `SELECT owner_id FROM deal WHERE id = $1 FOR UPDATE`, d.deal).Scan(&owner)
+	return err == nil && owner != nil && *owner == d.rep, err
 }
 
 func withDailyRepAgent(ctx context.Context, rep ids.UUID, rbac authz.RBAC, seat principal.SeatType) context.Context {

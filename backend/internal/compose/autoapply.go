@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -136,24 +137,39 @@ func (a autoApplier) applyAs(ownerCtx context.Context, decision autoApplyDecisio
 	return true, nil
 }
 
-// ownerNow binds the owner's agent as of the caller's transaction. A record
-// that changed hands, or an owner who is no longer live, answers false.
+// ownerNow is how a decided apply acts for its owner in each of its
+// transactions.
 func (a autoApplier) ownerNow(decision autoApplyDecision) approvals.PolicyActor {
-	bind := ownersAgentTx(a.users, decision.owner, autoApplyActorID)
-	return func(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
-		actor, err := bind(ctx, tx)
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return nil, false, nil
-		}
-		if err != nil {
-			return nil, false, err
-		}
-		owner, err := ownerOfTx(ctx, tx, decision.target.entityType, decision.target.entityID)
-		if err != nil || owner != decision.owner {
-			return nil, false, err
-		}
-		return actor, true, nil
+	return ownerPolicy{bind: ownersAgentTx(a.users, decision.owner, autoApplyActorID), decision: decision}
+}
+
+// ownerPolicy binds the owner's agent as of a transaction, and holds the
+// record so its owner stays the one the apply acts for until the write.
+type ownerPolicy struct {
+	bind     deals.OwnerAuthorityTx
+	decision autoApplyDecision
+}
+
+// Bind answers false for an owner who is no longer live.
+func (o ownerPolicy) Bind(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
+	actor, err := o.bind(ctx, tx)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return nil, false, nil
 	}
+	if err != nil {
+		return nil, false, err
+	}
+	return actor, true, nil
+}
+
+// HoldTarget locks the record for update, since every eligible effect writes
+// it in this same transaction. A record that changed hands answers false.
+func (o ownerPolicy) HoldTarget(ctx context.Context, tx pgx.Tx) (bool, error) {
+	owner, err := ownerOfTx(ctx, tx, o.decision.target.entityType, o.decision.target.entityID, true)
+	if err != nil {
+		return false, err
+	}
+	return owner == o.decision.owner, nil
 }
 
 // proposalTarget is the proposal's kind and what it points at.
@@ -202,24 +218,27 @@ func (a autoApplier) ownerOf(ctx context.Context, entityType string, entityID id
 	var owner ids.UUID
 	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
 		var err error
-		owner, err = ownerOfTx(ctx, tx, entityType, entityID)
+		owner, err = ownerOfTx(ctx, tx, entityType, entityID, false)
 		return err
 	})
 	return owner, err
 }
 
-// ownerOfTx is ownerOf read in the caller's transaction.
-func ownerOfTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (ids.UUID, error) {
+// ownerOfTx is ownerOf read in the caller's transaction. hold locks the
+// record for update until that transaction ends.
+func ownerOfTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, hold bool) (ids.UUID, error) {
 	table, ok := ownedTables[entityType]
 	if !ok {
 		return ids.Nil, nil
 	}
+	query := `SELECT owner_id FROM ` + table + ` WHERE id = $1 AND archived_at IS NULL`
+	if hold {
+		query += ` FOR UPDATE`
+	}
 	var owner *ids.UUID
 	// The table name is a compile-time literal from ownedTables, chosen by a
 	// key that had to match, never text off the approval row.
-	err := tx.QueryRow(ctx,
-		`SELECT owner_id FROM `+table+` WHERE id = $1 AND archived_at IS NULL`,
-		entityID).Scan(&owner)
+	err := tx.QueryRow(ctx, query, entityID).Scan(&owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil
 	}

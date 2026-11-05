@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"maps"
 	"testing"
 	"time"
@@ -181,34 +182,124 @@ func (e *closeDateEnv) dateUnchanged(t *testing.T, deal ids.UUID) {
 	}
 }
 
-// An automatic apply binds the owner before the decision locks the approval,
-// and before the effect's redemption locks anything. Neither can then deadlock
-// with a member's removal.
-func TestAnAutomaticApplyBindsTheOwnerBeforeItLocksARecord(t *testing.T) {
-	e := setupCloseDate(t)
+// observedPolicy is the production binding, with the test looking in before
+// each bind and after each hold on the target.
+type observedPolicy struct {
+	approvals.PolicyActor
+	beforeBind func(ctx context.Context, tx pgx.Tx) error
+	afterHold  func(holds int)
+	holds      int
+}
+
+func (o *observedPolicy) Bind(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
+	if o.beforeBind != nil {
+		if err := o.beforeBind(ctx, tx); err != nil {
+			return nil, false, err
+		}
+	}
+	return o.PolicyActor.Bind(ctx, tx)
+}
+
+func (o *observedPolicy) HoldTarget(ctx context.Context, tx pgx.Tx) (bool, error) {
+	holds, err := o.PolicyActor.HoldTarget(ctx, tx)
+	o.holds++
+	if o.afterHold != nil {
+		o.afterHold(o.holds)
+	}
+	return holds, err
+}
+
+// applyObserved decides one fresh card and applies it through policy, which
+// wraps the production binding.
+func (e *closeDateEnv) applyObserved(t *testing.T, policy *observedPolicy) (ids.UUID, ids.ApprovalID) {
+	t.Helper()
 	deal, approvalID := e.stageServerCard(t)
 	applier := autoApplier{pool: e.Pool, svc: e.svc, users: identity.NewService(e.Pool)}
 	decision, ownerCtx, ok, err := applier.decide(e.applyCtx(), approvalID)
 	if err != nil || !ok {
 		t.Fatalf("decide = %v, %v: want the proposal due to apply", ok, err)
 	}
-	bind := applier.ownerNow(decision)
-	var locksAtBind []int
-	counted := func(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
-		held, err := rowLocksHeld(ctx, tx)
-		if err != nil {
-			return nil, false, err
-		}
-		locksAtBind = append(locksAtBind, held)
-		return bind(ctx, tx)
-	}
-
-	if _, err := e.svc.ApplyUnderPolicy(ownerCtx, approvalID, counted); err != nil {
+	policy.PolicyActor = applier.ownerNow(decision)
+	if _, err := e.svc.ApplyUnderPolicy(ownerCtx, approvalID, policy); err != nil {
 		t.Fatal(err)
 	}
+	return deal, approvalID
+}
+
+// An automatic apply binds the owner before the decision locks the approval,
+// and before the effect's redemption locks anything. Neither can then deadlock
+// with a member's removal.
+func TestAnAutomaticApplyBindsTheOwnerBeforeItLocksARecord(t *testing.T) {
+	e := setupCloseDate(t)
+	var locksAtBind []int
+	policy := &observedPolicy{beforeBind: func(ctx context.Context, tx pgx.Tx) error {
+		held, err := rowLocksHeld(ctx, tx)
+		locksAtBind = append(locksAtBind, held)
+		return err
+	}}
+
+	deal, approvalID := e.applyObserved(t, policy)
 
 	e.applied(t, true, approvalID, deal)
 	if len(locksAtBind) != 2 || locksAtBind[0] != 0 || locksAtBind[1] != 0 {
 		t.Errorf("record locks held at each owner bind = %v, want [0 0]: the decision's and the effect's", locksAtBind)
+	}
+}
+
+// waitsForTheApply runs change while the effect's transaction is open, and
+// reports whether it had to wait for that transaction. The bound only ends a
+// wait; a change that does not wait commits well inside it.
+func waitsForTheApply(t *testing.T, change func(ctx context.Context) error) bool {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	err := change(ctx)
+	if err != nil && !errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil {
+		t.Fatalf("the change failed for another reason: %v", err)
+	}
+	return err != nil
+}
+
+// A switch turned off, or a handover, after the effect read the mode and held
+// the deal waits for the write. Neither can commit under a write that already
+// decided on the state before it.
+func TestAChangeToTheOwnerWaitsForAnAutomaticApplyInFlight(t *testing.T) {
+	for name, change := range map[string]func(e *closeDateEnv) func(ctx context.Context) error{
+		"switch turned off": switchesOff,
+		"handed to a colleague": func(e *closeDateEnv) func(ctx context.Context) error {
+			return func(ctx context.Context) error {
+				_, err := e.Pool.Exec(ctx, `UPDATE deal SET owner_id = $1 WHERE owner_id = $2`, e.Rep2, e.Rep1)
+				return err
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupCloseDate(t)
+			var waited bool
+			policy := &observedPolicy{afterHold: func(holds int) {
+				if holds == 2 {
+					waited = waitsForTheApply(t, change(e))
+				}
+			}}
+
+			deal, approvalID := e.applyObserved(t, policy)
+
+			if !waited {
+				t.Error("the change committed while the effect's transaction was open, want it to wait")
+			}
+			e.applied(t, true, approvalID, deal)
+		})
+	}
+}
+
+// switchesOff is Rep1 turning close-date corrections off through the real
+// writer, which takes the policy lock exclusively.
+func switchesOff(e *closeDateEnv) func(ctx context.Context) error {
+	return func(ctx context.Context) error {
+		rep := principal.WithWorkspaceID(ctx, e.WS)
+		rep = principal.WithActor(rep, principal.Principal{Type: principal.PrincipalHuman,
+			ID: principal.HumanIDPrefix + e.Rep1.String(), UserID: e.Rep1})
+		_, err := approvals.NewService(e.DB()).SetAutoApply(rep, deals.CloseDateCorrectionKind, false)
+		return err
 	}
 }

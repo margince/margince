@@ -15,12 +15,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// PolicyActor binds, in the caller's transaction, the agent that applies a
-// proposal for its owner. It carries the owner's grants as they stand in that
-// transaction. ok is false when the record changed hands or the owner is no
-// longer live. Members and records are not this module's. It runs before the
-// transaction locks any row.
-type PolicyActor func(ctx context.Context, tx pgx.Tx) (actor context.Context, ok bool, err error)
+// PolicyActor is how an automatic apply acts for a proposal's owner in each
+// of its transactions. Members and records are not this module's.
+type PolicyActor interface {
+	// Bind binds the owner's agent with the grants the owner holds in tx. It
+	// is the transaction's first statement. ok is false for an owner who is no
+	// longer live.
+	Bind(ctx context.Context, tx pgx.Tx) (actor context.Context, ok bool, err error)
+	// HoldTarget locks the proposal's record until tx ends and reports whether
+	// the bound owner still holds it, so a handover waits for the write.
+	HoldTarget(ctx context.Context, tx pgx.Tx) (ok bool, err error)
+}
 
 // ErrPolicyWithdrawn reports an automatic apply that its owner stopped
 // allowing after the apply was decided. They left, lost the record or the
@@ -32,51 +37,74 @@ type underPolicyKey struct{}
 
 // underPolicy names the one approval an automatic apply is releasing. A
 // redemption of any other approval on the same context is not read as one.
+// admits is the decider check a redemption asks only for that approval, so
+// an ordinary redemption stays bounded by the token alone.
 type underPolicy struct {
-	id    ids.ApprovalID
-	actAs PolicyActor
+	id     ids.ApprovalID
+	actAs  PolicyActor
+	admits func(context.Context, pgx.Tx, principal.Principal, row) (bool, error)
 }
 
 func withPolicyActor(ctx context.Context, id ids.ApprovalID, actAs PolicyActor) context.Context {
-	return context.WithValue(ctx, underPolicyKey{}, underPolicy{id: id, actAs: actAs})
+	return context.WithValue(ctx, underPolicyKey{}, underPolicy{id: id, actAs: actAs, admits: decidable})
 }
 
-func policyActorFor(ctx context.Context, id ids.ApprovalID) (PolicyActor, bool) {
+func policyActorFor(ctx context.Context, id ids.ApprovalID) (underPolicy, bool) {
 	held, ok := ctx.Value(underPolicyKey{}).(underPolicy)
-	if !ok || held.id != id {
-		return nil, false
+	if !ok || held.id != id || held.actAs == nil {
+		return underPolicy{}, false
 	}
-	return held.actAs, true
+	return held, true
 }
 
 // bindUnderPolicy binds the owner's agent as of tx for the automatic apply of
-// approval id. It is the transaction's first statement: the bind waits for
-// authorization changes, and removing a member locks that member's records.
+// approval id, in the lock order every authorized write keeps: the
+// authorization read, then the owner's policy, then the record. The bind waits
+// for authorization changes, and removing a member locks that member's
+// records, so nothing here may follow a record lock.
 func bindUnderPolicy(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (context.Context, principal.Principal, error) {
-	actAs, ok := policyActorFor(ctx, id)
-	if !ok || actAs == nil {
+	held, ok := policyActorFor(ctx, id)
+	if !ok {
 		return nil, principal.Principal{}, errors.New(
 			"crmapprovals: an automatic apply needs its owner's authority read in its transaction")
 	}
-	actor, held, err := actAs(ctx, tx)
+	actor, bound, err := held.actAs.Bind(ctx, tx)
 	if err != nil {
 		return nil, principal.Principal{}, err
 	}
-	if !held {
+	if !bound {
 		return nil, principal.Principal{}, ErrPolicyWithdrawn
 	}
 	p, ok := principal.Actor(actor)
 	if !ok || p.UserID.IsZero() {
 		return nil, principal.Principal{}, errors.New("crmapprovals: the owner's agent names no owner")
 	}
+	// A plain read takes no row lock, and an approval's kind never changes.
+	var kind string
+	if err := tx.QueryRow(ctx, `SELECT kind FROM approval WHERE id = $1`, id).Scan(&kind); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, principal.Principal{}, apperrors.ErrNotFound
+		}
+		return nil, principal.Principal{}, err
+	}
+	if err := stillOnAutomatic(actor, tx, p, kind); err != nil {
+		return nil, principal.Principal{}, err
+	}
+	holds, err := held.actAs.HoldTarget(actor, tx)
+	if err != nil {
+		return nil, principal.Principal{}, err
+	}
+	if !holds {
+		return nil, principal.Principal{}, ErrPolicyWithdrawn
+	}
 	return actor, p, nil
 }
 
-// stillOnAutomatic asks again whether the bound owner has a's kind on
-// automatic. The decision and the effect each ask in their own transaction,
-// because each commits separately and a switch can be turned off between them.
-func stillOnAutomatic(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) error {
-	mode, err := AutoApplyModeTx(ctx, tx, p.UserID, a.Kind)
+// stillOnAutomatic asks again whether the bound owner has kind on automatic.
+// The decision and the effect each ask in their own transaction, because each
+// commits separately and a switch can be turned off between them.
+func stillOnAutomatic(ctx context.Context, tx pgx.Tx, p principal.Principal, kind string) error {
+	mode, err := AutoApplyModeTx(ctx, tx, p.UserID, kind)
 	if err != nil {
 		return err
 	}
@@ -100,13 +128,14 @@ func bindForRedemption(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (conte
 	return actor, p, true, nil
 }
 
-// stillUnderPolicy asks, in an effect's redemption, whether the owner bound
-// there may still decide a and has its kind on automatic.
+// stillUnderPolicy asks, in an automatic apply's redemption, whether the
+// owner bound there may still decide a.
 func stillUnderPolicy(actor context.Context, tx pgx.Tx, p principal.Principal, a row) error {
-	if err := stillOnAutomatic(actor, tx, p, a); err != nil {
-		return err
+	held, ok := policyActorFor(actor, a.ID)
+	if !ok {
+		return errors.New("crmapprovals: an automatic apply's redemption lost its owner")
 	}
-	visible, err := decidable(actor, tx, p, a)
+	visible, err := held.admits(actor, tx, p, a)
 	if err != nil {
 		return err
 	}

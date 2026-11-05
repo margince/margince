@@ -130,3 +130,46 @@ func TestTheSweepBindsTheOwnerBeforeItLocksADeal(t *testing.T) {
 		t.Errorf("record locks held at each owner bind = %v, want [0 0]: the decision's and the write's", policy.locksAtBind)
 	}
 }
+
+// switchedOffAfterTheWriteReads is the production policy, with Rep1 turning
+// corrections off right after the write's transaction read the mode.
+type switchedOffAfterTheWriteReads struct {
+	closeDatePolicy
+	e      *closeDateEnv
+	t      *testing.T
+	reads  int
+	waited bool
+}
+
+func (p *switchedOffAfterTheWriteReads) CorrectsWithoutAsking(ctx context.Context, tx pgx.Tx, owner ids.UUID) (bool, error) {
+	allowed, err := p.closeDatePolicy.CorrectsWithoutAsking(ctx, tx, owner)
+	p.reads++
+	if p.reads == 2 {
+		p.waited = waitsForTheApply(p.t, switchesOff(p.e))
+	}
+	return allowed, err
+}
+
+// A switch turned off after the sweep's write read the mode waits for that
+// write, rather than committing under a write that already decided to run.
+func TestASwitchTurnedOffWaitsForTheSweepsWriteInFlight(t *testing.T) {
+	e := setupCloseDate(t)
+	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
+	policy := &switchedOffAfterTheWriteReads{closeDatePolicy: closeDatePolicy{owner: owner}, e: e, t: t}
+	e.corrector = deals.NewCloseDateCorrector(e.DB(), policy,
+		quietReviewReader{db: e.DB(), owner: owner}, slog.New(slog.NewTextHandler(os.Stderr, nil)),
+		installseam.Deals()).SetClock(func() time.Time { return e.day }).
+		WithBaseLanguage(installationLanguage(e.Pool))
+	id := e.seedSweepDeal(t, "Slipped but alive", e.early, nil, new(-12), 3)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	if !policy.waited {
+		t.Error("the switch committed while the sweep's write was open, want it to wait")
+	}
+	if got := e.sweptTier(t, id); got != `member outcome "changed", staged []` {
+		t.Errorf("the sweep recorded %q, want the write the switch waited for", got)
+	}
+}
