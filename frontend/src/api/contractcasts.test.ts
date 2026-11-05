@@ -212,8 +212,10 @@ function bare(expression: ts.Expression): ts.Expression {
 }
 
 // `as`, then whitespace or comments, then `unknown`: the bridge however it is
-// spaced or annotated.
-const AS_UNKNOWN = /\bas(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n]*(?:\n|$))+unknown\b/;
+// spaced or annotated. A line comment ends at any of TypeScript's four line
+// terminators, not only at LF.
+const AS_UNKNOWN =
+  /\bas(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n\r\u2028\u2029]*(?:[\n\r\u2028\u2029]|$))+unknown\b/;
 const castsToUnknown = (text: string) => AS_UNKNOWN.test(text);
 
 type Finding = { where: string; line: number; says: string };
@@ -390,6 +392,9 @@ describe("what counts as a contract type cast", () => {
       "({} as\n  unknown) as Worklist",
       "{} as /* the wire */ unknown as Worklist",
       "{} as // the wire\n  unknown as Worklist",
+      "{} as // the wire\r  unknown as Worklist",
+      "{} as // the wire\u2028  unknown as Worklist",
+      "{} as // the wire\u2029  unknown as Worklist",
     ]) {
       const code = `${aliasing}const w = ${bridge};`;
       expect(castsToUnknown(code), bridge).toBe(true);
