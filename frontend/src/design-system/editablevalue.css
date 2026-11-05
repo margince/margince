@@ -46,7 +46,8 @@
   display: flex;
   inline-size: calc(100% + var(--space-2));
 }
-.editable-value-block .editable-value-face {
+.editable-value-block .editable-value-face,
+.editable-value-block .editable-value-press {
   flex: 1;
 }
 
