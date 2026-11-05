@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQuery } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
 import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { CommunicationContext } from "../../lib/compose-context";
-import { useContact360 } from "../contacts/contact360";
+import { contact360Query } from "../../lib/contact.queries";
 import type { RelinkKind } from "./composerelink";
 import type { MissingField } from "./composesend";
 
@@ -72,7 +73,10 @@ export function useDealChoice(where: {
 }) {
   const offered = offersDealChoice(where);
   // The contact page's own read, so the composer costs no request there.
-  const view = useContact360(where.entityId, where.open && offered);
+  const view = useQuery({
+    enabled: where.open && offered,
+    ...contact360Query(where.entityId),
+  });
   const seats = view.data?.deal_roles;
   const choices = dealChoicesOf(seats?.data ?? []);
   const gap = dealListGap(view, seats?.page.has_more === true);

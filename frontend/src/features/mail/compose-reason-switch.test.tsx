@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 /** @vitest-environment happy-dom */
+
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
 import {
   allowedPreview,
@@ -116,7 +118,9 @@ describe("alternativeReasonOf", () => {
     can_be_overruled: true,
     supported_alternatives: supported as never,
   });
-  const ask = (recipients: ReturnType<typeof refused>[]) => ({
+  const ask = (
+    recipients: components["schemas"]["SendAuthorizationPreviewRecipient"][],
+  ) => ({
     preview: { allowed: false, recipients },
     asking: false,
     unanswered: false,
