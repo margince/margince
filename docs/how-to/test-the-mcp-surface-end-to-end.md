@@ -8,13 +8,9 @@ model the scenario prompts under `e2e/llm/scenarios/`, and grades what the model
 This is the **lane that costs money**, and you turn it on yourself. Every run uses real model tokens on your own credentials.
 The Go tests pin payloads and errors for free. This lane answers the question they cannot: whether a model can use the surface. To add a case, read [add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md).
 
-> **Start free.** `make test-e2e-llm-check` needs no key, network or stack. It
-> runs the checker, the recorded verdicts of the judge and the unit tests of the bridge,
-> against stand-ins in the same program. Run it after any change under `e2e/llm/`.
+> **Start free.** `make test-e2e-llm-check` needs no key, network or stack. It runs the checker, the recorded verdicts of the judge and the unit tests of the bridge, against stand-ins in the same program. Run it after any change under `e2e/llm/`.
 
-See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red result), and [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface under
-test). The lane of [certify-an-ai-model.md](certify-an-ai-model.md) is a different one: one AI feature, one model. The `e2e-llm` row of
-[reference/make-targets.md](../reference/make-targets.md) lists every setting. [test-the-rest-surface-end-to-end.md](test-the-rest-surface-end-to-end.md) runs the same scenarios through the REST API.
+See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red result), and [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface under test). The lane of [certify-an-ai-model.md](certify-an-ai-model.md) is a different one: one AI feature, one model. The `e2e-llm` row of [reference/make-targets.md](../reference/make-targets.md) lists every setting. [test-the-rest-surface-end-to-end.md](test-the-rest-surface-end-to-end.md) runs the same scenarios through the REST API.
 
 ## 1. Choose the assistant and how to reach it
 
@@ -37,6 +33,10 @@ instructions of the server as the system prompt. It also gives the same cap of 2
 cap on results. A CLI uses the system prompt and agent loop of its own vendor. So its
 number is filed on its own, and never sits in the comparison column. The CLI routes
 are the way to run a long sweep on a subscription at small cost.
+
+A CLI starts with nothing of yours: `e2e/llm/clean.py` starts it, and the judge, in an empty folder. The claude CLI loads no settings, no `memory_paths` and no `skills`. Codex gets a home folder that holds only a copy of your login, and a new login it gets goes back to yours. The lane stops a run whose `init` line shows a repository folder, a `memory_paths` entry, a user plugin or a skill. It also stops a run with a `hook_started` line. Codex prints neither, so `e2e/llm/tests/test_codex.py` checks how it starts instead.
+
+Records made before this check did not measure a model that knows nothing about Margince. A Claude CLI run read the `CLAUDE.md` and `AGENTS.md` of this repository, and your own settings. Measure those records again before you compare them with a new one. A codex record is in question too if your codex home held plugins, hooks, `memories`, `skills` or an `AGENTS.md`. `ls backend/internal/compose/aicert/records/mcp_e2e*/*@{claude,codex}-cli/` lists them.
 
 **Two passports.** Every scenario runs on a passport that holds `read` and
 `write`, which is what most jobs need. A scenario that sends mail, writes drafts or sets up meetings
@@ -80,8 +80,7 @@ verdict with `"search": "lexical"`.
 
 ## 3. Run one scenario first
 
-One scenario, with three runs, takes a few minutes, and costs from under a dollar to a few
-dollars. Credentials go in the environment of the shell you run from.
+One scenario, with three runs, takes a few minutes, and costs from under a dollar to a few dollars. Credentials go in the environment of the shell you run from.
 
 ```bash
 # Claude through its CLI
@@ -304,6 +303,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | Sign | Cause | Fix |
 |---|---|---|
 | Every run "called nothing" | The MCP server never connected: a server name turned off in the config of the claude CLI, or a codex run that could not reach its tools | Read the system line of the transcript; the lane stops on both |
+| `did not start clean: …` | The claude CLI loaded more than the server of the lane: a repository folder, `memory_paths`, a plugin, a skill or a hook | Read the `init` line of the transcript, and its `hook_started` lines for a hook. A new CLI version may load from a new place: turn it off in `e2e/llm/clean.py` |
 | `search_context` returns `semantic_ranking_degraded_to_lexical` | No embedding model serves the stack | section 2 |
 | `CERTIFICATE_VERIFY_FAILED` | A Python with no CA bundle | The bridge uses the system bundle instead; check that it exists |
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |

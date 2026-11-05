@@ -445,6 +445,51 @@ def unrun(path):
     return ""
 
 
+def _events(path, *subtypes):
+    """The transcript's system events of these subtypes, in order."""
+    found = []
+    with _open_checked(path) as lines:
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict) and event.get("type") == "system" and event.get("subtype") in subtypes:
+                found.append(event)
+    return found
+
+
+def _inside_repo(path):
+    real = os.path.realpath(path)
+    return real == _REPO_ROOT or real.startswith(_REPO_ROOT + os.sep)
+
+
+def unclean(path):
+    """What the candidate loaded besides the lane's server, or "" when nothing.
+
+    The lane measures a model that knows nothing of Margince, so a run that read
+    this repository's rules, the operator's memory, plugins, skills or hooks is
+    not scored. The CLI states each in its init line; a driver that writes its
+    own init line states none of them and passes.
+    """
+    inits = _events(path, "init")
+    if not inits:
+        return "the transcript carries no init line, so what the candidate loaded is unknown"
+    problems = []
+    for event in inits:
+        places = {event.get("cwd"), event.get("original_cwd"), *(event.get("additional_directories") or [])}
+        problems += [f"it started inside the repository ({place})" for place in sorted(places, key=str)
+                     if isinstance(place, str) and _inside_repo(place)]
+        if event.get("memory_paths"):
+            problems.append(f"it loaded the operator's memory ({json.dumps(event['memory_paths'])})")
+        problems += [f"it loaded the plugin {plugin.get('name')}" for plugin in event.get("plugins") or ()
+                     if isinstance(plugin, dict) and plugin.get("path") != "builtin"]
+        if event.get("skills"):
+            problems.append(f"it loaded skills: {', '.join(map(str, event['skills']))}")
+    problems += [f"it ran the hook {event.get('hook_name')}" for event in _events(path, "hook_started")]
+    return "; ".join(problems)
+
+
 def offered_problem(scenario, path):
     """Why this run could not have satisfied must_call, or "" when it could.
 
@@ -453,17 +498,10 @@ def offered_problem(scenario, path):
     that attached nothing — so the lane stops rather than scoring it. The
     tools are the ones the transcript's system line says were offered.
     """
-    offered = None
-    for line in _open_checked(path):
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if event.get("type") == "system" and event.get("subtype") == "init":
-            offered = event.get("tools") or []
-            break
-    if offered is None:
+    init = _events(path, "init")
+    if not init:
         return "the transcript carries no system line, so what was offered is unknown"
+    offered = init[0].get("tools") or []
     if not offered:
         return "the server offered no tools at all"
     offered = offered_verbs(offered, load_routes())
@@ -709,6 +747,13 @@ def main():
             print(why)
             sys.exit(1)
         sys.exit(0)
+
+    if sys.argv[1] == "--clean":
+        problem = unclean(sys.argv[2])
+        if problem:
+            print(problem)
+            return 1
+        return 0
 
     if sys.argv[1] == "--offered":
         problem = offered_problem(parse_scenario(sys.argv[2]), sys.argv[3])

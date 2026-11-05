@@ -76,7 +76,7 @@ jobs:
       # with `-tags=integration -cover -coverpkg=./...`, and because the slice is
       # per-TEST rather than per-package, EVERY shard compiles nearly the whole
       # lane. Sharding therefore divides the test execution N ways and
-      # multiplies the compile by N — which is why N is six rather than twelve
+      # multiplies the compile by N — which is why N stays at eight
       # (see the matrix above): past a point, another shard buys a smaller slice
       # of the cheap half and pays another copy of the expensive one.
       - name: Restore the Go build cache

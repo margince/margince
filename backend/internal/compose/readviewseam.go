@@ -196,20 +196,18 @@ func (door *viewDoor) serveInProcess(ctx context.Context, call inProcessCall) *c
 		req.Header.Set("Idempotency-Key", call.IdempotencyKey)
 	}
 	rec := &cappedRecorder{ResponseRecorder: httptest.NewRecorder(), fileLimit: call.FileLimit}
-	req.Body = http.MaxBytesReader(rec, req.Body, door.bodyCeiling(req, call.Pattern))
+	req.Body = http.MaxBytesReader(rec, req.Body, door.bodyCeiling(req))
 	door.api.ServeHTTP(rec, req)
 	return rec
 }
 
-// bodyCeiling asks the chassis's question of the route the tool declared. The
-// ceilings name a route by its pattern, which a resolved path no longer spells.
-func (door *viewDoor) bodyCeiling(req *http.Request, pattern string) int64 {
+// bodyCeiling asks the chassis's own question of the request the tool built, so
+// both doors resolve one route to one ceiling.
+func (door *viewDoor) bodyCeiling(req *http.Request) int64 {
 	if door.ceiling == nil {
 		return httperr.MaxBodyBytes
 	}
-	declared := req.Clone(req.Context())
-	declared.URL.Path = pattern
-	return door.ceiling(declared)
+	return door.ceiling(req)
 }
 
 // maxViewAnswerBytes bounds what one view may hold in memory. An answer past
