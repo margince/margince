@@ -311,10 +311,9 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"answer_reporting_question_card": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("question_report"), "card_id": "q1"}
 	},
-	"preview_reporting_report_as_role": byID("report"),
-	"get_ai_task_flow":                 func(*recordPool) map[string]any { return map[string]any{"task": "account_scan"} },
-	"list_automation_runs":             byID("automation"),
-	"get_company_logo":                 byID("anchor_logo"),
+	"get_ai_task_flow":     func(*recordPool) map[string]any { return map[string]any{"task": "account_scan"} },
+	"list_automation_runs": byID("automation"),
+	"get_company_logo":     byID("anchor_logo"),
 	"get_voice_build": func(p *recordPool) map[string]any {
 		build := p.take("voice_build")
 		return map[string]any{"id": p.fact(build, "profile"), "buildId": build}
@@ -369,6 +368,9 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 			"buffer_minutes": 0, "horizon_days": 30, "title": "Meeting", "host_name": "Ada", "location": "Video call",
 		}}
 	},
+	"request_ownership_transfer": func(p *recordPool) map[string]any {
+		return map[string]any{"record_type": "contact", "id": p.take("stranger_contact")}
+	},
 	"list_connector_containers": func(*recordPool) map[string]any { return map[string]any{"provider": "gmail"} },
 	"mark_worklist_rows_done": func(p *recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"rows": []any{map[string]any{"source": "meeting", "row_id": p.take("worklist_meeting")}}}}
@@ -390,15 +392,24 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"get_legal_entity_logo": byID("entity_logo"),
 }
 
-// fixtureOf is the fixture a verb has in either table.
+// fixtureTables are every table of fixtures: the two above, and one per
+// family of route verbs, each in that family's own file.
+//
+//craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
+func fixtureTables() []map[string]func(p *recordPool) map[string]any {
+	return []map[string]func(p *recordPool) map[string]any{toolRoleFixtures, routeVerbFixtures, captureFixtures}
+}
+
+// fixtureOf is the fixture a verb has in any table.
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 func fixtureOf(verb string) (func(p *recordPool) map[string]any, bool) {
-	if fixture, ok := toolRoleFixtures[verb]; ok {
-		return fixture, true
+	for _, table := range fixtureTables() {
+		if fixture, ok := table[verb]; ok {
+			return fixture, true
+		}
 	}
-	fixture, ok := routeVerbFixtures[verb]
-	return fixture, ok
+	return nil, false
 }
 
 // sweepFingerprint is a well-formed card fingerprint: a dismissal names one

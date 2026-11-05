@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 47 |
 | Resources | 13 |
-| Tool catalog | 208.7 KB |
+| Tool catalog | 208.5 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 54731 |
+| Approx. wire tokens | 54695 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 46.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.3 KB | 23% | Yes, every step |
-| Input schemas | 102.2 KB | 48% | Yes, every step |
+| Input schemas | 102.0 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 5% | Partly |
-| **Description + input schema** | **150.5 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **150.3 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -76,7 +76,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 494 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1286 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 764 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 755 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1896 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
@@ -100,7 +100,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 307 |
 | [`read_record`](#read_record) | Read a record | yes |  | 324 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2575 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2547 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1008 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2246 |
@@ -2921,7 +2921,6 @@ asked for this call themselves; requires passport scope "write".)
       "enum": [
         "archive_legal_entity",
         "archive_saved_view",
-        "ask_company_setup",
         "ask_site_read",
         "confirm_site_read",
         "create_acquisition_source",
@@ -2975,7 +2974,7 @@ asked for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "request_body": {
-      "description": "ask_company_setup, ask_site_read, confirm_site_read, create_acquisition_source, create_disqualify_reason, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_saved_view, decide_legacy_loss_reason, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, update_acquisition_source, update_disqualify_reason, update_duplicate_settings, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_review_template, update_saved_view only: The request body of messageOnboardingCompany",
+      "description": "ask_site_read, confirm_site_read, create_acquisition_source, create_disqualify_reason, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_saved_view, decide_legacy_loss_reason, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, update_acquisition_source, update_disqualify_reason, update_duplicate_settings, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_review_template, update_saved_view only: The request body of messageAnchorCompanySiteRead",
       "type": "object"
     },
     "text_hash": {
@@ -9887,7 +9886,7 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
       "type": "array"
     },
     "id": {
-      "description": "question_card_answer, question_card_records, reader_preview, report_revisions, sales_initiative, sales_initiative_members, standard only",
+      "description": "question_card_answer, question_card_records, report_revisions, sales_initiative, sales_initiative_members, standard only",
       "type": "string"
     },
     "kind": {
@@ -9900,7 +9899,6 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
         "evidence",
         "question_card_answer",
         "question_card_records",
-        "reader_preview",
         "report_revisions",
         "report_run",
         "report_run_cell_records",
@@ -10008,16 +10006,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
       "type": "object"
     },
     "revision": {
-      "description": "question_card_answer, question_card_records, reader_preview, standard only; at least 1 for standard.",
+      "description": "question_card_answer, question_card_records, standard only; at least 1 for standard.",
       "type": "integer"
     },
     "right_id": {
       "description": "standard only",
       "format": "uuid",
-      "type": "string"
-    },
-    "role": {
-      "description": "reader_preview only",
       "type": "string"
     },
     "run_id": {

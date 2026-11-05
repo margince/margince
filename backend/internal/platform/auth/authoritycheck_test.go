@@ -5,17 +5,20 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"maps"
 	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestACheckReadsBackAsItIsWritten(t *testing.T) {
-	for _, name := range []string{"deal.update", "deal.create|update", "*.create", "admin", "scope:team"} {
+	for _, name := range []string{"deal.update", "deal.create|update", "*.create", "admin", "scope:team", "scope-narrower-than:all"} {
 		c, err := ParseCheck(name)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
@@ -24,7 +27,7 @@ func TestACheckReadsBackAsItIsWritten(t *testing.T) {
 			t.Errorf("%s reads back as %s", name, c)
 		}
 	}
-	for _, bad := range []string{"", "deal", "deal.", ".read", "deal.archive", "scope:everyone"} {
+	for _, bad := range []string{"", "deal", "deal.", ".read", "deal.archive", "scope:everyone", "scope-narrower-than:everyone", "row:approval"} {
 		if _, err := ParseCheck(bad); err == nil {
 			t.Errorf("%q reads as a check", bad)
 		}
@@ -52,6 +55,8 @@ func TestHeldByIsTheGatesDecision(t *testing.T) {
 		{"admin", admin, true},
 		{"scope:team", rep, false},
 		{"scope:team", admin, true},
+		{"scope-narrower-than:all", rep, true},
+		{"scope-narrower-than:all", admin, false},
 		{"deal.read", principal.Principal{Type: principal.PrincipalBuyer}, false},
 		{"admin", principal.Principal{Type: principal.PrincipalSystem}, true},
 	} {
@@ -76,6 +81,8 @@ func gateAdmits(ctx context.Context, c Check) bool {
 		return RequireAdmin(ctx) == nil
 	case c.RowScope != "":
 		return RequireRowScope(ctx, c.RowScope) == nil
+	case c.NarrowerThan != "":
+		return RequireRowScopeNarrowerThan(ctx, c.NarrowerThan, apperrors.ErrConflict) == nil
 	case c.Object == anyObject:
 		return RequireAnyObject(ctx, c.Actions[0]) == nil
 	}
@@ -88,7 +95,7 @@ func TestOnlyARequirementOfTheCallerIsRecorded(t *testing.T) {
 	caller := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:caller", Permissions: principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{"deal": {Read: true}},
 	}}
-	rec := &checkRecorder{actor: caller.ID, checks: map[string]bool{}}
+	rec := &checkRecorder{actor: caller.ID, checks: map[string]bool{}, refused: map[string]bool{}}
 	ctx := context.WithValue(principal.WithActor(context.Background(), caller), checkRecorderKey{}, rec)
 
 	if err := Require(ctx, "deal", principal.ActionRead); err != nil {
@@ -118,5 +125,24 @@ func TestOnlyARequirementOfTheCallerIsRecorded(t *testing.T) {
 	want := []string{"admin", "contact.create|update", "deal.read"}
 	if !slices.Equal(got, want) {
 		t.Errorf("recorded %v, want %v", got, want)
+	}
+}
+
+// A refusal that does not answer 403 is recorded as one, so a sweep can tell a
+// hidden row from a row that is not there.
+func TestARefusalThatIsNotA403IsRecorded(t *testing.T) {
+	everyRow := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:all", Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+	rec := &checkRecorder{actor: everyRow.ID, checks: map[string]bool{}, refused: map[string]bool{}}
+	ctx := context.WithValue(principal.WithActor(context.Background(), everyRow), checkRecorderKey{}, rec)
+
+	if err := RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, apperrors.ErrConflict); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("an all-scope caller was answered %v, want the refusal it was handed", err)
+	}
+	if err := HideRow(ctx, "approval"); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a hidden row was answered %v, want not found", err)
+	}
+	got := slices.Sorted(maps.Keys(rec.refused))
+	if want := []string{"row:approval", "scope-narrower-than:all"}; !slices.Equal(got, want) {
+		t.Errorf("recorded refusals %v, want %v", got, want)
 	}
 }

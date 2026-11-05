@@ -14924,8 +14924,9 @@ paths:
       tags:
       - Reports
       operationId: previewReportingReportAsRole
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: preview_reporting_report_as_role, router: read_reports, action: reader_preview, tier: auto_execute, scope: read, served_by: route }
+      security: [ { cookieAuth: [] } ]   # human session only: an agent reads a report under its own user's grants
+      x-agent-access: human-only
+      x-human-only-reason: covered
       summary: Evaluate a saved report as a seat holding one role would see it.
       description: |
         The report evaluated under the caller's own permissions narrowed to the role's: an
@@ -17490,8 +17491,9 @@ paths:
         Uses the acting human's resumable onboarding state as the conversation and AI-run scope.
         The response may answer, clarify, or propose typed draft changes, but it never writes
         company truth. Off-topic input is redirected to the next unresolved company question.
-      x-mcp-tool: { verb: message_onboarding_company, router: change_settings, action: ask_company_setup, tier: auto_execute, scope: write, served_by: route }
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      security: [ { cookieAuth: [] } ]   # human session only: the setup conversation is its user's own, with its own model
+      x-agent-access: human-only
+      x-human-only-reason: security
       requestBody:
         required: true
         content:

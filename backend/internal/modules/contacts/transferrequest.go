@@ -104,6 +104,9 @@ func requireTransferAsker(ctx context.Context, recordType string) error {
 	if !p.SeatType.CanMutate() {
 		return fmt.Errorf("a read seat does not take on records: %w", apperrors.ErrPermissionDenied)
 	}
+	if err := auth.RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, errTransferAlreadyYours); err != nil {
+		return err
+	}
 	if recordType == entityCompany {
 		if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
 			return err

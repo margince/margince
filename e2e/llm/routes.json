@@ -247,7 +247,6 @@
       "actions": {
         "archive_legal_entity": "archive_legal_entity",
         "archive_saved_view": "archive_saved_view",
-        "ask_company_setup": "message_onboarding_company",
         "ask_site_read": "message_anchor_company_site_read",
         "confirm_site_read": "confirm_anchor_company_site_read",
         "create_acquisition_source": "create_acquisition_source",
@@ -500,7 +499,6 @@
         "evidence": "search_report_evidence",
         "question_card_answer": "answer_reporting_question_card",
         "question_card_records": "explain_reporting_question_card",
-        "reader_preview": "preview_reporting_report_as_role",
         "report_revisions": "list_reporting_report_revisions",
         "report_run": "get_report_run",
         "report_run_cell_records": "explain_report_run_cell",

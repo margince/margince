@@ -9589,50 +9589,6 @@ paths:
           required: true
           schema: {type: string}
       security: [{bearerAuth: []}]
-  /analytics/reports/{id}/reader-preview:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags:
-        - Reports
-      operationId: previewReportingReportAsRole
-      security: [{bearerAuth: []}]
-      summary: Evaluate a saved report as a seat holding one role would see it.
-      description: |-
-        The report evaluated under the caller's own permissions narrowed to the role's: an
-        object only where both grant it, the narrower row scope, and every field mask either
-        carries. So the preview never shows the caller anything their own access withholds.
-        It runs as the caller, so records private to another seat stay hidden here too.
-      parameters:
-        - name: role
-          in: query
-          required: true
-          schema:
-            type: string
-            minLength: 1
-            maxLength: 64
-        - name: revision
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-      responses:
-        '200':
-          description: The report as the role reads it.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReportingEvaluation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
   /analytics/reports/{id}/evaluation:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -11397,42 +11353,6 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/AgentToolListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
-  /onboarding/company/messages:
-    post:
-      tags: [Companies, AI]
-      operationId: messageOnboardingCompany
-      summary: Continue the scoped company-setup conversation with or without a website read.
-      description: |-
-        Uses the acting human's resumable onboarding state as the conversation and AI-run scope.
-        The response may answer, clarify, or propose typed draft changes, but it never writes
-        company truth. Off-topic input is redirected to the next unresolved company question.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-
-        Holds the request open while an AI model answers.
-      security: [{bearerAuth: []}]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/OnboardingCompanyMessageRequest'}
-      responses:
-        '200':
-          description: Scoped conversational response and optional draft proposals.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/OnboardingCompanyMessageReply'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-        '501':
-          description: No governed model path is configured.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
   /company:
     get:
       tags: [Companies]
@@ -41928,34 +41848,6 @@ components:
         source_url: {type: [string, 'null'], format: uri, description: 'Present only when source_kind=url; null for text/self_description.'}
         evidence_offset: {type: [integer, 'null'], description: 'Optional char offset of evidence_snippet within the pasted text (source_kind=text), for highlight-back; null for url/self_description.'}
         confidence: {type: number, minimum: 0, maximum: 1}
-    OnboardingCompanyDraft:
-      type: object
-      additionalProperties: false
-      description: |-
-        Partial human-editable company input retained while the wizard is unfinished. Every field
-        is optional here because this is not confirmed company truth; confirmation uses the stricter
-        CompanyProfileInput or ConfirmCompanySiteReadRequest contract. Values are bounded because the
-        same draft may be supplied as context to the conversational assistant.
-      properties:
-        display_name: {type: [string, 'null'], maxLength: 2000}
-        offer_summary: {type: [string, 'null'], maxLength: 2000}
-        icp: {type: [string, 'null'], maxLength: 2000}
-        value_proposition: {type: [string, 'null'], maxLength: 2000}
-        usp: {type: [string, 'null'], maxLength: 2000}
-        customer_pains: {type: [string, 'null'], maxLength: 2000}
-        desired_outcomes: {type: [string, 'null'], maxLength: 2000}
-        buying_center: {type: [string, 'null'], maxLength: 2000}
-        buying_intents: {type: [string, 'null'], maxLength: 2000}
-        common_objections: {type: [string, 'null'], maxLength: 2000}
-        sales_motion: {type: [string, 'null'], maxLength: 2000}
-        legal_name: {type: [string, 'null'], maxLength: 2000}
-        registered_address: {type: [string, 'null'], maxLength: 2000}
-        register_vat: {type: [string, 'null'], maxLength: 2000}
-        legal_form: {type: [string, 'null'], maxLength: 2000}
-        register_court: {type: [string, 'null'], maxLength: 2000}
-        register_number: {type: [string, 'null'], maxLength: 2000}
-        industry: {type: [string, 'null'], maxLength: 2000}
-        history: {type: [string, 'null'], maxLength: 2000}
     LegalEntity:
       type: object
       description: |-
@@ -42466,106 +42358,6 @@ components:
     CompanyConversationResponseKind:
       type: string
       enum: [status, answer, recommendation, correction, confirmation, clarification, off_topic]
-    OnboardingCompanyMessageRequest:
-      type: object
-      additionalProperties: false
-      required: [message, locale]
-      properties:
-        message: {type: string, minLength: 1, maxLength: 2000}
-        locale:
-          type: string
-          enum: [en, de, vi]
-        act:
-          $ref: '#/components/schemas/OnboardingAct'
-          default: company
-          description: Which onboarding act the conversation is in; omitted means company.
-        selected_option:
-          $ref: '#/components/schemas/OnboardingClarifySelection'
-          description: |-
-            The clarify option the administrator clicked, echoed verbatim. Valid only in the company
-            act; it authorizes exactly one proposed change — the selected field with the selected
-            value — and nothing else. The server re-derives its current clarifications and verifies
-            the tuple against them: an unknown or stale clarify_id, a mismatched field, or a value
-            outside a closed option list is refused with 422.
-        history:
-          type: array
-          maxItems: 8
-          items: {$ref: '#/components/schemas/CompanySiteReadConversationTurn'}
-        company_draft:
-          $ref: '#/components/schemas/OnboardingCompanyDraft'
-          description: The administrator's current unsaved artifact, used only as conversational context.
-    OnboardingCompanyMessageReply:
-      type: object
-      required: [kind, message, act, proposed_changes, citations, remaining_required_fields, ai_runtime]
-      properties:
-        kind: {$ref: '#/components/schemas/CompanyConversationResponseKind'}
-        message: {type: string, minLength: 1}
-        act:
-          $ref: '#/components/schemas/OnboardingAct'
-          description: Echoes the act the request addressed.
-        clarify:
-          $ref: '#/components/schemas/OnboardingClarify'
-          description: |-
-            A deterministically detected open question, attached only when the server's own
-            detectors found one — options are never model-invented.
-        proposed_changes:
-          type: array
-          maxItems: 5
-          items: {$ref: '#/components/schemas/CompanySiteReadSuggestedChange'}
-        citations:
-          type: array
-          items: {$ref: '#/components/schemas/CompanySiteReadCitation'}
-        next_required_field:
-          type: [string, 'null']
-          enum: [null, display_name, offer_summary, icp]
-        remaining_required_fields:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            enum: [display_name, offer_summary, icp]
-        available_action:
-          type: [string, 'null']
-          enum: [null, confirm_company, start_voice_build, upload_voice_source, connect_inbox, finish]
-        ai_runtime: {$ref: '#/components/schemas/AiRunSummary'}
-    OnboardingAct:
-      type: string
-      description: The four onboarding conversation acts.
-      enum: [company, voice, results, connect]
-    OnboardingClarify:
-      type: object
-      description: |-
-        One server-detected open question with its closed option list. Options are produced
-        deterministically from the persisted read (legal-entity census, human-conflict
-        comparisons) — never by a model. Answers travel back either as `selected_option` on the
-        next message or as a CompanySiteReadResolution at confirm time.
-      required: [id, question, field, options]
-      properties:
-        id: {type: string, description: 'Stable per read draft version, e.g. clarify:<field>:<draft_version>.'}
-        question: {type: string}
-        field: {type: string, description: The profile field or comparison key the question resolves.}
-        options:
-          type: array
-          maxItems: 6
-          items: {$ref: '#/components/schemas/OnboardingClarifyOption'}
-        allow_free_text: {type: boolean, description: Whether typing a different value is also a valid answer.}
-    OnboardingClarifyOption:
-      type: object
-      required: [value, label]
-      properties:
-        value: {type: string, description: The exact string the selection authorizes — verbatim from the read or the current record.}
-        label: {type: string}
-        evidence_url: {type: [string, 'null'], format: uri}
-        evidence_snippet: {type: [string, 'null']}
-        detail: {type: [string, 'null'], description: Provenance or disambiguation help for this option.}
-    OnboardingClarifySelection:
-      type: object
-      additionalProperties: false
-      required: [clarify_id, field, value]
-      properties:
-        clarify_id: {type: string}
-        field: {type: string}
-        value: {type: string}
     CompanySiteRead:
       type: object
       required: [id, target_kind, root_url, status, status_code, status_detail, next_attempt_at, pages, profile_fields, facts, comparisons, contacts, warnings, draft_version, proposal_hash, created_at, updated_at]

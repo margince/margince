@@ -27,19 +27,29 @@ type Check struct {
 	// RowScope is RequireRowScope's question: is the caller's row scope at
 	// least this wide.
 	RowScope principal.RowScope
+	// NarrowerThan is RequireRowScopeNarrowerThan's question: is the caller's
+	// row scope narrower than this.
+	NarrowerThan principal.RowScope
 }
 
 const (
 	anyObject      = "*"
 	adminCheckName = "admin"
 	rowScopePrefix = "scope:"
+	narrowerPrefix = "scope-narrower-than:"
+	// rowRefusalPrefix names a row a gate hid from the caller, as HideRow notes it.
+	rowRefusalPrefix = "row:"
 )
 
 // String is the check as the generated tool table stores it: "deal.update",
-// "deal.create|update", "*.create", "admin" or "scope:team".
+// "deal.create|update", "*.create", "admin", "scope:team" or
+// "scope-narrower-than:all".
 func (c Check) String() string {
 	if c.Admin {
 		return adminCheckName
+	}
+	if c.NarrowerThan != "" {
+		return narrowerPrefix + string(c.NarrowerThan)
 	}
 	if c.RowScope != "" {
 		return rowScopePrefix + string(c.RowScope)
@@ -56,12 +66,13 @@ func ParseCheck(s string) (Check, error) {
 	if s == adminCheckName {
 		return Check{Admin: true}, nil
 	}
+	if scope, ok := strings.CutPrefix(s, narrowerPrefix); ok {
+		c := Check{NarrowerThan: principal.RowScope(scope)}
+		return c, knownRowScope(s, c.NarrowerThan)
+	}
 	if scope, ok := strings.CutPrefix(s, rowScopePrefix); ok {
 		c := Check{RowScope: principal.RowScope(scope)}
-		if !slices.Contains([]principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll}, c.RowScope) {
-			return Check{}, fmt.Errorf("auth: %q names the row scope %q, which is not own, team or all", s, scope)
-		}
-		return c, nil
+		return c, knownRowScope(s, c.RowScope)
 	}
 	object, actions, ok := strings.Cut(s, ".")
 	if !ok || object == "" || actions == "" {
@@ -78,6 +89,13 @@ func ParseCheck(s string) (Check, error) {
 	return c, nil
 }
 
+func knownRowScope(check string, scope principal.RowScope) error {
+	if !slices.Contains([]principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll}, scope) {
+		return fmt.Errorf("auth: %q names the row scope %q, which is not own, team or all", check, scope)
+	}
+	return nil
+}
+
 // HeldBy is the gate's decision on c for p. A buyer holds nothing and the
 // system principal holds everything, as at every gate in this package.
 func (c Check) HeldBy(p principal.Principal) bool {
@@ -87,6 +105,8 @@ func (c Check) HeldBy(p principal.Principal) bool {
 	case c.RowScope != "":
 		// Read for the system too, which arrives on its own row scope.
 		return !c.RowScope.Wider(p.Permissions.RowScope)
+	case c.NarrowerThan != "":
+		return c.NarrowerThan.Wider(p.Permissions.RowScope)
 	case p.Type == principal.PrincipalSystem:
 		return true
 	case c.Admin:
@@ -111,16 +131,28 @@ func grantsAnyOf(perms principal.Permissions, object string, actions []principal
 // records, and no request can make it.
 type checkRecorderKey struct{}
 
-// checkRecorder collects the checks asked of one principal during one call.
-// A check asked of another principal on the same context is left out: a
-// recipient a notice is tested against is not the caller.
+// checkRecorder collects the checks asked of one principal during one call,
+// and the refusals a gate answered with something other than 403. A note about
+// another principal on the same context is left out: a recipient a notice is
+// tested against is not the caller.
 type checkRecorder struct {
-	actor  string
-	mu     sync.Mutex
-	checks map[string]bool
+	actor   string
+	mu      sync.Mutex
+	checks  map[string]bool
+	refused map[string]bool
 }
 
 func noteCheck(ctx context.Context, c Check) {
+	note(ctx, func(rec *checkRecorder) { rec.checks[c.String()] = true })
+}
+
+// noteRefusal records that a gate refused the caller, for a refusal whose
+// answer does not say so: a hidden row reads as not found.
+func noteRefusal(ctx context.Context, name string) {
+	note(ctx, func(rec *checkRecorder) { rec.refused[name] = true })
+}
+
+func note(ctx context.Context, write func(*checkRecorder)) {
 	rec, ok := ctx.Value(checkRecorderKey{}).(*checkRecorder)
 	if !ok {
 		return
@@ -130,5 +162,5 @@ func noteCheck(ctx context.Context, c Check) {
 	}
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
-	rec.checks[c.String()] = true
+	write(rec)
 }

@@ -13,17 +13,24 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// RecordedCall is what the gates asked of one caller during one call, and
+// which of them refused it without a 403.
+type RecordedCall struct {
+	Checks  []string
+	Refused []string
+}
+
 // RecordChecksForTest returns ctx carrying a recorder for its principal, and a
-// func listing every check a gate has asked of that principal since. It lives
+// func reading what the gates have noted of that principal since. It lives
 // behind the integration tag, so no shipped binary links it.
-func RecordChecksForTest(ctx context.Context) (context.Context, func() []string) {
-	rec := &checkRecorder{checks: map[string]bool{}}
+func RecordChecksForTest(ctx context.Context) (context.Context, func() RecordedCall) {
+	rec := &checkRecorder{checks: map[string]bool{}, refused: map[string]bool{}}
 	if p, ok := principal.Actor(ctx); ok {
 		rec.actor = p.ID
 	}
-	return context.WithValue(ctx, checkRecorderKey{}, rec), func() []string {
+	return context.WithValue(ctx, checkRecorderKey{}, rec), func() RecordedCall {
 		rec.mu.Lock()
 		defer rec.mu.Unlock()
-		return slices.Sorted(maps.Keys(rec.checks))
+		return RecordedCall{Checks: slices.Sorted(maps.Keys(rec.checks)), Refused: slices.Sorted(maps.Keys(rec.refused))}
 	}
 }

@@ -96,7 +96,12 @@ func memberSeeders(s sweepSeed) map[string]func() string {
 		return answer.Token
 	}
 	return map[string]func() string{
-		"user":             func() string { return active("rep") },
+		"user": func() string { return active("rep") },
+		// A contact a colleague off the caller's team owns, which a seat short
+		// of all row scope may ask to be handed.
+		"stranger_contact": func() string {
+			return s.post("/v1/contacts", AnyMap{"full_name": "Role Sweep", "source": "manual", "owner_id": active("rep")})
+		},
 		"invited_user":     func() string { return invited("rep") },
 		"deactivated_user": deactivated,
 		"me":               func() string { return sessionUserID(s.t, s.e) },

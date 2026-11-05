@@ -46,8 +46,10 @@ const mcpParityMethod = `## How an operation gets its group
 The answer for ` + "`rep`" + ` comes from these places, in this order:
 
 - ` + "`decided_by: measured`" + `: [mcp-tool-roles.json](mcp-tool-roles.json) ran the real tool on that role. Only a verb that
-  serves one operation counts, because a row for a shared verb says nothing about any one route.
-- ` + "`decided_by: grant_checks`" + `: the checks the handler makes, against [rbac-matrix.md](rbac-matrix.md). The gate walks from
+  serves one operation counts, because a row for a shared verb says nothing about any one route. ` + "`refused_by`" + ` is then the
+  first check in the sweep's tool checks table that the rep lacks.
+- ` + "`decided_by: grant_checks`" + `: for an operation no swept verb serves alone, the checks the handler makes, against
+  [rbac-matrix.md](rbac-matrix.md). The gate walks from
   the method ` + "`compose.Server`" + ` serves the operation with, and follows ` + "`auth.Require`" + `, ` + "`auth.RequireAny`" + `,
   ` + "`auth.RequireAdmin`" + ` and ` + "`auth.RequireCoach`" + `. A boolean read such as ` + "`auth.Allows`" + ` or ` + "`auth.ReadGranted`" + `
   refuses nobody by itself, so it counts as conditional.

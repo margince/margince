@@ -8,6 +8,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -23,9 +25,6 @@ const (
 	toolRoleUser  = "tool-role-matrix@fable.test"
 	// toolRoleCallsPerPassport stays under a passport's per-window call budget.
 	toolRoleCallsPerPassport = 80
-	// unprovenCeiling is how many cells may reach no verdict and the sweep
-	// still pass. It only goes down, and at zero every new cell is proven.
-	unprovenCeiling = 43
 )
 
 // TestTheToolRoleMatrixIsPublished measures, for every seeded role, which tools
@@ -47,13 +46,21 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	}
 
 	verdicts := map[string]toolRoleVerdicts{}
-	measured := toolChecksMeasure{}
+	measured := newToolChecksMeasure()
+	elsewhere := measuredElsewhere(t, roles)
+	for verb, row := range elsewhere {
+		measured.control[verb] = agents.ToolChecksRow{Checks: row.Checks}
+	}
 	for _, role := range roles {
 		assignRoleTo(t, d.e, toolRoleUser, "admin")
 		clients := passportClients(t, d.e, role.key, 1+len(calls)/toolRoleCallsPerPassport)
 		pool := seedToolRoleRecords(t, d.e, calls, "")
 		assignRoleTo(t, d.e, toolRoleUser, role.key)
 		for n, call := range calls {
+			if row, ok := elsewhere[call.verb]; ok {
+				verdicts[call.row] = row.toolRoleVerdicts
+				continue
+			}
 			got := callThroughApproval(t, d.e, clients[n/toolRoleCallsPerPassport], call.verb, call.args(pool))
 			if got.IsError && strings.Contains(got.Text, "human-only operation") {
 				t.Errorf("%s is offered to agents and its route refuses every agent: %s", call.verb, got.Text)
@@ -61,11 +68,12 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 			if got.IsError && isBudgetRefusal(got.Text) {
 				t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, role.key, got.Text)
 			}
-			if role.key == "admin" {
-				measured.add(call.verb, recorded, got)
+			run, ran := recorded.take(call.verb)
+			if ran {
+				measured.add(call.verb, role.key == "admin", run, got)
 			}
 			row := verdicts[call.row]
-			row.record(role.key, got)
+			row.record(role.key, got, run.Refused)
 			verdicts[call.row] = row
 		}
 	}
@@ -73,9 +81,12 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	assignRoleTo(t, d.e, toolRoleUser, "admin")
 
 	holdTheMeasurementHasTeeth(t, roles, len(calls), verdicts)
-	doc := toolRolesDocument(roles, calls, verdicts, colleague)
-	holdTheUnprovenRatchet(t, doc)
-	holdTheToolChecksTable(t, measured.provenBy(roles, calls, verdicts))
+	doc, open := toolRolesDocument(roles, calls, verdicts, colleague)
+	if len(open) > 0 {
+		t.Errorf("%d cells reached no verdict. Each must run, or be refused by a gate:\n%s", len(open), strings.Join(open, "\n"))
+	}
+	rows, partial := measured.rows()
+	holdTheToolChecksTable(t, provenBy(rows, roles, calls, verdicts), partial)
 	rendered, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		t.Fatal(err)
@@ -92,8 +103,44 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(committed) != string(rendered) {
-		t.Errorf("%s is not what the roles are refused. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished, then the page's own update in internal/compose", toolRolesFile)
+		t.Errorf("%s is not what the roles are refused. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished, then go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity", toolRolesFile)
 	}
+}
+
+// extensionRoleFile holds the verbs that need a composed extension unit. They
+// are measured in a test binary of their own. A registered unit holds for the
+// whole binary, and this one runs every other suite in the package.
+const extensionRoleFile = "extensionrole/measured.json"
+
+// elsewhereRow is one verb's cells and checks as measured.json holds them.
+type elsewhereRow struct {
+	toolRoleVerdicts
+	Checks []string `json:"checks"`
+}
+
+// measuredElsewhere reads the verbs another binary measured. Its roles must be
+// this sweep's, or its cells would answer for roles nobody seeded.
+func measuredElsewhere(t *testing.T, roles []seededRole) map[string]elsewhereRow {
+	t.Helper()
+	raw, err := os.ReadFile(extensionRoleFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Roles []string                `json:"roles"`
+		Verbs map[string]elsewhereRow `json:"verbs"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("%s does not read: %v", extensionRoleFile, err)
+	}
+	keys := make([]string, len(roles))
+	for i, role := range roles {
+		keys[i] = role.key
+	}
+	if !slices.Equal(doc.Roles, keys) {
+		t.Fatalf("%s measured the roles %v and this database seeds %v. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/extensionrole", extensionRoleFile, doc.Roles, keys)
+	}
+	return doc.Verbs
 }
 
 // holdTheMeasurementHasTeeth fails a sweep whose calls never reach a gate: such
@@ -117,38 +164,29 @@ func holdTheMeasurementHasTeeth(t *testing.T, roles []seededRole, calls int, ver
 // calls, which would otherwise stay in the table and fill nothing.
 func holdEveryFixtureNamesACall(t *testing.T, calls []toolRoleCall) {
 	t.Helper()
-	for _, fixtures := range []map[string]func(p *recordPool) map[string]any{toolRoleFixtures, routeVerbFixtures} {
+	inTable := map[string]int{}
+	for _, fixtures := range fixtureTables() {
 		for verb := range fixtures {
+			inTable[verb]++
 			if !slices.ContainsFunc(calls, func(call toolRoleCall) bool { return call.verb == verb }) {
 				t.Errorf("the fixtures have %s, which no swept call names; remove it or rename it to the verb it was for", verb)
 			}
 		}
 	}
-	for verb := range routeVerbFixtures {
-		if _, twice := toolRoleFixtures[verb]; twice {
-			t.Errorf("%s has a fixture in both tables, so one of them fills nothing", verb)
+	for verb, n := range inTable {
+		if n > 1 {
+			t.Errorf("%s has a fixture in %d tables, so all but one fill nothing", verb, n)
 		}
 	}
 }
 
-// holdTheUnprovenRatchet fails a sweep with more cells that reached no verdict
-// than the ceiling allows, and names each. It fails one with fewer too, so
-// the ceiling comes down with them.
-func holdTheUnprovenRatchet(t *testing.T, doc toolRolesFileShape) {
-	t.Helper()
-	var unproven []string
-	for _, row := range doc.Rows {
-		for _, role := range row.Unproven {
-			unproven = append(unproven, fmt.Sprintf("%s as %s: %s", row.Verb, role, row.UnprovenReasons[role]))
-		}
+// firstLine is the start of an answer, enough to name why a call stopped.
+func firstLine(text string) string {
+	line, _, _ := strings.Cut(text, "\n")
+	if len(line) > 240 {
+		line = line[:240]
 	}
-	switch {
-	case len(unproven) > unprovenCeiling:
-		t.Errorf("%d cells reached no verdict, above the ceiling of %d. Each must run, or be refused by a permission gate:\n%s",
-			len(unproven), unprovenCeiling, strings.Join(unproven, "\n"))
-	case len(unproven) < unprovenCeiling:
-		t.Errorf("%d cells reached no verdict, below the ceiling of %d; lower unprovenCeiling to %d", len(unproven), unprovenCeiling, len(unproven))
-	}
+	return line
 }
 
 func isBudgetRefusal(text string) bool {
@@ -213,34 +251,44 @@ func toolRoleCalls(specs []mcp.ToolSpec, shapes map[string]toolRoleRoute) []tool
 	return calls
 }
 
-// toolRoleVerdicts sorts the roles by what one call answered them. Unproven is
-// a refusal for some other reason, such as an invalid body, before any role
-// gate, and UnprovenReasons says which.
+// toolRoleVerdicts sorts the roles by what one call answered them. open is
+// each role the call stopped for before a gate decided it, and why; the sweep
+// fails on any. gated is each role a gate was recorded refusing, whose
+// refusal stands whatever the admin was answered.
 type toolRoleVerdicts struct {
-	Allowed         []string          `json:"allowed_for"`
-	Refused         []string          `json:"refused_for"`
-	Unproven        []string          `json:"unproven_for"`
-	UnprovenReasons map[string]string `json:"unproven_reasons,omitempty"`
+	Allowed []string `json:"allowed_for"`
+	Refused []string `json:"refused_for"`
+	open    map[string]string
+	gated   map[string]bool
 }
 
-func (v *toolRoleVerdicts) record(role string, got apptest.MCPResult) {
+// record sorts one answer. A 403 is a gate's refusal. Any other refusal counts
+// only where the recorder saw a gate make it. A 404 is a hidden row only when a
+// gate told it from a row that is not there.
+func (v *toolRoleVerdicts) record(role string, got apptest.MCPResult, refusedBy []string) {
 	switch {
 	case !got.IsError:
 		v.Allowed = append(v.Allowed, role)
+	case len(refusedBy) > 0:
+		v.Refused = append(v.Refused, role)
+		if v.gated == nil {
+			v.gated = map[string]bool{}
+		}
+		v.gated[role] = true
 	case strings.Contains(got.Text, "permission denied"):
 		v.Refused = append(v.Refused, role)
 	default:
-		v.Unproven = append(v.Unproven, role)
-		if v.UnprovenReasons == nil {
-			v.UnprovenReasons = map[string]string{}
+		if v.open == nil {
+			v.open = map[string]string{}
 		}
-		v.UnprovenReasons[role] = stopReason(got.Text)
+		v.open[role] = stopReason(got.Text) + " (" + firstLine(got.Text) + ")"
 	}
 }
 
-// Why a call stopped before a role gate, read from the answer the agent is
-// given. Each reason is a kind of work left, such as a value the filler cannot
-// make or a record the sweep does not seed.
+// Why a call stopped before a gate decided it, read from the answer the agent
+// is given. Each reason is a kind of work left, such as a value the filler
+// cannot make or a record the sweep does not seed. The colleague pass reports
+// its answers in the same words.
 const (
 	stopValidation  = "validation"
 	stopNotFound    = "not_found"
@@ -253,7 +301,8 @@ const (
 	stopOther   = "other"
 )
 
-// stopReasonMeanings is what each reason says, which the page prints.
+// stopReasonMeanings is what each reason says, which the page prints beside
+// the colleague pass.
 //
 // gatekit:fixture the published meaning of each stop reason: expected data, not a waived cost
 var stopReasonMeanings = map[string]string{
@@ -303,34 +352,43 @@ type toolRolesFileShape struct {
 
 // toolRolesNote is what the JSON says the sweep does, and the page prints it.
 const toolRolesNote = "Generated by TestTheToolRoleMatrixIsPublished (backend/internal/compose/integration). " +
-	"A passport on each seeded role calls every tool and action once. Each record a call names is a new one the " +
-	"role's user owns, made through the app's own routes; a kind the sweep cannot make is a placeholder id that " +
-	"names no record. A refusal counts only where the admin passes the same call. Each role whose row scope is " +
-	"narrower than all then calls every tool that takes a company, contact, deal, lead or project on one a " +
-	"colleague owns. Do not edit by hand."
+	"A passport on each seeded role calls every tool and action once. Each record a call names is one the sweep " +
+	"made through the app's own routes for that role. A 403 counts as a refusal where the admin passes the same " +
+	"call. Any other answer counts as one only where a gate was recorded refusing that role in that call, such as " +
+	"a row it hides as not found. Every other answer fails the test, so every cell is either. Each role whose row " +
+	"scope is narrower than all then calls every tool that takes a company, contact, deal, lead or project on one a " +
+	"colleague owns, and reasons names its answers. Do not edit by hand."
 
-func toolRolesDocument(roles []seededRole, calls []toolRoleCall, verdicts map[string]toolRoleVerdicts, colleague map[string]map[string]string) toolRolesFileShape {
+// toolRolesDocument is the published file, and each cell no gate decided.
+func toolRolesDocument(roles []seededRole, calls []toolRoleCall, verdicts map[string]toolRoleVerdicts, colleague map[string]map[string]string) (toolRolesFileShape, []string) {
 	doc := toolRolesFileShape{Note: toolRolesNote, Reasons: stopReasonMeanings}
 	for _, role := range roles {
 		doc.Roles = append(doc.Roles, role.key)
 	}
+	var open []string
 	for _, call := range calls {
 		row := verdicts[call.row]
-		if slices.Contains(row.Refused, "admin") {
-			if row.UnprovenReasons == nil {
-				row.UnprovenReasons = map[string]string{}
-			}
-			for _, key := range row.Refused {
-				row.UnprovenReasons[key] = stopRefused
-			}
-			row.Unproven, row.Refused = append(row.Unproven, row.Refused...), nil
+		if !slices.Contains(row.Allowed, "admin") {
+			// A 403 proves a role gate only beside an admin who passed.
+			row.Refused = slices.DeleteFunc(slices.Clone(row.Refused), func(role string) bool {
+				if row.gated[role] {
+					return false
+				}
+				if row.open == nil {
+					row.open = map[string]string{}
+				}
+				row.open[role] = stopRefused
+				return true
+			})
+		}
+		for _, role := range slices.Sorted(maps.Keys(row.open)) {
+			open = append(open, fmt.Sprintf("%s as %s: %s", call.row, role, row.open[role]))
 		}
 		published := toolRoleRow{Tool: call.tool, Action: call.action, Verb: call.verb, ColleagueRecord: colleague[call.row]}
-		published.Allowed, published.Refused, published.Unproven = sortedRoles(row.Allowed), sortedRoles(row.Refused), sortedRoles(row.Unproven)
-		published.UnprovenReasons = row.UnprovenReasons
+		published.Allowed, published.Refused = sortedRoles(row.Allowed), sortedRoles(row.Refused)
 		doc.Rows = append(doc.Rows, published)
 	}
-	return doc
+	return doc, open
 }
 
 func sortedRoles(keys []string) []string {

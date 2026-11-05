@@ -55,6 +55,14 @@ func EnsureVisibleLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID
 	return probeVisible(ctx, tx, table, id, probeLive)
 }
 
+// HideRow is a gate's answer to a row it found and the caller's scope does not
+// reach. It is ErrNotFound, as EnsureVisible answers, so "not yours" reads as
+// "not there". Only a gate that has told the two apart calls it.
+func HideRow(ctx context.Context, object string) error {
+	noteRefusal(ctx, rowRefusalPrefix+object)
+	return apperrors.ErrNotFound
+}
+
 func probeVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, mode rowProbe) error {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

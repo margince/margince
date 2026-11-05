@@ -14,6 +14,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
@@ -66,8 +67,8 @@ func WithImportPreviewWaitForTest(clock agents.WaitClock, within time.Duration) 
 }
 
 // WithToolChecksRecordedForTest hands sink, after each tool call, the verb that
-// ran and the authority checks the gates asked of the caller on its way.
-func WithToolChecksRecordedForTest(sink func(verb string, checks []string)) Option {
+// ran and what the gates asked of the caller on its way.
+func WithToolChecksRecordedForTest(sink func(verb string, call auth.RecordedCall)) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.registryForTest = append(s.registryForTest, agents.WithChecksRecordedForTest(sink))
 		s.rebuildToolRegistry(pool)

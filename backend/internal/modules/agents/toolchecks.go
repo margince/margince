@@ -28,12 +28,9 @@ type ToolChecksFile struct {
 	Verbs map[string]ToolChecksRow `json:"verbs"`
 }
 
-// ToolChecksRow is one verb's measured checks. Complete is false when the
-// admin call stopped for a reason that is not a role. Only the checks before
-// that stop are then known, and each one is still needed on that path.
+// ToolChecksRow is one verb's measured checks.
 type ToolChecksRow struct {
-	Checks   []string `json:"checks"`
-	Complete bool     `json:"complete"`
+	Checks []string `json:"checks"`
 }
 
 var requiredChecks = mustReadToolChecks(toolChecksJSON)

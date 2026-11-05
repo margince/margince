@@ -6,16 +6,21 @@ Use this page when a new or changed MCP tool or router action turns one of two t
 - `TestEveryServedVerbHasItsToolChecksRow` in `backend/internal/compose/toolcheckscensus_test.go`. It runs in
   `make check` with no database, and holds `backend/internal/modules/agents/toolchecks.json` to the tools the
   registry serves.
+- `TestTheMCPParityCatalogIsPublished` in `backend/gates/`. It draws
+  [mcp-tool-roles.md](../reference/mcp-tool-roles.md) in the catalog's groups, and fails where the two files the
+  sweep writes disagree about the `rep` role.
 - The role sweep in `backend/internal/compose/integration/toolrolematrix_integration_test.go`. It calls every
   tool and action as each seeded role and writes [mcp-tool-roles.json](../reference/mcp-tool-roles.json) and
   `toolchecks.json`.
 
-The goal is a ✓ or ✗ in every cell: the call ran for the role, or a permission gate refused it.
+Every cell is a ✓ or a ✗: the call ran for the role, or a gate refused it. A cell that is neither fails the
+sweep. A 403 counts as a refusal where the admin passes the same call. Any other answer counts only where a gate
+in `platform/auth` recorded refusing that role in that call.
 
 ## Steps
 
-1. **Read the failure.** The sweep names each open cell as `verb as role: reason`.
-   The census names a verb with no row or a row not complete, and a row nothing serves.
+1. **Read the failure.** The sweep names each open cell as `verb as role: reason`, and each verb whose admin
+   call stopped before a gate decided it. The census names a verb with no row, and a row nothing serves.
    The reasons are under `reasons` in [mcp-tool-roles.json](../reference/mcp-tool-roles.json).
 
 2. **Fix the call by its reason.** A seed goes through the app's own routes.
@@ -33,18 +38,27 @@ The goal is a ✓ or ✗ in every cell: the call ran for the role, or a permissi
    `tools/list` then hides the tool from a role without that grant. A branch that only changes what an
    answer holds uses `auth.Allows` or `auth.AdminGranted`, which record nothing. Never write
    `auth.Require(...) == nil` in a branch.
+   - A gate that hides a row it found answers through `auth.HideRow`, so the 404 is recorded as a refusal.
+     A row that is not there stays a plain not found, and fails the sweep.
+   - An act only a seat short of a row scope needs goes through `auth.RequireRowScopeNarrowerThan`. Its check
+     hides the tool from a wider seat, and its refusal counts for the admin too.
+   - A verb that needs a composed extension unit is measured in
+     `backend/internal/compose/integration/extensionrole`, because a registered unit holds for its whole
+     test binary. Add the verb's arguments there; the sweep reads its `measured.json`.
 
 4. **Run the sweep and write its files again,** from the repository root, then from `backend/`:
 
    ```sh
+   UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/extensionrole
    UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished
-   go test ./internal/compose/ -run TestTheToolRolePageIsTheMatrix -update-mcp-tool-roles-page
+   go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity
    ```
 
    The integration lane shares the `margince_test` template, so run one lane at a time.
 
-5. **Commit** `docs/reference/mcp-tool-roles.json`, `docs/reference/mcp-tool-roles.md` and
-   `backend/internal/modules/agents/toolchecks.json` with the change.
+5. **Commit** `docs/reference/mcp-tool-roles.json`, `docs/reference/mcp-tool-roles.md`,
+   `docs/reference/mcp-parity.json`, `docs/reference/mcp-parity.md`,
+   `backend/internal/modules/agents/toolchecks.json` and `extensionrole/measured.json` with the change.
 
 Never add a skip or a list of verbs the tests pass over. A cell no seed can reach needs a decision. Open an
 issue labelled `status: needs-decision` that names the verb and why it cannot run.

@@ -4,11 +4,7 @@
 package compose
 
 import (
-	"bytes"
 	"encoding/json"
-	"flag"
-	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -16,25 +12,18 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-var updateMCPToolRolesPage = flag.Bool("update-mcp-tool-roles-page", false,
-	"rewrite docs/reference/mcp-tool-roles.md from docs/reference/mcp-tool-roles.json")
-
 type toolRolesDoc struct {
-	Note    string            `json:"note"`
-	Reasons map[string]string `json:"reasons"`
-	Roles   []string          `json:"roles"`
-	Rows    []struct {
-		Tool            string            `json:"tool"`
-		Action          string            `json:"action"`
-		Verb            string            `json:"verb"`
-		Allowed         []string          `json:"allowed_for"`
-		Refused         []string          `json:"refused_for"`
-		Unproven        []string          `json:"unproven_for"`
-		UnprovenReasons map[string]string `json:"unproven_reasons"`
-		ColleagueRecord map[string]string `json:"colleague_record"`
+	Roles []string `json:"roles"`
+	Rows  []struct {
+		Tool    string   `json:"tool"`
+		Action  string   `json:"action"`
+		Verb    string   `json:"verb"`
+		Allowed []string `json:"allowed_for"`
+		Refused []string `json:"refused_for"`
 	} `json:"rows"`
 }
 
@@ -58,7 +47,7 @@ func TestTheToolRoleMatrixCoversEveryServedAction(t *testing.T) {
 	published := map[string]bool{}
 	for _, row := range doc.Rows {
 		published[row.Tool+"."+row.Action] = true
-		every := slices.Concat(row.Allowed, row.Refused, row.Unproven)
+		every := slices.Concat(row.Allowed, row.Refused)
 		slices.Sort(every)
 		roles := slices.Sorted(slices.Values(doc.Roles))
 		if !slices.Equal(every, roles) {
@@ -92,60 +81,6 @@ func TestTheToolRoleMatrixCoversEveryServedAction(t *testing.T) {
 	}
 }
 
-func TestTheToolRolePageIsTheMatrix(t *testing.T) {
-	page := filepath.Join(mcpDocsDir, "mcp-tool-roles.md")
-	rendered := renderToolRoles(readToolRoles(t), readToolChecks(t))
-	if *updateMCPToolRolesPage {
-		if err := os.WriteFile(page, rendered, 0o600); err != nil {
-			t.Fatal(err)
-		}
-		return
-	}
-	committed, err := os.ReadFile(page)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(committed, rendered) {
-		t.Errorf("%s is not its JSON. Run: go test ./internal/compose/ -run TestTheToolRolePageIsTheMatrix -update-mcp-tool-roles-page", page)
-	}
-}
-
-const toolRolesPageHead = `# Which role can use which MCP tool
-
-<!-- Generated together with mcp-tool-roles.json; do not edit by hand. -->
-
-An agent has the access of the user it acts for. This page shows what that gives on each role a new
-workspace starts with. [rbac-matrix.md](rbac-matrix.md) lists the grants themselves;
-[agent-tools.md](agent-tools.md) lists the tools.
-
-Nobody types this page. It is drawn from [mcp-tool-roles.json](mcp-tool-roles.json), and the test that
-writes the file fails when the answers change and the file does not. The file's note says how it is
-measured:
-
-`
-
-const toolRolesPageMarks = `
-| Mark | Meaning |
-|---|---|
-| ✓ | The call ran for this role. |
-| ✗ | A gate refused this role. |
-| ? | Not proven either way. The call stopped first; [why it stopped](#why-a-call-stopped) counts the reasons. |
-
-A cell with counts, such as ` + "`5✓ 2✗ 3?`" + `, covers the actions of one router. Row scope, the seat and the passport's
-scopes still apply to each call. A ✓ says the role passed on a record it owns;
-[a colleague's record](#a-colleagues-record) shows what the narrower roles get on one they do not own.
-
-Regenerate from the repository root, then from ` + "`backend/`" + `:
-
-    UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished
-    go test ./internal/compose/ -run TestTheToolRolePageIsTheMatrix -update-mcp-tool-roles-page
-
-A tool that reaches no verdict is fixed as [prove-a-tool-in-the-role-matrix.md](../how-to/prove-a-tool-in-the-role-matrix.md) says.
-
-## The matrix
-
-`
-
 // readToolChecks is the table the binary embeds, which tools/list narrows by.
 func readToolChecks(t *testing.T) agents.ToolChecksFile {
 	t.Helper()
@@ -160,167 +95,34 @@ func readToolChecks(t *testing.T) agents.ToolChecksFile {
 	return table
 }
 
-// everyMeasuredGrant holds the admin role key and every grant the table names,
-// so a listing under it is narrowed by nothing the table measured.
+// everyMeasuredGrant holds the admin role key, every grant the table names and
+// a row scope every scope check admits. A listing under it is narrowed by
+// nothing the table measured.
 func everyMeasuredGrant(t *testing.T) principal.Permissions {
 	t.Helper()
-	perms := principal.Permissions{RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{}}
+	perms := principal.Permissions{RoleKeys: []string{"admin"}, Objects: map[string]principal.ObjectGrant{}}
 	all := principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	var scopeChecks []auth.Check
 	for _, row := range readToolChecks(t).Verbs {
 		for _, name := range row.Checks {
-			if object, _, ok := strings.Cut(name, "."); ok {
-				perms.Objects[object] = all
+			check, err := auth.ParseCheck(name)
+			switch {
+			case err != nil:
+				t.Fatal(err)
+			case check.RowScope != "" || check.NarrowerThan != "":
+				scopeChecks = append(scopeChecks, check)
+			case check.Object != "" && !strings.HasPrefix(name, "*"):
+				perms.Objects[check.Object] = all
 			}
 		}
 	}
+	for _, scope := range []principal.RowScope{principal.RowScopeAll, principal.RowScopeTeam, principal.RowScopeOwn} {
+		perms.RowScope = scope
+		holder := principal.Principal{Type: principal.PrincipalAgent, Permissions: perms}
+		if !slices.ContainsFunc(scopeChecks, func(c auth.Check) bool { return !c.HeldBy(holder) }) {
+			return perms
+		}
+	}
+	t.Fatal("no row scope admits every scope check the table names")
 	return perms
-}
-
-func renderToolRoles(doc toolRolesDoc, checks agents.ToolChecksFile) []byte {
-	var b bytes.Buffer
-	b.WriteString(toolRolesPageHead)
-	b.WriteString("> " + doc.Note + "\n")
-	b.WriteString(toolRolesPageMarks)
-	b.WriteString("| Tool | " + strings.Join(doc.Roles, " | ") + " | Actions some role is refused |\n")
-	b.WriteString("|---|" + strings.Repeat("---|", len(doc.Roles)+1) + "\n")
-	var tools []string
-	for _, row := range doc.Rows {
-		if !slices.Contains(tools, row.Tool) {
-			tools = append(tools, row.Tool)
-		}
-	}
-	for _, tool := range tools {
-		cells := make([]string, 0, len(doc.Roles))
-		for _, role := range doc.Roles {
-			cells = append(cells, toolRoleCell(doc, tool, role))
-		}
-		fmt.Fprintf(&b, "| `%s` | %s | %s |\n", tool, strings.Join(cells, " | "), refusedActions(doc, tool))
-	}
-	renderStopReasons(&b, doc)
-	renderColleagueRecord(&b, doc)
-	renderToolChecks(&b, doc, checks)
-	return b.Bytes()
-}
-
-// renderToolChecks lists what each swept verb's admin call was asked, which is
-// what tools/list holds a passport's user to.
-func renderToolChecks(b *bytes.Buffer, doc toolRolesDoc, checks agents.ToolChecksFile) {
-	b.WriteString("\n## What each call needs\n\n" +
-		"tools/list offers a passport a tool, or a router's action, only when its user holds every check below. " +
-		"The checks come from [the tool checks table](../../backend/internal/modules/agents/toolchecks.json), " +
-		"which the same test writes:\n\n> " + checks.Note + "\n\n")
-	b.WriteString("A check is `object.action`, or `object.a|b` for any one of them. `*.action` is the action on any " +
-		"object, `admin` is the admin role key, and `scope:team` is a row scope at least that wide. **Measured** is `complete` where the admin call ran. It is `partial` " +
-		"where the call stopped first, so only the checks before the stop are known. It is `none` where the call never " +
-		"reached the verb: such a call stays offered, and the gate decides it.\n\n")
-	b.WriteString("| Call | Verb | Checks | Measured |\n|---|---|---|---|\n")
-	for _, row := range doc.Rows {
-		measured, needs := "none", ""
-		if verb, ok := checks.Verbs[row.Verb]; ok {
-			measured = map[bool]string{true: "complete", false: "partial"}[verb.Complete]
-			names := make([]string, len(verb.Checks))
-			for i, name := range verb.Checks {
-				names[i] = "`" + name + "`"
-			}
-			needs = strings.Join(names, " ")
-		}
-		fmt.Fprintf(b, "| `%s` | `%s` | %s | %s |\n", strings.TrimSuffix(row.Tool+"."+row.Action, "."), row.Verb, needs, measured)
-	}
-}
-
-// renderStopReasons counts why the unproven cells stopped, for the admin
-// control alone and for every role.
-func renderStopReasons(b *bytes.Buffer, doc toolRolesDoc) {
-	admin, every := map[string]int{}, map[string]int{}
-	for _, row := range doc.Rows {
-		for role, reason := range row.UnprovenReasons {
-			every[reason]++
-			if role == "admin" {
-				admin[reason]++
-			}
-		}
-	}
-	b.WriteString("\n## Why a call stopped\n\nA cell is proven only where the admin passes the same call, so the admin column is the work left.\n\n")
-	b.WriteString("| Reason | Meaning | admin | Every role |\n|---|---|---|---|\n")
-	for _, reason := range slices.Sorted(maps.Keys(doc.Reasons)) {
-		fmt.Fprintf(b, "| `%s` | %s | %d | %d |\n", reason, doc.Reasons[reason], admin[reason], every[reason])
-	}
-}
-
-// renderColleagueRecord counts, per scoped role, what the calls on a record a
-// colleague owns were answered, and names the ones that ran.
-func renderColleagueRecord(b *bytes.Buffer, doc toolRolesDoc) {
-	counts := map[string]map[string]int{}
-	ran := map[string][]string{}
-	answers := map[string]bool{}
-	for _, row := range doc.Rows {
-		for role, answer := range row.ColleagueRecord {
-			if counts[role] == nil {
-				counts[role] = map[string]int{}
-			}
-			counts[role][answer]++
-			answers[answer] = true
-			if answer == "ran" {
-				ran[role] = append(ran[role], "`"+strings.TrimSuffix(row.Tool+"."+row.Action, ".")+"`")
-			}
-		}
-	}
-	b.WriteString("\n## A colleague's record\n\nEach role below reads fewer rows than all. Every granted seat reads a company, contact, " +
-		"deal, lead or project, so a call may run; the test fails when one changes the colleague's record: its version, " +
-		"update time, archive or owner.\n\n")
-	kinds := slices.Sorted(maps.Keys(answers))
-	b.WriteString("| Role | " + strings.Join(kinds, " | ") + " | Calls that ran |\n|---|" + strings.Repeat("---|", len(kinds)+1) + "\n")
-	for _, role := range slices.Sorted(maps.Keys(counts)) {
-		cells := make([]string, 0, len(kinds))
-		for _, kind := range kinds {
-			cells = append(cells, fmt.Sprint(counts[role][kind]))
-		}
-		fmt.Fprintf(b, "| %s | %s | <details><summary>%d</summary>%s</details> |\n", role, strings.Join(cells, " | "), len(ran[role]), strings.Join(ran[role], " "))
-	}
-}
-
-func toolRoleCell(doc toolRolesDoc, tool, role string) string {
-	var allowed, refused, unproven int
-	for _, row := range doc.Rows {
-		switch {
-		case row.Tool != tool:
-		case slices.Contains(row.Allowed, role):
-			allowed++
-		case slices.Contains(row.Refused, role):
-			refused++
-		case slices.Contains(row.Unproven, role):
-			unproven++
-		}
-	}
-	marks := []struct {
-		count int
-		mark  string
-	}{{allowed, "✓"}, {refused, "✗"}, {unproven, "?"}}
-	if allowed+refused+unproven == 1 {
-		for _, m := range marks {
-			if m.count == 1 {
-				return m.mark
-			}
-		}
-	}
-	var parts []string
-	for _, m := range marks {
-		if m.count > 0 {
-			parts = append(parts, fmt.Sprintf("%d%s", m.count, m.mark))
-		}
-	}
-	return strings.Join(parts, " ")
-}
-
-func refusedActions(doc toolRolesDoc, tool string) string {
-	var entries []string
-	for _, row := range doc.Rows {
-		if row.Tool == tool && row.Action != "" && len(row.Refused) > 0 {
-			entries = append(entries, fmt.Sprintf("`%s` (%s)", row.Action, strings.Join(row.Refused, ", ")))
-		}
-	}
-	if len(entries) == 0 {
-		return ""
-	}
-	return "<details><summary>" + fmt.Sprint(len(entries)) + "</summary>" + strings.Join(entries, " ") + "</details>"
 }

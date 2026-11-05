@@ -10,16 +10,16 @@
   "totals": {
     "tools": 47,
     "resources": 13,
-    "tool_catalog_bytes": 213667,
+    "tool_catalog_bytes": 213522,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 54731,
+    "approx_wire_tokens_total": 54695,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 49434,
-      "input_schema_bytes": 104630,
+      "input_schema_bytes": 104485,
       "output_schema_bytes": 47766,
-      "description_plus_input_schema_bytes": 154064
+      "description_plus_input_schema_bytes": 153919
     }
   },
   "tools": {
@@ -2410,7 +2410,6 @@
               "enum": [
                 "archive_legal_entity",
                 "archive_saved_view",
-                "ask_company_setup",
                 "ask_site_read",
                 "confirm_site_read",
                 "create_acquisition_source",
@@ -2464,7 +2463,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "ask_company_setup, ask_site_read, confirm_site_read, create_acquisition_source, create_disqualify_reason, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_saved_view, decide_legacy_loss_reason, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, update_acquisition_source, update_disqualify_reason, update_duplicate_settings, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_review_template, update_saved_view only: The request body of messageOnboardingCompany",
+              "description": "ask_site_read, confirm_site_read, create_acquisition_source, create_disqualify_reason, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_saved_view, decide_legacy_loss_reason, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, update_acquisition_source, update_disqualify_reason, update_duplicate_settings, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_review_template, update_saved_view only: The request body of messageAnchorCompanySiteRead",
               "type": "object"
             },
             "text_hash": {
@@ -9070,7 +9069,7 @@
               "type": "array"
             },
             "id": {
-              "description": "question_card_answer, question_card_records, reader_preview, report_revisions, sales_initiative, sales_initiative_members, standard only",
+              "description": "question_card_answer, question_card_records, report_revisions, sales_initiative, sales_initiative_members, standard only",
               "type": "string"
             },
             "kind": {
@@ -9083,7 +9082,6 @@
                 "evidence",
                 "question_card_answer",
                 "question_card_records",
-                "reader_preview",
                 "report_revisions",
                 "report_run",
                 "report_run_cell_records",
@@ -9191,16 +9189,12 @@
               "type": "object"
             },
             "revision": {
-              "description": "question_card_answer, question_card_records, reader_preview, standard only; at least 1 for standard.",
+              "description": "question_card_answer, question_card_records, standard only; at least 1 for standard.",
               "type": "integer"
             },
             "right_id": {
               "description": "standard only",
               "format": "uuid",
-              "type": "string"
-            },
-            "role": {
-              "description": "reader_preview only",
               "type": "string"
             },
             "run_id": {

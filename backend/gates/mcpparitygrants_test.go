@@ -440,6 +440,10 @@ func (w *grantWalk) call(call *ast.CallExpr, info *types.Info, bound map[types.O
 		w.recordRefusal(used.Name(), call, info, bound, mainLine)
 		return
 	}
+	if used.Pkg() != nil && used.Pkg().Path() == authPackagePath && used.Name() == authAllows {
+		w.recordRefusal(used.Name(), call, info, bound, false)
+		return
+	}
 	// The primitive every object grant ends at. It answers a boolean and refuses
 	// nobody, so it is conditional however it is called.
 	if isPermissionsAllows(used) {
@@ -457,6 +461,11 @@ func (w *grantWalk) call(call *ast.CallExpr, info *types.Info, bound map[types.O
 // refuses by itself. Every other auth function is walked through to these or to
 // isPermissionsAllows, so a new wrapper cannot hide a grant.
 var refusingChecks = map[string]bool{"Require": true, "RequireAny": true, "RequireAdmin": true, "RequireCoach": true}
+
+// authAllows is Require read as a boolean, so the walk records it by name as a
+// conditional check. Its object and action reach the primitive inside a Check,
+// where the walk cannot bind them.
+const authAllows = "Allows"
 
 func isPermissionsAllows(fn *types.Func) bool {
 	sig, ok := fn.Type().(*types.Signature)
