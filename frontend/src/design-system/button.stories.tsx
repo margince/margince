@@ -6,6 +6,7 @@ import { Bell, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Button, TextInput } from "./atoms";
 import { ProviderMark } from "./provider-mark";
+import { QuietVerbs } from "./verbvolume";
 
 const meta: Meta<typeof Button> = {
   title: "Components/Forms and input/Button",
@@ -189,6 +190,29 @@ export const EveryAxis: Story = {
           </Button>
         </div>
       </div>
+    </div>
+  ),
+};
+
+// One filled button per screen, panel or card in hand; a row in a list has
+// none. The same verbs inside `QuietVerbs` keep their job and their ✦.
+export const OneFillPerRegion: Story = {
+  render: () => (
+    <div style={stack}>
+      <span className="t-label">The card in hand</span>
+      <div style={row}>
+        <Button variant="ai">Draft reply</Button>
+        <Button variant="aiQuiet">Prepare</Button>
+        <Button variant="ghost">Snooze</Button>
+      </div>
+      <span className="t-label">A row in a list</span>
+      <QuietVerbs>
+        <div style={row}>
+          <Button variant="ai">Draft reply</Button>
+          <Button variant="primary">Set next step</Button>
+          <Button variant="ghost">Snooze</Button>
+        </div>
+      </QuietVerbs>
     </div>
   ),
 };
