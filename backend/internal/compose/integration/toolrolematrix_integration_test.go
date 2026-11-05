@@ -63,7 +63,7 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 			}
 			client := clients[n/toolRoleCallsPerPassport]
 			pool.caller = client.Bearer()
-			got := callThroughApproval(t, d.e, client, call.verb, call.args(pool))
+			got, releaseRefused := callThroughApproval(t, d.e, client, call.verb, call.args(pool))
 			if got.IsError && strings.Contains(got.Text, "human-only operation") {
 				t.Errorf("%s is offered to agents and its route refuses every agent: %s", call.verb, got.Text)
 			}
@@ -75,10 +75,11 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 				measured.add(call.verb, role.key == "admin", run, got)
 			}
 			row := verdicts[call.row]
-			row.record(role.key, got, run.Refused)
+			row.record(role.key, got, append(run.Refused, releaseRefused...))
 			verdicts[call.row] = row
 		}
 	}
+	measureEveryKind(t, d.e, recorded, measured, kindVariants(t, withoutVerbs(calls, elsewhere), seedableKinds(t, d.e)))
 	colleague := crossOwnerPass(t, d.e, roles, calls)
 	assignRoleTo(t, d.e, toolRoleUser, "admin")
 
@@ -143,6 +144,14 @@ func measuredElsewhere(t *testing.T, roles []seededRole) map[string]elsewhereRow
 		t.Fatalf("%s measured the roles %v and this database seeds %v. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/extensionrole", extensionRoleFile, doc.Roles, keys)
 	}
 	return doc.Verbs
+}
+
+// withoutVerbs is calls less those of the verbs another binary measured.
+func withoutVerbs(calls []toolRoleCall, elsewhere map[string]elsewhereRow) []toolRoleCall {
+	return slices.DeleteFunc(slices.Clone(calls), func(call toolRoleCall) bool {
+		_, measured := elsewhere[call.verb]
+		return measured
+	})
 }
 
 // holdTheMeasurementHasTeeth fails a sweep whose calls never reach a gate: such
@@ -212,10 +221,13 @@ type toolRoleRoute struct {
 }
 
 // toolRoleCall is one call the sweep makes: a verb, and the published row it is.
+// A kind variant names kindArg's further kind, and whether the sweep seeds one.
 type toolRoleCall struct {
 	row, tool, action, verb string
 	input                   json.RawMessage
 	route                   toolRoleRoute
+	kindArg, kind           string
+	kindSeeded              bool
 }
 
 // routeShapes is each route verb's body schema and path by verb.
@@ -264,14 +276,15 @@ type toolRoleVerdicts struct {
 	gated   map[string]bool
 }
 
-// record sorts one answer. A 403 is a gate's refusal. Any other refusal counts
-// only where the recorder saw a gate make it. A 404 is a hidden row only when a
-// gate told it from a row that is not there.
+// record sorts one answer. A 403 is a gate's refusal, and one naming the grant
+// the role lacks stands whatever the admin was answered. Any other refusal
+// counts only where the recorder saw a gate make it. A 404 is a hidden row only
+// when a gate told it from a row that is not there.
 func (v *toolRoleVerdicts) record(role string, got apptest.MCPResult, refusedBy []string) {
 	switch {
 	case !got.IsError:
 		v.Allowed = append(v.Allowed, role)
-	case len(refusedBy) > 0:
+	case len(refusedBy) > 0, refusedAGrant(got):
 		v.Refused = append(v.Refused, role)
 		if v.gated == nil {
 			v.gated = map[string]bool{}

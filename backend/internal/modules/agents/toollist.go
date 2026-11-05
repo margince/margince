@@ -78,7 +78,6 @@ func invocableByCaller(ctx context.Context, spec mcp.ToolSpec) bool {
 	if spec.RequiredScope != principal.ScopeRead && !p.SeatType.CanMutate() {
 		return false
 	}
-	// Admit refuses a read seat every tool past the read scope, outright.
 	// A tool answering who the caller is stays offered whatever the passport
 	// is scoped to do; mcp.ToolSpec.SelfDescribing says why, and the
 	// admission gate reads the same flag so the listing cannot offer what the

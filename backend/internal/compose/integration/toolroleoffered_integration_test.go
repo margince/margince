@@ -9,6 +9,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -25,17 +27,23 @@ const toolListingUser = "tool-role-listing@fable.test"
 
 // A passport is offered a tool or action when, and only when, the gate admits
 // its user to it. The roles are an operator's own. One is a copy of rep that
-// may create tags and may not update deals. The other member holds rep and
-// ops, whose grants merge to the widest.
+// may create tags and may not update deals. One lacks two checks only some
+// paths of a tool ask: a company create, and the installation settings read.
+// The last member holds rep and ops, whose grants merge to the widest.
 func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
 	d := toolRoleApp(t, "tool-role-listing")
 	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
 	calls := toolRoleCalls(specs, routeShapes())
+	calls = append(calls, kindVariants(t, calls, seedableKinds(t, d.e))...)
 	createRole(t, d.e, "rep_tagger", `jsonb_set(jsonb_set(permissions,
 		'{objects,tag}', coalesce(permissions->'objects'->'tag', '{}') || '{"create": true}'),
 		'{objects,deal}', coalesce(permissions->'objects'->'deal', '{}') || '{"update": false}')`)
+	createRole(t, d.e, "rep_path_bound", `jsonb_set(jsonb_set(permissions,
+		'{objects,company}', coalesce(permissions->'objects'->'company', '{}') || '{"create": false}'),
+		'{objects,installation_settings}', coalesce(permissions->'objects'->'installation_settings', '{}') || '{"read": false}')`)
 
-	for _, holding := range [][]string{{"rep_tagger"}, {"rep", "ops"}} {
+	adminRows := publishedAdminAnswers(t)
+	for _, holding := range [][]string{{"rep_tagger"}, {"rep_path_bound"}, {"rep", "ops"}} {
 		t.Run(strings.Join(holding, "+"), func(t *testing.T) {
 			holdRoles(t, d.e, "admin")
 			clients := passportClients(t, d.e, strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
@@ -45,25 +53,68 @@ func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
 			offered := offeredCalls(t, clients[0].ListedTools(t), specs)
 			answers := map[string]roleAnswer{}
 			for n, call := range calls {
-				// One set of records for both. The role calls first, so a call it
-				// was refused leaves the records as the admin control finds them.
 				pool.caller = clients[n/toolRoleCallsPerPassport].Bearer()
 				args := call.args(pool)
-				holdRoles(t, d.e, holding...)
 				got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
-				holdRoles(t, d.e, "admin")
-				control := controls[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
 				// A refusal the admin meets too is about the record, not the role.
-				answers[call.row] = roleAnswer{
-					ran: !got.IsError, refused: refusedAGrant(got) && !isRefusal(control), text: got.Text,
+				// The published matrix says how the admin was answered; a kind
+				// variant it does not hold is asked of the admin on the same records.
+				adminAdmitted, published := adminRows[call.row]
+				if !published {
+					holdRoles(t, d.e, "admin")
+					adminAdmitted = !isRefusal(controls[n/toolRoleCallsPerPassport].Call(t, call.verb, args))
+					holdRoles(t, d.e, holding...)
 				}
+				answers[call.row] = roleAnswer{ran: !got.IsError, refused: refusedAGrant(got) && adminAdmitted, text: got.Text}
 			}
 			for _, disagreement := range listingDisagreements(calls, specs, offered, answers) {
 				t.Error(disagreement)
 			}
+			holdRoles(t, d.e, holding...)
+			holdPathDependentTools(t, clients[0], offered, answers)
 		})
 	}
 	holdRoles(t, d.e, "admin")
+}
+
+// publishedAdminAnswers is, per published row, whether the matrix has the
+// admin running it.
+func publishedAdminAnswers(t *testing.T) map[string]bool {
+	t.Helper()
+	raw, err := os.ReadFile(toolRolesFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc toolRolesFileShape
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("%s does not read: %v", toolRolesFile, err)
+	}
+	out := make(map[string]bool, len(doc.Rows))
+	for _, row := range doc.Rows {
+		out[strings.TrimSuffix(row.Tool+"."+row.Action, ".")] = slices.Contains(row.Allowed, "admin")
+	}
+	return out
+}
+
+// holdPathDependentTools holds what every role here may do, whatever one path
+// of a tool asks. The record tools stay offered, a contact is made, and whoami
+// answers.
+func holdPathDependentTools(t *testing.T, client *apptest.MCPClient, offered map[string]bool, answers map[string]roleAnswer) {
+	t.Helper()
+	for _, row := range []string{"create_record", "update_record", "read_record", "whoami"} {
+		if !offered[row] {
+			t.Errorf("%s is hidden from a role that may use it on some kind of record", row)
+		}
+	}
+	contact := client.Call(t, "create_record", map[string]any{
+		"record_type": "contact", "fields": map[string]any{"full_name": "Path Bound", "source": "manual"},
+	})
+	if contact.IsError {
+		t.Errorf("creating a contact was refused: %.300s", contact.Text)
+	}
+	if who := answers["whoami"]; !who.ran {
+		t.Errorf("whoami was refused: %.300s", who.text)
+	}
 }
 
 // A role change reaches the next tools/list of a passport already issued: the
@@ -153,33 +204,35 @@ type roleAnswer struct {
 
 // listingDisagreements names each row the listing and the gate answer apart:
 // an offered call the gate refuses the role, or a hidden one that ran. A router
-// choosing by the arguments named is held as one tool.
+// choosing by the arguments named is held as one tool. A call and its kind
+// variants are held as one row. Offered, some path is admitted; hidden, none ran.
 func listingDisagreements(calls []toolRoleCall, specs []mcp.ToolSpec, offered map[string]bool, answers map[string]roleAnswer) []string {
 	chooses := map[string]bool{}
 	for _, spec := range specs {
 		chooses[spec.Name] = len(spec.Actions) > 0 && spec.ActionField == ""
 	}
-	var out []string
+	groupOf := func(call toolRoleCall) string {
+		if chooses[call.tool] {
+			return call.tool
+		}
+		return baseRow(call.row)
+	}
+	listed, members := map[string]bool{}, map[string]int{}
 	someAdmitted, someRan := map[string]bool{}, map[string]bool{}
 	for _, call := range calls {
-		got := answers[call.row]
-		if chooses[call.tool] {
-			someAdmitted[call.tool] = someAdmitted[call.tool] || !got.refused
-			someRan[call.tool] = someRan[call.tool] || got.ran
-			continue
-		}
-		switch {
-		case offered[call.row] && got.refused:
-			out = append(out, fmt.Sprintf("%s is offered and the gate refuses it: %.200s", call.row, got.text))
-		case !offered[call.row] && got.ran:
-			out = append(out, fmt.Sprintf("%s is hidden and it ran", call.row))
-		}
+		group, got := groupOf(call), answers[call.row]
+		listed[group] = listed[group] || offered[baseRow(call.row)]
+		members[group]++
+		someAdmitted[group] = someAdmitted[group] || !got.refused
+		someRan[group] = someRan[group] || got.ran
 	}
-	for tool := range chooses {
-		listed := slices.ContainsFunc(calls, func(call toolRoleCall) bool { return call.tool == tool && offered[call.row] })
-		if chooses[tool] && (listed && !someAdmitted[tool] || !listed && someRan[tool]) {
-			out = append(out, fmt.Sprintf("%s is offered=%v, and the gate admits some action=%v and ran some=%v",
-				tool, listed, someAdmitted[tool], someRan[tool]))
+	var out []string
+	for _, group := range slices.Sorted(maps.Keys(members)) {
+		switch {
+		case listed[group] && !someAdmitted[group]:
+			out = append(out, fmt.Sprintf("%s is offered and the gate refuses every path of it: %.200s", group, answers[group].text))
+		case !listed[group] && someRan[group]:
+			out = append(out, fmt.Sprintf("%s is hidden and some path of it ran", group))
 		}
 	}
 	return out

@@ -11,8 +11,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -82,6 +84,10 @@ func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // went wrong.
 func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 	lang := string(textlang.English)
+	ctx, may := baseLanguageReader(ctx)
+	if !may {
+		return lang
+	}
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		resolved, err := BaseLanguageOf(ctx, tx)
 		if err != nil {
@@ -115,6 +121,10 @@ func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 // text: a summary, a finding, a note, stored once and read by everyone who
 // can see it.
 func BaseLanguageForRecord(ctx context.Context, tx pgx.Tx) textlang.Lang {
+	ctx, may := baseLanguageReader(ctx)
+	if !may {
+		return textlang.English
+	}
 	lang, err := BaseLanguageOf(ctx, tx)
 	if err != nil {
 		slog.WarnContext(ctx, "the installation's base language could not be read; English is used instead",
@@ -122,4 +132,12 @@ func BaseLanguageForRecord(ctx context.Context, tx pgx.Tx) textlang.Lang {
 		return textlang.English
 	}
 	return textlang.Lang(lang)
+}
+
+// baseLanguageReader asks the settings read gate unrecorded. A caller it
+// refuses gets English from both readers above, as any failed read does, so the
+// call never needs the grant.
+func baseLanguageReader(ctx context.Context) (context.Context, bool) {
+	readCtx, err := auth.Unrecorded(ctx, installationSettingsObject, principal.ActionRead)
+	return readCtx, err == nil
 }

@@ -134,6 +134,9 @@ func (c toolRoleCall) args(pool *recordPool) map[string]any {
 			args[name] = value
 		}
 	}
+	if c.kindArg != "" {
+		return c.withKind(args, pool)
+	}
 	return args
 }
 

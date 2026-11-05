@@ -159,3 +159,16 @@ func TestAReadSeatIsOfferedOnlyReadTools(t *testing.T) {
 		t.Error("a read seat is not offered a read tool")
 	}
 }
+
+// A tool answering who the caller is stays offered whatever checks its path
+// asks, as the scope filter keeps it.
+func TestASelfDescribingToolIsOfferedWithoutItsChecks(t *testing.T) {
+	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
+	spec := targetSpec("who_am_i", principal.ScopeRead, mcp.TierAutoExecute)
+	spec.SelfDescribing, spec.Unlisted = true, false
+	r.Register(&argsTool{spec: spec})
+	r.required = map[string][]auth.Check{"who_am_i": dealCheck(t, "installation_settings.read")}
+	if _, ok := offeredByName(grantedCtx(principal.SeatFull), r)["who_am_i"]; !ok {
+		t.Error("a self-describing tool is hidden from a caller who lacks a check its path asks")
+	}
+}

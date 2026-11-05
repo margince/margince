@@ -42,7 +42,12 @@ func (s *Store) ProjectDealTotalsTx(ctx context.Context, tx pgx.Tx, id ids.Proje
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return ProjectDealTotals{}, err
 	}
-	base, err := s.installation.BaseCurrency(ctx, tx)
+	// A caller who may not read it is withheld the totals, not the read.
+	readCtx, err := auth.Unrecorded(ctx, installationSettingsObject, principal.ActionRead)
+	if err != nil {
+		return ProjectDealTotals{}, err
+	}
+	base, err := s.installation.BaseCurrency(readCtx, tx)
 	if err != nil {
 		return ProjectDealTotals{}, err
 	}

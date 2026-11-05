@@ -1757,7 +1757,7 @@ backend|./internal/compose/integration|TestTheStopNamesNoContact|1.08
 backend|./internal/compose/integration|TestTheSuggestionListPagesAndFilters|1.57
 backend|./internal/compose/integration|TestTheSweepLeavesAnOccurrenceInsideItsLease|1.05
 backend|./internal/compose/integration|TestTheTeamWeekCountsWhatAdvanced|1.18
-backend|./internal/compose/integration|TestTheToolRoleMatrixIsPublished|189.81
+backend|./internal/compose/integration|TestTheToolRoleMatrixIsPublished|546.00
 backend|./internal/compose/integration|TestTheTrackRecordUnderASwitchCountsTheRepsOwnDecisions|1.38
 backend|./internal/compose/integration|TestTheTranscriptReadingDoorQueuesAndThenReportsOnItself|1.74
 backend|./internal/compose/integration|TestTheUndoTriggersAgreeWithTheGoPredicates|1.41
@@ -1767,6 +1767,7 @@ backend|./internal/compose/integration|TestThreeCompaniesWorkOneProjectAndEachPa
 backend|./internal/compose/integration|TestTimelineScopedToOneProjectDropsTheOtherEngagement|7.11
 backend|./internal/compose/integration|TestTimelineWithoutAScopeStillSeesEveryEngagement|8.83
 backend|./internal/compose/integration|TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas|4.79
+backend|./internal/compose/integration|TestToolsListAgreesWithTheGateForAnOperatorsRoles|254.46
 backend|./internal/compose/integration|TestTroubledCarriesFailedAndStalledRunsAndOnlyTheCallers|1.00
 backend|./internal/compose/integration|TestTwoSendsOfOnePromiseEachBecomeATask|3.66
 backend|./internal/compose/integration|TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable|2.23

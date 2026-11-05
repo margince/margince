@@ -327,17 +327,21 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 		// replies on the one the first seed captured.
 		"channel_conversation": func() string {
 			c := &channelSendEnv{AppEnv: s.e, user: sessionUserID(s.t, s.e)}
-			if existing := s.ownerScalar(`SELECT count(*)::text FROM activity WHERE thread_key = $1`, channelSendThreadKey); existing != "0" {
+			// The bot may already be live, connected by an earlier seed or call.
+			connected := func() {
 				if s.ownerScalar(`SELECT count(*)::text FROM channel_connection WHERE archived_at IS NULL`) == "0" {
 					c.connectBot(s.t)
 				}
+			}
+			if existing := s.ownerScalar(`SELECT count(*)::text FROM activity WHERE thread_key = $1`, channelSendThreadKey); existing != "0" {
+				connected()
 				return s.ownerScalar(`SELECT id::text FROM activity WHERE thread_key = $1`, channelSendThreadKey)
 			}
 			c.contactID = s.create["contact"]()
 			c.bindIdentity(s.t)
 			c.seedInboundMessage(s.t)
 			c.grantConsent(s.t, "transactional")
-			c.connectBot(s.t)
+			connected()
 			return c.activityID
 		},
 		"transcript": func() string {

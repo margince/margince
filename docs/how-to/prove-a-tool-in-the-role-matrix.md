@@ -38,6 +38,11 @@ in `platform/auth` recorded refusing that role in that call.
    `tools/list` then hides the tool from a role without that grant. A branch that only changes what an
    answer holds uses `auth.Allows` or `auth.AdminGranted`, which record nothing. Never write
    `auth.Require(...) == nil` in a branch.
+   - A read the call still answers without, such as a setting with a default, is a branch too. Read it
+     under the context `auth.Unrecorded` returns, or a role without the grant is not offered a tool it can run.
+   - A tool that picks its record by an enum argument, such as `record_type`, is called again as the admin.
+     There is one call for each word of that enum. Its row keeps only the checks that every one of those
+     calls asked.
    - A gate that hides a row that is there answers through `auth.HideRow`, so the 404 is recorded as a refusal.
      A row that is not there stays a plain 404, and fails the sweep.
    - An act only a seat short of a row scope needs goes through `auth.RequireRowScopeNarrowerThan`. Its check

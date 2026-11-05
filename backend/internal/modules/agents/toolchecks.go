@@ -67,10 +67,11 @@ func mustReadToolChecks(raw []byte) map[string][]auth.Check {
 // checks the caller lacks is not offered, and a router offers only the actions
 // whose verbs the caller holds. A verb with no recorded row stays offered: the
 // gate still decides each call. Humans and the system are not narrowed, since
-// their authority is enforced at the store and never listed.
+// their authority is enforced at the store and never listed. A self-describing
+// tool is never narrowed, for the reason invocableByCaller keeps it.
 func (r *Registry) grantedTo(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSpec, bool) {
 	p, ok := principal.Actor(ctx)
-	if !ok || p.Type != principal.PrincipalAgent {
+	if !ok || p.Type != principal.PrincipalAgent || spec.SelfDescribing {
 		return spec, true
 	}
 	if len(spec.Actions) == 0 {

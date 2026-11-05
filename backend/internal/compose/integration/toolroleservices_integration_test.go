@@ -99,27 +99,48 @@ var stagedApprovalID = regexp.MustCompile(`repeats with "approval_id": "([0-9a-f
 // callThroughApproval calls a tool, and when the answer is a confirm-first
 // stage, releases it as the passport's human and repeats the call with the
 // approval. So a governed tool is measured where it runs, behind its gate,
-// rather than where it waits.
+// rather than where it waits. It also names what refused the release: the
+// human's grants, or a row their inbox hides though the approval is there.
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
-func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPClient, verb string, args map[string]any) apptest.MCPResult {
+func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPClient, verb string, args map[string]any) (apptest.MCPResult, []string) {
 	t.Helper()
 	got := client.Call(t, verb, args)
 	staged := stagedApprovalID.FindStringSubmatch(got.Text)
 	if !got.IsError || staged == nil {
-		return got
+		return got, nil
 	}
-	var refusal json.RawMessage
-	switch status := e.Call(t, "POST", "/v1/approvals/"+staged[1]+"/approve", AnyMap{}, nil, &refusal); status {
+	switch status := e.Call(t, "POST", "/v1/approvals/"+staged[1]+"/approve", AnyMap{}, nil, nil); status {
 	case http.StatusOK:
-	case http.StatusForbidden, http.StatusNotFound:
-		// The human may not release the call, so the role cannot run it. The
-		// call staged this approval, so a 404 is the inbox hiding it from them.
-		return apptest.MCPResult{IsError: true, Text: "releasing the staged call: permission denied " + string(refusal)}
+	case http.StatusForbidden:
+		return got, []string{releaseRefusedByGrant}
+	case http.StatusNotFound:
+		if approvalExists(t, e, staged[1]) {
+			return got, []string{releaseRefusedByRow}
+		}
+		return got, nil
 	default:
-		return got
+		return got, nil
 	}
 	released := map[string]any{"approval_id": staged[1]}
 	maps.Copy(released, args)
-	return client.Call(t, verb, released)
+	return client.Call(t, verb, released), nil
+}
+
+// What refused the release of a staged call, beside the refusals the gates
+// noted in the call itself.
+const (
+	releaseRefusedByGrant = "release:permission"
+	releaseRefusedByRow   = "release:row:approval"
+)
+
+// approvalExists reads the approval past every gate, so a 404 is a hidden row
+// only for an approval that is there.
+func approvalExists(t *testing.T, e *apptest.AppEnv, id string) bool {
+	t.Helper()
+	var exists bool
+	if err := e.Owner.QueryRow(t.Context(), `SELECT EXISTS (SELECT 1 FROM approval WHERE id = $1)`, id).Scan(&exists); err != nil {
+		t.Fatalf("reading approval %s: %v", id, err)
+	}
+	return exists
 }

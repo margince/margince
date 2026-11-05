@@ -145,11 +145,14 @@ func (c *MCPClient) ListedTools(t *testing.T) []ListedTool {
 		if !ok {
 			t.Fatalf("tools/list entry is not an object: %v", entry)
 		}
-		name, _ := tool["name"].(string)
-		if name == "" {
+		name, ok := tool["name"].(string)
+		if !ok || name == "" {
 			t.Fatalf("tools/list entry carries no name: %v", tool)
 		}
-		description, _ := tool["description"].(string)
+		description, ok := tool["description"].(string)
+		if !ok {
+			t.Fatalf("%s's description is not a string: %v", name, tool["description"])
+		}
 		schema, err := json.Marshal(tool["inputSchema"])
 		if err != nil {
 			t.Fatalf("%s's input schema does not encode: %v", name, err)
