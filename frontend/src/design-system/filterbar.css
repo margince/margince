@@ -115,3 +115,6 @@
 .filter-bar[data-labels="inside"] .field:has([aria-invalid="true"]) {
   border-color: var(--danger);
 }
+.filter-bar[data-labels="inside"] .field:has([aria-invalid="true"]):focus-within {
+  box-shadow: var(--focus-glow-danger);
+}

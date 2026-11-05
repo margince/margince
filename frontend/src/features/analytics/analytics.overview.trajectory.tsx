@@ -13,6 +13,7 @@ import {
 import { DAY_MS, dayInZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { metricOf } from "./analytics.overview.readings";
+import { lastInstant } from "./analytics.period";
 import {
   type ReportingChart,
   type ReportingEvaluation,
@@ -54,7 +55,11 @@ export function QuarterTrajectory({
   const short = (value: number) => formatMoneyCompact(value, currency, locale);
   const amount = (value: number | null | undefined) =>
     reportingCompactAmount(value, trend.unit, currency, locale);
-  const nowDate = formatDayMonth(interval.end_at, locale, timezone);
+  const nowDate = formatDayMonth(
+    running ? interval.end_at : lastInstant(interval),
+    locale,
+    timezone,
+  );
   return (
     <TrajectoryChart
       label={t("analytics.trajectory.label")}

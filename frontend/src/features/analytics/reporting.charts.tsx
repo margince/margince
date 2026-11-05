@@ -217,7 +217,7 @@ function BoardResults({
   );
 }
 
-// Charts read against a target per person or per figure: narrow lists that
+// Charts read against a target per member or per figure: narrow lists that
 // read beside the figures rather than across the sheet.
 const RAIL_KINDS: ReadonlySet<ReportingChart["kind"]> = new Set([
   "owner_attainment",

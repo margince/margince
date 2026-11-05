@@ -78,7 +78,9 @@ Two sections appear only for some seats. **My outcomes** is for a seat that sees
 
 Analytics opens on **Overview**. The opening view follows your work and the view you last chose.
 
-**Sales review** opens with one card of readings: sales won first and largest, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. A chart under the readings shows sales won so far, with the target as a line across when there is one. While the period is still running, it also shows the forecast dashed to the period's end and the modelled range as a band. Sales won carries its target when a matching target is available. A forecast label says whether the figure is a manager call, won sales plus confirmed committed deals, or a weighted estimate. A manager call shows its date. The modelled range is separate from that forecast.
+**Sales review** opens with one card of readings: sales won first and largest, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. Sales won carries its target when a matching target is available. A forecast label says whether the figure is a manager call, won sales plus confirmed committed deals, or a weighted estimate. A manager call shows its date.
+
+The modelled range is separate from that forecast. A chart under the readings shows sales won so far, with the target as a line across when there is one. While the period is still running and the forecast can be shown, the chart carries it on to the period's end as a broken line. The modelled range shows as a band around it when both of its ends are set.
 
 **Quarter outlook** sits beside the readings, with **Needs your attention** under it. It leads with one sentence on where the quarter stands, followed by the rest of that paragraph; **Read the full outlook** opens the later paragraphs. It uses the figures and evidence for the selected view. **Supporting records** opens its sources. Available actions stay usable while the text loads or cannot be written. Empty summaries and empty decision sections are left out.
 
@@ -92,7 +94,7 @@ A zero, a hidden figure, a failed one and a day that cannot be read each say so 
 
 Under details, **How your outcomes developed** shows more weekly history, and **What happened to your handoffs** follows the ones you sent in the period. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
 
-**Team prospecting** has the record scope, a **Date range** of this or last week or month, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the team outlook and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
+**Team prospecting** has the record scope, a **Date range** of this or last week or month, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the **Team prospecting outlook** and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
 
 Under it come what holds the team up: waiting handoffs, handoffs sent back or turned down, and leads waiting for a reply. Each opens its own list, and the reasons count the decisions made in the period.
 
@@ -192,7 +194,7 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 ## Performance
 
-**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. The figures and charts sit on one sheet, and progress to target by person sits beside them. **Filters** holds the product, sales initiative, country, industry and value basis dials, and opens by itself when one of them is set. **View records**, at the foot of each chart with data, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
+**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. The figures and charts sit on one sheet, and progress to target for each member sits beside them. **Filters** holds **Product**, **Sales initiative**, **Country · company address**, **Industry** and **Value basis**, and opens by itself when one of them is set. **View records**, at the foot of each chart with data, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
 The default **SDR outcomes** tab follows your workflow: first qualifications without handoffs, or accepted handoffs when used. It also shows held meetings, first response time and leads still waiting for a reply. The period’s count includes only leads that came in during that period. Saved reports keep their chosen figures.
 
@@ -252,7 +254,7 @@ Problems with single records are shown in the review of the Forecast section.
 
 ## Forecast
 
-The **Forecast** section of Analytics answers one question (where will this period land?) and keeps three kinds of claim apart. The forecast, the checks before the call, the deals and the charts sit on one sheet, with **Where the period lands** and **Data and evidence checked** beside it.
+The **Forecast** section of Analytics answers one question (where will this period land?) and keeps three kinds of claim apart. The forecast, the checks before the call, the deals and the charts sit on one sheet. **Where the period lands** and **Data and evidence checked** sit beside it.
 
 | Reading | What kind of claim it is |
 |---|---|
