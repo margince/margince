@@ -3,7 +3,7 @@
 
 import { useEffect } from "react";
 import { replaceDial } from "../../lib/urlstate";
-import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
+import type { Worklist, WorklistItem } from "../../lib/worklisttypes";
 
 /**
  * The Home address dial that opens one row of the day, as a click on it does.
