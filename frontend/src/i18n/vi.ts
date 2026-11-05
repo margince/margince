@@ -7183,8 +7183,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Chuỗi thư mới",
   "compose.copies": "Cc và Bcc",
   "compose.signsOffAs": "Kết thư bằng “{closing}”.",
-  "compose.reasonRecord": "Ghi lý do này",
-  "compose.reasonRecordFor": "Ghi lý do này: {reason}, cho {address}",
+  "compose.reasonRecord": "Giữ làm lý do lâu dài",
+  "compose.reasonStanding":
+    "Lý do lâu dài áp dụng cho loại thư này gửi {address} từ công ty của bạn cho đến khi có ai thu hồi. Đây là lời xác nhận của bạn, không phải sự đồng ý của họ.",
+  "compose.reasonRecordFor": "Giữ làm lý do lâu dài: {reason}, cho {address}",
   "compose.reasonLabel": "Vì sao bạn có thể viết cho {address}",
   "compose.replyIntent": "Mục đích trả lời",
   "compose.newIntent": "Mục đích email",
@@ -7448,6 +7450,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageConfirmTitle": "Gửi tin nhắn",
   "compose.sendMessageBody": "Tin nhắn được gửi ngay. Không thể hoàn tác.",
   "directSend.open": "Gửi và ghi nhận ngoại lệ",
+  "directSend.sent": "Đã gửi như một ngoại lệ có ghi nhận.",
   "directSend.opening": "Đang mở…",
   "directSend.alreadySettled":
     "Đã có quyết định cho mục này. Mở phần xem lại để xem kết quả.",

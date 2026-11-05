@@ -7352,8 +7352,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
-  "compose.reasonRecord": "Diesen Grund erfassen",
-  "compose.reasonRecordFor": "Diesen Grund erfassen: {reason}, für {address}",
+  "compose.reasonRecord": "Als dauerhaften Grund festhalten",
+  "compose.reasonStanding":
+    "Ein dauerhafter Grund gilt für diese Art von Nachricht an {address} aus deinem Unternehmen, bis ihn jemand widerruft. Er ist deine Angabe, keine Einwilligung.",
+  "compose.reasonRecordFor":
+    "Als dauerhaften Grund festhalten: {reason}, für {address}",
   "compose.reasonLabel": "Warum du an {address} schreiben darfst",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
@@ -7629,6 +7632,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageBody":
     "Die Nachricht wird sofort gesendet. Das lässt sich nicht rückgängig machen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
+  "directSend.sent": "Als festgehaltene Ausnahme gesendet.",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":
     "Darüber wurde bereits entschieden. Öffne die Prüfung, um das Ergebnis zu sehen.",

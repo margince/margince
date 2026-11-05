@@ -27,7 +27,8 @@ type Vouch = ReasonTarget & Readonly<{ reason: string }>;
  * A rep's own reason to write to a contact the engine found nothing for. The
  * standing vouch `allowContact` writes, under the rep's name and not consent,
  * for the category the engine resolved; the engine is then asked again.
- * A reason the message already names is one press, not a second pick.
+ * A reason the message already names is one press, not a second pick. The
+ * caption says it is standing, so it is not read as a fact about one message.
  */
 export function ContactReasonPick({
   target,
@@ -51,6 +52,9 @@ export function ContactReasonPick({
   const chosenLabel = options.find((o) => o.value === chosen)?.label;
   return (
     <div className="compose-reason">
+      <p className="t-caption">
+        {t("compose.reasonStanding", { address: target.address })}
+      </p>
       {chosenLabel ? (
         <Button
           onClick={() => vouch.mutate({ ...target, reason: chosenLabel })}

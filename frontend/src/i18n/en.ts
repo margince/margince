@@ -7370,8 +7370,11 @@ export const en = {
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
-  "compose.reasonRecord": "Record this reason",
-  "compose.reasonRecordFor": "Record this reason: {reason}, for {address}",
+  "compose.reasonRecord": "Keep as a standing reason",
+  "compose.reasonStanding":
+    "A standing reason covers this kind of message to {address} from your company until someone revokes it. It is your word, not their consent.",
+  "compose.reasonRecordFor":
+    "Keep as a standing reason: {reason}, for {address}",
   "compose.reasonLabel": "Why you may write to {address}",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
@@ -7644,6 +7647,7 @@ export const en = {
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
   "directSend.open": "Send with a recorded exception",
+  "directSend.sent": "Sent as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",

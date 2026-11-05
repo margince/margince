@@ -49,6 +49,7 @@ const overrideWarningFile = "internal/modules/consent/overridewarning.go"
 // data, not a cost
 var warningDigests = map[string]string{
 	"override-v1": "de2de8c051f8eed3177d2583e13ef5f72d77d0db20d4f32b27ddea0e6d494379",
+	"override-v2": "8807f8c1106d22c1445c92a2d5247b0cdf02a8eb1346f93847a55e6588e052e4",
 }
 
 func TestTheOverrideWarningTextMatchesItsVersion(t *testing.T) {

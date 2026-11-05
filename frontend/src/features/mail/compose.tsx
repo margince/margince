@@ -470,7 +470,10 @@ export function ComposeWindow({
                     send.permission.refusal && {
                       ...send.permission.refusal,
                       remedies: (
-                        <SendRefusalRemedies review={send.sendReview} />
+                        <SendRefusalRemedies
+                          review={send.sendReview}
+                          onDirectSent={send.directSent}
+                        />
                       ),
                     }
                   }

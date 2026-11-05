@@ -39,24 +39,22 @@ type OverrideWarning struct {
 // MOVE IT WHENEVER THE TEXT BELOW CHANGES, in the same commit. An instruction
 // naming a version whose words have since been edited is a record of an
 // acknowledgement nobody made.
-const OverrideWarningVersion = "override-v1"
+const OverrideWarningVersion = "override-v2"
 
-// overrideWarningText is what a human is shown.
+// overrideWarningText is what a human is shown, beside the specific reason
+// the check gave.
 //
 // It says three things, and each is there because leaving it out would let
 // somebody acknowledge something untrue:
 //
-//   - the refusal STANDS. Directing a send is not a correction of the engine
-//     and not a grant of consent; the record will still say this message was
-//     refused.
-//   - the DECISION IS THEIRS, by name. The instruction records who they are and
-//     what they said, and it cannot be edited afterwards.
-//   - it covers THIS message only. The next one to the same contact is refused
-//     again, so this is not a door being opened.
-const overrideWarningText = "The engine refused this message, and that refusal stands: " +
-	"sending it now records an exception, never consent. Your name, your reason and the exact " +
-	"message are written to a record that cannot be edited afterwards. This covers this message " +
-	"alone — the next one to the same recipient is judged from scratch."
+//   - the refusal STANDS. An exception is not a correction of the check and
+//     not a grant of consent.
+//   - it covers THIS message only, and no later one.
+//   - the record is KEPT: their name, their explanation and the message, in a
+//     record nobody can edit.
+const overrideWarningText = "The send check still blocks this message. " +
+	"This sends only this message. Your name, your explanation and the message are kept " +
+	"in a record that cannot be edited. It does not grant consent or permission for future messages."
 
 // TheOverrideWarning answers the caution and its version together, because a
 // surface that could get one without the other would show words while naming a

@@ -272,6 +272,20 @@ export function useComposeSend({
   const queryClient = useQueryClient();
   const toast = useToast();
   const { setSendUnavailable } = fields;
+  // What every sent message does next, whichever door sent it: the draft is
+  // spent, the timeline reads again, and the composer closes.
+  const finishSent = () => {
+    savedDraft.sent();
+    const changed = [
+      ...entityTimelineKeys(entityType, entityId),
+      ...(dealId ? entityTimelineKeys("deal", dealId) : []),
+    ];
+    for (const queryKey of changed) {
+      queryClient.invalidateQueries({ queryKey });
+    }
+    onSent?.();
+    onClose();
+  };
   const send = useMutation({
     mutationKey: ["email", entityId],
     // The grounding is the variable, so a stale closure cannot file the mail
@@ -296,14 +310,6 @@ export function useComposeSend({
         setSendUnavailable(true);
         return;
       }
-      savedDraft.sent();
-      const changed = [
-        ...entityTimelineKeys(entityType, entityId),
-        ...(dealId ? entityTimelineKeys("deal", dealId) : []),
-      ];
-      for (const queryKey of changed) {
-        queryClient.invalidateQueries({ queryKey });
-      }
       // A scheduled send may need undoing, so the toast opens the queue. An
       // `open` verb keeps it until dismissed, door and all.
       if (result.scheduled) {
@@ -316,10 +322,17 @@ export function useComposeSend({
           },
         });
       }
-      onSent?.();
-      onClose();
+      finishSent();
     },
   });
+  // A message sent past its refusal as a recorded exception. The refusal it
+  // answered is cleared with the rest, so nothing on screen invites a second
+  // send of a message that has gone.
+  const directSent = () => {
+    send.reset();
+    toast.show(t("directSend.sent"));
+    finishSent();
+  };
 
   // A refusal keeps the form open under copy naming the next move, without
   // the raw server detail beside it.
@@ -423,6 +436,7 @@ export function useComposeSend({
     fieldsRef,
     confirm,
     clearAttempt: () => setAttempted(false),
+    directSent,
   };
 }
 
