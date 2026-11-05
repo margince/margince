@@ -228,10 +228,10 @@ func proveM05ConcentrationNeedsCountAndValue(t *testing.T) {
 	e := setupForecast(t)
 	small := int64(10_000)
 	for range 9 {
-		e.seedOpenDeal(t, "Ordinary", pipelineTestStage, &e.Rep1, &small, nil)
+		e.seedOpenDeal(t, "Ordinary", pipelineTestStage, &e.Rep1, &small)
 	}
 	whale := int64(900_000)
-	e.seedOpenDeal(t, "The whale", pipelineTestStage, &e.Rep1, &whale, nil)
+	e.seedOpenDeal(t, "The whale", pipelineTestStage, &e.Rep1, &whale)
 
 	got, err := askTool(e.wideLensCtx(e.Rep1), t, e,
 		`{"entity":"pipeline-current","measures":[`+
@@ -280,7 +280,7 @@ func proveM07StuckDealsUseTheSharedRule(t *testing.T) {
 		        (now() + interval '30 days')::date, 'manual', 'human:x',
 		        now() - interval '90 days', now() - interval '90 days')`,
 		e.pipeline, e.stages[pipelineTestStage], e.Rep1)
-	e.seedOpenDeal(t, "Fresh", pipelineTestStage, &e.Rep1, &amount, nil)
+	e.seedOpenDeal(t, "Fresh", pipelineTestStage, &e.Rep1, &amount)
 	// Idle as long, but deferred to a date ahead: that is an agreed next step.
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor,
 		currency, status, expected_close_date, source, captured_by, created_at, updated_at, wait_until)

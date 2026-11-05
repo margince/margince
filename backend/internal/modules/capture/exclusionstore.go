@@ -127,10 +127,10 @@ func (s *ExclusionStore) List(ctx context.Context) ([]Exclusion, error) {
 }
 
 // Add records one rule. A workspace rule takes the capture-settings update
-// grant (admin/ops); a user rule takes only a human seat, and names the
+// grant (admin/ops); a user rule takes only a user or their agent, and names the
 // caller. Idempotent on the folded value: re-adding answers the existing row.
 func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Exclusion, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return Exclusion{}, err
 	}
 	actor, err := storekit.Actor(ctx)
@@ -201,7 +201,7 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 // user it names. Somebody else's user rule is not theirs to see, so it
 // answers not-found like a row that is not there.
 func (s *ExclusionStore) Remove(ctx context.Context, id ids.UUID) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	actor, err := storekit.Actor(ctx)

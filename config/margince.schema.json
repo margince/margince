@@ -870,6 +870,16 @@
           ],
           "default": true
         },
+        "silent_close_days": {
+          "description": "Days without word from the customer after which Margince closes an open deal as lost.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 60,
+          "maximum": 730,
+          "default": 120
+        },
         "stage_autopilot_enabled": {
           "description": "Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move.",
           "type": [
@@ -1299,7 +1309,15 @@
             "string",
             "null"
           ],
-          "default": "commit_evidence"
+          "default": "likely"
+        },
+        "forecast_likely_threshold": {
+          "description": "The level, 1 to 100, from which the Likely forecast counts an open deal with a confirmed close date.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 90
         },
         "forecast_self_correcting": {
           "description": "Let the forecast correct itself: each stage's rate moves with the outcome of the deals recorded from it, and a risk signal counts once frozen forecasts show its effect. Off, the forecast uses the rate set on each stage.",

@@ -15,10 +15,10 @@ import (
 // deals that month counted.
 func TestOpenPipelineGroupsByCloseMonth(t *testing.T) {
 	e := setupForecast(t)
-	novemberOne := e.seedOpenDeal(t, "Nov one", 20, &e.Rep1, nil, nil)
-	novemberTwo := e.seedOpenDeal(t, "Nov two", 20, &e.Rep1, nil, nil)
-	december := e.seedOpenDeal(t, "Dec", 20, &e.Rep1, nil, nil)
-	undated := e.seedOpenDeal(t, "Undated", 20, &e.Rep1, nil, nil)
+	novemberOne := e.seedOpenDeal(t, "Nov one", 20, &e.Rep1, nil)
+	novemberTwo := e.seedOpenDeal(t, "Nov two", 20, &e.Rep1, nil)
+	december := e.seedOpenDeal(t, "Dec", 20, &e.Rep1, nil)
+	undated := e.seedOpenDeal(t, "Undated", 20, &e.Rep1, nil)
 	for deal, day := range map[any]any{
 		novemberOne: "2026-11-03", novemberTwo: "2026-11-30", december: "2026-12-01",
 	} {

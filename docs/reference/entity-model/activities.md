@@ -839,6 +839,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `attachment_account_ix`: `btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL)`
+- `attachment_activity_ix`: `btree (activity_id) WHERE (activity_id IS NOT NULL)`
 - `attachment_contract_ix`: `btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))`
 - `attachment_external_part_key`: `unique, btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)`
 - `attachment_pkey`: `unique, btree (id)`
@@ -1238,7 +1239,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## transcript_read
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1248,6 +1249,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `attempt_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `finished_at` | `timestamp with time zone` |  |  |
 | `line_count` | `integer`, default `0` | yes |  |
+| `outcome` | `jsonb` |  |  |
 | `proposal_ids` | `uuid[]`, default `'{}'::uuid[]` | yes |  |
 | `requested_by` | `text` | yes |  |
 | `started_at` | `timestamp with time zone` |  |  |

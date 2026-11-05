@@ -75,11 +75,7 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	// Every door derives the blocks from a layout, so the charts drawn are the
 	// ones the layout places.
 	deriveLayoutBlocks(&selection)
-	// A selection with no charts serialises the same whichever door built it,
-	// so the evaluation key does not depend on nil versus empty.
-	if selection.Blocks == nil {
-		selection.Blocks = []crmcontracts.ReportingBlockKind{}
-	}
+	withChartList(&selection)
 	if err := s.validateSelection(ctx, selection); err != nil {
 		return Evaluation{}, err
 	}

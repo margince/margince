@@ -118,6 +118,7 @@ export const SETTINGS_SECTIONS = {
     "installationSettings.callZalo",
     "installationSettings.individualPerformance",
     "installationSettings.selfCorrecting",
+    "installationSettings.likelyThreshold",
     "followUpSettings.days",
     "signatureTemplate.label",
   ],
@@ -219,6 +220,7 @@ export const SETTINGS_SECTIONS = {
   automations: ["auto.instances", "auto.catalog"],
   privacy: [
     "settings.purposes",
+    "privacy.customerNotices",
     "retention.title",
     "privacy.requestsPanel",
     "notice.title",

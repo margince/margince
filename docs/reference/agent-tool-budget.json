@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 45,
+    "tools": 47,
     "system_frame_tokens": 592,
-    "tokens": 32126,
-    "median_tool_tokens": 593,
-    "mean_tool_tokens": 713
+    "tokens": 35742,
+    "median_tool_tokens": 620,
+    "mean_tool_tokens": 760
   },
   "agents": [
     {
@@ -46,12 +46,12 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 45,
-      "tokens": 4298,
-      "listing_tokens": 2125,
-      "step_schema_tokens": 1581,
+      "of_served_tools": 47,
+      "tokens": 4319,
+      "listing_tokens": 2134,
+      "step_schema_tokens": 1592,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 18912,
+      "headroom_tokens": 18891,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -67,12 +67,12 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 45,
-      "tokens": 6381,
-      "listing_tokens": 3357,
-      "step_schema_tokens": 2432,
+      "of_served_tools": 47,
+      "tokens": 6422,
+      "listing_tokens": 3373,
+      "step_schema_tokens": 2457,
       "percent_of_ceiling": 19,
-      "headroom_tokens": 16829,
+      "headroom_tokens": 16788,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -85,31 +85,35 @@
   "tool_cost": [
     {
       "name": "read_reports",
-      "tokens": 2310
-    },
-    {
-      "name": "find_records",
-      "tokens": 1862
-    },
-    {
-      "name": "change_activities",
-      "tokens": 1840
-    },
-    {
-      "name": "change_state",
-      "tokens": 1762
+      "tokens": 2492
     },
     {
       "name": "read_workspace",
-      "tokens": 1681
+      "tokens": 2061
+    },
+    {
+      "name": "change_state",
+      "tokens": 1896
+    },
+    {
+      "name": "change_activities",
+      "tokens": 1878
+    },
+    {
+      "name": "find_records",
+      "tokens": 1874
     },
     {
       "name": "read_details",
-      "tokens": 1461
+      "tokens": 1662
     },
     {
       "name": "send_outbound",
-      "tokens": 1314
+      "tokens": 1453
+    },
+    {
+      "name": "change_reports",
+      "tokens": 1286
     },
     {
       "name": "read_view",
@@ -120,36 +124,40 @@
       "tokens": 1001
     },
     {
+      "name": "read_forecast",
+      "tokens": 929
+    },
+    {
       "name": "read_analytics",
       "tokens": 927
     },
     {
-      "name": "read_forecast",
-      "tokens": 908
+      "name": "change_capture",
+      "tokens": 865
+    },
+    {
+      "name": "change_attention",
+      "tokens": 807
+    },
+    {
+      "name": "change_compliance",
+      "tokens": 799
     },
     {
       "name": "bulk_update_records",
       "tokens": 798
     },
     {
-      "name": "change_attention",
-      "tokens": 781
-    },
-    {
       "name": "create_record",
-      "tokens": 776
+      "tokens": 794
     },
     {
       "name": "read_lists",
-      "tokens": 773
-    },
-    {
-      "name": "change_reports",
-      "tokens": 710
+      "tokens": 788
     },
     {
       "name": "change_settings",
-      "tokens": 706
+      "tokens": 764
     },
     {
       "name": "change_access",
@@ -158,6 +166,10 @@
     {
       "name": "change_offers",
       "tokens": 628
+    },
+    {
+      "name": "update_record",
+      "tokens": 626
     },
     {
       "name": "change_record_parts",
@@ -170,10 +182,6 @@
     {
       "name": "resolve_duplicates",
       "tokens": 613
-    },
-    {
-      "name": "update_record",
-      "tokens": 593
     },
     {
       "name": "change_tags",
@@ -202,6 +210,10 @@
     {
       "name": "schedule_meeting",
       "tokens": 409
+    },
+    {
+      "name": "run_research",
+      "tokens": 408
     },
     {
       "name": "list_approvals",
@@ -236,24 +248,20 @@
       "tokens": 324
     },
     {
-      "name": "run_research",
-      "tokens": 312
+      "name": "read_project",
+      "tokens": 307
     },
     {
       "name": "archive_record",
       "tokens": 300
     },
     {
-      "name": "read_project",
-      "tokens": 292
-    },
-    {
       "name": "commit_import",
-      "tokens": 279
+      "tokens": 275
     },
     {
       "name": "read_import",
-      "tokens": 220
+      "tokens": 235
     },
     {
       "name": "read_approval",

@@ -226,7 +226,7 @@ func TestApprovingAReplacedReportNamesTheRunThatReplacedIt(t *testing.T) {
 	}
 }
 
-func TestTheUpdateOpsRefuseAnAgent(t *testing.T) {
+func TestAnAgentChangesTestsAndCancelsADraftImport(t *testing.T) {
 	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	var minted struct {
@@ -239,19 +239,26 @@ func TestTheUpdateOpsRefuseAnAgent(t *testing.T) {
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	for _, op := range []struct {
-		method, path string
-		body         AnyMap
-	}{
-		{http.MethodPatch, "/v1/imports/" + profile.RunID, AnyMap{"version": 1, "draft_step": "map"}},
-		{http.MethodPost, "/v1/imports/" + profile.RunID + "/validate", AnyMap{"version": 1}},
-		{http.MethodPost, "/v1/imports/" + profile.RunID + "/cancel", nil},
-	} {
-		if status := e.Call(t, op.method, op.path, op.body, bearer, nil); status != http.StatusForbidden {
-			t.Errorf("agent %s %s → %d, want 403: the contract declares it human-only", op.method, op.path, status)
-		}
+	path := "/v1/imports/" + profile.RunID
+	var saved importRunDTO
+	if status := e.Call(t, http.MethodPatch, path, AnyMap{"version": 1, "draft_step": "map"}, bearer, &saved); status != http.StatusOK || saved.DraftStep != "map" {
+		t.Fatalf("the agent's change → %d %+v, want 200 on the map step", status, saved)
 	}
-	if draft := readImportRun(t, e, profile.RunID); draft.Status != "pending" || draft.Version != 1 {
-		t.Fatalf("the draft after the refusals = %+v, want it untouched", draft)
+	var tested importRunDTO
+	if status := e.Call(t, http.MethodPost, path+"/validate", AnyMap{"version": saved.Version}, bearer, &tested); status != http.StatusAccepted || tested.Status != "validating" {
+		t.Fatalf("the agent's test → %d %+v, want 202 and validating", status, tested)
+	}
+	// The first cancel stops the test run, and the second closes the draft.
+	var stopped importRunDTO
+	if status := e.Call(t, http.MethodPost, path+"/cancel", nil, bearer, &stopped); status != http.StatusOK || stopped.Status != "pending" {
+		t.Fatalf("the agent's first cancel → %d %+v, want 200 and back to pending", status, stopped)
+	}
+	var closed importRunDTO
+	if status := e.Call(t, http.MethodPost, path+"/cancel", nil, bearer, &closed); status != http.StatusOK ||
+		closed.Status != "cancelled" || !closed.Released {
+		t.Fatalf("the agent's second cancel → %d %+v, want cancelled with its file released", status, closed)
+	}
+	if draft := readImportRun(t, e, profile.RunID); draft.Status != "cancelled" || !draft.Released {
+		t.Fatalf("the draft after the agent's cancel = %+v, want it cancelled and released", draft)
 	}
 }

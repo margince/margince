@@ -29,12 +29,12 @@ var forecastReadingsCopy = toolCopy{
 	// contract's own phrasing and the payload carries five money fields, so a
 	// caller told a number has to guess which one is not a reading — and
 	// `weighted` is the one that goes unreported when it guesses.
-	Purpose: "Answer what a period is expected to close — `won`, `evidence`, `best_case` and " +
+	Purpose: "Answer what a period is expected to close — `won`, `evidence` (Likely) and " +
 		"`open`, plus `weighted` — under the installation's own fiscal calendar and base " +
 		"currency. `landing` is where the period finishes: won plus the measure it names, or " +
 		"the manager's call.",
 	Limits: "`won` counts deals by the day they ACTUALLY closed, not the day they were " +
-		"expected to. `evidence` is committed pipeline whose close date somebody confirmed; a " +
+		"expected to. `evidence` is Likely: open deals at `likely_threshold` percent or more whose close date somebody confirmed, counted in full; a " +
 		"provisional date stays in `open` and out of `evidence`. `coverage_note` says what the " +
 		"totals do not cover and is absent only when they cover every eligible deal, so " +
 		"quoting a total without it reports a partial pipeline as a complete one. " +
@@ -125,14 +125,14 @@ var dataCoverageCopy = toolCopy{
 
 var readForecastCopy = toolCopy{
 	Purpose: "Read the forecast under the installation's fiscal calendar and base currency. " +
-		"readings: what a period is expected to close — `won`, `evidence`, `best_case`, `open` and " +
+		"readings: what a period is expected to close — `won`, `evidence` (Likely), `open` and " +
 		"`weighted` — and `snapshots`, the period's frozen states, newest first. movement: why " +
 		"the forecast changed between two snapshots, as named causes that sum to the whole " +
 		"difference. input_summary: whether the inputs are sound enough to quote, and how much " +
 		"of the pipeline last night's check reached. input_exceptions: the open input problems, " +
 		"most material first. input_sources: which connectors the check could read, and how far " +
 		"back.",
-	Limits: "`won` counts deals by the day they ACTUALLY closed. `evidence` is committed pipeline " +
+	Limits: "`won` counts deals by the day they ACTUALLY closed. `evidence` is Likely: open deals at `likely_threshold` percent or more " +
 		"whose close date somebody confirmed. `coverage_note` says what the totals leave out; " +
 		"quote it with any total. movement needs `from` then `to`, both from ONE readings answer's " +
 		"`snapshots`; none listed means nothing was frozen yet. Reading twice and subtracting is " +
@@ -143,7 +143,7 @@ var readForecastCopy = toolCopy{
 		"tells them apart, and needs a coverage grant sellers lack.",
 	Instead: "read_reports and find_records with engine query also produce numbers, and neither " +
 		"is the forecast. For a board-pack section, use read_analytics: query with save, then " +
-		"compose.",
+		"compose. To make a call, answer an input exception or share a reading, use change_reports.",
 	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number. Every `_minor` figure " +
 		"is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
 }

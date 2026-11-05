@@ -454,7 +454,7 @@ function readableAssessment(
   locale: Locale,
 ): boolean {
   const unsupported =
-    /\b(?:commit_evidence|qualified_commit_evidence|no_target|nothing checked|i checked|i verified|i couldn[’']t confirm)\b/i;
+    /\b(?:qualified_likely|no_target|nothing checked|i checked|i verified|i couldn[’']t confirm)\b/i;
   return assessmentParagraphs(assessment)
     .flat()
     .every((line) => {

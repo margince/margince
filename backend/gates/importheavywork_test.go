@@ -145,6 +145,10 @@ type importCallGraph struct {
 	// methods holds the declared methods by methodKey.
 	methods  map[string][]*types.Func
 	packages []*types.Package
+	// infos holds the type answers each declaration was checked with, and
+	// fileInfos the same per file for a reader of package-level declarations.
+	infos     map[*ast.FuncDecl]*types.Info
+	fileInfos map[*ast.File]*types.Info
 }
 
 // callSite is one reference; in is nil for a package-level initializer.
@@ -180,6 +184,7 @@ func newImportCallGraph(fset *token.FileSet, groups [][]*ast.File) *importCallGr
 	g := &importCallGraph{
 		fset: fset, decls: map[*types.Func]*ast.FuncDecl{}, owner: map[*ast.FuncDecl]*types.Func{},
 		pkgOf: map[*ast.FuncDecl]string{}, sites: map[*types.Func][]callSite{}, methods: map[string][]*types.Func{},
+		infos: map[*ast.FuncDecl]*types.Info{}, fileInfos: map[*ast.File]*types.Info{},
 	}
 	checked := sharedImports{}
 	infos := make([]*types.Info, len(groups))
@@ -210,13 +215,14 @@ func (s sharedImports) Import(importPath string) (*types.Package, error) {
 
 func (g *importCallGraph) index(files []*ast.File, info *types.Info) {
 	for _, file := range files {
+		g.fileInfos[file] = info
 		for _, decl := range file.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
 			if !ok || fn.Body == nil {
 				continue
 			}
 			if obj, ok := info.Defs[fn.Name].(*types.Func); ok {
-				g.decls[obj], g.owner[fn], g.pkgOf[fn] = fn, obj, file.Name.Name
+				g.decls[obj], g.owner[fn], g.pkgOf[fn], g.infos[fn] = fn, obj, file.Name.Name, info
 				if fn.Recv != nil {
 					g.methods[methodKey(obj)] = append(g.methods[methodKey(obj)], obj)
 				}

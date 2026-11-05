@@ -77,7 +77,7 @@ func (h filterProposalHandlers) withFilterProposalLane(lane completer) filterPro
 
 func (h filterProposalHandlers) ProposeFilter(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

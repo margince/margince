@@ -9,8 +9,8 @@
 ### Where can I see my forecast?
 1. Click **Analytics**, then **Forecast** under **Analytics sections**.
 2. Choose the **Period**: **Quarter**, **Month** or **Week**.
-3. Read the **Period forecast** and what it is made of: **Already won**, **Committed · confirmed dates** and **Best-case addition**.
-   The forecast gap sets the manager’s total against won sales plus confirmed committed deals.
+3. Read the **Period forecast** and what it is made of: **Already won**, **Likely** and **Weighted**.
+   The forecast gap sets the manager’s total against won sales plus Likely deals.
    Review **Checks before the call**; source details are under **Data and evidence checked**.
 A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
 
@@ -22,7 +22,7 @@ A rep opens on their own records.
 
 ### How do I see my pipeline report?
 1. Click **Analytics**, then the **Pipeline** tab.
-2. Read the totals at the top. Then read **Open deals by stage**, **Open pipeline by close month**, **Forecast categories** and **Open deals per company**.
+2. Read the totals at the top. Then read **Open deals by stage**, **Open pipeline by close month**, **Forecast by probability** and **Open deals per company**.
 3. Press **Explain this number** on any card to see the deals behind it.
 The **Deals** board itself also shows each stage's total and weighted total at the top of its column. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 
@@ -100,7 +100,7 @@ Under it come what holds the team up: waiting handoffs, handoffs sent back or tu
 
 Qualification credit stays with the owner at the first qualification, and each lead counts once in the period when that happened. Qualifications whose earlier owner was not recorded count in the whole-company total. Owner and team readings show the attributed part with a partial-history notice. Existing targets for leads that came in keep their own label and meaning. The Leads report still follows the period when they came in.
 
-A handoff counts for whoever handed it on, and the team is today’s team. The rows need not add up to the team: a lead with no owner is in no row, and a shared meeting is in each. A figure your role may not see is named under the table, never shown as zero, and with **Show individual performance** off no row shows. A total of one colleague’s work is held back, and a team of you and one colleague hides its readings and movement, with the reason.
+A handoff counts for whoever handed it on, and the team is today’s team. The rows need not add up to the team: a lead with no owner is in no row, and a shared meeting is in each. A figure your role may not see is named under the table, never shown as zero, and with **Show individual performance** off no row shows. A total of one colleague’s work is held back, and a team of you and one colleague hides its readings and movement, with the reason. So does a team that would leave one colleague once another team's members are taken away.
 
 Each view keeps its own record scope, pipeline, period, close window and dates. **All pipelines** on Sales review is still set when you come back from the other views. A link that names a view and its filters opens what it names and changes nothing you chose. What you chose is kept per account in this browser until you sign out. The links out of a view carry its filters, and Back returns to the same filters, place and card. Forecast covers every pipeline, so it says so first when the figure you came from counts one pipeline of several.
 
@@ -119,7 +119,7 @@ The scope picker rules Performance, Forecast, Pipeline and Custom reports, so th
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only
-the owners you may measure, and the answer says so. With **Show individual performance** off, grouping or filtering by a colleague is refused. So is a figure holding only one colleague's work besides yours. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance).
+the owners you may measure, and the answer says so. With **Show individual performance** off, grouping or filtering by a colleague is refused. So is a figure holding only one colleague's work besides yours, or one that another team's total leaves to one colleague. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance).
 
 ## Under every report
 
@@ -168,14 +168,14 @@ stage, how many deals, and the value without and with weighting. Every figure
 is turned into one base currency, so a stage is one row with no currency
 column.
 
-**Forecast categories**: a tile per category, with the raw total as the value
+**Forecast by probability**: a tile per band (0%, 1 to 29%, 30 to 59%, 60 to
+89%, 90% or more). Each shows the raw total as the value
 and the weighted total under it. A note that always shows, **How to read these
 tiles**, says: "Each tile shows the raw total and, below it, the
 probability-weighted total. Rounding is per deal, so it always matches Explain
 this number."
 
-The **No category** tile appears only when a deal falls in it. A tile with
-nothing in it says **"No deals"**, never an empty mark.
+A tile with nothing in it says **"No deals"**, never an empty mark.
 
 **Open pipeline by close month**: deals, value and weighted value per expected
 close month, in calendar order. **No close date** comes last.
@@ -258,7 +258,8 @@ period land?) and keeps three kinds of claim apart.
 | Reading | What kind of claim it is |
 |---|---|
 | **Manager forecast** | Somebody's view. No forecast reads "No manager forecast submitted" |
-| **Committed · confirmed dates** | Open Commit deals with a confirmed expected close date in the period |
+| **Likely** | Open deals at 90% or more with a confirmed expected close date in the period, counted in full |
+| **Weighted** | Each open deal's value times its probability |
 | **Already won** | Value of deals that closed won in the period |
 
 Which deals count:
@@ -266,12 +267,12 @@ Which deals count:
 - **Won** counts by the day a deal closed, never the day it was expected to.
 - **Open** means not won, carrying an expected close date, and that date falls
   in the period.
-- **Committed · confirmed dates** means open, not provisional, and in Commit.
-- A **provisional** close date is a guess. It is in the open pipeline and out of
-  the evidence.
+- **Likely** means open, not provisional, and at or above the **Likely
+  threshold** setting (90% unless an administrator changed it).
+- A **provisional** close date is a guess: in the open pipeline, out of Likely.
 
 The manager forecast is a total for the full period. Its gap sets it against
-sales already won plus committed open deals with confirmed close dates. That
+sales already won plus Likely deals. That
 is in the same currency and period, and never against the open deals alone.
 What the forecast is made of is not guaranteed revenue.
 
@@ -309,17 +310,17 @@ than "forbidden", so it does not confirm that they exist.
 The **Landing** card is won plus what is still to come. What "still to come"
 means is the **Projection basis** installation setting, and the card names it:
 
-- **Commit evidence**: confirmed close dates only. The strictest.
+- **Likely**: deals at the Likely threshold or above, with confirmed close dates. The strictest.
 - **Weighted**: every open deal at its probability ([how it is set](forecast-learning.md)).
-- **Supported commit evidence**, **Supported weighted**: the same, for deals the customer supports.
-- **Manager’s call**: the recorded number *replaces* the projection rather than adding to what is already won. **From the deal records** shows won plus commit evidence beside it, never added.
+- **Supported Likely**, **Supported weighted**: the same, for deals the customer supports.
+- **Manager’s call**: the recorded number *replaces* the projection rather than adding to what is already won. **From the deal records** shows won plus Likely beside it, never added.
 
-With no basis chosen, the card uses supported commit evidence while **Count only deals the customer supports** is on. A chosen basis stays chosen.
+With no basis chosen, the card uses supported Likely while **Count only deals the customer supports** is on. A chosen basis stays chosen.
 No deal is counted in both parts.
 
 The card tells you about three caveats under **Landing has a caveat**:
 
-- "No call recorded for this period, so this shows commit evidence."
+- "No call recorded for this period, so this shows the Likely deals."
 - "The call is below the amount already won. It is shown as recorded, not corrected."
 - "The count of supported deals is off, so this shows all deals."
 
@@ -395,4 +396,4 @@ link cannot be copied from it.
 A link also stops when it expires or when you lose forecast access. A seat
 without permission to share sees neither button.
 
-A link that no longer works shows **not found**, no matter the reason. An agent can neither create one nor open one.
+A link that no longer works shows **not found**, no matter the reason. An agent can make and open one for its user. What a link shows is worked out for whoever opens it, with their own rights.

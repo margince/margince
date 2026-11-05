@@ -25,12 +25,7 @@ const NO_REACH: SettingsReach = { acts: [], looksUp: [] };
 export function useSetupReminder(enabled = true): SetupChecklist | null {
   const reach = useSettingsReach();
   const setup = useSetupChecklist(enabled ? reach : NO_REACH);
-  if (
-    !setup.settled ||
-    setup.hidden ||
-    setup.total === 0 ||
-    setup.done === setup.total
-  ) {
+  if (!setup.settled || setup.hidden || setup.total === 0 || setup.complete) {
     return null;
   }
   return setup;

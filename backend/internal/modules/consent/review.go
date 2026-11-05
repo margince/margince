@@ -74,12 +74,41 @@ type RefusedRecipient struct {
 	SubjectID   string `json:"subject_id,omitempty"`
 	ReasonCode  string `json:"reason_code"`
 	Category    string `json:"category,omitempty"`
+	// Requested is what the sender claimed the message is, which an unproven
+	// claim never writes into Category. Empty on a snapshot from before it.
+	Requested string `json:"requested,omitempty"`
+	// DealID is the deal the message named as its evidence, so an answer to
+	// this refusal is recorded about that deal. Nil when it named none.
+	DealID *ids.UUID `json:"deal_id,omitempty"`
 	// PurposeID is the purpose the SEND resolved to, nil for a broad send —
 	// and nil, additively, for a snapshot written before this field existed.
 	PurposeID *ids.UUID `json:"purpose_id,omitempty"`
 	// CanBeOverruled is the preview's own answer for this refusal. It is told
 	// to the sender and never stored: a stored copy would outlive the rule.
 	CanBeOverruled bool `json:"-"`
+	// RequestedCategory is the reason for contact the sender picked. It is told
+	// to the sender and never stored: the decision row already records it, and
+	// Category stays the engine's own reading. An unproven claim never
+	// resolves, so this is the only place the sender's pick travels, and the
+	// remedy for a failed active-deal claim is named from it.
+	RequestedCategory string `json:"-"`
+}
+
+// claim is what the sender said the message is: the claim when one was made,
+// otherwise the engine's reading.
+func (r RefusedRecipient) claim() commsauthz.Category {
+	if r.Requested != "" {
+		return commsauthz.Category(r.Requested)
+	}
+	return commsauthz.Category(r.Category)
+}
+
+// dealID is the deal the refused message named, or zero.
+func (r RefusedRecipient) dealID() ids.UUID {
+	if r.DealID == nil {
+		return ids.UUID{}
+	}
+	return *r.DealID
 }
 
 // Review is a refused send somebody can look at.
@@ -188,11 +217,10 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 // the reason every scoped read here does: "forbidden" tells a caller the id
 // exists, which is itself a disclosure about a message they may not see.
 func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error) {
-	// A HUMAN. auth.RequireHuman admits connectors, which run with the
-	// granting human's grants — so on the decider's door it would hand one
-	// seat's refused correspondence to anything holding their credentials.
-	// The initiator's own door is bounded by the seat either way.
-	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
+	// A user or their agent, never a connector. It runs with the granting user's
+	// grants, so it would hand one seat's refused correspondence to anything
+	// holding their credentials.
+	if err := requireAUserOrTheirAgent(ctx); err != nil {
 		return Review{}, err
 	}
 	seat := initiatingSeat(ctx)
@@ -261,10 +289,13 @@ func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
 		SubjectKind: d.SubjectKind,
 		ReasonCode:  d.ReasonCode,
 		Category:    string(d.Resolved),
+		Requested:   string(d.Requested),
 		PurposeID:   d.PurposeID,
+		DealID:      zeroUUIDAsNull(d.Evidence.DealID),
 		// The same answer the preview sends, so the composer picks the same
 		// deciding recipient before and after Send.
-		CanBeOverruled: d.CanBeOverruledByCategory(),
+		CanBeOverruled:    d.CanBeOverruledByCategory(),
+		RequestedCategory: string(d.Requested),
 	}
 	if !d.SubjectID.IsZero() {
 		refusal.SubjectID = d.SubjectID.String()
@@ -308,8 +339,9 @@ func openStateFor(stored string, refusals []RefusedRecipient) string {
 //
 // The review state, HeldSubjectsForReview and RecordContext all ask this
 // function. So the work item never offers an answer the store then refuses.
-// A statement is stored as a qualifying event, which only no_compatible_evidence
-// reads. Other reasons declare RemedyAnswer (commsauthz.RemediesFor). They need
+// A statement is stored as a qualifying event, which no_compatible_evidence,
+// deal_not_requested and opted_out_after_request read. The last is answered
+// by the request the rep confirmed with the contact after the opt-out. Other reasons declare RemedyAnswer (commsauthz.RemediesFor). They need
 // an answer request this store cannot take yet, and join here when it can.
 //
 // Everything else is about the SUBJECT or the ADDRESS and no context repairs
@@ -317,7 +349,12 @@ func openStateFor(stored string, refusals []RefusedRecipient) string {
 // subject's own instruction; a hard bounce is a dead mailbox; a frequency cap
 // is a fact about volume that time answers rather than evidence.
 func answerableByContext(reasonCode string) bool {
-	return reasonCode == commsauthz.ReasonNoEvidence
+	switch reasonCode {
+	case commsauthz.ReasonNoEvidence, commsauthz.ReasonDealNotRequested, commsauthz.ReasonOptedOutAfterRequest:
+		return true
+	default:
+		return false
+	}
 }
 
 // initiatingSeat reads the human this send belongs to, or the zero id for a

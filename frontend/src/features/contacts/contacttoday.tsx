@@ -1,16 +1,10 @@
-import {
-  CheckSquare,
-  FileText,
-  Search,
-  Send,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
+import { taskLine, useTaskHolder } from "../../components/taskassignee";
 import { TaskCallAction } from "../../components/tasknextsteps";
-import { Button } from "../../design-system/atoms";
+import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatDue, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
@@ -55,12 +49,15 @@ export function ContactToday({
   onAction,
   onOpenTasks,
   onOpenEmail,
+  onAddTask,
 }: Readonly<{
   moment?: ContactMoment;
   view: Contact360;
   onAction: (action: ContactMomentAction) => void;
   onOpenTasks?: () => void;
   onOpenEmail?: (activityId: string) => void;
+  // Opens the task form on this contact; absent where the reader may not log.
+  onAddTask?: () => void;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -107,7 +104,14 @@ export function ContactToday({
   if (task) {
     return <TaskBar task={task} view={view} more={more(rest)} />;
   }
-  return <AnswerBar moment={moment} view={view} onAction={onAction} />;
+  return (
+    <AnswerBar
+      moment={moment}
+      view={view}
+      onAction={onAction}
+      onAddTask={onAddTask}
+    />
+  );
 }
 
 type More = Readonly<{ count: number; onOpen: () => void }> | undefined;
@@ -233,6 +237,7 @@ function TaskBar({
   more,
 }: Readonly<{ task: Activity; view: Contact360; more: More }>) {
   const t = useT();
+  const holder = useTaskHolder(task.assignee_id);
   const { locale } = useLocale();
   const zone = useViewerZone();
   return (
@@ -240,13 +245,14 @@ function TaskBar({
       title={task.subject ?? t("task.untitled")}
       late={lateness(task.due_at, view, t, locale)}
       detail={taskDetail(task)}
-      sub={
+      sub={taskLine([
+        holder,
         task.due_at
           ? t("co.next.due", {
               when: formatDue(task.due_at, task.due_has_time, locale, zone),
             })
-          : t("co.next.undated")
-      }
+          : t("co.next.undated"),
+      ])}
       action={
         <>
           <TaskCallAction task={task} pageContact={view.contact} />
@@ -261,17 +267,20 @@ function TaskBar({
   );
 }
 
-// No move and no task. A quiet rung has the basis to say nothing is due. An
-// unread reading, a withheld source and a relationship with nothing recorded
-// do not, so each says what it does know instead.
+// No move and no task. A quiet rung on a record whose tasks the reader saw in
+// full says no follow-up task is recorded, and no more: it does not claim that
+// nothing is left to do. An unread reading, a withheld source and a
+// relationship with nothing recorded say what they do know instead.
 function AnswerBar({
   moment,
   view,
   onAction,
+  onAddTask,
 }: Readonly<{
   moment: ContactMoment | undefined;
   view: Contact360;
   onAction: (action: ContactMomentAction) => void;
+  onAddTask?: () => void;
 }>) {
   const t = useT();
   const omitted = new Set(view.sections_omitted);
@@ -300,7 +309,20 @@ function AnswerBar({
       />
     );
   }
-  return <RecordNextBar />;
+  return (
+    <RecordNextBar
+      // "What was said" already shows the last exchange, of every kind.
+      lastExchange={false}
+      empty={t("standing.next.noTask")}
+      action={
+        onAddTask && (
+          <Button variant="ghost" onClick={onAddTask}>
+            {t("standing.next.addTask")}
+          </Button>
+        )
+      }
+    />
+  );
 }
 
 // What the move says is owed, in the order both readers below take it: the
@@ -386,7 +408,12 @@ function recordsTheMoveNames(move: ContactMoment | undefined): Set<string> {
   );
 }
 
-// One verb: the button, and under it what will happen when it is pressed.
+// The bar has one filled verb, its lead; indigo when the model writes it.
+function verbVariant(drafts: boolean, lead: boolean): ButtonVariant {
+  if (lead) return drafts ? "ai" : "primary";
+  return drafts ? "aiQuiet" : "ghost";
+}
+
 function ActionVerb({
   action,
   primary,
@@ -398,10 +425,10 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  // A rule ladder picks the verb, not a model. Only a press that has the model
-  // write the mail wears indigo; the rest keep the accent.
+  // A rule ladder picks the verb, not a model. Only the bar's lead verb is
+  // filled; a press that has the model write the mail carries the ✦.
   const drafts = momentDrafts(action);
-  const variant = drafts ? "ai" : primary ? "primary" : "ghost";
+  const variant = verbVariant(drafts, primary === true);
   return (
     <span className="today-verb">
       {/* A blocked verb hands its sentence to the Button, whose `reason`
@@ -414,7 +441,7 @@ function ActionVerb({
         onClick={() => onAction(action)}
         reason={blocked ? blockedReason(action, t) : undefined}
       >
-        {drafts ? <Sparkles aria-hidden="true" /> : actionIcon(action.kind)}
+        {!drafts && actionIcon(action.kind)}
         {action.label}
       </Button>
     </span>

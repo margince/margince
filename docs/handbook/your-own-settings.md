@@ -15,9 +15,9 @@ Also called: my profile, my account, preferences, user settings.
 
 ### How do I finish setting up Margince?
 To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**.
-It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link. Each step has a button, such as **Connect mail** or **Turn on**.
+It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link.
 
-While steps are open, **Finish setup** at the top of the screen shows how many are done. Choose **Hide until next sign-in** to put it away for now.
+While steps are open, **Finish setup** at the top of the screen shows how many are done, and **Hide until next sign-in** puts it away. Once every step is done, **Your setup** and **Finish setup** are gone, and each step's page stays on **Overview**. If a step comes undone, **Your setup** comes back, and so does **Finish setup** unless you chose **Hide until next sign-in**.
 On a phone, **Finish setup** is a row in the account menu, right after **Help and feedback**. It opens the page of your next step.
 Also called: setup list, getting started, onboarding steps.
 

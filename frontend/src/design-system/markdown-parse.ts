@@ -28,6 +28,7 @@
  */
 
 import { markLine, markQuote } from "./markdown-highlight";
+import { parseInline } from "./markdown-inline";
 
 /** A leaf or a wrapper inside one line of prose. */
 export type Inline =
@@ -36,7 +37,9 @@ export type Inline =
   | { kind: "strong"; children: Inline[] }
   | { kind: "em"; children: Inline[] }
   | { kind: "link"; href: string; children: Inline[] }
-  | { kind: "mark"; children: Inline[] };
+  | { kind: "mark"; children: Inline[] }
+  // A line break kept as one: only a note's body has them (hardBreakBlocks).
+  | { kind: "break" };
 
 /**
  * One stretch of inline content — a paragraph's, a heading's, a list item's, a
@@ -335,155 +338,3 @@ function takeParagraph(lines: string[], i: number, first: number): Taken {
 // ---------------------------------------------------------------------------
 // Inline
 // ---------------------------------------------------------------------------
-
-// The opening run only. Finding the CLOSE with a backreference — /^(`+)(.+?)\1/ —
-// is what made this the one part of the renderer an uploaded document could
-// weaponise: with no closing run, the engine retries every prefix length at
-// every offset, which is cubic. A line of 8,000 backticks took five seconds of
-// the main thread inside render, and a corpus is a place a tenant member can
-// put a file. takeCode scans for the close instead, which is linear.
-const CODE_OPEN = /^`+/;
-// A destination may carry one level of balanced parentheses, as CommonMark
-// allows: `alert(1)` is a plausible payload and a reader of the refusal test
-// should see the real shape of one.
-const LINK = /^\[([^\][]*)\]\([ \t]*((?:[^()\s]|\([^()\s]*\))*)[ \t]*\)/;
-const STRONG = /^(\*\*|__)([\s\S]+?)\1/;
-const EM = /^([*_])([^\s*_][\s\S]*?)\1/;
-const ESCAPABLE = /^[\\`*_{}[\]()#+\-.!|>~]$/;
-
-export function parseInline(text: string): Inline[] {
-  const nodes: Inline[] = [];
-  let plain = "";
-  const flush = (): void => {
-    if (plain !== "") nodes.push({ kind: "text", text: plain });
-    plain = "";
-  };
-  let i = 0;
-  while (i < text.length) {
-    const rest = text.slice(i);
-    if (rest[0] === "\\" && ESCAPABLE.test(rest[1] ?? "")) {
-      plain += rest[1];
-      i += 2;
-      continue;
-    }
-    const taken = takeInline(rest);
-    if (taken === null) {
-      plain += text[i];
-      i++;
-      continue;
-    }
-    flush();
-    nodes.push(taken.node);
-    i += taken.length;
-  }
-  flush();
-  return nodes;
-}
-
-function takeInline(rest: string): { node: Inline; length: number } | null {
-  return (
-    takeCode(rest) ??
-    takeLink(rest) ??
-    takeWrapped(rest, STRONG, "strong") ??
-    takeWrapped(rest, EM, "em")
-  );
-}
-
-function takeCode(rest: string): { node: Inline; length: number } | null {
-  const opener = CODE_OPEN.exec(rest);
-  if (opener === null) return null;
-  const fence = opener[0];
-  // The closing run is the same length and no longer: scanned for, never
-  // backtracked into. A run of the wrong length is content, so the search
-  // continues past it rather than giving up on the span.
-  for (let at = fence.length; at < rest.length; ) {
-    const found = rest.indexOf(fence, at);
-    if (found < 0) return null;
-    const end = found + fence.length;
-    if (rest[end] === "`") {
-      // A longer run than the opener: not this span's close, skip the whole run.
-      at = end;
-      while (rest[at] === "`") at += 1;
-      continue;
-    }
-    // Code is a leaf: what a span holds is the literal characters between the
-    // backticks, emphasis and brackets included, which is the whole point of it.
-    return {
-      node: { kind: "code", text: rest.slice(fence.length, found).trim() },
-      length: end,
-    };
-  }
-  return null;
-}
-
-function takeWrapped(
-  rest: string,
-  pattern: RegExp,
-  kind: "strong" | "em",
-): { node: Inline; length: number } | null {
-  const match = pattern.exec(rest);
-  if (match === null) return null;
-  return {
-    node: { kind, children: parseInline(match[2] ?? "") },
-    length: match[0].length,
-  };
-}
-
-function takeLink(rest: string): { node: Inline; length: number } | null {
-  const match = LINK.exec(rest);
-  if (match === null) return null;
-  const href = safeHref(match[2] ?? "");
-  const children = parseInline(match[1] ?? "");
-  // A refused href leaves the LABEL standing, and nothing else. The target of a
-  // `javascript:` link is not information a reader wants beside the words it
-  // was hidden behind, and printing it would put the payload back on the page
-  // in the one form — visible, copyable text — that still invites a paste.
-  if (href === null) {
-    return { node: { kind: "em", children }, length: match[0].length };
-  }
-  return {
-    node: { kind: "link", href, children },
-    length: match[0].length,
-  };
-}
-
-const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
-const SAFE_SCHEME = /^(https?|mailto):/i;
-
-/**
- * The href allowlist: `http`, `https` and `mailto`, and nothing else —
- * `javascript:`, `data:`, `vbscript:`, and any scheme invented after this was
- * written, because the test is what the list ADMITS rather than what it has
- * heard of.
- *
- * A SCHEMELESS reference is refused too, which is not a safety judgement but a
- * destination one. The handbook links its own pages (`capture.md#filing`), and
- * this app has no resolver for a corpus-relative path: the shell routes by
- * hash and the Ask dialog rides on hash dials, so `#filing` would swap the
- * address for a not-found route and take the dialog down with it, while
- * `capture.md#filing` resolves against the app's own path and leaves the SPA
- * on a full load. Either way the reader loses both the answer and the document
- * they were checking it against. The label survives; give this a resolver and
- * the reference can become a link again.
- *
- * Whitespace and control characters come out BEFORE the scheme is read. A
- * browser ignores them when it resolves a URL, so `java\nscript:alert(1)` is a
- * javascript URL to the navigator and would be a schemeless one to a check
- * that read it as written.
- */
-function safeHref(raw: string): string | null {
-  // The control characters ARE the subject: a browser strips them before it
-  // resolves a URL, so a check that left them in would read a different string
-  // than the navigator does.
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: see just above
-  const href = raw.replace(/[\u0000-\u0020\u007F]/g, "");
-  if (href === "") return null;
-  // Schemeless goes with the rest: see above. This also closes the protocol
-  // -relative shape for good — the WHATWG parser reads a backslash as a slash
-  // for a special scheme, so `\\evil.example`, `/\evil.example` and
-  // `\/evil.example` all resolve to another ORIGIN while reading as a relative
-  // path, and "not external" would have drawn them without even the new-tab
-  // that marks a link as leaving.
-  if (!HAS_SCHEME.test(href)) return null;
-  return SAFE_SCHEME.test(href) ? href : null;
-}
