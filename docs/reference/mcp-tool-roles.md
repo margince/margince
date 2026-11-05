@@ -1233,7 +1233,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Reports and analytics | `read_reports.analytics_schema` | `get_analytics_schema` | `activity.read` `deal.read` `lead.read` `project.read` |
 | Reports and analytics | `read_reports.company_coverage` | `get_company_coverage` | `activity.read` `company.read` `contact.read` `deal.read` `relationship.read` |
 | Reports and analytics | `read_reports.evidence` | `search_report_evidence` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` |
-| Reports and analytics | `read_reports.question_card_answer` | `answer_reporting_question_card` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `report_definition.read` |
+| Reports and analytics | `read_reports.question_card_answer` | `answer_reporting_question_card` | `activity.read` `company.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `report_definition.read` |
 | Reports and analytics | `read_reports.question_card_records` | `explain_reporting_question_card` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `report_definition.read` |
 | Reports and analytics | `read_reports.report_revisions` | `list_reporting_report_revisions` | `report_definition.read` `report_definition.update` |
 | Reports and analytics | `read_reports.report_run` | `get_report_run` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` |
