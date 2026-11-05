@@ -65,9 +65,8 @@ func routineFooterContent(base string, words mailcopy.Copy) emailview.Content {
 	return content
 }
 
-// writeMailItemLink links every row: a row that is itself the work (a task,
-// a meeting, its outcome) opens on Home, any other its record page, and a
-// row with neither opens on Home as well.
+// writeMailItemLink links every row. A task, a meeting or its outcome opens
+// on Home; any other row opens its record page, or Home when it has none.
 func writeMailItemLink(body *emailview.Content, item crmcontracts.WorklistItem, base string, words mailcopy.Copy) {
 	fragment := ""
 	if item.Subject != nil && !opensOnHome(item.Source) {

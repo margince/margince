@@ -124,8 +124,8 @@ func LetterheadName(name string) string {
 }
 
 // letterheadMark is the Margince mark beside the wordmark. The mark is its
-// own green tile, so it reads on a light and a dark client alike; the alt
-// text is empty because the wordmark beside it already says the name.
+// own green tile, so it reads on light and dark clients. Its alt text is
+// empty: the wordmark beside it already says the name.
 func letterheadMark(name, contentID string) string {
 	mark := `<td width="28" valign="middle"><img src="cid:` + html.EscapeString(contentID) + `" alt="" width="28" height="28" style="display:block;width:28px;height:28px;border:0"></td>`
 	return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>` + mark +

@@ -81,8 +81,8 @@ const (
 	HomeFocusParam = "focus"
 )
 
-// WorkItemFragment opens one row of the day on Home: a task in its own read,
-// any other row beside its context, as a click on the row opens it.
+// WorkItemFragment opens one row of the day on Home, as a click on it does.
+// A task opens in its own read, any other row beside its context.
 func WorkItemFragment(source, id string) string {
 	if source == "task" {
 		return BriefMorningFragment + "?" + HomeTaskParam + "=" + url.QueryEscape(id)
