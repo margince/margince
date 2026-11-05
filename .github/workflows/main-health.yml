@@ -9,7 +9,7 @@
 # once a day; at eight merges an hour that is a working day of exposure.
 #
 # So this runs at most every two hours while main is moving, started by
-# main-health-pace.yml, and when it finds main broken it files ONE issue per
+# pace.yml, and when it finds main broken it files ONE issue per
 # broken lane naming the commits that landed since the last green run and who
 # authored them. The point is attribution and speed, not prevention.
 #
@@ -19,8 +19,8 @@
 #
 # The cadence is the one knob. Every two hours costs ~15 jobs a run against a
 # 20-concurrent runner ceiling that the pull-request lanes also queue in, and narrows
-# the suspect range to roughly a dozen commits. Tighten INTERVAL_SECONDS in
-# scripts/main-health-pace.sh if a dozen is too many to bisect; it is one line.
+# the suspect range to roughly a dozen commits. Tighten main-health's interval in
+# pace.yml if a dozen is too many to bisect; it is one line.
 name: main-health
 
 on:

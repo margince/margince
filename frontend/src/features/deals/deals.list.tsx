@@ -36,7 +36,11 @@ import { throwProblem, unwrap } from "../../lib/problem";
 import { useReReadMeWhen } from "../../lib/refusedfilters";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import {
   type ClosedDeal,
@@ -64,8 +68,8 @@ import {
 import { dealColumns } from "./deals.columns";
 import { partnerFields, usePartnerOptions } from "./deals.fields";
 import {
-  DealViewTools,
   dealRowSelection,
+  dealViewDials,
   savableDealQuery,
   useDealChips,
   useDealScreenDials,
@@ -356,16 +360,15 @@ export function DealsScreen({
   const pipelineId = effectivePipeline?.id ?? "";
   // The board/table switch and the pipeline picker are shared, so the reader
   // sees the same dials either way.
-  const tools = (
-    <DealViewTools
-      view={view}
-      setView={setView}
-      pipelines={pipelinesQuery.data ?? []}
-      pipelineId={pipelineId}
-      setPipelineId={setPipelineId}
-      setQuery={setQuery}
-    />
-  );
+  const { layout, viewRows } = dealViewDials({
+    view,
+    setView,
+    pipelines: pipelinesQuery.data ?? [],
+    pipelineId,
+    setPipelineId,
+    setQuery,
+    t,
+  });
   // Saving is not shared. A view holds a sort as well as its filters. The
   // board offers no way to see or change one: its order is the pipeline's
   // stage order. Saving from there would pin an ordering the reader never
@@ -373,7 +376,7 @@ export function DealsScreen({
   const saveView = view === "table" && (
     <SaveViewAction
       resource="deals"
-      query={savableDealQuery(dealsListState.query, pipelineId)}
+      state={{ query: savableDealQuery(dealsListState.query, pipelineId) }}
     />
   );
   const listState: ListState<Deal> = refusal
@@ -429,10 +432,13 @@ export function DealsScreen({
             {createAction}
           </>
         }
-        tools={tools}
+        layout={layout}
+        viewRows={viewRows}
         saveView={saveView}
+        notice={<SavedViewsFailure resource="deals" />}
         body={boardBody}
         bodyOwnsPaging={boardBody !== undefined}
+        countScope={effectivePipeline?.name}
         bodyCount={
           boardBody && (
             <BoardHeadCount

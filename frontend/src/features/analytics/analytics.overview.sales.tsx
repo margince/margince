@@ -11,7 +11,7 @@ import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
-import { usePipelines } from "../../lib/pipelines.queries";
+import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
 import { AssessmentPanel } from "./analytics.assessment";
@@ -179,12 +179,7 @@ function SalesReviewBody({
         railLabel={t("analytics.board.rail")}
         main={
           pipelineGone ? (
-            <PipelineGone
-              defaultPipeline={
-                pipelines.find((pipeline) => pipeline.is_default) ??
-                pipelines[0]
-              }
-            />
+            <PipelineGone defaultPipeline={defaultPipelineOf(pipelines)} />
           ) : (
             <>
               {answered && (

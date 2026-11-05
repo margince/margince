@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -380,7 +380,8 @@ dependency builds under them are shared:
 
 `ci.yml` only ever **loads** the cache. The writing lives in
 [`.github/workflows/cache-warm.yml`](../../.github/workflows/cache-warm.yml). It runs on `main` every
-three hours, plus `workflow_dispatch`, and **gates nothing**. A red or cancelled run there costs time on
+three hours, plus `workflow_dispatch`, and **gates nothing**. GitHub drops some cron runs, so `pace.yml`
+also starts one from a push to `main` once the newest run is three hours old. A red or cancelled run there costs time on
 the next lane, and nothing else.
 
 Three limits shaped that, and each rules out a choice that looks less hard:
@@ -392,7 +393,8 @@ Three limits shaped that, and each rules out a choice that looks less hard:
   on `main`.
 - **The writer cannot run on each push.** Seeding a kind is a side effect of compiling. The `plain` job
   runs a full `make check-backend`, and the `integration` job runs a shard against a live Postgres. At
-  about 80 merges a day, that pair would run about 80 times and mostly cancel itself.
+  about 80 merges a day, that pair would run about 80 times and mostly cancel itself. Paced to one run
+  in three hours, pushes start at most 8 a day.
 - **A stale entry is not a wrong entry.** Go's build cache is keyed by content, and the key falls back
   twice: `…-<deps-hash>-<sha>` → `…-<deps-hash>-` → `…-`. The last step drops the dependency hash,
   because a stale load only misses the entries whose inputs changed. A cache three hours old is mostly
@@ -428,10 +430,9 @@ and there it pushes out the `main` entries that every PR loads.
   red lint run still saves, because it read the whole tree. A run that stopped before lint saves
   nothing. The census does not hold this entry back, because golangci replays no test result.
 - `lint-cache.yml` also saves the golangci entry, after each push to `main` or `develop` that changes Go
-  files. A cold pass costs about 39 minutes of CPU. `internal/compose` imports every module, so an entry
-  many merges old lints close to cold. The job runs `make lint` on the pushed tree, from the entry of the
-  push before. Lint loads the whole tree and keeps the result of each package whose inputs did not
-  change. The job then deletes the older entries of its branch, so `main` and `develop` hold one each.
+  files. A cold pass costs about 39 minutes of CPU, and `internal/compose` imports every module, so an old
+  entry lints close to cold. The job runs `make lint` on the pushed tree from the entry of the push before.
+  Lint keeps the result of each package whose inputs did not change; the job then deletes older entries.
 - **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
   entry until `cache-warm` runs after the merge.
 
