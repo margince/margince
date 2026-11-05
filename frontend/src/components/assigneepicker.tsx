@@ -31,10 +31,9 @@ type MemberStatus = components["schemas"]["User"]["status"];
 /**
  * Whether the server says the reader may make this entry a record's owner.
  *
- * The rule is the server's and depends on the reader's own write scope. So the
- * roster answers it per row (`assignable`) and the client does not re-derive it.
- * An entry without the answer (an older server) is offered, and the write
- * decides.
+ * The rule is the server's, so the roster answers it per row (`assignable`)
+ * and the client does not re-derive it. An entry without the answer (an older
+ * server) is offered, and the write decides.
  */
 export function mayOwnRecords(entry: RosterEntry): boolean {
   if (!("display_name" in entry) || entry.is_agent) {
@@ -45,8 +44,8 @@ export function mayOwnRecords(entry: RosterEntry): boolean {
 
 /**
  * The colleagues the reader may make a record's owner: an active human seat
- * that can write, inside the reader's own write scope. Every owner picker reads
- * this, so a picker never offers somebody the owner change then refuses.
+ * that can write. Every owner picker reads this, so a picker never offers
+ * somebody the owner change then refuses.
  */
 export function useRecordOwnerOptions(enabled = true): UserOptions {
   const roster = useRoster("user", enabled);

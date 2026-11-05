@@ -18164,7 +18164,7 @@ export interface paths {
          *     owner. For a member who left, the contacts and companies only they can see move too and
          *     stay private, now to the new owner; an active member keeps theirs. A record the caller may not change stays with the member and is counted
          *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
-         *     owner (an active human seat that can write, inside the caller's write scope), else `422`
+         *     owner (an active human seat that can write), else `422`
          *     with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
          *     caller may not change stays with the member. Automations and deal-room stewardships are not moved.
          */
@@ -44037,7 +44037,7 @@ export interface components {
             is_agent: boolean;
             /** @description The extension unit this seat is the service member of: the identity that unit's scheduled feed runs as. Null for every other seat, including an AI agent seat, so a client tells the two apart by this field and not by `is_agent`. Present only for an admin caller, with `roles`. */
             service_extension?: string | null;
-            /** @description Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
+            /** @description Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
             assignable?: boolean;
             /** @description This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree. */
             roles?: string[];

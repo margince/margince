@@ -62582,7 +62582,7 @@ type User struct {
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
-	// Assignable Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
+	// Assignable Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
 	Assignable *bool `json:"assignable,omitempty"`
 
 	// ConnectedMailboxes How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture.

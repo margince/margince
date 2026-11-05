@@ -297,7 +297,7 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 			if before.OwnerID != nil {
 				current = &before.OwnerID.UUID
 			}
-			if err := auth.EnsureOwnerHandOn(ctx, tx, current, in.OwnerID); err != nil {
+			if err := auth.EnsureRunAsOwnerHandOn(ctx, tx, current, in.OwnerID); err != nil {
 				return err
 			}
 		}
