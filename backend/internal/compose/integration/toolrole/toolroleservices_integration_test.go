@@ -24,6 +24,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
+// The statutory retention floor, armed for this binary as the composed boot
+// arms it. The registry is process-global, so the parent package's arming does
+// not reach here, and a pin would be refused for a floor of no length.
+func init() {
+	integration.RegisterGoBDFloorPack()
+}
+
 // toolRoleApp is the sweep's app, with the services an installation runs and
 // the test stack leaves off. Each is the fake another integration test starts,
 // so a call the installation serves reaches its gate here too. The job queue
