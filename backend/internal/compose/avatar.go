@@ -32,7 +32,6 @@ import (
 // drawn avatar, with nothing left for the browser to upscale.
 const avatarEdge = 512
 
-// avatarKind is the blobstore key's entity discriminator.
 const avatarKind = "avatar"
 
 // Not SVG: markup is a document a photo route has no reason to rasterize. Not GIF: one
@@ -45,7 +44,6 @@ var errAvatarFormat = &httperr.DetailedError{
 	Detail: "the picture is not a PNG, JPEG or WebP image this server can read; save it as one of those and upload it again",
 }
 
-// avatarPictures stores, replaces and serves seat pictures.
 type avatarPictures struct {
 	db     *database.DB
 	users  *identity.Service
@@ -63,7 +61,7 @@ func newAvatarPictures(db *database.DB, blob blobstore.Store, fetch assetFetcher
 	}
 }
 
-// avatarHandlers serves the three routes over avatarPictures.
+// The zero avatarHandlers answers every route 501: a Server built without New has no pictures.
 type avatarHandlers struct{ pictures *avatarPictures }
 
 // normalizeAvatar re-encodes an accepted picture's centred square as this server's own PNG.

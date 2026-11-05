@@ -39,7 +39,7 @@ import (
 // grant would mean a second connection for the same mailbox.
 //
 // The send scope permits transmission only; it cannot read, modify, or delete.
-// The list is still least-privilege: no gmail.modify, no settings, no delete.
+// The list is least-privilege: no gmail.modify, no settings, no delete.
 // The calendar connector owns its own calendar-read scope inside the gcal
 // package.
 //
