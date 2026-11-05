@@ -30,10 +30,10 @@ the **proof** that category needs, and records a **decision** per recipient sayi
   notice, an opt-out, a note that confirms consent or a record. So only the installation
   itself writes to someone in its own name.
 - **The basis is proof.** A reply is allowed by the thread the subject opened, and only for this
-  recipient on that thread; being a reply is not enough. An invoice is allowed by a live invoice that
-  reaches this recipient through a current job at the customer. That is a real test. Say a contact handles money for the customer, but nobody linked them to the
-  customer record: they get `review`, not a refusal. Marketing is the case that needs
-  consent, and that consent holds for one purpose only.
+  recipient on that thread. An invoice or a contract notice goes to the company's billing contact,
+  else to the buyer on the deal. A recipient the record does not name gets `review`. Service,
+  account and security mail goes to a contact at a company with an active contract or a won deal.
+  Marketing needs consent, for one purpose only.
 - **The decision is recorded twice, before sending.** It is made once when the message is staged.
   It is made again right before the provider gets anything, into `communication_decision`, one row per
   recipient. The row holds the category, the verdict, the reason, the basis and a fingerprint of the
@@ -271,14 +271,14 @@ since rotated.
 - **A stop records its maker and its reach.** An Article 21 objection to direct marketing and a
   request to stop all contact are different legal acts with different reach. The objection binds
   marketing alone; the request binds everything but the three categories above.
-  `communication_suppression` records which kind, its `source`, the seat that captured it, and the
-  authority level that decided it. `lift.go` refuses any lift that the level of the user who lifts it cannot override.
+  `communication_suppression` records the kind, `source`, seat, deciding level and `recorded_through`,
+  which every copy keeps. `lift.go` refuses any lift that the level of the user who lifts it cannot override.
 
   A passed-on **marketing objection** is marked `decided_by_level='subject'`, because Article 21 is
   the subject's own act. An admin may still correct one a user typed in error, with a reason the
   audit row keeps (`stopcorrection.go`). One the subject pressed on a mailed link stays theirs. A
   passed-on **subject request** keeps the seat's level, so an admin can fix a wrong "stop
-  everything" note a user typed from a call. `GET /contacts/{id}/consent/stops` shows each user
+  everything" note a user typed from a call. `GET /{contacts,leads}/{id}/consent/stops` shows each user
   which stops they may lift. Nobody lifts a limit on processing here, because that owes the subject
   notice first, and Margince sends none yet.
 - **A public fix or erasure opens a case.** A subject who types into a confirm link opens a
@@ -364,9 +364,9 @@ into consent's handlers.
   destroys a contact's data. `backend/gates/retentionseedcoverage_test.go` records why each scope
   with no row has none.
 
-  No retention action deletes a stop. The `anonymize` action copies a stop for the whole record onto
-  each of its addresses (`privacy/retentionstops.go`). It writes a marketing withdrawal as an
-  objection on each address. So a subject who comes back on a new record is still stopped.
+  No retention action deletes a stop. `anonymize` pins each stop and withdrawal to its addresses and
+  their hashes (`address_hash`, `privacy/retentionstops.go`). A merge binds it to its own record's
+  addresses first. A later stop lands on the kept hashes (`contact.anonymized_address_hashes`).
 
 ## The single-transaction cross-store exception
 
@@ -459,19 +459,19 @@ it down.
   that of their current primary employer. A lead takes the one of the company it is filed under. A
   free-text value that is not a two-letter code is skipped.
 - **Data protection follows the sending legal entity's jurisdiction.** This covers the controller
-  identity and privacy contact at the foot of the mail. The user who sends belongs to an entity
-  through their legal-entity membership. A user with no entity, and the installation's own mail, send
-  for the default entity, whose jurisdiction is `installation.country`. An installation with one
-  entity sets nothing more.
+  identity and privacy contact at the foot of the mail. `storekit.LegalEntityOf` reads the sending
+  user's membership; none, or an archived entity, gives `installation.country`. A further entity
+  puts its own legal name and address in the foot. Staging stores the entity.
 
 A recipient whose record states no jurisdiction, or one no pack covers, gets the baseline: no pack
 duties. Marketing still needs consent, because the verdict asks for it everywhere, and the send path
 adds the unsubscribe link in every case. The email domain, the jurisdiction of the user who sends
 and the least strict pack never stand in for the recipient's jurisdiction.
 
-Each decision row records the ruleset that judged its recipient (`ruleset_codes`, `ruleset_version`).
-`CheckMessage` reads those codes back, so the advertising label is owed if any recipient's pack asks
-for it. One message goes to every recipient, so its foot carries each recipient's marketing duties.
+Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`) and the
+`data_protection_country` of the user who sends. `CheckMessage` reads the codes back, so the advertising label is
+owed if any recipient's pack asks for it. One message goes to every recipient, so its foot carries
+each recipient's marketing duties.
 
 ### Request deadlines
 

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
 # Writing and sending mail
 
 ### How do I send an email to a contact?
@@ -44,7 +44,7 @@ Rest the mouse on **Preview** to see a message's text, and press **Read full ema
 To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**, so the client's answer is filed under the project too.
 The switch **Add project key to subject (helps filing)** under the subject is on. Turn it off to send this email without the key; the next email starts with it on. Choosing **No project** also takes the key out; deleting it from the text does not.
 
-The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the list shows **No project** and cannot be changed. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
+The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the project list is hidden. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
 
 ### What do the composer's error messages mean?
 The composer in Margince does not send until four things are filled in, and names each one under its field.
@@ -113,7 +113,7 @@ To have AI draft an email in Margince, open the composer. Say what the email is 
 4. Then press **Draft email** (**Draft reply** for a reply). It shows **Drafting…** while it writes, and an empty message field shows moving dots where the text will appear.
 5. Read and edit the draft, then send it as you always do.
 
-With no AI model set up, AI drafting is not available, and you write the email yourself.
+**Email** starts a new message and waits for you to press **Draft email**. Its subject does not come from an earlier thread. A suggested **Draft a follow-up** continues the message named by the suggestion. If that message can no longer be read, the action says so. With no AI model set up, AI drafting is not available, and you write the email yourself.
 Also called: AI writer, generate an email, write it for me.
 
 ### Drafting with AI
@@ -122,7 +122,7 @@ Also called: AI writer, generate an email, write it for me.
 **Why this draft**, closed until you open it, shows what it read
 ("Based on: {inputs}"), with a link to each record it read.
 
-Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
+A restored draft keeps its purpose and AI note. The **Saved draft restored** notice makes clear that you are opening saved work. Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
 that you should check and edit it before sending.
 
 Your voice profile has a number that goes up with each build, shown after
@@ -305,12 +305,11 @@ reason says which, and what to do:
 - **The send job ran out of attempts.** Reschedule it to try again.
 - **A check blocked it when it was due.** Nothing was sent.
 
-A held message also adds an approval card that never runs out. See [Approvals](approvals.md).
+A held message also adds an approval card that never runs out. See [Approvals](approvals.md). After reading a recipient's reply, accept the card or reschedule the message to send it again. Another reply received after that review pauses it again. Only mail you can read counts.
 
 ## What the recipient controls
 
-Every marketing message carries a footer with two links: unsubscribe, and
-manage preferences. Both are the recipient's own private links.
+Every marketing message carries a footer with two links: unsubscribe, and manage preferences. Both are the recipient's own private links.
 
 **The preference centre** says that each purpose is separate. The recipient
 cannot switch off messages they need for something they did, such as an order note. All other purposes are theirs to control.
@@ -320,8 +319,7 @@ because they did not say no, or off because they asked you to stop. Only a clear
 "no" from them counts as off.
 
 **Security and service messages are always on**, and the page says why. They
-are needed for something the recipient asked for, such as a password reset or a
-confirmation.
+are needed for something the recipient asked for, such as a password reset or a confirmation.
 
 **Stop all marketing** switches off every marketing purpose at once and leaves
 the rest alone. Replies to their own questions, and anything they asked for, go
@@ -360,6 +358,8 @@ The record does not say where the contact's details come from, so no notice dead
 A user with privacy access answers how the details came in, under **Source** on the contact or in **Settings → Privacy**.
 If the details come from the contact, the review ends. Data from someone else may still need a notice.
 **Due no later than** is the last possible date. The duty may already be due.
+
+**Met face to face** asks for the day of the meeting. It allows personal follow-up mail, never marketing or a newsletter. No privacy notice is owed, because they learned at the meeting who you are. A meeting you record when a send is refused also allows follow-up mail.
 
 ### Why does Margince say "this installation cannot send mail"?
 "Not sent: this installation cannot send mail" means your installation has no server set up to send its own mail. So the privacy notice or confirmation link was not sent, and the duty stays open.

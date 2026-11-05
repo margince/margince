@@ -227,7 +227,7 @@ func Body(body string, lang textlang.Lang, band convstate.Band, on Grounds) []Fi
 		})
 	}
 
-	return append(findings, bandGated(lowered, lang, band)...)
+	return append(append(findings, attachmentFindings(body)...), bandGated(lowered, lang, band)...)
 }
 
 // Formatting reports what is wrong with the SHAPE of a message body.

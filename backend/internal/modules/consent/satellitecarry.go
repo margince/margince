@@ -81,14 +81,31 @@ func (s *Store) CarrySatellitesTx(ctx context.Context, tx pgx.Tx, from, to comms
 
 // BindRequestsToAddressesTx implements contacts.ConsentSatelliteCarrier. Gated
 // by admitACarry like the carry it comes before.
+//
+// A stop for the whole subject and a withdrawal are bound the same way as a
+// request. An anonymize then pins each only to its own record's addresses. The
+// trigger bind_requests_on_address_move binds the same rows when a merge runs
+// on code that predates this call.
 func (s *Store) BindRequestsToAddressesTx(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
 	if err := admitACarry(ctx, tx, commsauthz.ContactStopSubject(from), commsauthz.ContactStopSubject(to)); err != nil {
 		return err
 	}
+	pair := []ids.UUID{from.UUID, to.UUID}
 	if _, err := tx.Exec(ctx, `
 		UPDATE consent_qualifying_event q SET recorded_for_addresses = `+storekit.RequestAddressesSQL("q.contact_id")+`
-		 WHERE q.contact_id = ANY($1) AND q.recorded_for_addresses IS NULL`, []ids.UUID{from.UUID, to.UUID}); err != nil {
+		 WHERE q.contact_id = ANY($1) AND q.recorded_for_addresses IS NULL`, pair); err != nil {
 		return fmt.Errorf("consent: binding the recorded requests to their addresses: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE communication_suppression s SET recorded_for_addresses = `+storekit.RequestAddressesSQL("s.contact_id")+`
+		 WHERE s.contact_id = ANY($1) AND s.address IS NULL AND s.revoked_at IS NULL
+		   AND s.recorded_for_addresses IS NULL`, pair); err != nil {
+		return fmt.Errorf("consent: binding the subject-wide stops to their addresses: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE contact_consent c SET recorded_for_addresses = `+storekit.RequestAddressesSQL("c.contact_id")+`
+		 WHERE c.contact_id = ANY($1) AND c.state = 'withdrawn' AND c.recorded_for_addresses IS NULL`, pair); err != nil {
+		return fmt.Errorf("consent: binding the withdrawals to their addresses: %w", err)
 	}
 	return nil
 }

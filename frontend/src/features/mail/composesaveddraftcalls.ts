@@ -26,6 +26,7 @@ export type SavedDraftFields = Readonly<{
   subject: string;
   body: string;
   html: string;
+  editorState?: components["schemas"]["MailDraftEditorState"];
   // Where an agent drafted it, so a restore files the send there rather than
   // wherever the composer was opened.
   //
@@ -129,6 +130,7 @@ export async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
       subject: ask.fields.subject,
       body: ask.fields.body,
       html_body: ask.fields.html.trim() === "" ? null : ask.fields.html,
+      editor_state: ask.fields.editorState,
     },
   });
   if (!response.ok || !isMailDraft(data)) {

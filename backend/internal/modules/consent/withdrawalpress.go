@@ -123,8 +123,8 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// exactly the behaviour this dedup had before the column existed.
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
-		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id)
-		SELECT $1, $2, $3, $6, $4, $5, $7
+		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id, recorded_through)
+		SELECT $1, $2, $3, $6, $4, $5, $7, $8
 		 WHERE NOT EXISTS (
 		       SELECT 1 FROM communication_suppression live
 		        WHERE live.revoked_at IS NULL
@@ -133,7 +133,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
 		            OR ($1::uuid IS NULL AND lower(live.address) = $2)))`,
 		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,
-		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID)
+		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID, string(commsauthz.RecordedBySubject))
 	if err != nil {
 		return false, fmt.Errorf("consent: recording the stop this link pressed: %w", err)
 	}

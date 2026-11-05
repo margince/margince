@@ -4165,6 +4165,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.products.remove": "Xóa {name}",
   "deal.products.add": "Thêm sản phẩm",
   "deal.products.alreadyListed": "Đã có trong danh sách",
+  "deal.products.changedWhileEditing":
+    "Ai đó đã lưu sản phẩm của giao dịch này trong lúc bạn chỉnh sửa. Danh sách giờ hiển thị phiên bản của họ; hãy thực hiện lại thay đổi của bạn rồi lưu.",
   "deal.products.fromOffer": "Từ báo giá",
   "deal.products.setByHand": "Tự đặt",
   "deal.lines.empty":
@@ -6221,6 +6223,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.bulk.doneCount_other": "Đã đánh dấu xong {count} việc cho bạn.",
 
   "deal.pendingApprovals": "Chờ duyệt",
+  "deal.approval.open": "Mở",
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
   "deal.offerNeedsCurrency":
@@ -7474,6 +7477,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email",
   "compose.threadLeave": "Email mới",
+  "compose.channelDraftUnavailable":
+    "Kênh này chưa hỗ trợ soạn bằng AI. Hãy viết câu trả lời bên dưới.",
   "compose.draftKept": "Đã giữ các chỉnh sửa. Soạn lại khi sẵn sàng.",
   "compose.threadFailed":
     "Không thể tải tin nhắn. Chọn Thử lại trong chuỗi thư.",
@@ -9984,6 +9989,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa rõ ngày nhận thông tin; nghĩa vụ có thể đã đến hạn.",
   "noticeDuty.observedOn": "Ghi nhận vào",
   "notice.source.more": "Liên hệ này còn nguồn khác cần xác minh.",
+  "notice.source.evidenceOnFile": "Bằng chứng đã có",
+  "notice.source.original": "Bản ghi nguồn ban đầu",
+  "notice.source.originalUnknown": "Bản ghi này chưa nêu rõ nguồn.",
+  "notice.source.happenedOn": "Ngày {date}",
+  "notice.source.recordedOn": "Ghi nhận ngày {date}",
+  "notice.source.describeEvidence": "Mô tả bằng chứng khác",
+  "notice.source.openRecord": "Xem bản ghi",
+  "notice.source.moreEvidence": "Xem thêm bằng chứng",
+  "notice.source.preview": "Trước khi xác nhận",
+  "notice.source.previewNone": "Nguồn này không tạo nghĩa vụ thông báo riêng.",
+  "notice.source.previewOwed": "Vẫn phải thông báo chậm nhất ngày {date}.",
+  "notice.source.previewLatest":
+    "Hạn thông báo muộn nhất là {date}. Chưa xác nhận ngày nhận thông tin.",
+  "notice.source.selectedHint":
+    "Bản ghi đã chọn được giữ làm bằng chứng. Có thể thêm lời giải thích nếu cần.",
   "notice.source.title": "Xem nguồn",
   "notice.source.explanation":
     "Nguồn chưa được xác nhận. Chưa xác định nghĩa vụ thông báo quyền riêng tư hay thời hạn pháp lý. Xác minh nguồn liên hệ trước khi gửi thông báo.",
@@ -10009,6 +10029,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ví dụ: email đầu tiên của họ, hoặc ai đã giới thiệu họ.",
   "notice.source.effect":
     "Khi lưu, hệ thống ghi lại thông tin của họ đến từ đâu. Nếu nguồn đó cần thông báo về quyền riêng tư, nghĩa vụ thông báo sẽ được mở cùng thời hạn. Việc lưu không gửi email và không thay đổi việc bạn có được gửi email cho họ hay không.",
+  "notice.source.metEffect":
+    "Khi lưu, hệ thống ghi lại cuộc gặp. Bạn được gửi email theo dõi cá nhân cho họ, nhưng không bao giờ gửi tiếp thị hay bản tin. Không cần gửi thông báo về quyền riêng tư: họ đã biết bạn là ai khi gặp mặt. Việc lưu không gửi email. Hãy nhập ngày gặp.",
   "notice.source.whyUnknown":
     "Không có ghi nhận nào cho biết thông tin của liên hệ này đến từ đâu.",
   "notice.source.whyUnconfirmed":

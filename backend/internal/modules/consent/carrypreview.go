@@ -22,7 +22,8 @@ const carryFromContactArg = "from_contact"
 const carryFromLeadArg = "from_lead"
 
 const stopCarryCandidates = `SELECT DISTINCT ON (live.kind, live.purpose_id)
- live.id, live.address, live.kind, live.source, live.decided_by_level, live.purpose_id
+ live.id, live.address, live.kind, live.source, live.decided_by_level, live.purpose_id,
+ live.recorded_through, live.recorded_for_addresses
  FROM communication_suppression live
  WHERE ((@from_contact::uuid IS NOT NULL AND live.contact_id = @from_contact)
  OR (@from_lead::uuid IS NOT NULL AND live.lead_id = @from_lead))

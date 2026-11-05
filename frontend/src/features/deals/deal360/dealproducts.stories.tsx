@@ -124,14 +124,17 @@ function card(
         },
       ),
     "GET /deals/d-1/products": () =>
-      rows === "denied" ? permissionDenied() : jsonResponse({ data: rows }),
+      rows === "denied"
+        ? permissionDenied()
+        : jsonResponse({ data: rows, tag: "story" }),
     "GET /products": () =>
       jsonResponse({
         data: [{ id: "p-support", name: "Support plan" }],
         next_cursor: null,
         has_more: false,
       }),
-    "PUT /deals/d-1/products": () => jsonResponse({ data: BY_HAND }),
+    "PUT /deals/d-1/products": () =>
+      jsonResponse({ data: BY_HAND, tag: "story" }),
   });
   return (
     <StoryProviders>

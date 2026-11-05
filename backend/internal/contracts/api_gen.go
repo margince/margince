@@ -16993,6 +16993,84 @@ func (e NoticeKind) Valid() bool {
 	}
 }
 
+// Defines values for NoticeSourceEvidenceKind.
+const (
+	NoticeSourceEvidenceKindAcquisition NoticeSourceEvidenceKind = "acquisition"
+	NoticeSourceEvidenceKindEmail       NoticeSourceEvidenceKind = "email"
+	NoticeSourceEvidenceKindMeeting     NoticeSourceEvidenceKind = "meeting"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourceEvidenceKind enum.
+func (e NoticeSourceEvidenceKind) Valid() bool {
+	switch e {
+	case NoticeSourceEvidenceKindAcquisition:
+		return true
+	case NoticeSourceEvidenceKindEmail:
+		return true
+	case NoticeSourceEvidenceKindMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeSourceEvidenceRecordType.
+const (
+	NoticeSourceEvidenceRecordTypeActivity NoticeSourceEvidenceRecordType = "activity"
+	NoticeSourceEvidenceRecordTypeContact  NoticeSourceEvidenceRecordType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourceEvidenceRecordType enum.
+func (e NoticeSourceEvidenceRecordType) Valid() bool {
+	switch e {
+	case NoticeSourceEvidenceRecordTypeActivity:
+		return true
+	case NoticeSourceEvidenceRecordTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeSourceEvidenceReferenceKind.
+const (
+	NoticeSourceEvidenceReferenceKindAcquisition NoticeSourceEvidenceReferenceKind = "acquisition"
+	NoticeSourceEvidenceReferenceKindActivity    NoticeSourceEvidenceReferenceKind = "activity"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourceEvidenceReferenceKind enum.
+func (e NoticeSourceEvidenceReferenceKind) Valid() bool {
+	switch e {
+	case NoticeSourceEvidenceReferenceKindAcquisition:
+		return true
+	case NoticeSourceEvidenceReferenceKindActivity:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeSourcePreviewRule.
+const (
+	NoticeSourcePreviewRuleArt13 NoticeSourcePreviewRule = "art13"
+	NoticeSourcePreviewRuleArt14 NoticeSourcePreviewRule = "art14"
+	NoticeSourcePreviewRuleNone  NoticeSourcePreviewRule = "none"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourcePreviewRule enum.
+func (e NoticeSourcePreviewRule) Valid() bool {
+	switch e {
+	case NoticeSourcePreviewRuleArt13:
+		return true
+	case NoticeSourcePreviewRuleArt14:
+		return true
+	case NoticeSourcePreviewRuleNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NotificationClass.
 const (
 	NotificationClassApprovalPending NotificationClass = "approval_pending"
@@ -33235,9 +33313,18 @@ type ApproveRequest struct {
 
 // AssessNoticeSource defines model for AssessNoticeSource.
 type AssessNoticeSource struct {
-	Kind       AssessNoticeSourceKind `json:"kind"`
-	Note       string                 `json:"note"`
-	ObtainedAt *time.Time             `json:"obtained_at,omitempty"`
+	Kind AssessNoticeSourceKind `json:"kind"`
+
+	// MetInPerson The source was a meeting face to face, a card handed over at a stand included. Needs kind `in_person_permission` and `obtained_at`. The meeting is recorded as an `in_person` exchange too, the same as the communication-context answer: inside the reply window it supports personal one-to-one follow-up mail, never marketing or a newsletter. It owes no notice: the case settles as information already given at the meeting.
+	MetInPerson *bool `json:"met_in_person,omitempty"`
+
+	// Note Evidence in the officer's words. Required when no existing evidence is selected.
+	Note       string     `json:"note"`
+	ObtainedAt *time.Time `json:"obtained_at,omitempty"`
+
+	// PreviewToken When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview.
+	PreviewToken     *string                        `json:"preview_token,omitempty"`
+	SelectedEvidence *NoticeSourceEvidenceReference `json:"selected_evidence,omitempty"`
 
 	// Timezone IANA timezone used for the acquisition calendar and its monthly deadline.
 	Timezone *string `json:"timezone,omitempty"`
@@ -42068,7 +42155,8 @@ type ContactStop struct {
 	// Margince recorded it, for example for a bounce.
 	RecordedByColleague bool `json:"recorded_by_colleague"`
 
-	// RecordedByName The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+	// RecordedByName The colleague's current name. Null when no colleague recorded it, their seat is gone, or
+	// the stop is a merge's copy whose original was deleted.
 	RecordedByName *string `json:"recorded_by_name,omitempty"`
 }
 
@@ -44639,6 +44727,9 @@ type DealProductInput struct {
 // DealProductListResponse defines model for DealProductListResponse.
 type DealProductListResponse struct {
 	Data []DealProduct `json:"data"`
+
+	// Tag Names this set of allocations. It changes whenever any of them is written; send it back as `expected_tag` to set the products by hand.
+	Tag string `json:"tag"`
 }
 
 // DealRevisionRequest defines model for DealRevisionRequest.
@@ -45637,6 +45728,9 @@ type DraftSteering struct {
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
+
+	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
@@ -51913,6 +52007,9 @@ type MailDraft struct {
 	Cc         []string            `json:"cc"`
 	CreatedAt  time.Time           `json:"created_at"`
 
+	// EditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+	EditorState *MailDraftEditorState `json:"editor_state,omitempty"`
+
 	// Grounding The records this draft was written from, which an agent draft records and a human draft leaves empty. The composer files a sent draft under these, so a draft grounded in a deal reaches that deal's timeline even when it is opened from the contact page.
 	Grounding *[]MailDraftGround `json:"grounding,omitempty"`
 	HtmlBody  *string            `json:"html_body,omitempty"`
@@ -51926,6 +52023,19 @@ type MailDraft struct {
 // MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
 // record a new conversation starts from.
 type MailDraftAnchorType string
+
+// MailDraftEditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+type MailDraftEditorState struct {
+	AiDisclosure *string `json:"ai_disclosure,omitempty"`
+	AiGenerated  *bool   `json:"ai_generated,omitempty"`
+
+	// ContentFingerprint Server binding to the saved words, used only to retire stale editor state.
+	ContentFingerprint  *string `json:"content_fingerprint,omitempty"`
+	Intent              *string `json:"intent,omitempty"`
+	ServedBody          *string `json:"served_body,omitempty"`
+	VoiceDegraded       *bool   `json:"voice_degraded,omitempty"`
+	VoiceProfileVersion *int    `json:"voice_profile_version,omitempty" minimum:"1"`
+}
 
 // MailDraftGround One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.
 type MailDraftGround struct {
@@ -51947,6 +52057,9 @@ type MailDraftInput struct {
 	Bcc        *[]string           `json:"bcc,omitempty"`
 	Body       *string             `json:"body,omitempty"`
 	Cc         *[]string           `json:"cc,omitempty"`
+
+	// EditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+	EditorState *MailDraftEditorState `json:"editor_state,omitempty"`
 
 	// HtmlBody The editor's markup beside the plain body, so reopening restores the formatting.
 	HtmlBody *string   `json:"html_body,omitempty"`
@@ -53329,6 +53442,59 @@ type NoticeOrigin struct {
 		ToName   *string `json:"to_name,omitempty"`
 	} `json:"stage_change,omitempty"`
 }
+
+// NoticeSourceEvidence defines model for NoticeSourceEvidence.
+type NoticeSourceEvidence struct {
+	CapturedBy     *string                  `json:"captured_by,omitempty"`
+	CapturedByName *string                  `json:"captured_by_name,omitempty"`
+	Kind           NoticeSourceEvidenceKind `json:"kind"`
+	OccurredAt     *time.Time               `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	OccurredPrecision OccurredPrecision              `json:"occurred_precision"`
+	RecordId          openapi_types.UUID             `json:"record_id"`
+	RecordType        NoticeSourceEvidenceRecordType `json:"record_type"`
+	RecordedAt        time.Time                      `json:"recorded_at"`
+	Reference         NoticeSourceEvidenceReference  `json:"reference"`
+	Title             *string                        `json:"title,omitempty"`
+}
+
+// NoticeSourceEvidenceKind defines model for NoticeSourceEvidence.Kind.
+type NoticeSourceEvidenceKind string
+
+// NoticeSourceEvidenceRecordType defines model for NoticeSourceEvidence.RecordType.
+type NoticeSourceEvidenceRecordType string
+
+// NoticeSourceEvidencePage defines model for NoticeSourceEvidencePage.
+type NoticeSourceEvidencePage struct {
+	Items            []NoticeSourceEvidence         `json:"items"`
+	NextCursor       *string                        `json:"next_cursor,omitempty"`
+	Original         *NoticeSourceEvidence          `json:"original,omitempty"`
+	OriginalActivity *NoticeSourceEvidence          `json:"original_activity,omitempty"`
+	SelectedEvidence *NoticeSourceEvidenceReference `json:"selected_evidence,omitempty"`
+}
+
+// NoticeSourceEvidenceReference defines model for NoticeSourceEvidenceReference.
+type NoticeSourceEvidenceReference struct {
+	Id   openapi_types.UUID                `json:"id"`
+	Kind NoticeSourceEvidenceReferenceKind `json:"kind"`
+}
+
+// NoticeSourceEvidenceReferenceKind defines model for NoticeSourceEvidenceReference.Kind.
+type NoticeSourceEvidenceReferenceKind string
+
+// NoticeSourcePreview defines model for NoticeSourcePreview.
+type NoticeSourcePreview struct {
+	DeadlineIsUpperBound bool                    `json:"deadline_is_upper_bound"`
+	DueAt                *time.Time              `json:"due_at,omitempty"`
+	NoticeRequired       bool                    `json:"notice_required"`
+	PreviewToken         string                  `json:"preview_token"`
+	Rule                 NoticeSourcePreviewRule `json:"rule"`
+	Timezone             string                  `json:"timezone"`
+}
+
+// NoticeSourcePreviewRule defines model for NoticeSourcePreview.Rule.
+type NoticeSourcePreviewRule string
 
 // NotificationClass A class of notification a seat decides delivery about. Closed, and deliberately coarser
 // than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
@@ -56157,8 +56323,12 @@ type RecordClaimRecordType string
 
 // RecordCommunicationContextRequest One rep's statement about one contact, answering one refusal.
 type RecordCommunicationContextRequest struct {
-	// Kind How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
-	// contact asking us to write to them by phone or across a counter.
+	// Kind How it happened. `in_person` is an exchange in a room, a card handed over at a stand
+	// included; `requested_by_subject` is the contact asking us to write to them by phone or
+	// across a counter. `in_person` supports personal one-to-one follow-up mail, never
+	// marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
+	// settles the contact's open source reviews as information given at the meeting, as a
+	// source review answered "met face to face" does; for anyone else they stay open.
 	Kind RecordCommunicationContextRequestKind `json:"kind"`
 
 	// Note What happened, in the words of whoever was there. Required — it is the only evidence there is.
@@ -56173,8 +56343,12 @@ type RecordCommunicationContextRequest struct {
 	SubjectId openapi_types.UUID `json:"subject_id"`
 }
 
-// RecordCommunicationContextRequestKind How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
-// contact asking us to write to them by phone or across a counter.
+// RecordCommunicationContextRequestKind How it happened. `in_person` is an exchange in a room, a card handed over at a stand
+// included; `requested_by_subject` is the contact asking us to write to them by phone or
+// across a counter. `in_person` supports personal one-to-one follow-up mail, never
+// marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
+// settles the contact's open source reviews as information given at the meeting, as a
+// source review answered "met face to face" does; for anyone else they stay open.
 type RecordCommunicationContextRequestKind string
 
 // RecordConfirmationPage One contact's own view of what the workspace holds about them, for the no-login confirm page.
@@ -56830,7 +57004,9 @@ type ReplaceChannelTokenRequest struct {
 
 // ReplaceDealProductsRequest defines model for ReplaceDealProductsRequest.
 type ReplaceDealProductsRequest struct {
-	Products []DealProductInput `json:"products"`
+	// ExpectedTag The `tag` of the product set the caller read.
+	ExpectedTag string             `json:"expected_tag"`
+	Products    []DealProductInput `json:"products"`
 }
 
 // ReplyRecipient Who a reply to a message is addressed to: one contact, resolved from the
@@ -68880,6 +69056,9 @@ type DraftCompanyEmailJSONBody struct {
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
+
+	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // CreateCompanyFactParams defines parameters for CreateCompanyFact.
@@ -69809,6 +69988,9 @@ type DraftContactEmailJSONBody struct {
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
+
+	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // LinkContactEmployerParams defines parameters for LinkContactEmployer.
@@ -71539,6 +71721,12 @@ type UpdateLeadParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// LiftLeadSuppressionJSONBody defines parameters for LiftLeadSuppression.
+type LiftLeadSuppressionJSONBody struct {
+	// Reason Why the stop is being taken back. Required.
+	Reason string `json:"reason"`
+}
+
 // DemoteLeadParams defines parameters for DemoteLead.
 type DemoteLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -72512,6 +72700,11 @@ type ListNoticeCaseReviewsParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's queue time and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetNoticeSourceEvidenceParams defines parameters for GetNoticeSourceEvidence.
+type GetNoticeSourceEvidenceParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
@@ -75610,6 +75803,9 @@ type DisqualifyLeadJSONRequestBody = DisqualifyLeadRequest
 // UpdateLeadJSONRequestBody defines body for UpdateLead for application/json ContentType.
 type UpdateLeadJSONRequestBody = UpdateLeadRequest
 
+// LiftLeadSuppressionJSONRequestBody defines body for LiftLeadSuppression for application/json ContentType.
+type LiftLeadSuppressionJSONRequestBody LiftLeadSuppressionJSONBody
+
 // DemoteLeadJSONRequestBody defines body for DemoteLead for application/json ContentType.
 type DemoteLeadJSONRequestBody = DemoteLeadRequest
 
@@ -75777,6 +75973,9 @@ type AssignNoticeCaseReviewJSONRequestBody = AssignNoticeCase
 
 // AssessNoticeSourceJSONRequestBody defines body for AssessNoticeSource for application/json ContentType.
 type AssessNoticeSourceJSONRequestBody = AssessNoticeSource
+
+// PreviewNoticeSourceJSONRequestBody defines body for PreviewNoticeSource for application/json ContentType.
+type PreviewNoticeSourceJSONRequestBody = AssessNoticeSource
 
 // AssignNoticeCaseJSONRequestBody defines body for AssignNoticeCase for application/json ContentType.
 type AssignNoticeCaseJSONRequestBody = AssignNoticeCase
@@ -90636,6 +90835,12 @@ type ServerInterface interface {
 	// Update a lead (partial).
 	// (PATCH /leads/{id})
 	UpdateLead(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadParams)
+	// List the stops that stand on this lead, and which ones you may take back.
+	// (GET /leads/{id}/consent/stops)
+	ListLeadStops(w http.ResponseWriter, r *http.Request, id Id)
+	// Take back a stop on a lead, if you outrank the level that set it.
+	// (POST /leads/{id}/consent/suppress/{suppressionId}/lift)
+	LiftLeadSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID)
 	// Recipients copied on inbound correspondence who have no contact or live lead.
 	// (GET /leads/{id}/conversation-suggestions)
 	ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id)
@@ -91032,9 +91237,15 @@ type ServerInterface interface {
 	// Give a disclosure duty an owner.
 	// (POST /privacy/notice-case-reviews/{id}/assign)
 	AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Read accessible evidence for a contact source assessment.
+	// (GET /privacy/notice-case-reviews/{id}/source)
+	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
 	// Confirm the source of an unassessed contact.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Preview the source assessment without changing the case.
+	// (POST /privacy/notice-case-reviews/{id}/source/preview)
+	PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Disclosure duties this installation owes, soonest deadline first.
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
@@ -95601,6 +95812,18 @@ func (_ Unimplemented) UpdateLead(w http.ResponseWriter, r *http.Request, id Id,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the stops that stand on this lead, and which ones you may take back.
+// (GET /leads/{id}/consent/stops)
+func (_ Unimplemented) ListLeadStops(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back a stop on a lead, if you outrank the level that set it.
+// (POST /leads/{id}/consent/suppress/{suppressionId}/lift)
+func (_ Unimplemented) LiftLeadSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Recipients copied on inbound correspondence who have no contact or live lead.
 // (GET /leads/{id}/conversation-suggestions)
 func (_ Unimplemented) ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id) {
@@ -96393,9 +96616,21 @@ func (_ Unimplemented) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read accessible evidence for a contact source assessment.
+// (GET /privacy/notice-case-reviews/{id}/source)
+func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Confirm the source of an unassessed contact.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview the source assessment without changing the case.
+// (POST /privacy/notice-case-reviews/{id}/source/preview)
+func (_ Unimplemented) PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -125495,6 +125730,83 @@ func (siw *ServerInterfaceWrapper) UpdateLead(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListLeadStops operation middleware
+func (siw *ServerInterfaceWrapper) ListLeadStops(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLeadStops(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LiftLeadSuppression operation middleware
+func (siw *ServerInterfaceWrapper) LiftLeadSuppression(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "suppressionId" -------------
+	var suppressionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "suppressionId", chi.URLParam(r, "suppressionId"), &suppressionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "suppressionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LiftLeadSuppression(w, r, id, suppressionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLeadConversationSuggestions operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request) {
 
@@ -130951,6 +131263,56 @@ func (siw *ServerInterfaceWrapper) AssignNoticeCaseReview(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// GetNoticeSourceEvidence operation middleware
+func (siw *ServerInterfaceWrapper) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetNoticeSourceEvidenceParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNoticeSourceEvidence(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AssessNoticeSource operation middleware
 func (siw *ServerInterfaceWrapper) AssessNoticeSource(w http.ResponseWriter, r *http.Request) {
 
@@ -130976,6 +131338,40 @@ func (siw *ServerInterfaceWrapper) AssessNoticeSource(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AssessNoticeSource(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewNoticeSource operation middleware
+func (siw *ServerInterfaceWrapper) PreviewNoticeSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewNoticeSource(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -144643,6 +145039,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/leads/{id}", wrapper.UpdateLead)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/leads/{id}/consent/stops", wrapper.ListLeadStops)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/consent/suppress/{suppressionId}/lift", wrapper.LiftLeadSuppression)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/conversation-suggestions", wrapper.ListLeadConversationSuggestions)
 	})
 	r.Group(func(r chi.Router) {
@@ -145039,7 +145441,13 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/assign", wrapper.AssignNoticeCaseReview)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/notice-case-reviews/{id}/source", wrapper.GetNoticeSourceEvidence)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/source", wrapper.AssessNoticeSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/source/preview", wrapper.PreviewNoticeSource)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/privacy/notice-cases", wrapper.ListNoticeCases)

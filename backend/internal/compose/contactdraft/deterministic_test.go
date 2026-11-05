@@ -92,7 +92,7 @@ func TestALongSilenceIsAcknowledged(t *testing.T) {
 
 // Only a real thread subject earns the reply prefix. A deal name is a topic
 // this side chose, and "Re:" on one claims somebody wrote to us about it.
-func TestOnlyARealThreadSubjectEarnsTheReplyPrefix(t *testing.T) {
+func TestNewMessagesDoNotInheritReplyPrefixes(t *testing.T) {
 	withDeal := contactdraft.Deterministic(contactdraft.Input{
 		Envelope:  envelopeFor(textlang.English, convstate.BandFresh),
 		Recipient: contactdraft.RecipientIn{ID: "p1", FirstName: "Marek"},
@@ -109,12 +109,11 @@ func TestOnlyARealThreadSubjectEarnsTheReplyPrefix(t *testing.T) {
 			{ID: "a1", Kind: "email", Subject: "Pricing question", At: "2026-08-10T09:00:00Z", Inbound: true},
 		},
 	})
-	if !strings.HasPrefix(inbound.Subject, "Re:") {
-		t.Errorf("a message THEY sent should be replied to: subject %q", inbound.Subject)
+	if strings.HasPrefix(inbound.Subject, "Re:") {
+		t.Errorf("a historical message does not select a reply: subject %q", inbound.Subject)
 	}
 
-	// A thread only our side has written in is still the thread: a follow-up
-	// keeps its subject, so the recipient's mail client groups the two.
+	// Outbound history supplies context without selecting a thread.
 	outbound := contactdraft.Deterministic(contactdraft.Input{
 		Envelope:  envelopeFor(textlang.English, convstate.BandFresh),
 		Recipient: contactdraft.RecipientIn{ID: "p1", FirstName: "Marek"},
@@ -122,14 +121,13 @@ func TestOnlyARealThreadSubjectEarnsTheReplyPrefix(t *testing.T) {
 			{ID: "a1", Kind: "email", Subject: "Pricing question", At: "2026-08-10T09:00:00Z"},
 		},
 	})
-	if outbound.Subject != "Re: Pricing question" {
-		t.Errorf("a follow-up on our own mail keeps its thread: subject %q", outbound.Subject)
+	if strings.HasPrefix(outbound.Subject, "Re:") {
+		t.Errorf("a new message must not continue our historical mail: subject %q", outbound.Subject)
 	}
 }
 
-// Their subject already carries a reply prefix, and the floor adds one of its
-// own, so it must not keep theirs too.
-func TestAReplyToAReplyCarriesOnePrefix(t *testing.T) {
+// Historical reply prefixes do not turn a new message into a reply.
+func TestHistoricalReplySubjectsDoNotNameANewMessage(t *testing.T) {
 	draft := contactdraft.Deterministic(contactdraft.Input{
 		Envelope:  envelopeFor(textlang.English, convstate.BandFresh),
 		Recipient: contactdraft.RecipientIn{ID: "p1", FirstName: "Marek"},
@@ -137,8 +135,8 @@ func TestAReplyToAReplyCarriesOnePrefix(t *testing.T) {
 			{ID: "a1", Kind: "email", Subject: "AW: Re: Pricing question", At: "2026-08-10T09:00:00Z", Inbound: true},
 		},
 	})
-	if draft.Subject != "Re: Pricing question" {
-		t.Errorf("subject = %q, want one reply prefix", draft.Subject)
+	if strings.Contains(draft.Subject, "Pricing question") || strings.HasPrefix(draft.Subject, "Re:") {
+		t.Errorf("subject = %q, want a new subject", draft.Subject)
 	}
 	if strings.Contains(draft.Body, "Re: Pricing") || strings.Contains(draft.Body, "AW:") {
 		t.Errorf("the body quotes a reply prefix: %q", draft.Body)
@@ -156,8 +154,8 @@ func TestATaskAfterTheirMailNeverReachesTheFloorDraft(t *testing.T) {
 			{ID: "a1", Kind: "email", Subject: "Pricing question", At: "2026-08-10T09:00:00Z", Inbound: true},
 		},
 	})
-	if draft.Subject != "Re: Pricing question" {
-		t.Errorf("subject = %q, want the reply to their mail", draft.Subject)
+	if strings.Contains(draft.Subject, "Pricing question") || strings.HasPrefix(draft.Subject, "Re:") {
+		t.Errorf("subject = %q, want a new subject", draft.Subject)
 	}
 	if strings.Contains(draft.Body, "Call Marek back") {
 		t.Errorf("the body quotes the internal task title: %q", draft.Body)

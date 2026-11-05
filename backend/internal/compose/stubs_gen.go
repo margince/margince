@@ -2543,6 +2543,14 @@ func (stubs) UpdateLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 	httperr.NotImplemented(w, r, "UpdateLead")
 }
 
+func (stubs) ListLeadStops(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListLeadStops")
+}
+
+func (stubs) LiftLeadSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, suppressionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "LiftLeadSuppression")
+}
+
 func (stubs) ListLeadConversationSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListLeadConversationSuggestions")
 }
@@ -3071,8 +3079,16 @@ func (stubs) AssignNoticeCaseReview(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "AssignNoticeCaseReview")
 }
 
+func (stubs) GetNoticeSourceEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.GetNoticeSourceEvidenceParams) {
+	httperr.NotImplemented(w, r, "GetNoticeSourceEvidence")
+}
+
 func (stubs) AssessNoticeSource(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "AssessNoticeSource")
+}
+
+func (stubs) PreviewNoticeSource(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "PreviewNoticeSource")
 }
 
 func (stubs) ListNoticeCases(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticeCasesParams) {

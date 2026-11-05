@@ -89,6 +89,9 @@ func TestABriefTakesNoDayMeetingDatedTodayAsWhenWeLastSpoke(t *testing.T) {
 		t.Fatal(err)
 	}
 	day := room.log(t, "meeting", occurredday.AnchorIn(now, los), activities.PrecisionDay)
+	// Reported held, so only its date keeps it out of the arc. A writer refuses
+	// held on a day entry dated today, so this is a raw row.
+	room.e.WsExec(t, `UPDATE activity SET meeting_status = 'held' WHERE id = $1`, day)
 	if !occurredday.AnchorIn(now, los).Before(now) {
 		t.Fatal("today's anchor is not behind the clock, so this test proves nothing")
 	}

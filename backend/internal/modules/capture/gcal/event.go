@@ -48,8 +48,11 @@ type rawEvent struct {
 	Description string        `json:"description"`
 	End         eventDateTime `json:"end"`
 	Start       eventDateTime `json:"start"`
-	Organizer   eventActor    `json:"organizer"`
-	Attendees   []eventActor  `json:"attendees"`
+	// OriginalStart is an occurrence's slot in its series, which a move does
+	// not change. Google states it only on an instance of a recurring event.
+	OriginalStart eventDateTime `json:"originalStartTime"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+	Organizer     eventActor    `json:"organizer"`
+	Attendees     []eventActor  `json:"attendees"`
 	// Google sets attendeesOmitted when it cut the list short. A guest list
 	// hidden from guests (guestsCanSeeOtherGuests false, default true) is
 	// withheld from every copy but the organizer's.
@@ -166,6 +169,7 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 		StartsAt:      parseStart(ev.Start),
 		EndsAt:        parseStart(ev.End),
 		AllDay:        isAllDay(ev.Start),
+		SeriesSlot:    parseStart(ev.OriginalStart),
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.Email, Name: ev.Organizer.DisplayName},
 		Attendees:     attendees,
 		PartiesHidden: ev.partiesHidden(),

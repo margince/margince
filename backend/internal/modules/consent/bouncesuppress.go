@@ -134,14 +134,14 @@ func RecordHardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) err
 	var stopID ids.UUID
 	err = tx.QueryRow(ctx, `
 		INSERT INTO communication_suppression
-		    (address, kind, source, captured_by, decided_by_level)
-		VALUES ($1, $2, $3, $4, $5)
+		    (address, kind, source, captured_by, decided_by_level, recorded_through)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (lower(address))
 		  WHERE kind = 'hard_bounce' AND address IS NOT NULL AND revoked_at IS NULL
 		  DO NOTHING
 		RETURNING id`,
 		address, kindHardBounce, bounceSource(fact.DeliveryID), by,
-		string(commsauthz.LevelMachine)).Scan(&stopID)
+		string(commsauthz.LevelMachine), string(commsauthz.RecordedByMachine)).Scan(&stopID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// This address is already known to be dead, so nothing is audited and
 		// nothing is announced — the stop that exists says everything a second

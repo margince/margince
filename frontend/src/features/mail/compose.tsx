@@ -4,6 +4,7 @@ import { SendPermission } from "../../components/sendpermission";
 import { useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
 import { useVoiceProfile } from "../../lib/voice-profile";
+import { ChannelDraftNotice } from "./compose.notices";
 import {
   useComposeThread,
   useConversationNames,
@@ -98,6 +99,7 @@ export function ComposeWindow({
   initialReason,
   initialDealId,
   activityId,
+  sourceBlocked: openingBlocked,
   entityType,
   entityId,
   contactId,
@@ -127,9 +129,10 @@ export function ComposeWindow({
     askedIntent,
     edit,
   });
-  const { answering, choose } = useAnswerTarget({
+  const { answering, choose, sourceBlocked } = useAnswerTarget({
     open,
     channelAnchorId: dial.channel?.anchorId,
+    openingBlocked,
     activityId,
   });
   const fileTarget = answering ?? "";
@@ -208,9 +211,11 @@ export function ComposeWindow({
       subject: fields.subject,
       body: fields.body,
       html: fields.html,
+      editorState: fields.editorState,
     },
     replyTo: thread.anchorActivity,
     offeredRecipient: offer.standing.offeredAddress,
+    initialIntent: askedIntent,
     onRestore: restoreFields,
     onClose,
   });
@@ -232,6 +237,7 @@ export function ComposeWindow({
     fields,
     files: attached.files,
     carriageBlocked: carriageBlocks.length > 0,
+    sourceBlocked,
     anchorActivity: thread.anchorActivity,
     grounding: groundingOf({
       entityType,
@@ -261,12 +267,14 @@ export function ComposeWindow({
     bodyId,
     voiceProfileId: voiceProfile.data?.id ?? null,
     sendPending,
+    sourceBlocked,
   });
   useDraftOnOpen({
     open,
     asked: draftOnOpen,
     mail: !isChannelReply,
     settled: savedDraft.settled,
+    held: savedDraft.held !== null,
     body: fields.body,
     control: voice.control,
   });
@@ -325,6 +333,10 @@ export function ComposeWindow({
           bodyId={bodyId}
           openedFrom={openedFrom}
         >
+          <ChannelDraftNotice
+            requested={draftOnOpen}
+            channel={isChannelReply}
+          />
           {!isChannelReply && (
             <ThreadBar
               thread={thread}

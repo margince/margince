@@ -40,15 +40,18 @@ type rawEvent struct {
 	// The calendarView delta (client.go) reports occurrences rather than series
 	// masters, and every occurrence of one series carries the same value — so it
 	// names the series and the occurrence's start names the meeting within it.
-	ICalUID     string       `json:"iCalUId"` //nolint:tagliatelle // Microsoft's wire format
-	Subject     string       `json:"subject"`
-	BodyPreview string       `json:"bodyPreview"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
-	IsCancelled bool         `json:"isCancelled"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
-	IsAllDay    bool         `json:"isAllDay"`    //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
-	End         graphTime    `json:"end"`
-	Start       graphTime    `json:"start"`
-	Organizer   graphActor   `json:"organizer"`
-	Attendees   []graphActor `json:"attendees"`
+	ICalUID     string    `json:"iCalUId"` //nolint:tagliatelle // Microsoft's wire format
+	Subject     string    `json:"subject"`
+	BodyPreview string    `json:"bodyPreview"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	IsCancelled bool      `json:"isCancelled"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	IsAllDay    bool      `json:"isAllDay"`    //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	End         graphTime `json:"end"`
+	Start       graphTime `json:"start"`
+	// OriginalStart is an occurrence's slot in its series as an instant, which
+	// a move does not change. Graph states it on an occurrence or exception.
+	OriginalStart string       `json:"originalStart"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	Organizer     graphActor   `json:"organizer"`
+	Attendees     []graphActor `json:"attendees"`
 	// With hideAttendees set, each attendee's copy lists only themselves; the
 	// organizer's copy lists everyone.
 	HideAttendees bool `json:"hideAttendees"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
@@ -146,6 +149,7 @@ func decode(ev rawEvent) meetingmap.Event {
 		StartsAt:      parseStart(ev.Start, ev.IsAllDay),
 		EndsAt:        parseStart(ev.End, ev.IsAllDay),
 		AllDay:        ev.IsAllDay,
+		SeriesSlot:    seriesSlot(ev),
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
 		Attendees:     attendees,
 		PartiesHidden: ev.HideAttendees && !ev.IsOrganizer,
@@ -206,6 +210,20 @@ func parseStart(start graphTime, allDay bool) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+// seriesSlot reads an occurrence's original start. An all-day occurrence keeps
+// its start: Graph states the slot as an instant, whose date can differ from
+// the calendar date the series names.
+func seriesSlot(ev rawEvent) time.Time {
+	if ev.IsAllDay {
+		return time.Time{}
+	}
+	t, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(ev.OriginalStart))
+	if err != nil {
+		return time.Time{}
+	}
+	return t.UTC()
 }
 
 // RecordOf uses the live provider normalizer when replaying a stored event.

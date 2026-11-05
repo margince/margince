@@ -146,9 +146,8 @@ var notAnEdge = map[string]string{
 		"source and the product's classification when the row was written. The product is a " +
 		"workspace-wide catalogue entry that search finds by its own name, and the allocation is " +
 		"a figure about the deal rather than a link a rep follows between the two records",
-	"deal_line_item": "a priced line on a deal, naming a catalogue product and carrying its quantity and " +
-		"price. Search finds the product by its own name, and the line is a figure about the deal " +
-		"rather than a link a rep follows between the two records",
+	"deal_line_item": "a priced line of a deal, naming the catalogue product it prices. Like " +
+		"deal_product it is a figure about the deal, not a link a rep follows between the two records",
 	"contact_consent": "contact_id and lead_id are alternative OWNERS of one consent record, never both, " +
 		"so the pair is a polymorphic parent rather than an edge between the two",
 	"consent_event": "the append-only log behind contact_consent, and polymorphic in the same way",

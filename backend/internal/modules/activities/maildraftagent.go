@@ -88,7 +88,7 @@ func upsertAgentMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, ancho
 		   SET to_addresses = EXCLUDED.to_addresses, cc_addresses = EXCLUDED.cc_addresses,
 		       bcc_addresses = EXCLUDED.bcc_addresses, subject = EXCLUDED.subject,
 		       body = EXCLUDED.body, html_body = EXCLUDED.html_body, grounding = EXCLUDED.grounding,
-		       version = mail_draft.version + 1, updated_at = now()
+		       editor_state = '{}'::jsonb, version = mail_draft.version + 1, updated_at = now()
 		 WHERE mail_draft.agent_drafted
 		RETURNING `+mailDraftColumns,
 		arg(ids.NewV7()), arg(author), arg(string(anchor.Type)), arg(anchor.ID),

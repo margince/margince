@@ -48,3 +48,28 @@ func TestSourceAssessmentDowngradeRefusesToDiscardEvidence(t *testing.T) {
 		})
 	}
 }
+
+func TestSourceReferenceDowngradeKeepsAnAssessmentWithoutATypedNote(t *testing.T) {
+	dsn, _ := dsns(t)
+	conn := connect(t, dsn)
+	headSchema(t, conn)
+	ctx := context.Background()
+	id := archivedWithDuty(ctx, t, conn, "Source Reference Example", "human:fixture")
+	if _, err := conn.Exec(ctx, `UPDATE privacy_notice_case
+		SET source_kind = 'referral', source_review_note = '', source_evidence_kind = 'acquisition', source_evidence_id = acquisition_id
+		WHERE id = @id`, pgx.NamedArgs{"id": id}); err != nil {
+		t.Fatal(err)
+	}
+	sql, err := os.ReadFile("core/1793883475_notice_source_reference_note_check_validated.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, string(sql)); err == nil || !strings.Contains(err.Error(), "cannot be rolled back") {
+		t.Fatalf("downgrade=%v", err)
+	}
+	var kept bool
+	if err := conn.QueryRow(ctx, `SELECT source_review_note = '' AND source_evidence_kind = 'acquisition' AND source_evidence_id = acquisition_id
+		FROM privacy_notice_case WHERE id = @id`, pgx.NamedArgs{"id": id}).Scan(&kept); err != nil || !kept {
+		t.Fatalf("source reference kept=%t err=%v", kept, err)
+	}
+}

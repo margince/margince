@@ -231,12 +231,9 @@ func (s *Sink) partyActorTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (cont
 	if !seat.CanMutate() {
 		return ctx, errors.Join(apperrors.ErrPermissionDenied, errPartyAuthorityChanged)
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return ctx, errors.Join(apperrors.ErrPermissionDenied, errPartyAuthorityChanged)
+	if ctx, err = withAuthority(ctx, rbac, seat); err != nil {
+		return ctx, errors.Join(err, errPartyAuthorityChanged)
 	}
-	actor.Permissions, actor.TeamIDs, actor.SeatType = rbac.Permissions, rbac.TeamIDs, seat
-	ctx = principal.WithActor(ctx, actor)
 	if err := auth.Require(ctx, capturedContactObject, principal.ActionCreate); err != nil {
 		return ctx, errors.Join(err, errPartyAuthorityChanged)
 	}

@@ -240,11 +240,8 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 	var dropped string
 	txStart := time.Now()
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// A channel record's account id IS personal data, and THIS transaction is
-		// the one that makes it durable — so the erasure is excluded here, under
-		// the account's own lock, and not only at the ingress edge that admitted
-		// the update. sinkchannel.go states what landing inside an erasure costs.
-		if err := s.refuseErasedChannelAccount(ctx, tx, rec.Counterparty); err != nil {
+		ctx, err := s.admitWriteTx(ctx, tx, rec)
+		if err != nil {
 			return err
 		}
 
@@ -357,6 +354,20 @@ func (s *Sink) stageDuplicateLead(ctx context.Context, rec connector.NormalizedR
 		return fmt.Errorf("capture: staging the dedupe merge: %w", err)
 	}
 	return nil
+}
+
+// admitWriteTx is what the capture transaction asks before it locks a row.
+func (s *Sink) admitWriteTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (context.Context, error) {
+	// A mailbox run started under a role that was taken away since writes
+	// nothing more under it.
+	ctx, err := s.mailboxRunAllowedTx(ctx, tx)
+	if err != nil {
+		return ctx, err
+	}
+	// A channel record's account id is personal data, and this transaction
+	// makes it durable. So the erasure is excluded here, under the account's own
+	// lock, and not only at the ingress edge (sinkchannel.go).
+	return ctx, s.refuseErasedChannelAccount(ctx, tx, rec.Counterparty)
 }
 
 // admitRecord is what a record must be before ANY of it is written, and it

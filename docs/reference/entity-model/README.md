@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4294 |
+| Columns | 4303 |
 | Foreign keys | 592 |
 | Owning areas | 38 |
 
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 36 | 153 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 36 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 71 | 43 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 18 |
@@ -227,11 +227,11 @@ erDiagram
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
 | [`comms_outbound`](comms.md#comms_outbound) | comms | 44 | 4 |
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
-| [`communication_decision`](consent.md#communication_decision) | consent | 29 | 0 |
+| [`communication_decision`](consent.md#communication_decision) | consent | 30 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 19 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 11 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
-| [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
+| [`communication_suppression`](consent.md#communication_suppression) | consent | 15 | 1 |
 | [`company`](contacts.md#company) | contacts | 47 | 51 |
 | [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
@@ -255,13 +255,13 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 8 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 15 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 35 | 49 |
+| [`contact`](contacts.md#contact) | contacts | 36 | 49 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 13 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
 | [`contact_confirm_submission`](consent.md#contact_confirm_submission) | consent | 11 | 0 |
-| [`contact_consent`](consent.md#contact_consent) | consent | 9 | 0 |
+| [`contact_consent`](consent.md#contact_consent) | consent | 10 | 0 |
 | [`contact_email`](contacts.md#contact_email) | contacts | 14 | 1 |
 | [`contact_moment_dismissal`](compose.md#contact_moment_dismissal) | compose | 5 | 0 |
 | [`contact_phone`](contacts.md#contact_phone) | contacts | 14 | 1 |
@@ -361,7 +361,7 @@ erDiagram
 | [`list_member_event`](collections.md#list_member_event) | collections | 11 | 0 |
 | [`list_revision`](collections.md#list_revision) | collections | 11 | 0 |
 | [`list_visit`](collections.md#list_visit) | collections | 4 | 0 |
-| [`mail_draft`](activities.md#mail_draft) | activities | 15 | 0 |
+| [`mail_draft`](activities.md#mail_draft) | activities | 16 | 0 |
 | [`maskable_field`](identity.md#maskable_field) | identity | 2 | 1 |
 | [`meeting_calendar_episode`](activities.md#meeting_calendar_episode) | activities | 5 | 0 |
 | [`meeting_invitation`](activities.md#meeting_invitation) | activities | 21 | 1 |
@@ -385,7 +385,7 @@ erDiagram
 | [`passport`](identity.md#passport) | identity | 11 | 9 |
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 7 |
 | [`preference_token`](consent.md#preference_token) | consent | 8 | 0 |
-| [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 21 | 0 |
+| [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 23 | 0 |
 | [`privacy_request_proof`](consent.md#privacy_request_proof) | consent | 15 | 0 |
 | [`product`](deals.md#product) | deals | 20 | 5 |
 | [`product_translation`](deals.md#product_translation) | deals | 8 | 0 |

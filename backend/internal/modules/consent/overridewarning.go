@@ -63,10 +63,12 @@ const overrideWarningTextV1 = "The engine refused this message, and that refusal
 	"message are written to a record that cannot be edited afterwards. This covers this message " +
 	"alone — the next one to the same recipient is judged from scratch."
 
-// overrideWarnings holds the versions this build has served, with their words.
-// A version is added and never edited or removed. A record naming any of them
+// overrideWarnings resolves the words a recorded version showed. A
+// version is added and never edited or removed. A record naming any of them
 // can then be read back with what its director was shown. Only the current one is
 // accepted for a new instruction (servedWarningVersion).
+//
+// Held by: TestEveryServedWarningVersionReadsBackAndOnlyTheCurrentOneIsAccepted (backend/internal/modules/consent/overridewarning_test.go)
 var overrideWarnings = map[string]string{
 	"override-v1":          overrideWarningTextV1,
 	OverrideWarningVersion: overrideWarningText,

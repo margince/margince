@@ -4540,6 +4540,8 @@ paths:
       summary: Set a deal's products by hand, replacing every allocation it had.
       description: |-
         A deal in `lines` mode takes its products from its lines and refuses a hand-set list (422 `deal_has_lines`).
+        `expected_tag` is the `tag` the caller last read; a set that changed since answers 409 `version_skew`.
+        The write does not change the deal's `version`.
 
         Needs the passport permission Change records.
 
@@ -4557,6 +4559,7 @@ paths:
               schema: {$ref: '#/components/schemas/DealProductListResponse'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/lines:
     parameters:
@@ -16606,6 +16609,24 @@ paths:
   /privacy/notice-case-reviews/{id}/source:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [Compliance]
+      operationId: getNoticeSourceEvidence
+      security: [{bearerAuth: []}]
+      summary: Read accessible evidence for a contact source assessment.
+      parameters:
+        - {name: cursor, in: query, schema: {type: string}}
+      responses:
+        '200':
+          description: Accessible original evidence and a page of correspondence and meetings.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NoticeSourceEvidencePage'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: Read accessible evidence for a contact source assessment.
     post:
       tags: [Compliance]
       operationId: assessNoticeSource
@@ -16630,6 +16651,35 @@ paths:
         Confirm the source of an unassessed contact.
 
         Needs the passport permission Change records.
+
+        Runs at once.
+  /privacy/notice-case-reviews/{id}/source/preview:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      tags: [Compliance]
+      operationId: previewNoticeSource
+      security: [{bearerAuth: []}]
+      summary: Preview the source assessment without changing the case.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AssessNoticeSource'}
+      responses:
+        '200':
+          description: The shared assessment result and a token binding the confirmation to it.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NoticeSourcePreview'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: |-
+        Preview the source assessment without changing the case.
+
+        Needs the passport permission Read records.
 
         Runs at once.
   /communication-reviews/{id}:
@@ -17659,6 +17709,73 @@ paths:
                 required: [stops]
                 properties:
                   stops: {type: array, items: {$ref: '#/components/schemas/ContactStop'}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /leads/{id}/consent/stops:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: listLeadStops
+      security: [{bearerAuth: []}]
+      summary: List the stops that stand on this lead, and which ones you may take back.
+      description: |-
+        `listContactStops` for a lead. Every live suppression the send check reads for this lead:
+        the lead's own stops, the stops held on its address, and a stop kept for its address after
+        an earlier record was anonymized. Newest first.
+      responses:
+        '200':
+          description: The stops that stand.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stops]
+                properties:
+                  stops: {type: array, items: {$ref: '#/components/schemas/ContactStop'}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /leads/{id}/consent/suppress/{suppressionId}/lift:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: suppressionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+        description: The stop to take back, by row.
+    post:
+      tags: [Compliance]
+      operationId: liftLeadSuppression
+      security: [{bearerAuth: []}]
+      summary: Take back a stop on a lead, if you outrank the level that set it.
+      description: |-
+        `liftSuppression` for a lead, under the same rule: you may lift a decision made below your
+        level, never at or above it. Nothing lifts the lead's own press on a link. An admin
+        signed in themselves may correct a marketing objection a colleague recorded by mistake. No
+        seat lifts a processing restriction here.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                  description: Why the stop is being taken back. Required.
+      responses:
+        '204': {description: Lifted.}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -35893,9 +36010,10 @@ components:
       additionalProperties: false
     DealProductListResponse:
       type: object
-      required: [data]
+      required: [data, tag]
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/DealProduct'}}
+        tag: {type: string, description: 'Names this set of allocations. It changes whenever any of them is written; send it back as `expected_tag` to set the products by hand.'}
       additionalProperties: false
     DealProductInput:
       type: object
@@ -35906,8 +36024,9 @@ components:
       additionalProperties: false
     ReplaceDealProductsRequest:
       type: object
-      required: [products]
+      required: [expected_tag, products]
       properties:
+        expected_tag: {type: string, minLength: 1, description: 'The `tag` of the product set the caller read.'}
         products:
           type: array
           maxItems: 50
@@ -38968,6 +39087,10 @@ components:
       description: >-
         What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
       properties:
+        subject:
+          type: [string, 'null']
+          maxLength: 998
+          description: The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
         intent:
           type: [string, 'null']
           maxLength: 400
@@ -39371,6 +39494,18 @@ components:
       properties:
         anchor_type: {$ref: '#/components/schemas/MailDraftAnchorType'}
         anchor_id: {type: string, format: uuid}
+    MailDraftEditorState:
+      type: object
+      description: >-
+        The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+      properties:
+        content_fingerprint: {type: string, readOnly: true, description: "Server binding to the saved words, used only to retire stale editor state."}
+        intent: {type: string}
+        ai_generated: {type: boolean}
+        ai_disclosure: {type: string}
+        voice_profile_version: {type: integer, minimum: 1}
+        voice_degraded: {type: boolean}
+        served_body: {type: string}
     MailDraftInput:
       type: object
       required: [anchor_type, anchor_id]
@@ -39378,6 +39513,7 @@ components:
         The composer's fields as they stand. Every content field is optional and an omitted
         one saves as empty, because a draft is whatever the rep had typed so far.
       properties:
+        editor_state: {$ref: '#/components/schemas/MailDraftEditorState'}
         anchor_type: {$ref: '#/components/schemas/MailDraftAnchorType'}
         anchor_id: {type: string, format: uuid}
         to: {type: array, maxItems: 100, items: {type: string, maxLength: 320}}
@@ -39394,6 +39530,7 @@ components:
       description: |-
         One rep's unsent message, readable by its author and nobody else. Not an activity.
       properties:
+        editor_state: {$ref: '#/components/schemas/MailDraftEditorState'}
         id: {type: string, format: uuid}
         anchor_type: {$ref: '#/components/schemas/MailDraftAnchorType'}
         anchor_id: {type: string, format: uuid}
@@ -40910,8 +41047,12 @@ components:
           type: string
           enum: [in_person, requested_by_subject]
           description: |-
-            How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
-            contact asking us to write to them by phone or across a counter.
+            How it happened. `in_person` is an exchange in a room, a card handed over at a stand
+            included; `requested_by_subject` is the contact asking us to write to them by phone or
+            across a counter. `in_person` supports personal one-to-one follow-up mail, never
+            marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
+            settles the contact's open source reviews as information given at the meeting, as a
+            source review answered "met face to face" does; for anyone else they stay open.
         note:
           type: string
           minLength: 1
@@ -49256,7 +49397,57 @@ components:
           enum: [subject_initiated, customer_contract, requested_quote_or_meeting, in_person_permission, crm_migration, mailbox_history, event_or_form, referral, public_or_business_source, purchased_or_imported]
         obtained_at: {type: [string, 'null'], format: date-time}
         timezone: {type: string, default: UTC, description: 'IANA timezone used for the acquisition calendar and its monthly deadline.'}
-        note: {type: string, minLength: 1, maxLength: 500}
+        met_in_person:
+          type: boolean
+          default: false
+          description: 'The source was a meeting face to face, a card handed over at a stand included. Needs kind `in_person_permission` and `obtained_at`. The meeting is recorded as an `in_person` exchange too, the same as the communication-context answer: inside the reply window it supports personal one-to-one follow-up mail, never marketing or a newsletter. It owes no notice: the case settles as information already given at the meeting.'
+        note: {type: string, maxLength: 500, description: 'Evidence in the officer''s words. Required when no existing evidence is selected.'}
+        selected_evidence: {$ref: '#/components/schemas/NoticeSourceEvidenceReference'}
+        preview_token:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+          description: 'When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview.'
+    NoticeSourceEvidenceReference:
+      type: object
+      required: [kind, id]
+      properties:
+        kind: {type: string, enum: [acquisition, activity]}
+        id: {type: string, format: uuid}
+    NoticeSourceEvidence:
+      type: object
+      required: [reference, kind, recorded_at, record_type, record_id, occurred_precision]
+      properties:
+        reference: {$ref: '#/components/schemas/NoticeSourceEvidenceReference'}
+        kind: {type: string, enum: [acquisition, email, meeting]}
+        title: {type: string}
+        occurred_at: {type: [string, 'null'], format: date-time}
+        occurred_precision: {$ref: '#/components/schemas/OccurredPrecision'}
+        recorded_at: {type: string, format: date-time}
+        captured_by: {type: string}
+        captured_by_name: {type: [string, 'null']}
+        record_type: {type: string, enum: [contact, activity]}
+        record_id: {type: string, format: uuid}
+    NoticeSourceEvidencePage:
+      type: object
+      required: [items]
+      properties:
+        original: {$ref: '#/components/schemas/NoticeSourceEvidence'}
+        original_activity: {$ref: '#/components/schemas/NoticeSourceEvidence'}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/NoticeSourceEvidence'}
+        next_cursor: {type: string}
+        selected_evidence: {$ref: '#/components/schemas/NoticeSourceEvidenceReference'}
+    NoticeSourcePreview:
+      type: object
+      required: [preview_token, rule, notice_required, timezone, deadline_is_upper_bound]
+      properties:
+        preview_token: {type: string}
+        rule: {type: string, enum: [none, art13, art14]}
+        notice_required: {type: boolean}
+        deadline_is_upper_bound: {type: boolean}
+        due_at: {type: [string, 'null'], format: date-time}
+        timezone: {type: string}
     AssignNoticeCase:
       type: object
       required: [owner_user_id]
@@ -50718,7 +50909,9 @@ components:
             Margince recorded it, for example for a bounce.
         recorded_by_name:
           type: [string, 'null']
-          description: The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+          description: |-
+            The colleague's current name. Null when no colleague recorded it, their seat is gone, or
+            the stop is a merge's copy whose original was deleted.
         may_lift:
           type: boolean
           description: This caller may take the stop back now, with a reason.

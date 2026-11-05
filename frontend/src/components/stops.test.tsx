@@ -9,10 +9,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { components } from "../../api/schema";
-import { LocaleProvider } from "../../i18n";
-import { installFetchStub, jsonResponse } from "../../testing/story-utils";
-import { ContactStops } from "./contactstops";
+import type { components } from "../api/schema";
+import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
+import { ContactStops, LeadStops } from "./stops";
 
 // The stops on a contact. The server says per stop whether this reader may take
 // it back; the panel offers that, with a required reason.
@@ -115,5 +115,37 @@ describe("the stops on a contact", () => {
     ).toBeTruthy();
     expect(screen.getByText(/means telling the contact first/)).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("the stops on a lead", () => {
+  it("lists the lead's stops and lifts one through the lead's route", async () => {
+    const user = userEvent.setup();
+    const lifted = vi.fn(
+      (_body: unknown) => new Response(null, { status: 204 }),
+    );
+    installFetchStub({
+      "GET /leads/l-1/consent/stops": () =>
+        jsonResponse({ stops: [TYPED_OBJECTION] }),
+      [`POST /leads/l-1/consent/suppress/${TYPED_OBJECTION.id}/lift`]: lifted,
+    });
+    render(<LeadStops leadId="l-1" />);
+
+    expect(await screen.findByText("Objected to marketing")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Correct this stop" }));
+    await user.type(
+      await screen.findByRole("textbox"),
+      "typed on the wrong lead",
+    );
+    const confirm = Array.from(
+      (await screen.findByRole("dialog")).querySelectorAll("button"),
+    ).find((button) => button.textContent === "Correct this stop");
+    if (!confirm) throw new Error("the dialog has no confirm button");
+    await user.click(confirm);
+
+    await waitFor(() => expect(lifted).toHaveBeenCalledTimes(1));
+    expect(lifted.mock.calls[0]?.[0]).toEqual({
+      reason: "typed on the wrong lead",
+    });
   });
 });

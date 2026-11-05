@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -110,8 +111,8 @@ func stopCovers(purposeKey, marketing, legacy string) bool {
 // follow-up or a quote to them was scheduled.
 //
 // Only an authenticated inbound mail counts, so a forged sender cannot pause a
-// message. Mail a sending system sent (an auto-reply, a bulk mailing) is not a
-// contact writing. Its time is when it reached us: the provider's arrival
+// message. Mail a sending system sent (an auto-reply, a bulk mailing) is not
+// someone writing. Its time is when it reached us: the provider's arrival
 // time, or the capture time, never the Date header the sender wrote. A
 // scheduled reply listens on its own thread; a new message has no thread yet,
 // so any new mail from a recipient counts.
@@ -133,20 +134,27 @@ func pursuitPausedByReply(ctx context.Context, tx pgx.Tx, in SendEmailInput, anc
 		}
 	}
 	var replied bool
-	err := tx.QueryRow(ctx, `
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	addressesArg, sinceArg, threadArg := arg(addresses), arg(created), arg(thread)
+	readable, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return false, err
+	}
+	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1
 			  FROM activity a
 			  JOIN activity_participant p ON p.activity_id = a.id AND p.role = 'from'
-			 WHERE a.kind = 'email' AND a.archived_at IS NULL
+			 WHERE a.kind = 'email' AND a.archived_at IS NULL AND `+readable+`
 			   AND `+correspondence.AuthenticatedInboundSQL("a")+`
 			   AND NOT a.sender_is_machine AND NOT a.bulk_mail_attested
-			   AND lower(p.address) = ANY($1)
-			   AND ($3::text IS NULL OR a.thread_key = $3)
+			   AND lower(p.address) = ANY(`+storekit.SQLf("$%d", addressesArg)+`)
+			   AND (`+storekit.SQLf("$%d", threadArg)+`::text IS NULL OR a.thread_key = `+storekit.SQLf("$%d", threadArg)+`)
 			   AND coalesce(
 			         (SELECT min(coalesce(ci.provider_received_at, ci.imported_at))
 			            FROM capture_import ci WHERE ci.activity_id = a.id),
-			         a.created_at) > $2)`, addresses, created, thread).Scan(&replied)
+			         a.created_at) > `+storekit.SQLf("$%d", sinceArg)+`)`, args...).Scan(&replied)
 	if err != nil {
 		return false, fmt.Errorf("scheduled send: reading replies since scheduling: %w", err)
 	}

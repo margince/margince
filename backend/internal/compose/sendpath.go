@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
@@ -210,7 +211,13 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 // this is composition naming a dependency, every caller assigns it into the
 // seam itself, and widening here would only hide which gate was built.
 func consentGateFor(pool *pgxpool.Pool) *consent.Gate {
-	return consent.NewGate(consent.NewStore(InstallationDB(pool))).
+	return consentGateOn(InstallationDB(pool))
+}
+
+// consentGateOn is consentGateFor for a caller that holds the database handle
+// rather than the pool.
+func consentGateOn(db *database.DB) *consent.Gate {
+	return consent.NewGate(consent.NewStore(db)).
 		// Where the installation is established, which selects the messaging
 		// rules a decision is taken under. Injected rather than read directly
 		// because the setting belongs to identity and consent may not import a

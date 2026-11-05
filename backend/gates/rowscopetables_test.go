@@ -639,5 +639,10 @@ const (
 	// 154: privacy.readLeadNotice names the kinds of data a notice link's own
 	// website lead holds, for the privacy page. It reads presence flags only,
 	// for the lead the link resolved, and returns no reference.
-	modulesTierUnscopedCeiling = 154
+	//
+	// 155: ai.eraseSamplesTx finds every voice profile holding a sample copied
+	// from erased mail or naming an erased contact. An erasure must reach every
+	// owner's profile, so no row scope applies. Each id is only locked, and the
+	// call returns nothing but an error.
+	modulesTierUnscopedCeiling = 155
 )

@@ -165,6 +165,9 @@ func (d replyDrafter) completeChecked(ctx context.Context, data replyActivityDat
 // served draft is held to the bounds again; a refusal sends the caller to its
 // deterministic draft.
 func (data replyActivityData) greeted(draft replyDraft) (replyDraft, error) {
+	if draftcheck.ClaimsAttachment(draft.Body) {
+		return replyDraft{}, errors.New("draft claims an outgoing attachment that was not supplied")
+	}
 	draft.Body = draftcheck.EnsureGreeting(draft.Body, data.Envelope,
 		draftcheck.Grounds{FirstName: data.Recipient, LastName: data.RecipientLastName})
 	if err := validateReplyDraft(draft); err != nil {

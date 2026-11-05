@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -40,8 +41,24 @@ const slippingScanLimit = 50
 // holds the open deals quiet that long and those past their expected close.
 func slippingLister(pool *pgxpool.Pool) agents.SlippingLister {
 	return func(ctx context.Context, quietDays int) ([]agents.SlippingDeal, error) {
-		return quietDealLister(pool, quietDays)(ctx)
+		candidates, _, err := quietDealScanWithClock(pool, quietDays, clockNow)(ctx, scheduledRunOwners(ctx))
+		return candidates, err
 	}
+}
+
+// scheduledRunOwners narrows a scheduled agent run's list to the deals its
+// member owns, and is nil for every other caller. Each member's run then
+// sweeps only their own deals, so no deal is swept twice a night. A deal whose
+// owner never granted the sweep is swept by nobody.
+func scheduledRunOwners(ctx context.Context) *storekit.OwnerSet {
+	if _, scheduled := principal.AgentRunID(ctx); !scheduled {
+		return nil
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID == ids.Nil {
+		return &storekit.OwnerSet{}
+	}
+	return &storekit.OwnerSet{IDs: []ids.UUID{actor.UserID}}
 }
 
 // quietDealLister is the candidate set at one idle window.

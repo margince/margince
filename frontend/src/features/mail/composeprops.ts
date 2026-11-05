@@ -20,6 +20,7 @@ export type ComposeProps = Readonly<{
   initialReason?: CommunicationContext;
   initialDealId?: string;
   activityId?: string;
+  sourceBlocked?: boolean;
   entityType: RelinkKind;
   entityId: string;
   contactId?: string;

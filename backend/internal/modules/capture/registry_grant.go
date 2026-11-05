@@ -71,11 +71,9 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	}
 	// Put-then-commit (like blobstore): seal the credential in the vault
 	// first, then commit the row that names it. The row stores the opaque ref;
-	// the bytes never touch it. A transaction that fails after the seal strands
-	// the blob: nothing references it, and there is no vault sweep to collect it
-	// — only a human ever will. The blob is inert (unreferenced and encrypted at
-	// rest) and the human simply retries the connect, but a stranded secret is
-	// not a non-event.
+	// the bytes never touch it. A refusal inside the transaction deletes the
+	// blob. A transaction that fails for any other reason strands it, inert and
+	// encrypted, with no vault sweep to collect it.
 	ref, err := r.vault.Put(ctx, ids.From[ids.WorkspaceKind](ws), []byte(auth))
 	if err != nil {
 		return ids.Nil, fmt.Errorf("capture: sealing connector credential: %w", err)
@@ -90,7 +88,14 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	}
 	var id ids.UUID
 	var priorRef *string
+	refused := false
 	if err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Asked again before any row lock and held until commit: a demotion
+		// since the check above either waits for this row or refuses it.
+		if _, err := r.sink.captureAllowedTx(ctx, tx, actor.UserID); err != nil {
+			refused = true
+			return err
+		}
 		// The SAME lock the OAuth-app write takes, before this row is counted
 		// by anything. refuseStrandingConnections reads the connection count
 		// under it and then commits the new client id; without this the count
@@ -109,6 +114,9 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 		id, priorRef, err = upsertConnection(ctx, tx, row)
 		return err
 	}); err != nil {
+		if refused {
+			keyvault.DeleteDetached(ctx, r.vault, slog.Default(), ws, ref, "refused connect")
+		}
 		return ids.Nil, fmt.Errorf("capture: storing connection: %w", err)
 	}
 	// The row now names the fresh ref; a prior ref (a genuine reconnect over

@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 13 |
-| Tool catalog | 219.5 KB |
+| Tool catalog | 219.8 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 57512 |
+| Approx. wire tokens | 57583 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 46.3 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 52.3 KB | 23% | Yes, every step |
-| Input schemas | 109.0 KB | 49% | Yes, every step |
+| Descriptions (incl. governance clause) | 52.4 KB | 23% | Yes, every step |
+| Input schemas | 109.3 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **161.4 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **161.7 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -70,7 +70,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1892 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
-| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 811 |
+| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 834 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 601 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 752 |
@@ -94,7 +94,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1958 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2000 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 901 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
@@ -1864,11 +1864,11 @@ details_confirmation to mail the contact, read_details contact_consent, contact_
 contact_stops to check a contact before you record, read_workspace topics data_subject_requests,
 notice_cases, audit_log, legal_holds and restricted_records to read the queues, and read_workspace
 topic record_history for one record's trail. (Runs immediately; the actions allow_contact,
-confirm_notice_source, lift_suppression, record_communication_context, record_consent,
-record_qualifying_event, retract_acquisition_request, retract_qualifying_event, revoke_override,
-update_data_subject_request cannot be undone, so tell the user what the call will change and get
-their yes before calling, unless they asked for this call themselves; requires passport scope
-"write".)
+confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context,
+record_consent, record_qualifying_event, retract_acquisition_request, retract_qualifying_event,
+revoke_override, update_data_subject_request cannot be undone, so tell the user what the call will
+change and get their yes before calling, unless they asked for this call themselves; requires
+passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1883,6 +1883,7 @@ their yes before calling, unless they asked for this call themselves; requires p
         "assign_notice_case",
         "assign_notice_case_review",
         "confirm_notice_source",
+        "lift_lead_suppression",
         "lift_suppression",
         "open_data_subject_request",
         "pin_activity_to_floor",
@@ -1912,7 +1913,7 @@ their yes before calling, unless they asked for this call themselves; requires p
       "type": "string"
     },
     "id": {
-      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_suppression, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
+      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1929,11 +1930,11 @@ their yes before calling, unless they asked for this call themselves; requires p
       "type": "string"
     },
     "request_body": {
-      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "suppressionId": {
-      "description": "lift_suppression only",
+      "description": "lift_lead_suppression, lift_suppression only",
       "type": "string"
     }
   },
@@ -8398,6 +8399,7 @@ needs the user now, and read_record for a record's own fields.
         "lead_promotion_preview",
         "lead_score",
         "lead_signals",
+        "lead_stops",
         "legal_entity_logo",
         "legal_review",
         "legal_reviews",
@@ -8411,6 +8413,8 @@ needs the user now, and read_record for a record's own fields.
         "my_linkedin_reach",
         "notice_case",
         "notice_case_review",
+        "notice_source_evidence",
+        "notice_source_preview",
         "notices",
         "offer_pdf",
         "offered_values",
@@ -8464,7 +8468,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "cursor": {
-      "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, notices only",
+      "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, notice_source_evidence, notices only",
       "type": "string"
     },
     "days": {
@@ -8512,7 +8516,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
+      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
       "type": "string"
     },
     "kind": {
@@ -8568,7 +8572,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "string"
     },
     "request_body": {
-      "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, voice_source_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "rule": {

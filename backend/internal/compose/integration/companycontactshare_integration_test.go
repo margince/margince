@@ -12,7 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -139,7 +142,7 @@ func TestSharingCompanyContactsValidatesRecipientsWithoutEligibleContacts(t *tes
 	}
 }
 
-func TestSharingCompanyContactsRestatesAnExistingMemberGrantAtTheChosenLevel(t *testing.T) {
+func TestSharingCompanyContactsRestatesAnExistingColleagueGrantAtTheChosenLevel(t *testing.T) {
 	e := Setup(t)
 	company := companyIDOf(e.SeedCompany(t, "Shared account", &e.Rep1))
 	contact := e.SeedContact(t, "Shared employee", &e.Rep1)
@@ -195,8 +198,34 @@ func TestSharingCompanyContactsThroughTheHTTPRoute(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/companies/"+e.companyID+"/share-contacts", AnyMap{
 		"subject_type": "user", "subject_id": meUserID(t, e), "access": "write",
-	}, nil, &result); status != http.StatusOK || result.Shared != 3 || result.Skipped != 0 {
+	}, map[string]string{"Idempotency-Key": "share-current-roster"}, &result); status != http.StatusOK || result.Shared != 3 || result.Skipped != 0 {
 		t.Fatalf("share company contacts: status %d, result %+v", status, result)
+	}
+	later := createAndID(t, e.AppEnv, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Later colleague"})
+	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
+		"kind": "employment", "contact_id": later, "company_id": e.companyID,
+		"is_current_primary": true, "source": "manual",
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("create later employment: %d", status)
+	}
+	if status := e.Call(t, "POST", "/v1/companies/"+e.companyID+"/share-contacts", AnyMap{
+		"subject_type": "user", "subject_id": meUserID(t, e), "access": "write",
+	}, map[string]string{"Idempotency-Key": "share-current-roster"}, &result); status != http.StatusOK || result.Shared != 3 || result.Skipped != 0 {
+		t.Fatalf("retry used a different roster: status %d, result %+v", status, result)
+	}
+	var grants int
+	if err := apptest.InWorkspace(e.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(t.Context(), "SELECT count(*) FROM record_grant WHERE record_type = 'contact' AND record_id = @id", pgx.NamedArgs{"id": later}).Scan(&grants)
+	}); err != nil || grants != 0 {
+		t.Fatalf("retry granted a later contact: grants %d, error %v", grants, err)
+	}
+	if status := e.Call(t, "DELETE", "/v1/companies/"+e.companyID, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("archive the shared company: status %d", status)
+	}
+	if status := e.Call(t, "POST", "/v1/companies/"+e.companyID+"/share-contacts", AnyMap{
+		"subject_type": "user", "subject_id": meUserID(t, e), "access": "write",
+	}, map[string]string{"Idempotency-Key": "share-current-roster"}, nil); status != http.StatusNotFound {
+		t.Fatalf("replay disclosed an archived company: status %d, want 404", status)
 	}
 }
 

@@ -233,6 +233,15 @@ func TestAUserWorksForTheDefaultEntityUntilAssigned(t *testing.T) {
 	if err := e.store.AssignLegalEntityMember(admin, vienna.ID, user); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("assigning to an archived entity answered %v, want not found", err)
 	}
+	// The writers refuse this state, so only the owner role can leave a member
+	// on an archived entity; the resolver still never answers one.
+	if _, err := e.owner.Exec(context.Background(), `INSERT INTO legal_entity_member (legal_entity_id, user_id, assigned_by)
+		VALUES ($1, $2, 'human:x')`, vienna.ID, user); err != nil {
+		t.Fatal(err)
+	}
+	if got := resolve(); got != defaultEntity(t, e) {
+		t.Errorf("a member of an archived entity resolves to %s, want the default entity", got)
+	}
 }
 
 func TestARepReadsTheEntitiesAndChangesNone(t *testing.T) {

@@ -226,3 +226,15 @@ func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids
 	}
 	return EffectiveAuthorityTx(ctx, tx, humanID)
 }
+
+// HeldAuthorityTx is EffectiveAuthorityTx without the member's app_user row
+// lock, for a write that references other members' rows. Its foreign keys wait
+// on their row locks, so two such writes holding one each would deadlock. The
+// authorization lock alone still holds the authority until commit: every
+// authorization change takes it exclusively.
+func (*Service) HeldAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	if err := lockAuthorizationShared(ctx, tx); err != nil {
+		return authz.RBAC{}, "", err
+	}
+	return EffectiveAuthorityTx(ctx, tx, humanID)
+}

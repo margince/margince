@@ -4243,6 +4243,8 @@ export const en = {
   "deal.products.remove": "Remove {name}",
   "deal.products.add": "Add a product",
   "deal.products.alreadyListed": "Already listed",
+  "deal.products.changedWhileEditing":
+    "Someone saved this deal’s products while you edited them. The list now shows their version; make your change again and save.",
   "deal.products.fromOffer": "From the offer",
   "deal.products.setByHand": "Set by hand",
   "deal.lines.empty":
@@ -6340,6 +6342,7 @@ export const en = {
   "worklist.bulk.doneCount_other": "Marked {count} items done for you.",
 
   "deal.pendingApprovals": "Awaiting approval",
+  "deal.approval.open": "Open",
   "deal.offers": "Offers",
   "deal.newOffer": "New offer",
   "deal.offerNeedsCurrency":
@@ -7657,6 +7660,8 @@ export const en = {
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send email",
   "compose.threadLeave": "New email",
+  "compose.channelDraftUnavailable":
+    "AI drafting is not available for this channel. Write your reply below.",
   "compose.draftKept": "Your edits were kept. Draft again when ready.",
   "compose.threadFailed":
     "The message could not be loaded. Select Retry in the thread.",
@@ -10257,6 +10262,22 @@ export const en = {
     "The acquisition date is unknown; this duty may already be due.",
   "noticeDuty.observedOn": "Observed on",
   "notice.source.more": "More source reviews remain for this contact.",
+  "notice.source.evidenceOnFile": "Evidence on file",
+  "notice.source.original": "Original source record",
+  "notice.source.originalUnknown": "This record does not identify the source.",
+  "notice.source.happenedOn": "On {date}",
+  "notice.source.recordedOn": "Recorded {date}",
+  "notice.source.describeEvidence": "Describe other evidence",
+  "notice.source.openRecord": "View record",
+  "notice.source.moreEvidence": "Show more evidence",
+  "notice.source.preview": "Before you confirm",
+  "notice.source.previewNone":
+    "No separate notice duty follows from this source.",
+  "notice.source.previewOwed": "A notice is still owed by {date}.",
+  "notice.source.previewLatest":
+    "A notice is owed by {date} at the latest. The collection date is not confirmed.",
+  "notice.source.selectedHint":
+    "The selected record is kept as evidence. Add context if needed.",
   "notice.source.title": "Review source",
   "notice.source.explanation":
     "The source is unconfirmed. No privacy notice duty or legal deadline has been established. Review how the contact was obtained before sending a notice.",
@@ -10280,6 +10301,8 @@ export const en = {
     "For example: their first email, or who introduced you.",
   "notice.source.effect":
     "Saving records where their details came from. If that source means a privacy notice is owed, the notice duty opens with its deadline. Saving sends no email and does not change whether you may email them.",
+  "notice.source.metEffect":
+    "Saving records the meeting. It lets you send them personal follow-up mail, never marketing or a newsletter. No privacy notice is owed: they learned at the meeting who you are. Saving sends no email. Give the day you met.",
   "notice.source.whyUnknown":
     "Nothing on record says where this contact’s details came from.",
   "notice.source.whyUnconfirmed":

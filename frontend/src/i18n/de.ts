@@ -4277,6 +4277,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.products.remove": "{name} entfernen",
   "deal.products.add": "Produkt hinzufügen",
   "deal.products.alreadyListed": "Bereits aufgeführt",
+  "deal.products.changedWhileEditing":
+    "Jemand hat die Produkte dieses Deals gespeichert, während du sie bearbeitet hast. Die Liste zeigt jetzt diese Fassung; nimm deine Änderung erneut vor und speichere.",
   "deal.products.fromOffer": "Aus dem Angebot",
   "deal.products.setByHand": "Selbst festgelegt",
   "deal.lines.empty":
@@ -6372,6 +6374,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bulk.doneCount_other": "{count} Einträge für dich erledigt.",
 
   "deal.pendingApprovals": "Wartet auf Freigabe",
+  "deal.approval.open": "Öffnen",
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",
   "deal.offerNeedsCurrency":
@@ -7654,6 +7657,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "E-Mail senden",
   "compose.threadLeave": "Neue E-Mail",
+  "compose.channelDraftUnavailable":
+    "KI-Entwürfe sind in diesem Kanal nicht verfügbar. Schreib deine Antwort unten.",
   "compose.draftKept":
     "Deine Änderungen bleiben erhalten. Erstelle einen neuen Entwurf, wenn du so weit bist.",
   "compose.threadFailed":
@@ -10258,6 +10263,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Erfassungsdatum ist unbekannt; die Pflicht kann bereits fällig sein.",
   "noticeDuty.observedOn": "Beobachtet am",
   "notice.source.more": "Für diesen Kontakt sind weitere Quellen zu prüfen.",
+  "notice.source.evidenceOnFile": "Vorhandene Nachweise",
+  "notice.source.original": "Ursprünglicher Quelldatensatz",
+  "notice.source.originalUnknown": "Dieser Datensatz nennt keine Quelle.",
+  "notice.source.happenedOn": "Am {date}",
+  "notice.source.recordedOn": "Erfasst am {date}",
+  "notice.source.describeEvidence": "Anderen Nachweis beschreiben",
+  "notice.source.openRecord": "Datensatz ansehen",
+  "notice.source.moreEvidence": "Weitere Nachweise anzeigen",
+  "notice.source.preview": "Vor der Bestätigung",
+  "notice.source.previewNone":
+    "Aus dieser Quelle folgt keine eigene Informationspflicht.",
+  "notice.source.previewOwed": "Ein Datenschutzhinweis ist bis {date} fällig.",
+  "notice.source.previewLatest":
+    "Ein Datenschutzhinweis ist spätestens bis {date} fällig. Das Erfassungsdatum ist unbestätigt.",
+  "notice.source.selectedHint":
+    "Der gewählte Datensatz bleibt als Nachweis erhalten. Bei Bedarf eine Erklärung ergänzen.",
   "notice.source.title": "Quelle prüfen",
   "notice.source.explanation":
     "Die Quelle ist unbestätigt. Eine Informationspflicht und eine gesetzliche Frist stehen noch nicht fest. Vor einem Datenschutzhinweis prüfen, wie der Kontakt erfasst wurde.",
@@ -10283,6 +10304,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Zum Beispiel: die erste E-Mail des Kontakts oder wer den Kontakt vorgestellt hat.",
   "notice.source.effect":
     "Beim Speichern wird festgehalten, woher die Daten stammen. Verlangt diese Quelle einen Datenschutzhinweis, wird die Pflicht mit ihrer Frist angelegt. Es wird keine E-Mail gesendet, und ob du den Kontakt anschreiben darfst, ändert sich nicht.",
+  "notice.source.metEffect":
+    "Beim Speichern wird das Treffen festgehalten. Danach darfst du ihnen persönlich nachfassen, aber nie Werbung oder einen Newsletter senden. Ein Datenschutzhinweis ist nicht fällig: beim Treffen haben sie erfahren, wer ihr seid. Es wird keine E-Mail gesendet. Gib den Tag des Treffens an.",
   "notice.source.whyUnknown":
     "Nirgends ist festgehalten, woher die Daten dieses Kontakts stammen.",
   "notice.source.whyUnconfirmed":

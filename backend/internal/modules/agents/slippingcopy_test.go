@@ -26,7 +26,7 @@ func TestSlippingToolsShareLocalizedEvidence(t *testing.T) {
 				return []SlippingDeal{richer, older}, nil
 			}, func(context.Context, SlippingDeal) (ids.UUID, string, error) {
 				return ids.NewV7(), "Original draft words", nil
-			}, testStalledDays)
+			}, testStalledDays, testStalledDays)
 			raw, err := registry.tools["whats_slipping_this_week"].Handle(t.Context(), json.RawMessage(`{}`))
 			if err != nil {
 				t.Fatal(err)

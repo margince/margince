@@ -4,16 +4,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban } from "lucide-react";
 import { useState } from "react";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
-import { Button } from "../../design-system/atoms";
-import { ConfirmModal } from "../../design-system/confirmmodal";
-import { Field, Textarea } from "../../design-system/field";
-import { formatDateAbbrev } from "../../format/format";
-import { type Translator, useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useViewerZone } from "../../lib/viewerzone";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
+import { Button } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
+import { Field, Textarea } from "../design-system/field";
+import { formatDateAbbrev } from "../format/format";
+import { type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useViewerZone } from "../lib/viewerzone";
 
 type ContactStop = components["schemas"]["ContactStop"];
 type BlockedBy = NonNullable<ContactStop["lift_blocked_by"]>;
@@ -35,16 +35,27 @@ const BLOCKED: Partial<Record<BlockedBy, MessageKey>> = {
 
 const REASON_MAX = 500;
 
-/** The live stops on a contact, as the send check reads them. */
-function useContactStops(contactId: string) {
+/** The record whose stops are shown: a contact or a lead. */
+type StopSubject = Readonly<{ kind: "contact" | "lead"; id: string }>;
+
+/** The queries a lift changes, per subject kind. */
+const LIFT_INVALIDATES: Record<StopSubject["kind"], string[]> = {
+  contact: ["contactStops", "contactConsentGuard"],
+  lead: ["leadStops"],
+};
+
+/** The live stops on a contact or a lead, as the send check reads them. */
+function useStops(subject: StopSubject) {
   return useQuery({
-    queryKey: ["contactStops", contactId],
-    queryFn: async () =>
-      unwrap(
-        await api.GET("/contacts/{id}/consent/stops", {
-          params: { path: { id: contactId } },
-        }),
-      ).stops,
+    queryKey: [LIFT_INVALIDATES[subject.kind][0], subject.id],
+    queryFn: async () => {
+      const path = { params: { path: { id: subject.id } } };
+      const answer =
+        subject.kind === "contact"
+          ? await api.GET("/contacts/{id}/consent/stops", path)
+          : await api.GET("/leads/{id}/consent/stops", path);
+      return unwrap(answer).stops;
+    },
   });
 }
 
@@ -54,8 +65,17 @@ function useContactStops(contactId: string) {
  * a marketing objection a colleague recorded by mistake.
  */
 export function ContactStops({ contactId }: Readonly<{ contactId: string }>) {
+  return <SubjectStops subject={{ kind: "contact", id: contactId }} />;
+}
+
+/** The stops on a lead, the same panel as a contact's. */
+export function LeadStops({ leadId }: Readonly<{ leadId: string }>) {
+  return <SubjectStops subject={{ kind: "lead", id: leadId }} />;
+}
+
+function SubjectStops({ subject }: Readonly<{ subject: StopSubject }>) {
   const t = useT();
-  const stops = useContactStops(contactId);
+  const stops = useStops(subject);
   const list = stops.data ?? [];
   if (list.length === 0) {
     return null;
@@ -64,16 +84,16 @@ export function ContactStops({ contactId }: Readonly<{ contactId: string }>) {
     <section aria-label={t("consent.stopsTitle")}>
       <p className="t-label">{t("consent.stopsTitle")}</p>
       {list.map((stop) => (
-        <StopRow key={stop.id} contactId={contactId} stop={stop} />
+        <StopRow key={stop.id} subject={subject} stop={stop} />
       ))}
     </section>
   );
 }
 
 function StopRow({
-  contactId,
+  subject,
   stop,
-}: Readonly<{ contactId: string; stop: ContactStop }>) {
+}: Readonly<{ subject: StopSubject; stop: ContactStop }>) {
   const t = useT();
   const blocked = stop.lift_blocked_by
     ? BLOCKED[stop.lift_blocked_by]
@@ -101,7 +121,7 @@ function StopRow({
       </p>
       {stop.reason && <p className="t-caption">“{stop.reason}”</p>}
       {blocked && <p className="t-caption">{t(blocked)}</p>}
-      {stop.may_lift && <LiftStop contactId={contactId} stop={stop} />}
+      {stop.may_lift && <LiftStop subject={subject} stop={stop} />}
     </div>
   );
 }
@@ -126,27 +146,36 @@ function recordedByText(stop: ContactStop, date: string, t: Translator) {
 }
 
 function LiftStop({
-  contactId,
+  subject,
   stop,
-}: Readonly<{ contactId: string; stop: ContactStop }>) {
+}: Readonly<{ subject: StopSubject; stop: ContactStop }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState("");
   const lift = useMutation({
     mutationFn: async (words: string) => {
+      const request = {
+        params: { path: { id: subject.id, suppressionId: stop.id } },
+        body: { reason: words },
+      };
       unwrap(
-        await api.POST("/contacts/{id}/consent/suppress/{suppressionId}/lift", {
-          params: { path: { id: contactId, suppressionId: stop.id } },
-          body: { reason: words },
-        }),
+        subject.kind === "contact"
+          ? await api.POST(
+              "/contacts/{id}/consent/suppress/{suppressionId}/lift",
+              request,
+            )
+          : await api.POST(
+              "/leads/{id}/consent/suppress/{suppressionId}/lift",
+              request,
+            ),
       );
     },
     onSuccess: () => {
       setAsking(false);
       setReason("");
-      for (const key of ["contactStops", "contactConsentGuard"]) {
-        queryClient.invalidateQueries({ queryKey: [key, contactId] });
+      for (const key of LIFT_INVALIDATES[subject.kind]) {
+        queryClient.invalidateQueries({ queryKey: [key, subject.id] });
       }
     },
   });

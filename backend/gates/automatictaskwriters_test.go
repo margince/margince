@@ -95,7 +95,6 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/provider.go:Create":                               {writesCallerSource},
 	"modules/activities/activity.go:logActivityAndReadTranscript":         {writesForItsCaller},
 	"modules/activities/channelsend.go:SendMessage":                       {writesNoTask},
-	"modules/activities/dealfiling.go:fileUpdatedActivity":                {writesCallerSource},
 	"modules/activities/sendcore.go:SendPreparedTx":                       {writesNoTask},
 	"compose/controllermail.go:QueueConfirmationTx":                       {writesNoTask},
 	"compose/extractionaccept.go:auditAcceptedFieldsTx":                   {writesNoTask},

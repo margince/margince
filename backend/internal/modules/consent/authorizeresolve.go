@@ -245,7 +245,7 @@ func resolutionForClass(class Class) resolution {
 func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[string]stagedClaim, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category, evidence,
-		       legal_entity_id, purpose_key
+		       legal_entity_id, purpose_key, data_protection_country
 		  FROM communication_decision
 		 WHERE delivery_id = $1 AND phase = 'staging'
 		 -- id, not decided_at: every row of one staging transaction carries the
@@ -263,10 +263,10 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 		var claimed, purposeKey *string
 		var evidence []byte
 		var entity *ids.UUID
-		if err := rows.Scan(&address, &claimed, &evidence, &entity, &purposeKey); err != nil {
+		var out stagedClaim
+		if err := rows.Scan(&address, &claimed, &evidence, &entity, &purposeKey, &out.dataProtection); err != nil {
 			return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
 		}
-		var out stagedClaim
 		if claimed != nil {
 			out.category = commsauthz.Category(*claimed)
 		}
@@ -404,4 +404,6 @@ type stagedClaim struct {
 	// entity and purposeKey are what staging decided the message for.
 	entity     ids.UUID
 	purposeKey string
+	// dataProtection is the country the staged footer was rendered under.
+	dataProtection *string
 }

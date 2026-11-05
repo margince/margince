@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -19,7 +20,7 @@ func meetingProof(status string, declined bool) (PromoteTrigger, bool) {
 	switch {
 	case declined:
 		return "", false
-	case status == "held":
+	case meetingoutcome.IsHeld(status):
 		return TriggerMeetingHeld, true
 	case relstrength.MeetingStatusCounts(status):
 		return TriggerMeetingBooked, true
@@ -37,7 +38,7 @@ func meetingProves(status string, declined bool) bool {
 // leadRef names, NULL when it proves nothing. Both are compile-time literals.
 func meetingProofSQL(alias, leadRef string) string {
 	return `(CASE WHEN ` + leadDeclinedSQL(leadRef, alias) + ` THEN NULL
-	              WHEN ` + alias + `.meeting_status = 'held' THEN '` + string(TriggerMeetingHeld) + `'
+	              WHEN ` + meetingoutcome.HeldSQL(alias) + ` THEN '` + string(TriggerMeetingHeld) + `'
 	              WHEN ` + relstrength.MeetingCountsSQL(alias) + ` THEN '` + string(TriggerMeetingBooked) + `' END)`
 }
 

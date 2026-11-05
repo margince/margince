@@ -164,6 +164,8 @@ const (
 // until then the slot's natural key refuses a duplicate booking.
 const replayMemberAdminObject = "user_admin"
 
+const routeShareCompanyContacts = "POST /v1/companies/{id}/share-contacts"
+
 var replayableOperations = map[string]replayTarget{
 	"POST /v1/users/{id}/merge":       {object: replayMemberAdminObject, rowNote: "the response is only a boolean acknowledgment; it contains no member record or private content"},
 	"POST /v1/scheduling/invitations": {object: tableActivity, table: tableActivity, idPath: "id"},
@@ -189,10 +191,10 @@ var replayableOperations = map[string]replayTarget{
 			{table: tableDeal, idPath: dealIDField},
 		},
 	},
-	"POST /v1/companies":                     {object: tableCompany, table: tableCompany, idPath: "id"},
-	"PATCH /v1/companies/{id}":               {object: tableCompany, table: tableCompany, idPath: "id"},
-	"POST /v1/companies/{id}/merge":          {object: tableCompany, table: tableCompany, idPath: "id"},
-	"POST /v1/companies/{id}/share-contacts": {object: tableCompany, rowNote: "the answer is two counts and names no record"}, //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/companies":            {object: tableCompany, table: tableCompany, idPath: "id"},
+	"PATCH /v1/companies/{id}":      {object: tableCompany, table: tableCompany, idPath: "id"},
+	"POST /v1/companies/{id}/merge": {object: tableCompany, table: tableCompany, idPath: "id"},
+	routeShareCompanyContacts:       {object: tableCompany, table: tableCompany, pathParam: "id"},
 	"POST /v1/companies/{id}/link-contacts": {
 		object: tableCompany, table: tableCompany, pathParam: "id",
 		companions: []companionRef{

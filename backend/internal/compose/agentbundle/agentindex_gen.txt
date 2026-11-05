@@ -886,7 +886,9 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /privacy/notice-case-reviews` | listNoticeCaseReviews | Disclosure duties this installation owes, soonest deadline first. | Read records | at once |
 | `GET /privacy/notice-case-reviews/{id}` | getNoticeCaseReview | One disclosure duty. | Read records | at once |
 | `POST /privacy/notice-case-reviews/{id}/assign` | assignNoticeCaseReview | Give a disclosure duty an owner. | Change records | at once |
+| `GET /privacy/notice-case-reviews/{id}/source` | getNoticeSourceEvidence | Read accessible evidence for a contact source assessment. | Read records | at once |
 | `POST /privacy/notice-case-reviews/{id}/source` | assessNoticeSource | Confirm the source of an unassessed contact. | Change records | at once |
+| `POST /privacy/notice-case-reviews/{id}/source/preview` | previewNoticeSource | Preview the source assessment without changing the case. | Read records | at once |
 | `PATCH /data-subject-requests/{id}` | updateDataSubjectRequest | Update a data-subject request's status / assignee / resolution. | Change records | at once |
 | `GET /confirm-submissions` | listConfirmSubmissions | List what subjects sent through their own confirm links. | Read records | at once |
 | `POST /confirm-submissions/{id}/resolve` | resolveConfirmSubmission | Accept or decline what a subject proposed. | Change records | at once |
@@ -905,6 +907,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /contacts/{id}/consent/suppress` | suppressContact | Record that this contact asked us to stop writing to them. | Change records | at once |
 | `POST /contacts/{id}/consent/suppress/{suppressionId}/lift` | liftSuppression | Take back a stop, if you outrank the level that set it. | Change records | at once |
 | `GET /contacts/{id}/consent/stops` | listContactStops | List the stops that stand on this contact, and which ones you may take back. | Read records | at once |
+| `GET /leads/{id}/consent/stops` | listLeadStops | List the stops that stand on this lead, and which ones you may take back. | Read records | at once |
+| `POST /leads/{id}/consent/suppress/{suppressionId}/lift` | liftLeadSuppression | Take back a stop on a lead, if you outrank the level that set it. | Change records | at once |
 | `POST /contacts/{id}/consent/allow` | allowContact | Record a standing vouch that a machine-level refusal for one category may be overruled. | Change records | at once |
 | `POST /contacts/{id}/consent/allow/{overrideId}/revoke` | revokeOverride | Take back a standing override, if your level may revoke the one that recorded it. | Change records | at once |
 | `POST /contacts/{id}/consent/double-opt-in` | issueDoubleOptIn | Mail the subject a single-use link that confirms one marketing purpose. | Send messages | at once |

@@ -31,10 +31,12 @@ func (s *Sink) WithPartyReceiptSettlement(settle PartyReceiptSettlement) *Sink {
 	return &clone
 }
 
-// PartyAuthority checks the capturing member both before admission and inside its write.
+// PartyAuthority checks the capturing member before admission, inside its
+// write, and inside every capture write of a mailbox run (HeldAuthorityTx).
 type PartyAuthority interface {
 	EffectiveAuthority(context.Context, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error)
 	EffectiveAuthorityTx(context.Context, pgx.Tx, ids.UUID) (authz.RBAC, principal.SeatType, error)
+	HeldAuthorityTx(context.Context, pgx.Tx, ids.UUID) (authz.RBAC, principal.SeatType, error)
 }
 
 // WithPartyAuthority binds admission to current member authority.

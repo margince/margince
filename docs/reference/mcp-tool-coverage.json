@@ -3621,7 +3621,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 1958,
+      "tokens": 2000,
       "agents": [],
       "required_by_cases": [
         "case72_read_the_dossier",
@@ -4061,7 +4061,7 @@
     },
     {
       "name": "change_compliance",
-      "tokens": 811,
+      "tokens": 834,
       "agents": [],
       "required_by_cases": [
         "case77_record_her_yes",

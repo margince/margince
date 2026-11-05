@@ -37,3 +37,17 @@ func (e *Eraser) purgeTextCopies(ctx context.Context, tx pgx.Tx, activities []id
 	}
 	return e.purgeRawCaptures.PurgeTextCopiesTx(ctx, tx, activities)
 }
+
+// purgeTextNaming empties what other modules copied that names the subject,
+// such as a voice sample greeting them. A replay reads the tombstone name, which
+// names nobody. Every eraser compose builds for a request wires the purger.
+func (e *Eraser) purgeTextNaming(ctx context.Context, tx pgx.Tx, keys subjectKeys) error {
+	if e.purgeRawCaptures == nil {
+		return nil
+	}
+	name := keys.displayName
+	if name == erasedName {
+		name = ""
+	}
+	return e.purgeRawCaptures.PurgeTextNamingTx(ctx, tx, name, keys.emails)
+}
