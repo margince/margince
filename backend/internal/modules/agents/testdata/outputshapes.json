@@ -5795,6 +5795,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "base_currency": {
+            "type": "string"
+          },
           "buckets": {
             "type": "array",
             "items": {
@@ -5862,6 +5865,7 @@
           }
         },
         "required": [
+          "base_currency",
           "buckets",
           "closing_minor",
           "deals",

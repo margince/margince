@@ -23,7 +23,7 @@ import (
 // lend mints a second passport over the same workspace.
 func (d *twoDoors) lend(t *testing.T, label string, scopes ...string) *twoDoors {
 	t.Helper()
-	bearer, _ := passportWithID(t, d.e, label, scopes...)
+	bearer, _ := apptest.PassportWithID(t, d.e, label, scopes...)
 	return &twoDoors{e: d.e, bearer: bearer, mcp: apptest.NewMCPClient(d.e, strings.TrimPrefix(bearer["Authorization"], "Bearer "))}
 }
 

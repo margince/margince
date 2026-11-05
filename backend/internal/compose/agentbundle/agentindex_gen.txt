@@ -138,7 +138,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /companies/{id}/facts` | listCompanyFacts | The company's confirmed facts, grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it. | Read records | at once |
 | `POST /companies/{id}/facts` | createCompanyFact | State a fact about this company by hand. | Change records | at once |
 | `GET /companies/{id}/profile-fields` | listCompanyProfileFields | The company's confirmed profile fields. A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it. | Read records | at once |
-| `POST /onboarding/company/messages` | messageOnboardingCompany | Continue the scoped company-setup conversation with or without a website read. | Change records | at once |
 | `GET /onboarding/company/proposal` | getOnboardingCompanyProposal | The deterministic evidence-backed company proposal derived from the onboarding website read. | Read records | at once |
 | `GET /company` | getAnchorCompany | The installation's own company (the anchor company). | Read records | at once |
 | `PUT /company` | putAnchorCompany | Save the installation's own company. | Change records | at once |
@@ -503,7 +502,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /analytics/reports/{id}/draft/publish` | publishReportingReportDraft | Publish a reporting report draft | Change records | at once |
 | `GET /analytics/reports/{id}/revisions` | listReportingReportRevisions | List reporting report revisions | Read records | at once |
 | `POST /analytics/reports/{id}/revisions/{revision}/restore` | restoreReportingReportRevision | Restore a reporting report revision | Change records | at once |
-| `GET /analytics/reports/{id}/reader-preview` | previewReportingReportAsRole | Evaluate a saved report as a seat holding one role would see it. | Read records | at once |
 | `GET /analytics/reports/{id}/evaluation` | evaluateReportingReport | Evaluate reporting report | Read records | at once |
 | `GET /analytics/reports/{id}/questions/{card_id}/answer` | answerReportingQuestionCard | A question card's answer, asked on the server for this reader. | Read records | at once |
 | `POST /analytics/reports/{id}/questions/{card_id}/explain` | explainReportingQuestionCard | The records behind one cell of a question card. | Read records | at once |

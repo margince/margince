@@ -31,10 +31,10 @@ import (
 
 // queueLeadTest uploads a lead file and starts its test run, which it leaves
 // queued.
-func queueLeadTest(t *testing.T, e *apptest.AppEnv, csv string) importRunDTO {
+func queueLeadTest(t *testing.T, e *apptest.AppEnv, csv string) importjobtest.Run {
 	t.Helper()
-	profile, _ := uploadCSV(t, e, "lead", csv)
-	var queued importRunDTO
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", csv)
+	var queued importjobtest.Run
 	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead", "source_ref": profile.SourceRef,
 		"mapping": map[string]string{"Email": "email", "Full Name": "full_name"},
@@ -79,7 +79,7 @@ func TestATestRunAnswersBeforeAnyRowIsRead(t *testing.T) {
 	if status := e.Call(t, http.MethodGet, "/v1/imports/"+queued.ID+"/report", nil, nil, nil); status != http.StatusConflict {
 		t.Fatalf("the report while the test is queued → %d, want 409", status)
 	}
-	var again importRunDTO
+	var again importjobtest.Run
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+queued.ID+"/validate", AnyMap{"version": queued.Version}, nil, &again); status != http.StatusOK || again.Status != "validating" {
 		t.Fatalf("a second test of the same version → %d %q, want 200 with the run still validating", status, again.Status)
 	}
@@ -110,7 +110,7 @@ func TestASecondTestOfTheVersionBeingTestedReadsNoFile(t *testing.T) {
 	if err := store.Delete(t.Context(), sourceRef); err != nil {
 		t.Fatalf("removing the uploaded file: %v", err)
 	}
-	var again importRunDTO
+	var again importjobtest.Run
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+queued.ID+"/validate", AnyMap{"version": queued.Version}, nil, &again); status != http.StatusOK || again.Status != "validating" {
 		t.Fatalf("a second test of the same version with its file gone → %d %q, want 200 validating from the run alone", status, again.Status)
 	}

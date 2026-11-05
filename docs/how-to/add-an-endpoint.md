@@ -18,7 +18,8 @@ store writes, which step 3 needs: [explanation/write-backbone.md](../explanation
      issuing a passport). Or `auth-bootstrap` (sign-in and session code).
 
    The generator **fails** on a data-changing operation with neither, so an endpoint with no tier cannot
-   ship.
+   ship. An operation with `x-mcp-tool` must also pass the role sweep:
+   [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md).
 
    Some handlers **call a model and keep the request open** for the answer (a draft, a brief, an ask).
    Mark such an operation `x-waits-on-model: always`. Use `on-miss` when it serves a stored answer and

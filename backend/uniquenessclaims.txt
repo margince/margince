@@ -167,7 +167,6 @@ internal/compose/integration/recordhistory_http_integration_test.go#const record
 internal/compose/integration/requiredbodyids_http_integration_test.go#func requiredIDCases
 internal/compose/integration/scheduledsend_integration_test.go#method preflightEnv.seedConsentedRecipient
 internal/compose/integration/searchenv.go#var searchObjects
-internal/compose/integration/seatmatrix_integration_test.go#func seededRoles
 internal/compose/integration/workflow_replay_integration_test.go#const block at const routeLeadHandler
 internal/compose/integration/writeauthorityreview_integration_test.go#func TestAReadShareOfADealCannotRewriteItsContracts
 internal/compose/integrationswiring.go#func NewProviderRunService
@@ -223,7 +222,6 @@ internal/compose/transcriptproposetransport.go#func TranscriptReadOnLanding
 internal/modules/activities/activity.go#const block at const fieldKind
 internal/modules/activities/activitylinks.go#func insertActivityLinks
 internal/modules/activities/activityread.go#func scanActivity
-internal/modules/activities/attachment.go#func resolveAttachmentParent
 internal/modules/activities/channelsend.go#method outboundChannelMessage.activity
 internal/modules/activities/companyscope.go#func ActivityWithinProject
 internal/modules/activities/companyscope.go#func CompanyLinkedActivityExists

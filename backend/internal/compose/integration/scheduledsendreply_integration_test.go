@@ -125,7 +125,7 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p := setupPreflight(t)
-			p.connect(t, gmailReadonlyScope, gmailSendScope)
+			p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 			id := p.scheduleClaiming(t, tc.claim)
 
 			p.theyWrite(t, tc.mail(clocktest.Now(t).UTC().Add(time.Second)))
@@ -151,7 +151,7 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 // reply is paused.
 func TestAScheduledReplyListensOnItsOwnThread(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET thread_key = 'the-quote-thread' WHERE id = $1`, uuidOf(t, p.activityID))

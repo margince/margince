@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -204,12 +205,30 @@ func initRepo(t *testing.T, root string, committed map[string]string) (run func(
 	return run, write
 }
 
+// fixtureGitEnv is the environment a fixture's git runs in: the caller's, less
+// what would reach past the fixture. A global commit.gpgsign fails the fixture's
+// commits, and an exported GIT_DIR points them at the real repository.
+// scripts/lib-git-fixture.sh holds the same list for the shell tests.
+func fixtureGitEnv() []string {
+	env := []string{"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null", "GIT_TERMINAL_PROMPT=0"}
+	for _, entry := range os.Environ() {
+		name, _, _ := strings.Cut(entry, "=")
+		if !callerGitVariable.MatchString(name) {
+			env = append(env, entry)
+		}
+	}
+	return env
+}
+
+var callerGitVariable = regexp.MustCompile(`^GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|COMMON_DIR|CEILING_DIRECTORIES|CONFIG|CONFIG_COUNT|CONFIG_PARAMETERS|CONFIG_KEY_\d+|CONFIG_VALUE_\d+|CONFIG_GLOBAL|CONFIG_SYSTEM|TERMINAL_PROMPT)$`)
+
 func gitFixture(t *testing.T, root string) (run func(...string), write func(rel, body string)) {
 	t.Helper()
 	run = func(args ...string) {
 		t.Helper()
 		cmd := exec.Command("git", args...)
 		cmd.Dir = root
+		cmd.Env = fixtureGitEnv()
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 		}

@@ -102,7 +102,6 @@ var routeVerbsGerman = map[string]string{
 	"mark_notice_read":                   "Hinweis als gelesen markieren",
 	"mark_worklist_rows_done":            "Zeilen als erledigt markieren",
 	"message_anchor_company_site_read":   "Frage zur gelesenen Website stellen",
-	"message_onboarding_company":         "Einrichtung der eigenen Firma fortsetzen",
 	"offer_ownership_transfer":           "Datensatz einem Kollegen anbieten",
 	"pause_deal_room":                    "Deal-Raum pausieren",
 	"pin_worklist_row":                   "Zeile in der Arbeitsliste anheften",

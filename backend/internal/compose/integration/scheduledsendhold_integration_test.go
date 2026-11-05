@@ -60,7 +60,7 @@ func (p *preflightEnv) scheduleClaiming(t *testing.T, claim AnyMap) ids.UUID {
 // assembly, and no card is raised.
 func TestAStopHoldsQueuedMarketingAtOnce(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	marketing := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing"})
 	other := p.scheduleClaiming(t, AnyMap{"consent_purpose": "transactional"})
 
@@ -107,7 +107,7 @@ func (p *preflightEnv) cardsFor(t *testing.T, id ids.UUID) int {
 // consent.changed is not about any contact's queue.
 func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	newsletter := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing", "marketing_purpose": "newsletter"})
 	events := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing", "marketing_purpose": "events"})
 	// The legacy purpose key names the purpose the engine judges, so a
@@ -157,7 +157,7 @@ func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 // the first stop holds the message.
 func TestAStopDoesNotReachAnAddressTheContactNoLongerHolds(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, uuidOf(t, p.contactID))

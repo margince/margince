@@ -26,6 +26,12 @@ type NotPromotedError struct{}
 
 func (e *NotPromotedError) Error() string { return "lead is not promoted; nothing to reverse" }
 
+// MessageFault names the condition, so every surface answers it alike.
+func (e *NotPromotedError) MessageFault() (code, message string) { return "not_promoted", e.Error() }
+
+// Unwrap makes the refusal a conflict, which sets its status to 409.
+func (e *NotPromotedError) Unwrap() error { return apperrors.ErrConflict }
+
 // ContactHasDealError maps to 422 contact_has_deal (formulas §26.1): the
 // promoted contact carries commercial state, and un-contacting it would strand
 // the deal's counterparty. The contact stays a contact.

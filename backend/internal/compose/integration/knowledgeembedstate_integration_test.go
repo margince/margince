@@ -110,9 +110,9 @@ func TestKnowledgeAndSystemHealthAgreeWhetherAnEmbeddingModelIsBound(t *testing.
 	})
 
 	t.Run("bound", func(t *testing.T) {
-		router := embedReindexRouter(t, "embed-agree")
+		router := apptest.EmbedReindexRouter(t, "embed-agree")
 		e := apptest.SetupAppWithOptions(t,
-			compose.WithEmbedReindex(router, insertOnlyRunner(t)), compose.WithCorpusAsk(router, nil, quiet))
+			compose.WithEmbedReindex(router, apptest.InsertOnlyRunner(t)), compose.WithCorpusAsk(router, nil, quiet))
 		e.BootstrapWorkspace(t)
 		createCorpusOverHTTP(t, e)
 		offered, state := readEmbedAgreement(t, e)
@@ -132,7 +132,7 @@ func TestKnowledgeAndSystemHealthAgreeAcrossARebind(t *testing.T) {
 	}
 	router := modelPath.Router()
 	e := apptest.SetupAppWithOptions(t,
-		compose.WithEmbedReindex(router, insertOnlyRunner(t)), compose.WithCorpusAsk(router, nil, quiet))
+		compose.WithEmbedReindex(router, apptest.InsertOnlyRunner(t)), compose.WithCorpusAsk(router, nil, quiet))
 	e.BootstrapWorkspace(t)
 	createCorpusOverHTTP(t, e)
 
@@ -143,7 +143,7 @@ func TestKnowledgeAndSystemHealthAgreeAcrossARebind(t *testing.T) {
 		state   crmcontracts.KnowledgeEmbedState
 	}{
 		{"booted unbound", ai.FakeRoutingConfig(), false, crmcontracts.KnowledgeEmbedStateNoEmbeddingModel},
-		{"bound after boot", boundEmbedRouting("embed-rebound"), true, crmcontracts.KnowledgeEmbedStateComplete},
+		{"bound after boot", apptest.BoundEmbedRouting("embed-rebound"), true, crmcontracts.KnowledgeEmbedStateComplete},
 		{"unbound again", ai.FakeRoutingConfig(), false, crmcontracts.KnowledgeEmbedStateNoEmbeddingModel},
 	}
 	for _, step := range steps {

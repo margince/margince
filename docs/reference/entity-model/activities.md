@@ -984,7 +984,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## mail_draft
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -992,12 +992,16 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `agent_drafted` | `boolean`, default `false` | yes | An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. |
 | `anchor_id` | `uuid` | yes |  |
 | `anchor_type` | `text` | yes | One of `activity`, `contact`, `company`, `deal`, `lead`, `project`. |
+| `attachment_ids` | `uuid[]`, default `'{}'::uuid[]` | yes | The files the rep chose, by the ids `/attachments` gave them. |
 | `author_id` | `uuid` | yes | Points at `app_user.id`. |
 | `bcc_addresses` | `text[]`, default `'{}'::text[]` | yes |  |
 | `body` | `text`, default `''::text` | yes |  |
 | `cc_addresses` | `text[]`, default `'{}'::text[]` | yes |  |
+| `communication_context` | `text` |  | The reason for contact the author chose. |
 | `grounding` | `jsonb`, default `'[]'::jsonb` | yes | The records this draft was written from, which an agent draft records and a human draft leaves empty. |
 | `html_body` | `text` |  | The editor's markup beside the plain body, so reopening restores the formatting. |
+| `scheduled_at` | `timestamp with time zone` |  | The moment the author picked to send at, as saved. |
+| `scheduled_tz` | `text` |  | The IANA zone `scheduled_at` was picked in. |
 | `subject` | `text`, default `''::text` | yes |  |
 | `to_addresses` | `text[]`, default `'{}'::text[]` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -1013,7 +1017,9 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 **Rules**
 
 - `mail_draft_anchor_type`: `CHECK ((anchor_type = ANY (ARRAY['activity', 'contact', 'company', 'deal', 'lead', 'project'])))`
+- `mail_draft_communication_context`: `CHECK (((communication_context IS NULL) OR (communication_context = ANY (ARRAY['reply_to_inbound', 'requested_followup', 'precontract_quote', 'active_deal_followup', 'customer_service', 'account_notice', 'contract_notice', 'invoice_or_payment', 'marketing']))))`
 - `mail_draft_one_per_anchor`: `UNIQUE (author_id, anchor_type, anchor_id)`
+- `mail_draft_schedule_pair`: `CHECK (((scheduled_at IS NULL) = (scheduled_tz IS NULL)))`
 - `mail_draft_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**

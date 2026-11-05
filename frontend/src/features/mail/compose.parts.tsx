@@ -33,6 +33,7 @@ import { CarriageNotice } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
 import { FieldNeed } from "./composehead";
 import type { useSavedDraft } from "./composesaveddraft";
+import { SavedDraftFailure } from "./composesaveddraftnotices";
 import { momentLabel, momentOf, ScheduleMenu } from "./composeschedule";
 import type { ComposeSend, MissingField } from "./composesend";
 import { SignOffPreview } from "./composesignoff";
@@ -181,6 +182,7 @@ export function ComposeFoot({
   sendAt,
   savedDraft,
   busy,
+  addressRefused,
   marksRef,
 }: Readonly<{
   confirmLabel: string;
@@ -194,6 +196,8 @@ export function ComposeFoot({
   savedDraft: ReturnType<typeof useSavedDraft>;
   /** A send or a rejection is in flight. */
   busy: boolean;
+  /** A recipient line holds text that is not an address. */
+  addressRefused: boolean;
   /** The place the body's formatting marks draw, beside Send. */
   marksRef: (node: HTMLDivElement | null) => void;
 }>) {
@@ -201,10 +205,10 @@ export function ComposeFoot({
   const t = useT();
   const { locale } = useLocale();
   const scheduled = momentOf(sendAt);
-  const error = send.sendError ?? savedDraft.error;
   return (
     <div className="compose-foot">
-      {error && <ErrorLine>{error}</ErrorLine>}
+      {send.sendError && <ErrorLine>{send.sendError}</ErrorLine>}
+      <SavedDraftFailure draft={savedDraft} />
       <div className="compose-foot-row">
         <span className="actions-split">
           <Button
@@ -212,6 +216,9 @@ export function ComposeFoot({
             onClick={send.confirm}
             pending={send.send.isPending}
             disabled={held}
+            reason={
+              addressRefused ? t("compose.sendWaitsForAddress") : undefined
+            }
           >
             {confirmLabel}
           </Button>
@@ -287,7 +294,8 @@ export function ComposeBody({
   voiceMaturity,
   channelLabel,
   carriageBlocks,
-  flagged,
+  send,
+  sendBlocked,
   voice,
   marksIn,
   attach,
@@ -302,7 +310,10 @@ export function ComposeBody({
   voiceMaturity: VoiceProfile["maturity"] | undefined;
   channelLabel: string | undefined;
   carriageBlocks: readonly CarriageViolation[];
-  flagged: ReadonlySet<MissingField>;
+  /** The fields a press of Send flagged; Cmd/Ctrl+Enter is that press. */
+  send: ComposeSend;
+  /** Cmd/Ctrl+Enter is Send, and waits whenever the Send button does. */
+  sendBlocked: boolean;
   voice: VoiceDraft;
   /** Where the editor's marks draw, in the foot; null until it mounts. */
   marksIn: Element | null;
@@ -338,8 +349,16 @@ export function ComposeBody({
         footIn={marksIn}
         revealText={voice.drafted}
         thinking={voice.control.pending ? t("compose.draftingBody") : null}
+        // A held Send still claims the keys, so they type no line break.
+        onSubmit={() => {
+          if (!sendBlocked) send.confirm();
+        }}
+        undoableRevision={fields.undoableRevision}
       />
-      <FieldNeed show={flagged.has("body")} need={t("compose.missingBody")} />
+      <FieldNeed
+        show={send.flagged.has("body")}
+        need={t("compose.missingBody")}
+      />
       {mail && <SignOffPreview body={fields.body} subject={fields.subject} />}
       {earlier}
       <CarriageNotice channel={channelLabel} blocks={carriageBlocks} />
