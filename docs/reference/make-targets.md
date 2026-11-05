@@ -51,9 +51,10 @@ These target names are a stable interface: external tooling and its UAT guides c
 
 | Target | What it does |
 |---|---|
-| `check` | **The merge gate.** Backend `make check` = build + vet + lint + `arch-lint` + test + drift. Root `make check` runs that plus `craft static` (it needs `origin/main`, and the network on a first run to fetch the pinned binary), the craft-doc floor, image pins, contract breaking-change (`oasdiff`), test-lane hygiene, and the file-length ratchet |
+| `check` | **The merge gate.** Backend `make check` = build + vet + lint + `arch-lint` + test + drift. Root `make check` runs that plus `craft static` (it needs `origin/main`, and the network on a first run to fetch the pinned binary), the root script gates and `check-fe`. It runs the writers first and then four lanes side by side; see [How `make check` runs](#how-make-check-runs) |
 | `check-all` | `check` plus the whole integration lane, locally. `check` does not reach that lane: its `test` target is `go test ./...`, and every integration file carries `//go:build integration`. Optional: CI runs the lane on every non-draft PR that changes `backend/`, `scripts/`, `extensions/` or the `Makefile`, and the shipping loop asks for `make test-it DIR=<pkg>` on the packages a change touches. Needs `make db-up` and takes minutes |
-| `check-backend` / `check-fe` | The two halves of the root gate, runnable alone. `check-backend` = backend `check` + the root script gates below. The CI `deterministic-gates` job runs it with `CHECK_LEGS="test test-extensions"`, and `backend-lint` runs `check-static`. It needs no frontend toolchain: `contract-frontend-drift` skips loudly without pnpm. `check-fe` = the composed typecheck, `frontend-check`, and the unit screens' own suites (`fe-test-ext`), failing loudly if `frontend/node_modules` is missing |
+| `check-backend` / `check-fe` | The two halves of the root gate, runnable alone. `check-backend` = `contract-frontend-drift`, then `check-root-gates`, then backend `check`. The CI `deterministic-gates` job runs it with `CHECK_LEGS="test test-extensions"`, and `backend-lint` runs `check-static`. It needs no frontend toolchain: `contract-frontend-drift` skips loudly without pnpm. `check-fe` = the composed typecheck (which installs the frontend dependencies first), `frontend-check`, and the unit screens' own suites (`fe-test-ext`) |
+| `check-root-gates` | The root script gates below, side by side (`-j$(GATE_JOBS)`, the core count). The list is `ROOT_SCRIPT_GATES` in the root `Makefile` |
 | `build` | `go build ./...` |
 | `vet` | `go vet ./...` |
 | `test` | Unit tests; the fitness gates in `backend/gates/` (license header, write shape, architecture, enum sync, `audit_log` enum coherence, contract `$ref` resolution) run uncached |
@@ -158,7 +159,7 @@ The root `make check` runs the backend gate above and these deterministic root s
 | `make-target-parity` | Every backend target `make help-all` lists runs from the repo root, a wrong name fails there, and `make help` prints. The root sends a name to `backend/` through one pattern rule. A name it sends must stay out of the root `.PHONY` list: `make` then prints `Nothing to be done` and exits 0, so a CI step that calls it passes without running what it gates |
 | `test-make-target-parity` | The own test of `make-target-parity`. It runs the gate on a copy of the real Makefile, which must pass, then on copies with each known wrong rule, which must fail |
 | `contract-breaking-check` | oasdiff severity gate on `api/crm.yaml` against `origin/main` (breaking change fails; additive passes) |
-| `contract-frontend-drift` | The third regeneration a `backend/api/crm.yaml` change owes: `pnpm gen:api` regenerates `frontend/src/api/schema.d.ts` and `public-events.ts`, and this fails when they differ. Skips loudly when `pnpm` is absent (the CI `deterministic-gates` job installs Go only, and takes that path). On a pull request, the `fe-drift` of `fe-quality` covers it, with routing pinned by `TestTheContractReachesTheFrontendLane`. `fe-drift` runs this same script, so both lanes have one spelling. A `check-backend` prerequisite |
+| `contract-frontend-drift` | The third regeneration a `backend/api/crm.yaml` change owes: `pnpm gen:api` regenerates `frontend/src/api/schema.d.ts` and `public-events.ts`, and this fails when they differ. Skips loudly when `pnpm` is absent (the CI `deterministic-gates` job installs Go only, and takes that path). On a pull request, the `fe-drift` of `fe-quality` covers it, with routing pinned by `TestTheContractReachesTheFrontendLane`. `fe-drift` runs this same script, so both lanes have one spelling. `check-backend` runs it before the other gates, because it writes files they read |
 | `test-contract-frontend-drift` | the own test of `contract-frontend-drift`: the skip is loud, goes to stderr, is the gate's only early exit, and the artifact census precedes it. A gate that may skip can skip without a sound, so the skip itself is tested. A `check-backend` prerequisite |
 | `migration-versions` | Every migration version this branch adds is unclaimed on `origin/main` and sorts above the highest one there, per namespace, derived from `backend/migrations/*/`. See [migration-versions](#migration-versions) |
 | `test-lanes` | Hermetic-unit-lane check: no untagged test opens a real Postgres/Redis |
@@ -168,6 +169,8 @@ The root `make check` runs the backend gate above and these deterministic root s
 | `test-golangci-guard` | Prove `scripts/run-golangci.sh` still tells a finding in this checkout from one the golangci cache remembers from another worktree. See [The golangci cache guard](#the-golangci-cache-guard) |
 | `go-file-length` | Hard 500-LOC cap on hand-written product Go, ratcheted via `scripts/go-file-length-waivers.txt`. Test and generated files are exempt here; the craft gate bounds `*_test.go` at 1000 lines |
 | `comment-budget` | A change may not add more comment lines than the code they explain. Diff-scoped against `origin/main`, Go and TypeScript; `doc.go` and generated files are exempt. The counterweight to the function ceiling, which does not count comment lines |
+| `test-phase-timer` | Prove that `scripts/phase-timer.sh` refuses a phase opened inside another phase of the same lane, records phases of two lanes that overlap, and reports the wall time next to the total of the phases |
+| `test-check-lane-end` | Prove that `scripts/check-lane-end.sh` names a failed `make check` lane, prints the end of its log and fails |
 | `test-keep-unchanged-mtimes` | Prove that `scripts/keep-unchanged-mtimes.sh`, which `drift` runs its generators through, gives back the old mtime only to a file rewritten with its own bytes. Go replays a cached test result while the files it read keep their mtime, so a changed file that kept an old time would replay a stale result |
 | `test-comment-budget` | Prove the budget gate fails an over-budget change, since a budget nothing can trip looks the same as a change within budget |
 | `test-docs-describing` | Prove the `docs-describing` report asks about a page whose code changed, and accepts only an answer it can read |
@@ -217,9 +220,26 @@ The wrapper both lint lanes run through resolves every reported path and quarant
 - It holds the judged half offline, replaying verdicts a real judge gave the committed fixtures (`e2e/llm/testdata/judge/`). The correct answers must score clean and every defect must be caught and named, so a judge that agreed with everything fails. A judge that cannot be reached, or answers something other than a verdict, stops the run.
 - It runs the `e2e/llm/tests/` unittest suites. They drive the bridge, the codex reader and the key routes of the judge against in-process fakes of the MCP server and each vendor API. No key, no network.
 
+### How `make check` runs
+
+Some steps of the gate write files that other steps read. A reader that opens such a file while it is written sees a short or empty file. So `make check` runs in two parts:
+
+1. **The writers**, one at a time (`CHECK_WRITERS` in the root `Makefile`):
+   - `fe-install` writes `frontend/node_modules`.
+   - `composition` removes `build/composition/` and writes it again.
+   - `drift` writes the generated Go files, `config/` and generated pages under `docs/reference/`.
+   - `contract-frontend-drift` writes `frontend/src/api/schema.d.ts` and `public-events.ts`.
+2. **Four lanes**, side by side (`CHECK_LANES`): `craft-static`, `check-root-gates`, the backend `check` and `check-fe`. `CHECK_LANE_JOBS=1 make check` runs them one after the other. Use it when the machine has a high load. Then vitest and `go test` in two lanes slow each other until tests fail on their time limits.
+
+The lanes run with `CHECK_WRITERS_RAN=1`. Then `composition` and `fe-drift` print a line and write nothing, and the backend `check` leaves out `drift`. The other writes in a lane are files that only that lane reads: `check-fe` installs the composed frontend workspace under `build/composition-frontend/` and builds `frontend/dist`.
+
+Each lane writes its output to `.tmp/check-lanes/<lane>.log`, because make 3.81 (on macOS) cannot keep the output of parallel jobs apart. When a lane fails, `scripts/check-lane-end.sh` prints the lines of its log that name a failure. Then it prints the end of the log and the path to the full log. Then `make check` fails with the name of the lane.
+
+`TestMakeCheckRunsEveryLegItsTwoHalvesRun` in `backend/gates/checklanes_test.go` fails when `make check` does not reach a leg that `check-backend` or `check-fe` runs.
+
 ### Where the gate spends its time
 
-Every green `make check` ends with a table of its phases, so whoever optimizes it next starts from a measurement on their own machine. Both halves report: the backend's four phases and the gate fan-out, and the frontend's composed typecheck, core suite and unit screens.
+Every green `make check` ends with a table of its phases, so whoever optimizes it next starts from a measurement on their own machine. Each row names its lane. The first line gives the wall time of the run next to the total of its phases: the lanes overlap, so the total is larger.
 
 The time is not spread evenly. The frontend core suite is the largest phase, and `fe-unit` is most of it: vitest runs every test file on every run. In the backend, the `gates` package is the slowest leg. `UNCACHED_TEST_PKGS` in `backend/Makefile` keeps it and `internal/modules/ai` out of the test cache, and says why.
 
@@ -228,7 +248,6 @@ Every other Go package replays from the test cache when nothing it reads has cha
 ### Speed-ups measured and rejected
 
 - **Fanning out `frontend-check` under `-j`.** It has 7 legs. Five of them run `pnpm install --frozen-lockfile` into one `frontend/node_modules`, and four begin with it. Run together, they race the `.bin` symlink farm and leave the tree broken (`ENOENT ... chmod`, exit 2). CI runs them as parallel jobs only because each CI job has its own checkout. A working fan-out would save about `20s`.
-- **Running `check-backend` and `check-fe` concurrently.** Three steps write files that the other half reads. `drift` rewrites `*_gen.go`, `config/` and generated pages under `docs/reference/`. `contract-frontend-drift` and `fe-drift` rewrite `frontend/src/api/schema.d.ts` and `public-events.ts`. `composition` rewrites `build/composition/`, which `lint`, `fe-typecheck-composed` and `fe-test-ext` all read. Each rewrite is in place, so a reader can see a half-written file.
 
 ## Occasional
 
