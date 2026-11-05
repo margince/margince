@@ -299,6 +299,17 @@ func anonymizeSubjectRows(
 	if err != nil {
 		return nil, err
 	}
+	// The hashes an earlier anonymize kept go onto the erasure list before the
+	// redaction clears them. They are the same hash (storekit.SuppressionHash),
+	// so the anonymized subject's addresses stay refused once the row forgets
+	// them.
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO erasure_suppression (kind, value_hash)
+		SELECT 'email', kept FROM contact, unnest(anonymized_address_hashes) AS kept
+		 WHERE contact.id = $1
+		ON CONFLICT DO NOTHING`, contactID); err != nil {
+		return nil, fmt.Errorf("privacy: keeping the anonymized addresses on the erasure list: %w", err)
+	}
 	// Only a row that still holds something is written. An already-anonymised
 	// contact is left as it is, so an erasure that finds nothing counts no
 	// update and its request can answer nothing_held. Asked first rather than
@@ -310,7 +321,7 @@ func anonymizeSubjectRows(
 		       OR address_line1 IS NOT NULL OR address_line2 IS NOT NULL OR address_city IS NOT NULL
 		       OR address_region IS NOT NULL OR address_postal_code IS NOT NULL
 		       OR address_country IS NOT NULL OR source_author_name IS NOT NULL
-		       OR archived_at IS NULL%s
+		       OR anonymized_address_hashes IS NOT NULL OR archived_at IS NULL%s
 		  FROM contact WHERE id = $1`, anyColumnHeld(contactCustom)), contactID, erasedName).Scan(&holds); err != nil {
 		return nil, err
 	}
@@ -320,7 +331,7 @@ func anonymizeSubjectRows(
 		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
-		  source_author_name = NULL,
+		  source_author_name = NULL, anonymized_address_hashes = NULL,
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), contactID, erasedName); err != nil {
 			return nil, err

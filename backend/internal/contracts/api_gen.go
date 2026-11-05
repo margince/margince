@@ -42144,7 +42144,8 @@ type ContactStop struct {
 	// Margince recorded it, for example for a bounce.
 	RecordedByColleague bool `json:"recorded_by_colleague"`
 
-	// RecordedByName The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+	// RecordedByName The colleague's current name. Null when no colleague recorded it, their seat is gone, or
+	// the stop is a merge's copy whose original was deleted.
 	RecordedByName *string `json:"recorded_by_name,omitempty"`
 }
 
@@ -71694,6 +71695,12 @@ type UpdateLeadParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// LiftLeadSuppressionJSONBody defines parameters for LiftLeadSuppression.
+type LiftLeadSuppressionJSONBody struct {
+	// Reason Why the stop is being taken back. Required.
+	Reason string `json:"reason"`
+}
+
 // DemoteLeadParams defines parameters for DemoteLead.
 type DemoteLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -75766,6 +75773,9 @@ type DisqualifyLeadJSONRequestBody = DisqualifyLeadRequest
 
 // UpdateLeadJSONRequestBody defines body for UpdateLead for application/json ContentType.
 type UpdateLeadJSONRequestBody = UpdateLeadRequest
+
+// LiftLeadSuppressionJSONRequestBody defines body for LiftLeadSuppression for application/json ContentType.
+type LiftLeadSuppressionJSONRequestBody LiftLeadSuppressionJSONBody
 
 // DemoteLeadJSONRequestBody defines body for DemoteLead for application/json ContentType.
 type DemoteLeadJSONRequestBody = DemoteLeadRequest
@@ -90781,6 +90791,12 @@ type ServerInterface interface {
 	// Update a lead (partial).
 	// (PATCH /leads/{id})
 	UpdateLead(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadParams)
+	// List the stops that stand on this lead, and which ones you may take back.
+	// (GET /leads/{id}/consent/stops)
+	ListLeadStops(w http.ResponseWriter, r *http.Request, id Id)
+	// Take back a stop on a lead, if you outrank the level that set it.
+	// (POST /leads/{id}/consent/suppress/{suppressionId}/lift)
+	LiftLeadSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID)
 	// Recipients copied on inbound correspondence who have no contact or live lead.
 	// (GET /leads/{id}/conversation-suggestions)
 	ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id)
@@ -95749,6 +95765,18 @@ func (_ Unimplemented) GetLead(w http.ResponseWriter, r *http.Request, id Id) {
 // Update a lead (partial).
 // (PATCH /leads/{id})
 func (_ Unimplemented) UpdateLead(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the stops that stand on this lead, and which ones you may take back.
+// (GET /leads/{id}/consent/stops)
+func (_ Unimplemented) ListLeadStops(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back a stop on a lead, if you outrank the level that set it.
+// (POST /leads/{id}/consent/suppress/{suppressionId}/lift)
+func (_ Unimplemented) LiftLeadSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -125552,6 +125580,83 @@ func (siw *ServerInterfaceWrapper) UpdateLead(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListLeadStops operation middleware
+func (siw *ServerInterfaceWrapper) ListLeadStops(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLeadStops(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LiftLeadSuppression operation middleware
+func (siw *ServerInterfaceWrapper) LiftLeadSuppression(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "suppressionId" -------------
+	var suppressionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "suppressionId", chi.URLParam(r, "suppressionId"), &suppressionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "suppressionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LiftLeadSuppression(w, r, id, suppressionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLeadConversationSuggestions operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request) {
 
@@ -144667,6 +144772,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/leads/{id}", wrapper.UpdateLead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/leads/{id}/consent/stops", wrapper.ListLeadStops)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/consent/suppress/{suppressionId}/lift", wrapper.LiftLeadSuppression)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/conversation-suggestions", wrapper.ListLeadConversationSuggestions)

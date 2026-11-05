@@ -10,16 +10,16 @@
   "totals": {
     "tools": 47,
     "resources": 13,
-    "tool_catalog_bytes": 212228,
+    "tool_catalog_bytes": 212369,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 54371,
+    "approx_wire_tokens_total": 54407,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 49373,
-      "input_schema_bytes": 103584,
+      "description_bytes": 49396,
+      "input_schema_bytes": 103702,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 152957
+      "description_plus_input_schema_bytes": 153098
     }
   },
   "tools": {
@@ -1383,7 +1383,7 @@
           "readOnlyHint": false,
           "title": "Record consent, stops, holds and privacy work"
         },
-        "description": "Do the user's privacy work on a contact or record: record consent, record that a contact asked to stop, allow a refused category, record the exchange that makes correspondence lawful, answer a refused send, open or update a data subject request, assign a disclosure duty, confirm a source, accept or decline what a subject proposed, place a legal hold and pin an activity to the retention floor. record_consent, allow_contact, revoke_override, lift_suppression, record_qualifying_event, retract_qualifying_event, retract_acquisition_request and record_communication_context have legal weight: tell the user what you will record and call only after they say yes. The proof names you as its author. Record only what the user or the contact said, never your reading of their tone. Fulfilling an erasure request, lifting a legal hold, releasing a restricted record, restoring a change and retention policy are done in the app. Use send_outbound double_opt_in, privacy_notice or details_confirmation to mail the contact, read_details contact_consent, contact_consent_guard or contact_stops to check a contact before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds and restricted_records to read the queues, and read_workspace topic record_history for one record's trail. (Runs immediately; the actions allow_contact, confirm_notice_source, lift_suppression, record_communication_context, record_consent, record_qualifying_event, retract_acquisition_request, retract_qualifying_event, revoke_override, update_data_subject_request cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Do the user's privacy work on a contact or record: record consent, record that a contact asked to stop, allow a refused category, record the exchange that makes correspondence lawful, answer a refused send, open or update a data subject request, assign a disclosure duty, confirm a source, accept or decline what a subject proposed, place a legal hold and pin an activity to the retention floor. record_consent, allow_contact, revoke_override, lift_suppression, record_qualifying_event, retract_qualifying_event, retract_acquisition_request and record_communication_context have legal weight: tell the user what you will record and call only after they say yes. The proof names you as its author. Record only what the user or the contact said, never your reading of their tone. Fulfilling an erasure request, lifting a legal hold, releasing a restricted record, restoring a change and retention policy are done in the app. Use send_outbound double_opt_in, privacy_notice or details_confirmation to mail the contact, read_details contact_consent, contact_consent_guard or contact_stops to check a contact before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds and restricted_records to read the queues, and read_workspace topic record_history for one record's trail. (Runs immediately; the actions allow_contact, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_qualifying_event, retract_acquisition_request, retract_qualifying_event, revoke_override, update_data_subject_request cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -1393,6 +1393,7 @@
                 "assign_notice_case",
                 "assign_notice_case_review",
                 "confirm_notice_source",
+                "lift_lead_suppression",
                 "lift_suppression",
                 "open_data_subject_request",
                 "pin_activity_to_floor",
@@ -1422,7 +1423,7 @@
               "type": "string"
             },
             "id": {
-              "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_suppression, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
+              "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
               "type": "string"
             },
             "idempotency_key": {
@@ -1439,11 +1440,11 @@
               "type": "string"
             },
             "request_body": {
-              "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The request body of allowContact",
+              "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The request body of allowContact",
               "type": "object"
             },
             "suppressionId": {
-              "description": "lift_suppression only",
+              "description": "lift_lead_suppression, lift_suppression only",
               "type": "string"
             }
           },
@@ -7465,6 +7466,7 @@
                 "lead_promotion_preview",
                 "lead_score",
                 "lead_signals",
+                "lead_stops",
                 "legal_entity_logo",
                 "legal_review",
                 "legal_reviews",
@@ -7573,7 +7575,7 @@
               "type": "boolean"
             },
             "id": {
-              "description": "activity_pipeline, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
+              "description": "activity_pipeline, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
               "type": "string"
             },
             "kind": {

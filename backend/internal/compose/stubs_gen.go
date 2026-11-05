@@ -2543,6 +2543,14 @@ func (stubs) UpdateLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 	httperr.NotImplemented(w, r, "UpdateLead")
 }
 
+func (stubs) ListLeadStops(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListLeadStops")
+}
+
+func (stubs) LiftLeadSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, suppressionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "LiftLeadSuppression")
+}
+
 func (stubs) ListLeadConversationSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListLeadConversationSuggestions")
 }

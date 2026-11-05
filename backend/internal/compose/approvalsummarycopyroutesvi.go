@@ -201,6 +201,7 @@ var routeVerbsVietnamese = map[string]string{
 	"allow_contact":                      "Cho phép một danh mục bị từ chối cho liên hệ",
 	"revoke_contact_override":            "Thu hồi ngoại lệ của liên hệ",
 	"lift_contact_suppression":           "Gỡ yêu cầu dừng liên hệ",
+	"lift_lead_suppression":              "Gỡ yêu cầu dừng liên hệ trên lead",
 	"record_qualifying_event":            "Ghi nhận trao đổi với liên hệ",
 	"retract_qualifying_event":           "Rút lại trao đổi đã ghi nhận",
 	"retract_acquisition_request":        "Rút lại yêu cầu của liên hệ đã ghi nhận",

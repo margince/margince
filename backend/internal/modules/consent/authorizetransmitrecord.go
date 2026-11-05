@@ -173,14 +173,15 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 	// One row per (kind, purpose_id). Two narrow rows for the same kind but
 	// different purposes are two different stops, and collapsing them would
 	// drop one of them. The newest recorded_at of each is kept.
+	lowered, hashes := storekit.StopAddressArgs(r.Email)
 	rows, err := tx.Query(ctx, `
-		SELECT kind, purpose_id, max(recorded_at) FROM communication_suppression
+		SELECT kind, purpose_id, max(recorded_at) FROM communication_suppression s
 		 WHERE revoked_at IS NULL
 		   AND (contact_id = $1
 		        OR lead_id = $1
-		        OR (address IS NOT NULL AND $2 <> '' AND `+sameAddressSQL("address", "$2")+`))
+		        OR `+storekit.StopOnAddressesSQL("s", "$2", "$3")+`)
 		 GROUP BY kind, purpose_id`,
-		contactID, r.Email)
+		contactID, lowered, hashes)
 	if err != nil {
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
 	}

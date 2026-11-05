@@ -45,17 +45,18 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// schema did not must fail the insert rather than land a value nothing can
 	// name. The published surface is where the type lives, because a unit reads
 	// the same class off its Result.
-	"extension_ingest_refusal.refusal": {"pkg/extension", "RecordRefusal"},
-	"lead.status":                      {"internal/modules/contacts", "LeadStatus"},
-	"deal.status":                      {"internal/modules/deals", "DealStatus"},
-	"ai_model_rate.source":             {"internal/modules/ai", "RateSource"},
-	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},
-	"partner_stage.meaning":            {"internal/contracts", "PartnerStageMeaning"},
-	"contact_consent.state":            {"internal/modules/consent", "ConsentState"},
-	"consent_purpose.class":            {"internal/modules/consent", "Class"},
-	"offer_line_item.proposal_state":   {"internal/modules/deals", "ProposalState"},
-	"stage_exit_criterion.kind":        {"internal/modules/deals", "CriterionKind"},
-	"knowledge_document.ingest_status": {"internal/contracts", "KnowledgeDocumentIngestStatus"},
+	"extension_ingest_refusal.refusal":           {"pkg/extension", "RecordRefusal"},
+	"lead.status":                                {"internal/modules/contacts", "LeadStatus"},
+	"deal.status":                                {"internal/modules/deals", "DealStatus"},
+	"ai_model_rate.source":                       {"internal/modules/ai", "RateSource"},
+	"stage.semantic":                             {"internal/modules/deals", "StageSemantic"},
+	"partner_stage.meaning":                      {"internal/contracts", "PartnerStageMeaning"},
+	"contact_consent.state":                      {"internal/modules/consent", "ConsentState"},
+	"communication_suppression.recorded_through": {"internal/shared/ports/commsauthz", "RecordedThrough"},
+	"consent_purpose.class":                      {"internal/modules/consent", "Class"},
+	"offer_line_item.proposal_state":             {"internal/modules/deals", "ProposalState"},
+	"stage_exit_criterion.kind":                  {"internal/modules/deals", "CriterionKind"},
+	"knowledge_document.ingest_status":           {"internal/contracts", "KnowledgeDocumentIngestStatus"},
 	// The tag palette is spelled in five places: this CHECK, the contract enum,
 	// the MCP tool schemas, the frontend's TAG_TONES and its dot stylesheet.
 	// Widening four of the five is SILENT — the pill drops a tone it does not

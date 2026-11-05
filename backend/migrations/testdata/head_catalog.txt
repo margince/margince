@@ -1677,6 +1677,35 @@ public.automation_effect_claim_pkey CREATE UNIQUE INDEX automation_effect_claim_
 public.automation_effect_claim_unapplied CREATE INDEX automation_effect_claim_unapplied ON public.automation_effect_claim USING btree (created_at) WHERE (applied_at IS NULL)
 public.automation_effect_claim_unique CREATE UNIQUE INDEX automation_effect_claim_unique ON public.automation_effect_claim USING btree (handler, occurrence_key, effect_fingerprint)
 public.automation_pkey CREATE UNIQUE INDEX automation_pkey ON public.automation USING btree (id)
+public.bind_requests_on_address_move() secdef=false cfg=- acl=- 
+DECLARE
+    subject uuid;
+BEGIN
+    FOREACH subject IN ARRAY ARRAY[OLD.contact_id, NEW.contact_id] LOOP
+        UPDATE consent_qualifying_event q
+           SET recorded_for_addresses = (SELECT coalesce(array_agg(ce.email ORDER BY ce.email), '{}')
+                                           FROM contact_email ce
+                                          WHERE ce.contact_id = subject AND ce.archived_at IS NULL)
+         WHERE q.contact_id = subject AND q.recorded_for_addresses IS NULL;
+        UPDATE contact_acquisition_evidence e
+           SET recorded_for_addresses = (SELECT coalesce(array_agg(ce.email ORDER BY ce.email), '{}')
+                                           FROM contact_email ce
+                                          WHERE ce.contact_id = subject AND ce.archived_at IS NULL)
+         WHERE e.contact_id = subject AND e.recorded_for_addresses IS NULL;
+        UPDATE communication_suppression s
+           SET recorded_for_addresses = (SELECT coalesce(array_agg(ce.email ORDER BY ce.email), '{}')
+                                           FROM contact_email ce
+                                          WHERE ce.contact_id = subject AND ce.archived_at IS NULL)
+         WHERE s.contact_id = subject AND s.address IS NULL AND s.revoked_at IS NULL
+           AND s.recorded_for_addresses IS NULL;
+        UPDATE contact_consent c
+           SET recorded_for_addresses = (SELECT coalesce(array_agg(ce.email ORDER BY ce.email), '{}')
+                                           FROM contact_email ce
+                                          WHERE ce.contact_id = subject AND ce.archived_at IS NULL)
+         WHERE c.contact_id = subject AND c.state = 'withdrawn' AND c.recorded_for_addresses IS NULL;
+    END LOOP;
+    RETURN NEW;
+END 
 public.booking_alias acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.booking_alias.alias text NOT NULL gen=- def=-
 public.booking_alias.booking_alias_alias_key UNIQUE (alias)
@@ -2624,6 +2653,7 @@ public.communication_review_open CREATE INDEX communication_review_open ON publi
 public.communication_review_pkey CREATE UNIQUE INDEX communication_review_pkey ON public.communication_review USING btree (id)
 public.communication_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_suppression.address text gen=- def=-
+public.communication_suppression.address_hash text gen=- def=-
 public.communication_suppression.captured_by text NOT NULL gen=- def=-
 public.communication_suppression.carried_from uuid gen=- def=-
 public.communication_suppression.communication_suppression_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_suppression(id) ON DELETE SET NULL
@@ -2631,9 +2661,10 @@ public.communication_suppression.communication_suppression_contact_id_fkey FOREI
 public.communication_suppression.communication_suppression_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['machine'::text, 'user'::text, 'admin'::text, 'subject'::text])))
 public.communication_suppression.communication_suppression_kind CHECK ((kind = ANY (ARRAY['marketing_objection'::text, 'processing_restriction'::text, 'hard_bounce'::text, 'subject_request'::text])))
 public.communication_suppression.communication_suppression_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
-public.communication_suppression.communication_suppression_names_a_target CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL)))
+public.communication_suppression.communication_suppression_names_a_target CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL) OR (address_hash IS NOT NULL)))
 public.communication_suppression.communication_suppression_pkey PRIMARY KEY (id)
 public.communication_suppression.communication_suppression_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
+public.communication_suppression.communication_suppression_recorded_through CHECK ((recorded_through = ANY (ARRAY['colleague'::text, 'agent'::text, 'subject'::text, 'machine'::text, 'unknown'::text])))
 public.communication_suppression.contact_id uuid gen=- def=-
 public.communication_suppression.decided_by_level text NOT NULL gen=- def=-
 public.communication_suppression.id uuid NOT NULL gen=- def=uuidv7()
@@ -2641,10 +2672,13 @@ public.communication_suppression.kind text NOT NULL gen=- def=-
 public.communication_suppression.lead_id uuid gen=- def=-
 public.communication_suppression.purpose_id uuid gen=- def=-
 public.communication_suppression.recorded_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_suppression.recorded_for_addresses text[] gen=- def=-
+public.communication_suppression.recorded_through text NOT NULL gen=- def='unknown'::text
 public.communication_suppression.revoked_at timestamp with time zone gen=- def=-
 public.communication_suppression.source text NOT NULL gen=- def=-
 public.communication_suppression_carried_from_ix CREATE INDEX communication_suppression_carried_from_ix ON public.communication_suppression USING btree (carried_from) WHERE (carried_from IS NOT NULL)
 public.communication_suppression_live_address CREATE INDEX communication_suppression_live_address ON public.communication_suppression USING btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))
+public.communication_suppression_live_address_hash CREATE INDEX communication_suppression_live_address_hash ON public.communication_suppression USING btree (address_hash) WHERE ((address_hash IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_one_live_bounce CREATE UNIQUE INDEX communication_suppression_one_live_bounce ON public.communication_suppression USING btree (lower(address)) WHERE ((kind = 'hard_bounce'::text) AND (address IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_pkey CREATE UNIQUE INDEX communication_suppression_pkey ON public.communication_suppression USING btree (id)
 public.company acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -3341,6 +3375,7 @@ public.contact.address_line1 text gen=- def=-
 public.contact.address_line2 text gen=- def=-
 public.contact.address_postal_code text gen=- def=-
 public.contact.address_region text gen=- def=-
+public.contact.anonymized_address_hashes text[] gen=- def=-
 public.contact.archived_at timestamp with time zone gen=- def=-
 public.contact.captured_by text NOT NULL gen=- def=-
 public.contact.contact_converted_from_lead_id_fkey FOREIGN KEY (converted_from_lead_id) REFERENCES lead(id) ON DELETE SET NULL (converted_from_lead_id)
@@ -3495,6 +3530,7 @@ public.contact_consent.lawful_basis text gen=- def=-
 public.contact_consent.lead_id uuid gen=- def=-
 public.contact_consent.policy_version text gen=- def=-
 public.contact_consent.purpose_id uuid NOT NULL gen=- def=-
+public.contact_consent.recorded_for_addresses text[] gen=- def=-
 public.contact_consent.source text gen=- def=-
 public.contact_consent.state text NOT NULL gen=- def='unknown'::text
 public.contact_consent_lead_unique CREATE UNIQUE INDEX contact_consent_lead_unique ON public.contact_consent USING btree (lead_id, purpose_id)
@@ -3502,6 +3538,7 @@ public.contact_consent_pkey CREATE UNIQUE INDEX contact_consent_pkey ON public.c
 public.contact_consent_unique CREATE UNIQUE INDEX contact_consent_unique ON public.contact_consent USING btree (contact_id, purpose_id)
 public.contact_email acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_email.archived_at timestamp with time zone gen=- def=-
+public.contact_email.bind_requests_on_address_move CREATE TRIGGER bind_requests_on_address_move BEFORE UPDATE OF contact_id ON public.contact_email FOR EACH ROW WHEN ((old.contact_id IS DISTINCT FROM new.contact_id)) EXECUTE FUNCTION bind_requests_on_address_move()
 public.contact_email.captured_by text NOT NULL gen=- def=-
 public.contact_email.contact_email_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_email.contact_email_email_type_check CHECK ((email_type = ANY (ARRAY['work'::text, 'personal'::text, 'other'::text])))

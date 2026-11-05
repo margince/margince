@@ -40,6 +40,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -386,14 +387,15 @@ func aStopThatBindsTheMessage(
 	ctx context.Context, db *database.DB, subject ids.ContactID, refusal RefusedRecipient,
 ) (string, error) {
 	var stops []liveStop
+	lowered, hashes := storekit.StopAddressArgs(refusal.Address)
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT DISTINCT kind, purpose_id FROM communication_suppression
+			SELECT DISTINCT kind, purpose_id FROM communication_suppression s
 			 WHERE revoked_at IS NULL
 			   AND (contact_id = $1
 			        OR lead_id = $1
-			        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))`,
-			subject.UUID, refusal.Address)
+			        OR `+storekit.StopOnAddressesSQL("s", "$2", "$3")+`)`,
+			subject.UUID, lowered, hashes)
 		if err != nil {
 			return err
 		}

@@ -17263,6 +17263,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leads/{id}/consent/stops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List the stops that stand on this lead, and which ones you may take back.
+         * @description `listContactStops` for a lead. Every live suppression the send check reads for this lead:
+         *     the lead's own stops, the stops held on its address, and a stop kept for its address after
+         *     an earlier record was anonymized. Newest first.
+         *
+         *     `may_lift` is the answer `liftLeadSuppression` would give this caller, from the same rule.
+         *     `recorded_by_colleague` is true only for a stop a colleague typed. A stop the lead pressed
+         *     on a mailed link stays theirs, also after a merge copied it.
+         */
+        get: operations["listLeadStops"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/consent/suppress/{suppressionId}/lift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The stop to take back, by row. */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a stop on a lead, if you outrank the level that set it.
+         * @description `liftSuppression` for a lead, under the same rule: you may lift a decision made below your
+         *     level, never at or above it. Nothing lifts the lead's own press on a link. An admin
+         *     signed in themselves may correct a marketing objection a colleague recorded by mistake. No
+         *     seat lifts a processing restriction here.
+         *
+         *     The lift is audited on the lead. It emits no `consent.suppression_lifted`, which names a
+         *     contact; the send check reads the stop table, so the lift is in force at once.
+         *
+         *     A row already revoked, belonging to another subject, or never in existence all answer
+         *     `404` alike.
+         */
+        post: operations["liftLeadSuppression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/consent/allow": {
         parameters: {
             query?: never;
@@ -52316,7 +52379,10 @@ export interface components {
              *     Margince recorded it, for example for a bounce.
              */
             recorded_by_colleague: boolean;
-            /** @description The colleague's current name. Null when no colleague recorded it, or their seat is gone. */
+            /**
+             * @description The colleague's current name. Null when no colleague recorded it, their seat is gone, or
+             *     the stop is a merge's copy whose original was deleted.
+             */
             recorded_by_name?: string | null;
             /** @description This caller may take the stop back now, with a reason. */
             may_lift: boolean;
@@ -83883,6 +83949,69 @@ export interface operations {
                         stops: components["schemas"]["ContactStop"][];
                     };
                 };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLeadStops: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stops that stand. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        stops: components["schemas"]["ContactStop"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    liftLeadSuppression: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The stop to take back, by row. */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Why the stop is being taken back. Required. */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Lifted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];

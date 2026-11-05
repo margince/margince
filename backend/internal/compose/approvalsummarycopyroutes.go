@@ -216,6 +216,7 @@ var routeVerbsGerman = map[string]string{
 	"allow_contact":                      "Abgelehnte Kategorie für einen Kontakt erlauben",
 	"revoke_contact_override":            "Ausnahme für einen Kontakt zurücknehmen",
 	"lift_contact_suppression":           "Kontaktsperre aufheben",
+	"lift_lead_suppression":              "Kontaktsperre eines Leads aufheben",
 	"record_qualifying_event":            "Austausch mit einem Kontakt erfassen",
 	"retract_qualifying_event":           "Erfassten Austausch zurücknehmen",
 	"retract_acquisition_request":        "Erfasste Anfrage eines Kontakts zurücknehmen",

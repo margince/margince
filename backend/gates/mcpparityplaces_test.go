@@ -231,6 +231,7 @@ var parityPathAreas = map[string]string{
 	"/lead-origins":                       "sales_lists",
 	"/lead-signal-catalog":                "sales_lists",
 	"/lead-sources":                       "sales_lists",
+	"/leads/{id}/consent":                 "consent",
 	"/leads/settings":                     "sales_rules",
 	"/legal-entities":                     "company_profile",
 	"/legal-reviews":                      "legal_reviews",

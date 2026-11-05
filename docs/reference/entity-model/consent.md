@@ -253,12 +253,13 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_suppression
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+15 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `address` | `text` |  |  |
+| `address_hash` | `text` |  |  |
 | `carried_from` | `uuid` |  | Points at `communication_suppression.id`. |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `decided_by_level` | `text` | yes | One of `machine`, `user`, `admin`, `subject`. |
@@ -266,6 +267,8 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `purpose_id` | `uuid` |  | Points at `consent_purpose.id`. |
 | `recorded_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `recorded_for_addresses` | `text[]` |  |  |
+| `recorded_through` | `text`, default `'unknown'::text` | yes | One of `colleague`, `agent`, `subject`, `machine`, `unknown`. |
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
@@ -283,12 +286,14 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `communication_suppression_decided_by_level`: `CHECK ((decided_by_level = ANY (ARRAY['machine', 'user', 'admin', 'subject'])))`
 - `communication_suppression_kind`: `CHECK ((kind = ANY (ARRAY['marketing_objection', 'processing_restriction', 'hard_bounce', 'subject_request'])))`
-- `communication_suppression_names_a_target`: `CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL)))`
+- `communication_suppression_names_a_target`: `CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL) OR (address_hash IS NOT NULL)))`
+- `communication_suppression_recorded_through`: `CHECK ((recorded_through = ANY (ARRAY['colleague', 'agent', 'subject', 'machine', 'unknown'])))`
 
 **Indexes**
 
 - `communication_suppression_carried_from_ix`: `btree (carried_from) WHERE (carried_from IS NOT NULL)`
 - `communication_suppression_live_address`: `btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))`
+- `communication_suppression_live_address_hash`: `btree (address_hash) WHERE ((address_hash IS NOT NULL) AND (revoked_at IS NULL))`
 - `communication_suppression_one_live_bounce`: `unique, btree (lower(address)) WHERE ((kind = 'hard_bounce') AND (address IS NOT NULL) AND (revoked_at IS NULL))`
 - `communication_suppression_pkey`: `unique, btree (id)`
 - `idx_communication_suppression_contact`: `btree (contact_id)`
@@ -564,7 +569,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## contact_consent
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -575,6 +580,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `policy_version` | `text` |  |  |
 | `purpose_id` | `uuid` | yes | Points at `consent_purpose.id`. |
+| `recorded_for_addresses` | `text[]` |  |  |
 | `state` | `text`, default `'unknown'::text` | yes | One of `unknown`, `granted`, `withdrawn`. |
 | `source` | `text` |  | Which internal channel the record arrived by. |
 

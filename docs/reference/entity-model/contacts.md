@@ -567,7 +567,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-35 columns · primary key `(id)` · referenced by 49 foreign keys
+36 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -578,6 +578,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `address_line2` | `text` |  |  |
 | `address_postal_code` | `text` |  |  |
 | `address_region` | `text` |  |  |
+| `anonymized_address_hashes` | `text[]` |  |  |
 | `converted_from_lead_id` | `uuid` |  | Canonical origin pointer if promoted from a lead. |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_name` | `text` |  |  |
@@ -804,6 +805,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `bind_requests_on_address_move`: `BEFORE UPDATE OF contact_id FOR EACH ROW WHEN ((old.contact_id IS DISTINCT FROM new.contact_id)) EXECUTE FUNCTION bind_requests_on_address_move()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_contact_email()`
 - `trg_contact_email_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 

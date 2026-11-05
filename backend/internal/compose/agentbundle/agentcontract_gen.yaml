@@ -15667,6 +15667,73 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /leads/{id}/consent/stops:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: listLeadStops
+      security: [{bearerAuth: []}]
+      summary: List the stops that stand on this lead, and which ones you may take back.
+      description: |-
+        `listContactStops` for a lead. Every live suppression the send check reads for this lead:
+        the lead's own stops, the stops held on its address, and a stop kept for its address after
+        an earlier record was anonymized. Newest first.
+      responses:
+        '200':
+          description: The stops that stand.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stops]
+                properties:
+                  stops: {type: array, items: {$ref: '#/components/schemas/ContactStop'}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /leads/{id}/consent/suppress/{suppressionId}/lift:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: suppressionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+        description: The stop to take back, by row.
+    post:
+      tags: [Compliance]
+      operationId: liftLeadSuppression
+      security: [{bearerAuth: []}]
+      summary: Take back a stop on a lead, if you outrank the level that set it.
+      description: |-
+        `liftSuppression` for a lead, under the same rule: you may lift a decision made below your
+        level, never at or above it. Nothing lifts the lead's own press on a link. An admin
+        signed in themselves may correct a marketing objection a colleague recorded by mistake. No
+        seat lifts a processing restriction here.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                  description: Why the stop is being taken back. Required.
+      responses:
+        '204': {description: Lifted.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/consent/allow:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -45383,7 +45450,9 @@ components:
             Margince recorded it, for example for a bounce.
         recorded_by_name:
           type: [string, 'null']
-          description: The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+          description: |-
+            The colleague's current name. Null when no colleague recorded it, their seat is gone, or
+            the stop is a merge's copy whose original was deleted.
         may_lift:
           type: boolean
           description: This caller may take the stop back now, with a reason.

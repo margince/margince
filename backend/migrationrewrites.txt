@@ -82,3 +82,5 @@
 1793829966_the_decision_ground_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793830466_the_vouch_entity_link_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793847160_a_deal_prices_itself_from_product_lines.down.sql | deal_product | runs only on a rollback and deletes only the line rows the deal-lines writer made, at most one per product of a deal priced from its lines
+1793888556_a_kept_stop_holds_a_hash_and_its_own_addresses.up.sql | *, communication_suppression | communication_suppression holds one row per stop a colleague, a subject or a bounce recorded, a handful per stopped contact; the walk reads only its own carry chains; the procedural body is a trigger that binds the rows of the two contacts one merge touches
+1793888556_a_kept_stop_holds_a_hash_and_its_own_addresses.down.sql | communication_suppression | runs only on a rollback and rewrites only the stops recorded on an anonymized contact, which hold a hash and no address, a handful per such contact

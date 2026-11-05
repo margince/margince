@@ -1941,6 +1941,22 @@
     },
     {
       "tool": "change_compliance",
+      "action": "lift_lead_suppression",
+      "verb": "lift_lead_suppression",
+      "allowed_for": [],
+      "refused_for": [
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin",
+        "management",
+        "ops"
+      ]
+    },
+    {
+      "tool": "change_compliance",
       "action": "lift_suppression",
       "verb": "lift_contact_suppression",
       "allowed_for": [],
@@ -5445,6 +5461,21 @@
       "tool": "read_details",
       "action": "lead_signals",
       "verb": "list_lead_manual_signals",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_details",
+      "action": "lead_stops",
+      "verb": "list_lead_stops",
       "allowed_for": [
         "admin",
         "management",

@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4296 |
+| Columns | 4301 |
 | Foreign keys | 591 |
 | Owning areas | 38 |
 
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 35 | 153 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 36 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 71 | 43 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 18 |
@@ -231,7 +231,7 @@ erDiagram
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 19 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 11 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
-| [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
+| [`communication_suppression`](consent.md#communication_suppression) | consent | 15 | 1 |
 | [`company`](contacts.md#company) | contacts | 47 | 51 |
 | [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
@@ -255,13 +255,13 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 8 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 15 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 35 | 49 |
+| [`contact`](contacts.md#contact) | contacts | 36 | 49 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 13 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
 | [`contact_confirm_submission`](consent.md#contact_confirm_submission) | consent | 11 | 0 |
-| [`contact_consent`](consent.md#contact_consent) | consent | 9 | 0 |
+| [`contact_consent`](consent.md#contact_consent) | consent | 10 | 0 |
 | [`contact_email`](contacts.md#contact_email) | contacts | 14 | 1 |
 | [`contact_moment_dismissal`](compose.md#contact_moment_dismissal) | compose | 5 | 0 |
 | [`contact_phone`](contacts.md#contact_phone) | contacts | 14 | 1 |
