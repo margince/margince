@@ -7508,6 +7508,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.missingSubject": "Nhập tiêu đề.",
   "compose.missingBody": "Nhập nội dung trước khi gửi.",
   "compose.missingWhy": "Chọn lý do liên hệ.",
+  "compose.reasonSwitchText": "Hồ sơ đã có một lý do khác cho thư này.",
+  "compose.reasonSwitch": "Dùng “{reason}” thay thế",
   "compose.missingDeal": "Chọn deal mà thư theo dõi này nói về.",
   "compose.actionFailed": "Yêu cầu không thành công. Thử lại.",
 

@@ -7706,6 +7706,9 @@ export const en = {
   "compose.missingSubject": "Enter a subject.",
   "compose.missingBody": "Enter a message before sending.",
   "compose.missingWhy": "Select the reason for contact.",
+  "compose.reasonSwitchText":
+    "The record already shows another reason for this message.",
+  "compose.reasonSwitch": "Use “{reason}” instead",
   "compose.missingDeal": "Choose the deal this follow-up is about.",
   "compose.actionFailed": "The request failed. Retry.",
 

@@ -11,7 +11,12 @@ import type { Activity } from "./compose";
 import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
 import { ComposeDeal, type DealChoiceState } from "./composedeal";
 import type { ComposeFields } from "./composefields";
-import { ContactReasonPick, type ReasonTarget } from "./composereason";
+import {
+  alternativeReasonOf,
+  ContactReasonPick,
+  ReasonSwitch,
+  type ReasonTarget,
+} from "./composereason";
 import type { ComposeSend } from "./composesend";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
@@ -107,6 +112,10 @@ export function ComposeBlockers({
   const target = isChannelReply
     ? undefined
     : reasonTargetOf(send.permission, contactOf);
+  // A reason the record already carries comes before recording a new one.
+  const alternative = isChannelReply
+    ? undefined
+    : alternativeReasonOf(send.permission);
   // Until the message says why it is written, the engine has judged no reason.
   // Its missing-reason refusal would then ask the same question twice.
   const whyMissing = asksWhy(anchorActivity) && fields.context === "";
@@ -138,12 +147,16 @@ export function ComposeBlockers({
       {(!isChannelReply || send.permission.refusal) &&
         !(whyMissing && unproven) &&
         drawPermission(
-          target && (
-            <ContactReasonPick
-              key={`${target.contactId}:${target.category}`}
-              target={target}
-              chosen={send.claimedContext}
-            />
+          alternative ? (
+            <ReasonSwitch reason={alternative} onSwitch={fields.setContext} />
+          ) : (
+            target && (
+              <ContactReasonPick
+                key={`${target.contactId}:${target.category}`}
+                target={target}
+                chosen={send.claimedContext}
+              />
+            )
           ),
           asksWhy(anchorActivity),
         )}

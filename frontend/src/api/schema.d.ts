@@ -40342,6 +40342,13 @@ export interface components {
              */
             requested_category?: components["schemas"]["CommunicationContext"];
             /**
+             * @description When the claimed reason does not allow the message, the other reasons the record would
+             *     carry for this recipient, each one checked the way a send under it would be. Empty or
+             *     absent when there are none, and never offered for a marketing claim. Nothing is switched
+             *     for the sender: picking one asks the preview again.
+             */
+            supported_alternatives?: components["schemas"]["CommunicationContext"][];
+            /**
              * @description No contact or lead holds this address yet. Sending makes a contact for it, owned by
              *     the sender, before the message is checked, and this answer is the one that new
              *     contact gets. Absent or false for an address a record already holds.

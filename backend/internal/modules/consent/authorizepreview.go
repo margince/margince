@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // Preview answers what the engine would decide for this message, and records
@@ -106,9 +107,51 @@ func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 		d.Phase = ""
 		d.Mode = ModeFor(modes, d.Resolved)
 		d.Requested = req.Context
+		if d.SupportedAlternatives, err = g.supportedAlternatives(ctx, tx, r, req, d); err != nil {
+			return set, err
+		}
 		set.Decisions = append(set.Decisions, d)
 	}
 	return set, nil
+}
+
+// switchableClaims are the reasons a sender may switch to in one press: the
+// ones that rest on what the contact asked for, which the record can show.
+var switchableClaims = []commsauthz.Category{
+	commsauthz.CategoryRequestedFollowup,
+	commsauthz.CategoryActiveDealFollowup,
+	commsauthz.CategoryPrecontractQuote,
+}
+
+// supportedAlternatives asks the same engine what this recipient's message
+// would be under each other switchable reason, when the claimed one did not
+// allow it. A reason counts only when the claim itself carries the send, so
+// a stop or a missing deal that refuses every reason offers none. A marketing
+// claim is offered none: a message its sender calls marketing is not made a
+// follow-up by a press.
+//
+// It decides inside the preview's transaction, which rolls back, so the
+// grounds the other reasons would record are never written.
+func (g *Gate) supportedAlternatives(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision) ([]commsauthz.Category, error) {
+	if req.Context == "" || req.Context == commsauthz.CategoryMarketing || d.Verdict == commsauthz.VerdictAllow {
+		return nil, nil
+	}
+	var out []commsauthz.Category
+	for _, claim := range switchableClaims {
+		if claim == req.Context {
+			continue
+		}
+		asked := req
+		asked.Context = claim
+		alt, err := g.decideOne(ctx, tx, r, asked, commsauthz.PhaseStaging)
+		if err != nil {
+			return nil, err
+		}
+		if alt.Verdict == commsauthz.VerdictAllow && alt.Resolved == claim {
+			out = append(out, claim)
+		}
+	}
+	return out, nil
 }
 
 // errPreviewComplete unwinds Preview's transaction once it has its answer.

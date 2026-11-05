@@ -90,3 +90,52 @@ export function ContactReasonPick({
     </div>
   );
 }
+
+type Preview = components["schemas"]["SendAuthorizationPreview"];
+
+/**
+ * The reason the record already carries for every recipient the claimed one
+ * refuses, when there is one. The engine names it per recipient; a switch
+ * changes the reason for the whole message, so only a reason all of them share
+ * is offered. An answer still out, or one that failed, offers none.
+ */
+export function alternativeReasonOf(permission: {
+  preview: Preview | undefined;
+  asking: boolean;
+  unanswered: boolean;
+}): CommunicationContext | undefined {
+  if (permission.asking || permission.unanswered || !permission.preview) {
+    return undefined;
+  }
+  const refusing = permission.preview.recipients.filter((r) => r.would_refuse);
+  const [first, ...rest] = refusing;
+  return (first?.supported_alternatives ?? []).find((reason) =>
+    rest.every((r) => r.supported_alternatives?.includes(reason)),
+  );
+}
+
+/**
+ * The one press that answers a refused reason with the one the record
+ * carries. It switches the reason and the engine is asked again; it records
+ * nothing and sends nothing.
+ */
+export function ReasonSwitch({
+  reason,
+  onSwitch,
+}: Readonly<{
+  reason: CommunicationContext;
+  onSwitch: (next: CommunicationContext) => void;
+}>) {
+  const t = useT();
+  const label =
+    contextOptions(t).find((option) => option.value === reason)?.label ??
+    reason;
+  return (
+    <div className="compose-reason">
+      <p className="t-caption">{t("compose.reasonSwitchText")}</p>
+      <Button onClick={() => onSwitch(reason)}>
+        {t("compose.reasonSwitch", { reason: label })}
+      </Button>
+    </div>
+  );
+}

@@ -7694,6 +7694,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.missingSubject": "Gib einen Betreff ein.",
   "compose.missingBody": "Gib vor dem Senden eine Nachricht ein.",
   "compose.missingWhy": "Wähle den Kontaktgrund aus.",
+  "compose.reasonSwitchText":
+    "Für diese Nachricht steht schon ein anderer Grund im Datensatz.",
+  "compose.reasonSwitch": "Stattdessen „{reason}“ verwenden",
   "compose.missingDeal": "Wähle den Deal, um den es in diesem Follow-up geht.",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",

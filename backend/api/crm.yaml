@@ -55522,6 +55522,14 @@ components:
             The reason for contact the sender claimed. An unproven claim never becomes
             `resolved_category`, so a composer reads this one to name the gap the sender can
             close: a refused `active_deal_followup` claim asks for the deal, not for consent.
+        supported_alternatives:
+          type: array
+          items: { $ref: '#/components/schemas/CommunicationContext' }
+          description: |
+            When the claimed reason does not allow the message, the other reasons the record would
+            carry for this recipient, each one checked the way a send under it would be. Empty or
+            absent when there are none, and never offered for a marketing claim. Nothing is switched
+            for the sender: picking one asks the preview again.
         new_contact:
           type: boolean
           description: |

@@ -59586,6 +59586,12 @@ type SendAuthorizationPreviewRecipient struct {
 	// ResolvedCategory What the engine worked out this message is, which may differ from the claim.
 	ResolvedCategory *CommunicationContext `json:"resolved_category,omitempty"`
 
+	// SupportedAlternatives When the claimed reason does not allow the message, the other reasons the record would
+	// carry for this recipient, each one checked the way a send under it would be. Empty or
+	// absent when there are none, and never offered for a marketing claim. Nothing is switched
+	// for the sender: picking one asks the preview again.
+	SupportedAlternatives *[]CommunicationContext `json:"supported_alternatives,omitempty"`
+
 	// Verdict `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
 	// the record does not carry this message on its own and names what is missing.
 	Verdict SendAuthorizationPreviewRecipientVerdict `json:"verdict"`
