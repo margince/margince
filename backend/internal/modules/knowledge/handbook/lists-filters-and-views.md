@@ -6,7 +6,7 @@ The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals
 
 ## How a list screen looks
 
-Every Margince list screen has the same three rows. The header row holds the view tabs (such as **All** and **Mine**), the count ("1 to 25 of 200 contacts") and the create button. On a phone drag the tabs left or right. The toolbar row holds the **Search** box and one **View** button. The rows sit under it, with **Previous**, **Next** and **Rows per page** at the bottom, except on a board, where each column loads more itself. Click a row to open the record.
+Every Margince list screen has the same three rows. The header row holds the view tabs (such as **All** and **Mine**), the count ("1 to 25 of 200 contacts") and the create button. On a phone drag the tabs left or right. The toolbar row holds the **Search** box and one **View** button, and the rows sit under it. A table ends with **Previous**, **Next** and **Rows per page**; a board has **Load more** in each **Deals** column and one below **Leads**. Click a row to open the record.
 
 **View** opens a panel: a small window on a computer, a full screen on a phone. On **Deals** and **Leads** the **Table** / **Board** switch is at the top. Then comes one row for each setting: **Pipeline** (Deals, with several pipelines), **Filters**, **Sort** and **Columns**. Each row shows its value now, and a dot when it differs from how the list opens (never for **Default order**). Press a row to open its step, and press the step's name at the top to go back. Next come **Show archived** and **Compact**, which are On or Off.
 

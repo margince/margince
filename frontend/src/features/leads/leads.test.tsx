@@ -493,7 +493,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadsScreen />);
 
-    await showLayout(userEvent.setup(), "Board");
+    await showLayout(user, "Board");
 
     expect(
       screen.getByRole("searchbox", { name: "Search" }),
