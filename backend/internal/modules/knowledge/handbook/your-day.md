@@ -138,7 +138,7 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 
 ### What is on Today?
 **Today**, on **Home**, shows the kinds of work that need attention when the list is complete.
-Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
+Each item names its record and shows the facts that call for action. A badge says when Margince made the brief. Each item in the morning email opens its record's page when it has one. A task, a meeting or its outcome, an approval or an item without a record opens **Home** with that item open.
 - **First**: the first thing to do on one card, the rest as **Then**; at most 6 in all, in Worklist
   order. Press a row to bring it onto the card. Its reason stays visible beside the record.
   Proposals to answer, commitments due today and meetings to prepare in the next 24 hours sit here;
