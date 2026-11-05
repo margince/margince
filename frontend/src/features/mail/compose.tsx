@@ -2,7 +2,6 @@ import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { SendPermission } from "../../components/sendpermission";
 import { useT } from "../../i18n";
-import type { CommunicationContext } from "../../lib/compose-context";
 import type { Transport } from "../../lib/contacttransports";
 import { useVoiceProfile } from "../../lib/voice-profile";
 import {
