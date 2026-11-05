@@ -352,7 +352,7 @@ describe("the picker's marks", () => {
       const shown = option.querySelector("svg");
       if (plain.has(mark)) {
         expect(shown?.classList.contains("lucide")).toBe(true);
-        return;
+        continue;
       }
       const { container } = render(<ProviderMark providerKey={mark} />);
       const own = container.querySelector("svg.provider-mark");
