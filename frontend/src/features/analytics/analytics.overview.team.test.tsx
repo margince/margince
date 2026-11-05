@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { forgetSeat } from "../../lib/storage";
 import { jsonResponse } from "../../testing/story-utils";
+import { outlookFor } from "./analytics.assessment.fixtures";
 import {
   metric,
   openOverview as open,
@@ -488,6 +489,8 @@ describe("Team prospecting", () => {
   it("withholds the figures a lone colleague makes up", async () => {
     open(TEAM_ADDRESS, teamEvaluation, {
       template: "sdr",
+      // Offered and answered, so only the withheld team keeps it away.
+      assessment: () => jsonResponse(outlookFor("team", teamEvaluation())),
       team: served(
         teamReview({
           withheld: true,
@@ -506,6 +509,7 @@ describe("Team prospecting", () => {
     expect(
       screen.queryByRole("region", { name: "Where the team stands" }),
     ).toBeNull();
+    expect(screen.queryByText("Team prospecting outlook")).toBeNull();
   });
 });
 

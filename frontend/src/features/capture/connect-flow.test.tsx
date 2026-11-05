@@ -113,7 +113,8 @@ describe("ConnectFlow from a vendor the page already picked", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("heading", { name: "Sign in with Google" }),
     );
-    expect(screen.getByText(/Google asks twice/)).toBeTruthy();
+    // Google asks for mail and calendar on its one consent screen.
+    expect(screen.queryByText(/asks twice/)).toBeNull();
     await user.click(
       screen.getByRole("button", { name: "Continue to Google" }),
     );
@@ -138,6 +139,7 @@ describe("ConnectFlow from a vendor the page already picked", () => {
     const requests = stubConnect(consent);
     render({ startFrom: "microsoft" });
     await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText(/Microsoft 365 asks twice/)).toBeTruthy();
     await user.click(
       screen.getByRole("button", { name: "Continue to Microsoft 365" }),
     );

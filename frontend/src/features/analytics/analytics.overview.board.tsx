@@ -76,10 +76,13 @@ export function BoardChart({
   evaluation,
   kind,
   onEvidence,
+  section = false,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   kind: ReportingChart["kind"];
   onEvidence: (reference: ReportingEvidenceRef) => void;
+  // A section of a sheet, with a flat head, rather than a panel of its own.
+  section?: boolean;
 }>) {
   const chart = chartOf(evaluation, kind);
   if (
@@ -92,6 +95,7 @@ export function BoardChart({
     <ChartPanel
       chart={chart}
       wide={false}
+      section={section}
       evaluation={evaluation}
       onEvidence={onEvidence}
     />
@@ -99,9 +103,9 @@ export function BoardChart({
 }
 
 /**
- * Today's stock by stage beside the permitted sales by owner, from the chart
- * read. While it is read, or when it failed, it says so in its own place and
- * the figures above it stand.
+ * Today's stock by stage over the permitted sales by owner, from the chart
+ * read, each a section of the review's sheet. While it is read, or when it
+ * failed, it says so in its own place and the figures above it stand.
  */
 export function StockCharts({
   charts,
@@ -117,23 +121,26 @@ export function StockCharts({
   return (
     <QueryGate query={charts} pendingLabel={t("analytics.overview.charts")}>
       {(read) => (
-        <div className="analytics-pair">
+        <>
           <BoardChart
             evaluation={read}
             kind="stage_distribution"
             onEvidence={(reference) => onEvidence(reference, read)}
+            section
           />
           <BoardChart
             evaluation={read}
             kind="owner_attainment"
             onEvidence={(reference) => onEvidence(reference, read)}
+            section
           />
           <BoardChart
             evaluation={read}
             kind="breakdown"
             onEvidence={(reference) => onEvidence(reference, read)}
+            section
           />
-        </div>
+        </>
       )}
     </QueryGate>
   );

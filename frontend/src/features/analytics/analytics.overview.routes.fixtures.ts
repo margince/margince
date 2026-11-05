@@ -45,6 +45,8 @@ export function overviewRoutes(
     grants?: GrantSpec;
     summary?: () => Response | Promise<Response>;
     checks?: () => Response | Promise<Response>;
+    // The written outlook; unanswered unless a case writes one.
+    assessment?: () => Response | Promise<Response>;
     coverage?: () => Response | Promise<Response>;
     framework?: () => Response | Promise<Response>;
     team?: () => Response | Promise<Response>;
@@ -64,7 +66,14 @@ export function overviewRoutes(
     "GET /me": meRoute(over.grants ?? READS),
     "GET /analytics/context": () => jsonResponse(CONTEXTS[seat]),
     "GET /analytics/metrics": () =>
-      jsonResponse({ ...overviewCatalog, schedule_ready: true }),
+      jsonResponse({
+        ...overviewCatalog,
+        schedule_ready: true,
+        // A case that writes an outlook offers it on every view.
+        ...(over.assessment
+          ? { assessment_views: ["sales", "prospecting", "team"] }
+          : {}),
+      }),
     "GET /analytics/framework":
       over.framework ??
       (() =>
@@ -75,6 +84,9 @@ export function overviewRoutes(
     "GET /pipelines": over.pipelines ?? (() => pipelinePage([SALES_PIPELINE])),
     "GET /forecast/assurance/exceptions":
       over.checks ?? (() => jsonResponse({ data: [] })),
+    ...(over.assessment
+      ? { "POST /analytics/assessment": over.assessment }
+      : {}),
     "GET /analytics/coverage":
       over.coverage ??
       (() =>
