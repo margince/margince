@@ -356,6 +356,29 @@ func TestACellOpensToTheRecordsItWasComputedFrom(t *testing.T) {
 	}
 }
 
+// A cell naming fewer group values than the question grouped by is refused as
+// malformed. The floor never matches it against the answer's rows.
+func TestACellMissingAGroupValueIsRefusedAsMalformed(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for range 2 {
+		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &amount)
+	}
+	for range 6 {
+		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &amount)
+	}
+	q := analyticsquery.Query{
+		Entity:   "open-deals-per-company",
+		GroupBy:  []string{"owner_id"},
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}},
+	}
+	_, err := e.explainCell(e.reportReaderCtx(), t, analyticsquery.Explain{Query: q})
+	var refusal *analyticsquery.RefusalError
+	if !errors.As(err, &refusal) || refusal.Kind != analyticsquery.RefusalInvalid {
+		t.Fatalf("a cell with no group value answered %v, want the malformed-cell refusal", err)
+	}
+}
+
 func TestAWithheldCellExplainsToWithheldRatherThanToNothing(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)

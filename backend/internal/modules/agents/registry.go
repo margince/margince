@@ -109,6 +109,12 @@ type Registry struct {
 	contactCases ContactCaseMerger
 	// importWait is how long preview_import waits for its test's report.
 	importWait importWait
+	// required is each verb's measured checks (toolchecks.go), which narrow
+	// what an agent is offered and never what it may call.
+	required map[string][]auth.Check
+	// recordCall, set only by the integration build, records the checks one
+	// call asks; settle hands them on once the call returns.
+	recordCall func(ctx context.Context, verb string) (recorded context.Context, settle func())
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
@@ -129,6 +135,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		approvals:    approvals,
 		gate:         gate,
 		importWait:   defaultImportWait(),
+		required:     requiredChecks,
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -164,7 +171,12 @@ func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMes
 	if target != name {
 		served.Router = name
 	}
+	settle := func() {}
+	if r.recordCall != nil {
+		ctx, settle = r.recordCall(ctx, target)
+	}
 	served.Output, served.Records, err = r.InvokeServing(ctx, target, args)
+	settle()
 	return served, err
 }
 

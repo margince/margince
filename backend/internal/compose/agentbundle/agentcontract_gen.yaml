@@ -10747,50 +10747,6 @@ paths:
           required: true
           schema: {type: string}
       security: [{bearerAuth: []}]
-  /analytics/reports/{id}/reader-preview:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags:
-        - Reports
-      operationId: previewReportingReportAsRole
-      security: [{bearerAuth: []}]
-      summary: Evaluate a saved report as a seat holding one role would see it.
-      description: |-
-        The report evaluated under the caller's own permissions narrowed to the role's: an
-        object only where both grant it, the narrower row scope, and every field mask either
-        carries. So the preview never shows the caller anything their own access withholds.
-        It runs as the caller, so records private to another seat stay hidden here too.
-      parameters:
-        - name: role
-          in: query
-          required: true
-          schema:
-            type: string
-            minLength: 1
-            maxLength: 64
-        - name: revision
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-      responses:
-        '200':
-          description: The report as the role reads it.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReportingEvaluation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
   /analytics/reports/{id}/evaluation:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -12695,42 +12651,6 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /onboarding/company/messages:
-    post:
-      tags: [Companies, AI]
-      operationId: messageOnboardingCompany
-      summary: Continue the scoped company-setup conversation with or without a website read.
-      description: |-
-        Uses the acting human's resumable onboarding state as the conversation and AI-run scope.
-        The response may answer, clarify, or propose typed draft changes, but it never writes
-        company truth. Off-topic input is redirected to the next unresolved company question.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-
-        Holds the request open while an AI model answers.
-      security: [{bearerAuth: []}]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/OnboardingCompanyMessageRequest'}
-      responses:
-        '200':
-          description: Scoped conversational response and optional draft proposals.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/OnboardingCompanyMessageReply'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-        '501':
-          description: No governed model path is configured.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
   /onboarding/company/proposal:
     get:
       tags: [Companies]
@@ -39235,6 +39155,28 @@ components:
         html_body:
           type: [string, 'null']
           description: The editor's markup beside the plain body, so reopening restores the formatting.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: {type: string, format: uuid}
+          description: |-
+            The files the rep chose, by the ids `/attachments` gave them. A save replaces the
+            whole draft, so omitting this clears the files; a client keeps them by sending back
+            the `id` of each entry in the draft's `attachments`.
+        communication_context:
+          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
+          description: |-
+            The reason for contact the rep chose, checked as the send checks it: a category
+            reserved for the installation's own notices is refused 422. Omit it for none.
+        scheduled_at:
+          type: [string, 'null']
+          format: date-time
+          description: |-
+            The moment the rep picked to send at, checked as the send checks it: with
+            `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
+        scheduled_tz:
+          type: [string, 'null']
+          description: The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
     MailDraft:
       type: object
       required: [id, anchor_type, anchor_id, to, cc, bcc, subject, body, version, agent_drafted, created_at, updated_at]
@@ -39261,6 +39203,32 @@ components:
           type: boolean
           description: >-
             An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it.
+        attachments:
+          type: array
+          items: {$ref: '#/components/schemas/ApprovalPreviewFile'}
+          description: |-
+            The chosen files the author can still attach, in the order chosen, so the composer
+            draws each one without asking again. Resolved only by the draft read and the save
+            answer: absent elsewhere, so its absence there does not mean the draft has no files.
+        attachments_unavailable:
+          type: integer
+          minimum: 1
+          description: |-
+            How many chosen files the send would now refuse: removed, out of the author's sight,
+            kept without bytes, or empty. Not named, because a file the author cannot see answers
+            404 everywhere else. Absent when every file resolves.
+        communication_context:
+          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
+          description: The reason for contact the author chose. Absent when none was.
+        scheduled_at:
+          type: string
+          format: date-time
+          description: |-
+            The moment the author picked to send at, as saved. It may have passed since; the
+            draft schedules nothing. Absent when none was picked.
+        scheduled_tz:
+          type: string
+          description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
     RescheduleSendRequest:
@@ -47611,72 +47579,6 @@ components:
     CompanyConversationResponseKind:
       type: string
       enum: [status, answer, recommendation, correction, confirmation, clarification, off_topic]
-    OnboardingCompanyMessageRequest:
-      type: object
-      additionalProperties: false
-      required: [message, locale]
-      properties:
-        message: {type: string, minLength: 1, maxLength: 2000}
-        locale:
-          type: string
-          enum: [en, de, vi]
-        act:
-          $ref: '#/components/schemas/OnboardingAct'
-          default: company
-          description: Which onboarding act the conversation is in; omitted means company.
-        selected_option:
-          $ref: '#/components/schemas/OnboardingClarifySelection'
-          description: |-
-            The clarify option the administrator clicked, echoed verbatim. Valid only in the company
-            act; it authorizes exactly one proposed change — the selected field with the selected
-            value — and nothing else. The server re-derives its current clarifications and verifies
-            the tuple against them: an unknown or stale clarify_id, a mismatched field, or a value
-            outside a closed option list is refused with 422.
-        history:
-          type: array
-          maxItems: 8
-          items: {$ref: '#/components/schemas/CompanySiteReadConversationTurn'}
-        company_draft:
-          $ref: '#/components/schemas/OnboardingCompanyDraft'
-          description: The administrator's current unsaved artifact, used only as conversational context.
-    OnboardingCompanyMessageReply:
-      type: object
-      required: [kind, message, act, proposed_changes, citations, remaining_required_fields, ai_runtime]
-      properties:
-        kind: {$ref: '#/components/schemas/CompanyConversationResponseKind'}
-        message: {type: string, minLength: 1}
-        act:
-          $ref: '#/components/schemas/OnboardingAct'
-          description: Echoes the act the request addressed.
-        clarify:
-          $ref: '#/components/schemas/OnboardingClarify'
-          description: |-
-            A deterministically detected open question, attached only when the server's own
-            detectors found one — options are never model-invented.
-        proposed_changes:
-          type: array
-          maxItems: 5
-          items: {$ref: '#/components/schemas/CompanySiteReadSuggestedChange'}
-        citations:
-          type: array
-          items: {$ref: '#/components/schemas/CompanySiteReadCitation'}
-        next_required_field:
-          type: [string, 'null']
-          enum: [null, display_name, offer_summary, icp]
-        remaining_required_fields:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            enum: [display_name, offer_summary, icp]
-        available_action:
-          type: [string, 'null']
-          enum: [null, confirm_company, start_voice_build, upload_voice_source, connect_inbox, finish]
-        ai_runtime: {$ref: '#/components/schemas/AiRunSummary'}
-    OnboardingAct:
-      type: string
-      description: The four onboarding conversation acts.
-      enum: [company, voice, results, connect]
     OnboardingClarify:
       type: object
       description: |-
@@ -47703,14 +47605,6 @@ components:
         evidence_url: {type: [string, 'null'], format: uri}
         evidence_snippet: {type: [string, 'null']}
         detail: {type: [string, 'null'], description: Provenance or disambiguation help for this option.}
-    OnboardingClarifySelection:
-      type: object
-      additionalProperties: false
-      required: [clarify_id, field, value]
-      properties:
-        clarify_id: {type: string}
-        field: {type: string}
-        value: {type: string}
     OnboardingCompanyProposalField:
       type: object
       required: [field, value, confidence, evidence_snippet, source_url]

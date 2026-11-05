@@ -25,7 +25,7 @@ import (
 
 func enqueueHealthFixtures(t *testing.T, e *apptest.AppEnv, n int) {
 	t.Helper()
-	inserter := insertOnlyRunner(t)
+	inserter := apptest.InsertOnlyRunner(t)
 	err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		for range n {
 			if err := inserter.EnqueueTx(t.Context(), tx, compose.CaptureClassifyArgs{}, &river.InsertOpts{ScheduledAt: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}); err != nil {
@@ -243,7 +243,7 @@ func TestSystemHealthProjectsRevokedSourcesAndKeepsSearchReadable(t *testing.T) 
 }
 
 func TestSystemHealthDoesNotTreatAMatchingSearchModelAsCompleteIndexEvidence(t *testing.T) {
-	router := embedReindexRouter(t, "health-marker-model")
+	router := apptest.EmbedReindexRouter(t, "health-marker-model")
 	e := setupEmbedReindex(t, router)
 	var report crmcontracts.SystemHealth
 	if status := e.Call(t, "GET", "/v1/admin/system-health", nil, nil, &report); status != http.StatusOK {
@@ -315,7 +315,7 @@ func TestHistoryExcludesAnotherWorkspacesRetainedRuns(t *testing.T) {
 func TestExpectedQueueWorkAndCancellationDoNotBecomeProblems(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	inserter := insertOnlyRunner(t)
+	inserter := apptest.InsertOnlyRunner(t)
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return inserter.EnqueueTx(t.Context(), tx, compose.CaptureClassifyArgs{}, &river.InsertOpts{ScheduledAt: clocktest.Now(t).Add(time.Hour)})
 	}); err != nil {

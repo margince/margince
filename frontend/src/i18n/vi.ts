@@ -7201,7 +7201,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftGoneBody":
     "Bản nháp đã được gửi hoặc xóa ở đó. Khi lưu, nội dung đang hiển thị sẽ thành bản nháp mới.",
   "compose.savedDraftFailed":
-    "Không thể lưu bản nháp. Lưu lại, hoặc đóng lần nữa để bỏ nội dung.",
+    "Không thể lưu bản nháp. Chọn Thử lại, hoặc đóng lần nữa để bỏ nội dung.",
+  "compose.savedDraftAutosaveFailed":
+    "Chưa lưu xong bản nháp. Viết tiếp hoặc kết nối lại mạng để thử lại.",
+  "compose.savedDraftAutosaveRefused":
+    "Không thể lưu bản nháp. Chọn Thử lại, hoặc viết tiếp để thử lại.",
+  "compose.savedDraftFilesUnavailable_one": "{count} tệp không thể khôi phục.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} tệp không thể khôi phục.",
+  "compose.sendWaitsForAddress": "Sửa hoặc xóa phần không phải địa chỉ email.",
+  "compose.notAnAddress_one":
+    "Không phải địa chỉ email: {parts}. Sửa hoặc xóa.",
+  "compose.notAnAddress_other":
+    "Không phải địa chỉ email: {parts}. Sửa hoặc xóa.",
   "compose.savedDraftLoad": "Tải phiên bản đã lưu",
   "compose.aiDisclosureTitle": "Bản nháp có AI hỗ trợ",
   "compose.aiDisclosureFallback":
@@ -16882,7 +16894,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "richtext.bulletList": "Danh sách dấu đầu dòng",
   "richtext.numberList": "Danh sách đánh số",
   "richtext.link": "Liên kết",
-  "richtext.linkPrompt": "URL liên kết (để trống để gỡ liên kết)",
+  "richtext.linkAdd": "Thêm liên kết",
+  "richtext.linkEdit": "Sửa liên kết",
+  "richtext.linkAddress": "Địa chỉ web hoặc email",
+  "richtext.linkPlaceholder": "example.com hoặc name@example.com",
+  "richtext.linkApply": "Áp dụng",
+  "richtext.linkRemove": "Gỡ liên kết",
+  "richtext.linkRefused":
+    "Đây không phải địa chỉ web hay email. Nhập một địa chỉ như example.com hoặc name@example.com.",
   "contact.composer.intentAgenda": "đề xuất chương trình cho cuộc họp sắp tới",
   "contact.composer.intentReply": "trả lời tin nhắn gần nhất của họ",
   "contact.composer.intentCommitment": "thực hiện một cam kết",

@@ -79,7 +79,7 @@ func dispatchWith(t *testing.T, tool mcp.Tool, log *strings.Builder) *Dispatcher
 func scopedAgentCtx(scopes ...principal.Scope) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:conformance", OnBehalfOf: ids.NewV7(),
+		Type: principal.PrincipalAgent, ID: "agent:conformance", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull, Permissions: everyRecordedGrant(),
 		Scopes: principal.NewScopeSet(scopes...),
 	})
 }

@@ -51121,19 +51121,39 @@ type MailDraft struct {
 	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
 	// record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
-	Bcc        []string            `json:"bcc"`
-	Body       string              `json:"body"`
-	Cc         []string            `json:"cc"`
-	CreatedAt  time.Time           `json:"created_at"`
+
+	// Attachments The chosen files the author can still attach, in the order chosen, so the composer
+	// draws each one without asking again. Resolved only by the draft read and the save
+	// answer: absent elsewhere, so its absence there does not mean the draft has no files.
+	Attachments *[]ApprovalPreviewFile `json:"attachments,omitempty"`
+
+	// AttachmentsUnavailable How many chosen files the send would now refuse: removed, out of the author's sight,
+	// kept without bytes, or empty. Not named, because a file the author cannot see answers
+	// 404 everywhere else. Absent when every file resolves.
+	AttachmentsUnavailable *int     `json:"attachments_unavailable,omitempty"`
+	Bcc                    []string `json:"bcc"`
+	Body                   string   `json:"body"`
+	Cc                     []string `json:"cc"`
+
+	// CommunicationContext The reason for contact the author chose. Absent when none was.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+	CreatedAt            time.Time             `json:"created_at"`
 
 	// Grounding The records this draft was written from, which an agent draft records and a human draft leaves empty. The composer files a sent draft under these, so a draft grounded in a deal reaches that deal's timeline even when it is opened from the contact page.
 	Grounding *[]MailDraftGround `json:"grounding,omitempty"`
 	HtmlBody  *string            `json:"html_body,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
-	Subject   string             `json:"subject"`
-	To        []string           `json:"to"`
-	UpdatedAt time.Time          `json:"updated_at"`
-	Version   int64              `json:"version"`
+
+	// ScheduledAt The moment the author picked to send at, as saved. It may have passed since; the
+	// draft schedules nothing. Absent when none was picked.
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledTz The IANA zone `scheduled_at` was picked in. Present exactly when it is.
+	ScheduledTz *string   `json:"scheduled_tz,omitempty"`
+	Subject     string    `json:"subject"`
+	To          []string  `json:"to"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Version     int64     `json:"version"`
 }
 
 // MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
@@ -51157,14 +51177,34 @@ type MailDraftInput struct {
 	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
 	// record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
-	Bcc        *[]string           `json:"bcc,omitempty"`
-	Body       *string             `json:"body,omitempty"`
-	Cc         *[]string           `json:"cc,omitempty"`
+
+	// AttachmentIds The files the rep chose, by the ids `/attachments` gave them. A save replaces the
+	// whole draft, so omitting this clears the files; a client keeps them by sending back
+	// the `id` of each entry in the draft's `attachments`.
+	//
+	// Held to the send's own cap. A file the caller cannot see, or one the send would
+	// refuse, is left out rather than refused, so a save never loses the words; the answer
+	// counts it in `attachments_unavailable`.
+	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
+	Bcc           *[]string             `json:"bcc,omitempty"`
+	Body          *string               `json:"body,omitempty"`
+	Cc            *[]string             `json:"cc,omitempty"`
+
+	// CommunicationContext The reason for contact the rep chose, checked as the send checks it: a category
+	// reserved for the installation's own notices is refused 422. Omit it for none.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
 
 	// HtmlBody The editor's markup beside the plain body, so reopening restores the formatting.
-	HtmlBody *string   `json:"html_body,omitempty"`
-	Subject  *string   `json:"subject,omitempty"`
-	To       *[]string `json:"to,omitempty"`
+	HtmlBody *string `json:"html_body,omitempty"`
+
+	// ScheduledAt The moment the rep picked to send at, checked as the send checks it: with
+	// `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledTz The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
+	ScheduledTz *string   `json:"scheduled_tz,omitempty"`
+	Subject     *string   `json:"subject,omitempty"`
+	To          *[]string `json:"to,omitempty"`
 }
 
 // MailHistoryBaseline The local date this mailbox's automatic commitment suggestions start from. Absent when the
@@ -102972,8 +103012,6 @@ func (siw *ServerInterfaceWrapper) PreviewReportingReportAsRole(w http.ResponseW
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -128459,8 +128497,6 @@ func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Requ
 func (siw *ServerInterfaceWrapper) MessageOnboardingCompany(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 38603,
+    "tokens": 39012,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 803
+    "mean_tool_tokens": 812
   },
   "agents": [
     {
@@ -84,12 +84,16 @@
   ],
   "tool_cost": [
     {
-      "name": "read_reports",
-      "tokens": 2501
+      "name": "read_workspace",
+      "tokens": 2602
     },
     {
-      "name": "read_workspace",
-      "tokens": 2402
+      "name": "read_reports",
+      "tokens": 2557
+    },
+    {
+      "name": "read_details",
+      "tokens": 2031
     },
     {
       "name": "change_state",
@@ -97,11 +101,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 1886
-    },
-    {
-      "name": "read_details",
-      "tokens": 1878
+      "tokens": 1893
     },
     {
       "name": "find_records",
@@ -109,7 +109,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 1724
+      "tokens": 1715
     },
     {
       "name": "send_outbound",
@@ -165,7 +165,7 @@
     },
     {
       "name": "run_research",
-      "tokens": 676
+      "tokens": 680
     },
     {
       "name": "change_offers",

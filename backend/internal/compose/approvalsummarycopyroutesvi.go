@@ -89,7 +89,6 @@ var routeVerbsVietnamese = map[string]string{
 	"mark_brief_item_dismissed":          "Bỏ qua mục bản tin",
 	"mark_notice_read":                   "Đánh dấu đã đọc thông báo",
 	"message_anchor_company_site_read":   "Hỏi về website đã đọc",
-	"message_onboarding_company":         "Tiếp tục thiết lập công ty mình",
 	"offer_ownership_transfer":           "Đề nghị chuyển bản ghi cho đồng nghiệp",
 	"pause_deal_room":                    "Tạm dừng phòng giao dịch",
 	"pin_worklist_row":                   "Ghim dòng trong danh sách việc",

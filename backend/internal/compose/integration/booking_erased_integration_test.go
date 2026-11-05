@@ -28,7 +28,7 @@ const (
 func TestAnErasedAddressBooksAndIsAnsweredAsACleanOne(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	monday := nextMonday()
