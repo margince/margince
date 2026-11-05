@@ -689,7 +689,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `existing_customer_notice_pkey`: `unique, btree (id)`
-- `idx_existing_customer_notice_live_entity`: `btree (legal_entity_id) WHERE (withdrawn_at IS NULL)`
+- `idx_existing_customer_notice_legal_entity`: `btree (legal_entity_id)`
 
 ## existing_customer_notice_purpose
 

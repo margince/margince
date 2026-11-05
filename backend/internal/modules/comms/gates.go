@@ -335,26 +335,24 @@ func transmitRequestFor(del Delivery) commsauthz.TransmitRequest {
 // first answer came before pacing, the attachment checks and the file read. A
 // stop or a retraction committed in that time is in no ticket.
 //
-// An unchanged answer keeps the issued ticket. A changed one goes through the
-// same decision and requirement gates as the first. A stop committed during the
+// An unchanged answer lets the attempt go. A changed one goes through the same
+// decision and requirement gates as the first. A stop committed during the
 // provider call itself is too late for this attempt.
 func (d *Dispatcher) recheckBeforeTheWire(
 	ctx context.Context, del Delivery, issued commsauthz.TransmitTicket,
-) (commsauthz.TransmitTicket, Outcome, time.Duration, error) {
+) (Outcome, time.Duration, error) {
 	fresh, err := d.consent.RecheckTransmit(ctx, transmitRequestFor(del), issued)
 	if err != nil {
-		o, w, err := d.retry(ctx, del.ID, err)
-		return issued, o, w, err
+		return d.retry(ctx, del.ID, err)
 	}
 	if fresh.DecisionSetID == issued.DecisionSetID {
-		return issued, outcomeUndecided, 0, nil
+		return outcomeUndecided, 0, nil
 	}
 	ticket, outcome, wait, err := d.gateConsentDecision(ctx, fresh, del)
 	if outcome != outcomeUndecided {
-		return ticket, outcome, wait, err
+		return outcome, wait, err
 	}
-	outcome, wait, err = d.gateRequirements(ctx, del, ticket)
-	return ticket, outcome, wait, err
+	return d.gateRequirements(ctx, del, ticket)
 }
 
 // gateConsentDecision is what the gate DOES with the engine's answer, split out

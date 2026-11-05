@@ -89,9 +89,8 @@ func TestAnAdminCorrectsAnObjectionAColleagueTyped(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a rep correcting the objection answered %v, want ErrPermissionDenied", err)
 	}
-	var invalid *ValidationError
 	err = e.store.Lift(e.ctx, LiftInput{ContactID: contact, SuppressionID: ids.UUID(asAdmin.Id)})
-	if !errors.As(err, &invalid) {
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("a correction with no reason answered %v, want a validation error", err)
 	}
 	if err := e.store.Lift(e.ctx, LiftInput{

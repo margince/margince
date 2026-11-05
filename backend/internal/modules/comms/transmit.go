@@ -51,7 +51,7 @@ func (d *Dispatcher) transmit(ctx context.Context, del Delivery, seam sendSeam, 
 	if err != nil {
 		return d.retry(ctx, del.ID, fmt.Errorf("comms: reading this message's files before transmitting: %w", err))
 	}
-	ticket, outcome, wait, err := d.recheckBeforeTheWire(ctx, del, ticket)
+	outcome, wait, err := d.recheckBeforeTheWire(ctx, del, ticket)
 	if outcome != outcomeUndecided || err != nil {
 		return outcome, wait, err
 	}
