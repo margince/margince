@@ -222,11 +222,9 @@ func TestAnIngestWhoseHoldingConnectionDiedDoesNotBlockTheNext(t *testing.T) {
 	// outlive the call, and the next run reads a holder that is still dying.
 	var killed int
 	if err := o.e.Pool.QueryRow(ctx, `
-		SELECT count(*) FROM (
-		  SELECT pg_terminate_backend(pid, 5000) FROM pg_locks
-		  WHERE locktype = 'advisory' AND granted
-		    AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended($1, 0)
-		) AS ended`, "knowledge_ingest:"+o.doc.String()).Scan(&killed); err != nil || killed != 1 {
+		SELECT count(*) FILTER (WHERE pg_terminate_backend(pid, 5000)) FROM pg_locks
+		WHERE locktype = 'advisory' AND granted
+		  AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended($1, 0)`, "knowledge_ingest:"+o.doc.String()).Scan(&killed); err != nil || killed != 1 {
 		t.Fatalf("ending the holder's connection: ended=%d err=%v", killed, err)
 	}
 
