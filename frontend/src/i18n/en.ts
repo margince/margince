@@ -16883,6 +16883,17 @@ export const en = {
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":
     "The link to {company} and its history are deleted permanently. {company} itself stays. If they left, mark the role ended instead.",
+  // The About column's employer dialog: move the contact to another company or
+  // none, and say what became of the old job.
+  "contact.employer.changeTitle": "Change employer",
+  "contact.employer.none": "No current employer",
+  "contact.employer.fateQuestion": "What about {company}?",
+  "contact.employer.fateLeft": "They left {company}",
+  "contact.employer.fateLeftHint":
+    "It stays on their record as a former employer, ended today.",
+  "contact.employer.fateWrong": "{company} was never their employer",
+  "contact.employer.fateWrongHint":
+    "The link and its history are deleted. {company} itself stays.",
   "contact.proposal.title": "From {source}: {company}",
   "contact.proposal.ask": "Link or create this company?",
   "contact.proposal.link": "Link",
