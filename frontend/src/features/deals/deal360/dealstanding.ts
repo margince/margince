@@ -7,6 +7,7 @@
 
 import type { components } from "../../../api/schema";
 import type { ReadingTone } from "../../../design-system/readingtone";
+import type { TimelineHistory } from "../../../design-system/standingtimeline.zoombar";
 import {
   activityIsAhead,
   type OccurredPrecision,
@@ -40,6 +41,8 @@ export type DealStandingInputs = Readonly<{
   // The instant the page was read at: where today stands on the axis.
   asOf: string;
   activities: readonly Activity[];
+  // The list `activities` came from, which pages older rows in for the line.
+  history?: TimelineHistory;
   offers: readonly Offer[] | undefined;
   coverage: Readonly<{
     coverage?: DealCoverage;
