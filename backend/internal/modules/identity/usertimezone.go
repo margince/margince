@@ -34,7 +34,8 @@ const (
 	// TimezoneChosen is the user's own pick. It is always stored.
 	TimezoneChosen TimezoneSource = "chosen"
 	// TimezoneFromAgent is an agent doing what its user asked. It is always stored
-	// and holds against a browser's guess, and the row names the agent.
+	// and holds against a browser's guess. The row names the agent and does not read
+	// as chosen, because the user did not pick it themselves.
 	TimezoneFromAgent TimezoneSource = "agent"
 
 	fieldTimezoneChosen = "timezone_chosen"
@@ -55,8 +56,8 @@ func (s *Service) SaveMyTimezone(ctx context.Context, zone string, source Timezo
 		return Seat{}, &WorkingHoursError{Field: fieldTimezoneSource, Message: "a source is browser, chosen or agent"}
 	}
 	_, isAgent := callingAgent(ctx)
-	if isAgent && source == TimezoneChosen {
-		return Seat{}, agentLimit("an agent does not choose a time zone for its user; send source agent once they have asked for it")
+	if isAgent && source != TimezoneFromAgent {
+		return Seat{}, agentLimit("an agent does not choose a time zone for its user or pass as the browser; send source agent once they have asked for it")
 	}
 	if !isAgent && source == TimezoneFromAgent {
 		return Seat{}, &WorkingHoursError{Field: fieldTimezoneSource, Message: "only an agent sends the source agent"}
@@ -100,15 +101,14 @@ func writeTimezoneTx(ctx context.Context, tx pgx.Tx, user ids.UserID, zone strin
 	if locale != nil {
 		seat.Locale = *locale
 	}
-	seat.Timezone, seat.TimezoneChosen = optionalValue(before), chosenBefore
+	seat.Timezone, seat.TimezoneChosen, seat.TimezoneSetBy = optionalValue(before), chosenBefore, setByBefore
 	stored := before != nil && *before != ""
 	if source == TimezoneFromBrowser && stored {
 		return seat, nil
 	}
-	chosen := chosenBefore || source == TimezoneChosen || source == TimezoneFromAgent
-	setBy := timezoneSetBy(ctx, source)
-	unchangedBy := source == TimezoneFromBrowser || setByBefore == nil || (setBy != nil && *setBy == *setByBefore)
-	if stored && *before == zone && chosen == chosenBefore && unchangedBy {
+	chosen := source == TimezoneChosen || (source == TimezoneFromBrowser && chosenBefore)
+	setBy := timezoneSetBy(ctx)
+	if stored && *before == zone && repeatsTheStoredZone(source, chosenBefore, setByBefore, setBy) {
 		return seat, nil
 	}
 	if _, err := tx.Exec(ctx,
@@ -126,8 +126,30 @@ func writeTimezoneTx(ctx context.Context, tx pgx.Tx, user ids.UserID, zone strin
 		crmcontracts.PublicEventUserTimezoneChanged{Timezone: zone, Chosen: chosen}); err != nil {
 		return Seat{}, err
 	}
-	seat.Timezone, seat.TimezoneChosen = zone, chosen
+	seat.Timezone, seat.TimezoneChosen, seat.TimezoneSetBy = zone, chosen, setBy
 	return seat, nil
+}
+
+// repeatsTheStoredZone reports a save of the zone already stored that says nothing
+// new. An agent repeating a zone the user chose leaves it theirs. An agent repeating
+// a browser's guess becomes its setter, because a guess is nobody's choice.
+func repeatsTheStoredZone(source TimezoneSource, chosenBefore bool, setByBefore, setBy *string) bool {
+	if source == TimezoneFromAgent {
+		return chosenBefore || (setByBefore != nil && setBy != nil && *setBy == *setByBefore)
+	}
+	return chosenBefore && setByBefore == nil
+}
+
+// readSeatZone fills a self-service answer with the zone the seat holds, and who
+// set it, for writers whose own statement is about something else.
+func readSeatZone(ctx context.Context, tx pgx.Tx, seat *Seat) error {
+	var zone *string
+	if err := tx.QueryRow(ctx, `SELECT timezone, timezone_chosen, timezone_set_by FROM app_user WHERE id = $1`,
+		seat.UserID).Scan(&zone, &seat.TimezoneChosen, &seat.TimezoneSetBy); err != nil {
+		return fmt.Errorf("identity: reading the seat's time zone: %w", err)
+	}
+	seat.Timezone = optionalValue(zone)
+	return nil
 }
 
 // timezoneImage renders one side of the audit's before/after pair. A user
@@ -145,10 +167,9 @@ func optionalValue(s *string) string {
 
 // timezoneSetBy names the agent that set a zone, or nobody for a user's choice
 // or a guess a browser made.
-func timezoneSetBy(ctx context.Context, source TimezoneSource) *string {
-	actor, isAgent := callingAgent(ctx)
-	if !isAgent || source != TimezoneFromAgent {
-		return nil
+func timezoneSetBy(ctx context.Context) *string {
+	if actor, isAgent := callingAgent(ctx); isAgent {
+		return &actor.ID
 	}
-	return &actor.ID
+	return nil
 }

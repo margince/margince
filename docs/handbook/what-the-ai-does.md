@@ -149,7 +149,7 @@ An agent acting for you can set up pipelines and open stages, custom fields and 
 
 It can upload a logo, a vCard or your LinkedIn export. A vCard from your agent fills blanks and replaces nothing a contact already holds. It asks you first where its tool says so. That covers a custom field, a removal, a change to your name and a rule it turns on.
 
-A rule it set up stops at its next run after you revoke its passport, and a run already under way can finish. Margince tells you it stopped; resume the rule and it runs with no agent behind it. A contact's details cost credits, so it needs a daily limit on the connection, and it pays for a detail only when it names one.
+A rule it set up stops at its next run after you revoke its passport or disconnect it, or an admin turns its tool off. It also stops once its passport runs out with no way to renew. A run already under way can finish. A rule it set up says **By your agent**, and so does a time zone it set for you. Margince tells you it stopped; resume the rule and it runs with no agent behind it. A contact's details cost credits, so it needs a daily limit on the connection, and it pays for a detail only when it names one.
 
 These stay with you, in the app, because they would give it more than you want to give:
 

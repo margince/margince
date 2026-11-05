@@ -115,7 +115,23 @@ func TestAnAgentSetsUpAPipelineButNeverWhatClosesADeal(t *testing.T) {
 func TestAnAgentSetsAPartnersTermsButNeverItsMarginTier(t *testing.T) {
 	d := newTwoDoors(t, "agent-partner", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Channel Co"})
-	settingsAct(t, d, "upsert_partner", map[string]any{"id": company, "request_body": AnyMap{"partner_kinds": []string{"referral"}}})
+	refusal := d.toolRefused(t, "change_settings", map[string]any{"action": "upsert_partner", "id": company, "request_body": AnyMap{"partner_kinds": []string{"referral"}}})
+	if !strings.Contains(refusal, "set_up_partner") {
+		t.Errorf("an agent promoting a company answered %q, want it pointed at set_up_partner", refusal)
+	}
+	if status := d.e.Call(t, "GET", "/v1/companies/"+company+"/partner", nil, nil, nil); status != http.StatusNotFound {
+		t.Errorf("the refused promotion left the partner read at %d", status)
+	}
+	if status := d.e.Call(t, "PUT", "/v1/companies/"+company+"/partner", AnyMap{"partner_kinds": []string{"consulting"}}, nil, nil); status != http.StatusOK {
+		t.Fatalf("the user making it a partner → %d", status)
+	}
+	var standing struct {
+		Version int64 `json:"version"`
+	}
+	if status := d.e.Call(t, "GET", "/v1/companies/"+company+"/partner", nil, nil, &standing); status != http.StatusOK {
+		t.Fatalf("reading the partner → %d", status)
+	}
+	settingsAct(t, d, "upsert_partner", map[string]any{"id": company, "if_version": standing.Version, "request_body": AnyMap{"partner_kinds": []string{"referral"}}})
 	var partner struct {
 		PartnerKinds []string `json:"partner_kinds"`
 		MarginTier   *string  `json:"margin_tier"`

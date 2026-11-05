@@ -188,7 +188,8 @@ func stampQualifyingEvent(
 	return err
 }
 
-// recordedQualifyingEvent reads a row a human or an integration wrote.
+// recordedQualifyingEvent reads a recorded qualifying-event row, whichever writer
+// left it: a human, their passport agent, an integration, the transmit path or a booking.
 func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time, address *string) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var id string

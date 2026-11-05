@@ -422,7 +422,6 @@ internal/modules/identity/oauth_grant.go#func oauthPassportLabel
 internal/modules/identity/oauth_redirect.go#var responseParams
 internal/modules/identity/oauth_refresh.go#var errRefreshRejected
 internal/modules/identity/oauth_token.go#func writeTokenResponse
-internal/modules/identity/passport.go#const liveClientPredicate
 internal/modules/identity/passport.go#func auditPassportRevoked
 internal/modules/identity/passport.go#func mintPassport
 internal/modules/identity/passport.go#var passportScopeVocabulary

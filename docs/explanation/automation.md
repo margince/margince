@@ -213,7 +213,11 @@ system.
 
 ## A rule an agent set up
 
-A rule names the passport of the agent that created or enabled it, in `setter_passport_id`. `runOne` reads that passport before it matches and again before it claims the run. If the passport is revoked, the rule pauses with the reason `passport_revoked`, its owner gets a notice, and the firing does not run. A user enabling or editing the rule clears the setter, so no passport stands behind it. Its owner stays who it was. A seeded rule never names a setter.
+A rule names the passport of the agent that created it or turned it on, in `setter_passport_id`. `runOne` asks `workforce.LiveSetterSQL` before it matches and again before it claims the run.
+
+A passport with no grant is live until it is revoked or expires. A connected passport follows its connection, so a refresh leaves it live. A revoked grant ends it, and so does an admin turning the client off. A connection also ends when no passport on it is still in date and it cannot refresh. So an expired access token on a grant that can refresh is live.
+
+When the setter is not live, the rule pauses with the reason `passport_revoked` and the firing does not run. Its owner gets a notice, and the audit row records `expired` or `revoked`. A user enabling or editing the rule clears the setter, so no passport stands behind it. Its owner stays who it was. A seeded rule names no setter, except a draft starter an agent turned on, because it spends a model call each time it fires.
 
 ## The actor and context boundary of a run
 

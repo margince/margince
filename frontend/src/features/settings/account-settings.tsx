@@ -5,7 +5,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { THEME_LABEL_KEYS } from "../../app/account";
-import { Avatar, Button, SegmentedControl } from "../../design-system/atoms";
+import {
+  Avatar,
+  Badge,
+  Button,
+  SegmentedControl,
+} from "../../design-system/atoms";
 import { describedByIds } from "../../design-system/describedby";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -240,11 +245,17 @@ function TimeZoneSettingRow() {
   // Drawn once /me has answered, so the row never shows a guess first.
   if (!me.data) return null;
   return (
-    <TimeZoneSettingControl stored={me.data.user.timezone ?? readerZone} />
+    <TimeZoneSettingControl
+      stored={me.data.user.timezone ?? readerZone}
+      setByAgent={Boolean(me.data.user.timezone_set_by)}
+    />
   );
 }
 
-function TimeZoneSettingControl({ stored }: Readonly<{ stored: string }>) {
+function TimeZoneSettingControl({
+  stored,
+  setByAgent,
+}: Readonly<{ stored: string; setByAgent: boolean }>) {
   const t = useT();
   const save = useSaveMyTimezone();
   const [draft, setDraft] = useState<string | null>(null);
@@ -277,6 +288,9 @@ function TimeZoneSettingControl({ stored }: Readonly<{ stored: string }>) {
             value={shown}
             onChange={setDraft}
           />
+          {setByAgent && (
+            <Badge tone="ai">{t("account.timezoneSetByAgent")}</Badge>
+          )}
           <ErrorLine id={refusalId}>
             {save.isError ? problemMessageOf(save.error, t) : null}
           </ErrorLine>

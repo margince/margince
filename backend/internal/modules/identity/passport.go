@@ -388,18 +388,6 @@ func (a AgentIdentity) Principal() principal.Principal {
 	}
 }
 
-// liveClientPredicate is the ONE spelling of "this client is still a client",
-// carried by EVERY statement that reads oauth_client: authentication (the rule
-// below), issuance (the consent form, the consent POST and the code exchange,
-// in oauth.go and oauth_token.go), and the lock the code exchange takes before
-// it commits a grant (lockClientRegistration, oauth_grant.go). Disable and
-// soft-delete are the
-// operator's off switch, and a switch that only stops calls — while consent and
-// issuance carry on beneath it — spends a human's approval on a client an admin
-// already killed. The client table is aliased c in each of those statements so
-// this is one string rather than four that can rot apart.
-const liveClientPredicate = `c.disabled_at IS NULL AND c.deleted_at IS NULL`
-
 // authenticateAgentWhere is the ONE agent-authentication query, resolving a
 // live passport to the principal its calls carry: the passport's own scopes
 // over the granting human's RBAC, loaded here and now.

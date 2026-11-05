@@ -172,7 +172,7 @@ So:
 - The passport also carries its own narrower limits (see **Passports** below).
   Your permissions are the most an agent can ever have.
 - An agent can record consent, a stop or a legal hold for you, and work a privacy
-  request. It asks you first where the act has legal weight, and the record names it.
+  request. Where the act has legal weight, your AI tool is told to ask you first. Margince does not check that it did: the record names the agent and you, and it cannot show you said yes.
 
 ## Things the AI is refused outright
 
@@ -210,7 +210,7 @@ widen anything. So an agent can take its own request back off your list.
 
 **Decisions that remove data or set company rules.** An agent cannot carry out an erasure
 request, lift a legal hold, release a held record or change retention rules. It cannot destroy
-the mail from an address, or change what you decided about one. Those stay with you in the app.
+the mail from an address. It cannot change what you decided about a sender, a domain or a rule that keeps mail out. Those stay with you in the app.
 
 **What closes a deal.** The stage ladder is what the "advance a deal" approval is
 judged against. An agent can add open stages and move stages, but it cannot decide whether a
@@ -245,7 +245,7 @@ Where a purpose requires double opt-in, consent that was granted but not yet
 confirmed does not send. Every recipient is checked, including anyone copied in.
 
 Where a refusal allows it, someone with that permission can read the warning and still send.
-An agent does so only after you have seen the warning and said yes. The record names you both.
+Your AI tool is told to do so only after you have seen the warning and said yes. Margince does not check that you did. The record names you both, and it cannot show you said yes.
 
 **Your seat, checked again at sending.** It is checked when the message goes
 out, not only when the message is staged. Someone moved to a read-only seat
@@ -291,8 +291,8 @@ permissions**:
 - **Draft messages**: proposes text. This is not read-only: one drafting action
   saves a draft on the deal's timeline.
 - **Change records**: every change that stays inside your company.
-- **Send messages**: the four actions that send something out of Margince,
-  booking a meeting included.
+- **Send messages**: the actions that send something out of Margince, booking a meeting included.
+  It also covers changing what a buyer reads in a deal room at once.
 - **Buy contact data**: the one action that gets data from an outside provider.
 
 A passport with only **Read records** can read your approvals but cannot decide
