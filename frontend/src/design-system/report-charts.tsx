@@ -14,7 +14,7 @@ import { readingScale } from "./report-charts.model";
 
 export type { ChartReading } from "./report-charts.model";
 
-function ReadingTable({
+export function ReadingTable({
   readings,
   label,
   dataLabel,

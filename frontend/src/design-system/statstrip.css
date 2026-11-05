@@ -300,3 +300,44 @@
 .stat-strip[data-density="plate"] .stat-card:has(.stat-card-open):hover {
   background: var(--groundHover);
 }
+
+/* A LEAD plate heads its card and stands on the card's own ground, so it draws
+   neither a deeper rung nor a rule above it. Its figure sizes are the tile's
+   (atoms.css). */
+.stat-strip[data-density="plate"][data-lead] {
+  background: none;
+  grid-template-columns: minmax(200px, 1.5fr) repeat(
+      auto-fit,
+      minmax(150px, 1fr)
+    );
+  border-block-start: 0;
+}
+/* A lead plate's cells are narrow, so the receipt keeps its word for the
+   screen reader and shows a small mark in its place. */
+.stat-strip[data-lead] .stat-card-basis {
+  position: relative;
+  display: inline-block;
+  inline-size: 1rem;
+  block-size: 1rem;
+  overflow: hidden;
+  white-space: nowrap;
+  color: transparent;
+  text-decoration: none;
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+.stat-strip[data-lead] .stat-card-basis::before {
+  content: "i" / "";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--textSecondary);
+}
+.stat-strip[data-lead] .stat-card-basis:hover {
+  border-color: var(--accent);
+}
+.stat-strip[data-lead] .stat-card-basis:hover::before {
+  color: var(--accentText);
+}

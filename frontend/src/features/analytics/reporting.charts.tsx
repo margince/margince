@@ -219,12 +219,15 @@ export function ChartPanel({
   wide,
   evaluation,
   editionId,
+  section = false,
   onEvidence,
 }: Readonly<{
   chart: ReportingChart;
   wide: boolean;
   evaluation: ReportingEvaluation;
   editionId?: string;
+  // A section of a larger sheet: its title sits flat over the chart.
+  section?: boolean;
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
@@ -232,6 +235,7 @@ export function ChartPanel({
   const drawn = chart.points.length > 0 && chart.coverage.status !== "no_data";
   return (
     <Panel
+      flatHead={section}
       className={
         wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
       }

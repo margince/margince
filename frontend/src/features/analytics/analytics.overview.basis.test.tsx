@@ -4,7 +4,9 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
+import { formatMoneyCompact } from "../../format/format";
 import { forgetSeat } from "../../lib/storage";
 import {
   isSetup,
@@ -52,6 +54,13 @@ async function card(label: string) {
 }
 const money = (value: number) =>
   reportingCompactAmount(value, "EUR", "EUR", "en");
+const short = (value: number) => formatMoneyCompact(value, "EUR", "en");
+// A figure's receipt opens on a press, and holds what the figure rests on.
+async function openReceipt(card: ReturnType<typeof within>) {
+  await userEvent
+    .setup({ delay: null })
+    .click(card.getByRole("button", { name: "Evidence" }));
+}
 
 it("keeps committed business and modelled outcomes in different labelled readings", async () => {
   openScenario("modelCommitDivergence");
@@ -60,7 +69,7 @@ it("keeps committed business and modelled outcomes in different labelled reading
   expect(finish.queryByText(/€1,400,000/)).toBeNull();
   const model = await card("Modelled quarter finish");
   expect(
-    model.getByText(`${money(140000000)} – ${money(260000000)}`),
+    model.getByText(`${short(140000000)} – ${short(260000000)}`),
   ).toBeVisible();
   expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
 });
@@ -143,14 +152,17 @@ it.each([
     expect(
       (await card("Pipeline due this quarter")).getByText(money(11000)),
     ).toBeVisible();
-    expect(screen.getByText(`${money(10000)} still to win`)).toBeVisible();
+    await openReceipt(await card("Sales won"));
+    expect(
+      await screen.findByText(`${money(10000)} still to win`),
+    ).toBeVisible();
     if (measure === "manager_call") {
       const call = await card(label);
-      expect(call.getByText("Called 30 Oct 2026")).toBeVisible();
       expect(
-        call.getByText(`Projected shortfall ${money(20000 - amount)}`),
+        call.getByText(`${short(20000 - amount)} short of target`),
       ).toBeVisible();
-      expect(call.getByRole("button", { name: "Evidence" })).toBeVisible();
+      await openReceipt(call);
+      expect(await screen.findByText("Called 30 Oct 2026")).toBeVisible();
     }
   },
 );

@@ -10,7 +10,9 @@ import {
 
 describe("Analytics quantities", () => {
   it("writes whole major units with the currency sign, in each currency scale and locale", () => {
-    expect(formatAnalyticsMoney(743218965, "EUR", "de")).toBe("≈7.432.190\u00a0€");
+    expect(formatAnalyticsMoney(743218965, "EUR", "de")).toBe(
+      "≈7.432.190\u00a0€",
+    );
     expect(formatAnalyticsMoney(743218965, "EUR", "en")).toBe("≈€7,432,190");
     expect(formatAnalyticsMoney(7432189, "JPY", "vi")).toBe("7.432.189\u00a0¥");
     expect(formatAnalyticsMoney(1234500, "KWD", "en")).toBe("≈KWD\u00a01,235");

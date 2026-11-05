@@ -439,3 +439,40 @@ export const PlateEmpty: Story = {
     </StatStrip>
   ),
 };
+
+// The plate heading an Analytics card: the first figure leads at display size,
+// and each cell keeps one short line under its figure.
+export const PlateLead: Story = {
+  render: () => (
+    <StatStrip density="plate" lead>
+      <StatCard
+        label="Sales won"
+        value="€420,000"
+        detail="of €800,000 target"
+        onOpen={() => undefined}
+      />
+      <StatCard
+        label="Won + Likely deals"
+        value="€760,000"
+        detail="€40K short of target"
+        href="#forecast"
+        opens="forecast"
+      />
+      <StatCard
+        label="Modelled quarter finish"
+        value="€610K – €980K"
+        detail="Central 80% of outcomes"
+      />
+      <StatCard
+        label="Pipeline due this quarter"
+        value="€1,360,000"
+        detail="18 deals"
+        onOpen={() => undefined}
+      />
+    </StatStrip>
+  ),
+  play: async ({ canvasElement }) => {
+    const strip = canvasElement.querySelector(".stat-strip");
+    await expect(strip?.getAttribute("data-lead")).toBe("true");
+  },
+};

@@ -240,10 +240,14 @@ describe("the composition of the expected finish", () => {
           }),
     );
     const summary = await readings();
-    expect(await summary.findByText("15 of 18 valued")).toBeVisible();
+    expect(await summary.findByText(/15 of 18 valued/)).toBeVisible();
+    const pipeline = summary
+      .getByText("Pipeline due this quarter")
+      .closest<HTMLElement>(".stat-card");
+    if (!pipeline) throw new Error("missing pipeline card");
     await userEvent
       .setup({ delay: null })
-      .click(summary.getByRole("button", { name: "Evidence" }));
+      .click(within(pipeline).getByRole("button", { name: "Evidence" }));
     expect(
       await screen.findByText(
         "Counts 15 of the 18 open deals the forecast considered.",

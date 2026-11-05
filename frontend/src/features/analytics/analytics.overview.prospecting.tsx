@@ -165,6 +165,7 @@ export function MyProspecting({
       <FilterBar
         label={t("analytics.filters")}
         quiet
+        labels="inside"
         actions={
           <OverviewSaveActions
             selection={

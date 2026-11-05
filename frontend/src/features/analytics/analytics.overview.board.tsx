@@ -92,6 +92,7 @@ export function BoardChart({
     <ChartPanel
       chart={chart}
       wide={false}
+      section
       evaluation={evaluation}
       onEvidence={onEvidence}
     />
@@ -99,9 +100,9 @@ export function BoardChart({
 }
 
 /**
- * Today's stock by stage beside the permitted sales by owner, from the chart
- * read. While it is read, or when it failed, it says so in its own place and
- * the figures above it stand.
+ * Today's stock by stage over the permitted sales by owner, from the chart
+ * read, each a section of the review's sheet. While it is read, or when it
+ * failed, it says so in its own place and the figures above it stand.
  */
 export function StockCharts({
   charts,
@@ -117,7 +118,7 @@ export function StockCharts({
   return (
     <QueryGate query={charts} pendingLabel={t("analytics.overview.charts")}>
       {(read) => (
-        <div className="analytics-pair">
+        <>
           <BoardChart
             evaluation={read}
             kind="stage_distribution"
@@ -133,7 +134,7 @@ export function StockCharts({
             kind="breakdown"
             onEvidence={(reference) => onEvidence(reference, read)}
           />
-        </div>
+        </>
       )}
     </QueryGate>
   );

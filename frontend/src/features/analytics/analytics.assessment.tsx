@@ -8,7 +8,7 @@ import type { components } from "../../api/schema";
 import { WrittenBy } from "../../components/citations.list";
 import { EntityRef } from "../../components/entityref";
 import { AiPending } from "../../design-system/aipending";
-import { Button } from "../../design-system/atoms";
+import { Button, Disclosure } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
@@ -296,42 +296,39 @@ function WrittenAssessment({
         title={t(outlookTitle(view, evaluation))}
         tone="ai"
         flatHead
+        className="analytics-outlook"
         titleAction={
           <Button variant="ghost" onClick={refresh}>
             {t("analytics.assessment.refresh")}
           </Button>
         }
-        footer={<WrittenBy by={assessment.generated_by} />}
-      >
-        <PanelBody>
-          <div className="analytics-outlook-prose">
-            {assessmentParagraphs(assessment).map((paragraph) => (
-              <p key={paragraph.map((s) => s.text).join(" ")}>
-                {paragraph
-                  .map((line) => assessmentText(line, assessment, locale))
-                  .join(" ")}
-              </p>
-            ))}
-          </div>
-          <div className="actions">
+        footer={
+          <>
+            <WrittenBy by={assessment.generated_by} />
             <Button variant="link" onClick={() => setReading(true)}>
               {t("analytics.outlook.records")}
             </Button>
-            {next && (
+          </>
+        }
+      >
+        <PanelBody>
+          <OutlookProse assessment={assessment} />
+          {actions}
+          {next && (
+            <div className="actions">
               <p>
                 {next.text} <EntityRef kind="deal" id={next.deal_id} />{" "}
                 <EntityRef kind="user" id={next.owner_id} />
               </p>
-            )}
-            {next && canDecide && (
-              <Button variant="ghost" onClick={() => setDeciding(true)}>
-                {t("analytics.decisions.record")}
-              </Button>
-            )}
-          </div>
+              {canDecide && (
+                <Button variant="ghost" onClick={() => setDeciding(true)}>
+                  {t("analytics.decisions.record")}
+                </Button>
+              )}
+            </div>
+          )}
         </PanelBody>
       </Panel>
-      {actions}
       {reading && (
         <InterpretationDrawer
           assessment={assessment}
@@ -351,6 +348,33 @@ function WrittenAssessment({
         />
       )}
     </>
+  );
+}
+
+// The first sentence leads, the rest of its paragraph follows, and the
+// remaining paragraphs fold behind one door, so the rail reads at a glance.
+function OutlookProse({
+  assessment,
+}: Readonly<{ assessment: SalesAssessment }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const [first = [], ...more] = assessmentParagraphs(assessment).map(
+    (paragraph) =>
+      paragraph.map((line) => assessmentText(line, assessment, locale)),
+  );
+  const [lead, ...rest] = first;
+  return (
+    <div className="analytics-outlook-prose">
+      {lead && <p className="analytics-outlook-lead">{lead}</p>}
+      {rest.length > 0 && <p>{rest.join(" ")}</p>}
+      {more.length > 0 && (
+        <Disclosure summary={t("analytics.outlook.more")}>
+          {more.map((paragraph) => (
+            <p key={paragraph.join(" ")}>{paragraph.join(" ")}</p>
+          ))}
+        </Disclosure>
+      )}
+    </div>
   );
 }
 

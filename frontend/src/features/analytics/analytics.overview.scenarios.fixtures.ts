@@ -7,6 +7,7 @@
 
 import type { ReportingFixtureFrame } from "../../testing/reporting.fixtures";
 import { jsonResponse } from "../../testing/story-utils";
+import { outlookFor } from "./analytics.assessment.fixtures";
 import {
   ADMIN_GRANTS,
   COVERAGE_GRANTS,
@@ -36,6 +37,7 @@ import {
   frames,
   movementOn,
   prospectingOn,
+  quarterChecks,
   quarterSales,
   teamOn,
   teamReviewOn,
@@ -252,7 +254,10 @@ export const OVERVIEW_SCENARIOS = {
   populated: {
     about: "Ordinary data: a quarter with a trend, a week of SDR work.",
     views: {
-      sales: sales(quarterSales()),
+      sales: sales(quarterSales(), {
+        checks: json(quarterChecks(frames.quarterCutoff.clock)),
+        assessment: json(outlookFor("sales", quarterSales())),
+      }),
       prospecting: prospecting(prospectingOn(week), {
         worklist: day(),
         summary: summary("handoff"),

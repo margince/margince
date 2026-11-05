@@ -18,42 +18,77 @@ type Comparison = NonNullable<
 >;
 
 /**
- * What stands under Sales won. It shows progress to the quarter's target,
- * what is still to win and the previous period.
- * Every figure is the server's; the page only formats.
- * A target that cannot be compared says why, with its fix, in place.
+ * The one line under Sales won: the target it is read against. A target that
+ * cannot be compared says why, with its fix, in place.
  */
 export function HeroAside({
   evaluation,
-  charts,
   onApply,
   targetSetup,
 }: Readonly<{
   evaluation: ReportingEvaluation;
-  // The chart read, once it answered: the period before is read off its trend.
-  charts: ReportingEvaluation | undefined;
   onApply: (selection: ReportingSelection) => void;
   // Who can set a target, for a quarter that has none.
   targetSetup: ReactNode;
 }>) {
+  const t = useT();
+  const { locale } = useLocale();
   const forecast = metricOf(evaluation, "forecast_landing");
   if (forecast?.coverage.withheld) return null;
   const comparison = forecast?.target_comparison;
-  let target: ReactNode = null;
-  if (comparison?.status === "no_target") target = targetSetup;
-  else if (
+  if (comparison?.status === "no_target") return targetSetup;
+  if (
     comparison?.status === "compared" ||
     comparison?.status === "target_reached"
-  )
-    target = <TargetProgress evaluation={evaluation} comparison={comparison} />;
-  else if (comparison)
-    target = (
-      <ComparisonState comparison={comparison} onApply={onApply} compact />
+  ) {
+    const { currency } = evaluation.context;
+    return (
+      <span>
+        {comparison.status === "target_reached"
+          ? t("reporting.compare.reached")
+          : t("analytics.hero.ofTarget", {
+              target: reportingCompactAmount(
+                comparison.target,
+                currency,
+                currency,
+                locale,
+              ),
+            })}
+      </span>
     );
+  }
+  return comparison ? (
+    <ComparisonState comparison={comparison} onApply={onApply} compact />
+  ) : null;
+}
+
+/**
+ * What Sales won rests on, folded behind its receipt. It holds progress to the
+ * target, what is still to win and the same point of the period before.
+ * Every figure is the server's; the page only formats.
+ */
+// Nothing when there is nothing to fold, so the reading shows no receipt.
+export function heroReceipt(
+  evaluation: ReportingEvaluation,
+  // The chart read, once it answered: the period before is read off its trend.
+  charts: ReportingEvaluation | undefined,
+): ReactNode {
+  const forecast = metricOf(evaluation, "forecast_landing");
+  const comparison = forecast?.coverage.withheld
+    ? undefined
+    : forecast?.target_comparison;
+  const compared =
+    comparison?.status === "compared" || comparison?.status === "target_reached"
+      ? comparison
+      : undefined;
+  const prior = priorOf(charts);
+  if (!compared && !prior) return undefined;
   return (
     <div className="analytics-hero-aside">
-      {target}
-      {charts && <PriorPeriod evaluation={charts} />}
+      {compared && (
+        <TargetProgress evaluation={evaluation} comparison={compared} />
+      )}
+      {charts && prior && <PriorPeriod evaluation={charts} prior={prior} />}
     </div>
   );
 }
@@ -108,24 +143,34 @@ function TargetProgress({
 // The same elapsed point of the period before, read off the trend's own
 // comparison series. Both values are the server's. No partial period is set
 // against a whole one, and nothing is subtracted here.
-function PriorPeriod({
-  evaluation,
-}: Readonly<{ evaluation: ReportingEvaluation }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const trend = evaluation.charts.find(
+function priorOf(
+  evaluation: ReportingEvaluation | undefined,
+): Readonly<{ value: number; unit: string }> | undefined {
+  const trend = evaluation?.charts.find(
     (chart) => chart.kind === "bookings_trend",
   );
-  if (trend?.coverage.status !== "ok") return null;
-  const last = trend.points.at(-1);
-  if (!trend.comparison_interval || last?.comparison == null) return null;
+  if (trend?.coverage.status !== "ok" || !trend.comparison_interval)
+    return undefined;
+  const last = trend.points.at(-1)?.comparison;
+  return last == null ? undefined : { value: last, unit: trend.unit };
+}
+
+function PriorPeriod({
+  evaluation,
+  prior,
+}: Readonly<{
+  evaluation: ReportingEvaluation;
+  prior: Readonly<{ value: number; unit: string }>;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
   const { currency } = evaluation.context;
   return (
     <p className="t-caption">
       {t("analytics.hero.prior", {
         amount: reportingCompactAmount(
-          last.comparison,
-          trend.unit,
+          prior.value,
+          prior.unit,
           currency,
           locale,
         ),

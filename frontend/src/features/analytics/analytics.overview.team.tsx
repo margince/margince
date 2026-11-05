@@ -150,6 +150,7 @@ export function TeamProspecting({
       <FilterBar
         label={t("analytics.filters")}
         quiet
+        labels="inside"
         caption={periodCaption(query.data, locale, t)}
       >
         {switcher}

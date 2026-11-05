@@ -240,3 +240,80 @@
 .analytics-pair > .panel {
   align-self: start;
 }
+
+/* An Analytics page: the work column beside the rail (analytics.board.tsx).
+   The rail takes a third, enough for a written outlook to keep its lines. */
+.analytics-board {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+  align-items: start;
+  gap: var(--gapCards);
+}
+.analytics-board-main,
+.analytics-board-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .analytics-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The work column's sections as one pane: the sheet wears the pane's edge,
+   corner and resting shadow, and each panel inside gives up its own. A
+   hairline parts two sections. */
+.analytics-sheet {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
+  overflow: hidden;
+}
+.analytics-sheet > :where(*) + :where(*) {
+  border-top: 1px solid var(--groundEdge);
+}
+/* Each panel is a section on the sheet's own ground. */
+.analytics-sheet .panel {
+  border: 0;
+  border-top: 1px solid var(--groundEdge);
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+.analytics-sheet > .panel:first-child {
+  border-top: 0;
+}
+.analytics-sheet > :where(:not(.panel, section, div)) {
+  margin: 0;
+  padding: var(--space-3) var(--padPanel);
+}
+
+/* A projected shortfall is the one hero line that warns. */
+.analytics-hero-short {
+  color: var(--warningText);
+}
+.analytics-sales-hero .trajectory-chart {
+  padding: 0 var(--padPanel) var(--space-3);
+}
+/* The outlook's first sentence is its verdict, set a step above the prose. */
+.analytics-outlook-lead {
+  font: var(--fontHeadingSmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}
+.analytics-outlook .panel-body > .actions {
+  margin-block-start: var(--space-3);
+}
+.analytics-outlook .panel-foot {
+  justify-content: space-between;
+}
+/* As a chip the scope fits its name rather than holding a column's width. */
+.filter-bar[data-labels="inside"] .analytics-scope-control {
+  flex: none;
+  min-width: 0;
+}

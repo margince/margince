@@ -54,3 +54,46 @@
   backdrop-filter: none;
   background: none;
 }
+
+/* Labels inside: the field wears the control's box on the bar's ground. Its
+   name leads in the quiet ink and the value follows. */
+.filter-bar[data-labels="inside"] .filter-bar-controls {
+  align-items: center;
+  gap: var(--space-2);
+}
+.filter-bar[data-labels="inside"] .field {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline-start: var(--inputPaddingX);
+  min-block-size: var(--inputHeight);
+  background: var(--ground);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-control);
+  box-shadow: var(--shadow-well);
+  transition:
+    border-color var(--dur-state) var(--ease-out),
+    box-shadow var(--dur-state) var(--ease-out);
+}
+.filter-bar[data-labels="inside"] .field:hover {
+  box-shadow: none;
+}
+.filter-bar[data-labels="inside"] .field:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--focus-glow);
+}
+.filter-bar[data-labels="inside"] .field > .t-label {
+  margin: 0;
+  color: var(--textSecondary);
+  font-weight: var(--fontWeightRegular);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.filter-bar[data-labels="inside"] .field > .input {
+  inline-size: auto;
+  min-block-size: 0;
+  padding-inline-start: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}

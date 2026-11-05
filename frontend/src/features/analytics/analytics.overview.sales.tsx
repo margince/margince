@@ -17,6 +17,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
 import { AssessmentPanel } from "./analytics.assessment";
+import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { DecisionsPanel } from "./analytics.decisions";
 import { StockCharts, useSalesCharts } from "./analytics.overview.board";
@@ -25,7 +26,7 @@ import {
   outboundDials,
   scopeDials,
 } from "./analytics.overview.context";
-import { HeroAside } from "./analytics.overview.hero";
+import { HeroAside, heroReceipt } from "./analytics.overview.hero";
 import { InitiativePanel } from "./analytics.overview.initiative";
 import {
   InterventionPanel,
@@ -37,6 +38,7 @@ import { metricOf } from "./analytics.overview.readings";
 import { SalesHeader } from "./analytics.overview.salesheader";
 import { OpenPipelineLine } from "./analytics.overview.salesreadings";
 import { SinceLastReview } from "./analytics.overview.since";
+import { QuarterTrajectory } from "./analytics.overview.trajectory";
 import { periodCaption } from "./analytics.period";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -127,6 +129,7 @@ function SalesReviewBody({
   });
   const query = useReportingEvaluation(selection, asks);
   const charts = useSalesCharts(selection, blocks, catalog, asks);
+  const chartsRead = charts?.isError ? undefined : charts?.data;
   const { evidence, evidenceFrom, openEvidence, closeEvidence } =
     useSelectionEvidence(JSON.stringify(selection), query.data);
   const doors = outboundDials(
@@ -178,118 +181,134 @@ function SalesReviewBody({
         scope={scopeKey(scope)}
         onChange={(next) => changeFilters(filters, selection, next)}
       />
-      {pipelineGone ? (
-        <PipelineGone
-          defaultPipeline={
-            pipelines.find((pipeline) => pipeline.is_default) ?? pipelines[0]
-          }
-        />
-      ) : invalid ? (
-        <ErrorLine error={query.error} />
-      ) : (
-        <QueryGate query={query} pendingLabel={t("analytics.overview.sales")}>
-          {(evaluation) => (
-            <>
-              {emptyNotice(evaluation.context.scope_holds_deals)}
-              {selection.initiative_id && (
-                <InitiativePanel
-                  selection={selection}
-                  onEvidence={openEvidence}
-                />
-              )}
-              <QuarterNotes
-                evaluation={evaluation}
-                period={filters.period}
-                offersLanding={catalog.metrics.some(
-                  (metric) => metric.id === "forecast_landing",
-                )}
-                onApply={apply}
-              />
-              <SalesOverviewMetrics
-                evaluation={evaluation}
-                forecastHref={forecastHref}
-                onEvidence={openEvidence}
-                aside={
-                  <HeroAside
+      <AnalyticsBoard
+        railLabel={t("analytics.board.rail")}
+        main={
+          pipelineGone ? (
+            <PipelineGone
+              defaultPipeline={
+                pipelines.find((pipeline) => pipeline.is_default) ??
+                pipelines[0]
+              }
+            />
+          ) : invalid ? (
+            <ErrorLine error={query.error} />
+          ) : (
+            <QueryGate
+              query={query}
+              pendingLabel={t("analytics.overview.sales")}
+            >
+              {(evaluation) => (
+                <>
+                  {emptyNotice(evaluation.context.scope_holds_deals)}
+                  {selection.initiative_id && (
+                    <InitiativePanel
+                      selection={selection}
+                      onEvidence={openEvidence}
+                    />
+                  )}
+                  <QuarterNotes
                     evaluation={evaluation}
-                    charts={charts?.isError ? undefined : charts?.data}
+                    period={filters.period}
+                    offersLanding={catalog.metrics.some(
+                      (metric) => metric.id === "forecast_landing",
+                    )}
                     onApply={apply}
-                    targetSetup={targetSetup}
                   />
-                }
+                  <AnalyticsSheet>
+                    <SalesOverviewMetrics
+                      evaluation={evaluation}
+                      forecastHref={forecastHref}
+                      onEvidence={openEvidence}
+                      aside={
+                        <HeroAside
+                          evaluation={evaluation}
+                          onApply={apply}
+                          targetSetup={targetSetup}
+                        />
+                      }
+                      receipt={heroReceipt(evaluation, chartsRead)}
+                      trajectory={
+                        <QuarterTrajectory
+                          evaluation={evaluation}
+                          charts={chartsRead}
+                          onEvidence={openEvidence}
+                        />
+                      }
+                    />
+                    {/* Today's stock by stage, and the permitted chart of
+                        sales by owner, in name order. */}
+                    <SalesStock
+                      answered={evaluation}
+                      charts={charts}
+                      onEvidence={openEvidence}
+                    />
+                    <SinceLastReview
+                      catalog={catalog}
+                      scope={selection.scope}
+                      pipelineId={selection.pipeline_id}
+                      after={
+                        checks.state === "not_permitted"
+                          ? "ready"
+                          : checks.state
+                      }
+                    />
+                  </AnalyticsSheet>
+                </>
+              )}
+            </QueryGate>
+          )
+        }
+        rail={
+          <>
+            {answered && (
+              <AssessmentPanel
+                selection={selection}
+                evaluation={answered}
+                onEvidence={openEvidence}
               />
-            </>
-          )}
-        </QueryGate>
-      )}
-      {answered && (
-        <AssessmentPanel
-          selection={selection}
-          evaluation={answered}
-          onEvidence={openEvidence}
+            )}
+            <InterventionPanel
+              interventions={checks}
+              dials={findingDials(doors)}
+              emptyLabel=""
+            />
+            <DecisionsPanel />
+          </>
+        }
+      />
+      {/* The records behind every figure and chart on the page, under the
+          read each came from. */}
+      {answered && evidence && (
+        <ReportingEvidenceDrawer
+          key={JSON.stringify(evidence)}
+          evaluation={evidenceFrom ?? answered}
+          reference={evidence}
+          onClose={closeEvidence}
         />
       )}
-      <InterventionPanel
-        interventions={checks}
-        dials={findingDials(doors)}
-        emptyLabel=""
-      />
-      <DecisionsPanel />
-      {/* Below the decision and the actions: today's stock by stage, and the
-          permitted chart of sales by owner, in name order. */}
-      {answered && (
-        <SalesStock
-          answered={answered}
-          charts={charts}
-          evidence={evidence}
-          evidenceFrom={evidenceFrom}
-          onEvidence={openEvidence}
-          onCloseEvidence={closeEvidence}
-        />
-      )}
-      <SinceLastReview
-        catalog={catalog}
-        scope={selection.scope}
-        pipelineId={selection.pipeline_id}
-        after={checks.state === "not_permitted" ? "ready" : checks.state}
-      />
     </>
   );
 }
 
-// Under the decision and the actions: all open pipeline, today's stock by
-// stage and the permitted sales by owner. The evidence drawer for every figure
-// and chart on the page is here too, under the read each came from.
+// All open pipeline over today's stock by stage and the permitted sales by
+// owner, each a section of the review's sheet.
 function SalesStock({
   answered,
   charts,
-  evidence,
-  evidenceFrom,
   onEvidence,
-  onCloseEvidence,
 }: Readonly<{
   answered: ReportingEvaluation;
   charts: UseQueryResult<ReportingEvaluation> | undefined;
-  evidence: ReportingEvidenceRef | null;
-  evidenceFrom: ReportingEvaluation | undefined;
   onEvidence: (
     reference: ReportingEvidenceRef,
     from?: ReportingEvaluation,
   ) => void;
-  onCloseEvidence: () => void;
 }>) {
   return (
     <>
       <OpenPipelineLine evaluation={answered} onEvidence={onEvidence} />
       {charts && <StockCharts charts={charts} onEvidence={onEvidence} />}
-      {evidence && (
-        <ReportingEvidenceDrawer
-          key={JSON.stringify(evidence)}
-          evaluation={evidenceFrom ?? answered}
-          reference={evidence}
-          onClose={onCloseEvidence}
-        />
-      )}
     </>
   );
 }
