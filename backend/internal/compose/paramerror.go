@@ -19,7 +19,7 @@ import (
 //
 // It returns the chi router itself, so the body ceiling can ask which route a path
 // resolves to before the router serves it.
-func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.MiddlewareFunc) chi.Router {
+func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.MiddlewareFunc) *chi.Mux {
 	router := chi.NewRouter()
 	crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,

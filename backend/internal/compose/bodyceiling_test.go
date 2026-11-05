@@ -49,7 +49,7 @@ func ceilingFor(t *testing.T, method, path, contentType string) int64 {
 
 // contractRoutes is the real generated router, built once: the ceiling resolves a
 // path through it, and a stand-in would prove a resolution production never runs.
-var contractRoutes = sync.OnceValue(func() chi.Router {
+var contractRoutes = sync.OnceValue(func() *chi.Mux {
 	return contractRouter(crmcontracts.Unimplemented{})
 })
 
