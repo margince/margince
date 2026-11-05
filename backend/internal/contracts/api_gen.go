@@ -60845,7 +60845,7 @@ type TransferProjectOwnershipResult struct {
 // UndoMarginceChangeItem defines model for UndoMarginceChangeItem.
 type UndoMarginceChangeItem struct {
 	// ArchiveConfirmedFor The `team_work` a `needs_confirmation` answer named: the owner confirmed archiving
-	// a deal Margince opened over exactly that work. Without it, or when the team's
+	// a deal Margince opened, or closing again a deal it reopened, over exactly that work. Without it, or when the team's
 	// work changed since, such a deal is kept with `needs_confirmation`, the new counts
 	// and the new `team_work`.
 	ArchiveConfirmedFor *string `json:"archive_confirmed_for,omitempty"`
@@ -60866,10 +60866,10 @@ type UndoMarginceChangeKept struct {
 	Kind   *string                      `json:"kind,omitempty"`
 	Reason UndoMarginceChangeKeptReason `json:"reason"`
 
-	// TeamNotes With `needs_confirmation`, the notes the team added to the opened deal.
+	// TeamNotes With `needs_confirmation`, the notes the team added to the opened or reopened deal.
 	TeamNotes *int `json:"team_notes,omitempty"`
 
-	// TeamTasks With `needs_confirmation`, the tasks the team added to the opened deal.
+	// TeamTasks With `needs_confirmation`, the tasks the team added to the opened or reopened deal.
 	TeamTasks *int `json:"team_tasks,omitempty"`
 
 	// TeamWork With `needs_confirmation`, names the counted work. Send it back as `archive_confirmed_for`.

@@ -18063,6 +18063,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.kind.deal_revive": "Mở lại từ dấu hiệu mua hàng mới",
   "changes.undo.relost":
     "Đã đóng lại là mất, với lý do trước đó. Margince chỉ mở lại khi có dấu hiệu mua hàng mới hơn.",
+  "changes.undo.confirmRelost":
+    "Deal này hiện có {notes} ghi chú và {tasks} việc cần làm từ nhóm của bạn. Vẫn đóng là mất?",
   "changes.undo.confirmArchive":
     "Deal này hiện có {notes} ghi chú và {tasks} việc cần làm từ nhóm của bạn. Vẫn lưu trữ?",
   "changes.undo.archived":

@@ -141,6 +141,8 @@ Margince reopens a deal only when all of these hold:
 - The deal has an owner who still works in the workspace, with **Reopened
   deals** switched on.
 - The deal is not on legal hold.
+- Nobody on your team closed the deal in the last 30 days. A close by Margince
+  does not count.
 - Everyone in the workspace may still read the evidence.
 
 The reopen shows on the owner's **Home**, in the morning mail and on the deal,
@@ -148,9 +150,10 @@ with the reason and **Undo**. Only the owner reads the reason. The deal's
 timeline gets a note about the reopen.
 
 **Undo** closes the deal as lost again, with the reason and the close date it
-had. Undo is refused when someone moved the deal to another stage since. After
+had. Undo is refused when someone moved the deal to another stage since. If
+your team added notes or tasks to the deal since, Undo asks first. After
 an Undo, Margince reopens the deal only for evidence that arrived after it.
 
-With no owner, an owner who left, or the switch off, the suggestion stays for a
-person to decide. Evidence that reached Margince before the deal was lost is
+With no owner, an owner who left, or the switch off, the suggestion stays for
+your team to decide. Evidence that reached Margince before the deal was lost is
 not used.

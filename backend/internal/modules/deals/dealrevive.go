@@ -37,6 +37,10 @@ const (
 // a lost deal from it.
 const SuggestionKindRevive = "revive"
 
+// humanCloseHold is how long a deal a colleague closed as lost stays closed
+// whatever arrives. A default: a colleague's close is not overruled at once.
+const humanCloseHold = 30 * 24 * time.Hour
+
 // reviveMovedSince refuses an Undo once the deal moved after the reopen.
 const reviveMovedSince = "this deal has been moved since Margince reopened it, so there is nothing automatic to put back"
 
@@ -115,18 +119,22 @@ func (s *Store) ReviveLostDeal(ctx context.Context, in ReviveLostDealInput) (boo
 	return revived, err
 }
 
-// revivableDeal locks the suggestion, the company and the deal, and asks again
-// what the decision rested on. The suggestion is open and its evidence and
-// buyer stand. The company has no open deal. The deal is the company's latest
-// closed deal, lost, not on legal hold, owned by the same live member. Every
-// cited item arrived after the deal closed, and the newest after the last
-// Undo of a reopen. The evidence is still workspace-readable and the switch on.
+// revivableDeal locks the suggestion, its evidence, the company and the deal,
+// and asks again what the decision rested on. The deal is the company's last
+// closed deal and lost, with the same live owner. readLostDeal states the
+// rest. The evidence arrived after the close and after the last Undo.
 func (s *Store) revivableDeal(ctx context.Context, tx pgx.Tx, in ReviveLostDealInput) (Suggestion, ids.UUID, bool, error) {
 	current, err := openSuggestionForDecision(ctx, tx, in.SuggestionID)
 	if errors.As(err, new(*SuggestionDecidedError)) || errors.Is(err, apperrors.ErrNotFound) {
 		return Suggestion{}, ids.Nil, false, nil
 	}
 	if err != nil || current.Kind != SuggestionKindOpenDeal {
+		return Suggestion{}, ids.Nil, false, err
+	}
+	// The evidence is held first. The time checks below then read rows that
+	// nobody can change before the write.
+	evidence := citedEvidence(current)
+	if held, err := in.EvidenceHolds(ctx, tx, evidence); err != nil || !held {
 		return Suggestion{}, ids.Nil, false, err
 	}
 	for _, superseded := range []func(context.Context, pgx.Tx, Suggestion) (bool, error){
@@ -142,11 +150,10 @@ func (s *Store) revivableDeal(ctx context.Context, tx pgx.Tx, in ReviveLostDealI
 		}
 		return Suggestion{}, ids.Nil, false, err
 	}
-	lost, err := readLostDeal(ctx, tx, in.DealID, current.CompanyID, in.Owner)
+	lost, err := readLostDeal(ctx, tx, in.DealID, current.CompanyID, in.Owner, s.clock().Add(-humanCloseHold))
 	if err != nil || lost.pipeline.IsZero() {
 		return Suggestion{}, ids.Nil, false, err
 	}
-	evidence := citedEvidence(current)
 	arrived, ok, err := in.Arrival(ctx, tx, evidence)
 	if err != nil || !ok {
 		return Suggestion{}, ids.Nil, false, err
@@ -156,9 +163,6 @@ func (s *Store) revivableDeal(ctx context.Context, tx pgx.Tx, in ReviveLostDealI
 	// Either retires the suggestion, so newer evidence can raise its own.
 	if !arrived.Earliest.After(lost.closedAt) || (lost.undoneAt != nil && !arrived.Latest.After(*lost.undoneAt)) {
 		return Suggestion{}, ids.Nil, false, supersedeTx(ctx, tx, current.ID, map[string]any{"arrived_before": "the deal's loss or its reopen's Undo"})
-	}
-	if held, err := in.EvidenceHolds(ctx, tx, evidence); err != nil || !held {
-		return Suggestion{}, ids.Nil, false, err
 	}
 	on, err := in.SwitchOn(ctx, tx)
 	return current, lost.pipeline, on, err
@@ -173,8 +177,9 @@ type lostDeal struct {
 }
 
 // readLostDeal answers the locked deal when it may be reopened, or a zero
-// pipeline when it may not.
-func readLostDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID, company, owner ids.UUID) (lostDeal, error) {
+// pipeline when it may not. It must be lost, not on legal hold, and not closed
+// by a colleague after heldSince.
+func readLostDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID, company, owner ids.UUID, heldSince time.Time) (lostDeal, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return lostDeal{}, err
 	}
@@ -188,7 +193,11 @@ func readLostDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID, company, owne
 		  FROM deal d JOIN app_user u ON u.id = d.owner_id AND `+workforce.LiveMemberSQL("u")+`
 		 WHERE d.id = $1 AND d.company_id = $2 AND d.owner_id = $3 AND d.status = 'lost'
 		   AND NOT d.legal_hold AND d.closed_at IS NOT NULL
-		   FOR SHARE OF u`, deal, company, owner, DealReviveCorrection).Scan(&out.pipeline, &out.closedAt, &latest, &out.undoneAt)
+		   AND NOT (d.closed_at > $5 AND EXISTS (SELECT 1 FROM deal_stage_history closing
+		         WHERE closing.id = (SELECT h.id FROM deal_stage_history h WHERE h.deal_id = d.id
+		                              ORDER BY h.changed_at DESC, h.id DESC LIMIT 1)
+		           AND starts_with(closing.changed_by, $6)))
+		   FOR SHARE OF u`, deal, company, owner, DealReviveCorrection, heldSince, principal.HumanIDPrefix).Scan(&out.pipeline, &out.closedAt, &latest, &out.undoneAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lostDeal{}, nil
 	}
@@ -232,10 +241,12 @@ func recordRevived(ctx context.Context, tx pgx.Tx, suggestion, deal ids.UUID) er
 
 // revertDealRevive closes the reopened deal as lost again, in the caller's
 // transaction, with the note, code and close day the reopen took off it. A
-// code an admin retired since is left out when a note still says why.
+// code an admin retired since is left out when a note still says why. Work
+// the team added since needs a confirmation naming that work, as the Undo of
+// an opened deal does.
 func (s *Store) revertDealRevive(
 	ctx context.Context, tx pgx.Tx, c DealCorrection, ifVersion *int64, evidence map[string]any,
-	active []fieldcatalog.Column,
+	active []fieldcatalog.Column, confirmedFor string,
 ) error {
 	if err := storekit.EnsureIfMatch(ctx, tx, dealTable, c.DealID.UUID, ifVersion); err != nil {
 		return err
@@ -243,6 +254,13 @@ func (s *Store) revertDealRevive(
 	lostStage, err := stageMoveToReverse(ctx, tx, c, reviveMovedSince)
 	if err != nil {
 		return err
+	}
+	work, err := teamWorkSince(ctx, tx, c)
+	if err != nil {
+		return err
+	}
+	if work.Notes+work.Tasks+work.Edits > 0 && work.Work != confirmedFor {
+		return &work
 	}
 	loss, err := priorLoss(ctx, tx, c)
 	if err != nil {

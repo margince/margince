@@ -55492,7 +55492,7 @@ export interface components {
             audit_log_ids: string[];
             /**
              * @description The `team_work` a `needs_confirmation` answer named: the owner confirmed archiving
-             *     a deal Margince opened over exactly that work. Without it, or when the team's
+             *     a deal Margince opened, or closing again a deal it reopened, over exactly that work. Without it, or when the team's
              *     work changed since, such a deal is kept with `needs_confirmation`, the new counts
              *     and the new `team_work`.
              */
@@ -55506,9 +55506,9 @@ export interface components {
             kind?: string;
             /** @enum {string} */
             reason: "accepted" | "already_undone" | "changed_since" | "not_found" | "not_permitted" | "version_skew" | "needs_confirmation";
-            /** @description With `needs_confirmation`, the notes the team added to the opened deal. */
+            /** @description With `needs_confirmation`, the notes the team added to the opened or reopened deal. */
             team_notes?: number;
-            /** @description With `needs_confirmation`, the tasks the team added to the opened deal. */
+            /** @description With `needs_confirmation`, the tasks the team added to the opened or reopened deal. */
             team_tasks?: number;
             /** @description With `needs_confirmation`, names the counted work. Send it back as `archive_confirmed_for`. */
             team_work?: string;

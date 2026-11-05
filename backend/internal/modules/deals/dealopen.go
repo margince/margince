@@ -166,8 +166,9 @@ func recordDealOpen(ctx context.Context, tx pgx.Tx, deal ids.DealID) (ids.UUID, 
 	return recorded.ID, err
 }
 
-// DealOpenUndoNeedsConfirmError refuses to archive an opened deal that the
-// team has worked on since, until the owner confirms.
+// DealOpenUndoNeedsConfirmError refuses to archive an opened deal, or to close
+// a reopened one again, that the team has worked on since, until the owner
+// confirms.
 type DealOpenUndoNeedsConfirmError struct {
 	Notes, Tasks, Edits int
 	// Work names the notes, tasks and edits counted. A confirmation
@@ -176,7 +177,7 @@ type DealOpenUndoNeedsConfirmError struct {
 }
 
 func (e *DealOpenUndoNeedsConfirmError) Error() string {
-	return fmt.Sprintf("this deal now has %d notes, %d tasks and %d edits from the team; confirm to archive it anyway",
+	return fmt.Sprintf("this deal now has %d notes, %d tasks and %d edits from the team; confirm to take Margince's change back anyway",
 		e.Notes, e.Tasks, e.Edits)
 }
 
@@ -223,7 +224,8 @@ func (s *Store) revertDealOpen(ctx context.Context, tx pgx.Tx, c DealCorrection,
 	return nil
 }
 
-// teamWorkSince counts what humans added to the deal after Margince opened it.
+// teamWorkSince counts what humans added to the deal after Margince opened or
+// reopened it.
 // That is notes and tasks filed on it since, however old, and edits to the deal.
 // The link rows are held, so nothing is filed between the count and the archive.
 func teamWorkSince(ctx context.Context, tx pgx.Tx, c DealCorrection) (DealOpenUndoNeedsConfirmError, error) {

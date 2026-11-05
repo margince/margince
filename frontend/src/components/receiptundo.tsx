@@ -35,9 +35,6 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   if (receiptUndo.undone && receipt.kind === "deal_close_lost") {
     return <span role="status">{t("worklist.handled.closeLostUndone")}</span>;
   }
-  if (receiptUndo.undone && receipt.kind === "deal_revive") {
-    return <span role="status">{t("changes.undo.relost")}</span>;
-  }
   const field = changeFieldKey(receipt.kind);
   if (receiptUndo.undone && field) {
     return (
@@ -56,9 +53,9 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   if (subject?.type !== "deal") {
     return null;
   }
-  // An opened deal undoes through the bundle path, which asks before it
-  // archives work the team added since.
-  if (receipt.kind === "deal_open") {
+  // An opened or reopened deal undoes through the bundle path, which asks
+  // before it archives or closes work the team added since.
+  if (receipt.kind === "deal_open" || receipt.kind === "deal_revive") {
     return (
       <BundleUndo
         bundles={[
@@ -67,7 +64,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
             deal_name: subject.label ?? "",
             version: undo.version,
             audit_log_ids: [undo.audit_log_id],
-            kinds: ["deal_open"],
+            kinds: [receipt.kind],
             latest_at: receipt.occurred_at,
           },
         ]}

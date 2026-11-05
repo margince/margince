@@ -135,6 +135,7 @@ export function BundleUndo({
     notes: number;
     tasks: number;
     work: string;
+    kind: string;
   } | null>(null);
   if (answer) {
     return <span role="status">{answer}</span>;
@@ -177,10 +178,15 @@ export function BundleUndo({
       {asking ? (
         <>
           <span role="status">
-            {t("changes.undo.confirmArchive", {
-              notes: formatNumber(asking.notes, locale),
-              tasks: formatNumber(asking.tasks, locale),
-            })}
+            {t(
+              asking.kind === "deal_revive"
+                ? "changes.undo.confirmRelost"
+                : "changes.undo.confirmArchive",
+              {
+                notes: formatNumber(asking.notes, locale),
+                tasks: formatNumber(asking.tasks, locale),
+              },
+            )}
           </span>
           <Button
             variant="ghost"

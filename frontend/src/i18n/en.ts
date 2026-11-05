@@ -18351,6 +18351,8 @@ export const en = {
   "changes.kind.deal_revive": "Reopened from new buying evidence",
   "changes.undo.relost":
     "Closed as lost again, with its earlier reason. Margince reopens it only if newer buying evidence arrives.",
+  "changes.undo.confirmRelost":
+    "This deal now has {notes} notes and {tasks} tasks from your team. Close it as lost anyway?",
   "changes.undo.confirmArchive":
     "This deal now has {notes} notes and {tasks} tasks from your team. Archive it anyway?",
   "changes.undo.archived":

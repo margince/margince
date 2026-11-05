@@ -18536,6 +18536,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.kind.deal_revive": "Mit neuen Kaufsignalen wieder eröffnet",
   "changes.undo.relost":
     "Wieder als verloren geschlossen, mit dem früheren Grund. Margince eröffnet ihn nur wieder, wenn neuere Kaufsignale kommen.",
+  "changes.undo.confirmRelost":
+    "Dieser Deal hat jetzt {notes} Notizen und {tasks} Aufgaben von deinem Team. Trotzdem als verloren schließen?",
   "changes.undo.confirmArchive":
     "Dieser Deal hat jetzt {notes} Notizen und {tasks} Aufgaben von deinem Team. Trotzdem archivieren?",
   "changes.undo.archived":
