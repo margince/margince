@@ -85,6 +85,7 @@ func (r *Registry) runAdmittedBackfill(ctx context.Context, id ids.UUID, generat
 	defer release()
 	pageCtx, stopMonitoring := r.monitorBackfill(pageCtx)
 	defer stopMonitoring()
+	pageCtx = storekit.WithBatch(pageCtx, id)
 	result := backfillStepOutcome{}
 	result.done, result.completed, result.retryAfter, result.err = r.executeBackfillPage(pageCtx, id)
 	if errors.Is(result.err, apperrors.ErrConflict) && ctx.Err() == nil {

@@ -75,7 +75,9 @@ func (w *captureClassifyWorker) classifyWorkspace(ctx context.Context, workspace
 }
 
 // CaptureEnrichArgs runs one signature-enrich pass (ADR-0063; §2.9).
-type CaptureEnrichArgs struct{}
+type CaptureEnrichArgs struct {
+	Pending bool `json:"pending,omitempty"`
+}
 
 // Kind is the stable job identifier River persists in river_job.
 func (CaptureEnrichArgs) Kind() string { return "capture_enrich" }
@@ -95,7 +97,10 @@ type captureEnrichWorker struct {
 	log      *slog.Logger
 }
 
-func (w *captureEnrichWorker) Work(ctx context.Context, _ *river.Job[CaptureEnrichArgs]) error {
+func (w *captureEnrichWorker) Work(ctx context.Context, job *river.Job[CaptureEnrichArgs]) error {
+	if job.Args.Pending {
+		return jobs.FaultContext(ctx, runPendingPass(ctx, w.pool, w.enricher.RunPendingWorkspace))
+	}
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.enrichWorkspace))
 }
 

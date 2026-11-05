@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -270,16 +271,33 @@ func CreditBackfillRunTx(ctx context.Context, tx pgx.Tx, dispositionID ids.UUID,
 	if len(created) == 0 {
 		return nil
 	}
-	var run *ids.UUID
-	err := tx.QueryRow(ctx,
-		`SELECT backfill_id FROM capture_pending_counterparty WHERE id = $1`, dispositionID).Scan(&run)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && run == nil) {
+	run, err := backfillRunForDispositionTx(ctx, tx, dispositionID)
+	if err == nil && run == nil {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("capture: reading the run that queued a sender: %w", err)
 	}
 	return recordCreationsTx(ctx, tx, *run, created)
+}
+
+// BackfillContextForDispositionTx preserves import provenance when a deferred sender becomes a contact.
+func BackfillContextForDispositionTx(ctx context.Context, tx pgx.Tx, dispositionID ids.UUID) (context.Context, error) {
+	run, err := backfillRunForDispositionTx(ctx, tx, dispositionID)
+	if err != nil || run == nil {
+		return ctx, err
+	}
+	return storekit.WithBatch(ctx, *run), nil
+}
+
+func backfillRunForDispositionTx(ctx context.Context, tx pgx.Tx, dispositionID ids.UUID) (*ids.UUID, error) {
+	var run *ids.UUID
+	args := []any{dispositionID}
+	err := tx.QueryRow(ctx, `SELECT backfill_id FROM capture_pending_counterparty WHERE id = `+storekit.Placeholders(args), args...).Scan(&run)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	return run, err
 }
 
 // flushPacing says whether a write may be dropped for being too soon. Only the

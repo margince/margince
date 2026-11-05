@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -27,9 +28,10 @@ func (CaptureBackfillReconcileArgs) Kind() string { return "capture_backfill_rec
 func (CaptureBackfillReconcileArgs) FleetWide() {}
 
 type captureBackfillReconcileWorker struct {
-	pool     *pgxpool.Pool
-	registry *capture.Registry
-	log      *slog.Logger
+	pool          *pgxpool.Pool
+	registry      *capture.Registry
+	log           *slog.Logger
+	enrichEnabled bool
 }
 
 func (w *captureBackfillReconcileWorker) Work(ctx context.Context, _ *river.Job[CaptureBackfillReconcileArgs]) error {
@@ -38,5 +40,9 @@ func (w *captureBackfillReconcileWorker) Work(ctx context.Context, _ *river.Job[
 
 func (w *captureBackfillReconcileWorker) reconcileWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	return w.registry.DispatchBackfills(wsCtx, backfillScheduler(workspace), true)
+	var dispatchErr error
+	if w.registry != nil {
+		dispatchErr = w.registry.DispatchBackfills(wsCtx, backfillScheduler(workspace), true)
+	}
+	return errors.Join(dispatchErr, w.reconcileDerivedWork(wsCtx))
 }

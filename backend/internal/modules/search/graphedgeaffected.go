@@ -47,40 +47,33 @@ type pair struct {
 // one leaves a claim nobody can see is false. The lookup is served by
 // idx_graph_edge_user and idx_graph_edge_contact, and recomputePairs folds the
 // whole target set in one statement rather than one per pair.
-func affectedPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]pair, error) {
-	rows, err := tx.Query(ctx, `
+func affectedPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, includePrior bool) ([]pair, error) {
+	args := []any{activityIDs, includePrior}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH present_users AS (
 		    SELECT DISTINCT user_id
 		      FROM activity_participant
-		     WHERE activity_id = ANY($1) AND user_id IS NOT NULL
+		     WHERE activity_id = ANY($%[1]d) AND user_id IS NOT NULL
 		),
 		present_contacts AS (
 		    SELECT DISTINCT contact_id
 		      FROM activity_participant
-		     WHERE activity_id = ANY($1) AND contact_id IS NOT NULL
+		     WHERE activity_id = ANY($%[1]d) AND contact_id IS NOT NULL
 		)
 		SELECT DISTINCT u.user_id, p.contact_id
 		  FROM activity_participant u
 		  JOIN activity_participant p ON p.activity_id = u.activity_id
-		 WHERE u.activity_id = ANY($1)
+		 WHERE u.activity_id = ANY($%[1]d)
 		   AND u.user_id IS NOT NULL
 		   AND p.contact_id IS NOT NULL
 		 UNION
 		SELECT e.user_id, e.contact_id
 		  FROM graph_interaction_edge e
-		 WHERE e.user_id IN (SELECT user_id FROM present_users)
-		    OR e.contact_id IN (SELECT contact_id FROM present_contacts)`, activityIDs)
+		 WHERE $%[2]d AND (e.user_id IN (SELECT user_id FROM present_users)
+		    OR e.contact_id IN (SELECT contact_id FROM present_contacts))`, len(args)-1, len(args)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: resolving the pairs an activity touches: %w", err)
 	}
 	defer rows.Close()
-	var out []pair
-	for rows.Next() {
-		var pr pair
-		if err := rows.Scan(&pr.user, &pr.contact); err != nil {
-			return nil, err
-		}
-		out = append(out, pr)
-	}
-	return out, rows.Err()
+	return scanPairs(rows)
 }

@@ -118,7 +118,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_backfill
 
-30 columns · primary key `(id)` · referenced by 2 foreign keys
+30 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

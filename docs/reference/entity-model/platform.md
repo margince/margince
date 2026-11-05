@@ -6,7 +6,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 ## audit_log
 
-14 columns · primary key `(id)` · referenced by 2 foreign keys
+15 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -24,6 +24,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `on_behalf_of` | `uuid` |  | Points at `app_user.id`. |
 | `passport_id` | `uuid` |  |  |
+| `source_xid` | `xid8`, default `pg_current_xact_id()` |  |  |
 
 **Points at**
 

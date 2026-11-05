@@ -644,5 +644,10 @@ const (
 	// from erased mail or naming an erased contact. An erasure must reach every
 	// owner's profile, so no row scope applies. Each id is only locked, and the
 	// call returns nothing but an error.
-	modulesTierUnscopedCeiling = 155
+	// 156–162: derived-work maintenance adds seven contact references:
+	// signature retry/release selectors (two), the misattribution repair's
+	// ordered locks (one), and interaction retry/release/lock/queue selectors
+	// (four). Their system-only callers consume these keys inside maintenance;
+	// none enters a response. Human graph reads retain their object and row gates.
+	modulesTierUnscopedCeiling = 162
 )

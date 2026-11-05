@@ -197,3 +197,32 @@ To return to an older binary, hold new pages and drain the history workers first
 columns, saved progress and queued River jobs. An older binary does not serve the new queues, but its old
 reconcile pass can create paging jobs with no admission limit. Keep history imports disabled while
 running an older binary. Return to the new workers before resuming queued imports.
+
+## Mail import follow-up work
+
+Mail history requests contact and relationship reads on their existing rows. Repeated events
+raise a request number. A new relationship gets an exact read first, so no empty row or made-up
+time reaches a reader. Counts may wait for later mail until the active import group ends.
+Address repairs and shared mail use the same waiting reads. Live changes, removals and a
+smaller audience still take the direct path.
+
+Each exact graph read stores its database snapshot. An audit row names the transaction that
+wrote its source change. A delayed event already covered by that snapshot adds no new work.
+A change committed after the read still raises the request. Older audit rows without this
+value keep the safe path. Stored snapshots hold no database transaction open.
+
+Recovery releases requests when their import ends in success or error, or is cancelled.
+If another import is active or queued, history requests wait on that import instead.
+Deleting a run also releases its requests. A reader completes only the request number it saw;
+a newer request stays waiting. The graph reader uses its own queue. Both readers work in
+small groups, and job retries cannot erase waiting work stored on the rows.
+
+The signature reader keeps the mailbox, audience and human-field checks. Live requests have
+a separate generation and stay ready when history mail comes in behind them. Once that
+generation is read, later history mail waits again. The nightly pass also keeps contacts
+that wait out of its current source query.
+
+Before returning to an older binary, hold imports and stop their event consumers and page
+workers. Finish waiting reads and remove jobs whose arguments contain `pending: true` before
+starting older workers. Older workers may treat this flag as a full repair pass. Keep the
+added columns and progress while making the next fix.

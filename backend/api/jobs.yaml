@@ -94,6 +94,9 @@ queues:
     max_workers: 1
     reason: Bounded database corrections run apart from interactive jobs and serialize across processes with a database lock.
   default: {max_workers: 5}
+  graph_projection:
+    max_workers: 1
+    reason: Exact graph drains run apart from admission and short maintenance jobs.
   mail_admission:
     max_workers: 1
     reason: Admission recovery must run while every history reader is waiting on a provider.
@@ -373,10 +376,10 @@ kinds:
     timeout: 2m
     opts_owner: caller
     cadence: 15s
-    registration: {when: [GmailRegistry], absent: registers_nothing}
+    registration: always
     reason: >-
       Restore durable paging jobs and admit queued imports without exceeding
-      the installation budget. Ownership comes from advisory locks and execution
+      the installation budget. Recover durable signature requests and release terminal imports. Ownership comes from advisory locks and execution
       generations, so a delayed job or an old timestamp never proves an owner died.
 
   capture_backfill:
@@ -574,6 +577,8 @@ kinds:
     queue: default
     timeout: 20m
     opts_owner: caller
+    args:
+      Pending: {scalar: true, reason: "Selects the durable pending cohort; absent means the existing full repair pass."}
     cadence: 24h
     registration: {when: [EnrichBrain], absent: registers_nothing}
     reason: >-
@@ -1058,9 +1063,11 @@ kinds:
     role: worker
     fleet: true
     go_type: GraphEdgeReconcileArgs
-    queue: default
+    queue: graph_projection
     timeout: 15m
     opts_owner: caller
+    args:
+      Pending: {scalar: true, reason: "Selects the durable pending cohort; absent means the existing full repair pass."}
     cadence: 24h
     reason: >-
       Daily, because the 90-day window counts go stale through the passage of

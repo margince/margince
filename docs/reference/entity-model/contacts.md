@@ -947,27 +947,41 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_signature_enrich_state
 
-5 columns · primary key `(contact_id)` · referenced by 0 foreign keys
+11 columns · primary key `(contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `activity_id` | `uuid` | yes | Points at `activity.id`. |
-| `attempted_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `activity_id` | `uuid` |  | Points at `activity.id`. |
+| `attempted_at` | `timestamp with time zone`, default `now()` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
+| `deferred_run_id` | `uuid` |  | Points at `capture_backfill.id`. |
+| `due_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `history_depth` | `smallint` |  |  |
-| `last_activity_at` | `timestamp with time zone` | yes |  |
+| `last_activity_at` | `timestamp with time zone` |  |  |
+| `live_generation` | `bigint`, default `0` | yes |  |
+| `processed_generation` | `bigint`, default `0` | yes |  |
+| `read_snapshot` | `pg_snapshot` |  |  |
+| `requested_generation` | `bigint`, default `0` | yes |  |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `activity_id` | `activity` | deleting the parent deletes this row |
+| `activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `contact_id` | `contact` | deleting the parent deletes this row |
+| `deferred_run_id` | `capture_backfill` | deleting the parent keeps this row and clears the link |
+
+**Rules**
+
+- `signature_work_generations`: `CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation) AND (live_generation >= 0) AND (live_generation <= requested_generation)))`
 
 **Indexes**
 
 - `contact_signature_enrich_state_pkey`: `unique, btree (contact_id)`
 - `idx_contact_signature_enrich_state_activity`: `btree (activity_id)`
+- `idx_signature_live_work_due`: `btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation > processed_generation))`
+- `idx_signature_work_deferred`: `btree (deferred_run_id) WHERE (deferred_run_id IS NOT NULL)`
+- `idx_signature_work_due`: `btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation <= processed_generation) AND (deferred_run_id IS NULL))`
 
 ## contact_social
 

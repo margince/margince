@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4306 |
-| Foreign keys | 591 |
+| Columns | 4321 |
+| Foreign keys | 594 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -185,7 +185,7 @@ erDiagram
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 13 | 0 |
 | [`attachment`](activities.md#attachment) | activities | 28 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
-| [`audit_log`](platform.md#audit_log) | platform | 14 | 2 |
+| [`audit_log`](platform.md#audit_log) | platform | 15 | 2 |
 | [`auth_token`](identity.md#auth_token) | identity | 10 | 0 |
 | [`automation`](automation.md#automation) | automation | 15 | 0 |
 | [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 6 | 0 |
@@ -200,7 +200,7 @@ erDiagram
 | [`capture_answered_sweep_cursor`](capture.md#capture_answered_sweep_cursor) | capture | 3 | 0 |
 | [`capture_auto_enrich_budget`](capture.md#capture_auto_enrich_budget) | capture | 2 | 0 |
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
-| [`capture_backfill`](capture.md#capture_backfill) | capture | 30 | 2 |
+| [`capture_backfill`](capture.md#capture_backfill) | capture | 30 | 5 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
 | [`capture_connection`](capture.md#capture_connection) | capture | 30 | 2 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
@@ -267,7 +267,7 @@ erDiagram
 | [`contact_phone`](contacts.md#contact_phone) | contacts | 14 | 1 |
 | [`contact_profile_field`](contacts.md#contact_profile_field) | contacts | 17 | 0 |
 | [`contact_provider_claim`](contacts.md#contact_provider_claim) | contacts | 16 | 1 |
-| [`contact_signature_enrich_state`](contacts.md#contact_signature_enrich_state) | contacts | 5 | 0 |
+| [`contact_signature_enrich_state`](contacts.md#contact_signature_enrich_state) | contacts | 11 | 0 |
 | [`contact_social`](contacts.md#contact_social) | contacts | 5 | 0 |
 | [`contract`](contracts.md#contract) | contracts | 29 | 3 |
 | [`conversation_claim`](contacts.md#conversation_claim) | contacts | 21 | 0 |
@@ -329,8 +329,8 @@ erDiagram
 | [`fx_rate`](deals.md#fx_rate) | deals | 6 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |
-| [`graph_contact_edge`](search.md#graph_contact_edge) | search | 6 | 0 |
-| [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 14 | 0 |
+| [`graph_contact_edge`](search.md#graph_contact_edge) | search | 10 | 0 |
+| [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 18 | 0 |
 | [`home_read_cache`](compose.md#home_read_cache) | compose | 8 | 0 |
 | [`home_read_fence`](compose.md#home_read_fence) | compose | 2 | 0 |
 | [`home_read_fence_pending`](compose.md#home_read_fence_pending) | compose | 2 | 0 |

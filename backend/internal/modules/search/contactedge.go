@@ -55,23 +55,24 @@ type contactPair struct {
 // event arrives, the former pair cannot be named from the rows alone — but its
 // surviving member still is, so the stale edge is refolded and pruned instead
 // of standing until the nightly rebuild.
-func affectedContactPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]contactPair, error) {
-	rows, err := tx.Query(ctx, `
+func affectedContactPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, includePrior bool) ([]contactPair, error) {
+	args := []any{activityIDs, includePrior}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH present AS (
 		    SELECT DISTINCT contact_id
 		      FROM activity_participant
-		     WHERE activity_id = ANY($1) AND contact_id IS NOT NULL
+		     WHERE activity_id = ANY($%[1]d) AND contact_id IS NOT NULL
 		)
 		SELECT DISTINCT x.contact_id, y.contact_id
 		  FROM activity_participant x
 		  JOIN activity_participant y
 		    ON y.activity_id = x.activity_id AND y.contact_id > x.contact_id
-		 WHERE x.activity_id = ANY($1) AND x.contact_id IS NOT NULL
+		 WHERE x.activity_id = ANY($%[1]d) AND x.contact_id IS NOT NULL
 		 UNION
 		SELECT e.contact_a, e.contact_b
 		  FROM graph_contact_edge e
-		 WHERE e.contact_a IN (SELECT contact_id FROM present)
-		    OR e.contact_b IN (SELECT contact_id FROM present)`, activityIDs)
+		 WHERE $%[2]d AND (e.contact_a IN (SELECT contact_id FROM present)
+		    OR e.contact_b IN (SELECT contact_id FROM present))`, len(args)-1, len(args)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: resolving the contact pairs an activity touches: %w", err)
 	}
@@ -104,12 +105,7 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 	if len(pairs) == 0 {
 		return nil
 	}
-	first := make([]ids.UUID, 0, len(pairs))
-	second := make([]ids.UUID, 0, len(pairs))
-	for _, p := range pairs {
-		first = append(first, p.a)
-		second = append(second, p.b)
-	}
+	first, second := contactPairKeys(pairs)
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
 
 	if _, err := tx.Exec(ctx, `
@@ -135,15 +131,16 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		     GROUP BY t.contact_a, t.contact_b
 		)
 		INSERT INTO graph_contact_edge AS e
-		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at)
-		SELECT f.contact_a, f.contact_b, f.last_at, f.count_90d, f.count_total, now()
+		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at, read_snapshot)
+		SELECT f.contact_a, f.contact_b, f.last_at, f.count_90d, f.count_total, now(), pg_current_snapshot()
 		  FROM folded f
 		 ORDER BY f.contact_a, f.contact_b
 		ON CONFLICT (contact_a, contact_b) DO UPDATE SET
 		    last_at     = EXCLUDED.last_at,
 		    count_90d   = EXCLUDED.count_90d,
 		    count_total = EXCLUDED.count_total,
-		    computed_at = EXCLUDED.computed_at`,
+		    computed_at = EXCLUDED.computed_at,
+            read_snapshot = EXCLUDED.read_snapshot`,
 		first, second); err != nil {
 		return fmt.Errorf("search: recomputing contact edges: %w", err)
 	}

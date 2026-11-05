@@ -9,12 +9,15 @@ package compose
 
 import "github.com/riverqueue/river"
 
+const graphProjectionQueue = "graph_projection"
+
 func jobQueues() map[string]river.QueueConfig {
 	return map[string]river.QueueConfig{
-		river.QueueDefault: {MaxWorkers: 5},
-		"data_task":        {MaxWorkers: 1},
-		mailHistoryQueue:   {MaxWorkers: 2},
-		mailAdmissionQueue: {MaxWorkers: 1},
+		river.QueueDefault:   {MaxWorkers: 5},
+		"data_task":          {MaxWorkers: 1},
+		mailHistoryQueue:     {MaxWorkers: 2},
+		mailAdmissionQueue:   {MaxWorkers: 1},
+		graphProjectionQueue: {MaxWorkers: 1},
 		// A send carrying files is long and outbound-bound — a three-minute
 		// upload budget, because a 20 MiB album cannot cross the wire in
 		// thirty seconds. It is the category this file's posture was written

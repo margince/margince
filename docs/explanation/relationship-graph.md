@@ -146,7 +146,7 @@ the wrong user, and nobody sees it.
 
 `graph_interaction_edge` is one row per `(workspace, user, contact)` holding counted facts and exact
 times: `last_at`, `last_inbound_at`, `last_outbound_at`, the 90-day counts, and the all-time count.
-It is a **projection**. It holds no fact of its own and carries no id, no version, no `audit_log` row
+It is a **projection**. It holds no fact of its own and carries no id, no record version, no `audit_log` row
 and no `event_outbox` row. It can be deleted and built again at any time. That rebuild *is* the
 fix for wrong data, which is why the table can carry no audit history.
 
@@ -170,11 +170,17 @@ Two paths keep it true. They meet on the same statement.
 
   `user.deactivated` does nothing at all. Reads filter through the live-member join, so a user who
   leaves drops out, and no row is written again.
-- **Daily reconcile**: the `graph_edge_reconcile` dispatcher (`24h`) runs `graph_edge_workspace` per
-  workspace. It empties and fills the whole projection in **one transaction**, so a reader never sees
+- **Daily reconcile**: `graph_edge_reconcile` walks the workspaces and rebuilds each one. It empties and fills the whole projection in **one transaction**, so a reader never sees
   an empty graph. It runs daily for a reason no event can give: the 90-day window counts go out of
   date by time alone. The migration states that limit. A count may hold up to `24h` too much, while
   recency, which counts most in the score, is exact.
+
+History imports group repeated requests for the same pair on its existing row. A new pair is
+read at once; later history mail advances its request number. After the imports finish, a worker
+reads waiting pairs in small groups through the same statement. It marks only the request number
+that its read covered, so mail that arrives during that read stays due. New mail and changes that
+remove access still take effect at once. See [worker diagnostics](../reference/worker-diagnostics.md)
+for the jobs and upgrade rules.
 
 A fixture keeps the two paths in line: a rebuild and a stream of step-by-step updates over the same
 history must agree.

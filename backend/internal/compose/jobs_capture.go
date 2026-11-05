@@ -55,9 +55,6 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 	// the pager registered, and the nightly reconcile that puts a pager back
 	// behind a run whose own was lost (ADR-0063).
 	addDeclaredWorker[CaptureBackfillArgs](reg, &captureBackfillWorker{registry: cfg.GmailRegistry, log: log})
-	addDeclaredWorker[CaptureBackfillReconcileArgs](reg, &captureBackfillReconcileWorker{
-		pool: pool, registry: cfg.GmailRegistry, log: log,
-	})
 	if cfg.GmailWatch.Topic == "" {
 		return
 	}
@@ -96,6 +93,10 @@ func addStoredObjectJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 }
 
 func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
+	addDeclaredWorker[CaptureBackfillReconcileArgs](reg, &captureBackfillReconcileWorker{
+		pool: pool, registry: cfg.GmailRegistry, log: log, enrichEnabled: cfg.EnrichBrain != nil,
+	})
+
 	// The Telegram ingest job is not periodic — a poll enqueues one per accepted
 	// update in the same transaction as the raw capture row; the worker role only
 	// needs the worker registered. Registered unconditionally: unlike
