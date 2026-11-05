@@ -252,14 +252,15 @@ const PREVIEW_ROWS = 5;
 function CloseTasksPreview({
   tasks,
 }: Readonly<{ tasks: readonly Activity[] }>) {
-  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
   const hidden = tasks.length - PREVIEW_ROWS;
   return (
     <div className="closetasks-preview">
-      <ul aria-label={t("deals.closeTasks.listLabel")}>
+      {/* Unnamed: a name on the list would replace the task rows in the
+          description every answer reads out. */}
+      <ul>
         {tasks.slice(0, PREVIEW_ROWS).map((task) => (
           <CloseTaskRow key={task.id} task={task} zone={zone} />
         ))}

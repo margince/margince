@@ -186,9 +186,7 @@ it("lists the deal's open tasks and asks before it closes", async () => {
     name: "What happens to the 2 open tasks on this deal?",
   });
   // Listed inside the question, each with its due day.
-  const list = within(question).getByRole("list", {
-    name: "Open tasks on this deal",
-  });
+  const list = within(question).getByRole("list");
   const rows = within(list).getAllByRole("listitem");
   expect(rows.map((row) => row.firstChild?.textContent)).toEqual([
     "Send the final invoice",
@@ -196,6 +194,12 @@ it("lists the deal's open tasks and asks before it closes", async () => {
   ]);
   expect(rows[0]).toHaveTextContent(/^Send the final invoiceDue \S/);
   expect(rows[1]).toHaveTextContent("No due date");
+  // Each answer reads the tasks out as its description.
+  expect(
+    screen.getByRole("radio", { name: /Complete all/ }),
+  ).toHaveAccessibleDescription(
+    /Send the final invoice.*Return the loan device/,
+  );
   expect(screen.getByRole("radio", { name: /Complete all/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Keep/ })).not.toBeChecked();
 
@@ -213,7 +217,7 @@ it("completes exactly the listed tasks after the close lands, with undo", async 
     order.push("advance");
     return { id: "deal-1", version: 4 };
   });
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   await answer(user, "Complete all");
 
   await waitFor(() =>
@@ -242,7 +246,7 @@ it("keeps every task open when the reader picks Keep", async () => {
   const user = userEvent.setup();
   const onConfirm = vi.fn(async () => ({ id: "deal-1", version: 4 }));
   renderClose(onConfirm);
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   await answer(user, "Keep");
 
   await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
@@ -256,7 +260,7 @@ it("completes nothing when the close is refused", async () => {
     throw new Error("version conflict");
   });
   renderClose(onConfirm);
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   await answer(user, "Complete all");
 
   await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
@@ -281,7 +285,7 @@ it("holds Confirm while the deal's tasks are still loading", async () => {
   ).toBeInTheDocument();
 
   answerRead(json({ data: OPEN_TASKS, page: { has_more: false } }));
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   expect(screen.queryByText("Loading the deal’s open tasks…")).toBeNull();
 });
 
@@ -321,7 +325,7 @@ it("says so when Complete all could complete none of the tasks", async () => {
   });
   const user = userEvent.setup();
   renderClose(async () => ({ id: "deal-1", version: 4 }));
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   await answer(user, "Complete all");
 
   const note = await screen.findByText(/No task could be completed\./);
@@ -338,7 +342,7 @@ it("completes more tasks than one bulk change holds in batches of 500", async ()
   });
   const user = userEvent.setup();
   renderClose(async () => ({ id: "deal-1", version: 4 }));
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   await answer(user, "Complete all");
 
   await waitFor(() => expect(sent).toHaveLength(4));
@@ -362,9 +366,7 @@ it("lists the first five tasks and counts the rest", async () => {
     activities: () => json({ data: many, page: { has_more: false } }),
   });
   renderClose(async () => ({ id: "deal-1", version: 4 }));
-  const list = await screen.findByRole("list", {
-    name: "Open tasks on this deal",
-  });
+  const list = await screen.findByRole("list");
   expect(within(list).getAllByRole("listitem")).toHaveLength(5);
   expect(screen.getByText("and 2 more")).toBeInTheDocument();
 });

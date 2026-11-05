@@ -110,7 +110,7 @@ describe("ConfirmModal", () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it("confirms on Ctrl+Enter in a note, and only while Confirm is open", async () => {
+  it("confirms on Ctrl+Enter in a note, and only while Confirm can be pressed", async () => {
     const user = userEvent.setup();
     const onConfirm = vi.fn();
     const dialog = (reason?: string) => (
