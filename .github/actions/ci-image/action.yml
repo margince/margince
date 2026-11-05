@@ -1,0 +1,112 @@
+name: ci-image
+description: >-
+  Name the CI image for this tree by digest, building and pushing it first when
+  this run is the first to need it and may push. Hands back an empty name when
+  no job here can pull it, and the jobs then set up on the runner.
+
+inputs:
+  push:
+    description: >-
+      Whether a missing image may be built and pushed. Only a run whose token
+      can write packages sets it: a pull request from a fork gets a read-only
+      token.
+    required: true
+  token:
+    description: The token that logs in to the registry for a push.
+    required: true
+
+outputs:
+  pinned-image:
+    description: >-
+      `ghcr.io/<owner>/ci@sha256:<digest>`, or empty when the jobs cannot pull
+      the image for this tree.
+    value: ${{ steps.resolve.outputs.pinned-image }}
+
+runs:
+  using: composite
+  steps:
+    # One tag per set of inputs, spelled by the script the image is built from,
+    # so the name and the bytes cannot follow two different lists.
+    - name: Name the image after its inputs
+      id: tag
+      shell: bash
+      env:
+        OWNER: ${{ github.repository_owner }}
+      run: |
+        set -euo pipefail
+        tag="$(scripts/ci-image-context.sh "$RUNNER_TEMP/ci-image")"
+        repo="ghcr.io/${OWNER,,}/ci"
+        echo "repo=$repo" >> "$GITHUB_OUTPUT"
+        echo "ref=$repo:$tag" >> "$GITHUB_OUTPUT"
+        echo "CI image inputs hash to $tag"
+
+    # The jobs pull anonymously, as a `container:` with no credentials does, so
+    # the lookup does too: an image only a logged-in client can see is one no
+    # job here can start in.
+    - name: Look the image up
+      id: lookup
+      shell: bash
+      env:
+        REF: ${{ steps.tag.outputs.ref }}
+      run: scripts/ci-image-digest.sh "$REF" >> "$GITHUB_OUTPUT"
+
+    - name: Log in to the registry
+      if: steps.lookup.outputs.digest == '' && inputs.push == 'true'
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ACTOR: ${{ github.actor }}
+      run: echo "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+
+    # No layer cache: every build starts from the pins alone, and a rebuild
+    # happens only when an input moved.
+    - name: Build and push the image
+      if: steps.lookup.outputs.digest == '' && inputs.push == 'true'
+      shell: bash
+      env:
+        REF: ${{ steps.tag.outputs.ref }}
+        SOURCE: ${{ github.server_url }}/${{ github.repository }}
+      run: |
+        set -euo pipefail
+        docker buildx build --platform linux/amd64 \
+          --label "org.opencontainers.image.source=$SOURCE" \
+          --tag "$REF" --push "$RUNNER_TEMP/ci-image"
+        docker logout ghcr.io
+
+    - name: Look the pushed image up
+      id: pushed
+      if: steps.lookup.outputs.digest == '' && inputs.push == 'true'
+      shell: bash
+      env:
+        REF: ${{ steps.tag.outputs.ref }}
+      run: scripts/ci-image-digest.sh "$REF" >> "$GITHUB_OUTPUT"
+
+    # A digest, never a tag: the tag is ours to push again, the digest names
+    # these bytes. check-image-pins.sh admits the job output on that promise.
+    - name: Hand the image on
+      id: resolve
+      shell: bash
+      env:
+        REPO: ${{ steps.tag.outputs.repo }}
+        FOUND: ${{ steps.lookup.outputs.digest }}
+        PUSHED: ${{ steps.pushed.outputs.digest }}
+        PUSH: ${{ inputs.push }}
+      run: |
+        set -euo pipefail
+        digest="${FOUND:-$PUSHED}"
+        if [ -z "$digest" ]; then
+          if [ "$PUSH" = true ]; then
+            echo "::warning::$REPO was pushed but cannot be pulled without logging in; make the package public, and until then the jobs set up on the runner"
+          else
+            echo "::warning::this run changes the CI image's inputs and cannot push the image, so the jobs set up on the runner"
+          fi
+          echo "pinned-image=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        image="$REPO@$digest"
+        if ! [[ "$image" =~ ^ghcr\.io/[a-z0-9._-]+/ci@sha256:[0-9a-f]{64}$ ]]; then
+          echo "::error::'$image' is not a digest-pinned CI image" >&2
+          exit 1
+        fi
+        echo "pinned-image=$image" >> "$GITHUB_OUTPUT"
+        echo "The jobs run in $image"

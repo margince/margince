@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key .github/actions/ci-image scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -145,7 +145,7 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 |---|---|---|
 | `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in: every lane that opens a database |
 | `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, extension reference, craftsmanship, unit coverage, vuln |
-| `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs) | frontend lane, UAT |
+| `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs), and for the same reason the CI image, `.github/ci-image/**` and `.github/actions/ci-image/**` | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `scripts/install-sbom-python.sh`, `scripts/test-install-sbom-python.sh`, `scripts/sbom-license-parity.sh`, `scripts/test-sbom-license-parity.sh`, `embedded-binaries.txt`, `scripts/embedded-binary-licenses.sh`, `scripts/test-embedded-binary-licenses.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
@@ -226,8 +226,9 @@ What follows from this:
 ## Job graph
 
 ```
-changes ──┬─> deterministic-gates
-          ├─> backend-lint (×2: baseline, strict)
+ci-image  (every non-draft change, beside `changes`; the jobs marked * need it)
+changes ──┬─> deterministic-gates *
+          ├─> backend-lint (×2: baseline, strict) *
           ├─> craftsmanship
           ├─> integration  →  _lane-integration.yml ────────────────┐
           │                     integration-shards (×6) ──┐         │
@@ -236,20 +237,20 @@ changes ──┬─> deterministic-gates
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
           ├─> frontend  →  _lane-frontend.yml                  │   │
-          │                  fe-quality   ┐                     │   │
-          │                  fe-unit (×4) ├─> fan-in (+ merge)   │   │
-          │                  fe-bundle    ┘                     │   │
-          ├─> uat  (`frontend` scope, beside the lane)          │   │
+          │                  fe-quality * ┐                     │   │
+          │                  fe-unit (×4)*├─> fan-in * (+ merge) │   │
+          │                  fe-bundle *  ┘                     │   │
+          ├─> uat *  (`frontend` scope, beside the lane)        │   │
           ├─> live-boot                                         │   │
           v                                                     v   v
  deterministic-gates + integration + extension-reference + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
   secret-scan    (every non-draft change, independent — + the image-pin gate)
 
-  ci  ── the ONE required context. needs: deterministic-gates,
+  ci  ── the ONE required context. needs: ci-image, deterministic-gates,
          backend-lint, craftsmanship, craft-residue, secret-scan,
          extension-reference, integration, frontend, uat, license-gate,
-         images   (eleven — vuln and live-boot stay advisory and are NOT
+         images   (twelve — vuln and live-boot stay advisory and are NOT
          in the fan-in)
 ```
 
@@ -332,7 +333,8 @@ The job runs with `if: always()`. An aggregate that is skipped, together with a 
 report a **green** required check.
 
 A lane joins `needs` as its own change, so a red aggregate has one candidate cause. `license-gate`,
-`images` and `uat` each joined that way.
+`images` and `uat` each joined that way. `ci-image` is there because a failed image build skips every
+job that needs it, and a skip passes on a pull request.
 
 These jobs are not in `needs`:
 
@@ -372,7 +374,8 @@ dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
+| `plain` | `cache-warm.yml` job `plain`, its `runner` part | `extension-reference`, `integration unit coverage`, `live-boot`, `vuln`, and the [CI image](ci-image.md) jobs when they run on the runner |
+| `plain-in-image` | `cache-warm.yml` job `plain`, its `image` part | `deterministic-gates`, `backend-lint` |
 | `integration` | `cache-warm.yml` job `integration` | every shard |
 
 ### The writer lives in `cache-warm.yml`, on a schedule
@@ -404,10 +407,6 @@ they meant to seed. `cache-warm.yml` runs one job per kind, and takes
 
 The refresh steps use `!cancelled()`, not `success()`. A red gate still compiled the tree, and that build
 output can be used again as well as a green run's.
-
-`scripts/check-image-pins.sh` scans `.github/actions/` beside the workflows. The `./path` allowance lets a
-local action through, because the repo versions its own code. That holds for the action's own ref, but
-not for the outside actions it calls. Those would come in with nobody reading them.
 
 ### The lint caches are saved on `main` only
 
@@ -470,7 +469,8 @@ a gate: a cached test file that runs `git` or `go` must declare its inputs.
 
 ## The jobs
 
-What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
+What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md). The jobs that need a toolchain
+and no Docker run in one container image: [ci-image.md](ci-image.md).
 
 ### Why some jobs are shaped as they are
 

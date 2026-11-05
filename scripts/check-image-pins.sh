@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# check-image-pins.sh — fail unless every workflow `uses:` action, every
-# container `image:` (workflow service containers + the compose dev stack) AND
+# check-image-pins.sh — fail unless every workflow `uses:` action, every job
+# `container:` and container `image:` (service containers + the compose dev stack) AND
 # every Dockerfile base `FROM` is pinned to an immutable ref (supply-chain: a symbolic ref lets a compromised
 # artifact ride into CI unreviewed).
 # Allows:  @<40-char-hex>       (git commit SHA, e.g. actions/checkout@11bd71...)
@@ -67,6 +67,48 @@ while IFS= read -r line; do
 # `image:` as a YAML key too (same key-anchoring as `uses:` above).
 done < <(grep -rnE --include='*.yml' --include='*.yaml' \
   '^[[:space:]]*(-[[:space:]]+)?image:' "${scan_dirs[@]}" $compose_files 2>/dev/null || true)
+
+# --- Job containers written as a scalar: the same digest rule ---
+# `container: <image>` is the short form of a mapping with an `image:` key, so
+# the scan above never sees it. One expression is admitted: the CI image the
+# `ci-image` job resolves, read straight or behind a condition that falls back
+# to the empty string (an empty name runs the job on the runner). That job
+# writes only a name ending in @sha256:<64 hex>, and refuses anything else, so
+# what reaches `container:` is a digest either way.
+ci_image_ref='(needs\.ci-image\.outputs\.pinned-image|inputs\.ci-image)'
+admits_ci_image() {
+  local value="${1// /}"
+  [[ "$value" =~ ^\$\{\{${ci_image_ref}\}\}$ ]] && return 0
+  # `<condition> && <image> || ''`: a falsy condition yields '', never a tag.
+  [[ "$value" =~ ^\$\{\{[^|]+\&\&${ci_image_ref}\|\|\'\'\}\}$ ]]
+}
+while IFS= read -r line; do
+  content="${line#*:}"
+  content="${content#*:}"
+  case "$(echo "$content" | sed 's/^[[:space:]]*//')" in
+    \#*) continue ;;
+  esac
+  value=$(echo "$content" | sed 's/.*container:[[:space:]]*//' | sed 's/[[:space:]]#.*//' | sed 's/[[:space:]]*$//')
+  [[ -z "$value" ]] && continue                     # mapping form: its image: line is checked above
+  admits_ci_image "$value" && continue
+  if ! grep -qE '@sha256:[0-9a-f]{64}$' <<<"$(tr -d '"'"'" <<<"$value")"; then
+    echo "UNPINNED CONTAINER (pin as tag@sha256:<digest>, or read the ci-image job's output): $line" >&2
+    fail=1
+  fi
+done < <(grep -rnE --include='*.yml' --include='*.yaml' \
+  '^[[:space:]]*container:' "${scan_dirs[@]}" 2>/dev/null || true)
+
+# The lane workflows take the CI image as an input, and the input is only as
+# pinned as what the caller passes into it.
+while IFS= read -r line; do
+  value=$(echo "${line#*ci-image:}" | sed 's/[[:space:]]#.*//' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  [[ -z "$value" ]] && continue                     # the job key or the input's declaration
+  if [[ "${value// /}" != '${{needs.ci-image.outputs.pinned-image}}' ]]; then
+    echo "CI IMAGE INPUT NOT FROM THE ci-image JOB: $line" >&2
+    fail=1
+  fi
+done < <(grep -rnE --include='*.yml' --include='*.yaml' \
+  '^[[:space:]]*ci-image:' "${scan_dirs[@]}" 2>/dev/null || true)
 
 # --- Dockerfile base images: pinned by digest, same rule ---
 # A `FROM` is the same supply-chain edge as a service container: the bytes a

@@ -1,0 +1,104 @@
+<!-- prose:plain -->
+<!-- describes: .github/ci-image .github/actions/ci-image scripts/ci-image-context.sh scripts/ci-image-digest.sh scripts/gate-tools-recipe.sh scripts/check-image-pins.sh -->
+# The CI image
+
+`deterministic-gates`, `backend-lint`, the jobs of the frontend lane and `uat` run in one container
+image, `ghcr.io/margince/ci`. It holds Go, the gate binaries, Node with pnpm, the Chromium build
+Playwright starts, and the Debian packages Chromium needs. So these jobs install no toolchain, and
+`uat` does not reach a package mirror. A mirror that stopped answering during a font fetch has
+stopped a UAT shard before a test ran.
+
+The rest of the merge gate is in [ci-pipeline.md](ci-pipeline.md).
+
+## Every byte comes from a pin
+
+[`.github/ci-image/Dockerfile`](../../.github/ci-image/Dockerfile) builds the image, and each input
+has a pin in this tree:
+
+| Input | Pin | What moves it |
+|---|---|---|
+| Debian, Go and Node base images | tag and `@sha256` digest | Renovate, through its `dockerfile` manager. The `golang` image moves in the `go toolchain` group, with every other Go pin |
+| Debian packages | one time on `snapshot.debian.org`, `ARG DEBIAN_SNAPSHOT`, and each package as `name=version` | the `Debian` group in Renovate, once a week: the time and every package in one pull request |
+| Gate binaries | the recipe `make -n tools` prints, so the versions stay in `backend/Makefile` | a change to that recipe |
+| pnpm | `packageManager` in the root `package.json`, with its hash | the same change that moves pnpm for every other reader |
+| Chromium | `PLAYWRIGHT_VERSION`, the browser build and its sha256, as `ARG` lines | a maintainer, when Playwright moves (below) |
+
+The image reads Debian at one point in the history of the archive. So the same time and pins give
+the same packages on every build, and `apt-get upgrade` patches the base image the same way each
+time. The host is `snapshot-cloudflare.debian.org`, the same archive behind a CDN. `apt` checks each
+file against the signed index of the archive, and the origin host often times out.
+
+Renovate reads two sources from `snapshot.debian.org`: the list of times, and the versions of each
+package. The second lists every version the archive holds, so the rule
+`allowedVersions: "/deb13/"` keeps a pin on Debian 13. A version with no `deb13` in it is the one
+Debian 13 shipped, and it moves only when Debian ships an update for it. The time and the versions
+move in one branch, because `apt` cannot find a version newer than the time. So the wait of seven
+days is off for both, since neither source gives a release date. A wait on one side only would split
+them.
+
+A stable update can wait in `trixie-proposed-updates` until the next Debian release, and Renovate
+lists it. The image lists that suite with `Pin-Priority: 100`, so a pin can name such a version, and
+nothing else is taken from it.
+
+[`backend/gates/ciimagepins_test.go`](../../backend/gates/ciimagepins_test.go) holds the file to
+these rules:
+
+- every base image and every `COPY --from` image has a digest;
+- `apt` reads only the snapshot, and every package has a version;
+- every fetch over the network has a checksum that the build checks;
+- nothing turns off the checksum database of Go or the signature check of Corepack;
+- the managers in `renovate.json` find every pin.
+
+Each rule has a case that breaks the file, and the case must fail.
+
+Playwright gives no checksum for its browser. When the lockfile moves Playwright, the same gate fails.
+It names the four `ARG` lines to set from the `browsers.json` of that release, and the sha256 of the
+`chrome-headless-shell` archive.
+
+## How a job finds the image
+
+The tag is the sha256 of the build context, which
+[`scripts/ci-image-context.sh`](../../scripts/ci-image-context.sh) writes: the Dockerfile, the tools
+recipe and the pnpm pin. So the tag changes when an input does, and on no other change. There is no
+rebuild on a schedule.
+
+The `ci-image` job runs beside `changes`.
+[`scripts/ci-image-digest.sh`](../../scripts/ci-image-digest.sh) asks the registry for the digest of
+that tag, with no login. The `container:` of a job pulls with no login too, so the job asks the same
+way.
+
+- The image is there: the job hands on `ghcr.io/margince/ci@sha256:<digest>`, and each job above
+  sets that as its `container:`.
+- It is not there, and the run can push: that is a pull request from a branch of this repository. The
+  job builds the image, pushes it under the tag, and hands on its digest. So a Renovate pull request
+  runs on the image it brings.
+- It is not there, and the run cannot push: a pull request from a fork gets a token that can only
+  read. The job hands on an empty name, with a warning.
+
+An empty name runs each job on the runner. The steps marked
+`if: needs.ci-image.outputs.pinned-image == ''` then install what the image would hold: Go, the gate
+binaries, pnpm and Chromium. In the image, setup-go and setup-node get no version, use the tools in
+the image, and only restore their caches. An image that needs a login to pull gives the same empty
+name. So `ci` is correct with or without the image, and only slower without it.
+
+`scripts/check-image-pins.sh` admits that one job output as a `container:`, read as it is or behind a
+condition that falls back to the empty string. The action refuses to hand on a name that does not end
+in a digest. The script also scans `.github/actions/`. Its `./path` allowance lets a local action
+through, because the repo versions its own code. That holds for the action's own ref, but not for the
+outside actions it calls, which would come in with nobody reading them.
+
+## Its own caches
+
+Go keys a build on the folder it read, and golangci keys its cache on the path of the checkout. In
+the image both differ from a bare runner, so an entry from one misses in the other. The image sets
+`MARGINCE_CI_IMAGE`, and `go-build-cache` and `golangci-cache-key` add `in-image-` to their keys when
+it is set. `cache-warm.yml` warms both: its `plain` job runs on the runner and, when the image can be
+pulled, again in it.
+
+## Which jobs stay on the runner
+
+- The integration shards and `live-boot` start Docker Compose, which needs the Docker of the runner.
+- `craftsmanship`, `craft-residue`, `secret-scan`, `license gate` and `sonarcloud` install no
+  toolchain, or only Go for one small module. A pull would cost more than they save.
+- `extension-reference` and `vuln` read the `plain` cache of the runner, with the integration unit
+  coverage pass, which stays on the runner.

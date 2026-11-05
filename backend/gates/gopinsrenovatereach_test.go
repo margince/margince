@@ -48,6 +48,7 @@ type renovateConfig struct {
 	CustomManagers []struct {
 		ManagerFilePatterns []string `json:"managerFilePatterns"`
 		MatchStrings        []string `json:"matchStrings"`
+		DatasourceTemplate  string   `json:"datasourceTemplate"`
 	} `json:"customManagers"`
 }
 
@@ -95,7 +96,7 @@ func TestRenovateRaisesEveryGoPinInOneBranch(t *testing.T) {
 		if rule.GroupName == "" || !slices.Contains(rule.MatchPackageNames, "golang") {
 			continue
 		}
-		for _, manager := range []string{"gomod", "asdf", "custom.regex"} {
+		for _, manager := range []string{"gomod", "asdf", "custom.regex", "dockerfile"} {
 			if !slices.Contains(rule.MatchManagers, manager) {
 				t.Errorf("the %q group leaves out the %s manager, so the pins it owns arrive in a "+
 					"branch of their own and every pin outside it is behind until that one merges too.",

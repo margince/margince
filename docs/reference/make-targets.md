@@ -153,7 +153,7 @@ The root `make check` runs the backend gate above and these deterministic root s
 
 | Target | What it does |
 |---|---|
-| `check-image-pins` | Every workflow `uses:`, container `image:` and Dockerfile base `FROM` is pinned to an immutable ref |
+| `check-image-pins` | Every workflow `uses:`, container `image:` or `container:` and Dockerfile base `FROM` is pinned to an immutable ref; a job `container:` may also read the `ci-image` job output |
 | `check-host-ports` | Every host port published by `docker-compose.dev.yml` is below the ephemeral floor (32768), so `db-up` cannot lose a bind to a transient client port |
 | `make-target-parity` | Every backend target `make help-all` lists runs from the repo root, a wrong name fails there, and `make help` prints. The root sends a name to `backend/` through one pattern rule. A name it sends must stay out of the root `.PHONY` list: `make` then prints `Nothing to be done` and exits 0, so a CI step that calls it passes without running what it gates |
 | `test-make-target-parity` | The own test of `make-target-parity`. It runs the gate on a copy of the real Makefile, which must pass, then on copies with each known wrong rule, which must fail |

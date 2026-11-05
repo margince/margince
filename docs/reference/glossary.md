@@ -29,6 +29,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | CSV | Comma-separated values, a plain text format for tables. |
 | Cursor | An AI code editor, which can connect to Margince. |
 | de | The language code for German, as a setting value. |
+| Debian | The Linux distribution the CI image is built on, pinned to version 13. |
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
 | dmy | The date order day, month, year, as a setting value. |

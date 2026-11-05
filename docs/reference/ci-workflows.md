@@ -43,6 +43,10 @@ to the branch that writes plus the default branch, and a queue ref does not last
 for why it runs on a schedule and not on each push. Why `ci.yml` saves neither lint cache: [The lint
 caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-only).
 
+Its `ci-image` job builds the [CI image](../explanation/ci-image.md) for `main` when no pull request
+pushed it. Its `plain` job warms the caches of the runner, and those of the image when the image can
+be pulled.
+
 ## `merge-attest.yml`
 
 Runs no lane, but waits. `ci` is a fan-in that starts only once every other lane is done. So it

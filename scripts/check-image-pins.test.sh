@@ -91,6 +91,49 @@ if reported; then
   fail "a later stage named after an image was read as an unpinned pull"
 fi
 
+# --- a job container written as a scalar ------------------------------------
+#
+# `container: <image>` never reaches the `image:` scan, so it has its own. The
+# CI image's job output is the one expression it admits; every other way of
+# naming a container must carry a digest.
+
+plant_workflow() {
+  plant "FROM scratch"
+  printf '%s\n' "$1" > "$TMP/repo/.github/workflows/w.yml"
+  ( cd "$TMP/repo" && git add -A )
+}
+
+plant_workflow "    container: redis:7"
+if ! reported; then
+  fail "a tag-only scalar container passed; it is a pull like any service image"
+fi
+
+plant_workflow "    container: \${{ matrix.image }}"
+if ! reported; then
+  fail "a container read from a matrix passed; nothing holds a matrix value to a digest"
+fi
+
+plant_workflow "    container: \${{ github.event_name == 'pull_request' && needs.ci-image.outputs.pinned-image || 'redis:7' }}"
+if ! reported; then
+  fail "a fallback to a tag passed; only an empty fallback is admitted beside the CI image"
+fi
+
+plant_workflow "      ci-image: \${{ matrix.image }}"
+if ! reported; then
+  fail "a lane's ci-image input fed from somewhere other than the ci-image job passed"
+fi
+
+plant_workflow "    container: redis:7@$DIGEST
+    container: \${{ needs.ci-image.outputs.pinned-image }}
+    container: \${{ inputs.ci-image }}
+    container: \${{ matrix.where == 'image' && needs.ci-image.outputs.pinned-image || '' }}
+      ci-image: \${{ needs.ci-image.outputs.pinned-image }}
+    container:
+      image: redis:7@$DIGEST"
+if reported; then
+  fail "a digest-pinned container, the CI image's output or a mapping was reported"
+fi
+
 # --- and the gate must actually be reading this repository ------------------
 #
 # The cases above prove the rule; this proves the corpus. A gate whose file list
