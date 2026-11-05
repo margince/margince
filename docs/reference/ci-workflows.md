@@ -15,7 +15,8 @@ workflow is outside the gate:
 | `closing-declaration.yml` | pull request events | No |
 | `docs-describing.yml` | pull request events | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
-| `main-health.yml` | `main` every two hours, manual dispatch | No |
+| `main-health.yml` | `main-health-pace.yml`, `main` every six hours, manual dispatch | No |
+| `main-health-pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
 | `release.yml` | manual dispatch only | No |
@@ -159,7 +160,14 @@ and holds only `issues: write`.
 
 ## `main-health.yml`
 
-Runs on `main` every two hours.
+Runs on `main` every two hours while commits are landing.
+
+The GitHub scheduler starts about a third of the runs a cron line asks for, and keeps no record of
+the rest. So `main-health-pace.yml` runs on every push to `main` and starts this workflow when the
+newest run is at least two hours old
+([`scripts/main-health-pace.sh`](../../scripts/main-health-pace.sh), `make test-main-health-pace`).
+A cron line every six hours remains for a quiet `main`, when no push comes.
+
 Each run covers these lanes:
 
 - the backend gate;

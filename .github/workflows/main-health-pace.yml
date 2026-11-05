@@ -1,0 +1,40 @@
+# Holds main-health to its two-hour cadence while main is moving.
+#
+# The cron in main-health.yml gets about a third of its runs from GitHub's
+# scheduler, late and with no record of the ones it skipped. A push is delivered,
+# and main only needs a new health check once something has landed on it.
+#
+# A dispatch through GITHUB_TOKEN does start a workflow, unlike a push made with it.
+name: main-health-pace
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# One at a time, so a push arriving just after a dispatch reads that run rather
+# than racing it. Only the newest waiting push matters: all of them ask one question.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  pace:
+    name: pace
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # To read main-health's last run and to dispatch the next one.
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Start main-health if it is due
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: ./scripts/main-health-pace.sh
