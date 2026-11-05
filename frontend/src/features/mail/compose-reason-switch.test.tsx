@@ -138,6 +138,20 @@ describe("alternativeReasonOf", () => {
     ).toBeUndefined();
   });
 
+  it("offers nothing when another recipient is already allowed", () => {
+    const allowed = {
+      ...refused("b@x.test", []),
+      verdict: "allow" as const,
+      reason_code: "allowed",
+      would_refuse: false,
+    };
+    expect(
+      alternativeReasonOf(
+        ask([refused("a@x.test", ["requested_followup"]), allowed]),
+      ),
+    ).toBeUndefined();
+  });
+
   it("offers nothing while the answer is out or failed", () => {
     const answer = ask([refused("a@x.test", ["requested_followup"])]);
     expect(alternativeReasonOf({ ...answer, asking: true })).toBeUndefined();

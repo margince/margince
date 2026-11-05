@@ -94,10 +94,11 @@ export function ContactReasonPick({
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 
 /**
- * The reason the record already carries for every recipient the claimed one
- * refuses, when there is one. The engine names it per recipient; a switch
- * changes the reason for the whole message, so only a reason all of them share
- * is offered. An answer still out, or one that failed, offers none.
+ * The reason the record already carries for every recipient, when the claimed
+ * one refuses them all. The engine names alternatives only for a recipient it
+ * refuses, and a switch changes the reason for the whole message, so a send
+ * with an allowed recipient is offered none. An answer still out, or one that
+ * failed, offers none either.
  */
 export function alternativeReasonOf(permission: {
   preview: Preview | undefined;
@@ -107,8 +108,11 @@ export function alternativeReasonOf(permission: {
   if (permission.asking || permission.unanswered || !permission.preview) {
     return undefined;
   }
-  const refusing = permission.preview.recipients.filter((r) => r.would_refuse);
-  const [first, ...rest] = refusing;
+  const { recipients } = permission.preview;
+  if (!recipients.every((r) => r.would_refuse)) {
+    return undefined;
+  }
+  const [first, ...rest] = recipients;
   return (first?.supported_alternatives ?? []).find((reason) =>
     rest.every((r) => r.supported_alternatives?.includes(reason)),
   );

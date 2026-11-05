@@ -111,3 +111,95 @@ func TestNoAlternativeIsOfferedThatWouldNotCarryTheSend(t *testing.T) {
 		}
 	})
 }
+
+// tableCounts reads the rows a send's decision could write, so a preview can
+// be shown to have written none of them.
+func (e *resolveEnv) tableCounts(t *testing.T) map[string]int {
+	t.Helper()
+	out := map[string]int{}
+	for _, table := range []string{
+		"communication_basis", "consent_qualifying_event", "audit_log", "event_outbox", "communication_decision",
+	} {
+		var n int
+		if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM `+table).Scan(&n); err != nil {
+			t.Fatalf("counting %s: %v", table, err)
+		}
+		out[table] = n
+	}
+	return out
+}
+
+// Working out an alternative decides the other reason the way a send would,
+// and a send under it records a ground. The preview rolls all of it back.
+//
+// Mutation: commit the preview's transaction instead of rolling it back, and
+// the basis and audit counts grow.
+func TestWorkingOutAnAlternativeWritesNothing(t *testing.T) {
+	e := setupResolve(t)
+	e.theyWroteAMonthAgo(t)
+	before := e.tableCounts(t)
+
+	d := e.previewOne(t, commsauthz.Request{Context: commsauthz.CategoryActiveDealFollowup})
+	if !slices.Contains(d.SupportedAlternatives, commsauthz.CategoryRequestedFollowup) {
+		t.Fatalf("alternatives = %v, want requested_followup, or this case tests nothing", d.SupportedAlternatives)
+	}
+	after := e.tableCounts(t)
+	for table, n := range before {
+		if after[table] != n {
+			t.Errorf("%s: %d rows before the preview, %d after", table, n, after[table])
+		}
+	}
+}
+
+// Each recipient is offered only what its own record carries: one wrote to
+// us a month ago, the other's request was recorded and then retracted.
+func TestEachRecipientGetsOnlyItsOwnAlternatives(t *testing.T) {
+	e := setupResolve(t)
+	recorded := e.recordRequest(t, clocktest.Now(t).AddDate(0, 0, -10), false)
+	if err := e.store.RetractQualifyingEvent(e.seatCtx(e.user), e.contact, recordedID(t, recorded)); err != nil {
+		t.Fatalf("retracting the request: %v", err)
+	}
+	writer := e.secondContactWhoWroteAMonthAgo(t, "kai@buyer.test")
+
+	set, err := e.gate.Preview(e.ctx, commsauthz.Request{
+		Recipients: []connector.Recipient{{Email: e.address}, {Email: writer}},
+		Context:    commsauthz.CategoryActiveDealFollowup,
+	})
+	if err != nil {
+		t.Fatalf("previewing: %v", err)
+	}
+	offered := map[string][]commsauthz.Category{}
+	for _, d := range set.Decisions {
+		offered[d.Recipient.Email] = d.SupportedAlternatives
+	}
+	if len(offered[e.address]) != 0 {
+		t.Errorf("the retracted request still offered %v", offered[e.address])
+	}
+	if !slices.Contains(offered[writer], commsauthz.CategoryRequestedFollowup) {
+		t.Errorf("the recipient who wrote was offered %v, want requested_followup", offered[writer])
+	}
+}
+
+// secondContactWhoWroteAMonthAgo plants another contact with an authenticated
+// inbound mail from them, and answers their address.
+func (e *resolveEnv) secondContactWhoWroteAMonthAgo(t *testing.T, address string) string {
+	t.Helper()
+	ctx := context.Background()
+	contact, mail := ids.NewV7(), ids.NewV7()
+	for _, step := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Kai Buyer', 'manual', 'human:x')`, []any{contact}},
+		{`INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by) VALUES ($1, $2, true, 'manual', 'human:x')`, []any{contact, address}},
+		{`INSERT INTO activity (id, kind, direction, thread_key, occurred_at, source, captured_by, inbound_sender_authenticated)
+		  VALUES ($1, 'email', 'inbound', 'kai-question', $2, 'gmail', 'connector:gmail', true)`, []any{mail, clocktest.Now(t).AddDate(0, 0, -30)}},
+		{`INSERT INTO activity_participant (activity_id, contact_id, address, role) VALUES ($1, $2, $3, 'from')`, []any{mail, contact, address}},
+		{`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, []any{mail, contact}},
+	} {
+		if _, err := e.owner.Exec(ctx, step.sql, step.args...); err != nil {
+			t.Fatalf("planting the second contact: %v", err)
+		}
+	}
+	return address
+}
