@@ -26,29 +26,56 @@ type SeededStages struct {
 	Lost       string
 }
 
+// pipelineListing is GET /v1/pipelines as these helpers read it.
+type pipelineListing struct {
+	Data []struct {
+		ID        string `json:"id"`
+		IsDefault bool   `json:"is_default"`
+		Stages    []struct {
+			ID       string `json:"id"`
+			Semantic string `json:"semantic"`
+		} `json:"stages"`
+	} `json:"data"`
+}
+
+func listPipelines(t *testing.T, e *AppEnv) pipelineListing {
+	t.Helper()
+	var pipelines pipelineListing
+	if status := e.Call(t, "GET", "/v1/pipelines", nil, nil, &pipelines); status != http.StatusOK {
+		t.Fatalf("pipelines status = %d", status)
+	}
+	return pipelines
+}
+
 // DiscoverSeededPipeline asserts the bootstrap seeded exactly one default
 // pipeline with its six stages and resolves the semantic stage ids.
 func DiscoverSeededPipeline(t *testing.T, e *AppEnv) SeededStages {
 	t.Helper()
-	var pipelines struct {
-		Data []struct {
-			ID        string `json:"id"`
-			IsDefault bool   `json:"is_default"`
-			Stages    []struct {
-				ID       string `json:"id"`
-				Semantic string `json:"semantic"`
-			} `json:"stages"`
-		} `json:"data"`
-	}
-	if status := e.Call(t, "GET", "/v1/pipelines", nil, nil, &pipelines); status != http.StatusOK {
-		t.Fatalf("pipelines status = %d", status)
-	}
+	pipelines := listPipelines(t, e)
 	if len(pipelines.Data) != 1 || !pipelines.Data[0].IsDefault || len(pipelines.Data[0].Stages) != 6 {
 		t.Fatalf("got %+v, want exactly one default pipeline with six stages — the shape the bootstrap seed creates, which every caller of this fixture builds on",
 			pipelines.Data)
 	}
-	stages := SeededStages{PipelineID: pipelines.Data[0].ID}
-	for _, s := range pipelines.Data[0].Stages {
+	return pipelines.stagesOf(0)
+}
+
+// DefaultPipeline resolves the default pipeline's semantic stage ids, beside
+// any other pipeline a test made.
+func DefaultPipeline(t *testing.T, e *AppEnv) SeededStages {
+	t.Helper()
+	pipelines := listPipelines(t, e)
+	for i, pipeline := range pipelines.Data {
+		if pipeline.IsDefault {
+			return pipelines.stagesOf(i)
+		}
+	}
+	t.Fatalf("no default pipeline among %+v", pipelines.Data)
+	return SeededStages{}
+}
+
+func (l pipelineListing) stagesOf(i int) SeededStages {
+	stages := SeededStages{PipelineID: l.Data[i].ID}
+	for _, s := range l.Data[i].Stages {
 		switch s.Semantic {
 		case "won":
 			stages.Won = s.ID

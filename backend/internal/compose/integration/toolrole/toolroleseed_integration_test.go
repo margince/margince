@@ -85,7 +85,7 @@ var installationKinds = map[string]bool{
 // notes in the pool what it made beside its record.
 func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *recordPool) map[string]func() string {
 	t.Helper()
-	seeded := apptest.DiscoverSeededPipeline(t, e)
+	seeded := apptest.DefaultPipeline(t, e)
 	if owner == "" {
 		owner = apptest.SessionUserID(t, e)
 	}

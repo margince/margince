@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 359 |
-| Columns | 4256 |
-| Foreign keys | 589 |
+| Columns | 4258 |
+| Foreign keys | 590 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -39,17 +39,17 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 35 | 153 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 36 | 153 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 71 | 43 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 47 | 29 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
+| [`passport`](identity.md#passport) | [identity](identity.md) | 11 | 9 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 9 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 7 | 8 |
-| [`passport`](identity.md#passport) | [identity](identity.md) | 11 | 8 |
 | [`pipeline`](deals.md#pipeline) | [deals](deals.md) | 8 | 7 |
 
 ```mermaid
@@ -82,9 +82,9 @@ erDiagram
     company ||--o{ project : company_id
     app_user ||--o{ project : owner_id
     app_user ||--o{ project : source_author_id
-    pipeline ||--o{ stage : pipeline_id
     app_user ||--o{ passport : granted_by
     app_user ||--o{ passport : on_behalf_of
+    pipeline ||--o{ stage : pipeline_id
 ```
 
 ## The pages
@@ -170,7 +170,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 35 | 153 |
+| [`app_user`](identity.md#app_user) | identity | 36 | 153 |
 | [`approval`](approvals.md#approval) | approvals | 37 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -187,7 +187,7 @@ erDiagram
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 12 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 14 | 2 |
 | [`auth_token`](identity.md#auth_token) | identity | 10 | 0 |
-| [`automation`](automation.md#automation) | automation | 15 | 0 |
+| [`automation`](automation.md#automation) | automation | 16 | 0 |
 | [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 6 | 0 |
 | [`booking_alias`](activities.md#booking_alias) | activities | 6 | 0 |
 | [`booking_page`](activities.md#booking_page) | activities | 6 | 1 |
@@ -381,7 +381,7 @@ erDiagram
 | [`onboarding_wizard_state`](identity.md#onboarding_wizard_state) | identity | 15 | 0 |
 | [`partner`](contacts.md#partner) | contacts | 29 | 0 |
 | [`partner_stage`](contacts.md#partner_stage) | contacts | 13 | 1 |
-| [`passport`](identity.md#passport) | identity | 11 | 8 |
+| [`passport`](identity.md#passport) | identity | 11 | 9 |
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 7 |
 | [`preference_token`](consent.md#preference_token) | consent | 8 | 0 |
 | [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 21 | 0 |

@@ -9,11 +9,13 @@ package contacts
 
 import (
 	"context"
+	"net/http"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -73,10 +75,17 @@ func requirePartnerWriteGrant(ctx context.Context) error {
 
 // requireMarginTierGrant holds the partner grant on a write that sets or clears
 // the margin tier, because the tier prices every later commission. It reads the
-// clears the caller sent, before a set-up adds its own.
+// clears the caller sent, before a set-up adds its own. An agent never sets it,
+// on any door: it decides commission on every later deal.
 func requireMarginTierGrant(ctx context.Context, in UpsertPartnerInput) error {
 	if in.MarginTier == nil && !slices.Contains(in.Cleared, partnerFieldMarginTier) {
 		return nil
+	}
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return &httperr.DetailedError{
+			Status: http.StatusForbidden, Code: "agent_sets_no_margin_tier",
+			Detail: "the margin tier decides commission on every later deal, so a user sets it on the company's Partner tab",
+		}
 	}
 	return auth.Require(ctx, "partner", principal.ActionUpdate)
 }

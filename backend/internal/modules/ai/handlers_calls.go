@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // WithPayloadCaptureFlag reports the same deployment posture that controls
@@ -91,7 +92,13 @@ func (h Handlers) GetAiCall(w http.ResponseWriter, r *http.Request, id crmcontra
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireAiCall(detail))
+	wire := wireAiCall(detail)
+	// A payload holds what went to a model, from records past this user's row
+	// scope. An agent sees that one was captured, never what it says.
+	if actor, ok := principal.Actor(r.Context()); ok && actor.Type == principal.PrincipalAgent {
+		wire.Payload = nil
+	}
+	httperr.WriteJSON(w, http.StatusOK, wire)
 }
 
 func wireAiCallSummary(summary CallSummary) crmcontracts.AiCallSummary {

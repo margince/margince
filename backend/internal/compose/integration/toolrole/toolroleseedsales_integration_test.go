@@ -56,7 +56,7 @@ func salesSeeders(s sweepSeed) map[string]func() string {
 		},
 		"lost_deal": func() string {
 			id := s.create["deal"]()
-			stages := apptest.DiscoverSeededPipeline(s.t, s.e)
+			stages := apptest.DefaultPipeline(s.t, s.e)
 			s.call("POST", "/v1/deals/"+id+"/advance", integration.AnyMap{"to_stage_id": stages.Lost, "lost_reason": "Role sweep"}, nil, nil)
 			var deal struct {
 				ClosingOccurrenceID string `json:"closing_occurrence_id"`
@@ -75,7 +75,7 @@ func salesSeeders(s sweepSeed) map[string]func() string {
 				} `json:"data"`
 			}
 			s.call("GET", "/v1/pipelines", nil, nil, &pipelines)
-			first := apptest.DiscoverSeededPipeline(s.t, s.e).Open
+			first := apptest.DefaultPipeline(s.t, s.e).Open
 			for _, pipeline := range pipelines.Data {
 				for _, stage := range pipeline.Stages {
 					if stage.Semantic == "open" && stage.ID != first {
@@ -89,7 +89,7 @@ func salesSeeders(s sweepSeed) map[string]func() string {
 		// Only an automatic move can be reverted or accepted, and only a pass
 		// over a deal's exit criteria makes one; the seed records its outcome.
 		"auto_moved_deal": func() string {
-			id, stages := s.create["deal"](), apptest.DiscoverSeededPipeline(s.t, s.e)
+			id, stages := s.create["deal"](), apptest.DefaultPipeline(s.t, s.e)
 			next := s.create["open_stage"]()
 			s.call("POST", "/v1/deals/"+id+"/advance", integration.AnyMap{"to_stage_id": next}, nil, nil)
 			move := ids.NewV7().String()

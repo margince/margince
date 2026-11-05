@@ -148,7 +148,7 @@ func (s *Store) Connect(ctx context.Context, in ConnectInput) (Connection, error
 // and destroys the key. Data already retrieved stays until retention, erasure
 // or the separate delete-data action: disconnecting is not deleting.
 func (s *Store) Disconnect(ctx context.Context, name string) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionDelete); err != nil {

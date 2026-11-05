@@ -162,7 +162,7 @@ func toolRoleBatchSeeders(t *testing.T, e *apptest.AppEnv) []batchSeed {
 			t.Fatalf("closing the seat's earlier deals: %v", err)
 		}
 		defer sweepSeed{t: t, e: e}.asRoles("rep")()
-		stages := apptest.DiscoverSeededPipeline(t, e)
+		stages := apptest.DefaultPipeline(t, e)
 		deals := map[string][]string{}
 		for _, kind := range []string{"brief_item", "snoozed_brief_item"} {
 			for range wanted[kind] {

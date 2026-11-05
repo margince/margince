@@ -133,7 +133,7 @@ func memberSeeders(s sweepSeed) map[string]func() string {
 		// teammate owns the deal and asks.
 		"colleague_legal_review": func() string {
 			mate := teammate(s, active)
-			stages := apptest.DiscoverSeededPipeline(s.t, s.e)
+			stages := apptest.DefaultPipeline(s.t, s.e)
 			deal := s.post("/v1/deals", integration.AnyMap{
 				"name": "Role Sweep", "amount_minor": 100, "currency": "EUR", "pipeline_id": stages.PipelineID,
 				"stage_id": stages.Open, "company_id": s.create["company"](), "source": "manual", "owner_id": mate,

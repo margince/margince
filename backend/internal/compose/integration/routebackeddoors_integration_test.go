@@ -44,17 +44,32 @@ func TestARouteBackedActionAnswersAsItsRoute(t *testing.T) {
 	}
 }
 
-// Which model runs, how long data is kept, and what past AI calls held stay with
-// a signed-in user. An agent is refused them on the route and has no topic for them.
-func TestAnAgentIsRefusedTheOperatorReads(t *testing.T) {
+// An operator read answers an agent what it answers its user, and writes stay
+// with the user. Which model runs is read here and never changed.
+func TestAnOperatorsAgentReadsWhatTheOperatorReads(t *testing.T) {
 	d := newTwoDoors(t, "operator-reads", "read", "write", "send", "enrich")
-	for _, path := range []string{"/v1/ai/routing", "/v1/retention/settings", "/v1/ai/calls", "/v1/ai/calls/00000000-0000-4000-8000-000000000001"} {
-		if status := d.e.Call(t, "GET", path, nil, d.bearer, nil); status != http.StatusForbidden {
-			t.Errorf("GET %s as a passport → %d, want 403", path, status)
+	for topic, path := range map[string]string{
+		"ai_routing": "/v1/ai/routing", "retention_settings": "/v1/retention/settings",
+		"ai_calls": "/v1/ai/calls", "job_health": "/v1/admin/job-health", "system_health": "/v1/admin/system-health",
+		"tax_rates": "/v1/tax-rates", "fx_rates": "/v1/fx-rates", "my_working_hours": "/v1/me/working-hours",
+	} {
+		var viaREST json.RawMessage
+		if status := d.e.Call(t, "GET", path, nil, nil, &viaREST); status != http.StatusOK {
+			t.Fatalf("GET %s as the admin → %d %s", path, status, viaREST)
+		}
+		got := d.mcp.Call(t, "read_workspace", map[string]any{"topic": topic})
+		if got.IsError {
+			t.Errorf("%s refused their agent, and answered the admin 200: %s", topic, got.Text)
 		}
 	}
-	for _, topic := range []string{"ai_routing", "retention_settings", "ai_calls", "ai_call"} {
-		d.mcp.CallRefused(t, "read_workspace", map[string]any{"topic": topic})
+	for _, path := range []string{"/v1/ai/routing", "/v1/installation/settings", "/v1/provider-connections/hunter"} {
+		method := "PATCH"
+		if path == "/v1/ai/routing" {
+			method = "PUT"
+		}
+		if status := d.e.Call(t, method, path, AnyMap{}, d.bearer, nil); status != http.StatusForbidden {
+			t.Errorf("%s %s as a passport → %d, want 403", method, path, status)
+		}
 	}
 }
 
@@ -98,6 +113,9 @@ func TestNoRouteBackedActionStillRefusesAnActingAgent(t *testing.T) {
 			args["request_body"] = map[string]any{}
 			body = map[string]any{}
 		}
+		if v.UploadField != "" {
+			args["filename"], args["content_type"], args["content_base64"] = "sweep.txt", "text/plain", "c3dlZXA="
+		}
 		human := d.e.Call(t, v.Method, path, body, nil, nil)
 		result := d.mcp.Call(t, v.Verb, args)
 		// A record that is not there is the caller's mistake, never a fault.
@@ -131,4 +149,27 @@ func placeholderFor(param string) string {
 		return "00000000-0000-4000-8000-000000000001"
 	}
 	return "none"
+}
+
+// A router's list of actions is long, so asking for one answers only that one.
+func TestAskingAboutOneActionAnswersOnlyIt(t *testing.T) {
+	d := newTwoDoors(t, "describe-one-action", "read", "write")
+	whole := d.tool(t, "read_workspace", map[string]any{"topic": "actions", "router": "change_settings"})
+	one := d.tool(t, "read_workspace", map[string]any{"topic": "actions", "router": "change_settings", "action": "create_stage"})
+	t.Logf("change_settings answers %d bytes whole and %d for one action", len(whole), len(one))
+	var answer struct {
+		Actions []struct {
+			Action string `json:"action"`
+		} `json:"actions"`
+	}
+	if err := json.Unmarshal(one, &answer); err != nil {
+		t.Fatal(err)
+	}
+	if len(answer.Actions) != 1 || answer.Actions[0].Action != "create_stage" {
+		t.Errorf("asking for one action answered %s", one)
+	}
+	got := d.mcp.Call(t, "read_workspace", map[string]any{"topic": "actions", "router": "change_settings", "action": "no_such_action"})
+	if !got.IsError {
+		t.Errorf("an action the router lacks answered %+v", got)
+	}
 }

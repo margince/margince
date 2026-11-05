@@ -133,6 +133,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 
 	api := contractAPI(srv, pool, identitySvc)
 	srv.views.api = api
+	srv.views.ceiling = bodyCeilingFor(uploadCeilings(srv.uploadLimits))
 	// ONE identity.Service for the whole process: contractAPI's admission
 	// gate and the connector's authenticate closure share this instance, so
 	// they share its singleton cache and its clock.

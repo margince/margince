@@ -146,3 +146,14 @@ func TestARouteThatIsNotOfferedHereSaysSoAndAServerFaultDoesNot(t *testing.T) {
 		t.Fatalf("a 500 answered %v as a classified refusal, want a fault of the server", err)
 	}
 }
+
+// A JSON media type of any kind reads as JSON, as the generator publishes it.
+func TestASchemaJSONAnswerPassesAsItsDocument(t *testing.T) {
+	raw, err := routeAnswer(agents.RouteVerb{Verb: "get_ai_routing_schema", Method: http.MethodGet}, recorded("application/schema+json", "", []byte(`{"$defs":{}}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(raw) != `{"$defs":{}}` {
+		t.Errorf("the answer reads %s", raw)
+	}
+}

@@ -46,6 +46,21 @@
     "acknowledge_approval_failure": {
       "checks": []
     },
+    "acknowledge_company_view": {
+      "checks": [
+        "company.read"
+      ]
+    },
+    "acknowledge_contact_view": {
+      "checks": [
+        "contact.read"
+      ]
+    },
+    "activate_home_repair": {
+      "checks": [
+        "data_task.update"
+      ]
+    },
     "add_capture_exclusion": {
       "checks": []
     },
@@ -69,6 +84,11 @@
     "add_team_member": {
       "checks": [
         "team_admin.update"
+      ]
+    },
+    "add_voice_source": {
+      "checks": [
+        "voice_profile.update"
       ]
     },
     "add_weekly_plan_commitment": {
@@ -123,10 +143,26 @@
         "relationship.read"
       ]
     },
+    "apply_legacy_loss_reasons": {
+      "checks": [
+        "custom_field.read",
+        "custom_field.update",
+        "data_task.read",
+        "data_task.update"
+      ]
+    },
     "apply_tag": {
       "checks": [
         "company.update,contact.update,deal.update,lead.update,project.update",
         "tag.read"
+      ]
+    },
+    "apply_voice_version": {
+      "checks": []
+    },
+    "archive_automation": {
+      "checks": [
+        "automation.delete"
       ]
     },
     "archive_contract": {
@@ -144,9 +180,19 @@
         "deal_room.delete"
       ]
     },
+    "archive_exit_criterion": {
+      "checks": [
+        "pipeline.update"
+      ]
+    },
     "archive_legal_entity": {
       "checks": [
         "legal_entity.delete"
+      ]
+    },
+    "archive_pipeline": {
+      "checks": [
+        "pipeline.delete"
       ]
     },
     "archive_record": {
@@ -179,9 +225,30 @@
         "saved_view.delete"
       ]
     },
+    "archive_signal": {
+      "checks": [
+        "signal.delete"
+      ]
+    },
+    "archive_stage": {
+      "checks": [
+        "pipeline.delete"
+      ]
+    },
     "archive_tag": {
       "checks": [
         "tag.delete"
+      ]
+    },
+    "archive_voice_profile": {
+      "checks": [
+        "voice_profile.delete",
+        "voice_profile.read"
+      ]
+    },
+    "archive_web_form": {
+      "checks": [
+        "integrations.delete"
       ]
     },
     "ask_about_company": {
@@ -250,6 +317,11 @@
     "backfill_employment_import": {
       "checks": [
         "admin"
+      ]
+    },
+    "build_voice_profile": {
+      "checks": [
+        "voice_profile.update"
       ]
     },
     "bulk_update_records": {
@@ -408,6 +480,11 @@
         "privacy_request.update"
       ]
     },
+    "control_data_task": {
+      "checks": [
+        "data_task.update"
+      ]
+    },
     "correct_deal_close_day": {
       "checks": [
         "company.read",
@@ -426,6 +503,11 @@
         "custom_field.create"
       ]
     },
+    "create_automation": {
+      "checks": [
+        "automation.create"
+      ]
+    },
     "create_contract": {
       "checks": [
         "company.read",
@@ -439,6 +521,11 @@
         "knowledge_corpus.create"
       ]
     },
+    "create_custom_field": {
+      "checks": [
+        "custom_field.create"
+      ]
+    },
     "create_deal_outcome_review": {
       "checks": [
         "activity.create",
@@ -446,10 +533,21 @@
         "deal.read"
       ]
     },
+    "create_exit_criterion": {
+      "checks": [
+        "pipeline.update"
+      ]
+    },
     "create_forecast_share": {
       "checks": [
         "forecast.create",
         "forecast.read"
+      ]
+    },
+    "create_former_member": {
+      "checks": [
+        "user_admin.create",
+        "user_admin.read|create|update|delete"
       ]
     },
     "create_intro_request": {
@@ -491,6 +589,17 @@
       "checks": [
         "activity.create",
         "activity.read"
+      ]
+    },
+    "create_partner_stage": {
+      "checks": [
+        "custom_field.create"
+      ]
+    },
+    "create_pipeline": {
+      "checks": [
+        "deal.read",
+        "pipeline.create"
       ]
     },
     "create_project_health_assessment": {
@@ -557,6 +666,16 @@
         "saved_view.create"
       ]
     },
+    "create_signal": {
+      "checks": [
+        "signal.create"
+      ]
+    },
+    "create_stage": {
+      "checks": [
+        "pipeline.update"
+      ]
+    },
     "create_tag": {
       "checks": [
         "tag.create"
@@ -571,6 +690,12 @@
     "create_team": {
       "checks": [
         "team_admin.create"
+      ]
+    },
+    "create_voice_profile": {
+      "checks": [
+        "voice_profile.create",
+        "voice_profile.read"
       ]
     },
     "data_coverage": {
@@ -735,6 +860,16 @@
     "disconnect_connector": {
       "checks": []
     },
+    "disconnect_finance_source": {
+      "checks": [
+        "integrations.delete"
+      ]
+    },
+    "disconnect_provider": {
+      "checks": [
+        "integrations.delete"
+      ]
+    },
     "dismiss_company_suggestion": {
       "checks": [
         "activity.read",
@@ -809,6 +944,11 @@
         "pipeline.read"
       ]
     },
+    "download_jurisdiction_document": {
+      "checks": [
+        "installation_settings.read"
+      ]
+    },
     "download_offer_pdf": {
       "checks": [
         "company.read",
@@ -880,6 +1020,11 @@
       "checks": [
         "company.read",
         "company.update"
+      ]
+    },
+    "enrich_contact_from_provider": {
+      "checks": [
+        "contact.update"
       ]
     },
     "ensure_company_scan": {
@@ -971,6 +1116,11 @@
     "get_ai_budget": {
       "checks": [
         "ai_budget.read"
+      ]
+    },
+    "get_ai_call": {
+      "checks": [
+        "ai_diagnostics.read"
       ]
     },
     "get_ai_call_stats": {
@@ -1565,6 +1715,17 @@
         "deal.update"
       ]
     },
+    "import_linkedin_connections": {
+      "checks": [
+        "contact.create"
+      ]
+    },
+    "import_vcards": {
+      "checks": [
+        "contact.create",
+        "contact.update"
+      ]
+    },
     "intro_path_to": {
       "checks": [
         "company.read",
@@ -1641,6 +1802,12 @@
         "relationship.read"
       ]
     },
+    "link_finance_customer": {
+      "checks": [
+        "company.read",
+        "integrations.update"
+      ]
+    },
     "link_lead_company": {
       "checks": [
         "company.read",
@@ -1649,6 +1816,16 @@
     },
     "list_agent_tools": {
       "checks": []
+    },
+    "list_ai_calls": {
+      "checks": [
+        "ai_diagnostics.read"
+      ]
+    },
+    "list_ai_model_rates": {
+      "checks": [
+        "ai_model_rate.read"
+      ]
     },
     "list_approvals": {
       "checks": [
@@ -1811,6 +1988,17 @@
         "forecast.read"
       ]
     },
+    "list_fx_rate_currencies": {
+      "checks": [
+        "deal.read"
+      ]
+    },
+    "list_fx_rates": {
+      "checks": [
+        "fx_rate.read",
+        "installation_settings.read"
+      ]
+    },
     "list_held_threads": {
       "checks": []
     },
@@ -1899,6 +2087,11 @@
       "checks": [
         "deal.read",
         "pipeline.read"
+      ]
+    },
+    "list_product_translations": {
+      "checks": [
+        "product.read"
       ]
     },
     "list_provider_connections": {
@@ -1999,6 +2192,11 @@
     "list_tags": {
       "checks": [
         "tag.read"
+      ]
+    },
+    "list_tax_rates": {
+      "checks": [
+        "tax_rate.read"
       ]
     },
     "list_voice_corpus_sources": {
@@ -2170,6 +2368,31 @@
         "relationship.read"
       ]
     },
+    "preview_ai_budget": {
+      "checks": [
+        "ai_budget.read",
+        "ai_budget.update",
+        "ai_routing.read"
+      ]
+    },
+    "preview_ai_routing": {
+      "checks": [
+        "ai_budget.read",
+        "ai_routing.read",
+        "ai_routing.update"
+      ]
+    },
+    "preview_ai_task_overrides": {
+      "checks": [
+        "ai_routing.read",
+        "ai_routing.update"
+      ]
+    },
+    "preview_automation": {
+      "checks": [
+        "automation.read"
+      ]
+    },
     "preview_connector_backfill": {
       "checks": [
         "activity.create",
@@ -2202,6 +2425,12 @@
         "signal.read"
       ]
     },
+    "preview_home_repair": {
+      "checks": [
+        "activity.read",
+        "data_task.read"
+      ]
+    },
     "preview_import": {
       "checks": [
         "custom_field.read",
@@ -2214,6 +2443,11 @@
       "checks": [
         "deal.read",
         "lead.read"
+      ]
+    },
+    "preview_mail_deal_repair": {
+      "checks": [
+        "data_task.read"
       ]
     },
     "preview_member_retirement": {
@@ -2234,6 +2468,11 @@
       "checks": [
         "activity.create",
         "activity.read"
+      ]
+    },
+    "preview_voice_source": {
+      "checks": [
+        "voice_profile.update"
       ]
     },
     "progress_deal": {
@@ -2273,6 +2512,9 @@
         "relationship.read"
       ]
     },
+    "propose_fx_rate_refresh": {
+      "checks": []
+    },
     "propose_report_setup": {
       "checks": [
         "product.read",
@@ -2301,6 +2543,11 @@
     "put_anchor_company": {
       "checks": [
         "admin"
+      ]
+    },
+    "put_product_translation": {
+      "checks": [
+        "product.update"
       ]
     },
     "put_scheduling_alias": {
@@ -2342,6 +2589,16 @@
         "activity.read"
       ]
     },
+    "read_ai_price_sync": {
+      "checks": [
+        "ai_model_rate.read"
+      ]
+    },
+    "read_ai_routing": {
+      "checks": [
+        "ai_routing.read"
+      ]
+    },
     "read_approval": {
       "checks": [
         "company.read",
@@ -2353,18 +2610,44 @@
         "deal.update"
       ]
     },
+    "read_automatic_work_health": {
+      "checks": [
+        "job_health.read"
+      ]
+    },
     "read_brief": {
       "checks": [
         "activity.read",
         "deal.read"
       ]
     },
+    "read_capture_health": {
+      "checks": [
+        "job_health.read"
+      ]
+    },
     "read_capture_trace_pipeline": {
       "checks": []
+    },
+    "read_card_photo": {
+      "checks": [
+        "contact.create",
+        "contact.update"
+      ]
     },
     "read_corpus": {
       "checks": [
         "knowledge_corpus.read"
+      ]
+    },
+    "read_data_tasks": {
+      "checks": [
+        "data_task.read"
+      ]
+    },
+    "read_extension_ingest_health": {
+      "checks": [
+        "job_health.read"
       ]
     },
     "read_import_report": {
@@ -2372,11 +2655,38 @@
         "import_run.read"
       ]
     },
+    "read_installation_jurisdiction": {
+      "checks": [
+        "installation_settings.read"
+      ]
+    },
+    "read_job_health": {
+      "checks": [
+        "job_health.read"
+      ]
+    },
+    "read_job_health_history": {
+      "checks": [
+        "job_health.read"
+      ]
+    },
     "read_lists": {
       "checks": [
         "company.read",
         "list.read"
       ]
+    },
+    "read_my_brief_delivery": {
+      "checks": []
+    },
+    "read_my_working_hours": {
+      "checks": []
+    },
+    "read_onboarding_company_proposal": {
+      "checks": []
+    },
+    "read_onboarding_state": {
+      "checks": []
     },
     "read_project_360": {
       "checks": [
@@ -2401,9 +2711,32 @@
         "activity.read,deal_room.update,lead.read,offer.read,project.read,relationship.read"
       ]
     },
+    "read_recovery_health": {
+      "checks": [
+        "job_health.read"
+      ]
+    },
     "read_reporting": {
       "checks": [
         "report_definition.read"
+      ]
+    },
+    "read_retention_settings": {
+      "checks": [
+        "retention_policy.read"
+      ]
+    },
+    "read_site_read_logo": {
+      "checks": [
+        "company.read"
+      ]
+    },
+    "read_system_health": {
+      "checks": [
+        "ai_diagnostics.read",
+        "data_task.read",
+        "job_health.read",
+        "job_health.read,data_task.read,embedding_reindex.read,installation_settings.update"
       ]
     },
     "read_transcript_for_next_steps": {
@@ -2465,6 +2798,19 @@
         "activity.update"
       ]
     },
+    "record_tax_rate": {
+      "checks": [
+        "tax_rate.create"
+      ]
+    },
+    "refresh_ai_model_rates": {
+      "checks": [
+        "ai_model_rate.create|update",
+        "ai_model_rate.read",
+        "ai_model_rate.update",
+        "ai_routing.read"
+      ]
+    },
     "refresh_company_dossier": {
       "checks": [
         "company.read",
@@ -2513,6 +2859,9 @@
         "company.read",
         "offer.update"
       ]
+    },
+    "reject_voice_version": {
+      "checks": []
     },
     "relink_activities": {
       "checks": [
@@ -2566,6 +2915,11 @@
         "user_admin.update"
       ]
     },
+    "rename_custom_field": {
+      "checks": [
+        "custom_field.update"
+      ]
+    },
     "render_offer": {
       "checks": [
         "company.read",
@@ -2596,6 +2950,16 @@
     },
     "reopen_worklist_rows": {
       "checks": []
+    },
+    "reorder_pipelines": {
+      "checks": [
+        "pipeline.update"
+      ]
+    },
+    "reorder_stages": {
+      "checks": [
+        "pipeline.update"
+      ]
     },
     "replace_deal_products": {
       "checks": [
@@ -2662,6 +3026,11 @@
         "deal_room.update"
       ]
     },
+    "resend_member_invite": {
+      "checks": [
+        "user_admin.update"
+      ]
+    },
     "resolve_confirm_submission": {
       "checks": [
         "company.read",
@@ -2683,6 +3052,11 @@
       "checks": [
         "deal.update",
         "forecast.update",
+        "signal.update"
+      ]
+    },
+    "resolve_signal": {
+      "checks": [
         "signal.update"
       ]
     },
@@ -2709,6 +3083,11 @@
     "restore_owner_identity": {
       "checks": []
     },
+    "restore_pipeline": {
+      "checks": [
+        "pipeline.update"
+      ]
+    },
     "restore_relationship_nudge": {
       "checks": [
         "contact.read"
@@ -2731,6 +3110,11 @@
         "deal_room.update"
       ]
     },
+    "retire_custom_field": {
+      "checks": [
+        "custom_field.update"
+      ]
+    },
     "retract_acquisition_request": {
       "checks": [
         "contact.update"
@@ -2739,6 +3123,11 @@
     "retract_qualifying_event": {
       "checks": [
         "contact.update"
+      ]
+    },
+    "retry_automation_run": {
+      "checks": [
+        "automation.update"
       ]
     },
     "retry_reporting_execution": {
@@ -2784,6 +3173,9 @@
         "company.update"
       ]
     },
+    "rollback_voice_version": {
+      "checks": []
+    },
     "run_analytics_query": {
       "checks": [
         "activity.read",
@@ -2825,10 +3217,30 @@
         "activity.create"
       ]
     },
+    "save_my_display_name": {
+      "checks": []
+    },
     "save_my_email_signature": {
       "checks": []
     },
+    "save_my_greeting_name": {
+      "checks": []
+    },
     "save_my_linked_in_account": {
+      "checks": []
+    },
+    "save_my_locale": {
+      "checks": []
+    },
+    "save_my_onboarding_state": {
+      "checks": [
+        "company.read"
+      ]
+    },
+    "save_my_timezone": {
+      "checks": []
+    },
+    "save_my_working_hours": {
       "checks": []
     },
     "search_context": {
@@ -2902,6 +3314,17 @@
         "activity.read"
       ]
     },
+    "set_ai_model_rate": {
+      "checks": [
+        "ai_model_rate.create|update"
+      ]
+    },
+    "set_ai_price_sync": {
+      "checks": [
+        "ai_model_rate.read",
+        "ai_model_rate.update"
+      ]
+    },
     "set_blocked_domain": {
       "checks": [
         "company.update"
@@ -2927,6 +3350,11 @@
     "set_deal_room_expiry": {
       "checks": [
         "deal_room.update"
+      ]
+    },
+    "set_fx_rate": {
+      "checks": [
+        "fx_rate.create|update"
       ]
     },
     "set_lead_manual_signal": {
@@ -2988,6 +3416,11 @@
         "forecast.create"
       ]
     },
+    "start_search_reindex": {
+      "checks": [
+        "embedding_reindex.update"
+      ]
+    },
     "start_weekly_plan": {
       "checks": [
         "weekly_plan.create"
@@ -2997,6 +3430,9 @@
       "checks": [
         "contact.update"
       ]
+    },
+    "sync_finance_source": {
+      "checks": []
     },
     "take_over_conversation_claim": {
       "checks": [
@@ -3034,6 +3470,11 @@
         "deal.update"
       ]
     },
+    "unlink_finance_customer": {
+      "checks": [
+        "integrations.update"
+      ]
+    },
     "unpin_worklist_row": {
       "checks": [
         "activity.read"
@@ -3060,6 +3501,11 @@
         "company.update"
       ]
     },
+    "update_automation": {
+      "checks": [
+        "automation.update"
+      ]
+    },
     "update_contact_case_settings": {
       "checks": [
         "admin",
@@ -3077,6 +3523,11 @@
     "update_corpus": {
       "checks": [
         "knowledge_corpus.update"
+      ]
+    },
+    "update_custom_field_options": {
+      "checks": [
+        "custom_field.update"
       ]
     },
     "update_data_subject_request": {
@@ -3097,6 +3548,11 @@
     "update_deal_room_participant": {
       "checks": [
         "deal_room.update"
+      ]
+    },
+    "update_exit_criterion": {
+      "checks": [
+        "pipeline.update"
       ]
     },
     "update_follow_up_settings": {
@@ -3153,6 +3609,16 @@
     "update_member": {
       "checks": [
         "user_admin.update"
+      ]
+    },
+    "update_partner_stage": {
+      "checks": [
+        "custom_field.update"
+      ]
+    },
+    "update_pipeline": {
+      "checks": [
+        "pipeline.update"
       ]
     },
     "update_record": {
@@ -3222,6 +3688,16 @@
         "saved_view.update"
       ]
     },
+    "update_signal": {
+      "checks": [
+        "signal.update"
+      ]
+    },
+    "update_stage": {
+      "checks": [
+        "pipeline.update"
+      ]
+    },
     "update_tag": {
       "checks": [
         "tag.update"
@@ -3230,6 +3706,44 @@
     "update_team": {
       "checks": [
         "team_admin.update"
+      ]
+    },
+    "update_voice_profile": {
+      "checks": [
+        "voice_profile.update"
+      ]
+    },
+    "update_voice_source": {
+      "checks": [
+        "voice_profile.update"
+      ]
+    },
+    "update_web_form": {
+      "checks": []
+    },
+    "upload_company_logo": {
+      "checks": [
+        "admin"
+      ]
+    },
+    "upload_company_logo_icon": {
+      "checks": [
+        "admin"
+      ]
+    },
+    "upload_corpus_document": {
+      "checks": [
+        "knowledge_document.create"
+      ]
+    },
+    "upload_legal_entity_logo": {
+      "checks": [
+        "legal_entity.update"
+      ]
+    },
+    "upsert_partner": {
+      "checks": [
+        "company.update"
       ]
     },
     "validate_import_run": {

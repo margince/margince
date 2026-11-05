@@ -71,7 +71,7 @@ To add, rename, reorder or remove stages, open the account menu → **Settings**
 
 A stage whose win probability is lower than the stage above it is marked, but the order is still saved. A role that cannot edit pipelines sees "Read-only settings" at the top of the page.
 
-An agent is always refused. Also called: deal stages, sales process, customise the pipeline, reorder stages.
+An agent acting for someone who may edit pipelines can do the same. It cannot add a won or lost stage or change what a stage means. While a move runs by itself on the pipeline, it cannot change the stages or **Exit criteria** either. Also called: deal stages, sales process, customise the pipeline, reorder stages.
 
 ### How do I create another pipeline?
 To add a pipeline, open **Settings** → **Pipelines** and choose **New pipeline**.
@@ -118,8 +118,8 @@ Rename them, reorder them, add your own. Two rules you cannot change: a won stag
 is always 100 and a lost stage is always 0.
 
 You edit pipelines and stages at **Settings → Pipelines**, in the Sales group.
-Only a human can edit them. An agent is refused, because every "should this deal
-move?" idea is judged against the stage ladder.
+An agent acting for you can edit them too. What a stage means stays with you, and so do the
+stages while a move runs by itself: automatic moves are judged on them.
 
 Removing a stage tells you what happens. The stages after it move up, and past
 stage changes still read well. Deals still on it have to move first.
