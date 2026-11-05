@@ -1,8 +1,8 @@
 # Holds main-health to its two-hour cadence while main is moving.
 #
-# The cron in main-health.yml gets about a third of its runs from GitHub's
-# scheduler, late and with no record of the ones it skipped. A push is delivered,
-# and main only needs a new health check once something has landed on it.
+# GitHub's scheduler can run the cron in main-health.yml hours late or not at all,
+# with no record of a run it skipped. A push is delivered, and main only needs a
+# new health check once something has landed on it.
 #
 # A dispatch through GITHUB_TOKEN does start a workflow, unlike a push made with it.
 name: main-health-pace

@@ -22,7 +22,8 @@ cat >"$stub_dir/gh" <<'STUB'
 case "$*" in
 "run list"*)
   [[ "${LIST_FAILS:-}" == 1 ]] && { echo "HTTP 502" >&2; exit 1; }
-  [[ "$*" == *"--workflow main-health.yml"* && "$*" == *"--branch main"* ]] || {
+  # No --event: a run started by hand or by the cron has to count too.
+  [[ "$*" == *"--workflow main-health.yml"* && "$*" == *"--branch main"* && "$*" != *"--event"* ]] || {
     echo "unexpected run list: $*" >&2
     exit 1
   }

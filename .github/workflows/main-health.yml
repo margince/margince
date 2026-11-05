@@ -8,7 +8,7 @@
 # the wrong contact. The nightly lane in scheduled.yml answers the same question
 # once a day; at eight merges an hour that is a working day of exposure.
 #
-# So this runs every two hours while main is moving, started by
+# So this runs at most every two hours while main is moving, started by
 # main-health-pace.yml, and when it finds main broken it files ONE issue per
 # broken lane naming the commits that landed since the last green run and who
 # authored them. The point is attribution and speed, not prevention.
@@ -26,7 +26,7 @@ name: main-health
 on:
   schedule:
     # The floor for a quiet main, where no push arrives to start a run. Slower than
-    # the pacer so the two do not stack, and GitHub drops most of these anyway.
+    # the pacer so the two do not stack, and GitHub can drop any of these.
     # :17 rather than :00 — the top of the hour is when every other cron in every
     # other repository fires, and this lane competes for the same runner pool.
     - cron: "17 */6 * * *"

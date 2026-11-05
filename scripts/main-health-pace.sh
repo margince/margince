@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # main-health-pace.sh — start the health check once the last one is old enough.
 #
-# GitHub's scheduler creates about a third of the runs main-health.yml's cron
-# asks for, and it never reports the ones it skips. A push to main is delivered,
-# so each push asks this one question and the cadence holds while main is moving.
+# GitHub's scheduler can run main-health.yml's cron hours late or not at all, and
+# it never reports a run it skips. A push to main is delivered, so each push asks
+# this one question and the cadence holds while main is moving.
 #
 # It reads the newest run of ANY event, because a run started by hand or by the
 # cron answers the same question as one started from here.
