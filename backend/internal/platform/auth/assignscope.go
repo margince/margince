@@ -97,16 +97,32 @@ func EnsureRunAsOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 // returns the candidates the caller may make an owner, so a picker built on it
 // offers what the write accepts.
 func EligibleAssignees(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
+	return eligibleAmong(ctx, tx, candidates, func(func(any) int) string { return AssigneeEligibleSQL("u") })
+}
+
+// EligibleRunAsOwners answers EnsureRunAsOwner for many seats in one query, so
+// an automation's owner picker offers only the owners its write accepts.
+func EligibleRunAsOwners(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return eligibleAmong(ctx, tx, candidates, func(arg func(any) int) string { return runAsOwnerSQL(p, "u", arg) })
+}
+
+func eligibleAmong(ctx context.Context, tx pgx.Tx, candidates []ids.UUID, predicate func(arg func(any) int) string) (map[ids.UUID]bool, error) {
 	eligible := make(map[ids.UUID]bool, len(candidates))
 	if len(candidates) == 0 {
 		return eligible, nil
 	}
+	args := []any{candidates}
+	arg := func(v any) int { args = append(args, v); return len(args) }
 	query := fmt.Sprintf(
 		`SELECT u.owner_id FROM (
 		   SELECT id AS owner_id, status, archived_at, is_agent, seat_type
 		   FROM app_user WHERE id = ANY($1)) u WHERE %s`,
-		AssigneeEligibleSQL("u"))
-	rows, err := tx.Query(ctx, query, candidates)
+		predicate(arg))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("ask which seats may own records: %w", err)
 	}

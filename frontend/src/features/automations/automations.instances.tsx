@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { useRecordOwnerOptions } from "../../components/assigneepicker";
+import { useRunAsOwnerOptions } from "../../components/assigneepicker";
 import { RosterFailedLine } from "../../components/entityref";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
@@ -354,7 +354,7 @@ function AutomationOwner({
 }: Readonly<{ automation: Automation; canEdit: boolean }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const { options: owners, roster } = useRecordOwnerOptions(canEdit);
+  const { options: owners, roster } = useRunAsOwnerOptions(canEdit);
   const hand = useMutation({
     mutationFn: patchAutomation,
     onSettled: () =>
