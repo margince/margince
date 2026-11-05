@@ -135,7 +135,7 @@ func defectNaming(t *testing.T, defects []string, op string) string {
 }
 
 func suggestedLine(defect string) string {
-	for _, line := range strings.Split(defect, "\n") {
+	for line := range strings.SplitSeq(defect, "\n") {
 		if rest, found := strings.CutPrefix(strings.TrimSpace(line), "Suggested: "); found {
 			return rest
 		}

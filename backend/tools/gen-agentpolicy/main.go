@@ -7,10 +7,10 @@
 // backing MCP tool verb + declared tier (`x-mcp-tool`) or the
 // `x-agent-access` class (`human-only` | `auth-bootstrap`).
 //
-// It is also the contract drift-lint (interfaces.md §2 fail-closed rule):
-// an operation a principal reaches carrying NEITHER annotation fails
-// generation, read or write, because the gate refuses a route it has no row
-// for. The refusal suggests the placement (placement.go) but never writes it.
+// It is also the contract's fail-closed drift-lint.
+// An operation a principal reaches fails generation, read or write, when it
+// carries neither annotation. The gate refuses a route it has no row for.
+// The refusal suggests the placement (placement.go) but never writes it.
 package main
 
 import (

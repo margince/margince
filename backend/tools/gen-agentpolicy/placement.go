@@ -67,9 +67,9 @@ func suggestPlacement(target policy, placed []policy, tags map[string][]string) 
 	return placement{}, false
 }
 
-// recordPlacement places a create, change, archive or read of a record type:
-// a sibling in the record's collection names the type, and the verb is the one
-// the contract most often gives that method on that shape of record path.
+// recordPlacement places a create, change, archive or read of a record type.
+// A sibling in the record's collection names the type. The verb is the one the
+// contract most often gives that method on that shape of record path.
 func recordPlacement(method, path string, tools []policy) (placement, bool) {
 	collection, item := recordShape(path)
 	recordType, source := "", ""
@@ -101,9 +101,9 @@ func recordPlacement(method, path string, tools []policy) (placement, bool) {
 	}, true
 }
 
-// siblingPlacement places an operation beside a routed one on its own path:
-// in the sibling's router when it spends the same scope, else in the router
-// the contract most often pairs with it on a shared path.
+// siblingPlacement places an operation beside a routed one on its own path.
+// A sibling that spends the same scope gives its own router. Otherwise the
+// router the contract most often pairs with the sibling's on a path wins.
 func siblingPlacement(method, path, verb string, tools []policy) (placement, bool) {
 	scope := methodScope(method)
 	var sibling *policy
@@ -212,18 +212,11 @@ func methodScope(method string) string {
 // recordShape names a path's record collection and whether the path is one
 // item of it: /companies/{id} is an item of /companies.
 func recordShape(path string) (string, bool) {
-	parent, last, found := cutLast(path, "/")
+	parent, last, found := strings.CutLast(path, "/")
 	if found && strings.HasPrefix(last, "{") {
 		return parent, true
 	}
 	return path, false
-}
-
-func cutLast(s, sep string) (string, string, bool) {
-	if i := strings.LastIndex(s, sep); i >= 0 {
-		return s[:i], s[i+len(sep):], true
-	}
-	return s, "", false
 }
 
 // routeParts splits a policy route into its method and its contract path.
