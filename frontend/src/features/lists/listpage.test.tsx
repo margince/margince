@@ -35,6 +35,7 @@ import {
   shortlist,
   visitAnswer,
 } from "../../testing/lists.fixtures";
+import { openViewStep } from "../../testing/listview.testkit";
 import {
   emptyPage,
   installFetchStub,
@@ -214,7 +215,7 @@ describe("an opened list", () => {
     expect(within(row).queryByText(parent)).toBeNull();
   });
 
-  it("draws the first four filter fields and offers the rest under Display", async () => {
+  it("draws the first four filter fields and offers the rest under Columns", async () => {
     const fields = ["industry", "city", "country", "employees", "website"];
     installFetchStub({
       "GET /me": listsMe(true),
@@ -237,8 +238,8 @@ describe("an opened list", () => {
       await screen.findByRole("columnheader", { name: "employees" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "website" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: en["table.display"] }));
-    await user.click(screen.getByRole("checkbox", { name: "website" }));
+    const step = await openViewStep(user, "Columns");
+    await user.click(within(step).getByRole("checkbox", { name: "website" }));
     expect(
       screen.getByRole("columnheader", { name: "website" }),
     ).toBeInTheDocument();

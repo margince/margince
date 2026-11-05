@@ -36,7 +36,7 @@ You can change **Partner kinds**, **Certification status**, **Margin tier**, **R
 Also called: certify a partner, suspend a partner, change a partner's tier.
 
 ### How do I see all my partners?
-To see every partner in Margince, open **Companies** in the sidebar and choose **Partners** in the list's toolbar.
+To see every partner in Margince, open **Companies** in the sidebar and press **Partners** beside **New company** at the top of the list. On a phone it is in the **More actions** menu there.
 The **Partners** list shows each partner's **Company**, **Partner kinds**, **Certification status** and **Relationship stage**. Make it shorter with the **Partner kinds**, **Relationship stage**, **Stage meaning** and **Certification status** filters. It has no search box and no fixed order. Click a row to open the company.
 
 The **Companies** list has the **Partner kinds**, **Relationship stage** and **Stage meaning** filters too, for a role that may see partners. **Stage meaning** finds, for example, all signed partners, whatever your stages are called.
