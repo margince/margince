@@ -10,9 +10,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AI_RATE_DAY_ZONE, todayIn } from "../../format/calendarday";
+import { todayIn } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
-import { browserZone } from "../../format/timezone";
+import { AI_RATE_DAY_ZONE, browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ModelPricesCard } from "../ai/ai-price-sync";
