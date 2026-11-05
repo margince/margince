@@ -64,7 +64,7 @@ func withReadableAmounts(data json.RawMessage) json.RawMessage {
 	if err := decoder.Decode(&tree); err != nil {
 		return data
 	}
-	if !addDisplays(tree) {
+	if !addDisplays(tree, "") {
 		return data
 	}
 	out, err := json.Marshal(tree)
@@ -74,22 +74,35 @@ func withReadableAmounts(data json.RawMessage) json.RawMessage {
 	return out
 }
 
-// addDisplays walks the tree and reports whether it added any figure.
+// addDisplays walks the tree and reports whether it added any figure. inherited
+// is the base_currency an enclosing object converted its figures to. An
+// object's own currency wins over it. Only base_currency passes down, because
+// a row's currency describes that row and not what it holds. Below a row that
+// names its own currency, nothing is inherited: its parts may be in either.
 //
 //craft:ignore naked-any the node is a decoded JSON value of unknown shape, and the walk is what reads its type
-func addDisplays(node any) bool {
+func addDisplays(node any, inherited string) bool {
 	added := false
 	switch typed := node.(type) {
 	case map[string]any:
-		if currency := currencyOf(typed); currency != "" {
+		currency := currencyOf(typed)
+		if currency == "" {
+			currency = inherited
+		}
+		if currency != "" {
 			added = addPairDisplays(typed, currency)
 		}
+		if base, ok := typed[values.ConvertedCurrency].(string); ok && base != "" {
+			inherited = base
+		} else if own, ok := typed[values.AmountCurrency].(string); ok && own != "" {
+			inherited = ""
+		}
 		for _, child := range typed {
-			added = addDisplays(child) || added
+			added = addDisplays(child, inherited) || added
 		}
 	case []any:
 		for _, child := range typed {
-			added = addDisplays(child) || added
+			added = addDisplays(child, inherited) || added
 		}
 	}
 	return added

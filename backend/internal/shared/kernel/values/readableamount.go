@@ -13,9 +13,15 @@ import "strings"
 // MinorAmountSuffix ends the name of an amount counted in minor units.
 const MinorAmountSuffix = "_minor"
 
-// AmountCurrencyMembers name the currency an object's amounts are counted in. A
-// forecast's figures sit beside the base_currency they were converted to.
-func AmountCurrencyMembers() []string { return []string{"currency", "base_currency"} }
+// AmountCurrency names the currency an object's own amounts are counted in, and
+// ConvertedCurrency the one a forecast converted its figures to.
+const (
+	AmountCurrency    = "currency"
+	ConvertedCurrency = "base_currency"
+)
+
+// AmountCurrencyMembers name the currency an object's amounts are counted in.
+func AmountCurrencyMembers() []string { return []string{AmountCurrency, ConvertedCurrency} }
 
 // DisplayMemberOf is the readable member written beside the minor-unit amount
 // member, and whether member is one.

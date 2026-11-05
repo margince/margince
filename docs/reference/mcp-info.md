@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 13 |
-| Tool catalog | 220.9 KB |
+| Tool catalog | 221.0 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 57871 |
+| Approx. wire tokens | 57894 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,7 +33,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 46.6 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 52.4 KB | 23% | Yes, every step |
+| Descriptions (incl. governance clause) | 52.5 KB | 23% | Yes, every step |
 | Input schemas | 110.0 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
 | **Description + input schema** | **162.5 KB** | **73%** | **the recurring cost** |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
 | [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2031 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 929 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 952 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 307 |
@@ -8675,8 +8675,9 @@ clean pipeline; input_sources tells them apart, and needs a coverage grant selle
 read_reports and find_records with engine query also produce numbers, and neither is the forecast.
 For a board-pack section, use read_analytics: query with save, then compose. To make a call, answer
 an input exception or share a reading, use change_reports. Quote `as_of`, `timezone` and
-`base_currency` with the number. Every `_minor` figure is in minor units of `base_currency`: 3100000
-in EUR is EUR 31,000.
+`base_currency` with the number. A `_display` sits beside a `_minor` figure wherever its object
+names the unit: `base_currency`, or `current_call`'s own `currency`. Quote the `_display`, never the
+`_minor` integer.
 ```
 
 Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible to `model`.
