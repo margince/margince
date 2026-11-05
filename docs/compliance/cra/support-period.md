@@ -20,27 +20,28 @@ This page holds the rule and the reasons for it. The vulnerability process is in
 The Commission's guidance on the regulation, C(2026) 5252 of 27 July 2026, reads these duties for software
 that ships often:
 
-- **A release that is not a substantial modification is the same product** (point 15, example 2). It keeps the
-  date the version was first placed on the market, and its support period does not restart.
+- **A release can stay the same product** (point 15, example 2). A release that is not a substantial
+  modification keeps the date the version was first placed on the market, and its support period does
+  not restart.
 - **Five years is a floor** (point 126). It is not the default; a product used for longer gets a longer period.
 - **Article 13(10) covers software released every few months** (point 131, example 53). The manufacturer
   may stop fixing earlier versions once users can upgrade free of charge and with no added cost.
 - **Added cost means new hardware**, replaced infrastructure or a basic change to the operating environment
   (point 130). Staff time, routine tests, configuration changes and dependency upgrades are normal upgrade
   effort and do not count.
-- **The rest of Annex I Part II still applies** to every version: the disclosure policy, the sharing of
+- **Annex I Part II still applies** to every version: the disclosure policy, the sharing of
   vulnerability information, and the Article 14 reports.
 
 ## How Margince meets it
 
 | Duty | How |
 | --- | --- |
-| Latest release only (13(10)) | Fixes go to `main` and ship in the next release. No release branch gets a backport |
-| Free upgrade | A license covers every release, so an upgrade costs no license fee. Legal still has to confirm this against the license terms |
+| Latest release only (13(10)) | Fixes go to `main` and ship in the next `v*` release. No release branch gets a backport. The dist service lane in `release.yml` can release from an `lts/YYYY` branch; no such branch exists |
+| Free upgrade | A license token is not tied to a release: every build checks the same license generation, so a token that starts one release starts the next, and an upgrade costs no license fee. A build that checks a new generation would end this. Legal still has to confirm this against the license terms |
 | No added cost | A release does not raise the hardware a node needs past [system-requirements.md](../../reference/system-requirements.md) without a new substantially modified version and its own support period. Postgres and Redis upgrades inside the supported range are dependency upgrades |
-| Upgrade path | The api applies migrations at start, so an upgrade is three new images: [deploy-margince.md](../../how-to/deploy-margince.md#roll-out-in-this-order) |
-| Updates stay available (13(9)) | Not settled. No rule yet keeps each release and its images downloadable for 10 years |
-| End date (13(19)) | Not built. The release notes do not yet state the end date |
+| Upgrade path | The api applies migrations at start, so an upgrade is three new images or one new server bundle: [deploy-margince.md](../../how-to/deploy-margince.md#roll-out-in-this-order), [install-on-a-server.md](../../how-to/install-on-a-server.md#upgrade-to-a-new-release) |
+| Updates stay available (13(9)) | Not settled. Each `v*` release puts its images on `ghcr.io` and its server bundles on its GitHub release page. No rule yet keeps them there for 10 years |
+| End date (13(19)) | Not built. The release notes, which are the GitHub release page, do not yet state the end date |
 | End notice (13(19)) | Not built. The app does not yet show that support has ended |
 
 ## Support period and end date
@@ -61,6 +62,6 @@ any case (Article 69(3)).
 
 - [ ] Legal confirms that the license terms meet "free of charge" in Article 13(10).
 - [ ] The expected use time is written down, and the period is confirmed at five years or set longer.
-- [ ] Each release and its images stay downloadable for 10 years.
+- [ ] Each release, its images and its server bundles stay downloadable for 10 years.
 - [ ] The release notes carry the end date.
 - [ ] The app tells an admin when support for its version has ended.

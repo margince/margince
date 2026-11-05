@@ -75,8 +75,8 @@ Out of scope:
 
 ## Supported versions
 
-We fix security holes in the latest release only. The upgrade to it is free, and it needs no new
-hardware. Each version gets at least five years of support. The rules and the reasons are in
+We fix security holes only in the last release. To change to it is free, and it needs no new
+machine. Each version gets support for 5 years or more. The rules and the reasons are in
 [docs/compliance/cra/support-period.md](docs/compliance/cra/support-period.md).
 
 ## No bounty
