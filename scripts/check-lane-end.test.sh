@@ -30,7 +30,15 @@ out="$(CHECK_LANE_TAIL=5 bash "$END" backend 2 "$log" 2>&1)" || status=$?
 [[ "$status" -ne 0 ]] || fail "a lane that exited 2 did not fail make check"
 grep -qF "FAIL: make check lane backend exited 2" <<<"$out" || fail "the failure does not name the lane and its status: $out"
 grep -qF -- "--- FAIL: TestSomethingBroke" <<<"$out" || fail "the end of the failed lane's log is not printed: $out"
-grep -qF "line 195" <<<"$out" && fail "more than the asked-for 5 lines of the log are printed: $out"
+grep -qF "line 150" <<<"$out" && fail "more than the asked-for 5 lines of the log are printed: $out"
+
+# In a lane that fans out, the failing gate's line sits far above the tail.
+{
+	echo "  FAIL a recorded stack is recognised"
+	seq 1 200 | sed 's/^/ok gate /'
+} >"$log"
+out="$(CHECK_LANE_TAIL=5 bash "$END" gates 2 "$log" 2>&1)" || true
+grep -qF "1:  FAIL a recorded stack is recognised" <<<"$out" || fail "a failure line above the tail is not printed: $out"
 grep -qF "$log" <<<"$out" || fail "the failure does not name the full log: $out"
 
 status=0

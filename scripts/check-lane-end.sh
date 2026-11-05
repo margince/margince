@@ -23,9 +23,18 @@ fi
 
 {
 	echo ""
-	echo "FAIL: make check lane $lane exited $status. Last $tail_lines lines of $log:"
+	echo "FAIL: make check lane $lane exited $status."
+	if [[ ! -f "$log" ]]; then
+		echo "(no log at $log)"
+		exit 1
+	fi
+	# A lane that fans out (the root gates run side by side) mixes its output,
+	# so the line that names the failure can sit far above the tail.
+	echo "Lines of $log that name a failure:"
+	grep -nE '(^|[^[:alnum:]_])(FAIL|FAILED|panic:)([^[:alnum:]_]|$)|\*\*\* ' "$log" | head -n 40 || true
+	echo "Last $tail_lines lines of $log:"
 	echo "----- $lane -----"
-	tail -n "$tail_lines" "$log" 2>/dev/null || echo "(no log at $log)"
+	tail -n "$tail_lines" "$log"
 	echo "----- end of $lane; full log: $log -----"
 } >&2
 exit 1
