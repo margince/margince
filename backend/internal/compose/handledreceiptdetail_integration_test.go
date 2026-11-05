@@ -32,8 +32,8 @@ import (
 )
 
 // appliedUnderPolicy decides a staged proposal the way the auto-apply sweep
-// does: as an agent carrying the owner's own grants, bound again in each of
-// the apply's transactions.
+// does. It acts as an agent with the owner's own grants, bound again in each
+// of the apply's transactions.
 func appliedUnderPolicy(
 	ctx context.Context, t *testing.T, pool *pgxpool.Pool, svc *approvals.Service, id ids.ApprovalID, owner ids.UUID,
 ) {

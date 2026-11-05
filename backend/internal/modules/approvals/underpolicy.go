@@ -16,20 +16,21 @@ import (
 )
 
 // PolicyActor binds, in the caller's transaction, the agent that applies a
-// proposal for its owner, with the owner's grants as they stand in that
+// proposal for its owner. It carries the owner's grants as they stand in that
 // transaction. ok is false when the record changed hands or the owner is no
-// longer live. Members and records are not this module's.
+// longer live. Members and records are not this module's. It runs before the
+// transaction locks any row.
 type PolicyActor func(ctx context.Context, tx pgx.Tx) (actor context.Context, ok bool, err error)
 
 // ErrPolicyWithdrawn reports an automatic apply that its owner stopped
-// allowing after the apply was decided: they left, lost the record or the
+// allowing after the apply was decided. They left, lost the record or the
 // grant, or turned the kind off. Nothing was written.
 var ErrPolicyWithdrawn = fmt.Errorf("the owner no longer lets this change apply without asking: %w",
 	apperrors.ErrPermissionDenied)
 
 type underPolicyKey struct{}
 
-// underPolicy names the one approval an automatic apply is releasing, so a
+// underPolicy names the one approval an automatic apply is releasing. A
 // redemption of any other approval on the same context is not read as one.
 type underPolicy struct {
 	id    ids.ApprovalID
@@ -48,12 +49,11 @@ func policyActorFor(ctx context.Context, id ids.ApprovalID) (PolicyActor, bool) 
 	return held.actAs, true
 }
 
-// actUnderPolicyNow binds the owner's agent as of tx and asks again whether
-// the owner still has a's kind on automatic. The decision and the effect each
-// ask in their own transaction, because each commits separately and a
-// suspension, role change or switch can land between them.
-func actUnderPolicyNow(ctx context.Context, tx pgx.Tx, a row) (context.Context, principal.Principal, error) {
-	actAs, ok := policyActorFor(ctx, a.ID)
+// bindUnderPolicy binds the owner's agent as of tx for the automatic apply of
+// approval id. It is the transaction's first statement: the bind waits for
+// authorization changes, and removing a member locks that member's records.
+func bindUnderPolicy(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (context.Context, principal.Principal, error) {
+	actAs, ok := policyActorFor(ctx, id)
 	if !ok || actAs == nil {
 		return nil, principal.Principal{}, errors.New(
 			"crmapprovals: an automatic apply needs its owner's authority read in its transaction")
@@ -69,25 +69,41 @@ func actUnderPolicyNow(ctx context.Context, tx pgx.Tx, a row) (context.Context, 
 	if !ok || p.UserID.IsZero() {
 		return nil, principal.Principal{}, errors.New("crmapprovals: the owner's agent names no owner")
 	}
-	mode, err := AutoApplyModeTx(actor, tx, p.UserID, a.Kind)
-	if err != nil {
-		return nil, principal.Principal{}, err
-	}
-	if mode != ModeAuto {
-		return nil, principal.Principal{}, ErrPolicyWithdrawn
-	}
 	return actor, p, nil
 }
 
-// stillUnderPolicy asks again, inside an effect's redemption, whether the
-// owner may still decide a and has its kind on automatic, when that
-// redemption releases an automatic apply. Any other redemption passes.
-func stillUnderPolicy(ctx context.Context, tx pgx.Tx, a row) error {
-	if _, ok := policyActorFor(ctx, a.ID); !ok {
-		return nil
-	}
-	actor, p, err := actUnderPolicyNow(ctx, tx, a)
+// stillOnAutomatic asks again whether the bound owner has a's kind on
+// automatic. The decision and the effect each ask in their own transaction,
+// because each commits separately and a switch can be turned off between them.
+func stillOnAutomatic(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) error {
+	mode, err := AutoApplyModeTx(ctx, tx, p.UserID, a.Kind)
 	if err != nil {
+		return err
+	}
+	if mode != ModeAuto {
+		return ErrPolicyWithdrawn
+	}
+	return nil
+}
+
+// bindForRedemption binds the owner's agent first in an effect's redemption
+// when that redemption releases an automatic apply. ok is false for any other
+// redemption.
+func bindForRedemption(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (context.Context, principal.Principal, bool, error) {
+	if _, ok := policyActorFor(ctx, id); !ok {
+		return nil, principal.Principal{}, false, nil
+	}
+	actor, p, err := bindUnderPolicy(ctx, tx, id)
+	if err != nil {
+		return nil, principal.Principal{}, false, err
+	}
+	return actor, p, true, nil
+}
+
+// stillUnderPolicy asks, in an effect's redemption, whether the owner bound
+// there may still decide a and has its kind on automatic.
+func stillUnderPolicy(actor context.Context, tx pgx.Tx, p principal.Principal, a row) error {
+	if err := stillOnAutomatic(actor, tx, p, a); err != nil {
 		return err
 	}
 	visible, err := decidable(actor, tx, p, a)

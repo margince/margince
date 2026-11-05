@@ -884,11 +884,9 @@ func (e *closeDateEnv) stageLegacyCard(t *testing.T, dealID ids.UUID, proposed t
 // A rep who has asked to be asked keeps their deals, whoever the pass first
 // saw holding them.
 //
-// The member page joins the live deal table, so an ordinary hand-over is
-// already picked up on the next page. What it cannot see is a hand-over that
-// lands AFTER that page is read and before the row lock is taken — the same
-// window the status re-check beside it exists for. The owner the lock holds is
-// asked there, so the sweep never writes for the rep who declined.
+// The member page joins the live deal table, so the next page sees an
+// ordinary hand-over. A hand-over after the page is read and before the row
+// lock waits for the next pass, which asks the new owner.
 func TestADealOwnedByAnOptedOutRepIsLeftAlone(t *testing.T) {
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Not to be touched", e.late, new(95), new(30), 90)

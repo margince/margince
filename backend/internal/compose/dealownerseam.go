@@ -9,9 +9,8 @@ package compose
 // unconditionally and which no row scope bounds. Its writes to an owned deal
 // run as the owner's agent instead (ownersAgentTx). The system principal is
 // also wrong for anything the sweep reads and then STORES into an approval
-// payload, because that payload is read back later by whoever holds the
-// card's decide grant, and the grant set is narrower than the principal that
-// filled it. A string resolved under the system principal and frozen into a row
+// payload. Whoever holds the card's decide grant reads that payload later, and
+// that grant set is narrower than the principal that filled it. A string resolved under the system principal and frozen into a row
 // is a disclosure no read-side gate can undo.
 //
 // So a producer that puts human-identifying data or message content on a card

@@ -141,15 +141,15 @@ func (a autoApplier) applyAs(ownerCtx context.Context, decision autoApplyDecisio
 func (a autoApplier) ownerNow(decision autoApplyDecision) approvals.PolicyActor {
 	bind := ownersAgentTx(a.users, decision.owner, autoApplyActorID)
 	return func(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
-		owner, err := ownerOfTx(ctx, tx, decision.target.entityType, decision.target.entityID)
-		if err != nil || owner != decision.owner {
-			return nil, false, err
-		}
 		actor, err := bind(ctx, tx)
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return nil, false, nil
 		}
 		if err != nil {
+			return nil, false, err
+		}
+		owner, err := ownerOfTx(ctx, tx, decision.target.entityType, decision.target.entityID)
+		if err != nil || owner != decision.owner {
 			return nil, false, err
 		}
 		return actor, true, nil
@@ -215,8 +215,8 @@ func ownerOfTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.U
 		return ids.Nil, nil
 	}
 	var owner *ids.UUID
-	// The table name is a value from ownedTables, a compile-time literal
-	// chosen by a key that had to match — never text off the approval row.
+	// The table name is a compile-time literal from ownedTables, chosen by a
+	// key that had to match, never text off the approval row.
 	err := tx.QueryRow(ctx,
 		`SELECT owner_id FROM `+table+` WHERE id = $1 AND archived_at IS NULL`,
 		entityID).Scan(&owner)

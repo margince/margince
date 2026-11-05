@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -37,11 +39,10 @@ var ownerChanges = map[string]func(e *closeDateEnv, t *testing.T){
 	"switch turned off": func(e *closeDateEnv, t *testing.T) { e.optOutOfCorrections(t, e.Rep1) },
 }
 
-// decisionChanges adds a handover to a colleague, with the old owner still
-// holding the grants to edit the deal: an automatic apply acts for the owner
-// whose switch it read, never for whoever holds the deal when it decides. In
-// the effect's transaction the version the approval pinned refuses a handover
-// first.
+// decisionChanges adds a handover to a colleague, while the old owner can
+// still edit the deal. An automatic apply acts for the owner whose switch it
+// read, never for whoever holds the deal when it decides. In the effect's
+// transaction, the version the approval pinned refuses a handover first.
 func decisionChanges() map[string]func(e *closeDateEnv, t *testing.T) {
 	changes := maps.Clone(ownerChanges)
 	changes["handed to a colleague"] = func(e *closeDateEnv, t *testing.T) {
@@ -177,5 +178,37 @@ func (e *closeDateEnv) dateUnchanged(t *testing.T, deal ids.UUID) {
 	want := today().AddDate(0, 0, 30)
 	if got := e.readSwept(t, deal); got.expectedClose == nil || !got.expectedClose.Equal(want) {
 		t.Errorf("close date = %v, want %s left alone", got.expectedClose, want.Format(time.DateOnly))
+	}
+}
+
+// An automatic apply binds the owner before the decision locks the approval,
+// and before the effect's redemption locks anything. Neither can then deadlock
+// with a member's removal.
+func TestAnAutomaticApplyBindsTheOwnerBeforeItLocksARecord(t *testing.T) {
+	e := setupCloseDate(t)
+	deal, approvalID := e.stageServerCard(t)
+	applier := autoApplier{pool: e.Pool, svc: e.svc, users: identity.NewService(e.Pool)}
+	decision, ownerCtx, ok, err := applier.decide(e.applyCtx(), approvalID)
+	if err != nil || !ok {
+		t.Fatalf("decide = %v, %v: want the proposal due to apply", ok, err)
+	}
+	bind := applier.ownerNow(decision)
+	var locksAtBind []int
+	counted := func(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
+		held, err := rowLocksHeld(ctx, tx)
+		if err != nil {
+			return nil, false, err
+		}
+		locksAtBind = append(locksAtBind, held)
+		return bind(ctx, tx)
+	}
+
+	if _, err := e.svc.ApplyUnderPolicy(ownerCtx, approvalID, counted); err != nil {
+		t.Fatal(err)
+	}
+
+	e.applied(t, true, approvalID, deal)
+	if len(locksAtBind) != 2 || locksAtBind[0] != 0 || locksAtBind[1] != 0 {
+		t.Errorf("record locks held at each owner bind = %v, want [0 0]: the decision's and the effect's", locksAtBind)
 	}
 }

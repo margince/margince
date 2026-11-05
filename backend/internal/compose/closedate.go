@@ -58,8 +58,8 @@ func (p closeDatePolicy) LikelyThreshold(ctx context.Context) (int, error) {
 }
 
 // CorrectsWithoutAsking reports whether this owner has left close-date hygiene
-// to the sweep, read in the write's transaction so a switch turned off before
-// the write holds.
+// to the sweep. It reads in the write's transaction, so a switch turned off
+// before the write holds.
 //
 // Compared against ModeAuto rather than "not manual", because there is a third
 // rung: a rep on `veto` has asked to see a change before it lands, and reading

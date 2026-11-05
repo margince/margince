@@ -299,6 +299,14 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 	var version int64
 	var wrote bool
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The owner first, before any row lock: the bind waits for
+		// authorization changes, and removing a member locks the deals that
+		// member owns. Their grants and switch as they stand now stop a write
+		// a suspension, lost role or switch turned off since the page forbids.
+		actor, mayWrite, err := c.ownerAllows(ctx, tx, cand.ownerID)
+		if err != nil {
+			return err
+		}
 		// The candidate scan and this write are separate transactions:
 		// a deal closed or archived in between must not be re-dated.
 		lock, err := storekit.LockRow(ctx, tx, dealTable, cand.id.UUID, storekit.LiveOnly)
@@ -317,14 +325,9 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		if DealStatus(status) != DealOpen {
 			return nil
 		}
-		// Asked of the owner the lock holds, with their grants and switch as
-		// they stand now: a handover, suspension, lost role or switch turned
-		// off since the member page was read stops this write.
-		actor, mayWrite, err := c.ownerAllows(ctx, tx, owner)
-		if err != nil {
-			return err
-		}
-		if !mayWrite {
+		// A deal handed over since the page was read waits for the next pass,
+		// which asks its new owner.
+		if !mayWrite || !sameOwner(cand.ownerID, owner) {
 			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
 		}
 		// The kill switch, read here rather than once per pass: an operator who
@@ -395,6 +398,16 @@ func (c *CloseDateCorrector) ownerAllows(ctx context.Context, tx pgx.Tx, owner *
 		return nil, false, err
 	}
 	return actor, true, nil
+}
+
+// sameOwner reports whether a deal is still held by the member the candidate
+// page named. Both sides are nullable, since owner_id is ON DELETE SET NULL,
+// and two unowned deals have the same owner.
+func sameOwner(before, now *ids.UUID) bool {
+	if before == nil || now == nil {
+		return before == nil && now == nil
+	}
+	return *before == *now
 }
 
 // WithBaseLanguage resolves the language before recording a shared correction.
