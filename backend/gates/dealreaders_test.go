@@ -59,6 +59,7 @@ var dealGate = objectGate{
 // the gated set: removing the deal condition could only WIDEN the result the
 // caller already sees.
 var predicateDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/entityfloor.go:activityRecordOwnersSQL":                "the owner_id, a USER id, of the deals a message is filed under, so the retention floor follows that user's legal entity. Nothing of the deal leaves the statement; it only picks which floor keeps the message",
 	"internal/compose/dealscoutbuyer.go:unlinkedCommercialMatter":                    "existence-only refusal of an automatic proposal already handled by a same-company deal or project; no deal fields leave the predicate",
 	"internal/modules/activities/awaitingreply.go":                                   "the follow-up reminder's customer test: an EXISTS asking whether the reader's own sent message is filed under an open deal. No deal column is selected, and the deal id it returns comes off the gated link join",
 	"internal/modules/deals/stagesemanticflip.go:refuseFlipUnderDecidedDeals":        "the mirror of the terminal rule: a COUNT of the deals in one stage whose status the stage's current semantic decided, taken to refuse a configuration change. No deal column leaves the statement and the refusal carries no number, so an admin holding pipeline:update learns that the stage holds decided deals and nothing about any of them. Its only effect is to REFUSE a write, never to surface a deal",

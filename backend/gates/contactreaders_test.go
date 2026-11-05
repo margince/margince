@@ -68,6 +68,7 @@ var contactGate = objectGate{
 // grants do not cover â so a read projecting r.contact_id with the contact
 // joined for liveness and row scope has taken the grant its payload sits behind.
 var predicateContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/entityfloor.go:activityRecordOwnersSQL":                 "the owner_id, a USER id, of the contacts a message is filed under, so the retention floor follows that user's legal entity. Nothing of the contact leaves the statement; it only picks which floor keeps the message",
 	"internal/modules/search/graphedgetargets.go:liveContactSQL":                      "whether the contact an edge names is archived, so an edge fold skips it. The contact appears only inside NOT EXISTS; nothing is selected, and removing the condition could only fold more edges for readers already gated on the graph",
 	"internal/modules/capture/suggestioneligibility.go:suggestiblePartiesTx":          "An existence-only uniqueness check suppresses already registered addresses from a content-authorized suggestion. No contact identity or field leaves it, including when a different owner holds the existing contact.",
 	"internal/modules/contacts/companyreferrers.go:refuseIfNamedBy":                   "the owner of each contact employed at a company, compared with the company's own owner, inside a count that only ever KEEPS the company from an owner's archive. No contact identity or field is returned",

@@ -115,12 +115,16 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		if err != nil {
 			return err
 		}
-		policy = resolved
 		if workspaceScoped {
 			subject, err = capture.SelectWorkspacePurgeSubjectTx(ctx, tx, rule.Kind, rule.Value, floor)
+		} else {
+			subject, err = capture.SelectPurgeSubjectTx(ctx, tx, actor.UserID, rule.Kind, rule.Value, floor)
+		}
+		if err != nil {
 			return err
 		}
-		subject, err = capture.SelectPurgeSubjectTx(ctx, tx, actor.UserID, rule.Kind, rule.Value, floor)
+		// The receipt names the floor of the entities whose mail it kept.
+		policy, err = resolved.ForMessagesTx(ctx, tx, subject.UnderStatute)
 		return err
 	}); err != nil {
 		return PurgeOutcome{}, err

@@ -176,11 +176,11 @@ Two paths keep it true. They meet on the same statement.
   recency, which counts most in the score, is exact.
 
 History imports group repeated requests for the same pair on its existing row. A new pair is
-read at once; later history mail advances its request number. After the imports finish, a worker
+read at once; later history mail raises its request number. After the imports finish, a worker
 reads waiting pairs in small groups through the same statement. It marks only the request number
-that its read covered, so mail that arrives during that read stays due. New mail and changes that
-remove access still take effect at once. See [worker diagnostics](../reference/worker-diagnostics.md)
-for the jobs and upgrade rules.
+that its read covered, so mail that comes in during that read stays due. New mail and changes that
+remove access still take effect at once. See the [worker reference](../reference/worker-diagnostics.md)
+for the jobs and the rules when a new version starts.
 
 A fixture keeps the two paths in line: a rebuild and a stream of step-by-step updates over the same
 history must agree.

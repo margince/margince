@@ -17931,7 +17931,9 @@ export interface paths {
          *     mailed to the new address; otherwise the member sets a password through the standard
          *     account-recovery flow. Needs `user_admin.create`.
          *     Naming `team_ids` puts the member on those teams, which only an admin may do: any other
-         *     caller gets 403 `team_membership_requires_admin`. Emits `user.invited`.
+         *     caller gets 403 `team_membership_requires_admin`. Naming `legal_entity_id` places the
+         *     member in that legal entity and needs `legal_entity.update` and `user_admin.update`; an
+         *     unknown or archived entity is 422 `unknown_legal_entity`. Emits `user.invited`.
          */
         post: operations["inviteUser"];
         delete?: never;
@@ -44222,6 +44224,11 @@ export interface components {
             /** @description Omit to keep the current roles. */
             role?: string;
             team_ids?: string[];
+            /**
+             * Format: uuid
+             * @description Moves the member to this legal entity, from `listLegalEntities`, in the same transaction as the rest of the edit. Omit to keep their entity. Naming one needs the grants `assignLegalEntityMember` needs: `legal_entity` update and `user_admin` update. An unknown or archived entity is refused as 422 `unknown_legal_entity`.
+             */
+            legal_entity_id?: string;
             /** Format: date-time */
             expected_updated_at: string;
         };
@@ -44384,6 +44391,11 @@ export interface components {
             role: string;
             /** @description The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent. */
             team_ids?: string[];
+            /**
+             * Format: uuid
+             * @description The legal entity the member works for, from `listLegalEntities`, written in the same transaction as the seat. Omitted, the member works for the default entity. Naming one needs the grants `assignLegalEntityMember` needs: `legal_entity` update and `user_admin` update. An unknown or archived entity is refused as 422.
+             */
+            legal_entity_id?: string;
         };
         /** @description What a seat with this role and these teams may do — computed by the server from the evaluated policy, the same one the gates read, so the screen never interprets the role a second way. Used before an invite (`GET /users/access-preview`) and for an existing member (`GET /users/{id}/access`). */
         AccessPreview: {

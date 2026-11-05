@@ -100,6 +100,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		GreetingName: req.GreetingName,
 		Role:         string(req.Role),
 		TeamIDs:      teams,
+		LegalEntity:  legalEntityOf(req.LegalEntityId),
 		Mailed:       h.canSendPasswordLink(),
 	})
 	if err != nil {

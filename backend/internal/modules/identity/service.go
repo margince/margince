@@ -63,6 +63,9 @@ type Service struct {
 	// installationDescribed answers whether the anchor company exists, injected
 	// because contacts owns it (installationdescribed.go). Nil refuses every seat.
 	installationDescribed InstallationDescribed
+	// entityMembership places an invited member in the legal entity the invite
+	// names, injected because contacts owns it (inviteentity.go).
+	entityMembership EntityMembership
 	// captureReaper destroys the provider secrets a deactivation's withdrawal
 	// left in the vault, injected because capture owns it (capturereaper.go).
 	// Nil leaves them for capture's own sweep; the withdrawal itself has

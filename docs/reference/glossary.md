@@ -33,6 +33,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | dmy | The date order day, month, year, as a setting value. |
 | Docker | The container tool used to run the local stack and the images. |
 | English | The language the docs and the source catalog are written in. |
+| entity | A legal entity: one of the companies an installation trades as, each with its own name and address. |
 | EU | The European Union, whose laws several pages refer to. |
 | GDPR | The EU General Data Protection Regulation, the law on personal data. |
 | German | The language of the German compliance pack and UI catalog. |

@@ -41,12 +41,7 @@ func LegalEntityOf(ctx context.Context, tx pgx.Tx, user ids.UUID) (ids.UUID, err
 	}
 	args := []*ids.UUID{member}
 	var entity *ids.UUID
-	err := tx.QueryRow(ctx, `
-		SELECT coalesce(
-		    (SELECT le.id FROM legal_entity_member m
-		       JOIN legal_entity le ON le.id = m.legal_entity_id AND le.archived_at IS NULL
-		      WHERE m.user_id = `+Placeholders(args)+`),
-		    (SELECT id FROM legal_entity WHERE is_default))`, member).Scan(&entity)
+	err := tx.QueryRow(ctx, `SELECT `+LegalEntityOfSQL(Placeholders(args)), member).Scan(&entity)
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("read the legal entity a user works for: %w", err)
 	}
@@ -54,4 +49,14 @@ func LegalEntityOf(ctx context.Context, tx pgx.Tx, user ids.UUID) (ids.UUID, err
 		return ids.UUID{}, errors.New("this installation has no default legal entity")
 	}
 	return *entity, nil
+}
+
+// LegalEntityOfSQL is LegalEntityOf as an SQL expression over user, a uuid
+// expression, for a statement that asks it of many rows at once.
+func LegalEntityOfSQL(user string) string {
+	return `coalesce(
+		    (SELECT le.id FROM legal_entity_member m
+		       JOIN legal_entity le ON le.id = m.legal_entity_id AND le.archived_at IS NULL
+		      WHERE m.user_id = ` + user + `),
+		    (SELECT id FROM legal_entity WHERE is_default))`
 }
