@@ -2442,6 +2442,7 @@ public.communication_decision.communication_decision_basis CHECK (((basis IS NUL
 public.communication_decision.communication_decision_category CHECK ((resolved_category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text])))
 public.communication_decision.communication_decision_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE CASCADE
 public.communication_decision.communication_decision_execution_authority CHECK ((execution_authority = ANY (ARRAY['supported'::text, 'instruction'::text])))
+public.communication_decision.communication_decision_existing_customer_shape CHECK ((((existing_customer_notice_id IS NULL) = (existing_customer_offer_id IS NULL)) AND ((existing_customer_notice_id IS NULL) = (existing_customer_sold_at IS NULL))))
 public.communication_decision.communication_decision_instruction_id_fkey FOREIGN KEY (instruction_id) REFERENCES communication_instruction(id) ON DELETE RESTRICT
 public.communication_decision.communication_decision_instruction_shape CHECK (((execution_authority = 'instruction'::text) = (instruction_id IS NOT NULL)))
 public.communication_decision.communication_decision_mode CHECK ((mode = ANY (ARRAY['observe'::text, 'warn'::text, 'enforce'::text])))
@@ -2457,11 +2458,16 @@ public.communication_decision.decision_set_id uuid NOT NULL gen=- def=-
 public.communication_decision.delivery_id uuid NOT NULL gen=- def=-
 public.communication_decision.evidence jsonb NOT NULL gen=- def='{}'::jsonb
 public.communication_decision.execution_authority text NOT NULL gen=- def='supported'::text
+public.communication_decision.existing_customer_notice_id uuid gen=- def=-
+public.communication_decision.existing_customer_offer_id uuid gen=- def=-
+public.communication_decision.existing_customer_sold_at timestamp with time zone gen=- def=-
 public.communication_decision.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_decision.instruction_id uuid gen=- def=-
 public.communication_decision.legacy_verdict text gen=- def=-
+public.communication_decision.legal_entity_id uuid gen=- def=-
 public.communication_decision.mode text NOT NULL gen=- def=-
 public.communication_decision.phase text NOT NULL gen=- def=-
+public.communication_decision.purpose_key text gen=- def=-
 public.communication_decision.reason_code text NOT NULL gen=- def=-
 public.communication_decision.recipient_address text NOT NULL gen=- def=-
 public.communication_decision.requested_category text gen=- def=-
@@ -2565,19 +2571,22 @@ public.communication_override.communication_override_category CHECK ((category =
 public.communication_override.communication_override_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.communication_override.communication_override_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['user'::text, 'admin'::text])))
 public.communication_override.communication_override_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.communication_override.communication_override_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.communication_override.communication_override_names_a_target CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.communication_override.communication_override_pkey PRIMARY KEY (id)
 public.communication_override.contact_id uuid gen=- def=-
 public.communication_override.decided_by_level text NOT NULL gen=- def=-
 public.communication_override.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_override.lead_id uuid gen=- def=-
+public.communication_override.legal_entity_id uuid NOT NULL gen=- def=-
 public.communication_override.reason text NOT NULL gen=- def=-
 public.communication_override.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_override.revoked_at timestamp with time zone gen=- def=-
 public.communication_override_carried_from CREATE INDEX communication_override_carried_from ON public.communication_override USING btree (carried_from) WHERE (carried_from IS NOT NULL)
 public.communication_override_contact_cascade CREATE INDEX communication_override_contact_cascade ON public.communication_override USING btree (contact_id) WHERE (contact_id IS NOT NULL)
 public.communication_override_lead_cascade CREATE INDEX communication_override_lead_cascade ON public.communication_override USING btree (lead_id) WHERE (lead_id IS NOT NULL)
-public.communication_override_live_contact CREATE INDEX communication_override_live_contact ON public.communication_override USING btree (contact_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_legal_entity CREATE INDEX communication_override_legal_entity ON public.communication_override USING btree (legal_entity_id)
+public.communication_override_live_contact CREATE INDEX communication_override_live_contact ON public.communication_override USING btree (contact_id, legal_entity_id, category) WHERE (revoked_at IS NULL)
 public.communication_override_live_lead CREATE INDEX communication_override_live_lead ON public.communication_override USING btree (lead_id, category) WHERE (revoked_at IS NULL)
 public.communication_override_pkey CREATE UNIQUE INDEX communication_override_pkey ON public.communication_override USING btree (id)
 public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -3240,6 +3249,7 @@ public.consent_purpose.requires_double_opt_in boolean NOT NULL gen=- def=false
 public.consent_purpose_key_unique CREATE UNIQUE INDEX consent_purpose_key_unique ON public.consent_purpose USING btree (key)
 public.consent_purpose_pkey CREATE UNIQUE INDEX consent_purpose_pkey ON public.consent_purpose USING btree (id)
 public.consent_qualifying_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.consent_qualifying_event.about_deal_id uuid gen=- def=-
 public.consent_qualifying_event.asks_for_quote boolean NOT NULL gen=- def=false
 public.consent_qualifying_event.captured_by text NOT NULL gen=- def=-
 public.consent_qualifying_event.consent_qualifying_event_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
@@ -3253,6 +3263,7 @@ public.consent_qualifying_event.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_qualifying_event.kind text NOT NULL gen=- def=-
 public.consent_qualifying_event.note text gen=- def=-
 public.consent_qualifying_event.occurred_at timestamp with time zone NOT NULL gen=- def=-
+public.consent_qualifying_event.recorded_for_addresses text[] gen=- def=-
 public.consent_qualifying_event.retracted_at timestamp with time zone gen=- def=-
 public.consent_qualifying_event.retracted_by text gen=- def=-
 public.consent_qualifying_event.source text NOT NULL gen=- def=-
@@ -3381,6 +3392,7 @@ public.contact_acquisition_evidence.kind text NOT NULL gen=- def=-
 public.contact_acquisition_evidence.note text gen=- def=-
 public.contact_acquisition_evidence.occurred_at timestamp with time zone gen=- def=-
 public.contact_acquisition_evidence.purpose_claimed text gen=- def=-
+public.contact_acquisition_evidence.recorded_for_addresses text[] gen=- def=-
 public.contact_acquisition_evidence.request_retracted_at timestamp with time zone gen=- def=-
 public.contact_acquisition_evidence.request_retracted_by text gen=- def=-
 public.contact_acquisition_evidence.source_entity_id uuid gen=- def=-
@@ -4516,6 +4528,39 @@ public.event_outbox.seq bigint NOT NULL gen=- def=-
 public.event_outbox.stream text NOT NULL gen=- def=-
 public.event_outbox_pkey CREATE UNIQUE INDEX event_outbox_pkey ON public.event_outbox USING btree (id)
 public.event_outbox_seq_seq acl=- rls=false force=false
+public.existing_customer_notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.existing_customer_notice.captured_by text NOT NULL gen=- def=-
+public.existing_customer_notice.collection_channel text NOT NULL gen=- def=-
+public.existing_customer_notice.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.existing_customer_notice.customer_group text NOT NULL gen=- def=-
+public.existing_customer_notice.effective_from timestamp with time zone NOT NULL gen=- def=-
+public.existing_customer_notice.effective_until timestamp with time zone gen=- def=-
+public.existing_customer_notice.evidence_dated_at timestamp with time zone gen=- def=-
+public.existing_customer_notice.evidence_reference text gen=- def=-
+public.existing_customer_notice.existing_customer_notice_channel_bounded CHECK (((length(btrim(collection_channel)) >= 1) AND (length(btrim(collection_channel)) <= 200)))
+public.existing_customer_notice.existing_customer_notice_evidence_bounded CHECK (((evidence_reference IS NULL) OR ((length(btrim(evidence_reference)) >= 1) AND (length(btrim(evidence_reference)) <= 500))))
+public.existing_customer_notice.existing_customer_notice_evidence_shape CHECK (((evidence_reference IS NULL) = (evidence_dated_at IS NULL)))
+public.existing_customer_notice.existing_customer_notice_group_bounded CHECK (((length(btrim(customer_group)) >= 1) AND (length(btrim(customer_group)) <= 500)))
+public.existing_customer_notice.existing_customer_notice_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
+public.existing_customer_notice.existing_customer_notice_period_ordered CHECK (((effective_until IS NULL) OR (effective_until > effective_from)))
+public.existing_customer_notice.existing_customer_notice_pkey PRIMARY KEY (id)
+public.existing_customer_notice.existing_customer_notice_reason_bounded CHECK (((withdrawn_reason IS NULL) OR ((length(btrim(withdrawn_reason)) >= 1) AND (length(btrim(withdrawn_reason)) <= 500))))
+public.existing_customer_notice.existing_customer_notice_text_bounded CHECK (((length(btrim(notice_text)) >= 1) AND (length(btrim(notice_text)) <= 4000)))
+public.existing_customer_notice.existing_customer_notice_withdrawal_shape CHECK ((((withdrawn_at IS NULL) = (withdrawn_by IS NULL)) AND ((withdrawn_at IS NULL) = (withdrawn_reason IS NULL))))
+public.existing_customer_notice.id uuid NOT NULL gen=- def=uuidv7()
+public.existing_customer_notice.legal_entity_id uuid NOT NULL gen=- def=-
+public.existing_customer_notice.notice_text text NOT NULL gen=- def=-
+public.existing_customer_notice.withdrawn_at timestamp with time zone gen=- def=-
+public.existing_customer_notice.withdrawn_by text gen=- def=-
+public.existing_customer_notice.withdrawn_reason text gen=- def=-
+public.existing_customer_notice_pkey CREATE UNIQUE INDEX existing_customer_notice_pkey ON public.existing_customer_notice USING btree (id)
+public.existing_customer_notice_purpose acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.existing_customer_notice_purpose.existing_customer_notice_purpose_notice_id_fkey FOREIGN KEY (notice_id) REFERENCES existing_customer_notice(id) ON DELETE CASCADE
+public.existing_customer_notice_purpose.existing_customer_notice_purpose_pkey PRIMARY KEY (notice_id, purpose_id)
+public.existing_customer_notice_purpose.existing_customer_notice_purpose_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
+public.existing_customer_notice_purpose.notice_id uuid NOT NULL gen=- def=-
+public.existing_customer_notice_purpose.purpose_id uuid NOT NULL gen=- def=-
+public.existing_customer_notice_purpose_pkey CREATE UNIQUE INDEX existing_customer_notice_purpose_pkey ON public.existing_customer_notice_purpose USING btree (notice_id, purpose_id)
 public.extension_ingest_position acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.extension_ingest_position.extension_ingest_position_pkey PRIMARY KEY (unit, source_system)
 public.extension_ingest_position.extension_ingest_position_size CHECK ((("position" <> ''::text) AND (octet_length("position") <= 512)))
@@ -5256,6 +5301,8 @@ public.idx_domain_disposition_admission CREATE INDEX idx_domain_disposition_admi
 public.idx_domain_disposition_unevidenced CREATE INDEX idx_domain_disposition_unevidenced ON public.company_domain_disposition USING btree (updated_at DESC) WHERE (pending_reason = 'unevidenced'::text)
 public.idx_dsr_open CREATE INDEX idx_dsr_open ON public.data_subject_request USING btree (due_at) WHERE (status = ANY (ARRAY['open'::text, 'in_progress'::text]))
 public.idx_event_outbox_unpublished CREATE INDEX idx_event_outbox_unpublished ON public.event_outbox USING btree (seq) WHERE (published_at IS NULL)
+public.idx_existing_customer_notice_legal_entity CREATE INDEX idx_existing_customer_notice_legal_entity ON public.existing_customer_notice USING btree (legal_entity_id)
+public.idx_existing_customer_notice_purpose_purpose CREATE INDEX idx_existing_customer_notice_purpose_purpose ON public.existing_customer_notice_purpose USING btree (purpose_id)
 public.idx_field_provenance_object CREATE INDEX idx_field_provenance_object ON public.field_provenance USING btree (object_type, object_id, field_name, captured_at DESC)
 public.idx_forecast_call_period CREATE INDEX idx_forecast_call_period ON public.forecast_call USING btree (period_start, period_end, scope_kind, scope_id)
 public.idx_forecast_contribution_audit CREATE INDEX idx_forecast_contribution_audit ON public.forecast_contribution USING btree (audit_id) WHERE (audit_id IS NOT NULL)

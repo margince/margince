@@ -78,9 +78,8 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 				return err
 			}
 			w := packRulesFor(country)
-			// The legacy gate is asked about a purpose key and never about the
-			// message, so it can make no similarity claim. An exception whose
-			// pack requires similarity therefore refuses here.
+			// No sending entity: this gate is asked about a purpose key, not a
+			// staged message, so the existing-customer route never applies here.
 			marketing := MarketingContext{Exception: w.marketingException}
 			granted, err := grantedForRecipient(ctx, tx, r, purpose, time.Now().Add(-w.reply), marketing)
 			if err != nil {
@@ -104,9 +103,9 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 
 // grantedForRecipient answers the one recipient's question.
 //
-// A recipient that resolves to a CONTACT is answered by VerdictForContact — the
-// same code the guard endpoint serves, so the preview a composer shows and the
-// check that fires at transmit cannot drift. Two implementations of one
+// A recipient that resolves to a contact is answered by VerdictForRecipient. The
+// guard endpoint serves the same code (verdictFor), so the preview a composer
+// shows and the check that fires at transmit cannot drift. Two implementations of one
 // question are two questions, and the one that stops matching looks exactly
 // like the one that still does.
 //
@@ -134,7 +133,7 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		_, stopped, err := stopBindingPurpose(stops, purpose)
 		return !stopped, err
 	}
-	verdict, err := VerdictForContact(ctx, tx, contactID, purpose, since, marketing)
+	verdict, err := VerdictForRecipient(ctx, tx, contactID, r.Email, purpose, since, marketing)
 	if err != nil {
 		return false, err
 	}
@@ -143,7 +142,7 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	if verdict.State != VerdictAllowed {
 		return false, nil
 	}
-	// false: VerdictForContact allowed, so no stop binds this purpose. The
+	// false: VerdictForRecipient allowed, so no stop binds this purpose. The
 	// engine's arms pass their own answer.
 	if err := stampDerivedBasis(ctx, tx, contactID, verdict, false); err != nil {
 		return false, err

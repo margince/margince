@@ -230,6 +230,7 @@ func TestAnAgentReadsAContactsConsentAsTheUserDoes(t *testing.T) {
 	for action, route := range map[string]string{
 		"contact_consent":       "/v1/contacts/" + c.contact + "/consent",
 		"contact_consent_guard": "/v1/contacts/" + c.contact + "/consent/guard",
+		"contact_stops":         "/v1/contacts/" + c.contact + "/consent/stops",
 	} {
 		var asUser json.RawMessage
 		if status := c.e.Call(t, "GET", route, nil, nil, &asUser); status != http.StatusOK {

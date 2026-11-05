@@ -827,6 +827,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /contacts/{id}/consent` | recordConsent | Grant or withdraw consent for one purpose — writes an append-only proof row. | Change records | at once |
 | `POST /contacts/{id}/consent/suppress` | suppressContact | Record that this contact asked us to stop writing to them. | Change records | at once |
 | `POST /contacts/{id}/consent/suppress/{suppressionId}/lift` | liftSuppression | Take back a stop, if you outrank the level that set it. | Change records | at once |
+| `GET /contacts/{id}/consent/stops` | listContactStops | List the stops that stand on this contact, and which ones you may take back. | Read records | at once |
 | `POST /contacts/{id}/consent/allow` | allowContact | Record a standing vouch that a machine-level refusal for one category may be overruled. | Change records | at once |
 | `POST /contacts/{id}/consent/allow/{overrideId}/revoke` | revokeOverride | Take back a standing override, if your level may revoke the one that recorded it. | Change records | at once |
 | `POST /contacts/{id}/consent/double-opt-in` | issueDoubleOptIn | Mail the subject a single-use link that confirms one marketing purpose. | Send messages | at once |

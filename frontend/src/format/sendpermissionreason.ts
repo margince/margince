@@ -29,12 +29,15 @@ export function refusalKindOf(
   switch (reason) {
     case "no_compatible_evidence":
       return category === DEAL_FOLLOWUP ? "missingContext" : "missingEvidence";
+    case "deal_not_requested":
+      return "missingEvidence";
     case "unknown_purpose":
     case "claim_contradicts_resolution":
     case "legacy_transactional_unevidenced":
       return "missingContext";
     case "no_marketing_consent":
     case "unconfirmed_double_opt_in":
+    case "marketing_consent_required":
       return "missingPermission";
     default:
       return "restricted";
@@ -62,6 +65,10 @@ export function sendPermissionReasonKey(
       return "sendPermission.reason.bounced" as const;
     case "frequency_cap_reached":
       return "sendPermission.reason.tooMany" as const;
+    case "opted_out_after_request":
+      return "sendPermission.reason.optedOutAfterRequest" as const;
+    case "marketing_consent_required":
+      return "sendPermission.reason.consentRequired" as const;
     case "recipient_resolves_to_no_single_subject":
       return "sendPermission.reason.ambiguous" as const;
     case "unconfirmed_double_opt_in":
@@ -72,6 +79,8 @@ export function sendPermissionReasonKey(
         : recordable
           ? ("sendPermission.unprovenHint" as const)
           : ("sendPermission.unprovenRefuses" as const);
+    case "deal_not_requested":
+      return "sendPermission.reason.dealNotRequested" as const;
     case "no_marketing_consent":
       return picksReason
         ? ("sendPermission.reason.noMarketingConsent" as const)

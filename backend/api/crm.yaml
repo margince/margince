@@ -2240,7 +2240,7 @@ paths:
                         this contact's, and the writer is told the message has several readers.
                         Each must be a live contact the caller may read; one that is not refuses
                         the whole request with `422` `recipient_not_on_file`, the code
-                        `POST /emails` answers for an address nobody on file holds.
+                        `POST /emails` answers for an address the sender cannot write to.
       responses:
         '200':
           description: The draft, and what it was written from.
@@ -9924,10 +9924,13 @@ paths:
 
         Two refusals are specific to naming your own addressees and your own links:
 
-        - every address in `to`/`cc` must belong to a contact the sender can READ, or the send is
-          refused 422 `recipient_not_on_file` naming the address — a fix the composer can offer
-          ("attach this address to a contact"), rather than mail to a string nobody is
-          accountable for;
+        - an address in `to`/`cc` that no contact or lead holds gets a new contact first, owned by
+          the sender and committed before the message is checked and staged. An address a record
+          already holds is never filed twice, and a lead stays a lead. Every address must then
+          belong to a contact or lead the sender can READ, or the send is refused 422
+          `recipient_not_on_file` naming the address. That is an address on a record the sender
+          cannot see, or one no contact may be made for: an erased address, a colleague's, a
+          sending system's, or any new address when the sender may not create contacts;
         - every entry in `links` is row-scope probed, so a record the caller cannot see is
           refused 404 exactly as reading it directly would be.
 
@@ -24834,6 +24837,105 @@ paths:
               schema: { $ref: '#/components/schemas/ConsentPurpose' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /existing-customer-notices:
+    get:
+      tags: [Compliance]
+      operationId: listExistingCustomerNotices
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: The collection-notice declarations the existing-customer route reads.
+      description: |
+        Needs `consent_config:read`. Live declarations first, then withdrawn ones, newest first.
+        UNPAGED: an installation declares a handful, one per customer group.
+
+        Where the recipient's country grants an existing-customer route (Germany, UWG §7(3)), a
+        marketing send to a contact without consent goes out when all of these hold: an offer
+        the sending entity issued was accepted, and the contact was its buyer before the
+        acceptance (the deal's economic buyer, or a billing contact of the offer's buyer company);
+        a live declaration of that entity covers the moment of acceptance (`covers_from`); the
+        declaration names the send's marketing purpose; and the contact has not objected. An
+        offer that names no issuing entity counts for none. The send then records the basis
+        `existing_customer_exception`.
+      responses:
+        '200':
+          description: The declarations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/ExistingCustomerNotice' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Compliance]
+      operationId: declareExistingCustomerNotice
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Declare that a group of customers was told at collection that they may object to advertising.
+      description: |
+        Needs `consent_config:create`, and a signed-in user: an agent cannot declare evidence.
+        A declaration is never edited; to correct one, withdraw it and declare again.
+
+        `effective_from` may lie in the past, so customers won before the declaration was made
+        qualify where the notice was given then. It may not lie in the future. A sale before the
+        day of the declaration counts only with proof: `evidence_reference` names where the dated
+        proof is kept, and `evidence_dated_at` is the date it bears; no sale before that date
+        counts. The two are given together or not at all. `effective_until`
+        is exclusive and optional; without it the notice is still given. Every purpose must be a
+        marketing purpose. An archived legal entity is refused as 422.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeclareExistingCustomerNoticeRequest' }
+      responses:
+        '201':
+          description: The declaration as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExistingCustomerNotice' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /existing-customer-notices/{id}/withdraw:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Compliance]
+      operationId: withdrawExistingCustomerNotice
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Withdraw a collection-notice declaration, with a reason.
+      description: |
+        Needs `consent_config:update`. From now on no send rests on it. A send already made on
+        it keeps its own decision record. A declaration already withdrawn, or one that does not
+        exist, answers 404.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '200':
+          description: The withdrawn declaration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExistingCustomerNotice' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /retention/settings:
     get:
       tags: [Compliance]
@@ -25275,10 +25377,10 @@ paths:
         types it, because Art. 21 gives the right to the data subject and a rep relaying the call
         is a courier rather than its author.
 
-        **Nothing lifts it today.** No seat outranks the subject, and the subject-initiated
-        reversal that would let them take it back is not built yet — the preference centre writes
-        consent state and never touches a suppression. Record one only when the contact actually
-        asked for it: a mistake currently needs a database correction, not a product action.
+        **A mistake is corrected by an admin.** No seat outranks the subject, so a rep cannot take
+        one back. An admin may correct an objection a colleague recorded by mistake, with a reason
+        (`liftSuppression`). An objection the contact recorded themselves on a link stays until they
+        change it.
 
         Two kinds are recordable here. `subject_request` is "stop contacting me", and it stops
         every category except the three the controller owes regardless of what the subject wants
@@ -25304,7 +25406,7 @@ paths:
                     Which stop this is. `subject_request` is "stop contacting me" and reaches every
                     category but the three the controller owes anyway. `marketing_objection` is
                     Art. 21(2), reaches marketing only, and is recorded at the subject's own
-                    authority so no seat can lift it.
+                    authority, so only an admin correcting a mistake can lift it.
                 reason:
                   type: string
                   maxLength: 500
@@ -25342,8 +25444,16 @@ paths:
         admin's is liftable by an admin other than by the one who set it only through this
         same rule.
 
-        **Nothing lifts the subject's own act.** An Art. 21 objection and a withdrawal are
-        theirs, not the installation's, so no seat reaches them here whatever their role.
+        **Nothing lifts the subject's own act.** An Art. 21 objection the contact recorded on a
+        link in a mail is theirs, not the installation's, so no seat reaches it here whatever
+        their role. One exception: an admin may correct a marketing objection a colleague
+        recorded by mistake. The reason is required and the audit row records the correction. The
+        admin makes it signed in themselves; an agent working for them cannot.
+
+        **No seat lifts a processing restriction here.** Lifting one owes the contact notice
+        first, and Margince sends no such notice yet.
+
+        `listContactStops` answers, per stop, whether this caller may lift it and why not.
 
         A row already revoked, belonging to another subject, or never in existence all answer
         `404` alike: a caller learns nothing about rows they would not have been allowed to
@@ -25366,6 +25476,39 @@ paths:
                     change most worth being able to explain later.
       responses:
         '204': { description: Lifted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /contacts/{id}/consent/stops:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: listContactStops
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: list_contact_stops, router: read_details, action: contact_stops, tier: auto_execute, scope: read, served_by: route }
+      summary: List the stops that stand on this contact, and which ones you may take back.
+      description: |
+        Every live suppression the send check reads for this contact: the contact's own stops and
+        the stops held on one of its live addresses. Newest first.
+
+        `may_lift` is the answer `liftSuppression` would give this caller, from the same rule. An
+        admin may correct a marketing objection a colleague recorded by mistake (`correction`);
+        one the contact recorded themselves stays until they change it. No seat lifts a processing
+        restriction here, because lifting one owes the contact notice first and Margince sends no
+        such notice yet.
+      responses:
+        '200':
+          description: The stops that stand.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stops]
+                properties:
+                  stops: { type: array, items: { $ref: '#/components/schemas/ContactStop' } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -43141,6 +43284,14 @@ components:
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        acquisition_request:
+          readOnly: true
+          allOf: [{ $ref: '#/components/schemas/ContactAcquisitionRequest' }]
+          description: >-
+            The live request the contact's acquisition records: they asked for a quote or a
+            meeting, or gave permission in person. A send may rest on it with no age limit until
+            somebody takes it back (`retractAcquisitionRequest`). Served on a read of one contact;
+            absent when there is none or it was taken back, and on lists.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -47383,6 +47534,7 @@ components:
             - consent_withdrawn
             - no_consent_exception_not_offered
             - no_consent
+            - existing_customer
         reason_at:
           type: [string, 'null']
           format: date-time
@@ -47400,6 +47552,12 @@ components:
         6(1)(f) balancing accountable rather than merely asserted.
       required: [kind, occurred_at]
       properties:
+        id:
+          type: string
+          format: uuid
+          description: |
+            Set on an exchange a colleague recorded by hand (`in_person` or `requested_by_subject`),
+            the one kind POST /contacts/{id}/consent/qualifying-events/{event_id}/retract takes back.
         kind:
           type: string
           enum: [inbound_message, inquiry, active_deal, in_person, meeting, requested_by_subject]
@@ -55377,6 +55535,12 @@ components:
             The reason for contact the sender claimed. An unproven claim never becomes
             `resolved_category`, so a composer reads this one to name the gap the sender can
             close: a refused `active_deal_followup` claim asks for the deal, not for consent.
+        new_contact:
+          type: boolean
+          description: |
+            No contact or lead holds this address yet. Sending makes a contact for it, owned by
+            the sender, before the message is checked, and this answer is the one that new
+            contact gets. Absent or false for an address a record already holds.
         basis:
           type: string
           description: The lawful ground an allow would rest on.
@@ -67101,6 +67265,10 @@ components:
         key: { type: string, description: 'Stable machine key (e.g. transactional, marketing_email, profiling). Referenced by send_email.consent_purpose.' }
         label: { type: string }
         requires_double_opt_in: { type: boolean, default: false, description: 'When true, a grant is only effective after a confirmed DOI event (German email norm).' }
+        class:
+          type: string
+          enum: [business_correspondence, transactional, marketing, phone_outreach]
+          description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
         created_at: { type: string, format: date-time }
 
     CreateConsentPurposeRequest:
@@ -67110,6 +67278,51 @@ components:
         key: { type: string }
         label: { type: string }
         requires_double_opt_in: { type: boolean, default: false }
+
+    ExistingCustomerNotice:
+      type: object
+      required: [id, legal_entity_id, customer_group, collection_channel, notice_text, effective_from, covers_from, purpose_ids, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        legal_entity_id: { type: string, format: uuid, description: 'The sending entity that collected the addresses.' }
+        customer_group: { type: string, description: 'Which customers the declaration covers, in words.' }
+        collection_channel: { type: string, description: 'How their addresses were collected, for example the web shop checkout.' }
+        notice_text: { type: string, description: 'The notice the customers saw when their address was collected.' }
+        effective_from: { type: string, format: date-time }
+        effective_until: { type: [string, 'null'], format: date-time, description: 'Exclusive end of the period. Null while the notice is still given.' }
+        evidence_reference: { type: [string, 'null'], description: 'Where the dated proof of the notice is kept, for example an archived copy of the checkout page.' }
+        evidence_dated_at: { type: [string, 'null'], format: date-time, description: 'The date the proof bears.' }
+        covers_from:
+          type: string
+          format: date-time
+          description: >-
+            The first moment a sale counts: `effective_from`, but no earlier than `evidence_dated_at`,
+            and without proof no earlier than `created_at`.
+        purpose_ids:
+          type: array
+          description: The marketing purposes that advertise goods or services like the ones these customers bought.
+          items: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+        withdrawn_at: { type: [string, 'null'], format: date-time }
+        withdrawn_reason: { type: [string, 'null'] }
+
+    DeclareExistingCustomerNoticeRequest:
+      type: object
+      required: [legal_entity_id, customer_group, collection_channel, notice_text, effective_from, purpose_ids]
+      properties:
+        legal_entity_id: { type: string, format: uuid }
+        customer_group: { type: string, minLength: 1, maxLength: 500 }
+        collection_channel: { type: string, minLength: 1, maxLength: 200 }
+        notice_text: { type: string, minLength: 1, maxLength: 4000 }
+        effective_from: { type: string, format: date-time }
+        effective_until: { type: [string, 'null'], format: date-time }
+        evidence_reference: { type: [string, 'null'], maxLength: 500 }
+        evidence_dated_at: { type: [string, 'null'], format: date-time }
+        purpose_ids:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, format: uuid }
 
     RetentionScope:
       type: string
@@ -70218,6 +70431,73 @@ components:
           items: { type: string }
         on_behalf_of: { type: string, format: uuid, description: The human whose RBAC bounds every call this passport makes. }
         expires_at:   { type: string, format: date-time }
+
+    ContactAcquisitionRequest:
+      type: object
+      description: A request to hear from us that the contact's acquisition records.
+      required: [kinds]
+      properties:
+        kinds:
+          type: array
+          minItems: 1
+          items: { type: string, enum: [requested_quote_or_meeting, in_person_permission] }
+          description: Which requests stand. Taking the request back withdraws all of them.
+        occurred_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the earliest of them happened. Null when nobody recorded the time.
+
+    ContactStop:
+      type: object
+      description: One live stop on a contact, and whether the caller may take it back.
+      required: [id, kind, authority, recorded_at, recorded_by_colleague, may_lift, correction]
+      properties:
+        id: { type: string, format: uuid, description: The stop. `liftSuppression` takes this id. }
+        kind:
+          type: string
+          description: |
+            `subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`. A
+            kind from a newer server is shown as a stop of unknown kind.
+        authority:
+          type: string
+          enum: [machine, user, admin, subject]
+          description: Whose decision the stop is. `subject` is the contact's own, whoever typed it.
+        purpose_key:
+          type: [string, 'null']
+          description: The one purpose a narrow stop binds. Null for a stop on every purpose of its kind.
+        address:
+          type: [string, 'null']
+          description: The address a stop is held on. Null for a stop on the contact.
+        reason:
+          type: [string, 'null']
+          maxLength: 500
+          description: What the colleague or the contact wrote when the stop was recorded. Null when nothing was written.
+        recorded_at: { type: string, format: date-time }
+        recorded_by_colleague:
+          type: boolean
+          description: |
+            A colleague recorded the stop. False when the contact recorded it on a link in a mail or
+            Margince recorded it, for example for a bounce.
+        recorded_by_name:
+          type: [string, 'null']
+          description: The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+        may_lift:
+          type: boolean
+          description: This caller may take the stop back now, with a reason.
+        correction:
+          type: boolean
+          description: |
+            Taking it back corrects a stop a colleague recorded by mistake: a marketing objection,
+            which only an admin may correct. The audit row records the correction.
+        lift_blocked_by:
+          type: [string, 'null']
+          enum: [address, restriction, subject_decision, level, permission, null]
+          description: |
+            Why `may_lift` is false. `permission`: you may not change this contact, or you are not
+            signed in to a seat. `address`: a stop on an address clears when mail to it works
+            again. `restriction`: lifting it owes the contact notice first, which Margince cannot
+            send yet. `subject_decision`: the contact set it and only they change it. `level`: it
+            was recorded at your level or above. Null when `may_lift` is true.
 
     RecordedOverride:
       type: object
