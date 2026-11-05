@@ -3,10 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import { ListSurface } from "../../design-system/listsurface";
 import { LocaleProvider, useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
+import { playOpenViewStep } from "../../testing/listview.play";
 import { dealRangeChips } from "./deals.rangefilters";
 
 const meta: Meta = {
@@ -52,19 +53,6 @@ function Bar({
   );
 }
 
-/** The Filters step of the View panel, open and drawn. */
-async function openFilters(canvasElement: HTMLElement): Promise<HTMLElement> {
-  await userEvent.click(
-    await within(canvasElement).findByRole("button", { name: /^View/ }),
-  );
-  const panel = await screen.findByRole("dialog");
-  await waitFor(() => expect(panel).toBeVisible());
-  await userEvent.click(
-    within(panel).getByRole("button", { name: /^Filters,/ }),
-  );
-  return panel;
-}
-
 // The close-date step open: "this fiscal quarter" as one press, or two days
 // typed or picked in the calendar.
 export const CloseDateStep: Story = {
@@ -74,7 +62,7 @@ export const CloseDateStep: Story = {
     </LocaleProvider>
   ),
   play: async ({ canvasElement }) => {
-    const panel = within(await openFilters(canvasElement));
+    const panel = within(await playOpenViewStep(canvasElement, "Filters"));
     await userEvent.click(
       await panel.findByRole("button", { name: "Close date" }),
     );
@@ -117,7 +105,7 @@ export const AmountAndCompanyWithheld: Story = {
     </LocaleProvider>
   ),
   play: async ({ canvasElement }) => {
-    const panel = within(await openFilters(canvasElement));
+    const panel = within(await playOpenViewStep(canvasElement, "Filters"));
     await expect(
       await panel.findByRole("button", { name: "Close date" }),
     ).toBeVisible();

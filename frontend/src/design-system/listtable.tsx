@@ -74,6 +74,7 @@ const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 export function ListTable<Row>({
   title,
   bodyCount,
+  countScope,
   rows,
   columns,
   rowKey,
@@ -148,6 +149,8 @@ export function ListTable<Row>({
    * Ignored unless `bodyOwnsPaging`: otherwise the table's own range is true.
    */
   bodyCount?: ReactNode;
+  /** What the table's count names its rows as part of; see `CountLine`'s `scope`. */
+  countScope?: string;
   onRowClick?: (row: Row) => void;
   /**
    * Where this row lives, as a URL. Turns the identity cell into a link, so a
@@ -391,6 +394,7 @@ export function ListTable<Row>({
                 // "Loaded so far" is the caveat for a number the client
                 // counted itself; an exact total needs none.
                 more={hasMore && serverTotal === undefined}
+                scope={countScope}
                 sortedBy={sortedColumn(columns, sort)?.header}
               />
             )

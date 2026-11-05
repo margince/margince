@@ -270,6 +270,14 @@
 .lt-vlayout {
   padding: var(--controlGap) var(--space-2) var(--space-2);
 }
+/* On the pressed chip fill the value takes the row's ink, the pair measured. */
+.lt-vtoggle[aria-pressed="true"] .lt-vrow-value {
+  color: var(--textPrimary);
+}
+/* Off keeps the check's column, so On and Off rows line up. */
+.lt-vcheck-off {
+  visibility: hidden;
+}
 /* A dial's name, then what it holds, which is the part that gives way. */
 .lt-vrow {
   gap: var(--space-3);
@@ -297,6 +305,10 @@
   padding-inline: var(--space-2);
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+/* Save view and Manage views share the footer's width, on a phone as above. */
+.lt-vfoot > .btn {
+  flex: 1 1 0;
 }
 /* A Save view with nothing to save draws nothing, and its rule goes too. */
 .lt-vfoot:empty {
@@ -1713,7 +1725,8 @@
    in atoms.css: the View trigger and the panel's rows under a thumb. */
 @media (pointer: coarse) {
   .lt-vtrigger,
-  .lt-vpanel .lt-mi {
+  .lt-vpanel .lt-mi,
+  .lt-vfoot .btn {
     min-block-size: max(var(--controlHeight), 44px);
   }
 }

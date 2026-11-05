@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { playOpenView, playOpenViewStep } from "../testing/listview.play";
 import { Button, SegmentedControl } from "./atoms";
 import { type ListChip, ListSurface } from "./listsurface";
 import { ListViewMenu } from "./listviewmenu";
@@ -108,15 +109,6 @@ function Surface({
   );
 }
 
-async function openPanel(canvasElement: HTMLElement): Promise<HTMLElement> {
-  await userEvent.click(
-    await within(canvasElement).findByRole("button", { name: /^View/ }),
-  );
-  const panel = await within(document.body).findByRole("dialog");
-  await waitFor(() => expect(panel).toBeVisible());
-  return panel;
-}
-
 // Two filters apply and the list has left its view: View counts them and
 // carries the dot, and the filters stand in one row under the search.
 export const AppliedAndChanged: Story = {
@@ -134,7 +126,7 @@ export const AppliedAndChanged: Story = {
 export const PanelOpen: Story = {
   render: () => <Surface initialFilters={{ stage: "qualified" }} />,
   play: async ({ canvasElement }) => {
-    const panel = await openPanel(canvasElement);
+    const panel = await playOpenView(canvasElement);
     await expect(
       within(panel).getByRole("button", { name: "Sort, Created, descending" }),
     ).toBeVisible();
@@ -144,7 +136,7 @@ export const PanelOpen: Story = {
 export const ArchivedPressed: Story = {
   render: () => <Surface />,
   play: async ({ canvasElement }) => {
-    const panel = await openPanel(canvasElement);
+    const panel = await playOpenView(canvasElement);
     const archived = within(panel).getByRole("button", {
       name: "Show archived",
     });
@@ -159,28 +151,14 @@ export const ArchivedPressed: Story = {
 export const SortStepOpen: Story = {
   render: () => <Surface />,
   play: async ({ canvasElement }) => {
-    const panel = await openPanel(canvasElement);
-    await userEvent.click(
-      within(panel).getByRole("button", { name: /^Sort,/ }),
-    );
-    await waitFor(() =>
-      expect(within(panel).getByRole("group", { name: "Sort" })).toBeVisible(),
-    );
+    await playOpenViewStep(canvasElement, "Sort");
   },
 };
 
 export const FiltersStepOpen: Story = {
   render: () => <Surface />,
   play: async ({ canvasElement }) => {
-    const panel = await openPanel(canvasElement);
-    await userEvent.click(
-      within(panel).getByRole("button", { name: /^Filters,/ }),
-    );
-    await waitFor(() =>
-      expect(
-        within(panel).getByRole("group", { name: "Filters" }),
-      ).toBeVisible(),
-    );
+    await playOpenViewStep(canvasElement, "Filters");
   },
 };
 
@@ -191,7 +169,7 @@ export const PhoneSheet: Story = {
   tags: ["uat-phone"],
   render: () => <Surface initialFilters={{ stage: "qualified" }} />,
   play: async ({ canvasElement }) => {
-    const sheet = await openPanel(canvasElement);
+    const sheet = await playOpenView(canvasElement);
     await expect(sheet).toHaveAttribute("aria-modal", "true");
   },
 };

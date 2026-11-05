@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { playOpenView } from "../../testing/listview.play";
 import {
   installFetchStub,
   jsonResponse,
@@ -253,20 +254,11 @@ export const MorePages: Story = {
   },
 };
 
-async function openView(canvasElement: HTMLElement): Promise<HTMLElement> {
-  await userEvent.click(
-    await within(canvasElement).findByRole("button", { name: /^View/ }),
-  );
-  const panel = await screen.findByRole("dialog");
-  await waitFor(() => expect(panel).toBeVisible());
-  return panel;
-}
-
 // Table or Board stands at the top of View, above the list's dials.
 async function layoutInView({
   canvasElement,
 }: Readonly<{ canvasElement: HTMLElement }>) {
-  const panel = within(await openView(canvasElement));
+  const panel = within(await playOpenView(canvasElement));
   await expect(panel.getByRole("button", { name: "Table" })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Board" })).toBeVisible();
   await expect(panel.getByRole("button", { name: /^Filters,/ })).toBeVisible();

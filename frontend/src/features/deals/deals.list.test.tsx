@@ -74,6 +74,15 @@ describe("DealsScreen", () => {
     expect(dealFetches()).toBe(before); // no reload
   });
 
+  // With one pipeline there is no Pipeline row, so the count is where the
+  // table names the pipeline it reads, as the board's count does.
+  it("names the pipeline in the table's count line", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    render(<DealsScreen />);
+    await showLayout(userEvent.setup(), "Table");
+    expect(await screen.findByText(/^1 to 1 of 1 deals in Sales/)).toBeTruthy();
+  });
+
   // A view saved on the deals list is a server row, and the tab rail has to
   // read it. Otherwise a saved view is storable through the contract and then
   // invisible.

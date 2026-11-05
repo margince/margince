@@ -277,6 +277,7 @@ export function CountLine({
   last,
   total,
   more = false,
+  scope,
   sortedBy,
 }: Readonly<{
   unit: string;
@@ -290,6 +291,8 @@ export function CountLine({
    * report a total the client cannot know.
    */
   more?: boolean;
+  /** What the counted rows belong to, when the list reads one part of a set (a pipeline). */
+  scope?: string;
   sortedBy?: string;
 }>) {
   const t = useT();
@@ -304,12 +307,9 @@ export function CountLine({
   };
   // An empty list says why in its body: none yet, none matching, a failed read.
   // A zero here would only repeat that sentence or contradict it.
-  const counted =
-    total === 0
-      ? ""
-      : more
-        ? t("table.rangeLoaded", range)
-        : t("table.range", range);
+  const ranged = more ? t("table.rangeLoaded", range) : t("table.range", range);
+  const scoped = scope ? t("table.rangeIn", { range: ranged, scope }) : ranged;
+  const counted = total === 0 ? "" : scoped;
   const order = sortedBy
     ? t("table.sortedBy", { column: sortedBy })
     : undefined;

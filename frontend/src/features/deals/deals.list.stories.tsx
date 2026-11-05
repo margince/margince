@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
+import { playOpenView } from "../../testing/listview.play";
 import {
   installFetchStub,
   jsonResponse,
@@ -216,15 +217,6 @@ export const TableNarrowedByCloseDateAndCountry: Story = {
   },
 };
 
-async function openView(canvasElement: HTMLElement): Promise<HTMLElement> {
-  await userEvent.click(
-    await within(canvasElement).findByRole("button", { name: /^View/ }),
-  );
-  const panel = await screen.findByRole("dialog");
-  await waitFor(() => expect(panel).toBeVisible());
-  return panel;
-}
-
 function boardWithTwoPipelines() {
   installBoardStub([sales, renewals]);
   return (
@@ -242,7 +234,7 @@ async function boardPanelOpen({
   await expect(
     await within(canvasElement).findByText("3 deals in Sales"),
   ).toBeVisible();
-  const panel = within(await openView(canvasElement));
+  const panel = within(await playOpenView(canvasElement));
   await expect(panel.getByRole("button", { name: "Board" })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Table" })).toBeVisible();
   await expect(
@@ -265,7 +257,7 @@ export const BoardViewPanelPhone: Story = {
 export const PipelineStep: Story = {
   render: boardWithTwoPipelines,
   play: async ({ canvasElement }) => {
-    const panel = within(await openView(canvasElement));
+    const panel = within(await playOpenView(canvasElement));
     await userEvent.click(
       panel.getByRole("button", { name: "Pipeline, Sales" }),
     );
@@ -290,7 +282,7 @@ export const OnePipelineViewPanel: Story = {
     await expect(
       await within(canvasElement).findByText("3 deals in Sales"),
     ).toBeVisible();
-    const panel = within(await openView(canvasElement));
+    const panel = within(await playOpenView(canvasElement));
     await expect(panel.getByRole("button", { name: "Table" })).toBeVisible();
     await expect(
       panel.queryByRole("button", { name: /^Pipeline,/ }),

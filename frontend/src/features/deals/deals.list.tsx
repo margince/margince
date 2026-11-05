@@ -432,6 +432,7 @@ export function DealsScreen({
         saveView={saveView}
         body={boardBody}
         bodyOwnsPaging={boardBody !== undefined}
+        countScope={effectivePipeline?.name}
         bodyCount={
           view === "board" &&
           dealsQuery.data &&

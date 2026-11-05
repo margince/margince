@@ -7,9 +7,16 @@ import {
   ChevronRight,
   SlidersHorizontal,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { coveredByDialog } from "./dialogfocus";
 import { MenuHead } from "./listmenu";
 import { PopoverSheet } from "./listpopover";
 import { OptionCount } from "./optioncount";
@@ -52,6 +59,8 @@ export function ListViewMenu({
   const [stepKey, setStepKey] = useState<string | null>(null);
   const cameFrom = useRef<string | null>(null);
   const body = useRef<HTMLDivElement>(null);
+  const anchor = useRef<HTMLSpanElement>(null);
+  useCloseOnFocusOut(open, anchor, body, () => onOpenChange(false));
   // A closed panel reopens on its rows, never on the step it was left at.
   if (!open && stepKey !== null) {
     setStepKey(null);
@@ -85,7 +94,7 @@ export function ListViewMenu({
   };
 
   return (
-    <span className="lt-menu-wrap">
+    <span className="lt-menu-wrap" ref={anchor}>
       <PopoverSheet
         label={<ViewLabel filterCount={filterCount} changed={changed} />}
         title={t("list.viewMenu")}
@@ -131,26 +140,7 @@ export function ListViewMenu({
                   />
                 </button>
               ))}
-              {archived && (
-                <div className="lt-vgroup">
-                  {/* A filter over a list is a pressed button (README). */}
-                  <button
-                    type="button"
-                    className="lt-mi lt-vtoggle"
-                    aria-pressed={archived.checked}
-                    onClick={() => archived.onChange(!archived.checked)}
-                  >
-                    {t("list.showArchived")}
-                    {archived.checked && (
-                      <Check
-                        strokeWidth={1.8}
-                        aria-hidden="true"
-                        className="lt-caret lt-mi-more"
-                      />
-                    )}
-                  </button>
-                </div>
-              )}
+              {archived && <ArchivedRow archived={archived} />}
               {footer && <div className="lt-vfoot">{footer}</div>}
             </>
           )}
@@ -174,6 +164,70 @@ export function ViewStep({
       <MenuHead head={head} back={back} />
       {children}
     </fieldset>
+  );
+}
+
+/**
+ * Tab past the panel's last control leaves the popover open over a page the
+ * reader has moved on to, so focus landing outside it closes it.
+ */
+function useCloseOnFocusOut(
+  open: boolean,
+  anchor: RefObject<HTMLElement | null>,
+  body: RefObject<HTMLElement | null>,
+  close: () => void,
+) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const onFocus = (event: FocusEvent) => {
+      const target = event.target;
+      if (
+        !(target instanceof Node) ||
+        anchor.current?.contains(target) ||
+        body.current?.contains(target) ||
+        // A dialog the panel raised (a name prompt, a calendar) is the panel's.
+        coveredByDialog(anchor.current)
+      ) {
+        return;
+      }
+      close();
+    };
+    document.addEventListener("focusin", onFocus);
+    return () => document.removeEventListener("focusin", onFocus);
+  }, [open, anchor, body, close]);
+}
+
+// A filter over a list is a pressed button (README), in the rows' shape.
+function ArchivedRow({
+  archived,
+}: Readonly<{
+  archived: { checked: boolean; onChange: (next: boolean) => void };
+}>) {
+  const t = useT();
+  return (
+    <div className="lt-vgroup">
+      <button
+        type="button"
+        className="lt-mi lt-vrow lt-vtoggle"
+        aria-pressed={archived.checked}
+        onClick={() => archived.onChange(!archived.checked)}
+      >
+        <span className="lt-vrow-label">{t("list.showArchived")}</span>
+        {/* The pressed state already says this to a screen reader. */}
+        <span className="lt-vrow-value" aria-hidden="true">
+          {archived.checked
+            ? t("list.showArchivedOn")
+            : t("list.showArchivedOff")}
+        </span>
+        <Check
+          strokeWidth={1.8}
+          aria-hidden="true"
+          className={`lt-caret lt-mi-more${archived.checked ? "" : " lt-vcheck-off"}`}
+        />
+      </button>
+    </div>
   );
 }
 

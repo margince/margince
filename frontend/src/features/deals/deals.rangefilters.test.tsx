@@ -141,18 +141,8 @@ describe("the deal list's commercial filters", () => {
   it("offers countries by name in the reader's language", async () => {
     let filters: Record<string, string> = {};
     renderBar({ seen: (next) => (filters = next) }, "de");
-    // The testkit names the panel's dials in English; this reader reads German.
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", {
-        name: new RegExp(`^${de["list.viewMenu"]}(,|$)`),
-      }),
-    );
-    await user.click(
-      await screen.findByRole("button", {
-        name: new RegExp(`^${de["table.filters"]}(,|$)`),
-      }),
-    );
+    await openViewStep(user, de["table.filters"], document.body, "de");
     await user.click(screen.getByRole("button", { name: "Land" }));
     await user.click(screen.getByRole("radio", { name: "Deutschland" }));
     expect(filters).toEqual({ country: "DE" });

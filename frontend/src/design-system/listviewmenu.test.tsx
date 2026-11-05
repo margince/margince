@@ -112,13 +112,29 @@ describe("the View panel from the keyboard", () => {
     await user.tab();
     order.push(document.activeElement?.getAttribute("aria-label"));
     await user.tab();
-    order.push(document.activeElement?.textContent);
-    expect(order).toEqual([
-      "Filters, None",
-      "Sort, Default order",
-      "Show archived",
-    ]);
-    expect(panel.contains(document.activeElement)).toBe(true);
+    expect(order).toEqual(["Filters, None", "Sort, Default order"]);
+    expect(document.activeElement).toBe(
+      within(panel).getByRole("button", { name: "Show archived" }),
+    );
+  });
+
+  it("closes once Tab carries focus past the panel into the page", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Surface />
+        <button type="button">Next on the page</button>
+      </>,
+    );
+    const panel = await openView(user);
+    within(panel).getByRole("button", { name: "Show archived" }).focus();
+
+    await user.tab();
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Next on the page" }),
+    ).toHaveFocus();
   });
 });
 
@@ -164,6 +180,7 @@ describe("a dialog a step raises", () => {
     const step = await openViewStep(user, "Filters");
     await user.click(within(step).getByRole("button", { name: "Close date" }));
     await user.click(screen.getByRole("button", { name: "Pick a day" }));
+    screen.getByRole("button", { name: "5 November" }).focus();
     await user.click(screen.getByRole("button", { name: "5 November" }));
 
     expect(await viewButton()).toHaveAttribute("aria-expanded", "true");

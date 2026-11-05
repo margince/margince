@@ -131,7 +131,7 @@ it("reads every dial's value on its row, in the order the panel holds them", asy
 
   const rows = within(panel)
     .getAllByRole("button")
-    .filter((row) => row.classList.contains("lt-vrow"))
+    .filter((row) => row.dataset.viewRow !== undefined)
     .map((row) => row.getAttribute("aria-label"));
   expect(rows).toEqual(["Filters, Status", "Sort, Created, descending"]);
   const archived = within(panel).getByRole("button", { name: "Show archived" });
@@ -160,9 +160,11 @@ it("presses Show archived on and off from its row", async () => {
   const panel = await openView(user);
   const archived = within(panel).getByRole("button", { name: "Show archived" });
   expect(archived).toHaveAttribute("aria-pressed", "false");
+  expect(archived).toHaveTextContent("Off");
 
   await user.click(archived);
   expect(archived).toHaveAttribute("aria-pressed", "true");
+  expect(archived).toHaveTextContent("On");
 
   await user.click(archived);
   expect(archived).toHaveAttribute("aria-pressed", "false");
@@ -375,4 +377,26 @@ it("draws no count line while there is nothing to count", () => {
         /display:\s*none/.test(rule.body),
     ),
   ).toBe(true);
+});
+
+it("names what the counted rows belong to, before the order", () => {
+  render(
+    <ListSurface
+      count={
+        <CountLine
+          unit="deals"
+          first={1}
+          last={2}
+          total={2}
+          scope="Sales"
+          sortedBy="Value"
+        />
+      }
+    >
+      <p>rows</p>
+    </ListSurface>,
+  );
+  expect(
+    screen.getByText("1 to 2 of 2 deals in Sales, sorted by Value"),
+  ).toBeTruthy();
 });

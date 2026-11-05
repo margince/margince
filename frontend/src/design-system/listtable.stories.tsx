@@ -9,6 +9,7 @@ import {
 } from "../format/format";
 import { browserZone } from "../format/timezone";
 import { useLocale } from "../i18n";
+import { playOpenViewStep } from "../testing/listview.play";
 import { Badge, Button, OverflowMenu } from "./atoms";
 import { Avatar } from "./avatar";
 import type { ListChip } from "./listsurface";
@@ -193,21 +194,9 @@ function Surface({
   );
 }
 
-/** Opens one step of the View panel by pressing View, then the dial's row: the
- * panel is the surface's own state, with no prop to open it. */
 function openStep(step: string) {
   return async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    await userEvent.click(
-      await within(canvasElement).findByRole("button", { name: /^View/ }),
-    );
-    const panel = await within(document.body).findByRole("dialog");
-    await waitFor(() => expect(panel).toBeVisible());
-    await userEvent.click(
-      within(panel).getByRole("button", { name: new RegExp(`^${step},`) }),
-    );
-    await waitFor(() =>
-      expect(within(panel).getByRole("group", { name: step })).toBeVisible(),
-    );
+    await playOpenViewStep(canvasElement, step);
   };
 }
 

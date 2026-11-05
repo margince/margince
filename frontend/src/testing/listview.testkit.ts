@@ -3,7 +3,8 @@
 
 import { screen, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
-import { en } from "../i18n/en";
+import { catalogs, type Locale } from "../i18n";
+import { labelled, viewMenuName } from "./listview.names";
 
 // A list's dials are all behind its View button, so a test reaches a dial the
 // way a reader does: View, then the dial's row, then the step it opens.
@@ -11,31 +12,25 @@ import { en } from "../i18n/en";
 /** A `userEvent.setup()` instance, or `userEvent` itself. */
 type Presser = Pick<UserEvent, "click">;
 
-function escaped(text: string): string {
-  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-}
-
 /** The View button, by its visible word; its count and dot follow a comma. */
 export function viewButton(
   scope: HTMLElement = document.body,
+  locale: Locale = "en",
 ): Promise<HTMLElement> {
-  return within(scope).findByRole("button", {
-    name: new RegExp(`^${escaped(en["list.viewMenu"])}(,|$)`),
-  });
+  return within(scope).findByRole("button", { name: viewMenuName(locale) });
 }
 
 /** Opens the View panel, unless it is open already, and returns it. */
 export async function openView(
   user: Presser,
   scope: HTMLElement = document.body,
+  locale: Locale = "en",
 ): Promise<HTMLElement> {
-  const trigger = await viewButton(scope);
+  const trigger = await viewButton(scope, locale);
   if (trigger.getAttribute("aria-expanded") !== "true") {
     await user.click(trigger);
   }
-  return screen.findByRole("dialog", {
-    name: new RegExp(`^${escaped(en["list.viewMenu"])}(,|$)`),
-  });
+  return screen.findByRole("dialog", { name: viewMenuName(locale) });
 }
 
 /**
@@ -46,9 +41,10 @@ export async function openViewStep(
   user: Presser,
   step: string,
   scope: HTMLElement = document.body,
+  locale: Locale = "en",
 ): Promise<HTMLElement> {
-  const panel = await openView(user, scope);
-  const name = new RegExp(`^${escaped(step)}(,|$)`);
+  const panel = await openView(user, scope, locale);
+  const name = labelled(step);
   // A panel left on another step walks back to its rows first.
   let row = within(panel).queryByRole("button", { name });
   let back = panel.querySelector<HTMLElement>(".lt-mback");
@@ -68,9 +64,12 @@ export async function openViewStep(
 export async function toggleArchived(
   user: Presser,
   scope: HTMLElement = document.body,
+  locale: Locale = "en",
 ): Promise<void> {
-  const panel = await openView(user, scope);
+  const panel = await openView(user, scope, locale);
   await user.click(
-    within(panel).getByRole("button", { name: en["list.showArchived"] }),
+    within(panel).getByRole("button", {
+      name: catalogs[locale]["list.showArchived"],
+    }),
   );
 }

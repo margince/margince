@@ -71,6 +71,7 @@ export function ListTable<Row>({
   body,
   bodyOwnsPaging = false,
   bodyCount,
+  countScope,
   selection,
   hideShortChrome,
 }: Readonly<{
@@ -95,6 +96,8 @@ export function ListTable<Row>({
   bodyOwnsPaging?: boolean;
   /** The count for a body that pages itself; see the design-system table. */
   bodyCount?: ReactNode;
+  /** What the table's count names its rows as part of (the deals pipeline). */
+  countScope?: string;
   /** See the design-system table's own `hideShortChrome`. */
   hideShortChrome?: boolean;
   /**
@@ -434,6 +437,7 @@ export function ListTable<Row>({
       body={body}
       bodyOwnsPaging={bodyOwnsPaging}
       bodyCount={bodyCount}
+      countScope={countScope}
       selection={selection}
       pending={isPending}
       problem={problem}
