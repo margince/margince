@@ -189,7 +189,6 @@ export const ACTIVITY_LINE: Readonly<
   owed_verdict: SYSTEM_SWEEP,
   tag_suggest: SYSTEM_SWEEP,
   request_settlement: SYSTEM_SWEEP,
-  deal_verdict: SYSTEM_SWEEP,
   capture_confidentiality_verdict: SYSTEM_SWEEP,
   capture_counterparty_verdict: SYSTEM_SWEEP,
   enrich: notDisplayed(

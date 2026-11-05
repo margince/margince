@@ -136,6 +136,39 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 			},
 		},
 		{
+			// Both stage ids come off the BODY here rather than the path,
+			// because a pipeline has many transitions and each is decided
+			// separately. Unguarded, an omitted one decodes to the zero UUID
+			// and reaches the stage lookup, which answers that a stage the
+			// caller never named is not in the pipeline.
+			name:  "SetTransitionPolicyRequest",
+			shape: reflect.TypeFor[crmcontracts.SetTransitionPolicyRequest](),
+			call: func(t *testing.T, body []byte) error {
+				t.Helper()
+				var req crmcontracts.SetTransitionPolicyRequest
+				if err := json.Unmarshal(body, &req); err != nil {
+					t.Fatalf("probe body does not decode: %v", err)
+				}
+				_, err := transitionRefFromBody(
+					ids.From[ids.PipelineKind](ids.NewV7()), req.FromStageId, req.ToStageId)
+				return err
+			},
+		},
+		{
+			name:  "TransitionRef",
+			shape: reflect.TypeFor[crmcontracts.TransitionRef](),
+			call: func(t *testing.T, body []byte) error {
+				t.Helper()
+				var req crmcontracts.TransitionRef
+				if err := json.Unmarshal(body, &req); err != nil {
+					t.Fatalf("probe body does not decode: %v", err)
+				}
+				_, err := transitionRefFromBody(
+					ids.From[ids.PipelineKind](ids.NewV7()), req.FromStageId, req.ToStageId)
+				return err
+			},
+		},
+		{
 			name:  "CreateStageRequest",
 			shape: reflect.TypeFor[crmcontracts.CreateStageRequest](),
 			call: func(t *testing.T, body []byte) error {

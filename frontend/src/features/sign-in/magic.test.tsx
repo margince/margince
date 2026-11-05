@@ -47,11 +47,7 @@ describe("the receipt draws every lane it promises", () => {
             lane: "could_not_complete",
             summary: {
               key: "magic.action.automation_troubled",
-              values: {
-                name: "Nightly follow-up",
-                outcome: "failed",
-                reason_code: "target_missing",
-              },
+              values: { name: "Nightly follow-up", outcome: "timed out" },
             },
           }),
         ],
@@ -84,7 +80,7 @@ describe("the receipt draws every lane it promises", () => {
     ).toBeTruthy();
     expect(
       within(await lane("Could not be finished")).getByText(
-        "Nightly follow-up could not finish (Failed): the record it acts on no longer exists",
+        "Nightly follow-up is in trouble: timed out",
       ),
     ).toBeTruthy();
     expect(
@@ -654,34 +650,4 @@ it("names the proposed change in the waiting row before opening a decision", asy
       /proposal is waiting for your word|Nothing happens until you decide/,
     ),
   ).toBeNull();
-});
-
-describe("a rule that could not finish says why in the reader's language", () => {
-  it("translates the outcome and the reason, never the raw words", async () => {
-    stub(
-      receipt({
-        could_not_complete: [
-          line({
-            lane: "could_not_complete",
-            summary: {
-              key: "magic.action.automation_troubled",
-              values: {
-                name: "Route new lead to a task",
-                outcome: "failed",
-                reason: "the target record could not be found",
-                reason_code: "target_missing",
-              },
-            },
-          }),
-        ],
-        totals: { done: 0, needs_you: 0, could_not_complete: 1, watching: 0 },
-      }),
-    );
-    renderMagic("de");
-    expect(
-      within(await lane("Konnte nicht abgeschlossen werden")).getByText(
-        "Route new lead to a task konnte nicht abgeschlossen werden (Fehlgeschlagen): der Datensatz, auf den sie wirkt, existiert nicht mehr",
-      ),
-    ).toBeTruthy();
-  });
 });

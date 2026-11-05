@@ -63,7 +63,6 @@ func causeRefRenderers(t *testing.T) map[string]crmcontracts.AttentionItem {
 			Provider:     "gmail",
 			AccountLabel: "lena.fischer@margince.test",
 		}),
-		"booking_health": bookingItem(BookingConcern{PageID: ids.NewV7(), Blocker: "no_calendar"}),
 		"ai_work_health": aiWorkItem(TroubledRun{
 			ID: ids.NewV7(),
 			// A REAL task key, so the label this lane mints is the one
@@ -131,7 +130,6 @@ func TestEveryCauseProducerHasAFixture(t *testing.T) {
 	// with a sentence saying what to do rather than a missing-key panic.
 	fixtured := map[string]string{
 		"captureItem":    "capture_health",
-		"bookingItem":    "booking_health",
 		"aiWorkItem":     "ai_work_health",
 		"automationItem": "automation_run",
 	}

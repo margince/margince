@@ -10,11 +10,6 @@ import { LocaleProvider } from "../../i18n";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { DealRoomAccess } from "./dealroomaccess";
-import {
-  MAIL_POLL_MS,
-  MAIL_WATCH_MS,
-  seatPollInterval,
-} from "./dealroomaccess.queries";
 
 type DealRoom = components["schemas"]["DealRoom"];
 
@@ -109,59 +104,9 @@ describe("where a seat stands", () => {
       "Link requested",
     ],
     ["revoked", { revoked_at: "2026-08-26T08:00:00Z" }, "Revoked"],
-    [
-      "waiting on a mail that failed",
-      { has_signed_in: false, delivery_state: "failed" },
-      "Email failed",
-    ],
   ])("badges a seat that is %s", async (_case, seat, badge) => {
     drawWithDownloads(0, seat);
     expect(await screen.findByText(badge)).toBeTruthy();
-  });
-});
-
-describe("what became of the invitation mail", () => {
-  it("tells the seller a failed mail is theirs to send", async () => {
-    drawWithDownloads(0, { has_signed_in: false, delivery_state: "failed" });
-    expect(
-      await screen.findByText(
-        "The invitation email failed. Issue a new link and send it yourself.",
-      ),
-    ).toBeTruthy();
-  });
-
-  it("says the mail was sent once the relay took it", async () => {
-    drawWithDownloads(0, { has_signed_in: false, delivery_state: "sent" });
-    expect(await screen.findByText(/invited · email sent/)).toBeTruthy();
-  });
-});
-
-describe("reading the roster again while a mail is on its way", () => {
-  const pending = [{ delivery_state: "pending" as const, revoked_at: null }];
-  const now = 1_000_000;
-
-  it("polls while a queued mail has no answer yet", () => {
-    expect(seatPollInterval(pending, now + MAIL_WATCH_MS, now)).toBe(
-      MAIL_POLL_MS,
-    );
-  });
-
-  it("does not poll when no invitation was queued here", () => {
-    expect(seatPollInterval(pending, undefined, now)).toBe(false);
-  });
-
-  it("stops once the send budget has passed, since pending also means no relay", () => {
-    expect(seatPollInterval(pending, now - 1, now)).toBe(false);
-  });
-
-  it("stops once the relay's answer is on every row", () => {
-    expect(
-      seatPollInterval(
-        [{ delivery_state: "failed", revoked_at: null }],
-        now + MAIL_WATCH_MS,
-        now,
-      ),
-    ).toBe(false);
   });
 });
 

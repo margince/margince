@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 47,
     "system_frame_tokens": 592,
-    "tokens": 35835,
+    "tokens": 35742,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 762
+    "mean_tool_tokens": 760
   },
   "agents": [
     {
@@ -85,27 +85,27 @@
   "tool_cost": [
     {
       "name": "read_reports",
-      "tokens": 2498
+      "tokens": 2492
     },
     {
       "name": "read_workspace",
       "tokens": 2061
     },
     {
+      "name": "change_state",
+      "tokens": 1896
+    },
+    {
       "name": "change_activities",
-      "tokens": 1884
+      "tokens": 1878
     },
     {
       "name": "find_records",
       "tokens": 1874
     },
     {
-      "name": "change_state",
-      "tokens": 1873
-    },
-    {
       "name": "read_details",
-      "tokens": 1713
+      "tokens": 1662
     },
     {
       "name": "send_outbound",
@@ -113,23 +113,23 @@
     },
     {
       "name": "change_reports",
-      "tokens": 1255
+      "tokens": 1286
+    },
+    {
+      "name": "read_view",
+      "tokens": 1008
     },
     {
       "name": "preview_import",
       "tokens": 1001
     },
     {
-      "name": "read_view",
-      "tokens": 984
+      "name": "read_forecast",
+      "tokens": 929
     },
     {
       "name": "read_analytics",
       "tokens": 927
-    },
-    {
-      "name": "read_forecast",
-      "tokens": 901
     },
     {
       "name": "change_capture",
@@ -157,15 +157,15 @@
     },
     {
       "name": "change_settings",
-      "tokens": 770
-    },
-    {
-      "name": "change_offers",
-      "tokens": 741
+      "tokens": 764
     },
     {
       "name": "change_access",
-      "tokens": 669
+      "tokens": 656
+    },
+    {
+      "name": "change_offers",
+      "tokens": 628
     },
     {
       "name": "update_record",
@@ -181,7 +181,7 @@
     },
     {
       "name": "resolve_duplicates",
-      "tokens": 618
+      "tokens": 613
     },
     {
       "name": "change_tags",

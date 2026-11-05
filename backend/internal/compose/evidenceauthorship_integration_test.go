@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -27,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -216,6 +218,42 @@ func TestStageEvidenceFollowsAnOwnDomainAddedAndRemoved(t *testing.T) {
 	}
 }
 
+// budgetCard is a stage-move card that calls the budget criterion met, as the
+// proposer stages it.
+func (f *authorshipFixture) budgetCard() deals.StageProgressionChange {
+	f.t.Helper()
+	return f.cardFor("budget")
+}
+
+// cardFor is a stage-move card that marks only the criterion under key met.
+func (f *authorshipFixture) cardFor(key string) deals.StageProgressionChange {
+	f.t.Helper()
+	change := deals.StageProgressionChange{DealID: f.dealID, FromStageID: f.stageID, ToStageID: f.stageID}
+	rows, err := integration.OwnerConn(f.t).Query(context.Background(),
+		`SELECT id, key, label, required, version FROM stage_exit_criterion WHERE stage_id = $1 AND archived_at IS NULL`, f.stageID.UUID)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var c deals.ProposedCriterion
+		var id ids.UUID
+		if err := rows.Scan(&id, &c.Key, &c.Label, &c.Required, &c.Version); err != nil {
+			f.t.Fatal(err)
+		}
+		c.CriterionID, c.Met = ids.From[ids.ExitCriterionKind](id), c.Key == key
+		change.Criteria = append(change.Criteria, c)
+	}
+	return change
+}
+
+func (f *authorshipFixture) cardStands(change deals.StageProgressionChange) error {
+	f.t.Helper()
+	return database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+		return f.Deals.ValidateProgressionCriteriaTx(f.Admin(), tx, change)
+	})
+}
+
 // unmetForAssurance is the count of required criteria the assurance pass
 // finds unmet on the fixture deal.
 func (f *authorshipFixture) unmetForAssurance() int {
@@ -235,10 +273,14 @@ func (f *authorshipFixture) unmetForAssurance() int {
 	return unmet
 }
 
-func TestAnAdminDomainChangeCorrectsEvidenceAtOnce(t *testing.T) {
+func TestAnAdminDomainChangeCorrectsEvidenceAtOnceAndStalesTheCard(t *testing.T) {
 	f := newAuthorshipFixture(t)
 	fromBuyer := f.inboundMail("cfo@buyer-corp.test")
 	budget := f.claim(fromBuyer, "budget")
+	card := f.budgetCard()
+	if err := f.cardStands(card); err != nil {
+		t.Fatalf("the card on buyer evidence is refused before any change: %v", err)
+	}
 	if got := f.unmetForAssurance(); got != 0 {
 		t.Fatalf("assurance counts %d unmet criteria before any change, want 0", got)
 	}
@@ -256,6 +298,9 @@ func TestAnAdminDomainChangeCorrectsEvidenceAtOnce(t *testing.T) {
 	if got := f.stored(budget); got != string(deals.AuthorSeller) {
 		t.Errorf("right after the domain was added the claim is %s, want seller", got)
 	}
+	if err := f.cardStands(card); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a card resting on our own mail still stands: %v", err)
+	}
 	if got := f.unmetForAssurance(); got != 1 {
 		t.Errorf("assurance counts %d unmet criteria, want the budget criterion our own mail cannot settle", got)
 	}
@@ -268,6 +313,35 @@ func TestAnAdminDomainChangeCorrectsEvidenceAtOnce(t *testing.T) {
 	}
 	if got := f.stored(budget); got != string(deals.AuthorBuyer) {
 		t.Errorf("right after the domain was removed the claim is %s, want buyer", got)
+	}
+	if err := f.cardStands(card); err != nil {
+		t.Errorf("the card on restored buyer evidence is refused: %v", err)
+	}
+}
+
+func TestACardIsJudgedAgainstTheDomainsAsTheyStandEvenBeforeThePass(t *testing.T) {
+	f := newAuthorshipFixture(t)
+	fromBuyer := f.inboundMail("cfo@buyer-corp.test")
+	budget := f.claim(fromBuyer, "budget")
+	card := f.budgetCard()
+	checked := deals.NewStore(f.DB(), DealsInstallation()).WithOwnDomains(ownDomainReader{store: f.own})
+	stands := func() error {
+		return database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+			return checked.ValidateProgressionCriteriaTx(f.Admin(), tx, card)
+		})
+	}
+	if err := stands(); err != nil {
+		t.Fatalf("the card on buyer evidence is refused before any change: %v", err)
+	}
+	// The domain changes and no pass runs: the stored side is still buyer.
+	if _, err := f.own.Add(f.Admin(), "buyer-corp.test"); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.stored(budget); got != string(deals.AuthorBuyer) {
+		t.Fatalf("the claim changed to %s without a pass", got)
+	}
+	if err := stands(); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a card resting on mail from a domain now ours still stands: %v", err)
 	}
 }
 

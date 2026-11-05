@@ -16,7 +16,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
-	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -87,8 +86,7 @@ func newDecisionMailEnv(t *testing.T) (approvalNotifyEnv, *countingMailer, *noti
 func mailNotice(t *testing.T, a approvalNotifyEnv, worker *notificationMailWorker, notice ids.UUID) {
 	t.Helper()
 	if err := worker.Work(context.Background(), &river.Job[SendNotificationEmailArgs]{
-		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: notificationMailJobAttempts},
-		Args:   SendNotificationEmailArgs{Workspace: a.e.WS, NoticeID: notice.String()},
+		Args: SendNotificationEmailArgs{Workspace: a.e.WS, NoticeID: notice.String()},
 	}); err != nil {
 		t.Fatalf("the notification mail worker refused the job: %v", err)
 	}

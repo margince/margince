@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -113,12 +111,12 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 	// done — they asked for their deals to be left alone, and a run that read
 	// their correspondence to build a reason it would never use would be doing
 	// work they declined.
-	var mayCorrect bool
-	if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		_, mayCorrect, err = c.ownerAllows(ctx, tx, cand.ownerID)
-		return err
-	}); err != nil {
+	var owner ids.UUID
+	if cand.ownerID != nil {
+		owner = *cand.ownerID
+	}
+	mayCorrect, err := c.policy.CorrectsWithoutAsking(ctx, owner)
+	if err != nil {
 		return "", err
 	}
 	if !mayCorrect {
@@ -203,9 +201,13 @@ func (c *CloseDateCorrector) downgradeAndReview(
 	ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene,
 	proposal CloseDateCorrection, pace closeDatePace, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
+	lowers, err := c.policy.LowersWinProbability(ctx)
+	if err != nil {
+		return "", err
+	}
 	effective, source := cand.winProbability()
 	notched := effective
-	if source != SourceHuman {
+	if lowers && source != SourceHuman {
 		notched = lowerWinProbability(effective)
 	}
 	// The 🟡 review: gone quiet — still alive? The proposal keeps the

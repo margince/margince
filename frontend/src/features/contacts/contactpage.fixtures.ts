@@ -60,7 +60,6 @@ export const populated: View = {
     owner_id: "u-1",
     visibility: "owner",
     writable: true,
-    attachable: true,
     version: 7,
     social: { linkedin: "https://linkedin.com/in/danabuyer" },
     address: { city: "Munich", country: "DE" },

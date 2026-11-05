@@ -4,7 +4,7 @@
 import type { components } from "../../api/schema";
 import { activityHasHappened } from "../../format/activitywhen";
 import { calendarDaysUntil } from "../../format/daysuntil";
-import { calendarLateness } from "../../format/lateness";
+import { daysLate } from "./companynextbar";
 
 // What the four Overview cards list, read off the 360 alone and dated by its
 // `as_of`, never by the clock.
@@ -24,7 +24,7 @@ export const OVERVIEW_CONTACTS = 2;
 const SOON_DAYS = 7;
 
 /**
- * Where an open task stands at `as_of`: late by calendar days, due soon, due
+ * Where an open task stands at `as_of`: late by whole days, due soon, due
  * later on a named day, or undated. The Tasks tab's table and the Overview
  * card read the same answer.
  */
@@ -44,8 +44,7 @@ export function taskStanding(
     return { kind: "undated" };
   }
   if (step.overdue) {
-    const { days } = calendarLateness(step.due_at, asOf, zone);
-    return { kind: "late", days: days > 0 ? days : undefined };
+    return { kind: "late", days: daysLate(step, asOf, zone) };
   }
   const days = calendarDaysUntil(step.due_at, zone, new Date(asOf));
   if (days <= 0) {

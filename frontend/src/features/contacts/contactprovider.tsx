@@ -9,9 +9,7 @@ import {
   providerBrandName,
 } from "../../design-system/provider-mark";
 import { WriteRefused } from "../../design-system/querystates";
-import { Stack } from "../../design-system/stack";
 import { useT } from "../../i18n";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import {
   profileLabel,
   profileTone,
@@ -23,7 +21,6 @@ import {
 // Every value carries a provenance mark, because a bought value and one a
 // colleague typed are different kinds of fact and a page that renders them
 // alike invites a rep to treat a purchase as a confirmation.
-import { useContact360 } from "./contact360";
 import { BuyPriced } from "./contactprovider.buy";
 import { LookupRunning } from "./contactprovider.notices";
 import {
@@ -94,23 +91,6 @@ function hasValues(profile: Profile): boolean {
   );
 }
 
-/**
- * Why this reader may not look the contact up, or undefined when they may.
- * A run writes the provider's details onto the contact, so it needs the right
- * to edit it. That is the predicate the page's other write verbs ask, read
- * from the page's own cached contact. Until that contact arrives the button
- * stands, and the server's refusal (WriteRefused) covers a race.
- */
-function useLookupRefusal(contactId: string): string | undefined {
-  const t = useT();
-  const record = useContact360(contactId);
-  const refusal = useRecordWriteRefusal("contact", record.data?.contact, {
-    archived: t("contact.rail.archivedReadOnly"),
-    notYours: t("provider.profile.lookupNotYours"),
-  });
-  return record.data?.contact ? refusal : undefined;
-}
-
 // Split from the section so the mutation hook sits above no early return: the
 // section leaves before it knows there is a profile, and a hook cannot live
 // behind that.
@@ -169,22 +149,6 @@ function ProviderPanel({
   // both the heading and the plate: two spellings would let a section headed
   // "Surfe" explain a purchase from "surfe".
   const name = providerBrandName(profile.provider) ?? profile.provider;
-  const refused = useLookupRefusal(contactId);
-  // The one lookup verb, in the header or on the plate. None for a reader who
-  // may not edit the contact: the panel says why instead.
-  const lookup = refused ? undefined : (
-    <EnrichNow
-      contactId={contactId}
-      profile={profile}
-      enrich={enrich}
-      free={free}
-      catalogPending={catalogPending}
-      running={running}
-      // Same free details either way; only the wording differs, and it
-      // reports whether this contact has a lookup behind it.
-      recheck={lookedUp}
-    />
-  );
   return (
     // The record page's own card, with the provider's state in the header's
     // action slot. It used to be a bare `<section className="pe-card">` — a
@@ -222,40 +186,55 @@ function ProviderPanel({
           )}
         </Badge>
       }
-      actions={nothingToShow ? undefined : lookup}
-    >
-      <PanelBody>
-        <Stack>
-          <WriteRefused
-            titleKey="provider.profile.lookupRefused"
-            error={enrich.error}
-          />
-          {/* Above the values, because it is a caveat about what is under it. */}
-          {running && <LookupRunning asking={asking} provider={name} />}
-          {nothingToShow ? (
-            <EmptyState
-              title={t("provider.profile.emptyTitle")}
-              action={lookup}
-            >
-              {refused ?? t("provider.profile.emptyBody", { provider: name })}
-            </EmptyState>
-          ) : (
-            <>
-              <ProviderValues profile={profile} />
-              {refused && <p className="t-caption">{refused}</p>}
-            </>
-          )}
-        </Stack>
-        {/* Spends under the same gate, so a reader who may not edit the
-            contact is offered no purchase either. The row spaces itself. */}
-        {!refused && (
-          <BuyPriced
+      actions={
+        nothingToShow ? undefined : (
+          <EnrichNow
             contactId={contactId}
             profile={profile}
             enrich={enrich}
+            free={free}
+            catalogPending={catalogPending}
             running={running}
+            // Same free details either way; only the wording differs, and it
+            // reports whether this contact has a lookup behind it.
+            recheck={lookedUp}
           />
+        )
+      }
+    >
+      <PanelBody>
+        <WriteRefused
+          titleKey="provider.profile.lookupRefused"
+          error={enrich.error}
+        />
+        {/* Above the values, because it is a caveat about what is under it. */}
+        {running && <LookupRunning asking={asking} provider={name} />}
+        {nothingToShow ? (
+          <EmptyState
+            title={t("provider.profile.emptyTitle")}
+            action={
+              <EnrichNow
+                contactId={contactId}
+                profile={profile}
+                enrich={enrich}
+                free={free}
+                catalogPending={catalogPending}
+                running={running}
+                recheck={lookedUp}
+              />
+            }
+          >
+            {t("provider.profile.emptyBody", { provider: name })}
+          </EmptyState>
+        ) : (
+          <ProviderValues profile={profile} />
         )}
+        <BuyPriced
+          contactId={contactId}
+          profile={profile}
+          enrich={enrich}
+          running={running}
+        />
         <RunWatch contactId={contactId} profile={profile} />
       </PanelBody>
     </Panel>

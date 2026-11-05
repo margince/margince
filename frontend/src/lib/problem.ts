@@ -1,5 +1,3 @@
-import { openingCase } from "../format/collate";
-import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ConnectivityError, writeFailureKey } from "./connectivity";
 import {
@@ -185,20 +183,6 @@ export function logUnexpectedError(error: unknown): void {
 // network exception never claims field errors it doesn't have.
 export function problemFieldErrorsOf(error: unknown): FieldProblem[] {
   return error instanceof ProblemError ? problemFieldErrors(error.problem) : [];
-}
-
-// Each field a refusal names, with its sentence opening a line and ending in a
-// full stop, to sit under that field. The server writes a fragment.
-export function problemFieldSentencesOf(
-  error: unknown,
-  locale: Locale,
-): ReadonlyMap<string, string> {
-  return new Map(
-    problemFieldErrorsOf(error).map((fault) => {
-      const sentence = openingCase(fault.message.trim(), locale);
-      return [fault.field, /[.!?]$/.test(sentence) ? sentence : `${sentence}.`];
-    }),
-  );
 }
 
 // A 409 naming the If-Match precondition failure: the record changed under the

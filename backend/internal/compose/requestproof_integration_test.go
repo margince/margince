@@ -141,7 +141,7 @@ func TestFulfillingAnErasureWritesOneProofWithTheErasuresOwnAccount(t *testing.T
 	subject, body := "Loeschantrag Henrike", "Bitte alles loeschen, Ihre Henrike"
 	e.seedNoteFor(t, contact, subject, body)
 	request := e.openRequest(t, "erasure", contact.String())
-	closing := `{"status":"fulfilled","identity_check":"id_document","requester_email":"Henrike@Proof.test"}`
+	closing := `{"status":"fulfilled","resolution":"erased","identity_check":"id_document","requester_email":"Henrike@Proof.test"}`
 
 	e.patch(t, request, closing)
 	first := e.tombstone(t, request)
@@ -205,7 +205,7 @@ func TestARetriedCloseStoresTheFirstErasuresAccount(t *testing.T) {
 	contact := e.SeedContact(t, "Retried Subject", nil)
 	e.seedNoteFor(t, contact, "Bitte loeschen", "Bitte loeschen Sie alles")
 	request := e.openRequest(t, "erasure", contact.String())
-	closing := `{"status":"fulfilled","identity_check":"id_document"}`
+	closing := `{"status":"fulfilled","resolution":"erased","identity_check":"id_document"}`
 
 	dying := consent.NewHandlers(e.DB()).WithEraser(failingAfterErase{inner: privacy.NewEraser(e.DB())})
 	if w := patchWith(e.Admin(), dying, request, closing); w.Code == http.StatusOK {
@@ -230,12 +230,8 @@ func TestARequestWhoseIdentityWasNotCheckedCannotBeFulfilled(t *testing.T) {
 	contact := e.SeedContact(t, "Unverified Subject", nil)
 	for kind, subjectRef := range map[string]string{"access": "unverified@proof.test", "erasure": contact.String()} {
 		request := e.openRequest(t, kind, subjectRef)
-		// An erasure is answered by the erasure itself, so it sends no text.
-		body := `{"status":"fulfilled","resolution":"done","identity_check":"not_verified"}`
-		if kind == "erasure" {
-			body = `{"status":"fulfilled","identity_check":"not_verified"}`
-		}
-		w := patchWith(e.Admin(), e.handlers, request, body)
+		w := patchWith(e.Admin(), e.handlers, request,
+			`{"status":"fulfilled","resolution":"done","identity_check":"not_verified"}`)
 		if w.Code != http.StatusUnprocessableEntity || !strings.Contains(w.Body.String(), "identity_check") {
 			t.Fatalf("%s fulfilled with not_verified → %d %s, want 422 naming identity_check", kind, w.Code, w.Body)
 		}
@@ -268,7 +264,7 @@ func TestClosingARequestFiledByHandNeedsTheIdentityCheck(t *testing.T) {
 	e := setupProofs(t)
 	contact := e.SeedContact(t, "Unchecked Subject", nil)
 	request := e.openRequest(t, "erasure", contact.String())
-	w := patchWith(e.Admin(), e.handlers, request, `{"status":"fulfilled"}`)
+	w := patchWith(e.Admin(), e.handlers, request, `{"status":"fulfilled","resolution":"erased"}`)
 	if w.Code != http.StatusUnprocessableEntity || !strings.Contains(w.Body.String(), "identity_check") {
 		t.Fatalf("a close without an identity check → %d %s, want 422 naming identity_check", w.Code, w.Body)
 	}

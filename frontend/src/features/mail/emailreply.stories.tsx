@@ -70,7 +70,3 @@ export const Available: Story = {};
 export const CannotReply: Story = {
   args: { presentation: { ...message, can_reply: false } },
 };
-
-export const BookFromIncoming: Story = {
-  args: { onBook: () => {} },
-};

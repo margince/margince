@@ -26,7 +26,6 @@ import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
 import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
-import { composedLinks, type Link } from "./composelinks";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
@@ -35,6 +34,7 @@ import { sendReviewOf } from "./sendreview";
 
 type Activity = components["schemas"]["Activity"];
 type Preview = components["schemas"]["SendAuthorizationPreview"];
+type Link = { entity_type: RelinkKind; entity_id: string };
 
 // The refusals a rep can act on, as opposed to failures. Anything else keeps
 // the server's own message, so this surface invents no copy for it.
@@ -55,6 +55,45 @@ export function refusalOf(error: unknown): Refusal {
     }
   }
   return null;
+}
+
+/**
+ * What a sent message files under: the page it was written from, and every
+ * record the rep named while writing it.
+ *
+ * The grounding choices are the attribution, so they travel with the send. A
+ * link is matched on kind and id, the way the server identifies it, and a
+ * repeat is dropped because the link table refuses one.
+ *
+ * `chosen` is null on a reply, whose links belong to its thread.
+ */
+export function composedLinks(
+  anchor: { entityType: RelinkKind; entityId: string },
+  chosen: Grounding | null,
+  // The derived filing when the rep chose nothing. Empty means no project.
+  derivedProjectId = "",
+): Link[] {
+  const links: Link[] = [
+    { entity_type: anchor.entityType, entity_id: anchor.entityId },
+  ];
+  const add = (kind: RelinkKind, id: string) => {
+    const already = links.some(
+      (l) => l.entity_type === kind && l.entity_id === id,
+    );
+    if (!id || already) {
+      return;
+    }
+    links.push({ entity_type: kind, entity_id: id });
+  };
+  if (!chosen) {
+    // An anchored send: the record it started from, plus the filing it states.
+    add("project", derivedProjectId);
+    return links;
+  }
+  add("contact", chosen.recipientId);
+  add("deal", chosen.dealId);
+  add("project", chosen.projectId);
+  return links;
 }
 
 type SendRequest = {
@@ -117,7 +156,7 @@ async function sendFrom(args: SendRequest) {
 
 // What the send is waiting for, in reading order. A pressed Send names each
 // field on the field, so the button never refuses by going grey.
-export type MissingField = "to" | "subject" | "body" | "context" | "deal";
+export type MissingField = "to" | "subject" | "body" | "context";
 
 export function missingToSend(
   isChannelReply: boolean,
@@ -129,8 +168,6 @@ export function missingToSend(
     // False where the anchor answers what the message is. A reply derives
     // its category from the thread.
     asksContext: boolean;
-    // An Active deal claim with a deal to choose and none chosen.
-    needsDeal?: boolean;
   },
 ): readonly MissingField[] {
   const missing: MissingField[] = [];
@@ -146,9 +183,6 @@ export function missingToSend(
   }
   if (fields.asksContext && fields.context === "") {
     missing.push("context");
-  }
-  if (fields.needsDeal) {
-    missing.push("deal");
   }
   return missing;
 }
@@ -238,14 +272,12 @@ export function useComposeSend({
   answering,
   entityType,
   entityId,
-  dealId,
   fields,
   files,
   carriageBlocked,
   anchorActivity,
   grounding,
   projectId,
-  needsDeal,
   savedDraft,
   onSent,
   onClose,
@@ -255,15 +287,13 @@ export function useComposeSend({
   answering: string | undefined;
   entityType: RelinkKind;
   entityId: string;
-  dealId?: string;
   fields: ComposeFields;
   files: readonly ChosenFile[];
   carriageBlocked: boolean;
   anchorActivity: Activity | undefined;
-  /** What a new message is about; null on an anchored send. */
+  /** The account path's choices; null on an anchored send. */
   grounding: Grounding | null;
   projectId: string;
-  needsDeal: boolean;
   savedDraft: ReturnType<typeof useSavedDraft>;
   onSent?: () => void;
   onClose: () => void;
@@ -272,20 +302,6 @@ export function useComposeSend({
   const queryClient = useQueryClient();
   const toast = useToast();
   const { setSendUnavailable } = fields;
-  // What every sent message does next, whichever door sent it: the draft is
-  // spent, the timeline reads again, and the composer closes.
-  const finishSent = () => {
-    savedDraft.sent();
-    const changed = [
-      ...entityTimelineKeys(entityType, entityId),
-      ...(dealId ? entityTimelineKeys("deal", dealId) : []),
-    ];
-    for (const queryKey of changed) {
-      queryClient.invalidateQueries({ queryKey });
-    }
-    onSent?.();
-    onClose();
-  };
   const send = useMutation({
     mutationKey: ["email", entityId],
     // The grounding is the variable, so a stale closure cannot file the mail
@@ -310,6 +326,10 @@ export function useComposeSend({
         setSendUnavailable(true);
         return;
       }
+      savedDraft.sent();
+      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       // A scheduled send may need undoing, so the toast opens the queue. An
       // `open` verb keeps it until dismissed, door and all.
       if (result.scheduled) {
@@ -322,17 +342,10 @@ export function useComposeSend({
           },
         });
       }
-      finishSent();
+      onSent?.();
+      onClose();
     },
   });
-  // A message sent past its refusal as a recorded exception. The refusal it
-  // answered is cleared with the rest, so nothing on screen invites a second
-  // send of a message that has gone.
-  const directSent = () => {
-    send.reset();
-    toast.show(t("directSend.sent"));
-    finishSent();
-  };
 
   // A refusal keeps the form open under copy naming the next move, without
   // the raw server detail beside it.
@@ -352,14 +365,9 @@ export function useComposeSend({
     body: fields.body,
     context: fields.context,
     asksContext: asksWhy(anchorActivity),
-    needsDeal,
   });
   // Spelled once for the send and for the question asked ahead of it.
-  const links = composedLinks(
-    { entityType, entityId, dealId },
-    grounding,
-    projectId,
-  );
+  const links = composedLinks({ entityType, entityId }, grounding, projectId);
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
   const answer = useSendPermission({
@@ -436,7 +444,6 @@ export function useComposeSend({
     fieldsRef,
     confirm,
     clearAttempt: () => setAttempted(false),
-    directSent,
   };
 }
 

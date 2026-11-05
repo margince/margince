@@ -37,7 +37,7 @@ func TestTheApprovalRowAndReceiptCarryTheSummaryParts(t *testing.T) {
 	if item := receiptItem(receipt); item.SummaryParts != parts {
 		t.Errorf("receipt row carries parts %+v, want %+v", item.SummaryParts, parts)
 	}
-	if handled := WireReceipt(receipt); handled.SummaryParts != parts {
+	if handled := handledReceipt(receipt); handled.SummaryParts != parts {
 		t.Errorf("handled receipt carries parts %+v, want %+v", handled.SummaryParts, parts)
 	}
 }

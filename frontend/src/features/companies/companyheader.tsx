@@ -346,12 +346,6 @@ export function CompanyActionBadges({
           recordId={company.id}
           disabledReasonId={refusedByState}
         />
-        <ShareAction
-          contactsOnly
-          recordType="company"
-          recordId={company.id}
-          disabledReasonId={refusedByState}
-        />
         {/* The audit spine: who changed this record and when. It reads as an
             inspection of the record rather than part of its story, so it sits
             with the other rare verbs instead of beside the account's own
@@ -394,8 +388,6 @@ export function CompanyActionBadges({
             a reader cannot walk back from the header. */}
         <ArchiveAction
           requires={{ object: "company", action: "delete" }}
-          archivable={company.archivable ?? false}
-          refusedReason={t("company.archiveRefused")}
           disabledReasonId={refusedByState}
           label={t("record.archive")}
           confirmText={t("record.archiveConfirm")}

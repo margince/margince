@@ -413,50 +413,6 @@ func TestAMaskedFieldIsWithheldFromItsHistory(t *testing.T) {
 	}
 }
 
-// The product split adds up to the deal's amount, so the amount's mask takes
-// it out of both the record history and the field history.
-func TestAMaskedAmountWithholdsTheProductSplitFromHistory(t *testing.T) {
-	ctx := principal.WithActor(context.Background(), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:x",
-		Permissions: principal.Permissions{
-			RowScope:   principal.RowScopeOwn,
-			FieldMasks: []principal.FieldMask{{Object: fieldmask.Deal, Field: "currency"}, {Object: fieldmask.Deal, Field: "expected_arr_minor"}},
-		},
-	})
-	mask, err := withheldHistoryOf(ctx, fieldmask.Deal)
-	if err != nil {
-		t.Fatal(err)
-	}
-	split := []any{map[string]any{"product_id": "p-1", "amount_minor": 20000, "currency": "EUR"}}
-	row := recordAuditRow{
-		actorType: actorTypeHuman, actorID: "human:x", action: "update",
-		before: map[string]any{"products": []any{}, "commercial_revision": 1},
-		after:  map[string]any{"products": split, "commercial_revision": 2},
-	}
-	entry := recordHistoryEntry(row, mask)
-	if _, present := entry.After["products"]; present {
-		t.Fatalf("the record history still carries the product split: %v", entry.After)
-	}
-	if entry.After["commercial_revision"] == nil {
-		t.Fatalf("the record history dropped an unmasked field: %v", entry.After)
-	}
-	fields := diffAuditRowFields(auditDiffRow{
-		action: "update", entityType: fieldmask.Deal, actorType: "agent", before: row.before, after: row.after,
-		evidence: map[string]any{"line_after": map[string]any{"unit_price_minor": 200}, "line_change": "added"},
-	}, mask, nil)
-	if len(fields) == 0 {
-		t.Fatal("the field history lost the unmasked revision")
-	}
-	for _, field := range fields {
-		if field.Field == "products" {
-			t.Fatalf("the field history still carries the product split: %+v", field)
-		}
-		if _, present := field.Evidence["line_after"]; present {
-			t.Fatalf("an agent's evidence still carries the line's price: %+v", field.Evidence)
-		}
-	}
-}
-
 // With nobody bound to the context, the history mask ERRORS rather than
 // answering "nothing is withheld".
 //

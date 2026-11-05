@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -21,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // Per rep at the published tier. Pending cards fill more than two 50-row
@@ -46,11 +43,9 @@ type DailyApprovals struct {
 	toApply                   []dailyApply
 }
 
-// dailyApply is one staged card, the rep's agent that applies it, and the
-// binding that rebinds that agent in each of the apply's transactions.
+// dailyApply is one staged card and the rep's agent that applies it.
 type dailyApply struct {
 	agent context.Context
-	actAs approvals.PolicyActor
 	id    ids.ApprovalID
 }
 
@@ -74,7 +69,7 @@ func seedDailyApprovals(t *testing.T, e *apptest.AppEnv, seats Seats, scale floa
 			id := stageDailyCloseDate(sweep, t, svc, deal, i)
 			switch {
 			case i < applied:
-				made.toApply = append(made.toApply, dailyApply{agent, dailyRepPolicy{users: users, rep: repID, deal: deal}, id})
+				made.toApply = append(made.toApply, dailyApply{agent, id})
 			case i < applied+expired:
 				if _, err := e.Owner.Exec(ctx, `UPDATE approval SET expires_at = now() - interval '1 hour' WHERE id = $1`, id); err != nil {
 					t.Fatalf("expiring close-date card %s: %v", id, err)
@@ -98,7 +93,7 @@ func applyDailyApprovals(t *testing.T, e *apptest.AppEnv, made DailyApprovals) D
 	// deal's date does not move.
 	svc := compose.NewApprovalsService(e.DB())
 	for _, card := range made.toApply {
-		if _, err := svc.ApplyUnderPolicy(card.agent, card.id, card.actAs); err != nil {
+		if _, err := svc.ApplyUnderPolicy(card.agent, card.id); err != nil {
 			t.Fatalf("applying close-date card %s under policy: %v", card.id, err)
 		}
 		made.Applied++
@@ -117,33 +112,7 @@ func dailyRepAgent(t *testing.T, users *identity.Service, ws, rep ids.UUID) cont
 	if err != nil {
 		t.Fatalf("reading the authority of rep %s: %v", rep, err)
 	}
-	return withDailyRepAgent(principal.WithCorrelationID(ctx, ids.NewV7()), rep, rbac, seat)
-}
-
-// dailyRepPolicy acts for the rep on one of their deals, bound in each of
-// the apply's transactions.
-type dailyRepPolicy struct {
-	users *identity.Service
-	rep   ids.UUID
-	deal  ids.UUID
-}
-
-func (d dailyRepPolicy) Bind(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
-	rbac, seat, err := d.users.EffectiveAuthorityTx(ctx, tx, d.rep)
-	if err != nil {
-		return nil, false, err
-	}
-	return withDailyRepAgent(ctx, d.rep, rbac, seat), true, nil
-}
-
-func (d dailyRepPolicy) HoldTarget(ctx context.Context, tx pgx.Tx) (bool, error) {
-	var owner *ids.UUID
-	err := tx.QueryRow(ctx, `SELECT owner_id FROM deal WHERE id = $1 FOR UPDATE`, d.deal).Scan(&owner)
-	return err == nil && owner != nil && *owner == d.rep, err
-}
-
-func withDailyRepAgent(ctx context.Context, rep ids.UUID, rbac authz.RBAC, seat principal.SeatType) context.Context {
-	return principal.WithActor(ctx, principal.Principal{
+	return principal.WithActor(principal.WithCorrelationID(ctx, ids.NewV7()), principal.Principal{
 		Type: principal.PrincipalAgent, ID: dailyApprovalActor, UserID: rep, OnBehalfOf: rep,
 		SeatType: seat, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions,
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),

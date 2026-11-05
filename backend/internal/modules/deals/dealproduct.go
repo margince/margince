@@ -21,21 +21,16 @@ import (
 
 // syncDealProductsFromOffer rewrites the deal's `offer` allocations from the
 // accepted offer's lines that name a product, one row per product with the
-// lines' net value. A `manual` set stays, because it is the human's answer,
-// and so does every row of a deal priced from its lines.
+// lines' net value. A `manual` set stays, because it is the human's answer.
 // It runs under the deal row lock the amount sync took, so a manual set
 // cannot land between the check and the writes. It answers the rows it
 // wrote, and nil when the manual set stood.
 func syncDealProductsFromOffer(ctx context.Context, tx pgx.Tx, dealID ids.DealID, offer crmcontracts.Offer) ([]crmcontracts.DealProduct, error) {
-	head, err := readDealCommercialHead(ctx, tx, dealID)
-	if err != nil {
-		return nil, err
-	}
 	var manual bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal_product WHERE deal_id = $1 AND source = 'manual')`, dealID).Scan(&manual); err != nil {
 		return nil, fmt.Errorf("read manual deal products: %w", err)
 	}
-	if manual || head.Mode == modeLines {
+	if manual {
 		return nil, nil
 	}
 	lines, err := readOfferLines(ctx, tx, ids.From[ids.OfferKind](ids.UUID(offer.Id)))
@@ -102,13 +97,6 @@ func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in [
 		// the two never leave a mixed manual and offer set behind.
 		if _, err := storekit.LockRow(ctx, tx, dealTable, dealID.UUID, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("lock deal for product set: %w", err)
-		}
-		head, err := readDealCommercialHead(ctx, tx, dealID)
-		if err != nil {
-			return err
-		}
-		if head.Mode == modeLines {
-			return &LineOwnedValueError{Field: "products"}
 		}
 		before, err := readDealProducts(ctx, tx, dealID)
 		if err != nil {
@@ -232,24 +220,14 @@ func (s *Store) ListDealProducts(ctx context.Context, dealID ids.DealID) ([]crmc
 			return err
 		}
 		var err error
-		if out, err = readDealProducts(ctx, tx, dealID); err != nil {
-			return err
-		}
-		readable, err := dealAmountReadable(ctx, tx, dealID)
-		if err != nil || readable {
-			return err
-		}
-		// The allocations add up to the deal's amount, so its mask withholds them.
-		for i := range out {
-			out[i].AmountMinor, out[i].KnownAmountMinor, out[i].Currency = nil, nil, nil
-		}
-		return nil
+		out, err = readDealProducts(ctx, tx, dealID)
+		return err
 	})
 	return out, err
 }
 
 func readDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]crmcontracts.DealProduct, error) {
-	rows, err := tx.Query(ctx, `SELECT dp.product_id, p.name, dp.source, dp.amount_minor, dp.known_amount_minor, dp.currency, dp.component_kind, dp.updated_at
+	rows, err := tx.Query(ctx, `SELECT dp.product_id, p.name, dp.source, dp.amount_minor, dp.currency, dp.component_kind, dp.updated_at
 		 FROM deal_product dp JOIN product p ON p.id = dp.product_id WHERE dp.deal_id = $1 ORDER BY p.name, dp.product_id`, dealID)
 	if err != nil {
 		return nil, fmt.Errorf("read deal products: %w", err)
@@ -257,7 +235,7 @@ func readDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]crmc
 	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.DealProduct, error) {
 		var product crmcontracts.DealProduct
 		var source, kind *string
-		err := row.Scan(&product.ProductId, &product.ProductName, &source, &product.AmountMinor, &product.KnownAmountMinor, &product.Currency, &kind, &product.UpdatedAt)
+		err := row.Scan(&product.ProductId, &product.ProductName, &source, &product.AmountMinor, &product.Currency, &kind, &product.UpdatedAt)
 		if source != nil {
 			product.Source = crmcontracts.DealProductSource(*source)
 		}

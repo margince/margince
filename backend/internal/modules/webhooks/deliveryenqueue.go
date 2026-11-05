@@ -14,9 +14,7 @@ import (
 // enqueueRow is one subscription's delivery of an event: the body rendered
 // for it, or the reason it could not be.
 type enqueueRow struct {
-	subID ids.UUID
-	// ownerID is the owner the visibility check authorized this row for.
-	ownerID     ids.UUID
+	subID       ids.UUID
 	payload     []byte
 	contentType *string
 	renderError string
@@ -27,7 +25,7 @@ type enqueueRow struct {
 func renderFor(cands []subCandidate, envelope []byte) []enqueueRow {
 	rows := make([]enqueueRow, 0, len(cands))
 	for _, c := range cands {
-		row := enqueueRow{subID: c.id, ownerID: c.ownerID, payload: envelope}
+		row := enqueueRow{subID: c.id, payload: envelope}
 		if c.bodyTemplate != nil {
 			row.contentType = c.bodyContentType
 			tpl, err := parseBodyTemplate(*c.bodyTemplate, deref(c.bodyContentType))
@@ -53,31 +51,28 @@ func (s *Store) enqueueForSubscriptions(ctx context.Context, rows []enqueueRow, 
 		return nil, nil
 	}
 	subIDs := make([]ids.UUID, len(rows))
-	owners := make([]ids.UUID, len(rows))
 	payloads := make([]string, len(rows))
 	contentTypes := make([]*string, len(rows))
 	renderErrors := make([]*string, len(rows))
 	bodies := make(map[ids.UUID][]byte, len(rows))
-	ownersBySub := make(map[ids.UUID]ids.UUID, len(rows))
 	for i, r := range rows {
-		subIDs[i], owners[i], payloads[i], contentTypes[i] = r.subID, r.ownerID, string(r.payload), r.contentType
+		subIDs[i], payloads[i], contentTypes[i] = r.subID, string(r.payload), r.contentType
 		if r.renderError != "" {
 			renderErrors[i] = &r.renderError
 		}
 		bodies[r.subID] = r.payload
-		ownersBySub[r.subID] = r.ownerID
 	}
 	var targets []attemptTarget
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		res, err := tx.Query(ctx, `
 			WITH wanted AS (
-				SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $9::uuid[])
-				  AS w(subscription_id, payload, content_type, render_error, owner_id)
+				SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[])
+				  AS w(subscription_id, payload, content_type, render_error)
 			), matched AS (
 				SELECT s.id, s.target_url, s.signing_secret_ref, s.custom_headers,
 				       w.payload, w.content_type, w.render_error
 				FROM webhook_subscription s JOIN wanted w ON w.subscription_id = s.id
-				WHERE s.state = 'active' AND s.archived_at IS NULL AND s.owner_id = w.owner_id
+				WHERE s.state = 'active' AND s.archived_at IS NULL
 			), created AS (
 				INSERT INTO webhook_delivery
 				  (subscription_id, event_id, event_type, payload, content_type, status,
@@ -93,7 +88,7 @@ func (s *Store) enqueueForSubscriptions(ctx context.Context, rows []enqueueRow, 
 			SELECT c.id, c.subscription_id, m.target_url, m.signing_secret_ref, m.custom_headers, c.content_type
 			FROM created c JOIN matched m ON m.id = c.subscription_id
 			WHERE c.status = 'pending'`,
-			subIDs, payloads, contentTypes, renderErrors, eventType, eventID, entityType, entityID, owners)
+			subIDs, payloads, contentTypes, renderErrors, eventType, eventID, entityType, entityID)
 		if err != nil {
 			return err
 		}
@@ -105,7 +100,6 @@ func (s *Store) enqueueForSubscriptions(ctx context.Context, rows []enqueueRow, 
 				return err
 			}
 			t.payload, t.contentType = bodies[t.subID], deref(contentType)
-			t.entityType, t.entityID, t.ownerID = entityType, entityID, ownersBySub[t.subID]
 			targets = append(targets, t)
 		}
 		return res.Err()

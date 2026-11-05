@@ -547,29 +547,6 @@ export const ACalendarThatStopped: Story = {
   },
 };
 
-// A used booking page that takes no bookings. Its title names the blocker, and
-// the row opens the booking settings, where the host fixes it.
-export const ABookingPageThatIsPaused: Story = {
-  args: {
-    ...baseArgs,
-    item: {
-      occurred_precision: "instant",
-      id: "bh1",
-      source: "booking_health",
-      category: "system",
-      level: 6,
-      consequence: "work_blocked",
-      kind: "calendar_read_only",
-      because: [],
-      actions: [],
-    },
-  },
-  render: (args) => {
-    stubRow(false);
-    return <WorklistRow {...args} />;
-  },
-};
-
 // A new lead waiting on a first reply, with the clock the SLA policy is
 // counting. `response_overdue` is the reason the row gives; the phrase is the
 // client's to write.
@@ -888,6 +865,34 @@ export const TheRowInHand: Story = {
 // the FOLD, holding the reasons past the third together with why this row beat
 // the one below it — one press for a reader who disagrees with the order, and
 // no line of height for the many who do not.
+// One open customer-support review: its task and the deal's quiet row fold
+// into this one row, which stays while the review is open.
+export const ADealUnderReview: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      occurred_precision: "instant",
+      id: "01a05500-0000-7000-8000-0000000000db",
+      source: "deal_review",
+      category: "deals_at_risk",
+      level: 4,
+      consequence: "deal_drifts",
+      title: "Turbinenbau retrofit",
+      because: [{ kind: "quiet_days", value: { kind: "days", days: 196 } }],
+      actions: ["open"],
+      subject: {
+        type: "deal",
+        id: "01a05500-0000-7000-8000-0000000000da",
+        label: "Turbinenbau retrofit",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
 export const ADealAtRiskWithItsFigures: Story = {
   args: {
     ...baseArgs,

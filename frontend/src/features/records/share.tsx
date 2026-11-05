@@ -31,9 +31,7 @@ export function ShareAction({
   recordType,
   recordId,
   disabledReasonId,
-  contactsOnly = false,
 }: Readonly<{
-  contactsOnly?: boolean;
   recordType: RecordType;
   recordId: string;
   // Why this action is unavailable, when it is. STATE-4a settles the
@@ -47,16 +45,12 @@ export function ShareAction({
   return (
     <Button
       reasonId={disabledReasonId}
-      data-testid={contactsOnly ? "share-company-contacts" : "share-record"}
+      data-testid="share-record"
       onClick={() =>
-        navigate({
-          screen: "share",
-          id: contactsOnly ? "company-contacts" : recordType,
-          id2: recordId,
-        })
+        navigate({ screen: "share", id: recordType, id2: recordId })
       }
     >
-      {t(contactsOnly ? "share.companyContacts" : "record.share")}
+      {t("record.share")}
     </Button>
   );
 }
@@ -72,20 +66,12 @@ export function ShareScreen({
   recordId,
 }: Readonly<{ recordType: string; recordId: string }>) {
   const t = useT();
-  const contactsOnly = recordType === "company-contacts";
-  const kind = contactsOnly ? "company" : recordType;
-  if (!isRecordType(kind)) {
+  if (!isRecordType(recordType)) {
     return (
       <div className="wrap">
         <EmptyState>{t("share.unknownRecord")}</EmptyState>
       </div>
     );
   }
-  return (
-    <ShareScreenBody
-      recordType={kind}
-      recordId={recordId}
-      contactsOnly={contactsOnly}
-    />
-  );
+  return <ShareScreenBody recordType={recordType} recordId={recordId} />;
 }

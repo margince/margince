@@ -197,10 +197,6 @@
 .worklist-row-title > .heading {
   min-width: 0;
 }
-.worklist-row-pinned {
-  display: inline-flex;
-  color: var(--textSecondary);
-}
 
 .worklist-row-detail,
 .worklist-row-verdict,

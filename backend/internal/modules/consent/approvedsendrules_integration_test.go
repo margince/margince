@@ -521,36 +521,6 @@ func TestAnInternallyCreatedDealIsNoPermission(t *testing.T) {
 	}
 }
 
-// A deal claim on a message filed under the deal reads that deal. The rep is
-// told the request is missing, not asked to choose a deal the message already
-// carries. The outcome stays the links' own: still not supported.
-//
-// Mutation: make validateDealFollowup read only Evidence.DealID again, and the
-// filed case answers no_evidence.
-func TestADealClaimReadsTheDealTheMessageIsFiledUnder(t *testing.T) {
-	e := setupResolve(t)
-	deal := e.openDeal(t, "open", true)
-
-	filed := e.resolve(t, commsauthz.Request{
-		Context: commsauthz.CategoryActiveDealFollowup, Links: []ids.UUID{deal},
-	})
-	if filed.Supported || filed.Reason != commsauthz.ReasonDealNotRequested {
-		t.Fatalf("filed under the deal: supported=%v reason=%q, want deal_not_requested", filed.Supported, filed.Reason)
-	}
-	unfiled := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryActiveDealFollowup})
-	if unfiled.Supported || unfiled.Reason != commsauthz.ReasonNoEvidence {
-		t.Fatalf("no deal anywhere: supported=%v reason=%q, want no_evidence", unfiled.Supported, unfiled.Reason)
-	}
-
-	e.enquiredAbout(t, deal)
-	asked := e.resolve(t, commsauthz.Request{
-		Context: commsauthz.CategoryActiveDealFollowup, Links: []ids.UUID{deal},
-	})
-	if !asked.Supported || asked.Category != commsauthz.CategoryActiveDealFollowup {
-		t.Fatalf("filed under a deal they asked about: %+v, want a supported deal follow-up", asked)
-	}
-}
-
 // recordRequestAbout writes the rep's confirmation that the contact asked
 // about a deal, through the door the review form answers with.
 func (e *resolveEnv) recordRequestAbout(t *testing.T, deal ids.UUID, when time.Time, asksForQuote bool) {

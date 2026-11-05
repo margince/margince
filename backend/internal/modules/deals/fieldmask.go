@@ -58,9 +58,8 @@ var dealWithholders = map[string]func(*crmcontracts.Deal){
 
 // finishDealPage is what every page of deals goes through before it leaves the
 // store, a single read's one-row page included. It applies the read masks,
-// names who created each deal and who set its probability, and dates the
-// newest email on each card. The lists and the single read share it, so a pass
-// added here reaches all three.
+// names who created each deal, and dates the newest email on each card. The
+// lists and the single read share it, so a pass added here reaches all three.
 func finishDealPage(ctx context.Context, tx pgx.Tx, page []crmcontracts.Deal) error {
 	if err := maskDeals(ctx, tx, page); err != nil {
 		return err
@@ -69,9 +68,6 @@ func finishDealPage(ctx context.Context, tx pgx.Tx, page []crmcontracts.Deal) er
 		func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
 		auditattribution.NoneWithheld[crmcontracts.Deal],
 		func(d *crmcontracts.Deal, who *crmcontracts.PrincipalAttribution) { d.CreatedBy = who }); err != nil {
-		return err
-	}
-	if err := stampProbabilitySetters(ctx, tx, page); err != nil {
 		return err
 	}
 	return attachLastEmail(ctx, tx, page)

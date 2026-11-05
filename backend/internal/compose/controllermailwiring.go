@@ -105,13 +105,6 @@ func (r mailerRelay) SenderAddress() string { return r.from }
 // SendControllerMail hands one rendered message to the operator relay, under
 // the delivery row's own Message-ID so a bounce of it can find that row.
 func (r mailerRelay) SendControllerMail(ctx context.Context, msg comms.ControllerMessage) error {
-	if len(msg.Inline) > 0 {
-		related, ok := r.m.(mailer.RelatedSender)
-		if !ok {
-			return errors.New("compose: controller relay does not support the staged inline logo")
-		}
-		return related.SendRelated(ctx, msg.To, msg.Subject, msg.TextBody, msg.HTMLBody, msg.MessageID, msg.Inline)
-	}
 	if msg.HTMLBody != "" {
 		alternative, ok := r.m.(mailer.AlternativeSender)
 		if !ok {

@@ -149,7 +149,6 @@ func (r *Registry) Register(t mcp.Tool) {
 	r.enumArgs[spec.Name] = declaredEnumArgs(spec.InputSchema)
 	r.requiredArgs[spec.Name] = declaredRequired(spec.InputSchema)
 	r.typedArgs[spec.Name] = declaredTypes(spec.InputSchema)
-	r.uniqueArgs[spec.Name] = declaredUniqueArgs(spec.InputSchema)
 }
 
 // envelopedSpec is the spec every surface is served: the tool's own, with its

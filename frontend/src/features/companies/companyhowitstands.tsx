@@ -28,7 +28,6 @@ import type { CompanyTab } from "../../lib/companytab";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { companyActivityVerdict } from "./companyactivity";
-import { nextBarLateness } from "./companynextbar";
 import {
   companyDimRows,
   companyVerdict,
@@ -94,14 +93,10 @@ export function CompanyHowItStands({
     locale,
   });
   const withheld = omitted(view, "health");
-  const late = nextBarLateness(view, zone, { t, plural, locale });
   const verdict = companyVerdict({
     dimensions,
     withheld,
-    moment: view.moment && {
-      rule: view.moment.rule,
-      why_now: late?.sentence ?? view.moment.why_now,
-    },
+    moment: view.moment,
     unrated: companyActivityVerdict(view, { t, locale, zone }),
   });
   const word = t(verdict.word);

@@ -113,25 +113,20 @@ func TestAnInvalidChangeOfALockedAllowanceIsRefusedAsLocked(t *testing.T) {
 }
 
 // A name, a country or a send limit the environment sets refuses an invalid
-// change as locked, not as a value the screen could correct. A value outside
-// the contract's bounds is refused at decode, before any lock is read. The
-// country is the registered test pack zk.
+// change as locked, not as a value the screen could correct. The country is
+// the registered test pack zk.
 func TestAnInvalidChangeOfALockedInstallationSettingIsRefusedAsLocked(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{
 		"MARGINCE_INSTALLATION_NAME=Env Name Co", "MARGINCE_INSTALLATION_COUNTRY=zk", "MARGINCE_INSTALLATION_SEND_RATE_LIMIT=7",
 	})
 	e.BootstrapWorkspace(t)
-	for name, c := range map[string]struct {
-		patch map[string]any
-		want  int
-	}{
-		"a rename":                  {map[string]any{"name": "Other Co"}, http.StatusConflict},
-		"a country with no pack":    {map[string]any{"country": "zzz"}, http.StatusConflict},
-		"a limit within its bounds": {map[string]any{"send_rate_limit": 8}, http.StatusConflict},
-		"a limit below its minimum": {map[string]any{"send_rate_limit": 0}, http.StatusUnprocessableEntity},
+	for name, patch := range map[string]map[string]any{
+		"a rename":                  {"name": "Other Co"},
+		"a country with no pack":    {"country": "zzz"},
+		"a limit below its minimum": {"send_rate_limit": 0},
 	} {
-		if status := e.Call(t, http.MethodPatch, "/v1/installation/settings", c.patch, nil, nil); status != c.want {
-			t.Errorf("%s of a locked setting → %d, want %d", name, status, c.want)
+		if status := e.Call(t, http.MethodPatch, "/v1/installation/settings", patch, nil, nil); status != http.StatusConflict {
+			t.Errorf("%s of a locked setting → %d, want 409", name, status)
 		}
 	}
 }
