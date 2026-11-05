@@ -290,11 +290,15 @@ func TestEveryInvitedMemberCanBeSentANewInvitation(t *testing.T) {
 // already told it went out. The link says so, which is what offers the resend.
 func TestAnInvitationThatNeverReachedTheRelayIsRecordedAsFailed(t *testing.T) {
 	e := setupRevocationEnv(t, "invite-unread")
-	h, done := mailingHandlers(e, stalledMail{release: make(chan struct{})})
+	mail := &capturedMail{}
+	h, done := mailingHandlers(e, mail)
 	h.sendBudget = time.Nanosecond
 
 	inviteThrough(t, e, h, "unread@acme.test")
 	<-done
+	if mail.sent != 0 {
+		t.Fatalf("the relay took %d message(s), want the read to stop the send", mail.sent)
+	}
 	if row := rosterRow(t, e, h, "unread@acme.test"); !mailState(row, inviteMailFailed) || !offersResend(row) {
 		t.Fatalf("after the read before the send failed the roster shows %v %v, want failed and a resend",
 			row.InviteEmailState, row.AllowedActions)
