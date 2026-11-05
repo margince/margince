@@ -25,12 +25,7 @@ export function SetupReminder({
   const t = useT();
   const { locale } = useLocale();
   const setup = useSetupChecklist(useSettingsReach());
-  if (
-    !setup.settled ||
-    setup.hidden ||
-    setup.total === 0 ||
-    setup.done === setup.total
-  ) {
+  if (!setup.settled || setup.hidden || setup.total === 0 || setup.complete) {
     return null;
   }
   return (

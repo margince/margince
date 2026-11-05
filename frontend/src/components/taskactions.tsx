@@ -31,9 +31,9 @@ import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
 import { problemCodeOf, unwrap } from "../lib/problem";
-import { EntityRef } from "./entityref";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
+import { TaskAssignee } from "./taskassignee";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "../lib/activityread";
@@ -430,9 +430,7 @@ export function TaskDetailDialog({
                 {task.is_done && (
                   <Badge tone="success">{t("tasks.isDone")}</Badge>
                 )}
-                {task.assignee_id && (
-                  <EntityRef kind="user" id={task.assignee_id} />
-                )}
+                <TaskAssignee id={task.assignee_id} />
                 {/* A task an agent wrote says so, so a reader knows it was
                   read out of a conversation rather than typed by a colleague. */}
                 {provenanceOf(task.captured_by).kind === "agent" && (

@@ -3660,7 +3660,7 @@ export const en = {
   "co.strip.nextMeeting": "Next meeting",
   "co.strip.next.none": "None scheduled",
   "co.360.fullHistory": "Full history",
-  "co.overview.alsoOnList": "Also on your list",
+  "co.overview.otherOpen": "Other open tasks",
   "record.allTasks": "All tasks",
   "co.overview.latest": "Latest",
   "co.overview.nothingOpen": "Nothing else open",
@@ -6972,6 +6972,7 @@ export const en = {
     "This section did not load. The rest of the page is unaffected.",
   "today.quiet": "Nothing needs attention right now.",
   "task.untitled": "Untitled task",
+  "task.assigneeYou": "You",
   "task.next.openContact": "Open contact",
   "task.next.draftEmail": "Draft email",
   "task.next.draftIntent": "write about this task",
@@ -15019,8 +15020,6 @@ export const en = {
   "setup.action.voice": "Add samples",
   "setup.action.booking": "Turn on",
   "settings.home.setup.title": "Your setup",
-  "settings.home.setup.complete": "Setup is complete",
-  "settings.home.setup.show": "Show steps",
   "connectors.tile.notSetUp": "Not set up",
   "connectors.tile.askAdmin": "An administrator turns {vendor} on in {page}.",
   "connectors.tile.registerApp":
@@ -16892,6 +16891,17 @@ export const en = {
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":
     "The link to {company} and its history are deleted permanently. {company} itself stays. If they left, mark the role ended instead.",
+  // The About column's employer dialog: move the contact to another company or
+  // none, and say what became of the old job.
+  "contact.employer.changeTitle": "Change employer",
+  "contact.employer.none": "No current employer",
+  "contact.employer.fateQuestion": "What about {company}?",
+  "contact.employer.fateLeft": "They left {company}",
+  "contact.employer.fateLeftHint":
+    "It stays on their record as a former employer, and the job ends today.",
+  "contact.employer.fateWrong": "{company} was never their employer",
+  "contact.employer.fateWrongHint":
+    "The link and its history are deleted. {company} itself stays.",
   "contact.proposal.title": "From {source}: {company}",
   "contact.proposal.ask": "Link or create this company?",
   "contact.proposal.link": "Link",
