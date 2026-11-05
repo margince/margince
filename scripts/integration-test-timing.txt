@@ -1825,6 +1825,7 @@ backend|./internal/compose/weekly|TestTheWriterRefusesProseTheColumnCannotHold|1
 backend|./internal/compose/weekly|TestUndoingAnEditDoesNotReadAsUnarchivingTheDeal|1.05
 backend|./internal/compose/weekly|TestWeeklyCountsExcludeUnadoptedHistoricalAutomaticWork|2.55
 backend|./internal/compose|*|0.290
+backend|./internal/compose|TestABacklogPastEveryScanCapIsWalkedToItsEnd|160.00
 backend|./internal/compose|TestABacklogDeeperThanThePageStillLeadsWithTheOldest|4.12
 backend|./internal/compose|TestABookedMeetingAheadGivesDealHealthFullRecency|1.76
 backend|./internal/compose|TestABookedMeetingAheadKeepsADealOffStalled|2.65
@@ -2230,7 +2231,6 @@ backend|./internal/compose|TestDismissingOrReopeningSettlesNothingElse|2.74
 backend|./internal/compose|TestDisqualificationApprovalDescribesTheActualRetirement|1.91
 backend|./internal/compose|TestDomainQuestionDeferralPreservesTheReviewDestination|8.97
 backend|./internal/compose|TestDoneIsNotAskedOverAReplyTheReaderMayNotOpen|1.28
-backend|./internal/compose|TestDoneOnAWaitingCardBelowTheRankedTopTakesItOff|48.10
 backend|./internal/compose|TestDoneRefusesADealTheBriefRowReportsAbove|7.74
 backend|./internal/compose|TestDoneWithdrawsWhenTheReplyIsArchived|1.33
 backend|./internal/compose|TestDuplicateCompaniesCitingDifferentMeetingsKeepBothSuggestions|1.31
@@ -2515,7 +2515,6 @@ backend|./internal/compose|TestTheAccountStripStatesTheWorstSignalInTheReadersLa
 backend|./internal/compose|TestTheAddresseesGermanReplyStoredAsEnglishIsDraftedInGerman|1.54
 backend|./internal/compose|TestTheAddresseesMailOlderThanTheThreadPageStillDecidesTheLanguage|20.24
 backend|./internal/compose|TestTheAddresseesMailTheDrafterMayNotReadDoesNotDecideTheLanguage|23.34
-backend|./internal/compose|TestTheAtRiskTailReachesEveryDealOnce|150.35
 backend|./internal/compose|TestTheAttentionFeedShowsEachOwnerOnlyTheirOwnSuggestion|3.34
 backend|./internal/compose|TestTheBackfillReadsEveryLegacyDeclineButAHeldOne|1.17
 backend|./internal/compose|TestTheBackfillReadsOnlyTheMessagesOwnStoredParts|1.45
@@ -2587,8 +2586,6 @@ backend|./internal/compose|TestTheTeamWorklistShowsItsMembersWaitingMailAndQuiet
 backend|./internal/compose|TestTheTerritoryExampleGroupsSalesWonAndReclassifies|1.00
 backend|./internal/compose|TestTheTwoSignalsWithinThirtyDaysSuggestADeal|1.49
 backend|./internal/compose|TestTheUndoOfAContactMomentSetAsideShowsItAgain|4.37
-backend|./internal/compose|TestTheWaitingTailIsTheFoldOfTheScan|72.10
-backend|./internal/compose|TestTheWaitingTotalMatchesTheMergedWalk|134.25
 backend|./internal/compose|TestTheWalkReadsOnlyMailThisPassMayRead|5.60
 backend|./internal/compose|TestTheWalkStopsAtTheDepth|1.61
 backend|./internal/compose|TestTheWalkStopsAtTheFirstTitle|1.06

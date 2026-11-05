@@ -76,24 +76,16 @@ order_by_hint() {
   ' "$grouped" | LC_ALL=C sort -s -t'|' -k1,1 -rn | cut -d'|' -f2-
 }
 
-# assign_shard DISCOVERY TIMING K N — print the DISCOVERY lines shard K of N runs.
+# weigh_tests DISCOVERY TIMING — print `moduledir|package|weight|<line>` for each
+# DISCOVERY line, each package's tests slowest first.
 #
 # DISCOVERY lines are `moduledir|package|Test`; TIMING lines are the same three
-# fields plus `|seconds`. Tests of one package run one after another, so a
-# shard's wall clock is set by its largest package slice. Each package is
-# therefore split on its own: slowest test first, to the shard holding the least
-# of that package's time so far, ties to the shard with the least time overall,
-# then to the lowest index.
-#
-# TIMING names the slow tests one by one; a `dir|package|*|seconds` line gives
-# the weight of every test of that package it does not name. A test with
-# neither weighs 1 s, so a stale file costs balance and never a test. With no
-# timing at all every weight is equal and each package is split by count.
-#
-# Every shard computes the same split from the same two files, and each line
-# goes to exactly one shard; the lane's fan-in checks that the union is whole.
-assign_shard() {
-  local discovery="$1" timing="$2" shard="$3" total="$4"
+# fields plus `|seconds`. TIMING names the slow tests one by one; a
+# `dir|package|*|seconds` line gives the weight of every test of that package it
+# does not name. A test with neither weighs 1 s, so a stale file costs balance
+# and never a test. With no timing at all every weight is equal.
+weigh_tests() {
+  local discovery="$1" timing="$2"
   awk -F'|' -v timing="$timing" '
     BEGIN {
       while (timing != "" && (getline l < timing) > 0) {
@@ -108,20 +100,70 @@ assign_shard() {
       weight = ($0 in secs) ? secs[$0] : ((rest in secs) ? secs[rest] : 1)
       printf "%s|%s|%012.3f|%s\n", $1, $2, weight, $0
     }
-  ' "$discovery" \
-    | LC_ALL=C sort -t'|' -k1,2 -k3,3r -k4 \
-    | awk -F'|' -v shard="$shard" -v total="$total" '
-        {
-          p = $1 "|" $2
-          weight = $3 + 0
-          best = 1
-          for (s = 2; s <= total; s++) {
-            if (load[p, s] < load[p, best] || (load[p, s] == load[p, best] && sum[s] < sum[best])) best = s
+  ' "$discovery" | LC_ALL=C sort -t'|' -k1,2 -k3,3r -k4
+}
+
+# The one dealing rule, for shards and for parts alike: a test goes to the bin
+# holding the least of its package's time so far, ties to the bin with the least
+# time overall, then to the lowest index. Fed slowest first, that is
+# longest-processing-time-first.
+LANEORDER_DEAL='
+  function deal(p, weight, bins,    s, best) {
+    best = 1
+    for (s = 2; s <= bins; s++) {
+      if (load[p, s] < load[p, best] || (load[p, s] == load[p, best] && sum[s] < sum[best])) best = s
+    }
+    load[p, best] += weight
+    sum[best] += weight
+    return best
+  }'
+
+# assign_shard DISCOVERY TIMING K N — print the DISCOVERY lines shard K of N runs.
+#
+# Tests of one package run one after another, so a shard's wall clock is set by
+# its largest package slice. Each package is therefore split on its own.
+#
+# Every shard computes the same split from the same two files, and each line
+# goes to exactly one shard; the lane's fan-in checks that the union is whole.
+assign_shard() {
+  local discovery="$1" timing="$2" shard="$3" total="$4"
+  weigh_tests "$discovery" "$timing" \
+    | awk -F'|' -v shard="$shard" -v total="$total" "$LANEORDER_DEAL"'
+        { if (deal($1 "|" $2, $3 + 0, total) == shard) print $4 "|" $5 "|" $6 }
+      ' \
+    | LC_ALL=C sort
+}
+
+# split_parts ASSIGNED TIMING SECONDS — print one `moduledir|package|-run regex`
+# line for each `go test` process the lane starts.
+#
+# go test's -timeout bounds one process, so a package slice weighing more than
+# SECONDS is dealt into as many parts as it takes to bring each part under it,
+# and each part runs as its own process on its own clone. A package at or under
+# SECONDS stays one process. No part is ever empty, and every ASSIGNED line is
+# in exactly one part.
+split_parts() {
+  local assigned="$1" timing="$2" seconds="$3"
+  weigh_tests "$assigned" "$timing" \
+    | awk -F'|' -v target="$seconds" "$LANEORDER_DEAL"'
+        function flush(    bins, i, b) {
+          if (n == 0) return
+          bins = (target > 0) ? int(total / target) : 1
+          if (target > 0 && bins * target < total) bins++
+          if (bins < 1) bins = 1
+          if (bins > n) bins = n
+          split("", part)
+          for (i = 1; i <= n; i++) {
+            b = deal(pkg, weight[i], bins)
+            part[b] = (b in part) ? part[b] "|" name[i] : name[i]
           }
-          load[p, best] += weight
-          sum[best] += weight
-          if (best == shard) print $4 "|" $5 "|" $6
+          for (b = 1; b <= bins; b++) print pkg "|^(" part[b] ")$"
+          n = 0
+          total = 0
         }
+        ($1 "|" $2) != pkg { flush(); pkg = $1 "|" $2 }
+        { n++; weight[n] = $3 + 0; name[n] = $6; total += weight[n] }
+        END { flush() }
       ' \
     | LC_ALL=C sort
 }

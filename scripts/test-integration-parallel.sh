@@ -20,8 +20,10 @@
 #              than one package touches Redis, and at least two FLUSHDB between
 #              tests, so this is an isolation boundary rather than a convenience
 #              — batches wait before reusing the reserved test block.
-# Within a package nothing changes — still -p 1, the same sequential model that is
-# green today — so no test file needs editing.
+# Within a process nothing changes — still -p 1, the same sequential model that is
+# green today — so no test file needs editing. A package too heavy for one
+# process's timeout runs as several parts (split_parts in scripts/lib-laneorder.sh),
+# and each part is a process with its own private state like any other.
 #
 # Same teeth as the serial lane: zero-skip guard (a SKIP fails the run) and any
 # package failure fails the whole run. MARGINCE_ENV=dev is exported so the HTTP
@@ -429,11 +431,15 @@ fi
 # per-slot FILE, not onto the work line — hundreds of test names make a regex
 # far past what xargs -I can carry. The union is also what confines the run to
 # tagged tests, so it is built in BOTH modes, not only when sharding.
+#
+# A package whose slice weighs more than a quarter of the timeout runs as
+# several parts, each its own process on its own clone. The weights are seconds
+# from one green CI run, and one slice of ./internal/compose has taken 2.6 times
+# as long on one runner as on another, so a part near the whole timeout would be
+# killed with every test passing.
+PART_SECONDS=$(( ${IT_TIMEOUT%s} / 4 ))
 GROUPED="$(mktemp)"
-awk -F'|' '
-  { key = $1 "|" $2; re[key] = (key in re) ? re[key] "|" $3 : $3 }
-  END { for (k in re) print k "|^(" re[k] ")$" }
-' "$ASSIGNED" | LC_ALL=C sort > "$GROUPED"
+split_parts "$ASSIGNED" "$ROOT/scripts/integration-test-timing.txt" "$PART_SECONDS" > "$GROUPED"
 REGEX_DIR="$(mktemp -d)"
 export REGEX_DIR
 : > "$WORK"
@@ -460,15 +466,16 @@ while IFS= read -r line; do
 done < "$GROUPED"
 rm -f "$GROUPED"
 
-NPKGS=$(wc -l < "$WORK" | tr -d ' ')
+NPARTS=$(wc -l < "$WORK" | tr -d ' ')
+NPKGS=$(LC_ALL=C sort -u "$WORK" | wc -l | tr -d ' ')
 # Say what was left to the unit lane. An unreported exclusion and a broken
 # selector produce the same silence, and this lane's whole contract is that a
 # thinner run must never read as a passing one.
 echo "test-integration-parallel: $NTESTS tagged tests in $NPKGS_DISCOVERED packages; skipped $NUNTAGGED untagged (they run in \`make check\`)"
 if (( SHARD_TOTAL > 0 )); then
-  echo "test-integration-parallel: shard ${SHARD_IDX}/${SHARD_TOTAL} — $(wc -l < "$ASSIGNED" | tr -d ' ') of $NTESTS tests across $NPKGS packages, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
+  echo "test-integration-parallel: shard ${SHARD_IDX}/${SHARD_TOTAL} — $(wc -l < "$ASSIGNED" | tr -d ' ') of $NTESTS tests across $NPKGS packages in $NPARTS processes, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
 else
-  echo "test-integration-parallel: $NPKGS packages, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
+  echo "test-integration-parallel: $NPKGS packages in $NPARTS processes, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
 fi
 
 # One job = clone an empty db + own a private MinIO bucket, run that package
@@ -703,7 +710,8 @@ fi
 if [[ -s "$TIMING" ]] && (( SHARD_TOTAL == 0 )); then
   hint_dir="$(dirname "$MEASURED_HINT")"
   if mkdir -p "$hint_dir" 2>/dev/null && hint_tmp="$(mktemp "$hint_dir/.integration-lane-timing.XXXXXX" 2>/dev/null)"; then
-    cut -d'|' -f1,2 "$TIMING" > "$hint_tmp" 2>/dev/null \
+    # A package split into parts has one TIMING line per part; its hint is their sum.
+    awk -F'|' '{ secs[$1] += $2 } END { for (p in secs) printf "%s|%.3f\n", p, secs[p] }' "$TIMING" > "$hint_tmp" 2>/dev/null \
       && mv -f "$hint_tmp" "$MEASURED_HINT" 2>/dev/null \
       || rm -f "$hint_tmp"
   fi
@@ -716,10 +724,10 @@ fi
 if [[ "$NPKGS_DISCOVERED" -eq 0 ]]; then
   echo "FAIL: no integration packages discovered — the build-constraint scan admitted no tagged file (regression?)"
   fail=1
-elif [[ "$ran" -ne "$NPKGS" ]]; then
-  # $NPKGS is THIS run's package count — the shard's slice, not the lane total —
+elif [[ "$ran" -ne "$NPARTS" ]]; then
+  # $NPARTS is THIS run's process count — the shard's slice, not the lane total —
   # so it is the number a missing worker has to be counted against.
-  echo "FAIL: ran $ran package log(s) but this run has $NPKGS package(s) — a worker did not report; treating as red"
+  echo "FAIL: ran $ran package log(s) but this run started $NPARTS process(es) — a worker did not report; treating as red"
   fail=1
 fi
 

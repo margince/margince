@@ -15,7 +15,9 @@
 #      degrade to no-hint behaviour, not to an order the sort invented;
 #   3. the measured hint beats the committed baseline, and an empty or missing
 #      file is not a hint at all;
-#   4. the shard split holds every test once and spreads slow tests apart.
+#   4. the shard split holds every test once and spreads slow tests apart;
+#   5. a package too heavy for one process splits into parts that hold every
+#      test once, none empty, balanced by weight.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -236,6 +238,35 @@ for k in 1 2 3; do
   count=$(assign_shard "$work/discovery" "$work/notiming" "$k" 3 | grep -c '|./big|' || true)
   [[ "$count" -eq 2 ]] || fail "with no timing, shard $k got $count of ./big's 6 tests; it must split by count, 2 each"
 done
+
+# 5. Parts. A part is one `go test` process, so a lost test is a test no process
+# runs, and an empty part would be a `-run ^()$` process that runs nothing.
+part_tests() { # the tests a `dir|pkg|^(A|B)$` line runs, one `dir|pkg|Test` each
+  awk -F'|' '{ for (i = 3; i <= NF; i++) { t = $i; gsub(/[\^()$]/, "", t); print $1 "|" $2 "|" t } }' "$1" | LC_ALL=C sort
+}
+split_parts "$work/discovery" "$work/timing" 50 > "$work/parts"
+expect_order "the parts together must hold every test exactly once" \
+  "$(LC_ALL=C sort "$work/discovery")" "$(part_tests "$work/parts")"
+expect_order "./big (123 s) splits into three parts of at most 50 s each, ./small (9 s) stays whole" \
+  './big
+./big
+./big
+./small' \
+  "$(cut -d'|' -f2 "$work/parts")"
+while IFS= read -r part; do
+  printf '%s\n' "$part" > "$work/onepart"
+  load=$(awk -F'|' 'NR == FNR { if (NF == 4) t[$1 "|" $2 "|" $3] = $4; next } { s += t[$0] } END { print s + 0 }' \
+    "$work/timing" <(part_tests "$work/onepart" | grep '|./big|' || true))
+  if (( ${load%.*} > 61 )); then
+    fail "a part of ./big holds ${load}s; balanced, none holds more than the 60 s test plus a 1 s one"
+  fi
+done < "$work/parts"
+[[ "$(split_parts "$work/discovery" "$work/timing" 1 | grep -c '|./big|')" -eq 6 ]] \
+  || fail "a package never splits into more parts than it has tests"
+expect_order "a package under the part size runs as one process with all its tests" \
+  'backend|./big
+backend|./small' \
+  "$(split_parts "$work/discovery" "$work/timing" 900 | cut -d'|' -f1,2)"
 
 # The committed shard timing has to be readable by assign_shard: four fields,
 # a number last. A line it cannot read silently weighs its test at the mean.
