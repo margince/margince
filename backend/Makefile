@@ -145,7 +145,7 @@ help: ## List targets with their descriptions (the default goal)
 # lint and the unit tests each get a whole runner: `deterministic-gates` passes
 # CHECK_LEGS="$(TEST_LEGS)", and `backend-lint` runs `check-static`.
 # gates/checklegsplit_test.go fails if the two stop covering every leg.
-TEST_LEGS   := test test-extensions
+TEST_LEGS   := test-uncached test-cached test-extensions
 STATIC_LEGS := lint-base lint-strict vet arch-lint
 CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
 

@@ -6,8 +6,8 @@
 package gates
 
 // CI splits the backend gate's fan-out over two jobs: deterministic-gates runs
-// `make check-backend CHECK_LEGS="…"` and backend-lint runs `make check-static`,
-// whose matrix legs may each pass a STATIC_LEGS="…" share of it.
+// `make check-backend CHECK_LEGS="…"` and backend-lint runs `make check-static`.
+// Either may be a matrix whose entries each pass their share of the legs.
 // A leg that neither names still passes `ci`, because nothing ran it. This test
 // holds the two jobs to the full CHECK_LEGS list a local `make check` runs.
 
@@ -60,7 +60,7 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 	if err := yaml.Unmarshal(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", aggregateWorkflow, err)
 	}
-	testLegs, ok := legsPassedBy(wf, testLegsJob)
+	testLegs, ok := legsPassedBy(t, wf, testLegsJob)
 	if !ok {
 		t.Fatalf("job %q has no `make check-backend` step, so this test cannot tell which legs it runs", testLegsJob)
 	}
@@ -118,13 +118,14 @@ func backendCheckLegs(t *testing.T) (all, static []string) {
 
 // legsPassedBy answers the CHECK_LEGS a job's `make check-backend` step passes,
 // and nil when the step passes none, which runs every leg.
-func legsPassedBy(wf stepRuns, job string) ([]string, bool) {
+func legsPassedBy(t *testing.T, wf stepRuns, job string) ([]string, bool) {
+	t.Helper()
 	for _, step := range wf.Jobs[job].Steps {
 		if !strings.Contains(step.Run, "make check-backend") {
 			continue
 		}
 		if match := ciLegsOverride.FindStringSubmatch(step.Run); match != nil {
-			return strings.Fields(match[1]), true
+			return matrixLegs(t, wf, job, match[1]), true
 		}
 		return nil, true
 	}
@@ -145,23 +146,30 @@ func staticLegsRunBy(t *testing.T, wf stepRuns, static []string) ([]string, bool
 		if match == nil {
 			return static, true
 		}
-		key := matrixRef.FindStringSubmatch(match[1])
-		if key == nil {
-			return strings.Fields(match[1]), true
-		}
-		include := job.Strategy.Matrix.Include
-		if len(include) == 0 {
-			t.Fatalf("job %q passes STATIC_LEGS from matrix.%s, but has no matrix include entries", staticLegsJob, key[1])
-		}
-		var ran []string
-		for i, entry := range include {
-			legs := strings.Fields(entry[key[1]])
-			if len(legs) == 0 {
-				t.Errorf("job %q matrix include entry %d sets no %s, so that leg runs no static target", staticLegsJob, i, key[1])
-			}
-			ran = append(ran, legs...)
-		}
-		return ran, true
+		return matrixLegs(t, wf, staticLegsJob, match[1]), true
 	}
 	return nil, false
+}
+
+// matrixLegs reads a legs override: literal, or a matrix value unioned over
+// every include entry, each of which must set it.
+func matrixLegs(t *testing.T, wf stepRuns, job, override string) []string {
+	t.Helper()
+	key := matrixRef.FindStringSubmatch(override)
+	if key == nil {
+		return strings.Fields(override)
+	}
+	include := wf.Jobs[job].Strategy.Matrix.Include
+	if len(include) == 0 {
+		t.Fatalf("job %q passes its legs from matrix.%s, but has no matrix include entries", job, key[1])
+	}
+	var ran []string
+	for i, entry := range include {
+		legs := strings.Fields(entry[key[1]])
+		if len(legs) == 0 {
+			t.Errorf("job %q matrix include entry %d sets no %s, so that leg runs no check target", job, i, key[1])
+		}
+		ran = append(ran, legs...)
+	}
+	return ran
 }

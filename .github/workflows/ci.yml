@@ -377,13 +377,24 @@ jobs:
   # script gates (image pins, contract breaking, test lanes, file length, RLS
   # store-path, jurisdiction isolation).
   deterministic-gates:
-    name: deterministic-gates
+    name: deterministic-gates (${{ matrix.part }})
     timeout-minutes: 30
     needs: [changes]
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # The uncached root fitness packages were most of the test leg, so they get
+    # a runner; both legs still run the build and the root script gates.
+    # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: unit
+            legs: test-cached test-extensions
+          - part: gates
+            legs: test-uncached
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -479,7 +490,7 @@ jobs:
         # so lint and the unit tests stop sharing four cores.
         run: |
           set -o pipefail
-          make check-backend CHECK_LEGS="test test-extensions" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
+          make check-backend CHECK_LEGS="${{ matrix.legs }}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
       # Here and not in check-backend: only a CI runner's timings are steady
       # enough to hold a package to a budget.
       - name: Unit-test time budget per package
