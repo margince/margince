@@ -356,7 +356,7 @@ The cards, in order:
 To connect your mailbox and calendar to Margince, open Settings → **Connections** and choose **Connect Google** or **Connect Microsoft 365** in **Mail and calendar**. Once one account is connected, choose **Add account**.
 1. **Add account** asks which account first: **Google**, **Microsoft 365** or **Another mail host**.
 2. Under **What to bring in**, tick **Mail**, **Calendar** or both, and pick how much past email to import, or **None**. Choose **Continue**.
-3. Sign in at Google or Microsoft and allow each permission it lists. With both ticked it asks twice: once for mail, then once for your calendar.
+3. Sign in at Google or Microsoft and allow each permission it lists. With both ticked, Google asks once and Microsoft asks twice.
 You land back on Connections, where a note says, for example, "Google connected" and "Mail and Calendar are syncing."
 Also called: link my email, sync Gmail, sync Outlook, connect my calendar.
 

@@ -27433,9 +27433,10 @@ export interface components {
         /**
          * @description Whether a connect started right now would proceed, decided by the same predicate the connect
          *     endpoint itself uses so the two cannot disagree. Reported for the mail providers a contact can
-         *     choose between (gmail, graph, imap). The paired calendar connectors (gcal, graphcal) are absent:
-         *     each is its own grant, asked for after its mail provider's (`ConnectConnectorRequest.also_connect`)
-         *     or connected directly, on the same vendor OAuth app as its mail provider.
+         *     choose between (gmail, graph, imap). The paired calendar connectors (gcal, graphcal) are absent.
+         *     Each joins its mail provider's connect (`ConnectConnectorRequest.also_connect`) or is connected
+         *     directly, on the same vendor OAuth app as its mail provider. `gcal` shares the Gmail consent
+         *     screen; `graphcal` gets its own consent after `graph`.
          */
         CaptureProviderAvailability: {
             /**
@@ -27500,13 +27501,14 @@ export interface components {
              */
             return_to?: "onboarding" | "settings" | "meetings";
             /**
-             * @description The paired calendar to ask for straight after this mail grant, in one round trip:
-             *     the mail callback stores its grant, then redirects to the calendar's own consent
-             *     instead of landing, and the landing names the calendar's outcome. Only `gcal` after
-             *     `gmail` and `graphcal` after `graph`; any other pairing is refused with
-             *     `422 also_connect_mismatch`. The calendar must be connectable right now, or the
-             *     request answers exactly as a direct connect to it would. A declined or failed
-             *     calendar consent leaves the mail grant in place.
+             * @description The paired calendar to connect with this mail grant, in one round trip, and the
+             *     landing names the calendar's outcome. `gcal` joins the Gmail consent screen: the
+             *     one grant connects both, and a calendar the user unticks there lands as declined.
+             *     `graphcal` gets its own consent straight after the `graph` callback stores its
+             *     grant. Only `gcal` after `gmail` and `graphcal` after `graph`; any other pairing is
+             *     refused with `422 also_connect_mismatch`. The calendar must be connectable right
+             *     now, or the request answers exactly as a direct connect to it would. A declined or
+             *     failed calendar leaves the mail grant in place.
              * @enum {string}
              */
             also_connect?: "gcal" | "graphcal";

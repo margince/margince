@@ -129,16 +129,30 @@ For now this works only in the US, in English, on the web.
 
 Google's guide: https://support.google.com/gemini/answer/17209137
 
-### Coding agents
+### Coding agents and editors
 
-Run the command, then sign in in the browser. No passport is needed.
+Set up on your own computer; no admin and no passport are needed.
 
 <!-- connect: claude-code -->
-- **Claude Code.** Run `claude mcp add --transport http margince {{.MCPURL}}`, then `/mcp`
-  inside Claude Code. Guide: https://code.claude.com/docs/en/mcp
+- **Claude Code**, in a terminal or in any editor (VS Code, JetBrains, Visual Studio). Run
+  `claude mcp add --transport http --scope user margince {{.MCPURL}}` once, then `/mcp` inside
+  Claude Code. Guide: https://code.claude.com/docs/en/mcp
 <!-- connect: codex -->
 - **Codex.** Run `codex mcp add margince --url {{.MCPURL}}`, then
   `codex mcp login margince`. Guide: https://learn.chatgpt.com/docs/extend/mcp?surface=cli
+<!-- connect: vscode -->
+- **GitHub Copilot in VS Code.** In the Command Palette, run "MCP: Add Server", choose "HTTP",
+  paste `{{.MCPURL}}`, enter `margince` and choose "Global". Accept the sign-in prompt. Guide:
+  https://code.visualstudio.com/docs/agent-customization/mcp-servers
+<!-- connect: visual-studio -->
+- **GitHub Copilot in Visual Studio.** Save `{ "servers": { "margince": { "url": "{{.MCPURL}}" } } }`
+  as `%USERPROFILE%\.mcp.json`. Choose "Authenticate" above margince in the file, then turn on the
+  margince tools in Copilot Chat's Agent mode. Guide:
+  https://learn.microsoft.com/en-us/visualstudio/ide/mcp-servers
+<!-- connect: cursor -->
+- **Cursor.** Add `{ "mcpServers": { "margince": { "url": "{{.MCPURL}}" } } }` to
+  `~/.cursor/mcp.json`, restart Cursor and follow its sign-in prompt. Guide:
+  https://cursor.com/docs/mcp
 <!-- connect: antigravity -->
 - **Antigravity.** Add `{ "mcpServers": { "margince": { "serverUrl": "{{.MCPURL}}" } } }` to
   `~/.gemini/config/mcp_config.json`. Then open its agent settings, "Customizations", and
