@@ -1874,6 +1874,43 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /companies/{id}/share-contacts:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Companies]
+      operationId: shareCompanyContacts
+      security: [{bearerAuth: []}]
+      summary: Share the company's current contacts with a person or team.
+      description: |-
+        Creates ordinary record grants for the current employees this caller can read and share.
+        Reuses the single-record share checks, audit and event writer. Contacts the caller can
+        read but cannot share are skipped. Hidden contacts are absent from both counts.
+        Ended employments and archived contacts are excluded. Needs company, contact and
+        relationship read rights, and contact update rights. A company outside row scope is 404.
+        All grants commit together; an invalid recipient or grant aborts the whole request.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ShareCompanyContactsRequest'}
+      responses:
+        '200':
+          description: Counts of shared and skipped readable contacts.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ShareCompanyContactsResult'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/link-candidates:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -38262,6 +38299,21 @@ components:
         access: {type: string, enum: [read, write]}
         reason: {type: [string, 'null']}
         expires_at: {type: [string, 'null'], format: date-time}
+    ShareCompanyContactsRequest:
+      type: object
+      required: [subject_type, subject_id, access]
+      properties:
+        subject_type: {type: string, enum: [user, team]}
+        subject_id: {type: string, format: uuid}
+        access: {type: string, enum: [read, write]}
+        reason: {type: [string, 'null']}
+        expires_at: {type: [string, 'null'], format: date-time}
+    ShareCompanyContactsResult:
+      type: object
+      required: [shared, skipped]
+      properties:
+        shared: {type: integer, minimum: 0}
+        skipped: {type: integer, minimum: 0}
     UserListResponse:
       type: object
       required: [data, page]
