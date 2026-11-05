@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatAnalyticsNumber, formatDateAbbrev } from "../../format/format";
@@ -59,9 +60,14 @@ const HEADLINE_METRICS = [
 
 export function ResultsSummary({
   evaluation,
+  density,
+  lead,
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
+  density?: ComponentProps<typeof StatStrip>["density"];
+  // The first figure leads the plate, as on Overview.
+  lead?: boolean;
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
@@ -72,7 +78,7 @@ export function ResultsSummary({
   );
   if (!metrics.length) return null;
   return (
-    <StatStrip>
+    <StatStrip density={density} lead={lead}>
       {metrics.map((metric) => {
         const amount = (value: number | null | undefined) =>
           reportingCompactAmount(

@@ -192,7 +192,7 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 ## Performance
 
-**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. **View records**, at the foot of every chart, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
+**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. The figures and charts sit on one sheet, and progress to target by person sits beside them. **Filters** holds the product, sales initiative, country, industry and value basis dials, and opens by itself when one of them is set. **View records**, at the foot of every chart, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
 The default **SDR outcomes** tab follows your workflow: first qualifications without handoffs, or accepted handoffs when used. It also shows held meetings, first response time and leads still waiting for a reply. The period’s count includes only leads that came in during that period. Saved reports keep their chosen figures.
 

@@ -1418,6 +1418,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.industry": "Branche",
   "reporting.allIndustries": "Alle Branchen",
   "reporting.valueBasis": "Wertbasis",
+  "reporting.filtersMore": "Filter",
+  "reporting.filtersActive": "Filter · {active}",
   "reporting.basis.all": "Gesamter Wert",
   "reporting.basis.software": "Nur Software",
   "reporting.basis.implementation": "Nur Umsetzung",

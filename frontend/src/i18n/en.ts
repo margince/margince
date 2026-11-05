@@ -1366,6 +1366,8 @@ export const en = {
   "reporting.industry": "Industry",
   "reporting.allIndustries": "All industries",
   "reporting.valueBasis": "Value basis",
+  "reporting.filtersMore": "Filters",
+  "reporting.filtersActive": "Filters · {active}",
   "reporting.basis.all": "All value",
   "reporting.basis.software": "Software only",
   "reporting.basis.implementation": "Implementation only",

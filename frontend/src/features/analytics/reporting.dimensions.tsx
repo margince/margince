@@ -2,11 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 import { api } from "../../api/client";
-import { Badge, Field } from "../../design-system/atoms";
+import { Badge, Button, Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { TokenList } from "../../design-system/tokeninput";
 import { countryOptions } from "../../format/assignedcountries";
+import { formatAnalyticsNumber } from "../../format/format";
 import { INDUSTRY_CODES, industryLabelKey } from "../../format/industry";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { useSalesInitiatives } from "./reporting.initiatives";
@@ -55,15 +58,18 @@ export function useProductOptions(enabled = true) {
   });
 }
 
+/** How many dimensions the selection narrows by. */
+export function dimensionCount(selection: ReportingSelection): number {
+  return DIMENSION_KEYS.filter((key) =>
+    key === "value_basis"
+      ? !!selection.value_basis && selection.value_basis !== "all"
+      : !!selection[key],
+  ).length;
+}
+
 /** Whether the selection narrows by any dimension. */
 export function dimensioned(selection: ReportingSelection): boolean {
-  return (
-    !!selection.product_id ||
-    !!selection.initiative_id ||
-    !!selection.country ||
-    !!selection.industry ||
-    (!!selection.value_basis && selection.value_basis !== "all")
-  );
+  return dimensionCount(selection) > 0;
 }
 
 /** The selection with every dimension cleared; period, scope and pipeline stay. */
@@ -179,6 +185,37 @@ export function DimensionFilters({
           />
         )}
       </Field>
+    </>
+  );
+}
+
+/**
+ * The dimension dials behind one toggle, so a page's line of chips holds its
+ * main dials. A selection that already narrows opens folded out, so no active
+ * filter hides.
+ */
+export function FoldedDimensions({
+  selection,
+  onChange,
+}: Readonly<{
+  selection: ReportingSelection;
+  onChange: (selection: ReportingSelection) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const active = dimensionCount(selection);
+  const [open, setOpen] = useState(active > 0);
+  return (
+    <>
+      <Button aria-expanded={open} onClick={() => setOpen(!open)}>
+        {active > 0
+          ? t("reporting.filtersActive", {
+              active: formatAnalyticsNumber(active, locale),
+            })
+          : t("reporting.filtersMore")}
+        <ChevronDown aria-hidden />
+      </Button>
+      {open && <DimensionFilters selection={selection} onChange={onChange} />}
     </>
   );
 }

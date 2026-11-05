@@ -295,6 +295,8 @@ function OverviewBody({
       <FrameworkRetry view={view} query={framework} />
       <FilterBar
         label={t("analytics.filters")}
+        quiet
+        labels="inside"
         actions={
           <>
             {query.data && <ReportingExportButton evaluation={query.data} />}
@@ -329,7 +331,7 @@ function OverviewBody({
           showScope={false}
           showCloseWindow={shape.closeWindow}
           showPipeline={shape.dealFilters}
-          showDimensions={shape.dealFilters}
+          showDimensions={shape.dealFilters && "folded"}
           showTargets={false}
           dates={{
             from: start,
@@ -373,6 +375,7 @@ function OverviewBody({
               {emptyNotice?.(evaluation.context.scope_holds_deals)}
               <ReportingCharts
                 evaluation={evaluation}
+                board
                 afterSummary={
                   view === "sales" ? (
                     <AnalyticsAttention scope={scope} />

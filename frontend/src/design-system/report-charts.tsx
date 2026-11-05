@@ -86,6 +86,12 @@ function lineSegments(
   return lines;
 }
 
+// A line's points closed down to the baseline, for the fill beneath it.
+function areaUnder(points: string, baseline: number): string {
+  const xs = points.split(" ").map((point) => point.split(",")[0]);
+  return `${xs[0]},${baseline} ${points} ${xs.at(-1)},${baseline}`;
+}
+
 function chartX(index: number, count: number, width: number) {
   return 56 + (index / Math.max(1, count - 1)) * (width - 76);
 }
@@ -116,6 +122,7 @@ export function CumulativeChart({
   }>) {
   const height = LINE_HEIGHT[size];
   const title = useId();
+  const area = useId();
   const plot = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(680);
   useEffect(() => {
@@ -196,12 +203,21 @@ export function CumulativeChart({
               points={points}
             />
           ))}
+          <defs>
+            <linearGradient id={area} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" className="report-chart-area-top" />
+              <stop offset="1" className="report-chart-area-foot" />
+            </linearGradient>
+          </defs>
           {lineSegments(readings, "value", width, y).map((points) => (
-            <polyline
-              key={points}
-              className="report-chart-actual"
-              points={points}
-            />
+            <g key={points}>
+              <polygon
+                className="report-chart-area"
+                fill={`url(#${area})`}
+                points={areaUnder(points, y(0))}
+              />
+              <polyline className="report-chart-actual" points={points} />
+            </g>
           ))}
           {readings.map(
             (reading, index) =>

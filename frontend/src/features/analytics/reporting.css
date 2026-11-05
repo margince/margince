@@ -103,6 +103,19 @@
 .reporting-panel-wide {
   grid-column: 1 / -1;
 }
+/* On a sheet the grid's rules part its sections: a half section draws one at
+   its leading edge, which the sheet clips in the first column. */
+.reporting-sheet-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+}
+.analytics-sheet > .reporting-sheet-grid {
+  border-top: 0;
+}
+.reporting-sheet-grid > .reporting-panel:not(.reporting-panel-wide) {
+  margin-inline-start: -1px;
+  border-inline-start: 1px solid var(--groundEdge);
+}
 @media (max-width: 900px) {
   .reporting-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -178,6 +191,14 @@
    would open a second gap under the dials. */
 .filter-bar .reporting-toolbar {
   margin: 0;
+}
+/* As chips, each dial is as wide as its name and value. */
+.filter-bar[data-labels="inside"] .reporting-toolbar {
+  align-items: center;
+  gap: var(--space-2);
+}
+.filter-bar[data-labels="inside"] .reporting-toolbar > * {
+  min-width: 0;
 }
 
 .reporting-results {

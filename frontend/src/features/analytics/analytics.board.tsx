@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import "./analytics.board.css";
 
 /**
  * An Analytics page: the work column beside a rail. The column holds the
