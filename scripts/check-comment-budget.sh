@@ -32,6 +32,10 @@ if [[ -n "${CHECK_BASE_REF:-}" ]] && ! git rev-parse --verify -q "$diff_base" >/
 fi
 base="${BASE:-$(git merge-base HEAD "$diff_base" 2>/dev/null || true)}"
 if [[ -z "$base" ]]; then
+	if [[ -n "${CHECK_BASE_REF:-}" ]]; then
+		echo "comment-budget: no merge base with CHECK_BASE_REF $diff_base — deepen the fetch" >&2
+		exit 1
+	fi
 	echo "comment-budget: no $diff_base base — skipping"
 	exit 0
 fi
