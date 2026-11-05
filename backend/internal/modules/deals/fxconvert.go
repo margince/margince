@@ -256,20 +256,46 @@ func ConvertToBase(amountMinor int64, rate pgtype.Numeric, from, base string) (i
 // both currencies' minor-unit scales as one exact fraction and rounds once,
 // half away from zero, like ConvertToBase.
 func ConvertBetween(amountMinor int64, fromRate, toRate pgtype.Numeric, from, to string) (int64, error) {
+	numerator, denominator, err := wholeUnitFraction(amountMinor, fromRate, toRate, from)
+	if err != nil {
+		return 0, err
+	}
+	numerator.Mul(numerator, Pow10(int64(values.MinorUnitDigits(to))))
+	return roundedAmount(numerator, denominator)
+}
+
+// ConvertBetweenWhole is ConvertBetween in whole units of the target currency.
+// Rounding the minor-unit answer again would carry a value just under one half
+// up a unit.
+func ConvertBetweenWhole(amountMinor int64, fromRate, toRate pgtype.Numeric, from string) (int64, error) {
+	numerator, denominator, err := wholeUnitFraction(amountMinor, fromRate, toRate, from)
+	if err != nil {
+		return 0, err
+	}
+	return roundedAmount(numerator, denominator)
+}
+
+// wholeUnitFraction is the exact conversion, in whole units of the target
+// currency, as a numerator and a denominator.
+func wholeUnitFraction(amountMinor int64, fromRate, toRate pgtype.Numeric, from string) (*big.Int, *big.Int, error) {
 	for _, rate := range []pgtype.Numeric{fromRate, toRate} {
 		if !rate.Valid || rate.NaN || rate.InfinityModifier != pgtype.Finite {
-			return 0, ErrRateNotFinite
+			return nil, nil, ErrRateNotFinite
 		}
 	}
 	if toRate.Int.Sign() <= 0 {
-		return 0, ErrRateNotFinite
+		return nil, nil, ErrRateNotFinite
 	}
 	numerator := new(big.Int).Mul(big.NewInt(amountMinor), fromRate.Int)
 	denominator := new(big.Int).Set(toRate.Int)
 	scaleBy(numerator, denominator, fromRate.Exp)
 	scaleBy(denominator, numerator, toRate.Exp)
-	numerator.Mul(numerator, Pow10(int64(values.MinorUnitDigits(to))))
 	denominator.Mul(denominator, Pow10(int64(values.MinorUnitDigits(from))))
+	return numerator, denominator, nil
+}
+
+// roundedAmount rounds the fraction once, half away from zero.
+func roundedAmount(numerator, denominator *big.Int) (int64, error) {
 	product := DivRoundHalfAwayFromZero(numerator, denominator)
 	if !product.IsInt64() {
 		return 0, ErrAmountOutOfRange

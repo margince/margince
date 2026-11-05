@@ -123,20 +123,24 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 // store's own per-host read.
 type attentionBookingHealth struct{ store *activities.Store }
 
-// newAttentionBookingHealth reads the blocker from the stored calendar grant,
-// through the bare registry every health lane reads. The credential check the
-// settings screen adds needs the capture connectors and the vault, which this
-// constructor does not have.
+// newAttentionBookingHealth reads the blocker through the bare registry every
+// health lane reads, which holds no capture connectors and no vault.
 func newAttentionBookingHealth(pool *pgxpool.Pool, db *database.DB) attentionBookingHealth {
 	calendar := bookingGrantCalendar{newSchedulingCalendar(pool, captureHealthRegistry(db))}
 	return attentionBookingHealth{store: activities.NewStore(db).WithSchedulingCalendar(calendar)}
 }
 
-// bookingGrantCalendar answers Blocker from the stored grant alone.
+// bookingGrantCalendar pauses the pages schedulingCalendar.Blocker pauses,
+// without opening the credential. An unusable credential makes Blocker
+// fail rather than name a blocker, so skipping it changes no answer.
 type bookingGrantCalendar struct{ schedulingCalendar }
 
 func (c bookingGrantCalendar) Blocker(ctx context.Context, host ids.UserID, provider string) (crmcontracts.SchedulingProfileBlocker, error) {
-	return c.grantBlocker(ctx, host, provider)
+	blocker, err := c.grantBlocker(ctx, host, provider)
+	if err != nil || blocker != crmcontracts.SchedulingProfileBlockerNone {
+		return blocker, err
+	}
+	return blockerOfCheck(c.hostMayBook(ctx, host))
 }
 
 func (b attentionBookingHealth) BookingConcerns(ctx context.Context) ([]attention.BookingConcern, error) {

@@ -28,7 +28,8 @@ func (s *stubBookingHealth) BookingConcerns(context.Context) ([]BookingConcern, 
 func bookingLaneService(health BookingHealth) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).WithBookingHealth(health)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+	).WithBookingHealth(health)
 }
 
 func TestAPausedBookingPageIsOneCardNamingItsBlocker(t *testing.T) {
@@ -45,8 +46,8 @@ func TestAPausedBookingPageIsOneCardNamingItsBlocker(t *testing.T) {
 		t.Fatalf("booking_health count = %v, want 1", out.Counts.BookingHealth)
 	}
 	card := (*out.BookingHealth)[0]
-	if card.Source != "booking_health" || card.Id != page.String() {
-		t.Errorf("card = %s/%s, want booking_health/%s", card.Source, card.Id, page)
+	if want := page.String() + ":calendar_read_only"; card.Source != "booking_health" || card.Id != want {
+		t.Errorf("card = %s/%s, want booking_health/%s", card.Source, card.Id, want)
 	}
 	if card.Kind == nil || *card.Kind != "calendar_read_only" {
 		t.Errorf("kind = %v, want the blocker", card.Kind)
