@@ -14,6 +14,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"testing"
 	"time"
@@ -38,9 +39,7 @@ func (p *preflightEnv) scheduleClaiming(t *testing.T, claim AnyMap) ids.UUID {
 		"scheduled_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
 		"scheduled_tz": "Europe/Berlin",
 	}
-	for key, value := range claim {
-		body[key] = value
-	}
+	maps.Copy(body, claim)
 	var scheduled struct {
 		ID string `json:"id"`
 	}

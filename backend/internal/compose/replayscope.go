@@ -201,6 +201,7 @@ var replayableOperations = map[string]replayTarget{
 			{table: tableProject, idPath: "data[].project_id"},
 		},
 	},
+	"POST /v1/companies/{id}/share-contacts": {object: tableCompany, rowNote: "the answer is two counts, shared and skipped; it names no contact, so a replay discloses no record"},
 	// The rejection answers the archived company alongside the domain decision
 	// it recorded, so the replayed record is the company and the gate
 	// resolves against its own row — the admission carries no authority of its

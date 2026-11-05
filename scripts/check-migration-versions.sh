@@ -48,7 +48,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-BASE_REF="${1:-origin/main}"
+BASE_REF="${1:-${DIFF_BASE:-origin/main}}"
 MIGRATIONS_DIR="backend/migrations"
 
 # A migration is identified by its VERSION and named by its file, and the gate

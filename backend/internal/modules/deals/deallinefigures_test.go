@@ -125,8 +125,7 @@ func TestAFractionalQuantityRoundsOnceOnTheLine(t *testing.T) {
 func TestAValueTooLargeToStoreIsRefused(t *testing.T) {
 	big := int64(math.MaxInt64 / 2)
 	_, err := DealCommercialTotals([]DealLineInput{pricedDealLine("3", big, BillingOneTime)})
-	var rangeErr *MoneyRangeError
-	if !errors.As(err, &rangeErr) {
+	if _, ok := errors.AsType[*MoneyRangeError](err); !ok {
 		t.Fatalf("err = %v, want MoneyRangeError", err)
 	}
 }
