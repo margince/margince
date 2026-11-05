@@ -49,6 +49,21 @@ func (l *failingLane) Complete(_ context.Context, request model.Request) (model.
 	return model.Response{Text: "I would rather not say."}, nil
 }
 
+// databaseNow is the database's clock. The scan stamps its rows with now() and
+// judges them by its own clock, so these tests hand it that same clock.
+func databaseNow(t *testing.T, e *integration.Env) time.Time {
+	t.Helper()
+	var now time.Time
+	if err := e.Pool.QueryRow(t.Context(), `SELECT now()`).Scan(&now); err != nil {
+		t.Fatalf("reading the database's clock: %v", err)
+	}
+	return now
+}
+
+func databaseClock(t *testing.T, e *integration.Env) func() time.Time {
+	return func() time.Time { return databaseNow(t, e) }
+}
+
 // scanClocked is scanFor with the clock the ensure rule reads, for the
 // branches that turn on how long ago the last read settled.
 func scanClocked(e *integration.Env, lane companyscan.Completer, queued *[]companyscan.Queued, now func() time.Time) *companyscan.Service {
@@ -97,10 +112,10 @@ func readOnce(rep context.Context, t *testing.T, svc *companyscan.Service, compa
 func TestAnUnchangedAccountIsServedFromWhatWasReadAndAChangedOneIsMarkedStale(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	message := seedInboundAsk(t, e, company.UUID, "workspace")
+	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	lane := &quotingLane{messageID: message.String(), quote: "wants to see a sample of the driver reports"}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, time.Now)
+	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	// Before any open, the honest answer is that nobody asked.
@@ -124,7 +139,7 @@ func TestAnUnchangedAccountIsServedFromWhatWasReadAndAChangedOneIsMarkedStale(t 
 
 	// The account moves — another message — under the hour's floor: the
 	// stored read is served, marked stale, and nothing is queued.
-	seedInboundAsk(t, e, company.UUID, "workspace")
+	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	stale, err := svc.Ensure(rep, company, false)
 	if err != nil {
 		t.Fatalf("ensure after a change: %v", err)
@@ -154,15 +169,15 @@ func TestAnUnchangedAccountIsServedFromWhatWasReadAndAChangedOneIsMarkedStale(t 
 func TestAChangedAccountPastTheFloorIsReadAgainOnItsOwn(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	message := seedInboundAsk(t, e, company.UUID, "workspace")
+	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	lane := &quotingLane{messageID: message.String(), quote: "wants to see a sample of the driver reports"}
 	var queued []companyscan.Queued
-	later := func() time.Time { return time.Now().Add(companyscan.RescanFloor + time.Minute) }
+	later := func() time.Time { return databaseNow(t, e).Add(companyscan.RescanFloor + time.Minute) }
 	svc := scanClocked(e, lane, &queued, later)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	readOnce(rep, t, svc, company, &queued)
-	seedInboundAsk(t, e, company.UUID, "workspace")
+	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	got, err := svc.Ensure(rep, company, false)
 	if err != nil {
 		t.Fatalf("ensure: %v", err)
@@ -201,9 +216,9 @@ func scanAttempt(t *testing.T, scanID ids.UUID) int {
 func TestAReadWhoseWorkerDiedIsReadAgainWhenTheAccountIsOpened(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	seedInboundAsk(t, e, company.UUID, "workspace")
+	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	var queued []companyscan.Queued
-	svc := scanClocked(e, &failingLane{}, &queued, time.Now)
+	svc := scanClocked(e, &failingLane{}, &queued, databaseClock(t, e))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	if _, err := svc.Ensure(rep, company, false); err != nil {
@@ -237,10 +252,10 @@ func TestAReadWhoseWorkerDiedIsReadAgainWhenTheAccountIsOpened(t *testing.T) {
 func TestTheWorkerReclaimsAReadItsDeadPredecessorLeftRunning(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	message := seedInboundAsk(t, e, company.UUID, "workspace")
+	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	lane := &quotingLane{messageID: message.String(), quote: "wants to see a sample of the driver reports"}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, time.Now)
+	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	if _, err := svc.Ensure(rep, company, false); err != nil {
@@ -281,7 +296,7 @@ func TestWithNoWorkerTheOpenSettlesOnTheRulesFloorAtOnce(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	view := company360Service(e)
-	svc := companyscan.NewService(e.Pool, view, view, nil, nil, nil, time.Now, nil)
+	svc := companyscan.NewService(e.Pool, view, view, nil, nil, nil, databaseClock(t, e), nil)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	got, err := svc.Ensure(rep, company, false)
@@ -299,10 +314,10 @@ func TestWithNoWorkerTheOpenSettlesOnTheRulesFloorAtOnce(t *testing.T) {
 func TestALaneThatBreaksLeavesTheRulesAdviceStanding(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	seedInboundAsk(t, e, company.UUID, "workspace")
+	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	lane := &failingLane{}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, time.Now)
+	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	got := readOnce(rep, t, svc, company, &queued)
@@ -317,11 +332,11 @@ func TestALaneThatBreaksLeavesTheRulesAdviceStanding(t *testing.T) {
 func TestABudgetDeferralPutsTheReadOffRatherThanFailingIt(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	seedInboundAsk(t, e, company.UUID, "workspace")
-	resumes := time.Now().Add(45 * time.Minute).UTC().Truncate(time.Second)
+	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
+	resumes := databaseNow(t, e).Add(45 * time.Minute).UTC().Truncate(time.Second)
 	lane := &failingLane{err: &ai.BudgetDeferralError{Task: ai.TaskAccountScan, NextAttemptAt: resumes}}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, time.Now)
+	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	if _, err := svc.Ensure(rep, company, false); err != nil {
@@ -353,11 +368,11 @@ func TestABudgetDeferralPutsTheReadOffRatherThanFailingIt(t *testing.T) {
 func TestAProviderOutageNamesItselfAsTheReasonTheReadWaits(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	seedInboundAsk(t, e, company.UUID, "workspace")
-	resumes := time.Now().Add(45 * time.Minute).UTC().Truncate(time.Second)
+	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
+	resumes := databaseNow(t, e).Add(45 * time.Minute).UTC().Truncate(time.Second)
 	lane := &failingLane{err: &ai.ProviderDownError{Provider: "gemini", Health: model.HealthOutOfCredit, RetryAfter: resumes}}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, time.Now)
+	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	if _, err := svc.Ensure(rep, company, false); err != nil {
@@ -379,13 +394,13 @@ func TestAProviderOutageNamesItselfAsTheReasonTheReadWaits(t *testing.T) {
 func TestAReaderTheAccountRefusesGetsNoRead(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	seedInboundAsk(t, e, company.UUID, "workspace")
+	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	theirsRaw := e.SeedCompany(t, "Other Rep's Private Account", &e.Rep3)
 	e.MakeCapturePrivate(t, "company", theirsRaw, e.Rep3)
 	theirs := ids.From[ids.CompanyKind](theirsRaw)
 	lane := &quotingLane{}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, time.Now)
+	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	// An open on another rep's private account refuses before any row
@@ -444,10 +459,10 @@ func permsWithout(object string) principal.Permissions {
 func TestAReaderWithoutTheActivityGrantIsReadFromTheRecordsAlone(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	seedInboundAsk(t, e, company.UUID, "workspace")
+	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	lane := &quotingLane{}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, time.Now)
+	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, permsWithout("activity"))
 
 	got := readOnce(rep, t, svc, company, &queued)
@@ -473,7 +488,7 @@ func TestAnAccountWithNothingSaidToItYetIsReadCleanly(t *testing.T) {
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	lane := &quotingLane{}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, time.Now)
+	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	got := readOnce(rep, t, svc, company, &queued)
@@ -505,7 +520,7 @@ func TestAnAccountWithNothingSaidToItYetIsReadCleanly(t *testing.T) {
 func TestPuttingOffAFindingNobodyRaisedStoresNothing(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	message := seedInboundAsk(t, e, company.UUID, "workspace")
+	message := seedInboundAsk(t, e, company.UUID, "workspace", company360Clock)
 	lane := &quotingLane{messageID: message.String(), quote: "wants to see a sample of the driver reports"}
 	var queued []companyscan.Queued
 	svc, view := scanFor(e, lane, &queued)
@@ -535,10 +550,10 @@ func TestPuttingOffAFindingNobodyRaisedStoresNothing(t *testing.T) {
 func TestAReaderWithEveryRowReadsTheWholeCorrespondence(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	message := seedInboundAsk(t, e, company.UUID, "workspace")
+	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	lane := &quotingLane{messageID: message.String(), quote: "wants to see a sample of the driver reports"}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, time.Now)
+	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
 	everyRow := integration.AccountRepPerms
 	everyRow.RowScope = principal.RowScopeAll
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, everyRow)

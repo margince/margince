@@ -17,7 +17,6 @@ package company360
 
 import (
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -28,11 +27,11 @@ import (
 func TestNarrowingAMessagesAudienceTakesItsWordsOffTheStoredFinding(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	message := seedInboundAsk(t, e, company.UUID, "workspace")
+	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
 	const quoted = "wants to see a sample of the driver reports"
 	lane := &quotingLane{messageID: message.String(), quote: quoted}
 	var queued []companyscan.Queued
-	svc := scanClocked(e, lane, &queued, time.Now)
+	svc := scanClocked(e, lane, &queued, databaseClock(t, e))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	done := readOnce(rep, t, svc, company, &queued)
