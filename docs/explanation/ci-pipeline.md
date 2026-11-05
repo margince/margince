@@ -230,8 +230,9 @@ changes ──┬─> deterministic-gates
           ├─> backend-lint
           ├─> craftsmanship
           ├─> integration  →  _lane-integration.yml ────────────────┐
-          │                     integration-shards (×6) ──┐         │
-          │                     integration-unit-coverage ┴─> fan-in│
+          │                     integration-build                   │
+          │                      └─> integration-shards (×8) ┐      │
+          │                     integration-unit-coverage ───┴> fan-in
           ├─> extension-reference ──────────────────────────────┐   │
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
@@ -276,7 +277,7 @@ pass, one level down.
 without that, every step would run from the repository root.
 
 Check names inside a lane are reported as `<caller-job> / <lane-job>`, for example
-`integration / integration shard (3/6)`. Only `ci` is a required check, so no ruleset depends on those
+`integration / integration shard (3/8)`. Only `ci` is a required check, so no ruleset depends on those
 names.
 
 The pipeline stays **one caller**, and does not split into `pr.yml` and `merge-queue.yml`. The `ci`
@@ -298,15 +299,21 @@ The integration lane on a real Postgres runs **beside** `deterministic-gates` fo
 the longest lane in the pipeline. Running the two slowest jobs one after the other would set the clock
 time of a PR. And `deterministic-gates` itself still catches a broken build.
 
-- The lane is **sharded**. Six matrix runners each run a fixed part of the tests, picked per test.
+- The lane is **sharded**. 8 matrix runners each run a fixed part of the tests, picked per test.
   Splitting per package could go no faster than the largest package, `compose/integration`.
 - The `integration` fan-in puts them together again, into the single result the `ci` aggregate reads.
 
-The matrix is six wide, not 12, because the part of the tests is the cheap half of a shard. On a
-green run, one shard spent about `146s` loading the build cache and about `275s` compiling, against about
-`40s` running its tests. So each extra shard cuts the `40s` into smaller parts, and pays another `420s`. Cutting the
-matrix in half costs about a minute of clock time, and gives back about half the lane's runner minutes.
-The compile half is a problem of building once, not of sharding.
+The lane **compiles once**. A part picked per test reaches nearly every package, so a shard that
+compiled its own part would compile nearly the whole lane. The `integration build` job links the test
+binary of every package, with the flags the shards use. Each shard fetches the binaries and runs its
+part from them, each in its package directory, as `go test` runs it. A compile error fails the build
+job, and then no shard starts. The build job runs before the shards, so its time adds to the lane.
+
+Each shard pays a fixed cost: start-up, the fetch and its own migrated template. A wider matrix gives a
+smaller part of the tests for one more copy of that cost. At this size the slowest package gets about
+`330s` of tests on each shard, well under its time limit. Change the size only against a new measure.
+
+
 
 ### The `ci` aggregate is the only required build context
 
@@ -338,8 +345,8 @@ These jobs are not in `needs`:
 
 - `changes`: the classifier gives no verdict.
 - `fe-quality`, `fe-unit`, `fe-bundle`: taken in by the `frontend` fan-in.
-- `integration-shards`, `integration-unit-coverage`: taken in by the `integration` fan-in, which already
-  checks their results.
+- `integration-build`, `integration-shards`, `integration-unit-coverage`: taken in by the `integration`
+  fan-in, which already checks their results.
 - `sonarcloud`: not blocking, by decision. Listing it here would make it required in a hidden way.
 - `vuln`, `live-boot`: advisory. They are the plain next ones to add, since each runs on every change
   that counts, and a red one does not stop a merge.
@@ -373,7 +380,7 @@ dependency builds under them are shared:
 | Kind | Written by | Read by |
 |---|---|---|
 | `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
-| `integration` | `cache-warm.yml` job `integration` | every shard |
+| `integration` | `cache-warm.yml` job `integration` | `integration build`, and every shard for the tools it runs with `go run` |
 
 ### The writer lives in `cache-warm.yml`, on a schedule
 
@@ -390,14 +397,14 @@ Three limits shaped that, and each rules out a choice that looks less hard:
   no such scope (entries on the default branch can be read from any branch). So only the write has to be
   on `main`.
 - **The writer cannot run on each push.** Seeding a kind is a side effect of compiling. The `plain` job
-  runs a full `make check-backend`, and the `integration` job runs a shard against a live Postgres. At
+  runs a full `make check-backend`, and the `integration` job builds the test binaries and runs a shard from them against a live Postgres. At
   about 80 merges a day, that pair would run about 80 times and mostly cancel itself.
 - **A stale entry is not a wrong entry.** Go's build cache is keyed by content, and the key falls back
   twice: `…-<deps-hash>-<sha>` → `…-<deps-hash>-` → `…-`. The last step drops the dependency hash,
   because a stale load only misses the entries whose inputs changed. A cache three hours old is mostly
   warm. A cache from before a new dependency version is still better than an empty one.
 
-There is one writer per kind. Every shard compiles much the same set. So a second writer would add
+There is one writer per kind. Each run of a kind compiles much the same set. So a second writer would add
 nothing but two writers on the same key. And every runner sending up about 550 MB would push out the entry
 they meant to seed. `cache-warm.yml` runs one job per kind, and takes
 `concurrency: cancel-in-progress: false`, because a cancelled run saves nothing.
@@ -476,8 +483,8 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   not change its findings, and both reds show in one round.
 - **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
   and the shard profiles cannot reach them.
-- **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws
-  the slow `e2e` tests work through its part without running minutes past its siblings.
+- **`INTEGRATION_JOBS=8`** is twice the cores of a runner, because the tests wait on Postgres. At 16, a
+  test process and a Postgres backend for each package ran the runner out of memory.
 - **`integration unit coverage`** exists because the shards run just the packages tagged for
   integration. Without it, SonarCloud would see the packages with only unit tests at a false coverage
   of about 0% for new code.
