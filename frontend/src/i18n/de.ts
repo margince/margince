@@ -7373,7 +7373,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftGoneBody":
     "Der Entwurf wurde dort gesendet oder gelöscht. Beim Speichern bleibt der Text auf dem Bildschirm als neuer Entwurf erhalten.",
   "compose.savedDraftFailed":
-    "Der Entwurf konnte nicht gespeichert werden. Speichere den Entwurf erneut oder schließe den Dialog noch einmal, um den Text zu verwerfen.",
+    "Der Entwurf wurde nicht gespeichert. Wähle „Erneut versuchen“ oder schließe noch einmal, um den Text zu verwerfen.",
+  "compose.savedDraftAutosaveFailed":
+    "Das Speichern des Entwurfs wurde nicht abgeschlossen. Es wird erneut versucht, sobald du weiterschreibst oder wieder online bist.",
+  "compose.savedDraftAutosaveRefused":
+    "Der Entwurf wurde nicht gespeichert. Wähle „Erneut versuchen“ oder schreibe weiter, um es erneut zu versuchen.",
+  "compose.savedDraftFilesUnavailable_one":
+    "{count} Datei konnte nicht wiederhergestellt werden.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} Dateien konnten nicht wiederhergestellt werden.",
+  "compose.sendWaitsForAddress":
+    "Korrigiere oder entferne den Text, der keine E-Mail-Adresse ist.",
+  "compose.notAnAddress_one":
+    "Keine E-Mail-Adresse: {parts}. Korrigiere oder entferne sie.",
+  "compose.notAnAddress_other":
+    "Keine E-Mail-Adressen: {parts}. Korrigiere oder entferne sie.",
   "compose.savedDraftLoad": "Gespeicherte Fassung laden",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":
@@ -17250,7 +17264,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "richtext.bulletList": "Aufzählung",
   "richtext.numberList": "Nummerierte Liste",
   "richtext.link": "Link",
-  "richtext.linkPrompt": "Link-URL (leer lassen, um den Link zu entfernen)",
+  "richtext.linkAdd": "Link einfügen",
+  "richtext.linkEdit": "Link bearbeiten",
+  "richtext.linkAddress": "Web- oder E-Mail-Adresse",
+  "richtext.linkPlaceholder": "example.com oder name@example.com",
+  "richtext.linkApply": "Anwenden",
+  "richtext.linkRemove": "Link entfernen",
+  "richtext.linkRefused":
+    "Das ist keine Web- oder E-Mail-Adresse. Gib eine ein, etwa example.com oder name@example.com.",
   "contact.composer.intentAgenda":
     "eine Agenda für den anstehenden Termin vorschlagen",
   "contact.composer.intentReply":

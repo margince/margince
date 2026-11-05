@@ -17,6 +17,7 @@ import {
   specificity,
   splitTopLevel,
 } from "../../scripts/lib/css-rules";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import {
   extensionFrontendFiles,
   filesMatching,
@@ -143,7 +144,10 @@ function cssSpellings(rules: readonly Rule[]): string[] {
   });
 }
 
+const SPELLS_A_RUNG = new RegExp(`${NAMES_A_RUNG.source}|var\\(`);
+
 function scriptSpellings(path: string, text: string): string[] {
+  if (!mayHoldLiteral(text, SPELLS_A_RUNG)) return [];
   const found: string[] = [];
   const walk = (node: ts.Node) => {
     const part =
@@ -420,6 +424,8 @@ describe("the nesting ladder has one painter", () => {
         `const a = <div style={{ background: "var(--ladder2)" }} />; const b = \`var(--pane)\`; const c = \`var(\${token})\`; const d = "var(--" + name + ")";`,
       ),
     ).toHaveLength(4);
+    const dynamic = 'const d = "var(--" + name;';
+    expect(scriptSpellings(join(here, "probe.ts"), dynamic)).toHaveLength(1);
     expect(
       cssSpellings([
         probe(".probe", `border: 1px solid ${ref("--paneEdgeStrong")}`),
