@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent } from "storybook/test";
 import { parseHash } from "../lib/router";
 import {
   jsonResponse,
@@ -88,11 +88,41 @@ const openPanel: Story["play"] = async () => {
 
 export const Closed: Story = {};
 export const ClosedDark: Story = { globals: { theme: "dark" } };
-export const Open: Story = { play: openPanel };
+/** Open, hanging at the page gutter like every panel the strip opens. */
+export const Open: Story = {
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Finish setup/ }),
+    );
+    const panel = await screen.findByRole("heading", {
+      name: "Finish setting up",
+    });
+    const bar = document.querySelector<HTMLElement>(".topbar");
+    const pop = panel.closest(".popover-panel");
+    if (!bar || !pop) {
+      throw new Error("the top bar or the panel is missing");
+    }
+    await expect(window.innerWidth - pop.getBoundingClientRect().right).toBe(
+      Number.parseFloat(getComputedStyle(bar).paddingRight),
+    );
+  },
+};
 export const OpenDark: Story = { play: openPanel, globals: { theme: "dark" } };
+// A phone's bar has no room for the trigger, so the account menu carries it.
+// The row follows Help and feedback and opens the next step's page.
 export const Phone: Story = {
-  play: openPanel,
   globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Account/ }),
+    );
+    const row = await screen.findByRole("menuitem", { name: /Finish setup/ });
+    await expect(row).toHaveAttribute("href", "/#/settings/connections");
+    await expect(
+      screen.queryByRole("button", { name: /Finish setup/ }),
+    ).toBeNull();
+  },
 };
 
 // No company app yet: mail waits on an administrator, so no step offers a verb.

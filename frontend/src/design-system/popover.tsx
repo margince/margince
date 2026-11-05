@@ -57,6 +57,7 @@ export function Popover({
   panelClassName,
   width = "default",
   align = "start",
+  pinned = false,
   children,
 }: Readonly<{
   label: ReactNode;
@@ -112,6 +113,9 @@ export function Popover({
   width?: "default" | "wide";
   /** `end` for a trigger at the end of its row, so the panel stays over it. */
   align?: "start" | "end";
+  /** `panelClassName` places the panel, as the top bar does for every panel
+   *  it opens, so it is not moved to the trigger. */
+  pinned?: boolean;
   children: ReactNode;
 }>) {
   const [ownOpen, setOwnOpen] = useState(false);
@@ -133,7 +137,7 @@ export function Popover({
   const triggerId = useId();
   // The leading edge by default, since words open a popover as often as a chip
   // does. A panel hung off the end of a full-width sentence lands at the margin.
-  const at = useAnchoredToTrigger(open, trigger, panel, align);
+  const at = useAnchoredToTrigger(open && !pinned, trigger, panel, align);
 
   // Focus, shared with the evidence mark's own portalled panel: into the panel
   // when a press opened it, back to the trigger if the close dropped it, and
@@ -214,11 +218,15 @@ export function Popover({
             aria-labelledby={triggerId}
             {...(onHover ? hover : {})}
             {...panelFocus}
-            style={{
-              top: `${at.top}px`,
-              left: `${at.left}px`,
-              maxHeight: `${at.maxHeight}px`,
-            }}
+            style={
+              pinned
+                ? undefined
+                : {
+                    top: `${at.top}px`,
+                    left: `${at.left}px`,
+                    maxHeight: `${at.maxHeight}px`,
+                  }
+            }
           >
             {children}
           </section>,
