@@ -42,9 +42,8 @@ import (
 // the schema is demolished and rebuilt fails inside whichever test happens to be
 // running, never the one that broke the ordering.
 //
-// Not because a pooled connection would hold stale plan descriptions: describe_exec
-// keeps none. That was true of the mode this pool used to run and is the kind of
-// reason worth deleting when it stops being one.
+// A pool that predated the drop would also hold statements typed against the old
+// schema, which is why the shared pool can run production's caching exec mode.
 //
 // Unrecoverable within the package either way, because the pool is memoized for
 // the process: nothing after the mistake re-opens it.
@@ -75,18 +74,13 @@ var (
 //	pool_max_conn_idle_time   a package that spiked hands its connections back
 //	                          promptly instead of holding its high-water mark
 //	                          for the rest of the run.
-//	default_query_exec_mode   the only mode that is both cache-free and
-//	                          server-typed, which is what THIS pool's connections
-//	                          need in order to outlive a schema change — see the
-//	                          note on Pool.
 //
-// The first two change how many connections exist; the third is the only one that
-// changes how a query is executed, and so the only place this pool's behaviour
-// parts from the api's.
+// All of these change how many connections exist. None changes how a query is
+// executed: the lane runs the exec mode cmd/api runs, because the planner is most
+// of the lane's time and a mode without a cache plans every statement every call.
 var testPoolParams = map[string]string{
 	"pool_min_conns":          "0",
 	"pool_max_conn_idle_time": "30s",
-	"default_query_exec_mode": "describe_exec",
 }
 
 // PoolMaxConnsEnv is how the parallel lane hands this process the per-pool
@@ -133,59 +127,16 @@ func poolParams() (map[string]string, error) {
 // which is what makes it shared. Callers must not close it — a closed shared pool
 // fails every later test in the package with a use-after-close that names nothing.
 //
-// What sharing costs is the ability to cache a statement, and describe_exec is
-// how that is paid. It asks the server to describe the statement on every
-// execution, so no statement cache spans a schema change.
+// A shared connection caches its statements, as a cmd/api connection does. Two
+// things keep that sound across this package's schema changes. EnsureSchema runs
+// once per process and Pool refuses to open before it, so no shared connection
+// predates a rebuild. And the cf_ columns Reset drops are the runtime columns
+// production also changes under cached statements, which
+// gates/runtimeddlwholerow_test.go holds by refusing whole-row reads of them.
 //
-// That is narrower than "nothing is cached", and the difference is the next trap.
-// The per-connection pgtype.Map still memoizes encode plans, keyed by OID and
-// invalidated only by a type registration — never by DDL. It is harmless today
-// only because nothing here registers a schema-derived type: RegisterIDTypes maps
-// to the fixed system uuid OIDs, and no caller uses conn.LoadType or
-// RegisterType, so an extension's type falls to the same format-independent plan
-// whatever its OID is. The first caller to LoadType("vector") or register a
-// composite reopens this, and this mode alone will not cover it.
-//
-// This is also a property of THIS pool, not of the lane. Every other connection
-// the suites open — the owner pgx.Conn each fixture dials, SchemaPool, and every
-// pool a suite opens directly — still runs pgx's default cache_statement. Those
-// close with their test, so a stale plan costs one test rather than the process,
-// which is why they are left alone.
-//
-// pgx offers four other modes and none of them will do here. The two that cache —
-// cache_statement, which is production's default, and cache_describe — both
-// document that the first execution after a schema change may fail; a cached
-// NAMED PLAN fails as SQLSTATE 0A000 "cached plan must not change result type",
-// and a cached PARAMETER OID fails as XX000 "cache lookup failed for type N" once
-// that type is recreated. The other two, exec and simple_protocol, cache nothing
-// and cost no extra round trip, but they infer parameter types from the Go values
-// instead of asking the server, which cannot encode the typed-id slices the record
-// stores bind through ANY($n) — pool_integration_test.go pins that bind for this
-// reason. describe_exec is the only mode that is both cache-free and server-typed.
-//
-// Only the XX000 form has been observed here, and it is the one this package
-// gates: execmode_integration_test.go reproduces it without pgvector, so the
-// choice above is enforced rather than argued. The mechanism it stands in for is
-// real — search's embedding upsert binds $5::vector, so the server types that
-// parameter as pgvector's, and a suite that drops the schema and remigrates gives
-// the type a new OID under a live pooled connection. The 0A000 form is pgx's
-// documented behaviour for a named plan; whether production meets it is a separate
-// question with its own issue.
-//
-// The delta from production is narrower than swapping a mode sounds. Parameter
-// OIDs and result formats still come from the server, so the encode and decode
-// paths the lane exercises are the ones cmd/api uses; what differs is one extra
-// round trip per statement that takes arguments, and the absent cache. That cost
-// is real on a lane bound by round trips — 244s against the 190s the unsound
-// cache_describe managed, same sitting, Postgres restarted before each run.
-// Clearing the caches at each reset instead of forgoing them measured no cheaper:
-// closing the connections cost 254s, and clearing them in place cost 215s but
-// acquires every idle connection at each reset, which perturbs who gets a
-// connection next.
-//
-// Two things this does not survive, neither of which applies: a connection pooler
-// that switches the underlying connection between the two round trips, and a
-// caller that queries before EnsureSchema has run — see ErrSchemaNotReady.
+// A suite that drops the schema while this pool is live is outside both. It gets
+// XX000 "cache lookup failed for type N", so it opens an OwnPool or its own
+// connection instead.
 func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	if !schemaReady.Load() {
 		return nil, ErrSchemaNotReady
