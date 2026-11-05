@@ -2065,6 +2065,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "home.receipt.dateUnconfirmed":
     "Ngày chốt ước tính: {before} → {after} (cần xác nhận)",
   "home.receipt.undated": "Chưa có ngày",
+  "home.receipt.verdictDate":
+    "Ngày chốt theo lời khách hàng: {before} → {after}",
+  "home.receipt.verdictDateReverted":
+    "Đã hoàn tác: ngày chốt trở lại {before} (trước đó {after})",
   "home.receipt.confidence": "Đã cập nhật độ tin cậy dự báo",
   "home.receipt.forecast": "Đã đổi xác suất",
   "home.task.yours": "Việc cần làm của bạn: {action}",

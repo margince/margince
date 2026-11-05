@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/emailview"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
@@ -28,14 +29,42 @@ const morningChangesWindow = "margince_changes_since"
 // counted and wait on Home.
 const morningChangeLines = 5
 
-// morningChangeWindow is "last night": changes older than a day were already
-// in an earlier morning.
+// morningChangeWindow is "last night" for a reader who has had no morning
+// mail yet.
 const morningChangeWindow = 24 * time.Hour
 
-// appendMorningChanges adds the reader's deals Margince changed overnight and
-// has not had accepted or undone. A deal the send basis excluded is left out.
-func (s *morningSelection) appendMorningChanges(ctx context.Context, store *deals.Store, now time.Time, base string, words mailcopy.Copy) error {
-	since := now.Add(-morningChangeWindow)
+// morningCorrectionJobs are the jobs that write the changes the morning
+// counts. The close-date sweep runs the verdict and the silent close; the deal
+// scout opens and reopens deals.
+var morningCorrectionJobs = []string{CloseDateSweepArgs{}.Kind(), DealScoutArgs{}.Kind()}
+
+// morningChangeOverlap is the longest a correction writer's transaction can
+// stay open: the longest timeout of those jobs.
+func morningChangeOverlap() time.Duration {
+	var longest time.Duration
+	for _, kind := range morningCorrectionJobs {
+		if spec, ok := jobs.SpecFor(kind); ok {
+			longest = max(longest, spec.Timeout.Duration())
+		}
+	}
+	return longest
+}
+
+// morningChangesSince is where "last night" starts: the reader's previous
+// morning mail, less the overlap. A change stamped before that mail can commit
+// after it, and the overlap keeps it in this morning. Such a change may show
+// in two mornings; one accepted or undone shows in neither.
+func morningChangesSince(previous *time.Time, now time.Time) time.Time {
+	if previous == nil {
+		return now.Add(-morningChangeWindow)
+	}
+	return previous.Add(-morningChangeOverlap())
+}
+
+// appendMorningChanges adds the reader's deals Margince changed since the
+// previous morning and has not had accepted or undone. A deal the send basis
+// excluded is left out.
+func (s *morningSelection) appendMorningChanges(ctx context.Context, store *deals.Store, since time.Time, base string, words mailcopy.Copy) error {
 	summary, err := store.PendingChangesOwnedBy(ctx, &since)
 	if err != nil {
 		return err

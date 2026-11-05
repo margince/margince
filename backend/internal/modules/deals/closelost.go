@@ -39,7 +39,7 @@ const DealCloseLostKind = "deal_close_lost"
 // decided approval does not.
 func IsCorrectionReceiptKind(kind string) bool {
 	switch kind {
-	case CloseDateCorrectionKind, DealCloseLostKind, VerdictAmountCorrection, VerdictProbabilityCorrection,
+	case CloseDateCorrectionKind, VerdictCloseDateCorrection, DealCloseLostKind, VerdictAmountCorrection, VerdictProbabilityCorrection,
 		DealStageMoveKind, DealOpenKind, DealReviveKind:
 		return true
 	}
@@ -240,7 +240,7 @@ func (s *Store) revertStageCorrection(
 // that move is still the deal's newest.
 func stageMoveToReverse(ctx context.Context, tx pgx.Tx, c DealCorrection, movedSince string) (ids.StageID, error) {
 	if c.StageHistoryID == nil {
-		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince}
+		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince, MovedSince: true}
 	}
 	var newest ids.UUID
 	var from *ids.UUID
@@ -251,13 +251,13 @@ func stageMoveToReverse(ctx context.Context, tx pgx.Tx, c DealCorrection, movedS
 		                 ORDER BY h.changed_at DESC, h.id DESC LIMIT 1) latest
 		 WHERE closing.id = $1 AND closing.deal_id = $2`, *c.StageHistoryID, c.DealID).Scan(&newest, &from)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince}
+		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince, MovedSince: true}
 	}
 	if err != nil {
 		return ids.StageID{}, fmt.Errorf("deals: reading the stage move to undo: %w", err)
 	}
 	if newest != *c.StageHistoryID || from == nil {
-		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince}
+		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince, MovedSince: true}
 	}
 	return ids.StageID{UUID: *from}, nil
 }
