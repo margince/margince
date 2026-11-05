@@ -3,6 +3,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import { en, type MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/lib/settingscatalog";
+import { viewMenuName } from "../src/testing/listview.names";
 import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
 import {
@@ -2242,6 +2243,46 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the command palette open");
   });
+
+  // The View panel is a popover on a desktop and a full-screen sheet at 390px;
+  // the closed toolbar sweeps only its button, never what it opens.
+  const VIEW_SIZES = [
+    { name: "desktop", width: 1280, height: 800 },
+    { name: "390px", width: 390, height: 844 },
+  ];
+  for (const screen of ["contacts", "companies", "deals", "leads"]) {
+    for (const size of VIEW_SIZES) {
+      for (const step of [null, "sort", "filters"]) {
+        const opened = step ? `the View panel's ${step} step open` : "the View panel open";
+        test(`no AA violations on #/${screen} with ${opened} at ${size.name}`, async ({
+          page,
+        }) => {
+          await page.setViewportSize(size);
+          await page.goto(`/#/${screen}`);
+          await page.waitForLoadState("networkidle");
+          await expectShellRendered(page);
+          await page
+            .getByRole("button", { name: viewMenuName("de") })
+            .first()
+            .click();
+          const panel = page.locator(".lt-vpanel");
+          await expect(panel).toBeVisible();
+          if (step) {
+            await panel.locator(`[data-view-row="${step}"]`).click();
+            await expect(panel.locator(".lt-vstep")).toBeVisible();
+          }
+          // A pointer left over a row starts that row's hover transition
+          // after the settle has looked.
+          await page.mouse.move(0, 0);
+          await settleAnimations(page);
+          await expectNoAaViolations(
+            page,
+            `${screen} — View panel${step ? ` (${step})` : ""} at ${size.name}`,
+          );
+        });
+      }
+    }
+  }
 
   // A report row's explain drawer, with the permission notice in it: the
   // closed page sweeps only the icon-only trigger, never what it opens.
