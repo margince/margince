@@ -393,11 +393,11 @@ describe("Call on the next task", () => {
     ).toBeTruthy();
   });
 
-  it("offers no Call on a task typed by hand", () => {
+  it("offers Call on a task typed by hand", () => {
     show(onTask(null), QUIET);
 
     expect(screen.getByText(OPEN_TASK.subject)).toBeTruthy();
-    expect(dial()).toBeNull();
+    expect(dial()?.getAttribute("href")).toBe("tel:+49301234567");
   });
 
   // On this page the task is about this contact whatever else it links. The
@@ -490,16 +490,22 @@ describe("Call on the move a call left owed", () => {
     expect(screen.getByRole("button", { name: "Write to them" })).toBeTruthy();
   });
 
+  it("offers Call on a move about a hand-typed task", async () => {
+    show(viewWith({}), {
+      ...OWED,
+      evidence: [{ type: "task", id: "a-6", label: "Typed" }],
+    });
+    const call = await screen.findByRole("link", {
+      name: en["record.verb.call"],
+    });
+    expect(call.getAttribute("href")).toBe("tel:+49301234567");
+  });
+
   const quiet: [
     string,
     Partial<ContactMoment>,
     Partial<Contact360["contact"]>,
   ][] = [
-    [
-      "a hand-typed task",
-      { evidence: [{ type: "task", id: "a-6", label: "Typed" }] },
-      {},
-    ],
     [
       "a record that is not a task",
       { evidence: [{ type: "activity", id: "a-7", label: "Re: renewal" }] },
