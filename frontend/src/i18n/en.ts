@@ -18574,6 +18574,7 @@ export const en = {
     "you undid the last change, so Margince waits for news",
   "changes.check.why.already_right": "already right",
   "changes.check.why.accepted_offer": "the accepted offer sets it",
+  "changes.check.why.priced_by_products": "the deal’s products set it",
   "changes.check.why.no_rate": "no exchange rate for the currency",
   "changes.check.why.no_owner": "the owner left",
   "changes.check.why.stage_rules": "the stage’s exit criteria do not allow it",

@@ -56102,7 +56102,7 @@ export interface components {
             /** @enum {string} */
             kind: "close_date" | "amount" | "probability" | "stage";
             /** @enum {string} */
-            why: "switched_off" | "kept_your_edit" | "not_sure" | "outside_limits" | "changed_while_checking" | "undo_hold" | "already_right" | "accepted_offer" | "no_rate" | "no_owner" | "owner_cannot_edit" | "stage_rules" | "other";
+            why: "switched_off" | "kept_your_edit" | "not_sure" | "outside_limits" | "changed_while_checking" | "undo_hold" | "already_right" | "accepted_offer" | "priced_by_products" | "no_rate" | "no_owner" | "owner_cannot_edit" | "stage_rules" | "other";
         };
         /**
          * @description One source and what the reading made of it. `private` is a source whose only items on

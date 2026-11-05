@@ -47691,7 +47691,7 @@ components:
         kind: {type: string, enum: [close_date, amount, probability, stage]}
         why:
           type: string
-          enum: [switched_off, kept_your_edit, not_sure, outside_limits, changed_while_checking, undo_hold, already_right, accepted_offer, no_rate, no_owner, owner_cannot_edit, stage_rules, other]
+          enum: [switched_off, kept_your_edit, not_sure, outside_limits, changed_while_checking, undo_hold, already_right, accepted_offer, priced_by_products, no_rate, no_owner, owner_cannot_edit, stage_rules, other]
     DealMarginceCheckSource:
       type: object
       description: |-

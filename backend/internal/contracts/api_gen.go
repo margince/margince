@@ -10882,6 +10882,7 @@ const (
 	DealMarginceCheckOutcomeWhyOther                DealMarginceCheckOutcomeWhy = "other"
 	DealMarginceCheckOutcomeWhyOutsideLimits        DealMarginceCheckOutcomeWhy = "outside_limits"
 	DealMarginceCheckOutcomeWhyOwnerCannotEdit      DealMarginceCheckOutcomeWhy = "owner_cannot_edit"
+	DealMarginceCheckOutcomeWhyPricedByProducts     DealMarginceCheckOutcomeWhy = "priced_by_products"
 	DealMarginceCheckOutcomeWhyStageRules           DealMarginceCheckOutcomeWhy = "stage_rules"
 	DealMarginceCheckOutcomeWhySwitchedOff          DealMarginceCheckOutcomeWhy = "switched_off"
 	DealMarginceCheckOutcomeWhyUndoHold             DealMarginceCheckOutcomeWhy = "undo_hold"
@@ -10909,6 +10910,8 @@ func (e DealMarginceCheckOutcomeWhy) Valid() bool {
 	case DealMarginceCheckOutcomeWhyOutsideLimits:
 		return true
 	case DealMarginceCheckOutcomeWhyOwnerCannotEdit:
+		return true
+	case DealMarginceCheckOutcomeWhyPricedByProducts:
 		return true
 	case DealMarginceCheckOutcomeWhyStageRules:
 		return true
