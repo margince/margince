@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Download } from "lucide-react";
+import { Code, Download, Plug, SquareTerminal } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -9,17 +9,20 @@ import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { Field } from "../design-system/field";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { ProviderMark } from "../design-system/provider-mark";
 import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
+  AI_CHOICE_MARKS,
   AI_CHOICE_NAMES,
   AI_CHOICES,
   AI_PLACES,
   AI_PLANS,
   type AiChoice,
+  type AiMark,
   type AiPlace,
   type AiPlan,
   type AiTool,
@@ -90,6 +93,7 @@ function Picker({ mcpUrl }: Readonly<{ mcpUrl: string }>) {
               options={AI_CHOICES.map((key) => ({
                 value: key,
                 label: choiceName(key),
+                adornment: <Mark mark={AI_CHOICE_MARKS[key]} />,
               }))}
               value={choice}
               onChange={(next) => {
@@ -111,6 +115,7 @@ function Picker({ mcpUrl }: Readonly<{ mcpUrl: string }>) {
                 options={places.map((candidate) => ({
                   value: candidate.id,
                   label: candidate.label ? t(candidate.label) : candidate.id,
+                  adornment: <Mark mark={candidate.mark} />,
                 }))}
                 value={placeId}
                 onChange={setPlaceId}
@@ -130,6 +135,20 @@ function Picker({ mcpUrl }: Readonly<{ mcpUrl: string }>) {
       )}
     </div>
   );
+}
+
+// A vendor's own logo where the design system draws one, a plain icon otherwise.
+function Mark({ mark }: Readonly<{ mark: AiMark }>) {
+  if (mark === "terminal") {
+    return <SquareTerminal className="provider-mark" aria-hidden="true" />;
+  }
+  if (mark === "editor") {
+    return <Code className="provider-mark" aria-hidden="true" />;
+  }
+  if (mark === "other") {
+    return <Plug className="provider-mark" aria-hidden="true" />;
+  }
+  return <ProviderMark providerKey={mark} />;
 }
 
 function PlacePath({

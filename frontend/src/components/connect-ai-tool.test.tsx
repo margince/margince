@@ -9,8 +9,10 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ProviderMark } from "../design-system/provider-mark";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { AI_CHOICE_MARKS, AI_PLACES } from "../lib/aiconnect";
 import * as download from "../lib/download";
 import { ConnectAiToolCard } from "./connect-ai-tool";
 
@@ -310,5 +312,34 @@ describe("ConnectAiToolCard", () => {
     renderCard(500);
     expect(await screen.findByRole("button", { name: "Retry" })).toBeTruthy();
     expect(screen.queryByTestId("aiconnect-path")).toBeNull();
+  });
+});
+
+// Every vendor named in the picker shows its own logo. Only a terminal, an
+// editor without a published mark, and "another tool" fall back to an icon.
+describe("the picker's marks", () => {
+  const plain = new Set(["terminal", "editor", "other"]);
+  const vendors = [
+    ...Object.values(AI_CHOICE_MARKS),
+    ...Object.values(AI_PLACES).flatMap((places) =>
+      places.map((place) => place.mark),
+    ),
+  ].filter((mark) => !plain.has(mark));
+
+  it.each([...new Set(vendors)])("draws %s's own mark", (mark) => {
+    const { container } = render(<ProviderMark providerKey={mark} />);
+    const svg = container.querySelector("svg.provider-mark");
+    expect(svg?.classList.contains("lucide")).toBe(false);
+    expect(svg?.querySelector("path")).toBeTruthy();
+  });
+
+  it("puts each AI's logo beside its name in the list", async () => {
+    renderCard();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("combobox", { name: "Which AI do you use?" }),
+    );
+    const claude = await screen.findByRole("option", { name: "Claude" });
+    expect(claude.querySelector('svg [fill="#D97757"]')).toBeTruthy();
   });
 });

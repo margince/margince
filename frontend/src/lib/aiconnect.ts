@@ -310,6 +310,31 @@ export const AI_CHOICE_NAMES: Readonly<
   cursor: "Cursor",
 };
 
+// The mark beside each answer: a vendor's logo where one is drawn, otherwise a
+// plain icon for a terminal, an editor or any other tool.
+export type AiMark =
+  | "claude"
+  | "openai"
+  | "github-copilot"
+  | "microsoft"
+  | "gemini"
+  | "cursor"
+  | "vscode"
+  | "visual-studio"
+  | "jetbrains"
+  | "terminal"
+  | "editor"
+  | "other";
+
+export const AI_CHOICE_MARKS: Readonly<Record<AiChoice, AiMark>> = {
+  claude: "claude",
+  openai: "openai",
+  copilot: "github-copilot",
+  gemini: "gemini",
+  cursor: "cursor",
+  other: "other",
+};
+
 export type AiRoute =
   | Readonly<{ kind: "app"; tool: AiTool }>
   | Readonly<{
@@ -323,6 +348,7 @@ export type AiPlace = Readonly<{
   id: string;
   /** Absent where the AI has one place, and the second question is not asked. */
   label?: MessageKey;
+  mark: AiMark;
   route: AiRoute;
   note?: MessageKey;
 }>;
@@ -333,17 +359,20 @@ export const AI_PLACES: Readonly<Record<AiChoice, readonly AiPlace[]>> = {
   claude: [
     {
       id: "app",
+      mark: "claude",
       label: "aiAccess.place.claudeApp",
       route: { kind: "app", tool: "claude" },
       note: "aiAccess.place.claudeAppNote",
     },
     {
       id: "terminal",
+      mark: "terminal",
       label: "aiAccess.place.claudeCodeTerminal",
       route: { kind: "local", cli: "claude-code" },
     },
     {
       id: "vscode",
+      mark: "vscode",
       label: "aiAccess.place.claudeCodeVsCode",
       route: {
         kind: "local",
@@ -354,6 +383,7 @@ export const AI_PLACES: Readonly<Record<AiChoice, readonly AiPlace[]>> = {
     },
     {
       id: "jetbrains",
+      mark: "jetbrains",
       label: "aiAccess.place.claudeCodeJetBrains",
       route: {
         kind: "local",
@@ -363,6 +393,7 @@ export const AI_PLACES: Readonly<Record<AiChoice, readonly AiPlace[]>> = {
     },
     {
       id: "visual-studio",
+      mark: "visual-studio",
       label: "aiAccess.place.claudeCodeVisualStudio",
       route: {
         kind: "local",
@@ -375,11 +406,13 @@ export const AI_PLACES: Readonly<Record<AiChoice, readonly AiPlace[]>> = {
   openai: [
     {
       id: "app",
+      mark: "openai",
       label: "aiAccess.place.chatgptApp",
       route: { kind: "app", tool: "chatgpt" },
     },
     {
       id: "codex",
+      mark: "terminal",
       label: "aiAccess.place.codex",
       route: { kind: "local", cli: "codex" },
     },
@@ -387,16 +420,19 @@ export const AI_PLACES: Readonly<Record<AiChoice, readonly AiPlace[]>> = {
   copilot: [
     {
       id: "m365",
+      mark: "microsoft",
       label: "aiAccess.place.m365",
       route: { kind: "app", tool: "copilot" },
     },
     {
       id: "vscode",
+      mark: "vscode",
       label: "aiAccess.place.githubVsCode",
       route: { kind: "local", cli: "vscode" },
     },
     {
       id: "visual-studio",
+      mark: "visual-studio",
       label: "aiAccess.place.githubVisualStudio",
       route: { kind: "local", cli: "visual-studio" },
     },
@@ -404,16 +440,20 @@ export const AI_PLACES: Readonly<Record<AiChoice, readonly AiPlace[]>> = {
   gemini: [
     {
       id: "app",
+      mark: "gemini",
       label: "aiAccess.place.geminiApp",
       route: { kind: "app", tool: "gemini" },
     },
     {
       id: "antigravity",
+      mark: "editor",
       label: "aiAccess.place.antigravity",
       route: { kind: "local", cli: "antigravity" },
     },
   ],
-  cursor: [{ id: "cursor", route: { kind: "local", cli: "cursor" } }],
+  cursor: [
+    { id: "cursor", mark: "cursor", route: { kind: "local", cli: "cursor" } },
+  ],
   other: [],
 };
 
