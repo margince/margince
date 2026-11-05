@@ -368,7 +368,8 @@ func lockAuthorization(ctx context.Context, tx pgx.Tx) error {
 
 // lockAuthorizationShared holds the same lock in shared mode until commit. Reads
 // that admit a write run side by side, and an authorization change waits until
-// the writes they admitted commit.
+// the writes they admitted commit. Every holder of either mode takes this lock
+// before app_user, and app_user before any record.
 func lockAuthorizationShared(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock_shared(`+authorizationLockKey+`)`); err != nil {
 		return fmt.Errorf("identity: holding authority steady for a write: %w", err)
