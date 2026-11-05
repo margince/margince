@@ -5370,6 +5370,7 @@ export const en = {
   "lead.source.manual": "Created manually",
   "lead.source.inbound": "Inbound",
   "lead.source.webform": "Web form",
+  "lead.source.webformNamed": "Web form “{name}”",
   "lead.source.referral": "Referral",
   "lead.source.import": "Import",
   "lead.source.crawl": "Web research",
@@ -5487,8 +5488,24 @@ export const en = {
     "You cannot change this lead. Ask its owner to share it, or an administrator for edit access.",
   "lead.boardCountsUnavailable":
     "Qualified and Disqualified counts did not load.",
+  "lead.boardCountsNoSearch":
+    "The counts cannot apply a search, so none is shown.",
+  "lead.boardCountsNoTagFilter": "No count while a tag filter is on.",
+  "lead.boardCountsNoTeamFilter":
+    "The counts cannot narrow by team or to unassigned leads, so none is shown.",
+  "lead.boardCountsNoScoreFilter": "No count while a score filter is on.",
+  "lead.boardCountsNoResponseFilter": "No count while a response filter is on.",
+  "lead.boardCountsNoCompanyFilter":
+    "The counts cannot narrow by industry, country or company size, so none is shown.",
+  "lead.boardCountsNoOtherFilter":
+    "The counts cannot apply every filter on this list, so none is shown.",
+  "lead.boardCountsNoConnectorSource":
+    "The counts cannot narrow to every lead from one connector, so none is shown.",
+  "lead.boardCountsOwnerNotMeasurable":
+    "No count for this owner’s leads. Only an administrator can let you measure them.",
   "lead.boardTerminalRowsUnavailable":
     "These leads did not load. The count above is still correct.",
+  "lead.boardTerminalRowsUnavailableNoCount": "These leads did not load.",
   "lead.boardTerminalOnly":
     "No open leads here. They are counted under Qualified and Disqualified.",
 
@@ -6150,7 +6167,7 @@ export const en = {
   // pages on demand, so that number grows as the reader presses Load more.
   // Naming only the total would leave the count reading as final.
   "deals.totalsOwnerNotMeasurable":
-    "Loaded deals only. This owner’s totals are outside what you may measure.",
+    "Loaded deals only. Only an administrator can let you measure this owner’s totals.",
   "deals.totalsNoTagFilter":
     "Loaded deals only. No total while a tag filter is on.",
   "deals.totalsNoSearch":
@@ -12668,6 +12685,8 @@ export const en = {
     "Paused because the list it watches or adds to was archived. Restoring the list does not resume it.",
   "auto.pausedReason.listInvalid":
     "Paused because the filter of the Live List it watches stopped working. Fixing the filter does not resume it.",
+  "auto.pausedReason.passportRevoked":
+    "The agent that set this rule up had its passport revoked, so the rule stopped. Resume it to keep it running with no agent behind it.",
   "auto.pausedReason.listUnavailable":
     "Paused because its owner can no longer find the list it watches.",
   "auto.pausedReason.burst":
@@ -12714,6 +12733,7 @@ export const en = {
   "auto.action.addToShortlist": "add to a Shortlist",
   "auto.pausedShort.listArchived": "Paused · list archived",
   "auto.pausedShort.listInvalid": "Paused · list filter broken",
+  "auto.pausedShort.passportRevoked": "Paused · agent’s passport revoked",
   "auto.pausedShort.listUnavailable": "Paused · list not found",
   "auto.pausedShort.burst": "Paused · too many records",
   "auto.withheld": "Configured automations are hidden for your role.",
@@ -18995,6 +19015,8 @@ export const en = {
     "Nothing to rerun. This run was stopped on purpose, not by an error.",
   "worklist.verb.retryRefusedRepeats":
     "This rule is not allowed to run twice, so a rerun could repeat its actions.",
+  "worklist.verb.retryRefusedPassportRevoked":
+    "The agent that set this rule up had its passport revoked, so the rule is paused. Resume it to keep it running with no agent behind it.",
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",

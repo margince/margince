@@ -21,9 +21,9 @@ The heaviest menu is `overnight_at_risk_sweep`: 6422 of the window's 32768 token
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 47 | 2134 | 1592 | 4319 | 13% | 18891 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 47 | 3373 | 2457 | 6422 | 19% | 16788 | 4 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 47 |  | 35864 |  |  | 109% |  |  |  |
+| `morning_brief` | 5 | 5 of 48 | 2134 | 1592 | 4319 | 13% | 18891 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3373 | 2457 | 6422 | 19% | 16788 | 4 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 38704 |  |  | 118% |  |  |  |
 
 ### `morning_brief`
 

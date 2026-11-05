@@ -81,3 +81,5 @@
 1793829966_the_decision_ground_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793830466_the_vouch_entity_link_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793869296_a_deal_prices_itself_from_product_lines.down.sql | deal_product | runs only on a rollback and deletes only the line rows the deal-lines writer made, at most one per product of a deal priced from its lines
+1793861795_a_rule_names_the_passport_that_set_it_up.down.sql | automation | runs only on a rollback; an installation holds a catalog-bounded handful of rules, so the update is small
+1793861797_the_rule_setter_constraints_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

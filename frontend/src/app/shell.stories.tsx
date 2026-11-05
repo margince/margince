@@ -297,6 +297,12 @@ export const SidebarStates: Story = {
   },
 };
 
+export const SidebarStatesDark: Story = {
+  ...SidebarStates,
+  name: "sidebar — expanded and collapsed, dark",
+  globals: { theme: "dark" },
+};
+
 /**
  * The company's square icon in both panels, side by side: the open head's
  * card beside the 56px rail. The wide wordmark is seeded too, and appears in
@@ -832,6 +838,12 @@ export const PhoneBar: Story = {
       </StoryProviders>
     );
   },
+};
+
+export const PhoneBarDark: Story = {
+  ...PhoneBar,
+  name: "phone — the bar, dark",
+  globals: { viewport: { value: "phone" }, theme: "dark" },
 };
 
 /**

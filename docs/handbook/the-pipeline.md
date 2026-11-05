@@ -71,7 +71,7 @@ To add, rename, reorder or remove stages, open the account menu → **Settings**
 
 A stage whose win probability is lower than the stage above it is marked, but the order is still saved. A role that cannot edit pipelines sees "Read-only settings" at the top of the page.
 
-An agent is always refused. Also called: deal stages, sales process, customise the pipeline, reorder stages.
+An agent acting for someone who may edit pipelines can do the same. It cannot add a won or lost stage or change what a stage means. While a move runs by itself on the pipeline, it cannot change the stages or **Exit criteria** either. Also called: deal stages, sales process, customise the pipeline, reorder stages.
 
 ### How do I create another pipeline?
 To add a pipeline, open **Settings** → **Pipelines** and choose **New pipeline**.
@@ -118,8 +118,8 @@ Rename them, reorder them, add your own. Two rules you cannot change: a won stag
 is always 100 and a lost stage is always 0.
 
 You edit pipelines and stages at **Settings → Pipelines**, in the Sales group.
-Only a human can edit them. An agent is refused, because every "should this deal
-move?" idea is judged against the stage ladder.
+An agent acting for you can edit them too. What a stage means stays with you, and so do the
+stages while a move runs by itself: automatic moves are judged on them.
 
 Removing a stage tells you what happens. The stages after it move up, and past
 stage changes still read well. Deals still on it have to move first.
@@ -291,16 +291,15 @@ A date Margince set is a guess, marked "provisional close date, not confirmed by
 
 ## Reading the numbers
 
-The deals board in Margince loads 100 deals at a time. But the totals at the top of each column count every matching deal, the ones not loaded yet too. Each column header carries the stage name, its win probability and how many deals are in it. Under that are the stage total and the weighted total, in the short form the cards use. A bar under the two figures shows how large the stage is next to the largest stage on the board. Its dark part is the weighted share.
+Each stage column of the deals board loads 25 deals at a time. Click **Load more** under a column's cards to see more in that column only. Each column header carries the stage name, its win probability and how many deals are in it. Under that are the stage total and the weighted total, in the short form the cards use. A bar under the two figures shows how large the stage is next to the largest stage on the board. Its dark part is the weighted share.
 
 A stage with no total shows no bar, and the bar has no dark part when the weighted total is unknown. No stage shows a bar when the totals on the board are in more than one currency. When the totals have a rate date, a last line gives the date of the exchange rates used. It also says how many deals have no price, when some have none. Point at the stage total, or move to it with Tab, to see both totals in full, down to the smallest unit of the currency. A weighted total that is unknown shows there as a line, not an amount.
 
-The totals count every matching deal you may see, loaded as a card or not. They
-are held back when a tag filter is on ("Loaded deals only. No total
-while a tag filter is on."). They are also held back when the owner filter names
-someone whose numbers you may not measure ("Loaded deals only. This owner’s
-totals are outside what you may measure."). You may measure yourself, the
-members of teams you lead, and anyone if your access covers the whole company.
+The totals at the top of each column count every matching deal, the ones not loaded yet too. While the totals are still loading, or if they fail to load, a column shows the count of its loaded cards instead. A column that is still loading shows no count. If a column fails to load, it shows its own error and **Retry**, and the other columns stay as they are. If a later page fails, the cards already loaded stay, an error shows, and **Load more** tries that page again. The **Table** view loads one list.
+
+The totals count every deal you may see, which are the deals the board shows as cards. They are held back when the board includes archived deals. They are also held back when you narrow the board by stage, tag, search, team or unassigned deals. A range such as close date or value holds them back too. A tag filter, for example, shows "Loaded deals only. No total while a tag filter is on."
+
+They are held back too when the owner filter names someone whose numbers you may not measure ("Loaded deals only. Only an administrator can let you measure this owner’s totals."). You may measure yourself, the members of teams you lead, and anyone if your access covers the whole company. Where totals are held back, the count at the top of the board covers only the loaded cards and says so.
 
 Every deal report has an **Explain this number** control that shows the rows the
 number was built from. If a number looks wrong, open it.

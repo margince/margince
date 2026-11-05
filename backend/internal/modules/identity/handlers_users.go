@@ -428,7 +428,7 @@ const formerSourceMax = 200
 // no "this member could never sign in" conflict applies. Being unable to sign
 // in is the point here rather than the failure.
 func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}

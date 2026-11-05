@@ -16,7 +16,7 @@ import "testing"
 // app that their agent cannot reach yet. It equals today's count, with no
 // headroom. A new operation cannot join the backlog unnoticed, and each change
 // that opens operations to agents lowers it.
-const pendingHumanOnlyCeiling = 123
+const pendingHumanOnlyCeiling = 0
 
 const pendingReason = "pending"
 

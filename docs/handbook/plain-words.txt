@@ -544,7 +544,6 @@ hour
 how
 human
 i
-idea
 if
 ignore
 image
@@ -811,7 +810,6 @@ owner
 owner's
 owners
 ownership
-owner’s
 package
 page
 paid

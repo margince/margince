@@ -9,9 +9,10 @@ import "maps"
 // any of them, so each needs a headline in every language but English.
 
 // withRouteVerbs is one language's verb words, the route-backed ones included.
-func withRouteVerbs(routes, own map[string]string) map[string]string {
+func withRouteVerbs(routes, setup, own map[string]string) map[string]string {
 	merged := maps.Clone(own)
 	maps.Copy(merged, routes)
+	maps.Copy(merged, setup)
 	return merged
 }
 

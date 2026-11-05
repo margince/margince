@@ -5416,6 +5416,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.source.manual": "Manuell erstellt",
   "lead.source.inbound": "Eingehend",
   "lead.source.webform": "Webformular",
+  "lead.source.webformNamed": "Webformular „{name}“",
   "lead.source.referral": "Empfehlung",
   "lead.source.import": "Import",
   "lead.source.crawl": "Webrecherche",
@@ -5538,8 +5539,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst diesen Lead nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
   "lead.boardCountsUnavailable":
     "Die Anzahlen für Qualifiziert und Disqualifiziert konnten nicht geladen werden.",
+  "lead.boardCountsNoSearch":
+    "Es wird keine Anzahl angezeigt, da die Anzahlen keine Suche berücksichtigen können.",
+  "lead.boardCountsNoTagFilter":
+    "Keine Anzahl, solange ein Tag-Filter aktiv ist.",
+  "lead.boardCountsNoTeamFilter":
+    "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht nach Team oder auf nicht zugewiesene Leads eingrenzen lassen.",
+  "lead.boardCountsNoScoreFilter":
+    "Keine Anzahl, solange ein Score-Filter aktiv ist.",
+  "lead.boardCountsNoResponseFilter":
+    "Keine Anzahl, solange ein Antwortfilter aktiv ist.",
+  "lead.boardCountsNoCompanyFilter":
+    "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht nach Branche, Land oder Unternehmensgröße eingrenzen lassen.",
+  "lead.boardCountsNoOtherFilter":
+    "Es wird keine Anzahl angezeigt, da die Anzahlen nicht jeden Filter dieser Liste berücksichtigen können.",
+  "lead.boardCountsNoConnectorSource":
+    "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht auf alle Leads eines Connectors eingrenzen lassen.",
+  "lead.boardCountsOwnerNotMeasurable":
+    "Keine Anzahl für die Leads dieser verantwortlichen Person. Nur Admins können dir erlauben, diese Anzahl auszuwerten.",
   "lead.boardTerminalRowsUnavailable":
     "Diese Leads konnten nicht geladen werden. Die Anzahl oben stimmt weiterhin.",
+  "lead.boardTerminalRowsUnavailableNoCount":
+    "Diese Leads konnten nicht geladen werden.",
   "lead.boardTerminalOnly":
     "Hier sind keine offenen Leads. Die Leads zählen unter Qualifiziert und Disqualifiziert.",
 
@@ -6172,7 +6193,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur stockende",
   "deals.totalsOwnerNotMeasurable":
-    "Nur geladene Deals. Die Summen der verantwortlichen Person darfst du nicht auswerten.",
+    "Nur geladene Deals. Nur Admins können dir erlauben, die Summen dieser verantwortlichen Person auszuwerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.totalsNoSearch":
@@ -12681,6 +12702,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Pausiert, da die beobachtete oder befüllte Liste archiviert wurde. Wenn du die Liste wiederherstellst, läuft die Automatisierung nicht von selbst weiter.",
   "auto.pausedReason.listInvalid":
     "Pausiert, da der Filter der beobachteten Live-Liste nicht mehr funktioniert. Wenn du den Filter reparierst, läuft die Automatisierung nicht von selbst weiter.",
+  "auto.pausedReason.passportRevoked":
+    "Die Regel wurde pausiert, da der Passport des Agenten, der sie eingerichtet hat, widerrufen wurde. Setze sie fort, dann läuft sie ohne Agenten dahinter weiter.",
   "auto.pausedReason.listUnavailable":
     "Pausiert, da das zuständige Teammitglied die beobachtete Liste nicht mehr findet.",
   "auto.pausedReason.burst":
@@ -12729,6 +12752,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.action.addToShortlist": "zur Shortlist hinzufügen",
   "auto.pausedShort.listArchived": "Pausiert · Liste archiviert",
   "auto.pausedShort.listInvalid": "Pausiert · Listenfilter defekt",
+  "auto.pausedShort.passportRevoked":
+    "Pausiert · Passport des Agenten widerrufen",
   "auto.pausedShort.listUnavailable": "Pausiert · Liste nicht gefunden",
   "auto.pausedShort.burst": "Pausiert · zu viele Datensätze",
   "auto.withheld":
@@ -19189,6 +19214,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nichts erneut auszuführen. Dieser Lauf wurde absichtlich gestoppt, nicht durch einen Fehler.",
   "worklist.verb.retryRefusedRepeats":
     "Diese Regel darf nicht zweimal ausgeführt werden, da ein erneuter Lauf ihre Aktionen wiederholen könnte.",
+  "worklist.verb.retryRefusedPassportRevoked":
+    "Der Passport des Agenten, der diese Regel eingerichtet hat, wurde widerrufen. Darum ist sie pausiert. Setze sie fort, dann läuft sie ohne Agenten dahinter weiter.",
   "worklist.verb.retryRefusedEventGone":
     "Dieser Lauf kann nicht erneut ausgeführt werden, da das auslösende Ereignis nicht mehr existiert. Zeitgesteuerte Regeln prüfen automatisch erneut.",
   "worklist.verb.acknowledgeFailed":
