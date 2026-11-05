@@ -47,45 +47,76 @@ func newScoutDealOpener(pool *pgxpool.Pool, log *slog.Logger) scoutDealOpener {
 	}
 }
 
-// openableSuggestion is one suggestion and the owner of its company.
+// openableSuggestion is one suggestion, the owner of its company, and the
+// company's latest closed deal when that deal was lost.
 type openableSuggestion struct {
 	id, owner ids.UUID
+	lost      *ids.UUID
+	lostOwner *ids.UUID
 }
 
-// OpenWorkspace opens every suggestion it may in the workspace bound in ctx,
-// and reports how many deals it opened. One that cannot open does not stop
-// the others.
+// OpenWorkspace opens or reopens a deal for every suggestion it may in the
+// workspace bound in ctx, and reports how many it did. A company whose latest
+// closed deal was lost gets that deal back, never a second one beside it. One
+// that cannot act does not stop the others.
 func (o scoutDealOpener) OpenWorkspace(ctx context.Context) (int, error) {
 	var due []openableSuggestion
 	err := database.WithWorkspaceTx(ctx, o.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT s.id, c.owner_id FROM deal_suggestion s JOIN company c ON c.id = s.company_id
-			 WHERE s.state = 'open' AND s.kind = $1 AND c.owner_id IS NOT NULL AND c.archived_at IS NULL
+			SELECT s.id, c.owner_id, latest.id, latest.owner_id
+			  FROM deal_suggestion s JOIN company c ON c.id = s.company_id
+			  LEFT JOIN LATERAL (SELECT d.id, d.owner_id FROM deal d
+			          WHERE d.company_id = s.company_id AND d.archived_at IS NULL AND d.status <> 'open'
+			          ORDER BY d.closed_at DESC NULLS LAST, d.id DESC LIMIT 1) closed ON true
+			  LEFT JOIN deal latest ON latest.id = closed.id AND latest.status = 'lost'
+			 WHERE s.state = 'open' AND s.kind = $1 AND c.archived_at IS NULL
+			   AND (c.owner_id IS NOT NULL OR latest.owner_id IS NOT NULL)
 			 ORDER BY s.created_at, s.id`, deals.SuggestionKindOpenDeal)
 		if err != nil {
 			return fmt.Errorf("compose: reading the suggestions to open: %w", err)
 		}
 		due, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (openableSuggestion, error) {
 			var s openableSuggestion
-			return s, row.Scan(&s.id, &s.owner)
+			var owner *ids.UUID
+			err := row.Scan(&s.id, &owner, &s.lost, &s.lostOwner)
+			if owner != nil {
+				s.owner = *owner
+			}
+			return s, err
 		})
 		return err
 	})
 	if err != nil {
 		return 0, err
 	}
-	opened := 0
+	done := 0
 	for _, s := range due {
-		deal, err := o.openOne(ctx, s)
+		acted, err := o.actOn(ctx, s)
 		if err != nil {
-			o.log.WarnContext(ctx, "Margince could not open a suggested deal", "suggestion_id", s.id, "error", err)
+			o.log.WarnContext(ctx, "Margince could not act on a suggested deal", "suggestion_id", s.id, "error", err)
 			continue
 		}
-		if !deal.IsZero() {
-			opened++
+		if acted {
+			done++
 		}
 	}
-	return opened, nil
+	return done, nil
+}
+
+// actOn reopens the company's lost deal when it has one, and otherwise opens
+// a deal for the company's owner.
+func (o scoutDealOpener) actOn(ctx context.Context, s openableSuggestion) (bool, error) {
+	if s.lost != nil {
+		if s.lostOwner == nil {
+			return false, nil
+		}
+		return o.reviveOne(ctx, s.id, ids.From[ids.DealKind](*s.lost), *s.lostOwner)
+	}
+	if s.owner.IsZero() {
+		return false, nil
+	}
+	deal, err := o.openOne(ctx, s)
+	return !deal.IsZero(), err
 }
 
 // openOne opens one suggestion as its company owner's agent. An owner who

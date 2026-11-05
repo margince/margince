@@ -78,10 +78,10 @@ export function bundleItem(
   };
 }
 
-/** The team's work an Undo of an opened deal asks about first, if any. */
+/** The team's work an Undo of an opened or reopened deal asks about first. */
 export function archiveQuestion(
   result: UndoMarginceChangeResult,
-): { notes: number; tasks: number; work: string } | null {
+): { notes: number; tasks: number; work: string; kind: string } | null {
   const asked = result.kept.find(
     (kept) => kept.reason === "needs_confirmation",
   );
@@ -90,6 +90,7 @@ export function archiveQuestion(
         notes: asked.team_notes ?? 0,
         tasks: asked.team_tasks ?? 0,
         work: asked.team_work ?? "",
+        kind: asked.kind ?? "",
       }
     : null;
 }

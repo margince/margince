@@ -124,6 +124,9 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	if c.Correction == deals.DealOpenCorrection {
 		return dealOpenReceipt(c)
 	}
+	if c.Correction == deals.DealReviveCorrection {
+		return dealReviveReceipt(c)
+	}
 	if c.Correction == deals.VerdictAmountCorrection || c.Correction == deals.VerdictProbabilityCorrection {
 		return verdictReceipt(c)
 	}

@@ -40555,7 +40555,7 @@ components:
       required: [id, kind, state, company_id, company_name, pipeline_id, stage_id, name_hint, confidence, created_at, evidence]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [open_deal, advance_stage, revive], description: 'Only open_deal is suggested today.' }
+        kind: { type: string, enum: [open_deal, advance_stage, revive], description: 'An open suggestion is open_deal. One Margince reopened a lost deal from is revive.' }
         state: { type: string, enum: [open, accepted, dismissed, superseded] }
         company_id: { type: string, format: uuid }
         company_name: { type: string }
@@ -74261,7 +74261,7 @@ components:
         The changes Margince made to the caller's deals that are neither accepted nor undone.
         Every count is a number of deals; a deal with two kinds of change counts once in
         `deals` and once under each kind.
-      required: [as_of, deals, closed, redated, revalued, probabilities, moved, opened, base_currency, bundles, truncated]
+      required: [as_of, deals, closed, redated, revalued, probabilities, moved, opened, revived, base_currency, bundles, truncated]
       properties:
         as_of: { type: string, format: date-time }
         deals: { type: integer, description: Deals with at least one open change. }
@@ -74271,6 +74271,7 @@ components:
         probabilities: { type: integer, description: Deals given a new probability. }
         moved: { type: integer, description: Deals Margince moved to a later stage. }
         opened: { type: integer, description: Deals Margince opened from buying evidence. }
+        revived: { type: integer, description: Lost deals Margince reopened from new buying evidence. }
         base_currency: { type: string, description: The currency of every `value_base_minor`. }
         bundles:
           type: array
@@ -74295,7 +74296,7 @@ components:
           description: The changes, newest first.
         kinds:
           type: array
-          items: { type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability, stage_move, deal_open] }
+          items: { type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability, stage_move, deal_open, deal_revive] }
         value_base_minor:
           type: integer
           format: int64
@@ -74381,7 +74382,7 @@ components:
           type: string
           description: |
             The `team_work` a `needs_confirmation` answer named: the owner confirmed archiving
-            a deal Margince opened over exactly that work. Without it, or when the team's
+            a deal Margince opened, or closing again a deal it reopened, over exactly that work. Without it, or when the team's
             work changed since, such a deal is kept with `needs_confirmation`, the new counts
             and the new `team_work`.
 
@@ -74397,10 +74398,10 @@ components:
           enum: [accepted, already_undone, changed_since, not_found, not_permitted, version_skew, needs_confirmation]
         team_notes:
           type: integer
-          description: With `needs_confirmation`, the notes the team added to the opened deal.
+          description: With `needs_confirmation`, the notes the team added to the opened or reopened deal.
         team_tasks:
           type: integer
-          description: With `needs_confirmation`, the tasks the team added to the opened deal.
+          description: With `needs_confirmation`, the tasks the team added to the opened or reopened deal.
         team_work:
           type: string
           description: With `needs_confirmation`, names the counted work. Send it back as `archive_confirmed_for`.

@@ -11,6 +11,7 @@ package deals
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -40,8 +41,8 @@ type ChangeBundle struct {
 // ChangeSummary counts the owner's changed deals by kind. A deal with two
 // kinds counts once in Deals and once under each kind.
 type ChangeSummary struct {
-	Deals, Closed, Redated, Revalued, Probabilities, Moved, Opened int
-	BaseCurrency                                                   string
+	Deals, Closed, Redated, Revalued, Probabilities, Moved, Opened, Revived int
+	BaseCurrency                                                            string
 	// Bundles is ordered by value, the largest first. Truncated says
 	// bundleCap cut it; the counts above are never cut.
 	Bundles   []ChangeBundle
@@ -51,6 +52,15 @@ type ChangeSummary struct {
 // bundleCap bounds the rows of one summary. The counts come from SQL over
 // every changed deal, so a cut list still reports the true total.
 const bundleCap = 500
+
+// kindCountColumns is one window column per kind: the bundles holding it.
+func kindCountColumns(arg func(any) int, kinds ...string) string {
+	var out strings.Builder
+	for _, kind := range kinds {
+		fmt.Fprintf(&out, ",\n\t\t\t       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER ()", arg(kind))
+	}
+	return out.String()
+}
 
 // PendingChangesOwnedBy reads every change Margince made to the reader's own
 // deals that they have not accepted or undone, one bundle per deal. A since
@@ -74,8 +84,8 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		heldPos, ownerPos, basePos, capPos := arg(heldCorrections), arg(actor.UserID), arg(base), arg(bundleCap+1)
 		sincePos := arg(since)
-		closedPos, redatedPos := arg(CloseLostCorrection), arg(VerdictCloseDateCorrection)
-		revaluedPos, probabilityPos, movedPos, openedPos := arg(VerdictAmountCorrection), arg(VerdictProbabilityCorrection), arg(VerdictStageMoveCorrection), arg(DealOpenCorrection)
+		counts := kindCountColumns(arg, CloseLostCorrection, VerdictCloseDateCorrection, VerdictAmountCorrection,
+			VerdictProbabilityCorrection, VerdictStageMoveCorrection, DealOpenCorrection, DealReviveCorrection)
 		scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
 		if err != nil {
 			return err
@@ -102,18 +112,11 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			     AND d.owner_id = $%d AND d.archived_at IS NULL%s
 			   GROUP BY c.deal_id)
 			SELECT b.deal_id, d.name, d.version, b.audits, b.kinds, b.latest, %s,
-			       count(*) OVER (),
-			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER (),
-			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER (),
-			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER (),
-			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER (),
-			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER (),
-			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER ()
+			       count(*) OVER ()%s
 			  FROM bundle b JOIN deal d ON d.id = b.deal_id
 			 ORDER BY 7 DESC NULLS LAST, b.latest DESC, b.deal_id
 			 LIMIT $%d`,
-			heldPos, sincePos, sincePos, ownerPos, where, value,
-			closedPos, redatedPos, revaluedPos, probabilityPos, movedPos, openedPos, capPos)
+			heldPos, sincePos, sincePos, ownerPos, where, value, counts, capPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("deals: reading the changes Margince made: %w", err)
@@ -122,7 +125,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		for rows.Next() {
 			var b ChangeBundle
 			if err := rows.Scan(&b.DealID, &b.DealName, &b.Version, &b.AuditLogIDs, &b.Kinds, &b.LatestAt, &b.ValueBaseMinor,
-				&out.Deals, &out.Closed, &out.Redated, &out.Revalued, &out.Probabilities, &out.Moved, &out.Opened); err != nil {
+				&out.Deals, &out.Closed, &out.Redated, &out.Revalued, &out.Probabilities, &out.Moved, &out.Opened, &out.Revived); err != nil {
 				return err
 			}
 			out.Bundles = append(out.Bundles, b)

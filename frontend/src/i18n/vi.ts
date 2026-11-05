@@ -15050,6 +15050,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_open.label": "Deal mới",
   "autonomy.kind.deal_open.help":
     "Mở một deal cho công ty bạn phụ trách khi khách muốn mua, ví dụ khách yêu cầu báo giá. Deal thuộc về bạn, ở giai đoạn đầu tiên. Mỗi deal mới hiện trên Home kèm nút Hoàn tác.",
+  "autonomy.kind.deal_revive.label": "Deal mở lại",
+  "autonomy.kind.deal_revive.help":
+    "Mở lại một deal đã mất của bạn khi khách quay lại với dấu hiệu mua hàng mới, ví dụ khách yêu cầu báo giá mới. Deal quay về giai đoạn đầu tiên. Mỗi deal mở lại hiện trên Home kèm nút Hoàn tác, nút này đóng deal lại là mất.",
   "autonomy.kind.company_name_promotion.label": "Tên công ty",
   "autonomy.kind.company_name_promotion.help":
     "Chấp nhận tên công ty đề xuất từ chữ ký email cho các công ty đang mang tên theo tên miền. Tắt để tự xem lại các đề xuất này. Tên được nguồn độc lập xác nhận vẫn có thể được cập nhật tự động.",
@@ -18057,6 +18060,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.kind.deal_amount": "Giá trị mới",
   "changes.kind.deal_probability": "Xác suất mới",
   "changes.kind.deal_open": "Mở từ dấu hiệu mua hàng",
+  "changes.kind.deal_revive": "Mở lại từ dấu hiệu mua hàng mới",
+  "changes.undo.relost":
+    "Đã đóng lại là mất, với lý do trước đó. Margince chỉ mở lại khi có dấu hiệu mua hàng mới hơn.",
+  "changes.undo.confirmRelost":
+    "Deal này hiện có {notes} ghi chú và {tasks} việc cần làm từ nhóm của bạn. Vẫn đóng là mất?",
   "changes.undo.confirmArchive":
     "Deal này hiện có {notes} ghi chú và {tasks} việc cần làm từ nhóm của bạn. Vẫn lưu trữ?",
   "changes.undo.archived":
@@ -18076,6 +18084,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.part.probabilities_other": "{count} xác suất",
   "changes.part.moved_one": "{count} chuyển giai đoạn",
   "changes.part.moved_other": "{count} chuyển giai đoạn",
+  "changes.part.opened_one": "{count} mở mới",
+  "changes.part.opened_other": "{count} mở mới",
+  "changes.part.revived_one": "{count} mở lại",
+  "changes.part.revived_other": "{count} mở lại",
   "changes.viewAll": "Xem tất cả",
   "changes.undoAll": "Hoàn tác tất cả",
   "changes.undoAllDone_one": "Đã hoàn tác trên {count} giao dịch.",

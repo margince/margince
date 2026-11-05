@@ -130,6 +130,8 @@ func (s *Store) RevertCorrectionConfirmed(
 			err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, closeMovedSince)
 		case VerdictStageMoveCorrection:
 			err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, stageMoveMovedSince)
+		case DealReviveCorrection:
+			err = s.revertDealRevive(ctx, tx, correction, ifVersion, evidence, active, archiveConfirmedFor)
 		case DealOpenCorrection:
 			if err = s.revertDealOpen(ctx, tx, correction, ifVersion, archiveConfirmedFor); err == nil {
 				out, err = readDealForCaller(ctx, tx, correction.DealID, storekit.IncludeArchived, active)

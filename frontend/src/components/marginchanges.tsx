@@ -32,6 +32,7 @@ const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   deal_probability: "changes.kind.deal_probability",
   stage_move: "changes.kind.stage_move",
   deal_open: "changes.kind.deal_open",
+  deal_revive: "changes.kind.deal_revive",
 };
 
 /** What changed on one deal, in words. */
@@ -55,6 +56,14 @@ export function ChangeSummaryRow({
     summary.closed > 0 &&
       plural("changes.part.closed", summary.closed, {
         count: count(summary.closed),
+      }),
+    summary.opened > 0 &&
+      plural("changes.part.opened", summary.opened, {
+        count: count(summary.opened),
+      }),
+    summary.revived > 0 &&
+      plural("changes.part.revived", summary.revived, {
+        count: count(summary.revived),
       }),
     summary.moved > 0 &&
       plural("changes.part.moved", summary.moved, {
@@ -126,6 +135,7 @@ export function BundleUndo({
     notes: number;
     tasks: number;
     work: string;
+    kind: string;
   } | null>(null);
   if (answer) {
     return <span role="status">{answer}</span>;
@@ -168,10 +178,15 @@ export function BundleUndo({
       {asking ? (
         <>
           <span role="status">
-            {t("changes.undo.confirmArchive", {
-              notes: formatNumber(asking.notes, locale),
-              tasks: formatNumber(asking.tasks, locale),
-            })}
+            {t(
+              asking.kind === "deal_revive"
+                ? "changes.undo.confirmRelost"
+                : "changes.undo.confirmArchive",
+              {
+                notes: formatNumber(asking.notes, locale),
+                tasks: formatNumber(asking.tasks, locale),
+              },
+            )}
           </span>
           <Button
             variant="ghost"

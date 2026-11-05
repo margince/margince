@@ -232,3 +232,83 @@ it("asks before an opened deal's receipt archives the team's work, as the change
     },
   ]);
 });
+
+it("asks before a reopened deal's receipt closes the team's work as lost, then says it is lost again", async () => {
+  const reopened = {
+    ...automaticStageReceipt,
+    kind: "deal_revive",
+    review: automaticStageReceipt.review && {
+      ...automaticStageReceipt.review,
+      kind: "deal_revive" as const,
+    },
+  };
+  let asked = 0;
+  const calls = stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+    "POST /deal-corrections/undo": () => {
+      asked += 1;
+      return jsonResponse({
+        results: [
+          asked === 1
+            ? {
+                deal_id: reopened.subject?.id,
+                outcome: "refused",
+                undone: [],
+                kept: [
+                  {
+                    audit_log_id: reopened.undo?.audit_log_id,
+                    kind: "deal_revive",
+                    reason: "needs_confirmation",
+                    team_notes: 1,
+                    team_tasks: 0,
+                    team_work: "w1",
+                  },
+                ],
+              }
+            : {
+                deal_id: reopened.subject?.id,
+                outcome: "undone",
+                undone: ["deal_revive"],
+                kept: [],
+              },
+        ],
+      });
+    },
+  });
+  const user = userEvent.setup();
+  render(<ReceiptReview receipt={reopened} />);
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  expect(
+    await screen.findByText(
+      "This deal now has 1 notes and 0 tasks from your team. Close it as lost anyway?",
+    ),
+  ).toBeTruthy();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  expect(await screen.findByText(en["changes.undo.relost"])).toBeTruthy();
+  expect(
+    writes(calls)
+      .filter((call) => call.path === "/deal-corrections/undo")
+      .map((call) => call.body),
+  ).toEqual([
+    {
+      items: [
+        {
+          deal_id: reopened.subject?.id,
+          version: 7,
+          audit_log_ids: [reopened.undo?.audit_log_id],
+        },
+      ],
+    },
+    {
+      items: [
+        {
+          deal_id: reopened.subject?.id,
+          version: 7,
+          audit_log_ids: [reopened.undo?.audit_log_id],
+          archive_confirmed_for: "w1",
+        },
+      ],
+    },
+  ]);
+});

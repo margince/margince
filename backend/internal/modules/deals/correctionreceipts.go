@@ -74,7 +74,7 @@ type CorrectionReceipt struct {
 // heldCorrections stay on Home until their owner accepts or undoes them.
 var heldCorrections = []string{
 	CloseLostCorrection, VerdictCloseDateCorrection, VerdictAmountCorrection, VerdictProbabilityCorrection,
-	VerdictStageMoveCorrection, DealOpenCorrection,
+	VerdictStageMoveCorrection, DealOpenCorrection, DealReviveCorrection,
 }
 
 // RecentCorrectionsOwnedBy reads what the sweep changed on THIS reader's deals

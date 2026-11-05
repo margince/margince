@@ -15536,6 +15536,7 @@ const (
 	MarginceChangeBundleKindsDealCloseDate   MarginceChangeBundleKinds = "deal_close_date"
 	MarginceChangeBundleKindsDealOpen        MarginceChangeBundleKinds = "deal_open"
 	MarginceChangeBundleKindsDealProbability MarginceChangeBundleKinds = "deal_probability"
+	MarginceChangeBundleKindsDealRevive      MarginceChangeBundleKinds = "deal_revive"
 	MarginceChangeBundleKindsStageMove       MarginceChangeBundleKinds = "stage_move"
 )
 
@@ -15551,6 +15552,8 @@ func (e MarginceChangeBundleKinds) Valid() bool {
 	case MarginceChangeBundleKindsDealOpen:
 		return true
 	case MarginceChangeBundleKindsDealProbability:
+		return true
+	case MarginceChangeBundleKindsDealRevive:
 		return true
 	case MarginceChangeBundleKindsStageMove:
 		return true
@@ -44175,7 +44178,7 @@ type DealSuggestion struct {
 	Evidence []DealSuggestionEvidence `json:"evidence"`
 	Id       openapi_types.UUID       `json:"id"`
 
-	// Kind Only open_deal is suggested today.
+	// Kind An open suggestion is open_deal. One Margince reopened a lost deal from is revive.
 	Kind DealSuggestionKind `json:"kind"`
 
 	// NameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
@@ -44190,7 +44193,7 @@ type DealSuggestion struct {
 	State   DealSuggestionState `json:"state"`
 }
 
-// DealSuggestionKind Only open_deal is suggested today.
+// DealSuggestionKind An open suggestion is open_deal. One Margince reopened a lost deal from is revive.
 type DealSuggestionKind string
 
 // DealSuggestionNameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
@@ -50939,6 +50942,9 @@ type MarginceChangeSummary struct {
 
 	// Revalued Deals given a new amount.
 	Revalued int `json:"revalued"`
+
+	// Revived Lost deals Margince reopened from new buying evidence.
+	Revived int `json:"revived"`
 
 	// Truncated True when more bundles exist than were returned. The counts are never cut.
 	Truncated bool `json:"truncated"`
@@ -60839,7 +60845,7 @@ type TransferProjectOwnershipResult struct {
 // UndoMarginceChangeItem defines model for UndoMarginceChangeItem.
 type UndoMarginceChangeItem struct {
 	// ArchiveConfirmedFor The `team_work` a `needs_confirmation` answer named: the owner confirmed archiving
-	// a deal Margince opened over exactly that work. Without it, or when the team's
+	// a deal Margince opened, or closing again a deal it reopened, over exactly that work. Without it, or when the team's
 	// work changed since, such a deal is kept with `needs_confirmation`, the new counts
 	// and the new `team_work`.
 	ArchiveConfirmedFor *string `json:"archive_confirmed_for,omitempty"`
@@ -60860,10 +60866,10 @@ type UndoMarginceChangeKept struct {
 	Kind   *string                      `json:"kind,omitempty"`
 	Reason UndoMarginceChangeKeptReason `json:"reason"`
 
-	// TeamNotes With `needs_confirmation`, the notes the team added to the opened deal.
+	// TeamNotes With `needs_confirmation`, the notes the team added to the opened or reopened deal.
 	TeamNotes *int `json:"team_notes,omitempty"`
 
-	// TeamTasks With `needs_confirmation`, the tasks the team added to the opened deal.
+	// TeamTasks With `needs_confirmation`, the tasks the team added to the opened or reopened deal.
 	TeamTasks *int `json:"team_tasks,omitempty"`
 
 	// TeamWork With `needs_confirmation`, names the counted work. Send it back as `archive_confirmed_for`.

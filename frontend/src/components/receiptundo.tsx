@@ -53,9 +53,9 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   if (subject?.type !== "deal") {
     return null;
   }
-  // An opened deal undoes through the bundle path, which asks before it
-  // archives work the team added since.
-  if (receipt.kind === "deal_open") {
+  // An opened or reopened deal undoes through the bundle path, which asks
+  // before it archives or closes work the team added since.
+  if (receipt.kind === "deal_open" || receipt.kind === "deal_revive") {
     return (
       <BundleUndo
         bundles={[
@@ -64,7 +64,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
             deal_name: subject.label ?? "",
             version: undo.version,
             audit_log_ids: [undo.audit_log_id],
-            kinds: ["deal_open"],
+            kinds: [receipt.kind],
             latest_at: receipt.occurred_at,
           },
         ]}

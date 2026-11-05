@@ -592,7 +592,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `evidence_count` | `integer` | yes |  |
 | `evidence_through` | `timestamp with time zone` | yes |  |
 | `fingerprint` | `text` | yes |  |
-| `kind` | `text`, default `'open_deal'::text` | yes | Only open_deal is suggested today. |
+| `kind` | `text`, default `'open_deal'::text` | yes | An open suggestion is open_deal. |
 | `name_hint` | `text` | yes | Which evidence leads, as a code the client words in the reader's language. |
 | `pipeline_id` | `uuid` | yes | Points at `pipeline.id`. |
 | `proposed_amount_minor` | `bigint` |  |  |
