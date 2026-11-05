@@ -63,6 +63,40 @@ const placementPaths = `
   get:
     tags: [Oddities]
     operationId: getOddReport
+/odd/ping:
+  post:
+    tags: [Oddities]
+    operationId: pingOdd
+/alerts/settings:
+  get:
+    tags: [Alerts]
+    operationId: getAlertSettings
+    x-mcp-tool: { verb: get_alert_settings, router: read_workspace, action: alert_settings, tier: auto_execute, scope: read, served_by: route }
+  put:
+    tags: [Alerts]
+    operationId: replaceAlertSettings
+    x-mcp-tool: { verb: replace_alert_settings, router: change_access, action: replace_alert_settings, tier: auto_execute, scope: write, served_by: route }
+  patch:
+    tags: [Alerts]
+    operationId: updateAlertSettings
+    x-mcp-tool: { verb: update_alert_settings, router: change_access, action: update_alert_settings, tier: auto_execute, scope: write, served_by: route }
+  post:
+    tags: [Alerts]
+    operationId: resetAlertSettings
+    x-mcp-tool: { verb: reset_alert_settings, router: change_access, action: reset_alert_settings, tier: auto_execute, scope: write, served_by: route }
+/mail/settings:
+  get:
+    tags: [Mail]
+    operationId: getMailSettings
+    x-mcp-tool: { verb: get_mail_settings, router: read_workspace, action: mail_settings, tier: auto_execute, scope: read, served_by: route }
+  put:
+    tags: [Mail]
+    operationId: updateMailSettings
+    x-mcp-tool: { verb: update_mail_settings, router: change_settings, action: update_mail_settings, tier: auto_execute, scope: write, served_by: route }
+/mail/settings/current:
+  get:
+    tags: [Mail]
+    operationId: readMailSettings
 `
 
 // An unannotated operation is refused with the x-mcp-tool line the contract's
@@ -71,10 +105,16 @@ func TestAnUnannotatedOperationGetsTheSuggestedPlacement(t *testing.T) {
 	_, defects := policiesOf(t, placementPaths)
 	for _, tc := range []struct{ name, op, line string }{
 		{
-			name: "a routed sibling gives its paired router",
+			name: "a routed sibling gives the router paired with it on the most paths",
 			op:   "updateContactCaseSettings",
 			line: "{ verb: update_contact_case_settings, router: change_settings, action: update_contact_case_settings, " +
 				"tier: auto_execute, scope: write, served_by: route }",
+		},
+		{
+			name: "a read action the router already has keeps the whole verb",
+			op:   "readMailSettings",
+			line: "{ verb: read_mail_settings, router: read_workspace, action: read_mail_settings, " +
+				"tier: auto_execute, scope: read, served_by: route }",
 		},
 		{
 			name: "only a tag gives the router its method most uses",
@@ -99,6 +139,34 @@ func TestAnUnannotatedOperationGetsTheSuggestedPlacement(t *testing.T) {
 				t.Errorf("suggested %q, want %q\nin: %s", got, "x-mcp-tool: "+tc.line, defect)
 			}
 		})
+	}
+}
+
+// The pairing counts paths, not operations, so the sentence that reports it is
+// true. /alerts/settings pairs read_workspace with change_access three times
+// over, and still counts once.
+func TestTheSiblingPairingCountsPaths(t *testing.T) {
+	_, defects := policiesOf(t, placementPaths)
+	defect := defectNaming(t, defects, "updateContactCaseSettings")
+	const want = "because: GET /dedupe/settings is served by read_workspace, " +
+		"and change_settings serves the write side on 2 of the paths read_workspace serves."
+	if !strings.Contains(defect, want) {
+		t.Errorf("the refusal lacks %q:\n%s", want, defect)
+	}
+}
+
+// A write that nothing places gets no line, but still the reminder that the
+// scope may be send or enrich.
+func TestAnUnplacedWriteStillGetsTheScopeReminder(t *testing.T) {
+	_, defects := policiesOf(t, placementPaths)
+	defect := defectNaming(t, defects, "pingOdd")
+	if got := suggestedLine(defect); got != "" {
+		t.Errorf("suggested %q for an operation nothing places", got)
+	}
+	for _, want := range []string{"No sibling, tag or record type places it", "make it send if the act delivers"} {
+		if !strings.Contains(defect, want) {
+			t.Errorf("the refusal lacks %q:\n%s", want, defect)
+		}
 	}
 }
 

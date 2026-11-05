@@ -26,12 +26,12 @@ func unannotatedDefect(target policy, placed []policy, tags map[string][]string)
 		"An operation is open to agents unless security is the reason to close it.", method, path, target.Op)
 	if suggested, found := suggestPlacement(target, placed, tags); found {
 		fmt.Fprintf(&b, "\n    Suggested: x-mcp-tool: %s\n    because: %s", suggested.line, suggested.because)
-		if methodScope(method) != "read" {
-			b.WriteString("\n    The scope follows the method: make it send if the act delivers to the other party, " +
-				"or enrich if it fetches from a third party.")
-		}
 	} else {
 		b.WriteString("\n    No sibling, tag or record type places it: name the verb that serves it on MCP.")
+	}
+	if methodScope(method) != "read" {
+		b.WriteString("\n    The scope follows the method: make it send if the act delivers to the other party, " +
+			"or enrich if it fetches from a third party.")
 	}
 	b.WriteString("\n    If security is the reason an agent must never do this, mark it x-agent-access: human-only " +
 		"and give x-human-only-reason: security.")
@@ -113,7 +113,7 @@ func siblingPlacement(method, path, verb string, tools []policy) (placement, boo
 		}
 		if p.Scope == scope {
 			return routedPlacement(verb, p.Router, scope,
-				fmt.Sprintf("%s is served by %s.", routeDisplay(p.Route), p.Router)), true
+				fmt.Sprintf("%s is served by %s.", routeDisplay(p.Route), p.Router), tools), true
 		}
 		if sibling == nil {
 			sibling = &tools[i]
@@ -124,10 +124,14 @@ func siblingPlacement(method, path, verb string, tools []policy) (placement, boo
 	}
 	routers := map[string]int{}
 	for _, shared := range pathsServedBy(sibling.Router, tools) {
+		onPath := map[string]bool{}
 		for _, p := range tools {
 			if routePath(p.Route) == shared && p.Router != "" && p.Scope == scope {
-				routers[p.Router]++
+				onPath[p.Router] = true
 			}
+		}
+		for router := range onPath {
+			routers[router]++
 		}
 	}
 	router, uses := mostUsed(routers)
@@ -136,7 +140,7 @@ func siblingPlacement(method, path, verb string, tools []policy) (placement, boo
 	}
 	because := fmt.Sprintf("%s is served by %s, and %s serves the %s side on %d of the paths %s serves.",
 		routeDisplay(sibling.Route), sibling.Router, router, scope, uses, sibling.Router)
-	return routedPlacement(verb, router, scope, because), true
+	return routedPlacement(verb, router, scope, because, tools), true
 }
 
 // tagPlacement places an operation in the router its tag most often uses for
@@ -160,14 +164,16 @@ func tagPlacement(method, verb string, targetTags []string, tools []policy, tags
 	}
 	tag, router, _ := strings.Cut(key, " ")
 	return routedPlacement(verb, router, scope,
-		fmt.Sprintf("%d other %s operations in the %s tag use %s.", uses, method, tag, router)), true
+		fmt.Sprintf("%d other %s operations in the %s tag use %s.", uses, method, tag, router), tools), true
 }
 
-// routedPlacement writes a route-backed line. A read router's action drops the
-// verb's leading word (get_contact_brief is contact_brief), as most do.
-func routedPlacement(verb, router, scope, because string) placement {
+// routedPlacement writes a route-backed line. The line declares a new action,
+// which the router gains when it registers. A read router's action drops the
+// verb's leading word (get_contact_brief is contact_brief), as most do, unless
+// the router already has an action of that name.
+func routedPlacement(verb, router, scope, because string, tools []policy) placement {
 	action := verb
-	if _, rest, cut := strings.Cut(verb, "_"); cut && scope == "read" {
+	if _, rest, cut := strings.Cut(verb, "_"); cut && scope == "read" && !hasAction(tools, router, rest) {
 		action = rest
 	}
 	return placement{
@@ -175,6 +181,15 @@ func routedPlacement(verb, router, scope, because string) placement {
 			verb, router, action, scope, routeServed),
 		because: because,
 	}
+}
+
+func hasAction(tools []policy, router, action string) bool {
+	for _, p := range tools {
+		if p.Router == router && p.Action == action {
+			return true
+		}
+	}
+	return false
 }
 
 // pathsServedBy lists the paths any of whose operations the router serves.
