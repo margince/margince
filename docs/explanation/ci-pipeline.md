@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -408,6 +408,25 @@ output can be used again as well as a green run's.
 `scripts/check-image-pins.sh` scans `.github/actions/` beside the workflows. The `./path` allowance lets a
 local action through, because the repo versions its own code. That holds for the action's own ref, but
 not for the outside actions it calls. Those would come in with nobody reading them.
+
+### The lint caches are saved on `main` only
+
+Two smaller caches follow the same rule: `ci.yml` loads them and never saves them. An entry that a PR
+saves can be read by that PR alone. It still counts against the 10 GB cache quota of the repository,
+and there it pushes out the `main` entries that every PR loads.
+
+| Cache | Key | Saved by |
+|---|---|---|
+| Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss |
+| golangci analysis, `~/.cache/golangci-lint` | [`golangci-cache-key`](../../.github/actions/golangci-cache-key/action.yml): `go.mod`, `go.sum`, both lint configs, then the commit | `cache-warm.yml` job `plain` |
+
+- **The gate binaries key reads the recipe.** An edit elsewhere in `backend/Makefile` keeps the
+  key, and a new tool or pin in `make tools` changes it.
+- **The golangci entry is saved under `!cancelled()`**, as the build cache is. A red gate still
+  read the whole tree. The census does not hold this entry back, because golangci replays no test
+  result.
+- **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
+  entry until `cache-warm` runs after the merge.
 
 ### Test results replay only on a stable mtime
 
