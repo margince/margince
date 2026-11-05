@@ -305,7 +305,7 @@ reason says which, and what to do:
 - **The send job ran out of attempts.** Reschedule it to try again.
 - **A check blocked it when it was due.** Nothing was sent.
 
-A held message also adds an approval card that never runs out. See [Approvals](approvals.md).
+A held message also adds an approval card that never runs out. See [Approvals](approvals.md). After reading a recipient's reply, accept the card or reschedule the message to send it again. Another reply received after that review pauses it again. Only mail you can read counts.
 
 ## What the recipient controls
 
