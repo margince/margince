@@ -119,17 +119,17 @@ func TestTheRetryAnswersWhetherTheFormWasShown(t *testing.T) {
 		supported       bool
 		action          string
 	}{
-		{"accept", `{"margince_client_check":{"action":"accept","content":{"colour":"green"}}}`, true, "accept"},
+		{"accept", `{"margince_client_check":{"action":"accept","content":{"color":"green"}}}`, true, "accept"},
 		{"decline", `{"margince_client_check":{"action":"decline"}}`, true, "decline"},
 		{"cancel", `{"margince_client_check":{"action":"cancel"}}`, true, "cancel"},
-		{"a colour that was not offered", `{"margince_client_check":{"action":"accept","content":{"colour":"pink"}}}`, false, ""},
+		{"a color that was not offered", `{"margince_client_check":{"action":"accept","content":{"color":"pink"}}}`, false, "accept"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			data := checkData(t, retryCheck(t, checkClientDispatcher(true), tc.responses))
 			if data["supported"] != tc.supported {
 				t.Errorf("supported = %v, want %v: %v", data["supported"], tc.supported, data)
 			}
-			if tc.supported && data["action"] != tc.action {
+			if data["action"] != tc.action {
 				t.Errorf("action = %v, want %s", data["action"], tc.action)
 			}
 			if !tc.supported && data["reason"] == nil {
@@ -189,6 +189,18 @@ func TestACallToAToolTheGateWithholdsGetsTheUnknownToolAnswer(t *testing.T) {
 	}
 	if text(absent) != text(nonexistent) {
 		t.Errorf("the refusal tells the caller the tool exists: %q vs %q", text(absent), text(nonexistent))
+	}
+}
+
+func TestAGatedToolIsNeverLoggedAsAHiddenCall(t *testing.T) {
+	for _, offered := range []bool{false, true} {
+		d := checkClientDispatcher(offered)
+		var logged bytes.Buffer
+		d.log = slog.New(slog.NewTextHandler(&logged, nil))
+		callCheck(t, d, clientMeta(`{}`), "")
+		if strings.Contains(logged.String(), "hidden tool") {
+			t.Errorf("offered=%v: a gated tool was logged as a hidden call: %s", offered, logged.String())
+		}
 	}
 }
 
@@ -322,7 +334,7 @@ func TestAnInputRequiredResultCarriesItsResultType(t *testing.T) {
 }
 
 func TestAnAnswerFromAClientThatDeclaredNoFormIsNotCounted(t *testing.T) {
-	answer := `"inputResponses":{"margince_client_check":{"action":"accept","content":{"colour":"red"}}},`
+	answer := `"inputResponses":{"margince_client_check":{"action":"accept","content":{"color":"red"}}},`
 	for _, caps := range []string{`{}`, `{"elicitation":{"url":{}}}`} {
 		data := checkData(t, callCheck(t, checkClientDispatcher(true), clientMeta(caps), answer))
 		if data["supported"] != false {
@@ -339,18 +351,18 @@ func TestLongDeclaredCapabilitiesAreNotQuotedBack(t *testing.T) {
 	}
 }
 
-func TestTheFormOffersTheColoursTheCheckAccepts(t *testing.T) {
+func TestTheFormOffersTheColorsTheCheckAccepts(t *testing.T) {
 	var form struct {
 		Properties struct {
-			Colour struct {
+			Color struct {
 				Enum []string `json:"enum"`
-			} `json:"colour"`
+			} `json:"color"`
 		} `json:"properties"`
 	}
 	if err := json.Unmarshal(clientCheckQuestion.Schema, &form); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(form.Properties.Colour.Enum, clientCheckColours) {
-		t.Errorf("the form offers %v but the check accepts %v", form.Properties.Colour.Enum, clientCheckColours)
+	if !slices.Equal(form.Properties.Color.Enum, clientCheckColors) {
+		t.Errorf("the form offers %v but the check accepts %v", form.Properties.Color.Enum, clientCheckColors)
 	}
 }

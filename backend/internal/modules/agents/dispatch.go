@@ -390,7 +390,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 		callCtx = withRequestFacts(callCtx, fr.requestFacts())
 	}
 	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
-	s.noteHiddenCall(spec, registered, err)
+	s.noteHiddenCall(spec, registered)
 	if err != nil {
 		if handle, minted := s.mintTask(callCtx, fr, served.Tool, err); minted {
 			return handle

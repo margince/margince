@@ -22,27 +22,32 @@ const (
 	maxDeclaredEcho   = 1024
 )
 
-var clientCheckColours = []string{"red", "green", "blue"}
+var clientCheckColors = []string{"red", "green", "blue"}
 
 // clientCheckQuestion is the one form the check shows. Its enum is
-// clientCheckColours, which a test holds.
+// clientCheckColors, which a test holds.
 var clientCheckQuestion = chatQuestion{
 	Key:     clientCheckKey,
-	Message: "Margince client check: pick a colour. Nothing is changed.",
-	Schema: json.RawMessage(`{"type":"object","required":["colour"],` +
-		`"properties":{"colour":{"type":"string","enum":["red","green","blue"]}}}`),
+	Message: "Margince client check: pick a color. Nothing is changed.",
+	Schema: json.RawMessage(`{"type":"object","required":["color"],` +
+		`"properties":{"color":{"type":"string","enum":["red","green","blue"]}}}`),
 }
 
 // ClientCheckResult is what the check reports about one client.
 type ClientCheckResult struct {
-	Supported       bool            `json:"supported" jsonschema:"True when the client answered the form, whatever it chose."`
-	Framing         string          `json:"framing" jsonschema:"modern or handshake: which era of the protocol the request used."`
-	ProtocolVersion string          `json:"protocol_version" jsonschema:"The revision the request declared; empty in the handshake era."`
-	Client          *ClientIdentity `json:"client" jsonschema:"The client's name and version, or null when it sent none."`
-	Reason          string          `json:"reason,omitempty" jsonschema:"Why the client is not supported, or what was wrong with its answer."`
-	Declared        json.RawMessage `json:"declared,omitempty" jsonschema:"The capabilities the client declared, when it could not be asked."`
-	Action          string          `json:"action,omitempty" jsonschema:"accept, decline or cancel: what the user did with the form."`
-	Answer          json.RawMessage `json:"answer,omitempty" jsonschema:"The form's values when the user accepted."`
+	Supported       bool               `json:"supported" jsonschema:"True when the client answered the form, whatever it chose."`
+	Framing         string             `json:"framing" jsonschema:"modern or handshake: which era of the protocol the request used."`
+	ProtocolVersion string             `json:"protocol_version" jsonschema:"The revision the request declared; empty in the handshake era."`
+	Client          *ClientIdentity    `json:"client,omitempty" jsonschema:"The client's name and version, absent when it sent none."`
+	Reason          string             `json:"reason,omitempty" jsonschema:"Why the client is not supported, or what was wrong with its answer."`
+	Declared        json.RawMessage    `json:"declared,omitempty" jsonschema:"The capabilities the client declared, when it could not be asked."`
+	Action          string             `json:"action,omitempty" jsonschema:"accept, decline or cancel: what the user did with the form."`
+	Answer          *ClientCheckAnswer `json:"answer,omitempty" jsonschema:"The form's values when the user accepted with a valid color."`
+}
+
+// ClientCheckAnswer is the validated content of an accepted form.
+type ClientCheckAnswer struct {
+	Color string `json:"color"`
 }
 
 // ClientIdentity is the name and version a client sends in its request metadata.
@@ -58,7 +63,7 @@ type checkClient struct{ log *slog.Logger }
 func (t checkClient) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: clientCheckTool, Title: "Check what an AI tool supports", Version: toolVersionV1,
-		Description:   "Asks the user to pick a colour in a small form and reports whether this AI tool could show it. Changes no data.",
+		Description:   "Asks the user to pick a color in a small form and reports whether this AI tool could show it. Changes no data.",
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted: true, Gated: true, ProtocolOnly: true,
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
@@ -109,7 +114,7 @@ func measureClient(ctx context.Context, facts requestFacts) (ClientCheckResult, 
 		result.Supported, result.Action = true, reply.Action
 		return result, nil
 	}
-	return acceptedColour(result, reply.Content), nil
+	return acceptedColor(result, reply.Content), nil
 }
 
 // boundedDeclared quotes the declared capabilities when they are short, and
@@ -121,21 +126,19 @@ func boundedDeclared(capabilities json.RawMessage) json.RawMessage {
 	return capabilities
 }
 
-func acceptedColour(result ClientCheckResult, content map[string]json.RawMessage) ClientCheckResult {
-	var colour string
-	if json.Unmarshal(content["colour"], &colour) != nil || !slices.Contains(clientCheckColours, colour) {
-		result.Reason = "an accepted form did not carry one of the offered colours"
+func acceptedColor(result ClientCheckResult, content map[string]json.RawMessage) ClientCheckResult {
+	result.Action = "accept"
+	var color string
+	if json.Unmarshal(content["color"], &color) != nil || !slices.Contains(clientCheckColors, color) {
+		result.Reason = "the user accepted the form, but the answer did not carry one of the offered colors"
 		return result
 	}
-	result.Supported, result.Action = true, "accept"
-	if answer, err := json.Marshal(map[string]string{"colour": colour}); err == nil {
-		result.Answer = answer
-	}
+	result.Supported, result.Answer = true, &ClientCheckAnswer{Color: color}
 	return result
 }
 
 // clientIdentityOf reads clientInfo, which the specification requires but this
-// server does not, so a missing one is null. The words are caller text and are
+// server does not, so a missing one is left out. The words are caller text and are
 // bounded and escaped before they reach a log line or a transcript.
 func clientIdentityOf(raw json.RawMessage) *ClientIdentity {
 	var info ClientIdentity

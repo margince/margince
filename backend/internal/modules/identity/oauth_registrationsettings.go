@@ -5,6 +5,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -47,12 +48,11 @@ var McpClientCheck = config.DefineStored(config.Spec[bool]{
 	Doc:     "Admins may run the check_client tool from an AI tool to test whether it can answer a form.",
 }, config.Store{RBACObject: agentClientObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
-// clientCheckReadActor names a read of the switch in the audit trail: no human
-// asked for it, a settings answer or a tool list did.
+// clientCheckReadActor names the principal of the tool gate's read below.
 const clientCheckReadActor = "system:client_check_read"
 
-// ReadClientCheck reads the switch as the system, because every passport's tool
-// list reads it and only an admin may read agent_client.
+// ReadClientCheck reads the switch as the system for the tool gate. The gate asks
+// on a passport's behalf, and a passport's scopes are not a settings grant.
 func ReadClientCheck(ctx context.Context, cfg *config.Config) (bool, error) {
 	return config.StoredVal(principal.SystemActing(ctx, clientCheckReadActor), cfg, McpClientCheck)
 }
@@ -125,12 +125,19 @@ func (m RegistrationMethods) admits(createdVia string) bool {
 	return true
 }
 
+// errClientCheckUnwired refuses a read on a service composed without the
+// configuration, which would otherwise show the switch off whatever is stored.
+var errClientCheckUnwired = errors.New("identity: this service reads no client check switch, because its configuration is not wired")
+
 // ClientCheck reads the switch for the admin's client list, under the reader's
-// own agent_client grant. A service built without its configuration reads it off.
+// own agent_client grant.
 func (s *Service) ClientCheck(ctx context.Context, actor Identity) (bool, error) {
 	ctx, err := admit(ctx, actor, agentClientObject, principal.ActionRead)
-	if err != nil || s.config == nil {
+	if err != nil {
 		return false, err
+	}
+	if s.config == nil {
+		return false, errClientCheckUnwired
 	}
 	return config.StoredVal(ctx, s.config, McpClientCheck)
 }

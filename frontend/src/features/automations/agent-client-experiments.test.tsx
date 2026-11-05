@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useCan } from "../../lib/capability";
 import { agentClientList } from "../../testing/agent-clients.fixtures";
 import { AgentClientExperimentsCard } from "./agent-client-experiments";
 import {
@@ -16,17 +17,65 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const CHECK = "Check what an AI tool supports";
+const CHECK = "Tool support check";
+
+// Renders once the seat's grants have loaded, so an absent card is measured
+// against the seat, not against a /me still in flight.
+function GrantsLoaded() {
+  return useCan("deal", "read") ? <p>grants loaded</p> : null;
+}
 
 function clientList(on: boolean) {
   return { ...agentClientList([]), client_check: on };
 }
 
 describe("Experiments", () => {
-  it("shows nothing to a seat that may not change MCP clients", async () => {
-    serve({}, { agent_client: ["read"] });
+  it("shows nothing to a seat that may not read MCP clients", async () => {
+    serve({}, { deal: ["read"] });
+    renderWithClient(
+      <>
+        <GrantsLoaded />
+        <AgentClientExperimentsCard />
+      </>,
+    );
+    await screen.findByText("grants loaded");
+    expect(screen.queryByText("Experiments")).toBeNull();
+  });
+
+  it("shows a reader the switch, but not to change", async () => {
+    serve(
+      { "GET /installation/agent-clients": () => json(clientList(true)) },
+      { agent_client: ["read"] },
+    );
     renderWithClient(<AgentClientExperimentsCard />);
-    await waitFor(() => expect(screen.queryByText("Experiments")).toBeNull());
+    const control = await screen.findByRole("switch", { name: CHECK });
+    expect(control.getAttribute("aria-checked")).toBe("true");
+    expect((control as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText("Only an admin can change these.")).toBeTruthy();
+  });
+
+  it("says a refused change, and names it from the switch", async () => {
+    const user = userEvent.setup();
+    serve(
+      {
+        "GET /installation/agent-clients": () => json(clientList(false)),
+        "PATCH /installation/settings": () =>
+          json(
+            { title: "Forbidden", status: 403, detail: "Not allowed." },
+            403,
+          ),
+      },
+      ADMIN_GRANTS,
+    );
+    renderWithClient(<AgentClientExperimentsCard />);
+    await user.click(await screen.findByRole("switch", { name: CHECK }));
+    const refusal = await screen.findByText("The change was not saved");
+    const callout = refusal.closest("[id]");
+    const describedBy = screen
+      .getByRole("switch", { name: CHECK })
+      .getAttribute("aria-describedby");
+    expect(callout?.id).toBeTruthy();
+    expect(describedBy?.split(" ")).toContain(callout?.id);
   });
 
   it("shows the check off, and turns it on through the settings patch", async () => {
@@ -68,9 +117,7 @@ describe("Experiments", () => {
     );
     renderWithClient(<AgentClientExperimentsCard />);
     expect(
-      await screen.findByText(
-        "The switch could not be read. Reload the page to try again.",
-      ),
+      await screen.findByText("Could not load this view. Reload the page."),
     ).toBeTruthy();
   });
 
@@ -87,7 +134,7 @@ describe("Experiments", () => {
     await user.click(trigger);
     expect(await screen.findByText("How to test")).toBeTruthy();
     expect(
-      screen.getByRole("textbox", { name: "The question to ask" }).textContent,
+      screen.getByRole("textbox", { name: "Question" }).textContent,
     ).toContain("check_client");
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByText("How to test")).toBeNull());

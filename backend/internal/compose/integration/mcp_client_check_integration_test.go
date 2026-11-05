@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"encoding/json"
 	"maps"
 	"net/http"
 	"slices"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/agents"
 )
 
 const clientCheckTool = "check_client"
@@ -27,6 +29,16 @@ func readClientCheck(t *testing.T, e *apptest.AppEnv) bool {
 		t.Fatalf("GET /v1/installation/agent-clients = %d, want 200", status)
 	}
 	return list.ClientCheck
+}
+
+func clientCheckAudits(t *testing.T, e *apptest.AppEnv) int {
+	t.Helper()
+	var n int
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT count(*) FROM audit_log WHERE after ? 'identity.mcp_client_check'`).Scan(&n); err != nil {
+		t.Fatalf("counting the switch's audit rows: %v", err)
+	}
+	return n
 }
 
 func setClientCheck(t *testing.T, e *apptest.AppEnv, on bool) {
@@ -48,6 +60,9 @@ func TestTheClientCheckSwitchIsOffByDefaultAndReadOnTheClientList(t *testing.T) 
 	setClientCheck(t, e, true)
 	if !readClientCheck(t, e) {
 		t.Fatal("after the admin turned it on, the client list still reads false")
+	}
+	if n := clientCheckAudits(t, e); n != 1 {
+		t.Errorf("turning the switch on wrote %d audit rows naming it, want 1", n)
 	}
 
 	demoteToRep(t, e)
@@ -79,6 +94,9 @@ func TestOnlyAgentClientUpdateMovesTheClientCheckSwitch(t *testing.T) {
 	}
 	if status := e.Call(t, http.MethodPatch, "/v1/installation/settings", AnyMap{"mcp_client_check": true}, nil, nil); status != http.StatusForbidden {
 		t.Errorf("rep PATCH {mcp_client_check: true} = %d, want 403", status)
+	}
+	if n := clientCheckAudits(t, e); n != 0 {
+		t.Errorf("a refused PATCH left %d audit rows naming the switch, want 0", n)
 	}
 }
 
@@ -147,7 +165,7 @@ func TestTheClientCheckToolExistsOnlyForAnAdminWhileTheSwitchIsOn(t *testing.T) 
 		t.Fatalf("switch on, admin, form client: answered %v, want input_required with a requestState", asked)
 	}
 	answer := AnyMap{"requestState": state, "inputResponses": AnyMap{
-		"margince_client_check": AnyMap{"action": "accept", "content": AnyMap{"colour": "blue"}},
+		"margince_client_check": AnyMap{"action": "accept", "content": AnyMap{"color": "blue"}},
 	}}
 	got := modernCheck(t, e, client.Bearer(), answer)
 	structured, _ := got["structuredContent"].(map[string]any)
@@ -157,4 +175,46 @@ func TestTheClientCheckToolExistsOnlyForAnAdminWhileTheSwitchIsOn(t *testing.T) 
 
 	demoteToRep(t, e)
 	withheldLike(t, client, "switch on, rep")
+}
+
+// check_client is held to its schema here, not in the no-approval sweep. That
+// sweep's seat is not an admin, and its installation has the switch off.
+func TestEveryClientCheckAnswerKeepsItsAdvertisedSchema(t *testing.T) {
+	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
+		return []compose.Option{
+			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"),
+			compose.WithMCPInputStateKey("client-check-integration-state-key-0123"),
+		}
+	})
+	e.BootstrapWorkspace(t)
+	setClientCheck(t, e, true)
+	bearer := apptest.NewMCPClient(e, apptest.MCPBearerToken(t, e, "client check", "read")).Bearer()
+	spec, ok := compose.NewRegistry(e.Pool, compose.SendPath{}).Spec(clientCheckTool)
+	if !ok {
+		t.Fatalf("%s is not registered", clientCheckTool)
+	}
+	noClientInfo := AnyMap{"_meta": AnyMap{
+		"io.modelcontextprotocol/protocolVersion":    "2026-07-28",
+		"io.modelcontextprotocol/clientCapabilities": AnyMap{},
+	}}
+	state, _ := modernCheck(t, e, bearer, nil)["requestState"].(string)
+	answer := func(content AnyMap) AnyMap {
+		return AnyMap{"requestState": state, "inputResponses": AnyMap{
+			"margince_client_check": AnyMap{"action": "accept", "content": content},
+		}}
+	}
+	for name, extra := range map[string]AnyMap{
+		"no clientInfo, no form":  noClientInfo,
+		"an accepted color":       answer(AnyMap{"color": "red"}),
+		"an accept with no color": answer(AnyMap{}),
+	} {
+		got := modernCheck(t, e, bearer, extra)
+		structured, err := json.Marshal(got["structuredContent"])
+		if err != nil || got["structuredContent"] == nil {
+			t.Fatalf("%s: no structured answer: %v", name, got)
+		}
+		if defect := agents.ResultDefect(spec.OutputSchema, structured); defect != "" {
+			t.Errorf("%s: answered %s, which breaks the advertised schema: %s", name, structured, defect)
+		}
+	}
 }

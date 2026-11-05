@@ -1745,7 +1745,15 @@
             "type": "string"
           },
           "answer": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "color": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "color"
+            ]
           },
           "client": {
             "type": "object",

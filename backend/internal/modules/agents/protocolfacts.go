@@ -6,7 +6,6 @@ package agents
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -40,11 +39,11 @@ func (fr framing) requestFacts() requestFacts {
 	}
 }
 
-// noteHiddenCall logs the traffic a hidden name still carries, which decides
-// when it can go. A name the gate withheld is not logged, so the log does not
-// tell an operator that a withheld tool exists either.
-func (s *Dispatcher) noteHiddenCall(spec mcp.ToolSpec, registered bool, err error) {
-	if _, withheld := errors.AsType[*UnknownToolError](err); registered && spec.Unlisted && !withheld {
+// noteHiddenCall logs the traffic a retired name still carries, which decides
+// when it can go. A Gated tool is not retired, and a withheld call to one must
+// not tell an operator that it exists.
+func (s *Dispatcher) noteHiddenCall(spec mcp.ToolSpec, registered bool) {
+	if registered && spec.Unlisted && !spec.Gated {
 		s.log.Info("mcp: a hidden tool was called by its own name", "tool", spec.Name)
 	}
 }

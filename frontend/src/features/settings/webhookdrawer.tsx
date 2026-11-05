@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Info } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -12,7 +11,7 @@ import {
 } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { Popover } from "../../design-system/popover";
+import { HelpPopover } from "../../design-system/helppopover";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import {
@@ -117,25 +116,6 @@ async function saveSubscription({
     await api.POST("/webhook-subscriptions", {
       body: { target_url: form.targetUrl.trim(), ...webhookBodyOf(form) },
     }),
-  );
-}
-
-function HelpPopover({
-  label,
-  text,
-}: Readonly<{ label: string; text: string }>) {
-  return (
-    <Popover
-      className="webhook-help"
-      label={
-        <>
-          <Info aria-hidden />
-          <span className="sr-only">{label}</span>
-        </>
-      }
-    >
-      <p>{text}</p>
-    </Popover>
   );
 }
 
@@ -258,10 +238,9 @@ export function WebhookSubscriptionDrawer({
           <Field
             label={t("webhooks.body.format")}
             labelEnd={
-              <HelpPopover
-                label={t("webhooks.body.helpLabel")}
-                text={t("webhooks.body.help")}
-              />
+              <HelpPopover label={t("webhooks.body.helpLabel")}>
+                <p>{t("webhooks.body.help")}</p>
+              </HelpPopover>
             }
             hint={
               form.format === "custom"

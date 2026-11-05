@@ -88,11 +88,13 @@ caller, tool or set of arguments, or one older than ten minutes, gets the questi
 through the client, so it only decides what the client could decide by itself. A change a human must approve still
 goes to the approval inbox. A client with no form support, or a server with no key, gets the answer it had before.
 
-`check_client` measures whether a client can answer such a form. It is off until an admin turns it on in
-Settings → MCP, and then only a passport whose human is an admin is offered it. Any other caller gets the unknown-tool
-answer, and `tools/list` never names it. A client that can be asked gets one colour form, and the retry reports
-`supported: true` with the user's action. A client that cannot be asked gets `supported: false` and a reason. The tool
-has no REST route, because a REST caller cannot answer a form.
+`check_client` measures whether a client can answer such a form. It is off until a seat with `agent_client` update
+turns it on in Settings → MCP. Then `tools/list` names it only for a passport whose human is an admin, and any other
+caller gets the unknown-tool answer. The tool has no REST route, because a REST caller cannot answer a form.
+
+A client that can be asked gets one form with a pick of three values. The retry reports the user's `action`, and
+`supported: true` for `decline`, `cancel`, or `accept` with an offered value. An `accept` without one reports
+`supported: false` and a reason. A client that cannot be asked gets `supported: false`, a reason and what it declared.
 
 **`resources/list` and `prompts/list` answer empty, not `-32601`**, when nothing is wired. `claude.ai` calls both
 right after `initialize` no matter what. A feature the server does not list that answers "method not found" reads as a

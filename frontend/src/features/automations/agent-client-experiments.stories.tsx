@@ -11,9 +11,6 @@ import {
 } from "../../testing/story-utils";
 import { AgentClientExperimentsCard } from "./agent-client-experiments";
 
-// Features still being tried out, off until an admin turns one on. Only an
-// admin who may change MCP clients sees the card.
-
 const meta: Meta<typeof AgentClientExperimentsCard> = {
   title: "Settings/AI/MCP/Experiments",
   component: AgentClientExperimentsCard,
@@ -42,3 +39,6 @@ export const Off: Story = { render: served(false) };
 
 /** An admin turned the check on. */
 export const On: Story = { render: served(true) };
+
+/** The check on, in the dark theme. */
+export const OnDark: Story = { ...On, globals: { theme: "dark" } };
