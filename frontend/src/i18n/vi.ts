@@ -12311,6 +12311,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã tạm dừng vì danh sách mà tự động hóa theo dõi hoặc thêm vào đã được chuyển vào kho lưu trữ. Khôi phục danh sách không làm tự động hóa tiếp tục.",
   "auto.pausedReason.listInvalid":
     "Đã tạm dừng vì bộ lọc của danh sách tự cập nhật mà tự động hóa theo dõi đã ngừng hoạt động. Sửa bộ lọc không làm tự động hóa tiếp tục.",
+  "auto.pausedReason.passportRevoked":
+    "Passport của trợ lý AI đã thiết lập quy tắc này đã bị thu hồi nên quy tắc đã tạm dừng. Hãy tiếp tục để quy tắc chạy mà không còn trợ lý AI nào đứng sau.",
   "auto.pausedReason.listUnavailable":
     "Đã tạm dừng vì người phụ trách tự động hóa không còn tìm thấy danh sách được theo dõi.",
   "auto.pausedReason.burst":
@@ -12359,6 +12361,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.action.addToShortlist": "thêm vào danh sách chọn tay",
   "auto.pausedShort.listArchived": "Đã tạm dừng · danh sách đã lưu trữ",
   "auto.pausedShort.listInvalid": "Đã tạm dừng · bộ lọc danh sách bị lỗi",
+  "auto.pausedShort.passportRevoked":
+    "Đã tạm dừng · passport của trợ lý AI bị thu hồi",
   "auto.pausedShort.listUnavailable": "Đã tạm dừng · không tìm thấy danh sách",
   "auto.pausedShort.burst": "Đã tạm dừng · quá nhiều hồ sơ",
   "auto.withheld": "Tự động hóa đã cấu hình bị ẩn với vai trò này.",
@@ -18496,6 +18500,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không có gì để chạy lại. Lần chạy này đã dừng có chủ đích, không phải do lỗi.",
   "worklist.verb.retryRefusedRepeats":
     "Quy tắc này không được phép chạy hai lần, nên chạy lại có thể lặp lại các thao tác của quy tắc.",
+  "worklist.verb.retryRefusedPassportRevoked":
+    "Passport của trợ lý AI thiết lập quy tắc này đã bị thu hồi nên quy tắc đang tạm dừng. Hãy tiếp tục để quy tắc chạy mà không còn trợ lý AI nào đứng sau.",
   "worklist.verb.retryRefusedEventGone":
     "Sự kiện kích hoạt không còn tồn tại, nên không thể chạy lại. Quy tắc theo lịch sẽ tự kiểm tra lại.",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem. Thử lại.",

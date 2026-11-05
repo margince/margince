@@ -211,6 +211,10 @@ plain error while a human can still see and fix it, not days later in run histor
 request body. The only way to reach the gate with a `NULL` owner is the trusted path that seeds the
 system.
 
+## A rule an agent set up
+
+A rule names the passport of the agent that created or enabled it, in `setter_passport_id`. `runOne` reads that passport before it matches and again before it claims the run. If the passport is revoked, the rule pauses with the reason `passport_revoked`, its owner gets a notice, and the firing does not run. A user enabling or editing the rule clears the setter, so no passport stands behind it. Its owner stays who it was. A seeded rule never names a setter.
+
 ## The actor and context boundary of a run
 
 Every firing runs under a **principal context made for it**, with no HTTP request or signed in user

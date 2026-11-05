@@ -212,16 +212,16 @@ widen anything. So an agent can take its own request back off your list.
 request, lift a legal hold, release a held record or change retention rules. It cannot destroy
 the mail from an address, or change what you decided about one. Those stay with you in the app.
 
-**Changing the pipeline or its stages.** The stage ladder is what the "advance
-a deal" approval is judged against. An agent that could edit the ladder could
-change the meaning of the approval it was asking for.
+**What closes a deal.** The stage ladder is what the "advance a deal" approval is
+judged against. An agent can add open stages and move stages, but it cannot decide whether a
+stage counts as won or lost. While a move runs by itself on a pipeline, it cannot
+change that pipeline's stages or **Exit criteria**. See
+[What your agent can set up](what-the-ai-does.md#what-your-agent-can-set-up-and-what-stays-yours).
 
-**Custom fields and webhooks.** These are settings for members, and an agent can
-neither read nor change them. It can still read which custom fields exist, so it
-can search on them.
+**Webhooks.** These are settings for members, and an agent can neither read nor
+change them.
 
-For these and for pipeline settings, a passport cannot sign in at all. Approvals
-work in another way: the passport is let in, and the check happens on the card
+The API refuses a passport on every webhook operation. Approvals work in another way: the passport is let in, and the check happens on the card
 itself.
 
 **New actions that change data.** Agents cannot use a new action that changes
