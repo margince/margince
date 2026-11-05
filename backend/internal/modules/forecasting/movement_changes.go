@@ -3,9 +3,9 @@
 
 package forecasting
 
-// amountChanged answers whether the deal's own money moved, including a deal
-// that BECAME unpriced: its full prior value leaves through this bucket rather
-// than through an exclusion nobody drew.
+// amountChanged answers whether the deal's own money moved. That includes a deal
+// that became unpriced: its full prior value leaves through this bucket, not
+// through an exclusion nobody drew.
 func amountChanged(was, now Contribution) bool {
 	switch {
 	case was.AmountMinor == nil && now.AmountMinor == nil:
@@ -39,9 +39,9 @@ func sameEffect(a, b *float64) bool {
 	return *a == *b
 }
 
-// fxChanged answers whether only the conversion moved. Checked after the
-// amount, so a deal whose price AND rate both moved reads as a repricing —
-// which is what happened to it commercially.
+// fxChanged answers whether only the conversion moved. It is checked after the
+// amount, so a deal whose price and rate both moved reads as a repricing. That
+// is what happened to it commercially.
 func fxChanged(was, now Contribution) bool {
 	if was.BaseMinor == nil || now.BaseMinor == nil {
 		return was.BaseMinor != now.BaseMinor
