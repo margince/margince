@@ -3187,6 +3187,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.addStakeholder": "Thêm bên liên quan",
   "rel.dealStakeholders": "Bên liên quan",
   "rel.dealStakeholdersEmpty": "Deal này chưa có bên liên quan nào",
+  "rel.employerUnavailable":
+    "Không thể đọc thông tin nơi làm việc. Nhập để tìm trong tất cả giao dịch đang mở.",
   "rel.kind": "Loại",
   "rel.saveDone": "Đã lưu quan hệ",
   "rel.role": "Vai trò",
@@ -7005,6 +7007,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.addFollowUp": "Thêm công việc tiếp theo",
   "log.followUpSubject": "Bước tiếp theo",
   "log.addTask": "Thêm việc cần làm",
+  "log.dealFiling": "Lưu vào giao dịch đang mở",
+  "log.dealChoice":
+    "Chọn một giao dịch đang mở mà bạn có quyền truy cập hoặc không chọn giao dịch.",
+  "log.dealNone": "Không chọn giao dịch",
+  "log.dealAutomatic": "Đồng thời lưu vào giao dịch:",
+  "log.dealUnavailable":
+    "Không thể kiểm tra các giao dịch đang mở. Hãy thử lại.",
+  "log.dealLoading": "Đang kiểm tra giao dịch mở",
   "log.kind": "Loại",
   "log.kindNote": "Ghi chú",
   "log.kindTask": "Việc cần làm",
@@ -7012,7 +7022,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.kindCall": "Cuộc gọi",
   "log.transcriptLabel": "Bản chép lời",
   "log.transcriptHint":
-    "Dán từ công cụ họp, ví dụ Teams, Zoom hoặc Meet. Nếu có nhãn người nói, nhãn được giữ nguyên.",
+    "Dán bản chép lời cuộc gọi hoặc cuộc họp. Nhãn người nói được giữ nguyên nếu có.",
   "log.recordOfMeeting": "Đây có phải là ghi chép của {subject}, {time} không?",
   "log.recordOfMeetingUntitled": "cuộc họp",
   "log.recordOfMeetingYes": "Có, lưu vào cuộc họp đó và đánh dấu đã diễn ra",
@@ -18324,7 +18334,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.check.why.already_right": "đã đúng",
   "changes.check.why.accepted_offer":
     "báo giá đã được chấp nhận quyết định giá trị này",
-  "changes.check.why.priced_by_products": "các sản phẩm của giao dịch quyết định giá trị này",
+  "changes.check.why.priced_by_products":
+    "các sản phẩm của giao dịch quyết định giá trị này",
   "changes.check.why.no_rate": "không có tỷ giá cho loại tiền này",
   "changes.check.why.no_owner": "thành viên phụ trách đã rời đi",
   "changes.check.why.stage_rules": "tiêu chí rời giai đoạn không cho phép",

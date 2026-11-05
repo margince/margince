@@ -153,6 +153,7 @@ var routeVerbsVietnamese = map[string]string{
 	"set_weekly_plan_commitment_state":   "Đánh dấu cam kết xong, mở lại hoặc bỏ",
 	"set_weekly_plan_contract":           "Ghi rủi ro và dư địa của tuần",
 	"settle_conversation_claim":          "Ghi nhận lời hứa đã giữ hoặc không còn",
+	"share_company_contacts":             "Chia sẻ các liên hệ của công ty",
 	"share_record":                       "Chia sẻ bản ghi với đồng nghiệp hoặc nhóm",
 	"snooze_brief_item":                  "Tạm hoãn mục bản tin",
 	"start_weekly_plan":                  "Bắt đầu kế hoạch tuần",

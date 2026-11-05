@@ -62,7 +62,7 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithInstallationRenamer(installationRenamer(pool)),
 		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:    projects.ProviderOver(ProjectsStoreOver(db)),
-		activities:  activities.NewProvider(InstallationDB(pool)).WithTaskRecommendation(taskRecommendationReader(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx),
+		activities:  activities.NewProvider(InstallationDB(pool)).WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).WithTaskRecommendation(taskRecommendationReader(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx),
 		commissions: commissions.NewProvider(db),
 		dealRooms:   dealrooms.NewProvider(db),
 		reports:     newReportEngine(pool),
