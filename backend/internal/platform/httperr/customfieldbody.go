@@ -13,10 +13,9 @@ import (
 // decodeCustomFieldBody decodes a body that takes custom-field values as extra
 // top-level cf_ keys. The cf_ keys are lifted out. The rest is held to the closed
 // struct's rules, nested keys included, so a misspelt field is refused by name.
-// owned reaches those rules as it does on a body with no custom fields.
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
-func decodeCustomFieldBody(r *http.Request, raw json.RawMessage, into any, owned func(string) bool) error {
+func decodeCustomFieldBody(r *http.Request, raw json.RawMessage, into any) error {
 	body, err := datasource.SplitCustomFields(raw, into)
 	if err != nil {
 		return err
@@ -24,7 +23,7 @@ func decodeCustomFieldBody(r *http.Request, raw json.RawMessage, into any, owned
 	if err := body.RejectUnknownKeys(); err != nil {
 		return Validation("body", "unknown_field", err.Error())
 	}
-	if err := decodeRaw(r, body.Rest(), body.Target(), owned, true); err != nil {
+	if err := decodeRaw(r, body.Rest(), body.Target(), nil, true); err != nil {
 		return err
 	}
 	body.Adopt()

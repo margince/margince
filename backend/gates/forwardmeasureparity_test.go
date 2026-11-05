@@ -26,7 +26,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/forecasting"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Where the contract spells a forward measure. Held honest by
@@ -35,20 +34,15 @@ import (
 var forwardMeasureSites = []struct {
 	what string
 	path []string
-	// frozen marks a site that also offers the retired measures, because a
-	// stored row read back keeps the word it was frozen under.
-	frozen bool
 }{
-	// A shared snapshot frozen under the retired qualified forecast lands on the
-	// measure it was frozen under.
-	{"the landing a read returns", []string{"components", "schemas", "ForecastLanding"}, true},
-	{"the stored installation setting", []string{"components", "schemas", "InstallationSettings"}, false},
-	{"the settings patch", []string{"components", "schemas", "UpdateInstallationSettingsRequest"}, false},
+	{"the landing a read returns", []string{"components", "schemas", "ForecastLanding"}},
+	{"the stored installation setting", []string{"components", "schemas", "InstallationSettings"}},
+	{"the settings patch", []string{"components", "schemas", "UpdateInstallationSettingsRequest"}},
 	// The weekly review's FROZEN measure. It records which measure a past week
 	// was read under, so it must offer the same set — a review frozen under a
 	// measure the server no longer builds is a record nobody can re-read.
-	{"the frozen weekly outlook", []string{"components", "schemas", "WeeklyReviewOutlook"}, true},
-	{"the basis of a target comparison", []string{"components", "schemas", "ReportingTargetComparison"}, false},
+	{"the frozen weekly outlook", []string{"components", "schemas", "WeeklyReviewOutlook"}},
+	{"the basis of a target comparison", []string{"components", "schemas", "ReportingTargetComparison"}},
 }
 
 // TestEveryForwardMeasureIsOfferedOnTheWire is the gate forecasting.ForwardMeasures names.
@@ -73,9 +67,6 @@ func TestEveryForwardMeasureIsOfferedOnTheWire(t *testing.T) {
 			}
 		}
 		for _, measure := range onWire {
-			if site.frozen && slices.Contains(values.RetiredForwardMeasures(), measure) {
-				continue
-			}
 			if !slices.Contains(inGo, measure) {
 				t.Errorf("%s offers %q and forecasting.ProjectLanding refuses it — "+
 					"an installation that saves this setting errors on every forecast read, "+
@@ -121,14 +112,14 @@ func TestTheMeasureSiteListCoversEveryForwardMeasureEnum(t *testing.T) {
 // forward measure, by the one value that is unambiguously ours.
 //
 // `weighted` and `manager_call` are words other schemas could reasonably use;
-// `likely` names this specific reading and no other enum in the contract
-// spells it.
+// `qualified_likely` names this specific reading and nothing else in the
+// contract spells it.
 //
 //craft:ignore naked-any a decoded YAML document is untyped by nature — mappings, sequences and scalars arrive as any, and the switch below is the narrowing
 func walkForwardMeasureEnums(node any, at []string, found map[string]bool) {
 	switch shape := node.(type) {
 	case map[string]any:
-		if slices.Contains(enumOf(shape), string(forecasting.MeasureLikely)) {
+		if slices.Contains(enumOf(shape), "qualified_likely") {
 			found[strings.Join(measureSitePath(at), "/")] = true
 			return
 		}
@@ -192,7 +183,7 @@ func measureEnumUnder(schema map[string]any) []string {
 		if !ok {
 			continue
 		}
-		if values := enumOf(field); slices.Contains(values, string(forecasting.MeasureLikely)) {
+		if values := enumOf(field); slices.Contains(values, "qualified_likely") {
 			return values
 		}
 	}

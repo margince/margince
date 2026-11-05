@@ -212,6 +212,7 @@ func forecastToolResult(
 		BaseCurrency:       baseCurrency,
 		ScopeLimited:       &limited,
 		CoverageNote:       in.CoverageNote(),
+		QualificationMode:  in.QualificationMode(),
 	}
 	if scope.ID != nil {
 		id := scope.ID.String()
@@ -219,6 +220,14 @@ func forecastToolResult(
 	}
 	if in.Range != nil {
 		out.RangeLowMinor, out.RangeHighMinor = &in.Range.LowMinor, &in.Range.HighMinor
+	}
+	if q := in.Qualified; q != nil {
+		out.Qualified = &agents.ForecastQualifiedResult{
+			EvidenceMinor: q.EvidenceMinor, WeightedMinor: q.WeightedMinor,
+			ExcludedMinor: q.ExcludedMinor, UnknownMinor: q.UnknownMinor,
+			ExcludedCount: q.ExcludedCount, UnknownCount: q.UnknownCount, AmountsPartial: q.AmountsPartial,
+			UnsupportedMinor: q.UnsupportedMinor, UnsupportedCount: q.UnsupportedCount,
+		}
 	}
 	return out
 }

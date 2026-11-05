@@ -32,7 +32,6 @@ export const bookingInvitation: components["schemas"]["MeetingInvitation"] = {
   location: "Video call",
 };
 export const bookingContact = {
-  attachable: true,
   id: "0198f011-aaaa-7000-8000-000000000002",
   full_name: "Nina Weber",
   primary_email: "nina@brandt.example",

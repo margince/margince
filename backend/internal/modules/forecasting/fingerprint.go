@@ -14,7 +14,7 @@ import (
 
 // InputFingerprint is a digest of what a set of contributions says about the
 // forecast. Two readings with one fingerprint agree on every deal's money,
-// close-window membership, stage, chance and risk effect. No comparison between them can
+// close-window membership, qualification, stage, chance and risk effect. No comparison between them can
 // find a material change. The owner and audit references move no figure.
 func InputFingerprint(rows []Contribution) string {
 	ordered := slices.SortedFunc(slices.Values(rows), func(a, b Contribution) int {
@@ -28,9 +28,7 @@ func InputFingerprint(rows []Contribution) string {
 		}
 		material = fmt.Appendf(material, "%s|%s|%d|%t|%t|%t|%t|%s|%s|%s|%s|%d|%s|%s|%s|%s\n",
 			row.DealID, base, row.WeightedMinor, row.InWon, row.InOpen, row.InEvidence,
-			// The empty slot was the retired qualification. It stays, so a
-			// fingerprint frozen before it went still matches today's.
-			row.InLost, "", row.Source, row.ExclusionReason,
+			row.InLost, row.Qualification, row.Source, row.ExclusionReason,
 			row.StageID, row.StageProbability, optionalInt(row.TypedProbability), optionalInt(row.EvidenceN),
 			strings.Join(SignalCodes(row.Signals), ","), optionalEffect(row.Effect))
 	}

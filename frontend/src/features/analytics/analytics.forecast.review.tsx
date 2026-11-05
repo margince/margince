@@ -4,10 +4,12 @@ import type { components } from "../../api/schema";
 import { Badge, Disclosure } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { formatAnalyticsNumber } from "../../format/format";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { type AnalyticsScope, scopeQuery } from "./analytics.context";
 import { CheckTable } from "./analytics.forecast.checktable";
+import { EnforcementSwitch } from "./analytics.forecast.enforcement";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
 import {
   FreshnessLine,
@@ -124,6 +126,7 @@ function ReviewPanel({
     >
       <PanelBody>
         <FreshnessLine freshness={run.freshness} />
+        <DeliveryFailedLine deliveries={run.review_deliveries} />
         {run.sources?.some((source) => source.state !== "checked") ? (
           <CoverageLine sources={run.sources} />
         ) : (
@@ -135,6 +138,7 @@ function ReviewPanel({
             answer to what the coverage line just said, and the header already
             carries the verdict. */}
         <Recheck runId={run.run_id} />
+        <EnforcementSwitch />
       </PanelBody>
       <QueryGate query={checks} pendingLabel={title}>
         {(found) => (
@@ -142,6 +146,25 @@ function ReviewPanel({
         )}
       </QueryGate>
     </Panel>
+  );
+}
+
+// Reviews whose task could not be delivered after every retry. Pending and
+// delivered need no line: a pending one is on its way.
+function DeliveryFailedLine({
+  deliveries,
+}: Readonly<{ deliveries: Assurance["review_deliveries"] | undefined }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (!deliveries?.failed) {
+    return null;
+  }
+  return (
+    <p className="sub">
+      {plural("review.deliveryFailed", deliveries.failed, {
+        count: formatAnalyticsNumber(deliveries.failed, locale),
+      })}
+    </p>
   );
 }
 

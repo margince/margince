@@ -98,12 +98,10 @@ function holdsCopies(edit: EditSeed | undefined): boolean {
 // the epoch that retires a draft request once the words move on.
 export function useComposeFields({
   initialMessage,
-  initialReason,
   askedIntent,
   edit,
 }: Readonly<{
   initialMessage?: Readonly<{ subject: string; body: string }>;
-  initialReason?: CommunicationContext;
   askedIntent?: string;
   /** A scheduled message being written again; read once, when the composer mounts. */
   edit?: EditSeed;
@@ -135,7 +133,7 @@ export function useComposeFields({
   // What this message is, when the record does not say. Empty until the
   // reader answers, and never asked on a reply (see contextFor).
   const [context, setContext] = useState<CommunicationContext | "">(
-    edit?.context ?? initialReason ?? "",
+    edit?.context ?? "",
   );
   // The send-later moment as datetime-local text in the rep's zone. It
   // becomes an instant at submit (see scheduleFields).

@@ -25,7 +25,6 @@ import { navigate } from "../../lib/router";
 import { refreshContactMeetings } from "../contacts/contactmeetings.waiting";
 import { ComposeModal } from "../mail/compose";
 import { useBookingIntent } from "./booking-common";
-import { useProposalContext } from "./booking-context";
 import type { BookingMode, BookingSlot } from "./booking-picker";
 
 type Invitation = components["schemas"]["MeetingInvitationRequest"];
@@ -34,8 +33,6 @@ type Proposal = components["schemas"]["MeetingProposalRequest"];
 export type BookingDraft = Readonly<{
   contactId: string;
   contactName?: string;
-  dealId?: string;
-  replyToActivityId?: string;
   attendee: string;
   subject: string;
   location: string;
@@ -64,20 +61,6 @@ const NOTES: Record<BookingMode, MessageKey> = {
   link: "scheduling.linkNote",
 };
 
-function bookingReady(
-  draft: BookingDraft,
-  configured: boolean,
-  refusal: string | undefined,
-  pending: boolean | undefined,
-) {
-  return (
-    configured &&
-    !refusal &&
-    !pending &&
-    Boolean(draft.contactId && draft.attendee && draft.subject.trim())
-  );
-}
-
 export function BookingReview({
   mode,
   draft,
@@ -87,8 +70,6 @@ export function BookingReview({
   configured,
   zone,
   searchContacts,
-  contactRefusal,
-  contactPending,
 }: Readonly<{
   mode: BookingMode;
   draft: BookingDraft;
@@ -98,13 +79,15 @@ export function BookingReview({
   configured: boolean;
   zone: string;
   searchContacts: (q: string) => Promise<{ id: string; name: string }[]>;
-  contactRefusal?: string;
-  contactPending?: boolean;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const ready = bookingReady(draft, configured, contactRefusal, contactPending);
+  const ready =
+    configured &&
+    !!draft.contactId &&
+    !!draft.attendee &&
+    !!draft.subject.trim();
   const needed = mode === "propose" ? 2 : mode === "invite" ? 1 : 0;
   const cta = (() => {
     if (!configured) return t("scheduling.connectFirst");
@@ -134,7 +117,6 @@ export function BookingReview({
   return (
     <Panel title={t("scheduling.review")}>
       <PanelBody className="book-review">
-        {contactRefusal && <ErrorLine>{contactRefusal}</ErrorLine>}
         <RecordPicker
           label={t("scheduling.contact")}
           selected={
@@ -223,8 +205,6 @@ export function BookingReview({
               options: mode === "link" ? [] : [...picks],
             }}
             zone={zone}
-            dealId={draft.dealId}
-            replyToActivityId={draft.replyToActivityId}
           />
         )}
         <p className="t-caption">{t(NOTES[mode])}</p>
@@ -358,15 +338,11 @@ function ProposalSend({
   disabled,
   request,
   zone,
-  dealId,
-  replyToActivityId,
 }: Readonly<{
   label: string;
   disabled: boolean;
   request: Proposal;
   zone: string;
-  dealId?: string;
-  replyToActivityId?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -395,16 +371,11 @@ function ProposalSend({
     remedy: t("scheduling.copyFallback"),
   });
   const offered = create.variables ?? request;
-  const { activeDealId, initialReason, contextPending } = useProposalContext(
-    offered.contact_id,
-    dealId,
-    replyToActivityId,
-  );
   return (
     <div className="book-form">
       <Button
         variant="primary"
-        disabled={disabled || contextPending}
+        disabled={disabled}
         pending={create.isPending}
         onClick={() => (current ? setReview(true) : create.mutate(request))}
       >
@@ -427,13 +398,11 @@ function ProposalSend({
         <p className="t-caption">{t("scheduling.linkReplaced")}</p>
       )}
       <ErrorLine error={create.error} />
-      {review && create.data && !contextPending && (
+      {review && create.data && (
         <ComposeModal
           key={create.data.id}
           entityType="contact"
           entityId={offered.contact_id}
-          initialDealId={activeDealId}
-          initialReason={initialReason}
           contactId={offered.contact_id}
           recordAddress={offered.attendee_email}
           initialMessage={{

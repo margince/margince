@@ -28,6 +28,16 @@ func (s *Service) exactSources(day crmcontracts.Attention, scope string, conside
 			exact[key]++
 		}
 	}
+	// A store's task count still holds an open review's task, which the fold
+	// moved to the review row. Which task category it would have counted under
+	// is not known here, so the task totals are left absent, never wrong.
+	if s.reviews.holdsOpenTask() {
+		for key := range exact {
+			if key.source == sourceTask {
+				delete(exact, key)
+			}
+		}
+	}
 	if day.Counts.ApprovalsOpen != nil && (s.taskOwner != ids.Nil || scope != scopeTeam) {
 		approval := crmcontracts.WorklistItemSourceApproval
 		exact[totalKey{approval, crmcontracts.WorklistCountCategory(categoryOfSource(approval))}] = *day.Counts.ApprovalsOpen

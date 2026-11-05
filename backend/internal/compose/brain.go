@@ -103,9 +103,6 @@ type ModelPath struct {
 	// OwedVerdict because it reads a CONVERSATION rather than a message, and
 	// only ever runs on threads the workspace has already answered.
 	RequestSettlement completer
-	// DealVerdict reads one open deal's evidence at night and proposes a new
-	// close date, amount or win probability.
-	DealVerdict completer
 	// TagSuggest reads captured items against the workspace's suggestible tags
 	// and names the ones each item shows interest in. Without it the tag scout
 	// matches description phrases.
@@ -351,7 +348,6 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
 		OwedVerdict:                   brain(ai.TaskOwedVerdict),
 		RequestSettlement:             brain(ai.TaskRequestSettlement),
-		DealVerdict:                   brain(ai.TaskDealVerdict),
 		TagSuggest:                    brain(ai.TaskTagSuggest),
 		CaptureCounterpartyVerdict:    brain(ai.TaskCaptureCounterpartyVerdict),
 		CaptureConfidentialityVerdict: brain(ai.TaskCaptureConfidentialityVerdict),

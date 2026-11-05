@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 207.0 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 54306 |
+| Approx. wire tokens | 54310 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 46.3 KB | 22% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 48.2 KB | 23% | Yes, every step |
-| Input schemas | 100.9 KB | 48% | Yes, every step |
+| Output schemas | 46.6 KB | 22% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 48.3 KB | 23% | Yes, every step |
+| Input schemas | 100.5 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 5% | Partly |
-| **Description + input schema** | **149.1 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **148.8 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -66,18 +66,18 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
-| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 669 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1884 |
+| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 656 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1878 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 807 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 865 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 799 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
-| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 741 |
+| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 628 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 494 |
-| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1255 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 770 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1873 |
+| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1286 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 764 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1896 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
@@ -93,18 +93,18 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1713 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 901 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1662 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 929 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 307 |
 | [`read_record`](#read_record) | Read a record | yes |  | 324 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2498 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2492 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 984 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1008 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2061 |
-| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
+| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 408 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1453 |
@@ -1237,7 +1237,6 @@ get their yes before calling, unless they asked for this call themselves; requir
         "remove_team_member",
         "request_ownership",
         "share",
-        "share_contacts",
         "unshare",
         "update_assignment",
         "update_member",
@@ -1249,7 +1248,7 @@ get their yes before calling, unless they asked for this call themselves; requir
       "type": "string"
     },
     "id": {
-      "description": "add_team_member, assign_legal_entity, change_role, claim_record, deactivate_member, end_assignment, hand_over_work, offer_ownership, reactivate_member, remove_member, remove_team_member, request_ownership, share_contacts, unshare, update_assignment, update_member, update_record_role, update_team, withdraw_ownership_offer, withdraw_ownership_request only",
+      "description": "add_team_member, assign_legal_entity, change_role, claim_record, deactivate_member, end_assignment, hand_over_work, offer_ownership, reactivate_member, remove_member, remove_team_member, request_ownership, unshare, update_assignment, update_member, update_record_role, update_team, withdraw_ownership_offer, withdraw_ownership_request only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1270,7 +1269,7 @@ get their yes before calling, unless they asked for this call themselves; requir
       "type": "string"
     },
     "request_body": {
-      "description": "assign, assign_legal_entity, change_role, create_record_role, create_team, deactivate_member, hand_over_work, offer_ownership, remove_member, request_ownership, share, share_contacts, update_assignment, update_member, update_record_role, update_team only: The request body of createRecordAssignment",
+      "description": "assign, assign_legal_entity, change_role, create_record_role, create_team, deactivate_member, hand_over_work, offer_ownership, remove_member, request_ownership, share, update_assignment, update_member, update_record_role, update_team only: The request body of createRecordAssignment",
       "type": "object"
     },
     "userId": {
@@ -1558,7 +1557,7 @@ yes before calling, unless they asked for this call themselves; requires passpor
       "type": "boolean"
     },
     "request_body": {
-      "description": "accept_document_fields, check_new_send, check_send, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The request body of acceptAttachmentExtraction",
+      "description": "accept_document_fields, check_new_send, check_send, preview_sign_off, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The request body of acceptAttachmentExtraction",
       "type": "object"
     },
     "scope": {
@@ -2224,7 +2223,6 @@ themselves; requires passport scope "write".)
       "description": "Which act to run; read_workspace topic actions lists each action's body",
       "enum": [
         "accept_offer",
-        "add_deal_line",
         "add_room_document",
         "archive_contract",
         "archive_room",
@@ -2232,10 +2230,8 @@ themselves; requires passport scope "write".)
         "close_room",
         "pause_room",
         "record_contract",
-        "refresh_offer_from_deal",
         "regenerate_offer",
         "reject_offer",
-        "remove_deal_line",
         "remove_room_document",
         "render_offer",
         "renew_contract",
@@ -2247,11 +2243,9 @@ themselves; requires passport scope "write".)
         "set_deal_products",
         "set_room_expiry",
         "update_contract",
-        "update_deal_line",
         "update_room",
         "update_room_document",
-        "update_room_participant",
-        "use_deal_estimate"
+        "update_room_participant"
       ],
       "type": "string"
     },
@@ -2259,12 +2253,8 @@ themselves; requires passport scope "write".)
       "description": "remove_room_document, update_room_document only",
       "type": "string"
     },
-    "expected_revision": {
-      "description": "remove_deal_line only",
-      "type": "integer"
-    },
     "id": {
-      "description": "accept_offer, add_deal_line, add_room_document, archive_contract, archive_room, cancel_contract, close_room, pause_room, refresh_offer_from_deal, regenerate_offer, reject_offer, remove_deal_line, remove_room_document, render_offer, renew_contract, resolve_room_thread, resume_room, revoke_room_participant, send_offer, set_contract_status, set_deal_products, set_room_expiry, update_contract, update_deal_line, update_room, update_room_document, update_room_participant, use_deal_estimate only",
+      "description": "accept_offer, add_room_document, archive_contract, archive_room, cancel_contract, close_room, pause_room, regenerate_offer, reject_offer, remove_room_document, render_offer, renew_contract, resolve_room_thread, resume_room, revoke_room_participant, send_offer, set_contract_status, set_deal_products, set_room_expiry, update_contract, update_room, update_room_document, update_room_participant only",
       "type": "string"
     },
     "idempotency_key": {
@@ -2273,19 +2263,15 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "if_version": {
-      "description": "accept_offer, archive_room, cancel_contract, refresh_offer_from_deal, reject_offer, remove_room_document, renew_contract, send_offer, set_contract_status, set_room_expiry, update_contract, update_room, update_room_document only: The version the caller read; the write is refused as skew if the record moved since",
+      "description": "accept_offer, archive_room, cancel_contract, reject_offer, remove_room_document, renew_contract, send_offer, set_contract_status, set_room_expiry, update_contract, update_room, update_room_document only: The version the caller read; the write is refused as skew if the record moved since",
       "type": "integer"
-    },
-    "lineId": {
-      "description": "remove_deal_line, update_deal_line only",
-      "type": "string"
     },
     "participantId": {
       "description": "revoke_room_participant, update_room_participant only",
       "type": "string"
     },
     "request_body": {
-      "description": "add_deal_line, add_room_document, cancel_contract, record_contract, refresh_offer_from_deal, reject_offer, renew_contract, set_contract_status, set_deal_products, set_room_expiry, update_contract, update_deal_line, update_room, update_room_document, update_room_participant, use_deal_estimate only: The request body of addDealLine",
+      "description": "add_room_document, cancel_contract, record_contract, reject_offer, renew_contract, set_contract_status, set_deal_products, set_room_expiry, update_contract, update_room, update_room_document, update_room_participant only: The request body of addDealRoomDocument",
       "type": "object"
     },
     "threadId": {
@@ -2633,14 +2619,15 @@ discard, restore or archive a report, set targets, the framework and schedules, 
 retry a run, define and launch a sales initiative, make a forecast call, answer an input check and
 share a forecast by link. record_decision records a decision from a sales review on its deal, with
 an owner and a review date; record_decision_outcome closes it. A draft is refused on a report that
-already has one. publish_draft, discard_draft, restore_revision, archive_report, publish_framework
-and launch_initiative change what colleagues see: ask the user first. Use read_reports to read
-reports and their metric catalog, run_research for the sales review's assessment or a report set up
-from a description, and change_state move_deal to move a deal. Keep the report id and draft_revision
-to preview the draft with read_reports. (Runs immediately; the actions archive_report,
-discard_draft, launch_initiative, publish_draft, publish_framework, restore_revision cannot be
-undone, so tell the user what the call will change and get their yes before calling, unless they
-asked for this call themselves; requires passport scope "write".)
+already has one. publish_draft, discard_draft, restore_revision, archive_report, publish_framework,
+launch_initiative and close_lost_input_check change what colleagues see: ask the user first. Use
+read_reports to read reports and their metric catalog, run_research for the sales review's
+assessment or a report set up from a description, and change_state move_deal to move a deal. Keep
+the report id and draft_revision to preview the draft with read_reports. (Runs immediately; the
+actions archive_report, close_lost_input_check, discard_draft, launch_initiative, publish_draft,
+publish_framework, restore_revision cannot be undone, so tell the user what the call will change and
+get their yes before calling, unless they asked for this call themselves; requires passport scope
+"write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2652,6 +2639,7 @@ asked for this call themselves; requires passport scope "write".)
       "description": "draft: save a report's next charts as a draft to publish later, or create a new report only its author sees",
       "enum": [
         "archive_report",
+        "close_lost_input_check",
         "create_forecast_share",
         "create_initiative",
         "create_report",
@@ -2675,7 +2663,8 @@ asked for this call themselves; requires passport scope "write".)
         "update_initiative",
         "update_report",
         "update_schedule",
-        "update_target"
+        "update_target",
+        "wait_input_check"
       ],
       "type": "string"
     },
@@ -2684,7 +2673,7 @@ asked for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "id": {
-      "description": "archive_report, create_schedule, discard_draft, freeze_edition, launch_initiative, publish_draft, record_decision_outcome, replace_initiative_members, resolve_input_check, restore_revision, retry_execution, revoke_forecast_share, update_initiative, update_report, update_schedule, update_target only",
+      "description": "archive_report, close_lost_input_check, create_schedule, discard_draft, freeze_edition, launch_initiative, publish_draft, record_decision_outcome, replace_initiative_members, resolve_input_check, restore_revision, retry_execution, revoke_forecast_share, update_initiative, update_report, update_schedule, update_target, wait_input_check only",
       "type": "string"
     },
     "idempotency_key": {
@@ -2706,7 +2695,7 @@ asked for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "request_body": {
-      "description": "create_forecast_share, create_initiative, create_report, create_schedule, create_target, publish_framework, record_decision, record_decision_outcome, record_forecast_call, replace_initiative_members, resolve_input_check, update_initiative, update_report, update_schedule, update_target only: The request body of createForecastShare",
+      "description": "close_lost_input_check, create_forecast_share, create_initiative, create_report, create_schedule, create_target, publish_framework, record_decision, record_decision_outcome, record_forecast_call, replace_initiative_members, resolve_input_check, update_initiative, update_report, update_schedule, update_target, wait_input_check only: The request body of closeLostInputCheck",
       "type": "object"
     },
     "revision": {
@@ -2784,8 +2773,6 @@ asked for this call themselves; requires passport scope "write".)
                           "type": "array"
                         },
                         "limit": {
-                          "maximum": 1000,
-                          "minimum": 1,
                           "type": "integer"
                         },
                         "measures": {
@@ -2944,7 +2931,6 @@ asked for this call themselves; requires passport scope "write".)
         "delete_disqualify_reason",
         "delete_lead_origin",
         "delete_lead_source",
-        "mark_booking_page_shared",
         "remove_legal_entity_logo",
         "remove_own_logo",
         "remove_own_logo_icon",
@@ -3030,11 +3016,11 @@ the retry carries; do not report the change until the retry has answered. (Gover
 immediately for accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health,
 decide_commission, decide_legal_review, demote, disqualify, link_lead_company, move_project,
 promote, propose_deal_roles, publish_contact, qualify, record_project_health, reopen_lead,
-request_legal_review, review_outcome, set_lead_signal, transfer_projects, withdraw_legal_review; a
-human approves first for merge_member_accounts, set_up_partner; decided per call from its arguments
-for move_deal; the actions decide_commission, disqualify, transfer_projects cannot be undone, so
-tell the user what the call will change and get their yes before calling, unless they asked for this
-call themselves; requires passport scope "write".)
+request_legal_review, revert_stage, review_outcome, set_lead_signal, transfer_projects,
+withdraw_legal_review; a human approves first for merge_member_accounts, set_up_partner; decided per
+call from its arguments for move_deal; the actions decide_commission, disqualify, revert_stage,
+transfer_projects cannot be undone, so tell the user what the call will change and get their yes
+before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3063,12 +3049,17 @@ call themselves; requires passport scope "write".)
         "record_project_health",
         "reopen_lead",
         "request_legal_review",
+        "revert_stage",
         "review_outcome",
         "set_lead_signal",
         "set_up_partner",
         "transfer_projects",
         "withdraw_legal_review"
       ],
+      "type": "string"
+    },
+    "approvalId": {
+      "description": "revert_stage only",
       "type": "string"
     },
     "approval_id": {
@@ -3134,7 +3125,7 @@ call themselves; requires passport scope "write".)
       "type": "string"
     },
     "id": {
-      "description": "accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, propose_deal_roles, publish_contact, record_project_health, reopen_lead, request_legal_review, review_outcome, set_lead_signal, withdraw_legal_review only",
+      "description": "accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, propose_deal_roles, publish_contact, record_project_health, reopen_lead, request_legal_review, revert_stage, review_outcome, set_lead_signal, withdraw_legal_review only",
       "type": "string"
     },
     "idempotency_key": {
@@ -5153,7 +5144,6 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
                     "type": "array"
                   },
                   "more_fields": {
-                    "minimum": 0,
                     "type": "integer"
                   },
                   "sentence": {
@@ -5536,23 +5526,18 @@ make. (Runs immediately; requires passport scope "write".)
             "disposition": {
               "properties": {
                 "created": {
-                  "minimum": 0,
                   "type": "integer"
                 },
                 "duplicates": {
-                  "minimum": 0,
                   "type": "integer"
                 },
                 "skipped": {
-                  "minimum": 0,
                   "type": "integer"
                 },
                 "unchanged": {
-                  "minimum": 0,
                   "type": "integer"
                 },
                 "updated": {
-                  "minimum": 0,
                   "type": "integer"
                 }
               },
@@ -5580,7 +5565,6 @@ make. (Runs immediately; requires passport scope "write".)
                     "type": "string"
                   },
                   "line": {
-                    "minimum": 1,
                     "type": "integer"
                   },
                   "params": {
@@ -5609,11 +5593,9 @@ make. (Runs immediately; requires passport scope "write".)
             "links": {
               "properties": {
                 "applied": {
-                  "minimum": 0,
                   "type": "integer"
                 },
                 "offered": {
-                  "minimum": 0,
                   "type": "integer"
                 },
                 "unresolved": {
@@ -5664,33 +5646,26 @@ make. (Runs immediately; requires passport scope "write".)
               "items": {
                 "properties": {
                   "closed_lost": {
-                    "minimum": 1,
                     "type": "integer"
                   },
                   "closed_won": {
-                    "minimum": 1,
                     "type": "integer"
                   },
                   "disposition": {
                     "properties": {
                       "created": {
-                        "minimum": 0,
                         "type": "integer"
                       },
                       "duplicates": {
-                        "minimum": 0,
                         "type": "integer"
                       },
                       "skipped": {
-                        "minimum": 0,
                         "type": "integer"
                       },
                       "unchanged": {
-                        "minimum": 0,
                         "type": "integer"
                       },
                       "updated": {
-                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -5709,7 +5684,6 @@ make. (Runs immediately; requires passport scope "write".)
                     "type": "string"
                   },
                   "rows_read": {
-                    "minimum": 0,
                     "type": "integer"
                   }
                 },
@@ -5724,7 +5698,6 @@ make. (Runs immediately; requires passport scope "write".)
               "type": "array"
             },
             "rows_read": {
-              "minimum": 0,
               "type": "integer"
             },
             "run_id": {
@@ -5797,7 +5770,6 @@ make. (Runs immediately; requires passport scope "write".)
                   "type": "array"
                 },
                 "reversed_count": {
-                  "minimum": 0,
                   "type": "integer"
                 },
                 "run_id": {
@@ -5808,7 +5780,6 @@ make. (Runs immediately; requires passport scope "write".)
                   "type": "string"
                 },
                 "updates_not_reversed": {
-                  "minimum": 0,
                   "type": "integer"
                 }
               },
@@ -6531,7 +6502,6 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
               "type": "array"
             },
             "more_fields": {
-              "minimum": 0,
               "type": "integer"
             },
             "sentence": {
@@ -8169,8 +8139,6 @@ fields.
         "contract",
         "controller_mail_preview",
         "deal_legal_reviews",
-        "deal_lines",
-        "deal_margince_changes",
         "deal_products",
         "deal_room_brief",
         "deal_suggestion",
@@ -8181,6 +8149,7 @@ fields.
         "evidence",
         "field_history",
         "filter_preview",
+        "forecast_assurance_enforcement",
         "forecast_assurance_preview",
         "forecast_share_csv",
         "forecast_shared_reading",
@@ -8216,7 +8185,6 @@ fields.
         "ownership_offer",
         "ownership_offer_candidates",
         "ownership_request",
-        "pending_margince_changes",
         "project_filing",
         "relationship_nudge",
         "response_metrics",
@@ -8226,7 +8194,6 @@ fields.
         "tag_suggestion",
         "team_board",
         "team_exceptions",
-        "team_margince_changes",
         "team_weekly_review",
         "teammate_weekly_plan",
         "weekly_plan",
@@ -8260,7 +8227,7 @@ fields.
       "type": "boolean"
     },
     "cursor": {
-      "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, lead_score, legal_reviews, magic_line_records, notices only",
+      "description": "company_contracts, deal_suggestions, field_history, handled_for_you, lead_score, legal_reviews, magic_line_records, notices only",
       "type": "string"
     },
     "days": {
@@ -8304,7 +8271,7 @@ fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
+      "description": "activity_pipeline, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
       "type": "string"
     },
     "kind": {
@@ -8343,10 +8310,6 @@ fields.
       "description": "backfill_preview, scheduling_calendars only",
       "type": "string"
     },
-    "question": {
-      "description": "document_extraction only",
-      "type": "string"
-    },
     "record_type": {
       "description": "ownership_offer, ownership_offer_candidates, ownership_request only",
       "type": "string"
@@ -8364,7 +8327,7 @@ fields.
       "type": "string"
     },
     "since": {
-      "description": "magic, magic_line_records, team_margince_changes only",
+      "description": "magic, magic_line_records only",
       "type": "string"
     },
     "stage_id": {
@@ -8467,11 +8430,13 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
       "type": "string"
     },
     "reading": {
-      "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.",
+      "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports.",
       "enum": [
         "open",
         "weighted",
-        "evidence"
+        "evidence",
+        "qualified_evidence",
+        "qualified_weighted"
       ],
       "type": "string"
     },
@@ -8913,6 +8878,52 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         },
         "priced_count": {
           "type": "integer"
+        },
+        "qualification_mode": {
+          "type": "string"
+        },
+        "qualified": {
+          "properties": {
+            "amounts_partial": {
+              "type": "boolean"
+            },
+            "evidence_minor": {
+              "type": "integer"
+            },
+            "excluded_count": {
+              "type": "integer"
+            },
+            "excluded_minor": {
+              "type": "integer"
+            },
+            "unknown_count": {
+              "type": "integer"
+            },
+            "unknown_minor": {
+              "type": "integer"
+            },
+            "unsupported_count": {
+              "type": "integer"
+            },
+            "unsupported_minor": {
+              "type": "integer"
+            },
+            "weighted_minor": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "amounts_partial",
+            "evidence_minor",
+            "excluded_count",
+            "excluded_minor",
+            "unknown_count",
+            "unknown_minor",
+            "unsupported_count",
+            "unsupported_minor",
+            "weighted_minor"
+          ],
+          "type": "object"
         },
         "range_high_minor": {
           "type": "integer"
@@ -10035,8 +10046,6 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
                           "type": "array"
                         },
                         "limit": {
-                          "maximum": 1000,
-                          "minimum": 1,
                           "type": "integer"
                         },
                         "measures": {
@@ -10478,6 +10487,7 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
         "deal_outcome_reviews",
         "deal_stakeholders",
         "deal_status",
+        "deal_viability",
         "dedupe_candidate",
         "dedupe_candidates",
         "email_presentation",
@@ -10527,13 +10537,18 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
         "signals",
         "site_read",
         "stage",
+        "stage_automation_report",
         "stage_evidence",
         "stage_exit_criteria",
         "stages",
         "teams",
-        "transcript_read"
+        "transcript_read",
+        "transition_policies"
       ],
       "type": "string"
+    },
+    "window_days": {
+      "type": "integer"
     }
   },
   "required": [
@@ -11050,8 +11065,7 @@ before calling, unless they asked for this call themselves; requires passport sc
         "format": "uuid",
         "type": "string"
       },
-      "type": "array",
-      "uniqueItems": true
+      "type": "array"
     },
     "owner_id": {
       "description": "Who owns the remaining contact: the owner of one selected member",

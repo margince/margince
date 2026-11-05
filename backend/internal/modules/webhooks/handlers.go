@@ -102,10 +102,6 @@ func (h Handlers) UpdateWebhookSubscription(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	in := UpdateSubscriptionInput{EventTypes: req.EventTypes, IfVersion: ifVersion}
-	if req.OwnerId != nil {
-		owner := ids.From[ids.UserKind](ids.UUID(*req.OwnerId))
-		in.OwnerID = &owner
-	}
 	if req.State != nil {
 		state := string(*req.State)
 		in.State = &state

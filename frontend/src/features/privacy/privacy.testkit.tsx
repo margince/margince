@@ -108,10 +108,7 @@ export function choose(control: HTMLElement, optionLabel: string) {
 
 // Writes what a close needs: the answer, and how the identity was checked.
 export async function draftClose(answer: string) {
-  // An erasure is fulfilled with no typed answer, so an empty one types nothing.
-  if (answer) {
-    await userEvent.type(screen.getByLabelText(/resolution/i), answer);
-  }
+  await userEvent.type(screen.getByLabelText(/resolution/i), answer);
   await choose(
     screen.getByLabelText(en["privacy.identityCheck"]),
     en["privacy.identityCheck.id_document"],

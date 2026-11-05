@@ -130,6 +130,7 @@ func compareCall(
 	drift := forecasting.CompareWithBaseline(baseline,
 		forecasting.TodaySide(today, now))
 	subject.Limitation = string(drift.Limitation)
+	subject.QualificationChanges = drift.QualificationChanges
 	subject.Net = map[string]int64{}
 	for reading, net := range drift.Net {
 		subject.Net[string(reading)] = net
@@ -177,5 +178,6 @@ func assuranceScanner(pool *pgxpool.Pool, store *assurance.Store) *assurance.Sca
 	return assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, AssuranceConfig()).
 		WithSignalSubjects(AssuranceSignalSubjects).
 		WithCallSubjects(assuranceCallSubjects(pool)).
-		WithDealSubjects(assuranceDealSubjects)
+		WithDealSubjects(assuranceDealSubjects).
+		WithReviewDelivery(queueReviewDeliveries(store))
 }

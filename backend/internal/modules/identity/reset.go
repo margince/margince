@@ -108,7 +108,7 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		}
 		// Unauthenticated endpoint: a panic here would be a one-request denial of
 		// service for anybody who can reach it.
-		defer httpserver.RecoverDetached("password-reset send")
+		defer recoverDetached("password-reset send")
 		rawToken, err := h.svc.CreatePasswordReset(workCtx, email.String())
 		if err != nil {
 			slog.Error("password-reset token mint failed", "err", err)

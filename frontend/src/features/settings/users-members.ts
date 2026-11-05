@@ -7,10 +7,10 @@ import { holdsEveryWord, searchWords } from "../../format/collate";
 import { readMemberPage } from "../../lib/memberpages";
 
 export type User = components["schemas"]["User"];
-export function matchingMembers<M extends Pick<User, "display_name" | "email">>(
-  members: readonly M[],
+export function matchingMembers(
+  members: readonly User[],
   search: string,
-): M[] {
+): User[] {
   const words = searchWords(search);
   return members.filter((member) =>
     holdsEveryWord(words, [member.display_name, member.email]),

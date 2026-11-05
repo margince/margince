@@ -11,10 +11,6 @@
 //   - type: [T, 'null'] -> type: T + nullable: true
 //   - schema-level examples: [x, …] -> example: x (3.0 has no plural form)
 //   - const: X -> enum: [X] (3.0 has no const; the single-value enum is exact)
-//   - uniqueItems: true also tags the generated field `unique:"items"`, the
-//     tag every request decoder refuses a repeated item by (UniqueItemsTag)
-//   - minimum/maximum also tag the generated field with the bound, the tags
-//     every request decoder refuses an out-of-range number by
 //
 // Any OTHER 3.1-only construct with no faithful 3.0 equivalent
 // (unsupported31Keywords) fails loudly rather than degrading silently —
@@ -25,7 +21,6 @@ package oas30
 
 import (
 	"fmt"
-	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -88,26 +83,8 @@ var arbitraryKeyContainers = map[string]struct{}{
 // so its members are never descended into either. The guarantee is the same;
 // only the door differs.
 var opaqueValueKeys = map[string]struct{}{
-	"example": {}, "default": {}, extraTagsKey: {},
+	"example": {}, "default": {},
 }
-
-// UniqueItemsTag is the struct tag a `uniqueItems: true` array's generated
-// field carries. oapi-codegen keeps uniqueItems out of the Go type, so without
-// the tag no decoder could know the contract refuses a repeated item.
-// datasource.UniqueItemsTag reads it; TestEveryUniqueItemsListIsTaggedForTheDecoders
-// fails if the two names differ.
-const UniqueItemsTag = "unique"
-
-// MinimumTag and MaximumTag carry a number's declared bounds onto its
-// generated field, for the same reason: the Go type keeps neither.
-// datasource.MinimumTag and datasource.MaximumTag read them;
-// TestEveryNumberBoundIsTaggedForTheDecoders fails if the names differ.
-const (
-	MinimumTag = "minimum"
-	MaximumTag = "maximum"
-)
-
-const extraTagsKey = "x-oapi-codegen-extra-tags"
 
 // Node downgrades a parsed OpenAPI 3.1 YAML node tree to 3.0.3 in place. The
 // document root is a schema-keyword position (scanKeys=true).
@@ -236,20 +213,6 @@ func rewriteKeyword(mapping, key, val *yaml.Node) (handled, drop bool, err error
 			val.Content = kept
 		}
 		return true, false, nil
-	case "uniqueItems":
-		if val.Kind == yaml.ScalarNode && val.Value == "true" {
-			addExtraTag(mapping, UniqueItemsTag, "items")
-		}
-		return true, false, nil
-	case "exclusiveMinimum", "exclusiveMaximum":
-		return false, false, fmt.Errorf("oas30: %s is not held by any request decoder or agent tool; "+
-			"state the bound as minimum or maximum instead", key.Value)
-	case MinimumTag, MaximumTag:
-		if _, err := strconv.ParseFloat(val.Value, 64); val.Kind != yaml.ScalarNode || err != nil {
-			return false, false, fmt.Errorf("oas30: %s %q is no number, so no decoder could hold it", key.Value, val.Value)
-		}
-		addExtraTag(mapping, key.Value, val.Value)
-		return true, false, nil
 	case "const":
 		// 3.0 has no const; its faithful equivalent is a single-value
 		// enum (const: X ⇔ enum: [X]), so downgrade rather than drop it.
@@ -287,29 +250,6 @@ func rewriteKeyword(mapping, key, val *yaml.Node) (handled, drop bool, err error
 		}
 	}
 	return false, false, nil
-}
-
-// addExtraTag adds one struct tag to the field generated for the schema in
-// mapping. A schema may earn several (a bounded list, a bounded number), and
-// they share one x-oapi-codegen-extra-tags entry.
-func addExtraTag(mapping *yaml.Node, name, value string) {
-	tags := extraTags(mapping)
-	tags.Content = append(tags.Content,
-		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: name},
-		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: value},
-	)
-}
-
-func extraTags(mapping *yaml.Node) *yaml.Node {
-	for i := 0; i+1 < len(mapping.Content); i += 2 {
-		if mapping.Content[i].Value == extraTagsKey {
-			return mapping.Content[i+1]
-		}
-	}
-	tags := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-	mapping.Content = append(mapping.Content,
-		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: extraTagsKey}, tags)
-	return tags
 }
 
 // rewriteTypeUnion turns type: [T, 'null'] into type: T + nullable: true on

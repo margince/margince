@@ -19,7 +19,7 @@ import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
-import { pillFigure } from "../../lib/worklistcounts";
+import { pillCount } from "../../lib/worklistcounts";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
@@ -111,7 +111,7 @@ export function BriefScreen() {
     <PageAsideToggle
       controlled={{
         open: drawerOpen,
-        ...(queuedDay && pillFigure(queuedDay, "all", drawer.view)),
+        count: queuedDay ? pillCount(queuedDay, "all", drawer.view) : undefined,
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),

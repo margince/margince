@@ -1,10 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import {
-  installFetchStub,
-  meRoute,
-  StoryProviders,
-} from "../../testing/story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { ContactToday } from "./contacttoday";
 
 const view: components["schemas"]["Contact360"] = {
@@ -31,16 +27,11 @@ const meta: Meta<typeof ContactToday> = {
   title: "Records/Contact 360/Next privacy duty",
   component: ContactToday,
   decorators: [
-    (Story) => {
-      installFetchStub({
-        "GET /me": meRoute({ activity: ["read", "create"] }),
-      });
-      return (
-        <StoryProviders>
-          <Story />
-        </StoryProviders>
-      );
-    },
+    (Story) => (
+      <StoryProviders>
+        <Story />
+      </StoryProviders>
+    ),
   ],
   args: { view, onAction: () => undefined },
 };

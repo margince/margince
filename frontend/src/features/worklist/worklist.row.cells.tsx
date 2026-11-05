@@ -7,7 +7,6 @@ import { Heading } from "../../design-system/heading";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { isUnprepared } from "../../lib/meetingreadiness";
-import { PinnedMark } from "./worklist.pinmark";
 import { RowCaptions } from "./worklist.row.captions";
 import type { RowReadings } from "./worklist.row.compact";
 import { RowName } from "./worklist.rowname";
@@ -41,8 +40,7 @@ export function RowText({
   readings: RowReadings;
   /** Opens a waiting message. Its presence is what names the row. */
   emailOpener: ((activityId: string) => void) | undefined;
-  /** Whether the title line has a mark to show: overdue, not confirmed ready,
-   *  or pinned. */
+  /** Whether the day put a state on this row: overdue, or not confirmed ready. */
   badged: boolean;
 }>) {
   const {
@@ -80,7 +78,6 @@ export function RowText({
       {isUnprepared(item) && (
         <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
       )}
-      {readings.pinned && <PinnedMark />}
     </>
   );
   return (

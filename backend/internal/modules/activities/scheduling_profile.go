@@ -442,8 +442,6 @@ func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.User
 	}
 	args = schedulingArgs{}
 	var id ids.UUID
-	if err := tx.QueryRow(ctx, `SELECT id FROM booking_page WHERE slug=`+args.add(slug), args...).Scan(&id); err != nil {
-		return ids.Nil, err
-	}
-	return id, carryBookingPageUseTx(ctx, tx, host, id)
+	err = tx.QueryRow(ctx, `SELECT id FROM booking_page WHERE slug=`+args.add(slug), args...).Scan(&id)
+	return id, err
 }

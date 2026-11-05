@@ -780,9 +780,7 @@ describe("the consent panel names the purpose behind each answer", () => {
 
     await screen.findByText("Business correspondence");
     // The correspondence row is the allowed one; the newsletter row is not.
-    const rows = screen.getAllByText(
-      /Permission to write recorded|Nothing recorded yet/,
-    );
+    const rows = screen.getAllByText(/Allowed|Unknown/);
     expect(rows.length).toBeGreaterThan(1);
   });
 
