@@ -61,13 +61,15 @@ export function BusyMark({ className }: Readonly<{ className?: string }>) {
 type ButtonShape =
   | {
       variant: "bare";
-      /** The whole label is the glyph; see the other arm. */
+      /** The whole label is the glyph; the next arm says what that owes. */
       iconOnly: true;
+      align?: never;
     }
   | {
       /** An AI verb always shows its ✦, so it never takes a glyph of its own. */
       variant: "ai" | "aiQuiet";
       iconOnly?: false;
+      align?: "center" | "start";
     }
   | {
       variant?: Exclude<ButtonVariant, "ai" | "aiQuiet">;
@@ -77,7 +79,17 @@ type ButtonShape =
        * it an accessible name (`aria-label` or a visually-hidden child),
        * because a glyph announces as nothing.
        */
-      iconOnly?: boolean;
+      iconOnly: true;
+      align?: never;
+    }
+  | {
+      variant?: ButtonVariant;
+      iconOnly?: false;
+      /**
+       * Where the label's lines sit in the button. `start` is for a label that
+       * is data standing in running text, so a wrapped line reads from its edge.
+       */
+      align?: "center" | "start";
     };
 
 type ButtonBase = ComponentPropsWithRef<"button"> & ButtonShape;
@@ -85,6 +97,7 @@ type ButtonBase = ComponentPropsWithRef<"button"> & ButtonShape;
 export function Button({
   variant = "ghost",
   iconOnly,
+  align = "center",
   className,
   reason,
   reasonId,
@@ -239,6 +252,7 @@ export function Button({
       type="button"
       {...attrs}
       className={classes}
+      data-align={align === "start" ? "start" : undefined}
       disabled={barred}
       aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
