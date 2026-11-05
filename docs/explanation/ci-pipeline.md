@@ -428,9 +428,8 @@ and there it pushes out the `main` entries that every PR loads.
   restore. The save runs under `!cancelled()`, and only if a cache file is newer than the stamp. A
   red lint run still saves, because it read the whole tree. A run that stopped before lint saves
   nothing. The census does not hold this entry back, because golangci replays no test result.
-- **One entry holds both lint passes.** `make check-static` runs the baseline and strict passes at once,
-  so the strict pass writes its own directory under `~/.cache/golangci-lint` (`GOLANGCI_CACHE_PASS`).
-  `cache-warm` runs both and saves the whole directory, so both `backend-lint` jobs restore their pass warm.
+- **One entry holds both lint passes.** The strict pass writes its own directory under `~/.cache/golangci-lint`
+  (`GOLANGCI_CACHE_PASS`). `cache-warm` saves both, so both `backend-lint` jobs restore their pass warm.
 - **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
   entry until `cache-warm` runs after the merge.
 
@@ -477,10 +476,9 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 ### Why some jobs are shaped as they are
 
 - **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
-  It fetches the commits without old file contents (`filter: blob:none`), and so do `backend-lint`,
-  `extension-reference`, `craftsmanship` and `license gate`. A merge base needs only the commits, and git
-  fetches an old file when a gate first reads it. `sonarcloud` fetches every old file, because its scan
-  reads all of them to find who wrote each line.
+  Like `backend-lint`, `extension-reference`, `craftsmanship` and `license gate`, it fetches no old file
+  contents (`filter: blob:none`): git fetches an old file when a gate first reads it. `sonarcloud` fetches
+  them all, because its scan reads every old file to find who wrote each line.
 - **`craftsmanship` starts beside `deterministic-gates`.** It reads source only, so a red build does
   not change its findings, and both reds show in one round.
 - **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
