@@ -21,10 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// This file sorts after toolrolematrix, so the sweep runs first. The settings
-// rows the filler names outlive a test, and a second maker meets a conflict.
-const toolListingUser = "tool-role-listing@fable.test"
-
 // A passport is offered a tool or action when, and only when, the gate admits
 // its user to it. The roles are an operator's own. One is a copy of rep that
 // may create tags and may not update deals. One lacks two checks only some
@@ -43,43 +39,65 @@ func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
 		'{objects,installation_settings}', coalesce(permissions->'objects'->'installation_settings', '{}') || '{"read": false}')`)
 
 	adminRows := publishedAdminAnswers(t)
-	for _, holding := range [][]string{{"rep_tagger"}, {"rep_path_bound"}, {"rep", "ops"}} {
+	holdings := [][]string{{"rep_tagger"}, {"rep_path_bound"}, {"rep", "ops"}}
+	seats := make([]*apptest.AppEnv, len(holdings))
+	for i := range holdings {
+		seats[i] = signedInAs(t, d.E, fmt.Sprintf("tool-role-listing-%d@fable.test", i))
+	}
+	for i, holding := range holdings {
 		t.Run(strings.Join(holding, "+"), func(t *testing.T) {
-			holdRoles(t, d.E, "admin")
-			clients := passportClients(t, d.E, strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
-			controls := passportClients(t, d.E, "control "+strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
-			pool := seedToolRoleRecords(t, d.E, calls, "")
-			holdRoles(t, d.E, holding...)
+			t.Parallel()
+			e := seats[i]
+			holdRoles(t, e, "admin")
+			clients := passportClients(t, e, strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
+			controls := passportClients(t, e, "control "+strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
+			pool := seedToolRoleRecords(t, e, calls, "")
+			holdRoles(t, e, holding...)
 			offered := offeredCalls(t, clients[0].ListedTools(t), specs)
 			answers := map[string]roleAnswer{}
 			for n, call := range calls {
 				pool.caller = clients[n/toolRoleCallsPerPassport].Bearer()
-				args := call.args(pool)
+				args := argsSeededAsAdmin(t, e, call, pool, holding)
 				got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
 				// A refusal the admin meets too is about the record, not the role.
 				// The published matrix says how the admin was answered; a kind
 				// variant it does not hold is asked of the admin on the same records.
 				adminAdmitted, published := adminRows[call.row]
 				if !published {
-					holdRoles(t, d.E, "admin")
+					holdRoles(t, e, "admin")
 					adminAdmitted = !isRefusal(controls[n/toolRoleCallsPerPassport].Call(t, call.verb, args))
-					holdRoles(t, d.E, holding...)
+					holdRoles(t, e, holding...)
 				}
 				answers[call.row] = roleAnswer{ran: !got.IsError, refused: refusedAGrant(got) && adminAdmitted, text: got.Text}
 			}
 			for _, disagreement := range listingDisagreements(calls, specs, offered, answers) {
 				t.Error(disagreement)
 			}
-			holdRoles(t, d.E, holding...)
+			holdRoles(t, e, holding...)
 			holdPathDependentTools(t, clients[0], offered, answers)
 		})
 	}
-	holdRoles(t, d.E, "admin")
 }
 
-// publishedAdminAnswers is, per published row, whether the matrix has the
-// admin running it.
-func publishedAdminAnswers(t *testing.T) map[string]bool {
+// argsSeededAsAdmin is call's arguments. A call in aloneVerbs has its state
+// seeded as it takes it, which only the admin may. So the user holds admin for
+// that, and holding again after.
+//
+//craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
+func argsSeededAsAdmin(t *testing.T, e *apptest.AppEnv, call toolRoleCall, pool *recordPool, holding []string) map[string]any {
+	t.Helper()
+	if !aloneVerbs[call.verb] {
+		return call.args(pool)
+	}
+	installationSeeds.Lock()
+	defer installationSeeds.Unlock()
+	holdRoles(t, e, "admin")
+	defer holdRoles(t, e, holding...)
+	return call.args(pool)
+}
+
+// publishedMatrix is docs/reference/mcp-tool-roles.json as committed.
+func publishedMatrix(t *testing.T) toolRolesFileShape {
 	t.Helper()
 	raw, err := os.ReadFile(toolRolesFile)
 	if err != nil {
@@ -89,9 +107,73 @@ func publishedAdminAnswers(t *testing.T) map[string]bool {
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		t.Fatalf("%s does not read: %v", toolRolesFile, err)
 	}
+	return doc
+}
+
+// publishedRow is a published row's name as the sweep's calls name it.
+func publishedRow(row toolRoleRow) string {
+	return strings.TrimSuffix(row.Tool+"."+row.Action, ".")
+}
+
+// publishedAdminAnswers is, per published row, whether the matrix has the
+// admin running it.
+func publishedAdminAnswers(t *testing.T) map[string]bool {
+	t.Helper()
+	doc := publishedMatrix(t)
 	out := make(map[string]bool, len(doc.Rows))
 	for _, row := range doc.Rows {
-		out[strings.TrimSuffix(row.Tool+"."+row.Action, ".")] = slices.Contains(row.Allowed, "admin")
+		out[publishedRow(row)] = slices.Contains(row.Allowed, "admin")
+	}
+	return out
+}
+
+// A passport on each seeded role is offered the cells the published matrix
+// allows that role. No refused call is offered, and no allowed one is hidden. The matrix and the listing's checks come from one sweep, and this
+// holds the listing the binary serves to both.
+func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
+	d := toolRoleApp(t, "tool-role-cells")
+	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
+	doc := publishedMatrix(t)
+	for _, role := range doc.Roles {
+		apptest.AssignRoleTo(t, d.E, "tool-role-cells@fable.test", role)
+		listed := d.MCP.ListedTools(t)
+		offered := offeredCalls(t, listed, specs)
+		for _, disagreement := range cellDisagreements(role, doc.Rows, specs, offered) {
+			t.Errorf("%s: %s", role, disagreement)
+		}
+		for _, named := range hiddenActionsNamed(t, listed, specs) {
+			t.Errorf("%s: %s", role, named)
+		}
+	}
+	apptest.AssignRoleTo(t, d.E, "tool-role-cells@fable.test", "admin")
+}
+
+// cellDisagreements names each published row the listing offers role while
+// the matrix refuses it, or hides while the matrix allows it. A router that
+// picks its action by the arguments named has no enum to narrow. It is held as
+// one tool, allowed where any of its rows is.
+func cellDisagreements(role string, rows []toolRoleRow, specs []mcp.ToolSpec, offered map[string]bool) []string {
+	byArguments := map[string]bool{}
+	for _, spec := range specs {
+		byArguments[spec.Name] = len(spec.Actions) > 0 && spec.ActionField == ""
+	}
+	allowed, listed := map[string]bool{}, map[string]bool{}
+	for _, row := range rows {
+		name := publishedRow(row)
+		if byArguments[row.Tool] {
+			name = row.Tool
+		}
+		allowed[name] = allowed[name] || slices.Contains(row.Allowed, role)
+		listed[name] = listed[name] || offered[publishedRow(row)]
+	}
+	var out []string
+	for _, name := range slices.Sorted(maps.Keys(allowed)) {
+		switch {
+		case listed[name] && !allowed[name]:
+			out = append(out, name+" is offered and the matrix refuses it")
+		case !listed[name] && allowed[name]:
+			out = append(out, name+" is hidden and the matrix allows it")
+		}
 	}
 	return out
 }
@@ -268,18 +350,113 @@ func createRole(t *testing.T, e *apptest.AppEnv, key, edit string) {
 	})
 }
 
-// holdRoles gives the listing test's user these workspace roles and no others.
+// holdRoles gives the signed-in user these workspace roles and no others.
 func holdRoles(t *testing.T, e *apptest.AppEnv, keys ...string) {
 	t.Helper()
-	email := toolListingUser
-	if _, err := e.Owner.Exec(t.Context(), `
-		DELETE FROM role_assignment WHERE team_id IS NULL AND user_id = (SELECT id FROM app_user WHERE email = $1)`,
-		email); err != nil {
-		t.Fatalf("clearing the roles of %s: %v", email, err)
+	user := apptest.SessionUserID(t, e)
+	if _, err := e.Owner.Exec(t.Context(), `DELETE FROM role_assignment WHERE team_id IS NULL AND user_id = $1`, user); err != nil {
+		t.Fatalf("clearing the roles of %s: %v", user, err)
 	}
 	if _, err := e.Owner.Exec(t.Context(), `
-		INSERT INTO role_assignment (user_id, role_id)
-		SELECT (SELECT id FROM app_user WHERE email = $1), id FROM role WHERE key = ANY($2)`, email, keys); err != nil {
-		t.Fatalf("giving %s the roles %v: %v", email, keys, err)
+		INSERT INTO role_assignment (user_id, role_id) SELECT $1, id FROM role WHERE key = ANY($2)`, user, keys); err != nil {
+		t.Fatalf("giving %s the roles %v: %v", user, keys, err)
 	}
 }
+
+// hiddenActionsNamed names each router whose listed schema speaks of an action
+// its route enum hides, as an argument's name, description or enum word. In
+// prose only an action's own spelling with an underscore counts, as a plain
+// word such as "member" is English first. The route field's own description is
+// the router's prose about every action, and the tool's description answers it.
+func hiddenActionsNamed(t *testing.T, listed []apptest.ListedTool, specs []mcp.ToolSpec) []string {
+	t.Helper()
+	byName := map[string]mcp.ToolSpec{}
+	for _, spec := range specs {
+		byName[spec.Name] = spec
+	}
+	var out []string
+	for _, tool := range listed {
+		spec := byName[tool.Name]
+		if spec.ActionField == "" {
+			continue
+		}
+		var schema struct {
+			Properties map[string]json.RawMessage `json:"properties"`
+		}
+		if err := json.Unmarshal(tool.InputSchema, &schema); err != nil {
+			t.Fatalf("%s's input schema does not read: %v", tool.Name, err)
+		}
+		var route struct {
+			Enum []string `json:"enum"`
+		}
+		if err := json.Unmarshal(schema.Properties[spec.ActionField], &route); err != nil {
+			t.Fatalf("%s's route field does not read: %v", tool.Name, err)
+		}
+		hidden := map[string]bool{}
+		for _, action := range spec.Actions {
+			hidden[action.Action] = !slices.Contains(route.Enum, action.Action)
+		}
+		delete(schema.Properties, spec.ActionField)
+		for name, arg := range schema.Properties {
+			for _, word := range append(schemaWords(t, arg), name) {
+				if hidden[word] && (strings.Contains(word, "_") || !proseOnly(t, arg, word)) {
+					out = append(out, fmt.Sprintf("%s's argument %s names the hidden action %s", tool.Name, name, word))
+				}
+			}
+		}
+	}
+	slices.Sort(out)
+	return slices.Compact(out)
+}
+
+// schemaWords lists the words of the strings in one argument's schema, at any
+// depth: its descriptions, enums and the names of its members.
+//
+//craft:ignore naked-any a schema member is whichever JSON value its keyword takes
+func schemaWords(t *testing.T, arg json.RawMessage) []string {
+	t.Helper()
+	var doc any
+	if err := json.Unmarshal(arg, &doc); err != nil {
+		t.Fatalf("an argument does not read: %v", err)
+	}
+	var words []string
+	var walk func(any)
+	walk = func(node any) {
+		switch value := node.(type) {
+		case string:
+			words = append(words, actionWord.FindAllString(value, -1)...)
+		case []any:
+			for _, item := range value {
+				walk(item)
+			}
+		case map[string]any:
+			for key, item := range value {
+				words = append(words, key)
+				walk(item)
+			}
+		}
+	}
+	walk(doc)
+	return words
+}
+
+// proseOnly reports whether word appears in arg only inside a description.
+//
+//craft:ignore naked-any an enum word is whichever JSON value the schema lists
+func proseOnly(t *testing.T, arg json.RawMessage, word string) bool {
+	t.Helper()
+	var shape struct {
+		Enum  []any                      `json:"enum"`
+		Items struct{ Enum []any }       `json:"items"`
+		Props map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(arg, &shape); err != nil {
+		t.Fatalf("an argument does not read: %v", err)
+	}
+	named := slices.Concat(shape.Enum, shape.Items.Enum)
+	_, isMember := shape.Props[word]
+	return !isMember && !slices.Contains(named, any(word))
+}
+
+// actionWord matches a word an action can be named by.
+var actionWord = regexp.MustCompile(`[a-z][a-z_]*`)

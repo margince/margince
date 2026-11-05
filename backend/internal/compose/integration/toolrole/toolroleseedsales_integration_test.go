@@ -118,8 +118,9 @@ func salesSeeders(s sweepSeed) map[string]func() string {
 // leadSeeders make leads promoted, disqualified, referred by a partner or
 // matching a company by its domain.
 func leadSeeders(s sweepSeed) map[string]func() string {
+	me := apptest.SessionUserID(s.t, s.e)
 	lead := func(body integration.AnyMap) string {
-		body["full_name"], body["source"] = "Role Sweep", "manual"
+		body["full_name"], body["source"], body["owner_id"] = "Role Sweep", "manual", me
 		if body["email"] == nil {
 			body["email"] = uniqueEmail()
 		}

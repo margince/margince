@@ -16506,7 +16506,7 @@
       "web_app": "direct",
       "rep_passes": false,
       "decided_by": "measured",
-      "refused_by": "user_admin:delete"
+      "refused_by": "role:admin"
     },
     {
       "method": "DELETE",
@@ -16577,7 +16577,7 @@
       "web_app": "direct",
       "rep_passes": false,
       "decided_by": "measured",
-      "refused_by": "signal:delete"
+      "refused_by": "role:admin"
     },
     {
       "method": "POST",
@@ -16610,7 +16610,7 @@
       "web_app": "direct",
       "rep_passes": false,
       "decided_by": "measured",
-      "refused_by": "user_admin:delete"
+      "refused_by": "role:admin"
     },
     {
       "method": "PATCH",

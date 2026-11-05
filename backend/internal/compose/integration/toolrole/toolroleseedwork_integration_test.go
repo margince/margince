@@ -326,7 +326,7 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 		},
 		// A Telegram conversation is one per bot and account, so each role
 		// replies on the one the first seed captured.
-		"channel_conversation": func() string {
+		"channel_conversation": s.alone(func() string {
 			c := &apptest.ChannelConversation{AppEnv: s.e, User: apptest.SessionUserID(s.t, s.e)}
 			// The bot may already be live, connected by an earlier seed or call.
 			connected := func() {
@@ -338,13 +338,14 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 				connected()
 				return s.ownerScalar(`SELECT id::text FROM activity WHERE thread_key = $1`, apptest.ChannelThreadKey)
 			}
+			defer s.asRoles("admin")()
 			c.ContactID = s.create["contact"]()
 			c.BindIdentity(s.t)
 			c.SeedInboundMessage(s.t)
 			c.GrantConsent(s.t, "transactional")
 			connected()
 			return c.ActivityID
-		},
+		}),
 		"transcript": func() string {
 			return s.post("/v1/activities", integration.AnyMap{
 				"kind": "meeting", "subject": "Role sweep", "body": "We agreed to send the deck.", "source": "manual", "source_system": "transcript",

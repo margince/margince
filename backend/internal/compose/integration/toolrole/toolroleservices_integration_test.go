@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -58,9 +59,15 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	previous := http.DefaultTransport
 	http.DefaultTransport = calendar
 	t.Cleanup(func() { http.DefaultTransport = previous })
+	// Each role's seat signs in from its own address through the loopback, so
+	// no seat spends another's sign-in budget.
+	loopback, err := httpserver.ParseTrustedProxies("127.0.0.1/32")
+	if err != nil {
+		t.Fatal(err)
+	}
 	// The channel surface takes its vault from WithKeyvault, so it is composed first.
 	d := apptest.SetupTwoDoors(t, slug, append([]compose.Option{
-		compose.WithChannelSurface(), compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
+		compose.WithTrustedProxies(loopback), compose.WithChannelSurface(), compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
 			ClientID: "calendar-fixture", ClientSecret: "calendar-fixture",
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
 		}, compose.CaptureConfig{}), compose.WithCaptureBackfill(jobs),

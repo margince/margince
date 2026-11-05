@@ -8,6 +8,7 @@ package toolrole
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -34,46 +35,57 @@ const (
 // granted seat reads an identity record and may act on its own work beside it.
 // So a call may run, and it must not change the colleague's record. It answers
 // each call's row with what each such role was told.
-func crossOwnerPass(t *testing.T, e *apptest.AppEnv, roles []apptest.SeededRole, calls []toolRoleCall) map[string]map[string]string {
+func crossOwnerPass(t *testing.T, admin *apptest.AppEnv, seats []roleSeat, calls []toolRoleCall) map[string]map[string]string {
 	t.Helper()
 	owned := callsTakingOwnedRecords(t, calls)
 	if len(owned) == 0 {
 		t.Fatal("no call takes a record with an owner, so the cross-owner pass measured nothing")
 	}
-	apptest.AssignRoleTo(t, e, toolRoleUser, "admin")
-	colleague := seededID(t, e, "/v1/users", integration.AnyMap{"email": "colleague@role-sweep.test", "display_name": "Colleague", "role": "rep"})
+	colleague := seededID(t, admin, "/v1/users", integration.AnyMap{"email": "colleague@role-sweep.test", "display_name": "Colleague", "role": "rep"})
+	scoped := slices.DeleteFunc(slices.Clone(seats), func(seat roleSeat) bool { return seat.role.RowScope == "all" })
+	if len(scoped) == 0 {
+		t.Fatal("every seeded role reads all rows, so the cross-owner pass measured nothing")
+	}
+	byRole := make([]map[string]string, len(scoped))
+	eachSeat(t, "colleague", scoped, func(t *testing.T, i int, seat roleSeat) {
+		byRole[i] = colleagueAnswers(t, seat, owned, colleague)
+	})
 	answers := map[string]map[string]string{}
-	scoped := 0
-	for _, role := range roles {
-		if role.RowScope == "all" {
-			continue
-		}
-		scoped++
-		apptest.AssignRoleTo(t, e, toolRoleUser, "admin")
-		clients := passportClients(t, e, role.Key+" colleague", 1+len(owned)/toolRoleCallsPerPassport)
-		pool := seedToolRoleRecords(t, e, owned, colleague)
-		apptest.AssignRoleTo(t, e, toolRoleUser, role.Key)
-		for n, call := range owned {
-			pool.taken = map[string][]string{}
-			args := call.args(pool)
-			before := ownedRecordStates(t, e, pool.taken)
-			got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
-			if got.IsError && isBudgetRefusal(got.Text) {
-				t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, role.Key, got.Text)
+	for i, seat := range scoped {
+		for row, answer := range byRole[i] {
+			if answers[row] == nil {
+				answers[row] = map[string]string{}
 			}
-			answer := colleagueAnswer(got)
-			if changed := changedRecord(before, ownedRecordStates(t, e, pool.taken)); changed != "" {
-				answer = colleagueChanged
-				t.Errorf("%s as %s (row scope %s) changed %s, which a colleague owns: %.300s", call.row, role.Key, role.RowScope, changed, got.Text)
-			}
-			if answers[call.row] == nil {
-				answers[call.row] = map[string]string{}
-			}
-			answers[call.row][role.Key] = answer
+			answers[row][seat.role.Key] = answer
 		}
 	}
-	if scoped == 0 {
-		t.Fatal("every seeded role reads all rows, so the cross-owner pass measured nothing")
+	return answers
+}
+
+// colleagueAnswers calls each owned-record call as the seat's role on records
+// the colleague owns, and answers what each row was told.
+func colleagueAnswers(t *testing.T, seat roleSeat, owned []toolRoleCall, colleague string) map[string]string {
+	t.Helper()
+	apptest.AssignRoleTo(t, seat.e, seat.email, "admin")
+	clients := passportClients(t, seat.e, seat.role.Key+" colleague", 1+len(owned)/toolRoleCallsPerPassport)
+	pool := seedToolRoleRecords(t, seat.e, owned, colleague)
+	apptest.AssignRoleTo(t, seat.e, seat.email, seat.role.Key)
+	defer apptest.AssignRoleTo(t, seat.e, seat.email, "admin")
+	answers := map[string]string{}
+	for n, call := range owned {
+		pool.taken = map[string][]string{}
+		args := call.args(pool)
+		before := ownedRecordStates(t, seat.e, pool.taken)
+		got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
+		if got.IsError && isBudgetRefusal(got.Text) {
+			t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, seat.role.Key, got.Text)
+		}
+		answer := colleagueAnswer(got)
+		if changed := changedRecord(before, ownedRecordStates(t, seat.e, pool.taken)); changed != "" {
+			answer = colleagueChanged
+			t.Errorf("%s as %s (row scope %s) changed %s, which a colleague owns: %.300s", call.row, seat.role.Key, seat.role.RowScope, changed, got.Text)
+		}
+		answers[call.row] = answer
 	}
 	return answers
 }

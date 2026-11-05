@@ -145,12 +145,13 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 				VALUES ($1, 'requested_quote_or_meeting', now(), 'system')`, contact)
 			return contact
 		},
-		// An admin's stop outranks an admin, so the stop reads as a rep's, the
-		// level every seat that may lift one reaches.
+		// A stop is lifted only by a level above the one it was recorded at.
+		// The stop reads as the engine's own, which every seat outranks, so the
+		// lift measures the role's grant and not the stop's level.
 		"suppression": func() string {
 			contact := s.create["contact"]()
 			s.call("POST", "/v1/contacts/"+contact+"/consent/suppress", integration.AnyMap{"kind": "subject_request", "reason": "Asked on the phone."}, nil, nil)
-			stop := s.ownerScalar(`UPDATE communication_suppression SET decided_by_level = 'user' WHERE contact_id = $1 RETURNING id::text`, contact)
+			stop := s.ownerScalar(`UPDATE communication_suppression SET decided_by_level = 'machine' WHERE contact_id = $1 RETURNING id::text`, contact)
 			s.pool.note(stop, "contact", contact)
 			return stop
 		},

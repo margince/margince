@@ -164,23 +164,23 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 			return s.ownerScalar(`SELECT to_char(connected_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
 				FROM capture_connection WHERE user_id = $1 AND provider = $2`, apptest.SessionUserID(s.t, s.e), sweepMailbox)
 		},
-		"live_channel": func() string {
+		"live_channel": s.alone(func() string {
 			c := &apptest.ChannelConversation{AppEnv: s.e, User: apptest.SessionUserID(s.t, s.e)}
 			if s.ownerScalar(`SELECT count(*)::text FROM channel_connection WHERE archived_at IS NULL`) == "0" {
 				c.ConnectBot(s.t)
 			}
 			return s.ownerScalar(`SELECT id::text FROM channel_connection WHERE archived_at IS NULL`)
-		},
-		"draft_import_run": func() string {
+		}),
+		"draft_import_run": s.alone(func() string {
 			profile, status := importjobtest.UploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
 			if status != http.StatusOK || profile.RunID == "" {
 				s.t.Fatalf("uploading an import's file → %d %+v", status, profile)
 			}
 			return profile.RunID
-		},
+		}),
 		// No route finishes an import without its worker; the commit job's
 		// writer leaves the run complete.
-		"complete_import_run": func() string {
+		"complete_import_run": s.alone(func() string {
 			profile, status := importjobtest.UploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
 			if status != http.StatusOK {
 				s.t.Fatalf("uploading an import's file → %d", status)
@@ -191,7 +191,7 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 			}
 			s.ownerExec(`UPDATE import_run SET status = 'complete', version = version + 1 WHERE id = $1`, run.ID)
 			return run.ID
-		},
+		}),
 	}
 }
 
@@ -209,7 +209,8 @@ func openDomainQuestion(s sweepSeed, reason string) string {
 	// The question is current against the store's own clock.
 	s.ownerExec(`UPDATE activity SET occurred_at = now() - interval '1 hour' WHERE id = $1`, mail)
 	s.ownerExec(`INSERT INTO activity_participant (activity_id, address, address_domain_folded, role) VALUES ($1, $2, $3, 'from')`, mail, sender, domain)
-	s.ownerExec(`INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'to')`, mail, toolRoleUser)
+	s.ownerExec(`INSERT INTO activity_participant (activity_id, address, role)
+		SELECT $1, email, 'to' FROM app_user WHERE id = $2`, mail, apptest.SessionUserID(s.t, s.e))
 	s.ownerExec(`INSERT INTO company_domain_disposition (domain, status, source, pending_reason) VALUES ($1, 'pending', NULL, $2)
 		ON CONFLICT (domain) DO UPDATE SET status = 'pending', source = NULL, pending_reason = $2`, domain, reason)
 	return domain

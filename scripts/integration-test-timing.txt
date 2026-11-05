@@ -677,8 +677,9 @@ backend|./internal/compose/integration/jobfanout|TestTheTenantPassClosesAbandone
 backend|./internal/compose/integration/jobfanout|TestTwoSimultaneousAnswersStillLeaveOneLiveCredential|4.08
 backend|./internal/compose/integration/jobfanout|TestWithdrawingEndsTheAuthorityRatherThanTheReference|3.10
 backend|./internal/compose/integration/schemaready|TestReadyMeansTheComposedUnitsSchemaIsApplied|4.32
-backend|./internal/compose/integration/toolrole|TestTheToolRoleMatrixIsPublished|546.00
-backend|./internal/compose/integration/toolrole|TestToolsListAgreesWithTheGateForAnOperatorsRoles|254.46
+backend|./internal/compose/integration/toolrole|TestTheToolRoleMatrixIsPublished|350.00
+backend|./internal/compose/integration/toolrole|TestToolsListAgreesWithTheGateForAnOperatorsRoles|180.00
+backend|./internal/compose/integration/toolrole|TestToolsListOffersEachSeededRoleItsAllowedCells|5.00
 backend|./internal/compose/integration/webforms|TestABrowserFormLandsALeadWithItsMessageOnTheTimeline|2.71
 backend|./internal/compose/integration/webforms|TestABrowserFormRefusesWhatItShouldNotLand|3.58
 backend|./internal/compose/integration/webforms|TestABuilderSecretPastedAgainReplacesTheOldOne|3.74

@@ -13,8 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// RecordedCall is what the gates asked of one caller during one call, which of
-// them refused it, and the human the caller is or acts for.
+// RecordedCall is what the gates asked of one caller during one call, and
+// which of them refused it. Human is the user the caller is or acts for.
 type RecordedCall struct {
 	Checks  []string
 	Refused []string

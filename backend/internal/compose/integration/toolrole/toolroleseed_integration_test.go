@@ -20,7 +20,7 @@ import (
 )
 
 // seedToolRoleRecords creates what these calls will take, through the app's own
-// routes, as the admin. The admin owns them, or the named owner does.
+// routes, as the admin. The session's user owns them, or the named owner does.
 func seedToolRoleRecords(t *testing.T, e *apptest.AppEnv, calls []toolRoleCall, owner string) *recordPool {
 	t.Helper()
 	counting := countingPool(t)
@@ -63,22 +63,27 @@ func seedToolRoleRecords(t *testing.T, e *apptest.AppEnv, calls []toolRoleCall, 
 // lateKinds are seeded as a call takes them. The anchor company's logo is one:
 // the sweep's own calls take the logo off before the reads run. So is the
 // Telegram bot, which a disconnect takes off before the sends run. So is an
-// agent's own act, made as the passport of the call that takes it.
+// agent's own act, made as the passport of the call that takes it. So is the
+// state of what the installation has one of, which a call made alone takes.
 var lateKinds = map[string]bool{
 	"anchor_logo": true, "live_channel": true, "channel_conversation": true,
 	"agent_withdrawn_owner_identity": true,
+	"idle_input_check":               true, "finished_site_read": true, "review_template": true,
 }
 
 // toolRoleSeeders makes one record of each kind a call can take. An owner, when
-// named, owns the records that carry one; the admin owns them otherwise. A seed
+// named, owns the records that carry one. Otherwise the session's user does: a
+// role is then measured on its own records, and its grants alone decide. A
+// route leaves some records, such as a lead, with no owner unless told. A seed
 // notes in the pool what it made beside its record.
 func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *recordPool) map[string]func() string {
 	t.Helper()
 	seeded := apptest.DiscoverSeededPipeline(t, e)
+	if owner == "" {
+		owner = apptest.SessionUserID(t, e)
+	}
 	owned := func(body integration.AnyMap) integration.AnyMap {
-		if owner != "" {
-			body["owner_id"] = owner
-		}
+		body["owner_id"] = owner
 		return body
 	}
 	post := func(path string, body integration.AnyMap) string { return seededID(t, e, path, body) }

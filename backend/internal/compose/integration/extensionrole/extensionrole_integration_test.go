@@ -17,7 +17,6 @@ import (
 	"maps"
 	"os"
 	"slices"
-	"strings"
 	"sync"
 	"testing"
 
@@ -110,19 +109,22 @@ func TestTheExtensionVerbsRoleCellsArePublished(t *testing.T) {
 		for _, role := range got.Roles {
 			assignRole(t, e, role)
 			answer := client.Call(t, tool, args)
+			mu.Lock()
+			call := recorded[verb]
+			delete(recorded, verb)
+			mu.Unlock()
+			// A refusal counts only where the recorder saw a gate make it.
 			switch {
 			case !answer.IsError:
 				row.Allowed = append(row.Allowed, role)
-			case strings.Contains(answer.Text, "permission denied"):
+			case len(call.Refused) > 0:
 				row.Refused = append(row.Refused, role)
 			default:
 				t.Errorf("%s as %s reached no verdict: %s", verb, role, answer.Text)
 			}
-			mu.Lock()
 			if role == "admin" {
-				row.Checks = recorded[verb].Checks
+				row.Checks = call.Checks
 			}
-			mu.Unlock()
 		}
 		if !slices.Contains(row.Allowed, "admin") {
 			t.Errorf("%s did not run for the admin, so no refusal of it proves a role gate", verb)

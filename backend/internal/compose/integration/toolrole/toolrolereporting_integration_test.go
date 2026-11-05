@@ -8,6 +8,7 @@ package toolrole
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -18,19 +19,28 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// sweepSelection is a report selection every seeded role may save.
-func sweepSelection() map[string]any {
-	return map[string]any{"period": "this_month", "target_basis": "month", "close_window": "all_open", "metrics": []any{"bookings_won"}}
+// sweepSelection is a report selection every seeded role may save: it
+// measures the records of me, the passport's own user, which every lens
+// reaches. A wider population is a question of row scope, not of the role.
+func sweepSelection(me string) map[string]any {
+	return map[string]any{
+		"scope": ownScope(me), "period": "this_month", "target_basis": "month", "close_window": "all_open", "metrics": []any{"bookings_won"},
+	}
+}
+
+// ownScope is the reporting scope of one user's own records.
+func ownScope(me string) map[string]any {
+	return map[string]any{"kind": "owner", "id": me}
 }
 
 // targetMonths hands each target the sweep sets its own month, so no two
 // collide on one metric, scope and period.
 var targetMonths atomic.Int32
 
-func targetInput(p *recordPool, months int32) map[string]any {
+func targetInput(p *recordPool, me string, months int32) map[string]any {
 	start := time.Date(p.sweepStart.Year(), p.sweepStart.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, int(months), 0)
 	return map[string]any{
-		"metric": "meetings_held", "scope": map[string]any{"kind": "workspace"}, "period_kind": "month",
+		"metric": "meetings_held", "scope": ownScope(me), "period_kind": "month",
 		"period_start": start.Format(time.DateOnly), "value": 40, "reason": "The plan for the month.",
 	}
 }
@@ -49,12 +59,12 @@ func seededVersion(p *recordPool, id string) int {
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 var reportingFixtures = map[string]func(p *recordPool) map[string]any{
-	"create_reporting_report": func(*recordPool) map[string]any {
-		return map[string]any{"request_body": map[string]any{"name": uniqueName(), "audience": "private", "selection": sweepSelection()}}
+	"create_reporting_report": func(p *recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"name": uniqueName(), "audience": "private", "selection": sweepSelection(p.take("me"))}}
 	},
 	"update_reporting_report": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("report"), "if_version": 1, "request_body": map[string]any{
-			"name": uniqueName(), "audience": "private", "selection": sweepSelection(),
+			"name": uniqueName(), "audience": "private", "selection": sweepSelection(p.take("me")),
 		}}
 	},
 	"restore_reporting_report_revision": func(p *recordPool) map[string]any {
@@ -83,8 +93,14 @@ var reportingFixtures = map[string]func(p *recordPool) map[string]any{
 		report := p.take("drafted_report")
 		return map[string]any{"id": report, "if_version": seededVersion(p, report)}
 	},
+	"record_forecast_call": func(p *recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"amount_minor": 100000, "currency": "EUR", "scope_kind": "owner", "scope_id": p.take("me")}}
+	},
+	"create_forecast_share": func(p *recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"kind": "live", "target": "forecast", "scope_kind": "owner", "scope_id": p.take("me")}}
+	},
 	"create_reporting_target": func(p *recordPool) map[string]any {
-		return map[string]any{"request_body": targetInput(p, 1+targetMonths.Add(1))}
+		return map[string]any{"request_body": targetInput(p, p.take("me"), 1+targetMonths.Add(1))}
 	},
 	"update_reporting_target": func(p *recordPool) map[string]any {
 		target := p.take("sales_target")
@@ -92,7 +108,7 @@ var reportingFixtures = map[string]func(p *recordPool) map[string]any{
 		if err != nil {
 			months = 0
 		}
-		input := targetInput(p, int32(months))
+		input := targetInput(p, p.take("me"), int32(months))
 		input["value"], input["reason"] = 45, "More capacity."
 		return map[string]any{"id": target, "if_version": 1, "request_body": input}
 	},
@@ -140,8 +156,8 @@ var reportingFixtures = map[string]func(p *recordPool) map[string]any{
 	"explain_reporting_question_card": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("question_report"), "card_id": "q1", "request_body": map[string]any{"group": []any{p.take("company")}}}
 	},
-	"assess_sales_review": func(*recordPool) map[string]any {
-		return map[string]any{"request_body": map[string]any{"view": "sales", "selection": sweepSelection()}}
+	"assess_sales_review": func(p *recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"view": "sales", "selection": sweepSelection(p.take("me"))}}
 	},
 	"preview_filter": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"resource": "contact", "filter": map[string]any{
@@ -158,8 +174,9 @@ var reportingFixtures = map[string]func(p *recordPool) map[string]any{
 
 // reportingSeeders make the reports, targets, initiatives and findings above.
 func reportingSeeders(s sweepSeed) map[string]func() string {
+	me := apptest.SessionUserID(s.t, s.e)
 	report := func() string {
-		return s.post("/v1/analytics/reports", integration.AnyMap{"name": uniqueName(), "audience": "private", "selection": sweepSelection()})
+		return s.post("/v1/analytics/reports", integration.AnyMap{"name": uniqueName(), "audience": "private", "selection": sweepSelection(me)})
 	}
 	versioned := func(id, path string) string {
 		var row struct {
@@ -169,10 +186,13 @@ func reportingSeeders(s sweepSeed) map[string]func() string {
 		s.pool.note(id, "version", strconv.FormatInt(row.Version, 10))
 		return id
 	}
-	// An edition keeps its record only under a retention policy for it.
+	// An edition keeps its record only under a retention policy for it. The
+	// scope holds one policy, so another role's seed may have made it.
 	editionKept := func() {
-		s.ownerExec(`INSERT INTO retention_policy (object_type, retain_days, action, enabled)
-			SELECT 'report_edition', 730, 'erase', true WHERE NOT EXISTS (SELECT 1 FROM retention_policy WHERE object_type = 'report_edition')`)
+		status := s.e.Call(s.t, "POST", "/v1/retention-policies", integration.AnyMap{"scope": "report_edition", "retain_days": 730, "action": "erase"}, nil, nil)
+		if status != http.StatusCreated && status != http.StatusConflict {
+			s.t.Fatalf("keeping report editions → %d", status)
+		}
 	}
 	finding := func(kind string) string {
 		deal := s.create["deal"]()
@@ -183,7 +203,7 @@ func reportingSeeders(s sweepSeed) map[string]func() string {
 	return map[string]func() string{
 		"revised_report": func() string {
 			id := report()
-			s.call("PATCH", "/v1/analytics/reports/"+id, integration.AnyMap{"name": uniqueName(), "audience": "private", "selection": sweepSelection()}, pinned(1), nil)
+			s.call("PATCH", "/v1/analytics/reports/"+id, integration.AnyMap{"name": uniqueName(), "audience": "private", "selection": sweepSelection(me)}, pinned(1), nil)
 			return versioned(id, "/v1/analytics/reports/"+id)
 		},
 		"editioned_report": func() string {
@@ -208,12 +228,12 @@ func reportingSeeders(s sweepSeed) map[string]func() string {
 		},
 		"drafted_report": func() string {
 			id := report()
-			s.call("PUT", "/v1/analytics/reports/"+id+"/draft", integration.AnyMap{"selection": sweepSelection()}, pinned(1), nil)
+			s.call("PUT", "/v1/analytics/reports/"+id+"/draft", integration.AnyMap{"selection": sweepSelection(me)}, pinned(1), nil)
 			return versioned(id, "/v1/analytics/reports/"+id)
 		},
 		"sales_target": func() string {
 			months := 100 + targetMonths.Add(1)
-			id := s.post("/v1/analytics/targets", targetInput(s.pool, months))
+			id := s.post("/v1/analytics/targets", targetInput(s.pool, me, months))
 			s.pool.note(id, "months", strconv.Itoa(int(months)))
 			return id
 		},

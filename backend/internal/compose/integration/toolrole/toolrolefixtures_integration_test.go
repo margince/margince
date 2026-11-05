@@ -67,9 +67,9 @@ var toolRoleFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"id": p.fact(contact, "company"), "request_body": map[string]any{"contact_ids": []any{contact}}}
 	},
 	"relink_activities": func(p *recordPool) map[string]any { return map[string]any{"activity_ids": []any{p.take("activity")}} },
-	"draft_report": func(*recordPool) map[string]any {
+	"draft_report": func(p *recordPool) map[string]any {
 		return map[string]any{"name": uniqueName(), "selection": map[string]any{
-			"scope": map[string]any{"kind": "workspace"}, "period": "this_month", "target_basis": "month",
+			"scope": ownScope(p.take("me")), "period": "this_month", "target_basis": "month",
 			"close_window": "all_open", "metrics": []any{"bookings_won"}, "blocks": []any{},
 		}}
 	},
@@ -242,6 +242,14 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	},
 	"settle_conversation_claim":    byID("claim"),
 	"take_over_conversation_claim": byID("claim"),
+	// One record's history, so what the read is asked does not turn on what
+	// another role wrote last.
+	"list_audit_log": func(p *recordPool) map[string]any {
+		return map[string]any{"entity_type": "company", "entity_id": p.take("company")}
+	},
+	"put_scheduling_alias": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"alias": "sweep-" + ids.NewV7().String()[24:]}}
+	},
 	"put_anchor_company": func(p *recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"display_name": p.take("anchor_name"), "offer_summary": "Role sweep", "icp": "Role sweep"}}
 	},

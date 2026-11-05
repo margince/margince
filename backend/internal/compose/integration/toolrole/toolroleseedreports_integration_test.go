@@ -28,9 +28,8 @@ import (
 // reportSeeders make what the reporting, forecast and import reads find. That
 // is a saved run, a report, a share, an input check, an import and a document.
 func reportSeeders(s sweepSeed) map[string]func() string {
-	selection := func() integration.AnyMap {
-		return integration.AnyMap{"period": "this_month", "target_basis": "month", "close_window": "all_open", "metrics": []string{"bookings_won"}}
-	}
+	me := apptest.SessionUserID(s.t, s.e)
+	selection := func() integration.AnyMap { return sweepSelection(me) }
 	return map[string]func() string{
 		"report_run": func() string {
 			var run struct {
@@ -66,7 +65,7 @@ func reportSeeders(s sweepSeed) map[string]func() string {
 			return ""
 		},
 		"forecast_snapshot": func() string { return ownForecastSnapshot(s) },
-		"import_run": func() string {
+		"import_run": s.alone(func() string {
 			profile, status := importjobtest.UploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
 			if status != http.StatusOK {
 				s.t.Fatalf("uploading the import's file → %d", status)
@@ -76,7 +75,7 @@ func reportSeeders(s sweepSeed) map[string]func() string {
 				s.t.Fatalf("starting the import → %d", status)
 			}
 			return run.ID
-		},
+		}),
 		"corpus_document": func() string {
 			corpus := s.create["corpus"]()
 			form, contentType := apptest.MultipartDocument(s.t, "sweep.md", "text/markdown", []byte("# Role sweep\n"))
@@ -149,15 +148,20 @@ type batchSeed struct {
 func toolRoleBatchSeeders(t *testing.T, e *apptest.AppEnv) []batchSeed {
 	t.Helper()
 	// One brief runs per user a day and ranks at most a handful of open deals.
-	// So a role's items are ranked after its run is cleared and the deals an
-	// earlier role's calls left open are closed.
+	// So the seat's items are ranked after its run is cleared and its earlier
+	// open deals are closed. It ranks as an own-scope seat, so another role's
+	// deals, seeded at the same time, are not in its reach.
 	brief := func(wanted map[string]int) map[string][]string {
-		if _, err := e.Owner.Exec(t.Context(), `DELETE FROM brief_run WHERE user_id = $1`, apptest.SessionUserID(t, e)); err != nil {
+		installationSeeds.Lock()
+		defer installationSeeds.Unlock()
+		me := apptest.SessionUserID(t, e)
+		if _, err := e.Owner.Exec(t.Context(), `DELETE FROM brief_run WHERE user_id = $1`, me); err != nil {
 			t.Fatalf("clearing the day's brief: %v", err)
 		}
-		if _, err := e.Owner.Exec(t.Context(), `UPDATE deal SET archived_at = now() WHERE archived_at IS NULL`); err != nil {
-			t.Fatalf("closing an earlier role's deals: %v", err)
+		if _, err := e.Owner.Exec(t.Context(), `UPDATE deal SET archived_at = now() WHERE archived_at IS NULL AND owner_id = $1`, me); err != nil {
+			t.Fatalf("closing the seat's earlier deals: %v", err)
 		}
+		defer sweepSeed{t: t, e: e}.asRoles("rep")()
 		stages := apptest.DiscoverSeededPipeline(t, e)
 		deals := map[string][]string{}
 		for _, kind := range []string{"brief_item", "snoozed_brief_item"} {
@@ -210,7 +214,7 @@ func companySeeders(s sweepSeed) map[string]func() string {
 		},
 		// Seeded as a call takes it, so as whichever role is being swept; only
 		// the admin uploads the company's own logo.
-		"anchor_logo": func() string {
+		"anchor_logo": s.alone(func() string {
 			defer s.asRoles("admin")()
 			upload(s, "/v1/company/logo")
 			upload(s, "/v1/company/logo/icon")
@@ -219,7 +223,7 @@ func companySeeders(s sweepSeed) map[string]func() string {
 			}
 			s.call("GET", "/v1/company", nil, nil, &company)
 			return company.CompanyID
-		},
+		}),
 		"entity_logo": func() string {
 			entity := s.create["legal_entity"]()
 			upload(s, "/v1/legal-entities/"+entity+"/logo")

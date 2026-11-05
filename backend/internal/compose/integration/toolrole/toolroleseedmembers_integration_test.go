@@ -7,10 +7,9 @@ package toolrole
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -173,16 +172,23 @@ func introAsk(s sweepSeed, active func(role string, teams ...string) string) str
 func (s sweepSeed) asColleague(user string) sweepSeed {
 	s.t.Helper()
 	s.ownerExec(`UPDATE app_user SET password_hash = (SELECT password_hash FROM app_user WHERE id = $1) WHERE id = $2`, apptest.SessionUserID(s.t, s.e), user)
-	transport, ok := s.e.Client.Transport.(*http.Transport)
-	jar, err := cookiejar.New(nil)
-	if !ok || err != nil {
-		s.t.Fatalf("the harness client cannot be copied for a second seat: %T, %v", s.e.Client.Transport, err)
-	}
-	colleague := *s.e
-	colleague.Client = &http.Client{Transport: transport.Clone(), Jar: jar}
-	s.e = &colleague
-	s.call("POST", "/v1/auth/login", integration.AnyMap{"email": s.pool.fact(user, "email"), "password": "correct-horse-battery"}, nil, nil)
+	s.e = s.e.AsSecondSeat(s.t, s.pool.fact(user, "email"), "correct-horse-battery")
 	return s
+}
+
+// installationSeeds is held by a seed of what the whole installation has one
+// of, such as the Telegram bot. It is held too by a seed the shared job queue
+// works, such as an import run. Each role's passes seed at once, and two such
+// seeds at once would race for the one record or take each other's jobs.
+var installationSeeds sync.Mutex
+
+// alone is seed run while no other role's seed of the installation runs.
+func (s sweepSeed) alone(seed func() string) func() string {
+	return func() string {
+		installationSeeds.Lock()
+		defer installationSeeds.Unlock()
+		return seed()
+	}
 }
 
 // asRoles gives the signed-in user these roles for a seed, and answers the

@@ -80,8 +80,8 @@ func TransferProjectOwnershipTx(ctx context.Context, tx pgx.Tx, in TransferProje
 	if in.FromOwnerID == in.ToOwnerID {
 		return 0, &SameOwnerError{}
 	}
-	// An own-scope seat's write scope holds no other seat to hand work to, so a
-	// handover is a wider scope's act; recorded as that check, decided below.
+	// An own-scope seat's write scope holds no other seat to hand work to. So a
+	// handover is a wider scope's act, recorded as that check and decided below.
 	if p, ok := principal.Actor(ctx); ok {
 		teamScope := auth.Check{RowScope: principal.RowScopeTeam}
 		auth.RecordDecision(ctx, teamScope, teamScope.HeldBy(p))
