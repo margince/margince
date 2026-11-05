@@ -16,9 +16,9 @@ import (
 // TestEveryPooledDSNRunsProductionsExecMode covers every pool this package has
 // handed out, not the one a test happened to ask for.
 //
-// A mode without a statement cache plans every statement on every call, and on a
-// statement carrying the content gate that planning costs far more than running
-// it. So the lane stays on the mode cmd/api runs. The two DSNs come from different
+// A mode without a statement cache plans every statement on every call. On a
+// statement carrying the content gate, that costs far more than running it. So
+// the lane stays on the mode cmd/api runs. The two DSNs come from different
 // env vars, so a mode exported on one would escape an app-pool-only assertion.
 func TestEveryPooledDSNRunsProductionsExecMode(t *testing.T) {
 	// ownerConn migrates, which is the precondition Pool refuses to run before.

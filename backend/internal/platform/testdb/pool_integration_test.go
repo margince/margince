@@ -27,10 +27,9 @@ import (
 // database.NewPool's per-connection setup that a hand-built pgxpool config
 // silently drops — as an earlier revision of this pool did.
 //
-// The bind pins the idiom itself: pgx's exec and simple_protocol modes infer
-// parameter types from the Go values and would fail on this slice, so a future
-// change of mode meets this test rather than a record store. jit is the half that
-// catches the construction regressing.
+// The bind pins the idiom itself. pgx's exec and simple_protocol modes infer
+// parameter types from the Go values and would fail on this slice. jit is the
+// half that catches the construction regressing.
 func TestSharedPoolKeepsTheProductionConnectionSetup(t *testing.T) {
 	pool := sharedAppPool(t)
 	ctx := context.Background()

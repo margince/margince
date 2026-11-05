@@ -43,7 +43,7 @@ import (
 // running, never the one that broke the ordering.
 //
 // A pool that predated the drop would also hold statements typed against the old
-// schema, which is why the shared pool can run production's caching exec mode.
+// schema. Refusing it here is what lets the shared pool cache statements.
 //
 // Unrecoverable within the package either way, because the pool is memoized for
 // the process: nothing after the mistake re-opens it.
@@ -75,9 +75,9 @@ var (
 //	                          promptly instead of holding its high-water mark
 //	                          for the rest of the run.
 //
-// All of these change how many connections exist. None changes how a query is
-// executed: the lane runs the exec mode cmd/api runs, because the planner is most
-// of the lane's time and a mode without a cache plans every statement every call.
+// All of these change how many connections exist. None changes how a query runs.
+// The lane keeps cmd/api's exec mode because planning is most of its time, and a
+// mode without a cache plans every statement on every call.
 var testPoolParams = map[string]string{
 	"pool_min_conns":          "0",
 	"pool_max_conn_idle_time": "30s",
