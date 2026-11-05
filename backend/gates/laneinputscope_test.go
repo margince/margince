@@ -272,18 +272,32 @@ func scriptsUnder(targets map[string]*recipeTarget, vars map[string]string, root
 }
 
 // delegatedTargets reads the targets a `$(MAKE) a b` line pulls in. A `-C` line
-// is a sub-make into another directory: it runs a different Makefile, so it adds
-// no edge to this graph and its scripts are that directory's own.
-//
-// The environment prefix is stripped first, because `make check` is spelled
-// `@PHASE_TIMER_OWNED=1 $(MAKE) check-backend` — a reader that required the
-// line to OPEN with $(MAKE) followed neither half of the merge gate and judged
-// it against one timer script.
+// runs a different Makefile, so it adds no edge to this graph.
+func delegatedTargets(command string) []string {
+	var targets []string
+	for _, sub := range subMakes(command) {
+		if sub.dir == "" {
+			targets = append(targets, sub.targets...)
+		}
+	}
+	return targets
+}
+
+// subMake is one `$(MAKE)` simple command: the directory `-C` sends it to, or
+// "" for this Makefile, and the targets it names.
+type subMake struct {
+	dir     string
+	targets []string
+}
+
+// subMakes strips the environment prefix first, because `make check` starts
+// its lanes as `@CHECK_WRITERS_RAN=1 PHASE_TIMER_OWNED=1 $(MAKE) …`. A reader
+// that required the line to open with $(MAKE) would follow no lane at all.
 //
 // Each simple command of the line counts on its own, because `make sbom-gate`
 // runs `$(MAKE) sbom` inside a shell loop written on one line.
-func delegatedTargets(command string) []string {
-	var targets []string
+func subMakes(command string) []subMake {
+	var found []subMake
 	for _, simple := range simpleCommands(strings.TrimLeft(command, " \t@+-")) {
 		// Words, not a split on " ": make separates a recipe's words with a tab
 		// as readily as with a space.
@@ -291,11 +305,17 @@ func delegatedTargets(command string) []string {
 		for len(words) > 0 && (slices.Contains(shellKeywords, words[0]) || environmentAssignment.MatchString(words[0])) {
 			words = words[1:]
 		}
-		if len(words) == 0 || words[0] != "$(MAKE)" || slices.Contains(words, "-C") {
+		if len(words) == 0 || words[0] != "$(MAKE)" {
 			continue
 		}
+		var sub subMake
 		for i := 1; i < len(words); i++ {
 			word := words[i]
+			if word == "-C" && i+1 < len(words) {
+				i++
+				sub.dir = words[i]
+				continue
+			}
 			if bareRedirection.MatchString(word) {
 				i++ // the file after `>` is no target either
 				continue
@@ -305,10 +325,11 @@ func delegatedTargets(command string) []string {
 			if strings.HasPrefix(word, "-") || strings.ContainsAny(word, "$()<>") || environmentAssignment.MatchString(word) {
 				continue
 			}
-			targets = append(targets, word)
+			sub.targets = append(sub.targets, word)
 		}
+		found = append(found, sub)
 	}
-	return targets
+	return found
 }
 
 // simpleCommands splits a recipe line where a shell ends one simple command:
@@ -567,16 +588,16 @@ func TestTheCensusFailsOnAScopeThatOmitsAScriptItsLaneRuns(t *testing.T) {
 func TestARecursiveMakeBehindAnEnvironmentPrefixIsStillAnEdge(t *testing.T) {
 	t.Parallel()
 
-	// `make check` is spelled `@PHASE_TIMER_OWNED=1 $(MAKE) check-backend`, and a
-	// reader that required the line to open with $(MAKE) followed neither half of
-	// the merge gate — it saw one timer script where two whole trees of gates
-	// hang. The census shape that fails short is the one this file exists to
-	// refuse, so the spelling is a case rather than a comment.
+	// `make check` starts its lanes behind an environment prefix, and a reader
+	// that required the line to open with $(MAKE) followed none of them. It saw
+	// one timer script where whole trees of gates hang. The census shape that
+	// fails short is the one this file exists to refuse, so the spelling is a case.
 	for command, want := range map[string][]string{
-		"\t@PHASE_TIMER_OWNED=1 $(MAKE) check-backend":   {"check-backend"},
-		"\tPHASE_TIMER_OWNED=1 $(MAKE) -C backend check": nil,
-		"\t$(MAKE) fe-drift":                             {"fe-drift"},
-		"\t@bash scripts/phase-timer.sh reset":           nil,
+		"\t@PHASE_TIMER_OWNED=1 $(MAKE) check-backend":                         {"check-backend"},
+		"\t@CHECK_WRITERS_RAN=1 PHASE_TIMER_OWNED=1 $(MAKE) -j4 check-lane-fe": {"check-lane-fe"},
+		"\tPHASE_TIMER_OWNED=1 $(MAKE) -C backend check":                       nil,
+		"\t$(MAKE) fe-drift":                   {"fe-drift"},
+		"\t@bash scripts/phase-timer.sh reset": nil,
 	} {
 		if got := delegatedTargets(command); !slices.Equal(got, want) {
 			t.Errorf("delegatedTargets(%q) = %v, want %v", command, got, want)
@@ -602,6 +623,9 @@ func TestARecursiveMakeInsideACompoundLineIsStillAnEdge(t *testing.T) {
 		// A separator inside quotes joins nothing.
 		"\t@$(MAKE) GO_TEST_FLAGS='-run=A|B' test-integration": {"test-integration"},
 		"\t@echo \"run; $(MAKE) fe-lint by hand\"":             nil,
+		// A `make check` lane: its log folder, the sub-make with its log, then
+		// the script that reports the lane.
+		"\t@mkdir -p .tmp/l && PHASE_LANE=fe $(MAKE) check-fe >.tmp/l/fe.log 2>&1; bash scripts/check-lane-end.sh fe $$? .tmp/l/fe.log": {"check-fe"},
 	} {
 		if got := delegatedTargets(command); !slices.Equal(got, want) {
 			t.Errorf("delegatedTargets(%q) = %v, want %v", command, got, want)

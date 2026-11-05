@@ -23,7 +23,9 @@ plant() {
   mkdir -p "$repo/scripts" "$repo/backend" "$repo/tools" "$repo/composition"
   cp "$REPO/Makefile" "$repo/Makefile"
   cp "$REPO/backend/Makefile" "$repo/backend/Makefile"
-  cp "$SCRIPT_DIR/check-make-target-parity.sh" "$SCRIPT_DIR/make-help.sh" "$repo/scripts/"
+  # check-lane-end.sh too: a dry run of `make check` runs each lane's line,
+  # which holds $(MAKE), and that line ends in the script.
+  cp "$SCRIPT_DIR/check-make-target-parity.sh" "$SCRIPT_DIR/make-help.sh" "$SCRIPT_DIR/check-lane-end.sh" "$repo/scripts/"
   if [[ -n "$edit" ]]; then
     sed -i.orig -e "$edit" "$repo/Makefile"
     if cmp -s "$repo/Makefile" "$repo/Makefile.orig"; then
