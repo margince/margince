@@ -97,9 +97,9 @@ function hasValues(profile: Profile): boolean {
 /**
  * Why this reader may not look the contact up, or undefined when they may.
  * A run writes the provider's details onto the contact, so it needs the right
- * to edit it: the same predicate the page's other write verbs ask, read from
- * the page's own cached contact. Until that contact arrives the button stands,
- * and the server's refusal (WriteRefused) covers a race.
+ * to edit it. That is the predicate the page's other write verbs ask, read
+ * from the page's own cached contact. Until that contact arrives the button
+ * stands, and the server's refusal (WriteRefused) covers a race.
  */
 function useLookupRefusal(contactId: string): string | undefined {
   const t = useT();

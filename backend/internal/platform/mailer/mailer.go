@@ -254,7 +254,7 @@ func (s SMTP) connect(ctx context.Context, addr string) (*smtp.Client, error) {
 
 // exchangeDeadline is when the relay exchange must end: 30 seconds from now,
 // or the caller's own deadline when that comes first. A caller that stops
-// waiting for the relay also stops the exchange, so the relay cannot take the
+// waiting for the relay also stops the exchange. So the relay cannot take the
 // message after the caller reported it as not taken.
 func exchangeDeadline(ctx context.Context) time.Time {
 	deadline := time.Now().Add(30 * time.Second)

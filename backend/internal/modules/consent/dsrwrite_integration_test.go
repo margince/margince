@@ -205,9 +205,9 @@ func TestARepeatedErasureFulfilmentIsAccepted(t *testing.T) {
 	}
 }
 
-// An erasure is answered from a fixed list. Text an officer typed is refused,
-// and refused before anything is erased: the officer learns it at once, and
-// nothing they wrote is thrown away without a word.
+// An erasure is answered from a fixed list. Text an officer typed is refused
+// before anything is erased. The officer learns it at once, and nothing they
+// wrote is thrown away without a word.
 //
 // Mutation: drop the refusal in FulfilErasure, or move it after the erase,
 // and this fails.

@@ -19,7 +19,7 @@ import { DateInput } from "../design-system/dateinput";
 import { focusableWithin } from "../design-system/dialogfocus";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
-import { Markdown } from "../design-system/markdown";
+import { NoteMarkdown } from "../design-system/markdown";
 import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { formatActivityWhen } from "../format/activitywhen";
@@ -361,7 +361,7 @@ export function TaskDetailDialog({
               {/* Markdown, as the timeline draws the same body. */}
               {task.body && (
                 <div className="t-body task-detail-body">
-                  <Markdown source={task.body} autolink />
+                  <NoteMarkdown source={task.body} />
                 </div>
               )}
               <div className="t-caption task-detail-meta">

@@ -17,10 +17,12 @@ const readViewVerb = "read_view"
 // queryParameter is one parameter of an operation, decoded for its name, where
 // it sits and the JSON type its schema gives it.
 type queryParameter struct {
-	Ref    string `yaml:"$ref"`
-	Name   string `yaml:"name"`
-	In     string `yaml:"in"`
-	Schema struct {
+	Ref  string `yaml:"$ref"`
+	Name string `yaml:"name"`
+	In   string `yaml:"in"`
+	// Required is read for headers: the door must send one a route demands.
+	Required bool `yaml:"required"`
+	Schema   struct {
 		Ref  string `yaml:"$ref"`
 		Type any    `yaml:"type"`
 	} `yaml:"schema"`
@@ -33,10 +35,11 @@ type viewQuery struct{ name, jsonType string }
 // query parameters, whether the route takes If-Match and a JSON body, and the
 // summary that describes the verb.
 type routeShape struct {
-	queries []viewQuery
-	ifMatch bool
-	body    bool
-	summary string
+	queries        []viewQuery
+	ifMatch        bool
+	idempotencyKey bool
+	body           bool
+	summary        string
 	// bodySchema is the route's JSON body schema, $refs resolved;
 	// answerSchema is its first 2xx answer's.
 	bodySchema   string
@@ -108,6 +111,12 @@ func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryP
 			}
 			if param.In == "header" && param.Name == "If-Match" {
 				shape.ifMatch = true
+			}
+			if param.In == "header" && param.Name == "Idempotency-Key" && param.Required {
+				shape.idempotencyKey = true
+			}
+			if param.In == "header" && param.Required && param.Name != "If-Match" && param.Name != "Idempotency-Key" {
+				return nil, fmt.Errorf("%s requires header %s, which the in-process door cannot send", p.Route, param.Name)
 			}
 			if param.In != "query" {
 				continue
@@ -191,8 +200,8 @@ var routeVerbShapes = map[string]routeVerbShape{
 	sort.Strings(routes)
 	for _, route := range routes {
 		shape := shapes[route]
-		fmt.Fprintf(&b, "\t%q: {Summary: %q, IfMatch: %t, Body: %t, BodySchema: %q, AnswerSchema: %q, Query: []viewQuery{",
-			route, shape.summary, shape.ifMatch, shape.body, shape.bodySchema, shape.answerSchema)
+		fmt.Fprintf(&b, "\t%q: {Summary: %q, IfMatch: %t, IdempotencyKey: %t, Body: %t, BodySchema: %q, AnswerSchema: %q, Query: []viewQuery{",
+			route, shape.summary, shape.ifMatch, shape.idempotencyKey, shape.body, shape.bodySchema, shape.answerSchema)
 		for i, q := range shape.queries {
 			if i > 0 {
 				b.WriteString(", ")

@@ -114,7 +114,7 @@ func (s *Store) RecordHealthTx(
 	}
 	return insertHealthRow(ctx, tx, healthRow{
 		ProjectID: in.ProjectID, State: in.State, Note: note, AssessedAt: assessedAt,
-		Source: sourceHuman, SourceAuthor: trimmedOrNil(in.SourceAuthor), CapturedBy: by,
+		Source: healthSource(ctx), SourceAuthor: trimmedOrNil(in.SourceAuthor), CapturedBy: by,
 	})
 }
 
@@ -150,7 +150,7 @@ func (s *Store) CorrectHealth(
 		}
 		out, err = insertHealthRow(ctx, tx, healthRow{
 			ProjectID: in.ProjectID, State: in.State, Note: note, AssessedAt: target.AssessedAt,
-			Source: sourceHuman, SourceAuthor: trimmedOrNil(in.SourceAuthor), CapturedBy: by,
+			Source: healthSource(ctx), SourceAuthor: trimmedOrNil(in.SourceAuthor), CapturedBy: by,
 			Supersedes: &in.AssessmentID,
 		})
 		return err

@@ -38,6 +38,8 @@ A security reason means the agent would get something its user could not safely 
   as their agent, and fails where only the agent is refused.
 - `TestTheToolRoleMatrixIsPublished` measures what each role can do, in
   [mcp-tool-roles.md](../reference/mcp-tool-roles.md).
+- `TestTheMCPParityCatalogIsPublished` counts how much of the web app is open to an agent, in
+  [mcp-parity.md](../reference/mcp-parity.md).
 
 ## What this does not ask for
 

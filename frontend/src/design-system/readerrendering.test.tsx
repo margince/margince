@@ -32,14 +32,18 @@ function answer(status: number, body: unknown) {
   return fetch;
 }
 
-function draw(locale: Locale, language: "de" | "en" | "vi" | null) {
+function draw(
+  locale: Locale,
+  language: "de" | "en" | "vi" | null,
+  note = false,
+) {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
-        <ReaderRendering activityId={ACTIVITY} language={language}>
+        <ReaderRendering activityId={ACTIVITY} language={language} note={note}>
           <p>{ORIGINAL}</p>
         </ReaderRendering>
       </LocaleProvider>
@@ -127,4 +131,34 @@ describe("ReaderRendering", () => {
       });
     }
   }
+});
+
+// A note's rendering is a note's markdown, drawn as the original is: emphasis
+// as emphasis, and each line its own line. A mail's stays plain text.
+describe("a note's rendering", () => {
+  const body = "**Next step:** send the offer\nName: A\nEmail: b@example.com";
+
+  it("reads as the note it renders", async () => {
+    answer(200, { ...rendered, body });
+    const { container } = draw("en", "de", true);
+    fireEvent.click(
+      screen.getByRole("button", { name: en["readerRendering.show"] }),
+    );
+    expect(await screen.findByText("Next step:")).toBeTruthy();
+    const shown = container.querySelector(".readerrendering__body");
+    expect(shown?.querySelector("strong")?.textContent).toBe("Next step:");
+    expect(shown?.querySelectorAll("br")).toHaveLength(2);
+  });
+
+  it("keeps a mail's rendering as text", async () => {
+    answer(200, { ...rendered, body });
+    const { container } = draw("en", "de");
+    fireEvent.click(
+      screen.getByRole("button", { name: en["readerRendering.show"] }),
+    );
+    expect(
+      await screen.findByText(body, { normalizer: (t) => t }),
+    ).toBeTruthy();
+    expect(container.querySelector(".readerrendering__body strong")).toBeNull();
+  });
 });

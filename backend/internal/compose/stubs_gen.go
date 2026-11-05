@@ -1555,6 +1555,10 @@ func (stubs) RetractQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "RetractQualifyingEvent")
 }
 
+func (stubs) ListContactStops(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListContactStops")
+}
+
 func (stubs) SuppressContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SuppressContact")
 }
@@ -2101,6 +2105,18 @@ func (stubs) BackfillEmploymentImport(w nethttp.ResponseWriter, r *nethttp.Reque
 
 func (stubs) ResolveEntities(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ResolveEntities")
+}
+
+func (stubs) ListExistingCustomerNotices(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListExistingCustomerNotices")
+}
+
+func (stubs) DeclareExistingCustomerNotice(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeclareExistingCustomerNotice")
+}
+
+func (stubs) WithdrawExistingCustomerNotice(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "WithdrawExistingCustomerNotice")
 }
 
 func (stubs) CreateFilteredExport(w nethttp.ResponseWriter, r *nethttp.Request) {

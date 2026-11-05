@@ -123,7 +123,7 @@ func (s *Store) ReviveLostDeal(ctx context.Context, in ReviveLostDealInput) (boo
 			return err
 		}
 		revived = true
-		return in.Record(ctx, tx, in.DealID, moved.Deal.Name)
+		return in.Record(ctx, tx, in.DealID, moved.Name)
 	})
 	return revived, err
 }

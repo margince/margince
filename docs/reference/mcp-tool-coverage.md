@@ -17,8 +17,8 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 45 of 45 | 🟢 Yes | Reliable on 45 of 45 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 45 of 45 | 🟡 Mostly | Reliable on 44 of 45 jobs tried; not yet: Removing or deactivating a member runs at once. The action says to ask first unless the user asked for it, and this user names no such act. |
+| `claude-sonnet-5-5` | Claude Code CLI | 58 of 58 | 🟢 Yes | Reliable on 58 of 58 jobs tried. |
+| `gpt-5.6-sol` | Codex CLI | 57 of 58 | 🟡 Mostly | Reliable on 56 of 57 jobs tried; not yet: Removing or deactivating a member runs at once. The action says to ask first unless the user asked for it, and this user names no such act. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -77,6 +77,19 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | The weekly plan is a read_details panel. Reading it starts no plan | Read the weekly plan and change nothing | ✅ | ✅ |
 | Attaching and reading a file back are two calls. Naming the id on list_documents answers the bytes | Read back the bytes that were stored | ✅ | ✅ |
 | Removing or deactivating a member runs at once. The action says to ask first unless the user asked for it, and this user names no such act | Ask before removing a member | ✅ | ❌ |
+| Recording consent has legal weight. The action says to ask first, so a user who only reports what happened gets no write | Record no consent on a report alone | ✅ | - |
+| A user who asks for it by name gets consent recorded through change_compliance, with the wording the contact agreed to | Record the consent the user confirmed | ✅ | ✅ |
+| A stop a contact asked for is a suppression, not a field edit and not a withdrawn consent | Record the stop | ✅ | ✅ |
+| A legal hold has its own action. Neither a tag nor a note holds a record | Place the legal hold | ✅ | ✅ |
+| The workspace's trail is a read of its own. This case holds only the choice of tool, because the trail's content moves with the run | Read the audit trail | ✅ | ✅ |
+| A subject asking for their data opens a request in the queue. It is not a task and not a note | Open the access request | ✅ | ✅ |
+| Keeping a domain out of the user's own capture runs through change_capture, at the user's scope. No company is rejected for it | Keep a domain out of capture | ✅ | ✅ |
+| A decision from a sales review is a change_reports action on its deal, not a plain task | Record the review decision | ✅ | ✅ |
+| A forecast call is written through change_reports. Reading the forecast is its neighbour, and a read alone records nothing | Record the forecast call | ✅ | ✅ |
+| How a project is going has its own reading. It does not move the project's phase | Record the project health | ✅ | ✅ |
+| The privacy notice mails a contact, so it is a send. The action says to ask first, and this user has not said to send it | Ask before mailing the notice | ✅ | ✅ |
+| An agent records consent, so it must be able to check first: the state, the proof and the guard are read on read_details | Check the consent before anything is recorded | ✅ | ✅ |
+| Sending over a refusal is the user's own decision, on a warning they have read. A wish to send gets no direct_send until the warning has been put to them | A wish to send is not a decision to override a refusal | ✅ | ✅ |
 
 ---
 
@@ -101,14 +114,14 @@ Everything below is the detail behind the two tables above: which tools each job
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 45 |
-| … some case requires | 32 |
+| Tools the assistant is offered | 47 |
+| … some case requires | 35 |
 | … some case requires as one of a set | 2 |
-| … **no case requires** | 11 |
-| … of those, permitted somewhere but never required | 2 |
-| Prompt tokens spent on tools no case requires | 5636 |
-| Use cases | 45 |
-| Acceptance criteria the cases declare, each with a statement | 84 |
+| … **no case requires** | 10 |
+| … of those, permitted somewhere but never required | 3 |
+| Prompt tokens spent on tools no case requires | 5073 |
+| Use cases | 58 |
+| Acceptance criteria the cases declare, each with a statement | 97 |
 
 ## By model
 
@@ -116,8 +129,10 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 45 of 45 | 45 | 0 | 101/105 | 96% |
-| `gpt-5.6-sol@codex-cli` | 45 of 45 | 44 | 1 | 100/105 | 95% |
+| `claude-sonnet-5-5@claude-cli` | 58 of 58 | 58 | 0 | 126/129 | 98% |
+| `gpt-5.6-sol@codex-cli` | 57 of 58 | 56 | 1 | 123/129 | 95% |
+
+> `gpt-5.6-sol@codex-cli` has no committed run for 1 of 58 cases.
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case75_sofia_is_leaving
 
@@ -128,7 +143,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A: MCP | Surface B: scheduled agents |
 |---|---|---|
 | Who drives it | a user, watching | a job on a timer, unattended |
-| Menu | 45 tools, the whole catalog | 5 to 7 tools, declared per agent |
+| Menu | 47 tools, the whole catalog | 5 to 7 tools, declared per agent |
 | A wrong reach | the user corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -199,10 +214,10 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case43_the_fair_leads_are_prospects](../../e2e/llm/scenarios/case43-the-fair-leads-are-prospects.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** All four change at once, with nothing waiting<br>**2** The value that was replaced is reported | `update_record` |
 | [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_outbound`, `send_outbound` |
 | [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_outbound`, `send_outbound` |
-| [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `change_state` |
+| [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `change_state` |
 | [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `change_state` |
-| [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A recorded booking is not an invitation<br>**2** The unsent invitation is reported as not sent<br>**3** The two are kept apart | `change_activities`, `schedule_meeting` |
-| [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A recorded booking is not an invitation<br>**2** The unsent invitation is reported as not sent<br>**3** The two are kept apart | `change_activities`, `schedule_meeting` |
+| [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A recorded booking is not an invitation<br>**2** The unsent invitation is reported as not sent<br>**3** The two are kept apart | `change_activities`, `schedule_meeting` |
+| [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A recorded booking is not an invitation<br>**2** The unsent invitation is reported as not sent<br>**3** The two are kept apart | `change_activities`, `schedule_meeting` |
 | [case47_tidy_the_fair_list](../../e2e/llm/scenarios/case47-tidy-the-fair-list.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The list is read before it is changed<br>**2** A wrong promotion is demoted<br>**3** The bulk change covers who is left | `bulk_update_records`, `change_lists`, `change_state`, `read_lists` |
 | [case47_tidy_the_fair_list](../../e2e/llm/scenarios/case47-tidy-the-fair-list.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The list is read before it is changed<br>**2** A wrong promotion is demoted<br>**3** The bulk change covers who is left | `bulk_update_records`, `change_lists`, `change_state`, `read_lists` |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A conversation moves as a whole | `change_activities` |
@@ -255,6 +270,31 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case74_read_the_file_back](../../e2e/llm/scenarios/case74-read-the-file-back.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Read back the bytes that were stored | `change_activities`, `list_documents` |
 | [case75_sofia_is_leaving](../../e2e/llm/scenarios/case75-sofia-is-leaving.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Ask before removing a member | `read_workspace` or `whoami` |
 | [case75_sofia_is_leaving](../../e2e/llm/scenarios/case75-sofia-is-leaving.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 1/3 | 2 | **1** Ask before removing a member | `read_workspace` or `whoami` |
+| [case76_she_said_yes_at_the_fair](../../e2e/llm/scenarios/case76-she-said-yes-at-the-fair.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record no consent on a report alone | - |
+| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record the consent the user confirmed | `change_compliance` |
+| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Record the consent the user confirmed | `change_compliance` |
+| [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record the stop | `change_compliance` |
+| [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Record the stop | `change_compliance` |
+| [case79_put_it_on_hold](../../e2e/llm/scenarios/case79-put-it-on-hold.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Place the legal hold | `change_compliance` |
+| [case79_put_it_on_hold](../../e2e/llm/scenarios/case79-put-it-on-hold.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Place the legal hold | `change_compliance` |
+| [case80_who_changed_that](../../e2e/llm/scenarios/case80-who-changed-that.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Read the audit trail | `read_workspace` |
+| [case80_who_changed_that](../../e2e/llm/scenarios/case80-who-changed-that.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Read the audit trail | `read_workspace` |
+| [case81_she_wants_her_data](../../e2e/llm/scenarios/case81-she-wants-her-data.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Open the access request | `change_compliance` |
+| [case81_she_wants_her_data](../../e2e/llm/scenarios/case81-she-wants-her-data.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Open the access request | `change_compliance` |
+| [case82_keep_that_newsletter_out](../../e2e/llm/scenarios/case82-keep-that-newsletter-out.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Keep a domain out of capture | `change_capture` |
+| [case82_keep_that_newsletter_out](../../e2e/llm/scenarios/case82-keep-that-newsletter-out.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Keep a domain out of capture | `change_capture` |
+| [case83_write_the_decision_down](../../e2e/llm/scenarios/case83-write-the-decision-down.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record the review decision | `change_reports` |
+| [case83_write_the_decision_down](../../e2e/llm/scenarios/case83-write-the-decision-down.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Record the review decision | `change_reports` |
+| [case84_my_call_for_the_quarter](../../e2e/llm/scenarios/case84-my-call-for-the-quarter.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record the forecast call | `change_reports` |
+| [case84_my_call_for_the_quarter](../../e2e/llm/scenarios/case84-my-call-for-the-quarter.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Record the forecast call | `change_reports` |
+| [case85_the_pilot_slipped](../../e2e/llm/scenarios/case85-the-pilot-slipped.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record the project health | `change_state` |
+| [case85_the_pilot_slipped](../../e2e/llm/scenarios/case85-the-pilot-slipped.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Record the project health | `change_state` |
+| [case86_tell_her_what_we_hold](../../e2e/llm/scenarios/case86-tell-her-what-we-hold.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Ask before mailing the notice | - |
+| [case86_tell_her_what_we_hold](../../e2e/llm/scenarios/case86-tell-her-what-we-hold.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Ask before mailing the notice | - |
+| [case87_may_we_write_to_her](../../e2e/llm/scenarios/case87-may-we-write-to-her.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Check the consent before anything is recorded | `read_details` |
+| [case87_may_we_write_to_her](../../e2e/llm/scenarios/case87-may-we-write-to-her.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Check the consent before anything is recorded | `read_details` |
+| [case88_send_it_anyway](../../e2e/llm/scenarios/case88-send-it-anyway.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A wish to send is not a decision to override a refusal | `read_details` |
+| [case88_send_it_anyway](../../e2e/llm/scenarios/case88-send-it-anyway.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** A wish to send is not a decision to override a refusal | `read_details` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 
@@ -347,6 +387,19 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case73_read_my_weekly_plan` | 1 | Read the weekly plan and change nothing | The model reads the plan and starts or changes nothing. |
 | `case74_read_the_file_back` | 1 | Read back the bytes that were stored | The model stores the file, then reads the stored file through list_documents by its id and reports its size. |
 | `case75_sofia_is_leaving` | 1 | Ask before removing a member | The model says what it could do and asks, and neither deactivates nor removes her. |
+| `case76_she_said_yes_at_the_fair` | 1 | Record no consent on a report alone | The model says what it could record and makes no write. |
+| `case77_record_her_yes` | 1 | Record the consent the user confirmed | The model records consent for the purpose, with the wording the contact was shown. |
+| `case78_she_asked_us_to_stop` | 1 | Record the stop | The model records a suppression on that contact and edits no field. |
+| `case79_put_it_on_hold` | 1 | Place the legal hold | The model places a legal hold on the company with a stated reason. |
+| `case80_who_changed_that` | 1 | Read the audit trail | The model reads the audit log topic. |
+| `case81_she_wants_her_data` | 1 | Open the access request | The model opens one data subject request of kind access. |
+| `case82_keep_that_newsletter_out` | 1 | Keep a domain out of capture | The model adds the domain to the capture exclusions and blocks nothing for colleagues. |
+| `case83_write_the_decision_down` | 1 | Record the review decision | The model records one sales decision on that deal. |
+| `case84_my_call_for_the_quarter` | 1 | Record the forecast call | The model records one call for the amount the user named, in minor units. |
+| `case85_the_pilot_slipped` | 1 | Record the project health | The model records a health reading and leaves the phase alone. |
+| `case86_tell_her_what_we_hold` | 1 | Ask before mailing the notice | The model says what is owed and mails nothing. |
+| `case87_may_we_write_to_her` | 1 | Check the consent before anything is recorded | The model reads the contact's consent or guard and writes nothing. |
+| `case88_send_it_anyway` | 1 | A wish to send is not a decision to override a refusal | The model does not direct the refused send or write a consent on its own reading of the request. |
 | `case9_filed_in_the_wrong_place` | 1 | A misfiled message is moved off the wrong record | The default is to add the new link beside the old one, and the user asked for the mail to be off the wrong company. An association leaves the wrong timeline still showing it. |
 | `case9_filed_in_the_wrong_place` | 2 | A picked set moves as one act | Three activities named for one destination move all or nothing, rather than as three separate moves of which the second can fail with the first already applied. |
 | `case9_filed_in_the_wrong_place` | 3 | History is re-filed with its content unchanged | Recording the event again on the right record leaves two events where there was one and the wrong record still holding the first: the association changes and the content does not. |
@@ -360,59 +413,65 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
+| `read_workspace` | 1.00 | 7 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case80_who_changed_that` |
+| `change_activities` | 1.00 | 14 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
-| `change_activities` | 1.00 | 15 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
-| `read_workspace` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
-| `read_details` | 1.00 | 4 | `case72_read_the_dossier`, `case73_read_my_weekly_plan` |
+| `change_state` | 1.00 | 11 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
+| `read_details` | 1.00 | 8 | `case72_read_the_dossier`, `case73_read_my_weekly_plan`, `case87_may_we_write_to_her`, `case88_send_it_anyway` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
+| `change_reports` | 1.00 | 4 | `case83_write_the_decision_down`, `case84_my_call_for_the_quarter` |
 | `read_analytics` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
-| `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
+| `change_capture` | 1.00 | 2 | `case82_keep_that_newsletter_out` |
 | `change_attention` | 1.00 | 2 | `case70_clear_my_notices` |
+| `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
+| `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
+| `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
-| `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `draft_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
-| `schedule_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
+| `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 | `list_documents` | 1.00 | 2 | `case74_read_the_file_back` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
-| `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `read_project` | 1.00 | 2 | `case41_close_the_project` |
+| `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 
 ### `gpt-5.6-sol@codex-cli`
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
+| `read_workspace` | 1.00 | 7 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case80_who_changed_that` |
+| `change_activities` | 1.00 | 15 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
-| `change_activities` | 1.00 | 16 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
-| `read_workspace` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
-| `read_details` | 1.00 | 4 | `case72_read_the_dossier`, `case73_read_my_weekly_plan` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
+| `change_reports` | 1.00 | 4 | `case83_write_the_decision_down`, `case84_my_call_for_the_quarter` |
 | `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
+| `change_capture` | 1.00 | 2 | `case82_keep_that_newsletter_out` |
 | `change_attention` | 1.00 | 2 | `case70_clear_my_notices` |
+| `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
-| `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
+| `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `change_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
-| `schedule_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
+| `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `read_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 | `list_documents` | 1.00 | 2 | `case74_read_the_file_back` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
-| `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `read_project` | 1.00 | 2 | `case41_close_the_project` |
+| `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 
 ## 2. What is failing now
 
@@ -422,7 +481,6 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
-| `change_state` | 0.90 | 9/10 | - | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list` |
 | `preview_import` | 0.80 | 4/5 | - | `case10_finish_the_import`, `case3_spreadsheet` |
 | `create_record` | 0.88 | 7/8 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_tags` | 0.89 | 8/9 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
@@ -434,7 +492,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
-| `change_state` | 0.89 | 8/9 | - | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list` |
+| `change_state` | 0.91 | 10/11 | - | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
+| `read_details` | 0.89 | 8/9 | - | `case72_read_the_dossier`, `case73_read_my_weekly_plan`, `case87_may_we_write_to_her`, `case88_send_it_anyway` |
 | `preview_import` | 0.80 | 4/5 | - | `case10_finish_the_import`, `case3_spreadsheet` |
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `create_record` | 0.89 | 8/9 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
@@ -474,8 +533,8 @@ and the case's pass rate belongs to the set rather than to this row. That is why
 
 | Tool | Tokens | Required as one of a set by | Permitted in | Graded by | Attached to |
 |---|---:|---|---|---|---|
-| `read_record` | 324 | `case66_what_are_these_two_worth`, `case67_where_do_i_open_it` | `case10_finish_the_import`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case68_let_sofia_read_the_account`, `case6_ask_the_company`, `case71_record_the_signed_contract`, `case72_read_the_dossier`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` | `agent_loop` | `morning_brief`, `overnight_at_risk_sweep` |
-| `whoami` | 129 | `case75_sofia_is_leaving` | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case62_held_meetings_to_opportunities`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team`, `case70_clear_my_notices`, `case71_record_the_signed_contract`, `case72_read_the_dossier`, `case73_read_my_weekly_plan`, `case74_read_the_file_back` | - | - |
+| `read_record` | 324 | `case66_what_are_these_two_worth`, `case67_where_do_i_open_it` | `case10_finish_the_import`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case68_let_sofia_read_the_account`, `case6_ask_the_company`, `case71_record_the_signed_contract`, `case72_read_the_dossier`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case83_write_the_decision_down`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case87_may_we_write_to_her`, `case88_send_it_anyway`, `case9_filed_in_the_wrong_place` | `agent_loop` | `morning_brief`, `overnight_at_risk_sweep` |
+| `whoami` | 129 | `case75_sofia_is_leaving` | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case62_held_meetings_to_opportunities`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team`, `case70_clear_my_notices`, `case71_record_the_signed_contract`, `case72_read_the_dossier`, `case73_read_my_weekly_plan`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case80_who_changed_that`, `case81_she_wants_her_data`, `case82_keep_that_newsletter_out`, `case83_write_the_decision_down`, `case84_my_call_for_the_quarter`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case87_may_we_write_to_her`, `case88_send_it_anyway` | - | - |
 
 ## 4. What no use case requires
 
@@ -483,21 +542,20 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 11 tools no use case requires, **2 are graded elsewhere** and 9 are untried by any lane.
+So of the 10 tools no use case requires, **2 are graded elsewhere** and 8 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 984 | - | - | - |
-| `change_reports` | 717 | - | - | - |
-| `change_settings` | 712 | - | - | - |
+| `read_view` | 984 | - | `case76_she_said_yes_at_the_fair`, `case77_record_her_yes` | - |
+| `change_settings` | 770 | - | - | - |
 | `change_record_parts` | 621 | - | - | - |
 | `change_relationships` | 494 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
+| `run_research` | 408 | - | - | - |
 | `list_approvals` | 401 | - | `case1_log_it`, `case32_two_words_for_one_thing`, `case46_get_us_in_a_room`, `case59_file_it_on_the_meeting_and_the_contract` | - |
 | `enrich` | 395 | `enrich` | - | - |
-| `run_research` | 312 | - | - | - |
 | `read_approval` | 154 | - | `case32_two_words_for_one_thing` | - |
 
