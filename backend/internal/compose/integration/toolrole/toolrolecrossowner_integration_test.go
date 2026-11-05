@@ -75,9 +75,12 @@ func colleagueAnswers(t *testing.T, admin *apptest.AppEnv, seat roleSeat, owned 
 	answers := map[string]string{}
 	for n, call := range owned {
 		pool.taken = map[string][]string{}
-		args := call.args(pool)
-		before := ownedRecordStates(t, admin, pool.taken)
-		got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
+		var got apptest.MCPResult
+		var before map[string]string
+		withArgs(t, seat, call, pool, func(args map[string]any) {
+			before = ownedRecordStates(t, admin, pool.taken)
+			got = clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
+		})
 		if got.IsError && isBudgetRefusal(got.Text) {
 			t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, seat.role.Key, got.Text)
 		}

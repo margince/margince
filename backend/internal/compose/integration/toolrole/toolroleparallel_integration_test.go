@@ -138,17 +138,32 @@ func runsAlone(t *testing.T, call toolRoleCall) bool {
 	return false
 }
 
-// callAsSeat makes one call as the seat's role. A call that runs alone has its
-// records seeded as the admin, under the installation's lock, and runs there.
+// callAsSeat makes one call as the seat's role.
 func callAsSeat(t *testing.T, seat roleSeat, client *apptest.MCPClient, call toolRoleCall, pool *recordPool) (apptest.MCPResult, []string) {
 	t.Helper()
+	var got apptest.MCPResult
+	var releaseRefused []string
+	withArgs(t, seat, call, pool, func(args map[string]any) {
+		got, releaseRefused = callThroughApproval(t, seat.e, client, call.verb, args)
+	})
+	return got, releaseRefused
+}
+
+// withArgs runs run with call's arguments, as the seat's role. A call that
+// runs alone has its records seeded as the admin, under the installation's
+// lock, and run runs there too.
+//
+//craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
+func withArgs(t *testing.T, seat roleSeat, call toolRoleCall, pool *recordPool, run func(args map[string]any)) {
+	t.Helper()
 	if !runsAlone(t, call) {
-		return callThroughApproval(t, seat.e, client, call.verb, call.args(pool))
+		run(call.args(pool))
+		return
 	}
 	installationSeeds.Lock()
 	defer installationSeeds.Unlock()
 	apptest.AssignRoleTo(t, seat.e, seat.email, "admin")
 	args := call.args(pool)
 	apptest.AssignRoleTo(t, seat.e, seat.email, seat.role.Key)
-	return callThroughApproval(t, seat.e, client, call.verb, args)
+	run(args)
 }
