@@ -56,7 +56,7 @@ export function QuarterTrajectory({
   const amount = (value: number | null | undefined) =>
     reportingCompactAmount(value, trend.unit, currency, locale);
   const nowDate = formatDayMonth(
-    running ? interval.end_at : lastInstant(interval),
+    interval.end_at === evaluated_at ? interval.end_at : lastInstant(interval),
     locale,
     timezone,
   );
