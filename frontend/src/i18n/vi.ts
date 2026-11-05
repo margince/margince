@@ -5215,6 +5215,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.source.manual": "Tạo thủ công",
   "lead.source.inbound": "Khách tự liên hệ",
   "lead.source.webform": "Biểu mẫu web",
+  "lead.source.webformNamed": "Biểu mẫu web “{name}”",
   "lead.source.referral": "Giới thiệu",
   "lead.source.import": "Nhập dữ liệu",
   "lead.source.crawl": "Tìm hiểu trên web",

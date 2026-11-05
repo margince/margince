@@ -40663,6 +40663,8 @@ export interface components {
             source: string;
             /** @description The label the deprecated lead_source list gives `source`; null for connector, seed and other free values. */
             readonly source_label?: string | null;
+            /** @description The current name of the website form this lead came through; null for every other lead, and for one whose form was deleted. */
+            readonly web_form_name?: string | null;
             /** @description Where the lead came from, a key from `/lead-origins`. Null when nobody has classified the lead; such a lead scores neutral. Set by a human, an importer or capture, and the only lead fact the score and the origin filter read. */
             origin?: string | null;
             /** @description The label `/lead-origins` gives `origin`; null when `origin` is null. */
@@ -44039,6 +44041,8 @@ export interface components {
             service_extension?: string | null;
             /** @description Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
             assignable?: boolean;
+            /** @description Whether this member's seat may own records at all: an active human seat that can write, asked without the caller's own write scope. A website form's owner of new leads is checked this way, because the installation writes those leads, so its picker offers these members. Present on `listUsers`; absent means not computed. */
+            can_own_records?: boolean;
             /** @description This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree. */
             roles?: string[];
             /** @description The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have. */

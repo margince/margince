@@ -5354,6 +5354,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.source.manual": "Manuell erstellt",
   "lead.source.inbound": "Eingehend",
   "lead.source.webform": "Webformular",
+  "lead.source.webformNamed": "Webformular „{name}“",
   "lead.source.referral": "Empfehlung",
   "lead.source.import": "Import",
   "lead.source.crawl": "Webrecherche",
