@@ -68,6 +68,7 @@ LAST_CREATED="$(iso_seconds_ago 7200)" check "exactly the interval starts a run"
 LAST_CREATED="$(iso_seconds_ago 30000)" check "a gap the scheduler left starts a run" 0 1 "${health[@]}"
 LAST_CREATED="" check "no run on record starts one" 0 1 "${health[@]}"
 LAST_CREATED="" LIST_FAILS=1 check "a failed read fails and starts nothing" 1 0 "${health[@]}"
+LAST_CREATED="not-a-date" check "a date that does not parse fails and starts nothing" 1 0 "${health[@]}"
 
 # The interval is the caller's: the same age is due for one workflow and not for another.
 export WANT_WORKFLOW=cache-warm.yml

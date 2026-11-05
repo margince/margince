@@ -38,7 +38,10 @@ last_created="$(gh run list \
   --jq '.[0].createdAt // empty')"
 
 if [[ -n "$last_created" ]]; then
-  age_seconds=$((now_epoch - $(to_epoch "$last_created")))
+  # Its own assignment, so a date that does not parse stops the script under
+  # `set -e`. Inside the arithmetic it only printed an error, and a run started.
+  last_epoch="$(to_epoch "$last_created")"
+  age_seconds=$((now_epoch - last_epoch))
   if ((age_seconds < INTERVAL_SECONDS)); then
     echo "pace-workflow: $WORKFLOW last ran ${age_seconds}s ago, under ${INTERVAL_SECONDS}s; nothing to start"
     exit 0
