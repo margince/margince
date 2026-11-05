@@ -164,7 +164,7 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 // deal's owner whose grants composed them. The amounts follow the reader's
 // field mask. Each reader adds its own `WHERE` and `ORDER BY`.
 func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, error) {
-	readable := basisReadable(arg(readerOf(ctx)))
+	readable := BasisReadableSQL("a.evidence->>'basis_owner'", "d", arg(ReaderOf(ctx)))
 	amountShown, masked, err := auth.MaskExcludedClause(ctx, maskObject, "amount_minor", "d", arg)
 	if err != nil {
 		return "", err
@@ -222,10 +222,11 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 `, readable, before, after, amountShown, arg(VerdictAmountCorrection)), nil
 }
 
-// basisReadable is when the reader may read a correction's reason. The deal
-// is unowned, or the reader owns it and the reason was composed for them. A
-// colleague with row scope still sees what changed, never why.
-func basisReadable(readerPos int) string {
-	return storekit.SQLf(`(nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
-			                 AND (d.owner_id IS NULL OR d.owner_id = $%d))`, readerPos)
+// BasisReadableSQL is when the reader at readerPos may read why Margince did
+// something to the deal under alias. The deal is unowned, or the reader owns
+// it and basisOwner names them as the one the reason was composed for. A
+// colleague with row scope still sees what Margince did, never why.
+func BasisReadableSQL(basisOwner, deal string, readerPos int) string {
+	return storekit.SQLf(`(nullif(%[1]s, '') IS NOT DISTINCT FROM %[2]s.owner_id::text
+			                 AND (%[2]s.owner_id IS NULL OR %[2]s.owner_id = $%[3]d))`, basisOwner, deal, readerPos)
 }

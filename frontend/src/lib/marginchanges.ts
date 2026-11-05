@@ -22,6 +22,9 @@ export type MarginceChangeBundle =
 export type UndoMarginceChangeResult =
   components["schemas"]["UndoMarginceChangeResult"];
 export type TeamMarginceChanges = components["schemas"]["TeamMarginceChanges"];
+export type TeamMarginceOwnerlessDeal =
+  components["schemas"]["TeamMarginceOwnerlessDeal"];
+export type DealMarginceCheck = components["schemas"]["DealMarginceCheck"];
 
 /** How many open changed deals it takes before Home shows one summary row. */
 export const CHANGE_SUMMARY_FLOOR = 3;

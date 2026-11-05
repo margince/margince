@@ -53,6 +53,7 @@ type dealVerdictRead struct {
 	// newestEvidenceAt is when the newest activity, offer or stage move
 	// arrived. An Undo holds until something arrives after it.
 	newestEvidenceAt time.Time
+	sources          []verdictSource
 }
 
 // readDealVerdict reads one deal's input in the caller's transaction.
@@ -72,10 +73,12 @@ func readDealVerdict(
 			return read, err
 		}
 	}
-	if len(prior) > 0 {
-		if err := json.Unmarshal(prior, &read.in.Prior); err != nil {
-			return read, fmt.Errorf("compose: decoding the deal's earlier verdict: %w", err)
-		}
+	earlier, err := decodeVerdictRecord(prior)
+	if err != nil {
+		return read, fmt.Errorf("compose: decoding the deal's earlier verdict: %w", err)
+	}
+	for _, action := range earlier.Actions {
+		read.in.Prior = append(read.in.Prior, dealverdict.PriorAction{Kind: action.Kind, Outcome: action.Outcome})
 	}
 	read.state.Held = dealverdict.Holds(read.undone, read.newestEvidenceAt)
 	return read, nil
