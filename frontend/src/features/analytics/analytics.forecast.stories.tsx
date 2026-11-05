@@ -137,6 +137,38 @@ export const SomeDealsUnpriced: Story = {
   },
 };
 
+// Where the quarter lands, beside the sheet: the landing and the modelled
+// range stand in the rail above the receipt.
+export const WithLanding: Story = {
+  render: () => {
+    const landed = readings({
+      range_low_minor: 180_000_00,
+      range_high_minor: 310_000_00,
+    });
+    installFetchStub(
+      routes({
+        ...landed,
+        landing: {
+          amount_minor: landed.won_minor + landed.evidence_minor,
+          measure: "likely",
+          won_minor: landed.won_minor,
+          remaining_minor: landed.evidence_minor,
+        },
+      }),
+    );
+    return (
+      <StoryProviders>
+        <ForecastView selection={SELECTION} canSubmit={false} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const WithLandingDark: Story = {
+  ...WithLanding,
+  globals: { theme: "dark" },
+};
+
 // Recording what somebody believes will close, opened. The editor is a panel of
 // its own: the lead sentence says a call moves no deal, the two fields are its
 // body, and cancel and save stand in the action band under them.

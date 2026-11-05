@@ -254,7 +254,7 @@ describe("headline, actions and charts are ready on their own", () => {
     expect(
       within(
         screen.getByRole("region", { name: "Opening readings" }),
-      ).getByText("420,000 EUR"),
+      ).getByText("€420,000"),
     ).toBeVisible();
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
     expect(

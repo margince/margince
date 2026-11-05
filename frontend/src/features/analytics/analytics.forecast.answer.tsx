@@ -63,6 +63,8 @@ export function ForecastAnswer({
   period,
   landingUnrecorded = false,
   onOpenDeals,
+  landing = true,
+  density,
 }: Readonly<{
   readings: Readings;
   locale: Locale;
@@ -70,6 +72,9 @@ export function ForecastAnswer({
   // A snapshot frozen before its landing was kept: the basis is unknown.
   landingUnrecorded?: boolean;
   onOpenDeals?: () => void;
+  // False when the page places the landing readings elsewhere, beside these.
+  landing?: boolean;
+  density?: "plate";
 }>) {
   const t = useT();
   const currency = readings.base_currency;
@@ -84,7 +89,6 @@ export function ForecastAnswer({
       formatAnalyticsMoney,
     );
   const call = readings.current_call;
-  const range = rangeOf(readings.range_low_minor, readings.range_high_minor);
   const threshold = formatPercent(readings.likely_threshold / 100, locale);
 
   return (
@@ -149,7 +153,7 @@ export function ForecastAnswer({
 
       {/* The two readings of the open deals. Weighted is not a segment above:
           it counts the Likely deals too, at their probability. */}
-      <StatStrip>
+      <StatStrip density={density}>
         <StatCard
           narrow="row"
           label={t("forecast.likely")}
@@ -191,70 +195,114 @@ export function ForecastAnswer({
         </Callout>
       )}
 
-      {/* Every slot declares the narrow shape, the landing pair included: the
-          fold is the strip's, so a card that did not declare it would keep its
-          box while the rows beside it lost theirs.
-
-          Both are absent for a managed-teams reading, which covers several
-          populations at once: a landing summed across books that are called
-          separately, and a coverage rate blended over them, would each
-          describe none of them. With neither, no strip: an empty one still
-          takes its row and its gaps. A share has a range without a landing
-          when its snapshot predates the landing, so the range alone keeps
-          the strip. */}
-      {(readings.landing ||
-        readings.sufficiency ||
-        range ||
-        landingUnrecorded) && (
-        <StatStrip>
-          {readings.landing ? (
-            <LandingCard
-              landing={readings.landing}
-              currency={currency}
-              locale={locale}
-              callMinor={
-                readings.landing.measure === "manager_call"
-                  ? undefined
-                  : readings.current_call?.amount_minor
-              }
-            />
-          ) : (
-            landingUnrecorded && (
-              <StatCard
-                narrow="row"
-                label={t("forecast.landing")}
-                value={t("forecast.landingUnrecorded")}
-                detail={t("forecast.basis.unknown")}
-              />
-            )
-          )}
-          {(readings.landing || range) && (
-            <ModelRangeCard
-              label={t(`forecast.model.${period}`)}
-              range={range}
-              wonMinor={readings.won_minor}
-              unpriced={readings.eligible_count - readings.priced_count}
-              fxMissing={readings.fx_missing_count}
-              money={slot}
-              onOpen={onOpenDeals}
-            />
-          )}
-          {readings.landing?.system_minor != null && (
-            <RecordsLandingCard
-              systemMinor={readings.landing.system_minor}
-              currency={currency}
-              locale={locale}
-            />
-          )}
-          {readings.sufficiency && (
-            <SufficiencyCard
-              sufficiency={readings.sufficiency}
-              currency={currency}
-              locale={locale}
-            />
-          )}
-        </StatStrip>
+      {landing && (
+        <ForecastLanding
+          readings={readings}
+          locale={locale}
+          period={period}
+          landingUnrecorded={landingUnrecorded}
+          onOpenDeals={onOpenDeals}
+          density={density}
+        />
       )}
     </>
+  );
+}
+
+/**
+ * Where the period lands: the landing, the modelled range, what the records
+ * say and the deal value still needed.
+ */
+export function ForecastLanding({
+  readings,
+  locale,
+  period,
+  landingUnrecorded = false,
+  onOpenDeals,
+  density,
+  title,
+}: Readonly<{
+  readings: Readings;
+  locale: Locale;
+  period: ForecastPeriod;
+  landingUnrecorded?: boolean;
+  onOpenDeals?: () => void;
+  density?: "plate";
+  // Set where the readings stand as a section of their own, as in a rail.
+  title?: string;
+}>) {
+  const t = useT();
+  const currency = readings.base_currency;
+  const slot = (minor: number | null | undefined) =>
+    formatMoneyOrWord(
+      minor,
+      currency,
+      locale,
+      t("format.notForecast"),
+      formatAnalyticsMoney,
+    );
+  const range = rangeOf(readings.range_low_minor, readings.range_high_minor);
+  // Every card declares the narrow shape, since the fold is the strip's. A
+  // managed-teams reading has neither landing nor sufficiency: summed over
+  // separate books, neither would describe any of them. A share's snapshot may
+  // predate the landing, so a range alone keeps the strip.
+  if (!(readings.landing || readings.sufficiency || range || landingUnrecorded))
+    return null;
+  const strip = (
+    <StatStrip density={density}>
+      {readings.landing ? (
+        <LandingCard
+          landing={readings.landing}
+          currency={currency}
+          locale={locale}
+          callMinor={
+            readings.landing.measure === "manager_call"
+              ? undefined
+              : readings.current_call?.amount_minor
+          }
+        />
+      ) : (
+        landingUnrecorded && (
+          <StatCard
+            narrow="row"
+            label={t("forecast.landing")}
+            value={t("forecast.landingUnrecorded")}
+            detail={t("forecast.basis.unknown")}
+          />
+        )
+      )}
+      {(readings.landing || range) && (
+        <ModelRangeCard
+          label={t(`forecast.model.${period}`)}
+          range={range}
+          wonMinor={readings.won_minor}
+          unpriced={readings.eligible_count - readings.priced_count}
+          fxMissing={readings.fx_missing_count}
+          money={slot}
+          onOpen={onOpenDeals}
+        />
+      )}
+      {readings.landing?.system_minor != null && (
+        <RecordsLandingCard
+          systemMinor={readings.landing.system_minor}
+          currency={currency}
+          locale={locale}
+        />
+      )}
+      {readings.sufficiency && (
+        <SufficiencyCard
+          sufficiency={readings.sufficiency}
+          currency={currency}
+          locale={locale}
+        />
+      )}
+    </StatStrip>
+  );
+  return title ? (
+    <Panel title={title} flatHead>
+      {strip}
+    </Panel>
+  ) : (
+    strip
   );
 }

@@ -387,7 +387,9 @@ You can also add a note to a teammate's Worklist with **Add note** ("A short not
 
 ### What is in the morning email?
 
-It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing. When Margince changed your deals, it says "Margince changed 2 of your deals last night" and names up to five with links. It counts the changes since your last morning email, or the last 24 hours before your first one. **Undo or view all** opens Home. Such a morning is sent even with nothing else. A change you undo first is left out.
+It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing. Each item opens its record's page when it has one. A task, a meeting or its outcome, or an item without a record opens **Home** with that item open.
+
+When Margince changed your deals, it says "Margince changed 2 of your deals last night" and names up to five with links. It counts the changes since your last morning email, or the last 24 hours before your first one. **Undo or view all** opens Home. Such a morning is sent even with nothing else. A change you undo first is left out.
 
 Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest.
 Mail follows your working days and local clock, with a three-hour window that can end on the next day.

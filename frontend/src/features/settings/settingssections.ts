@@ -49,7 +49,6 @@ export const SETTINGS_SECTIONS = {
     "agents.connected",
     "aiAccess.dev.title",
     "settings.passports",
-    "aiAccess.cli.title",
     "tools.title",
     "settings.autonomy",
     "autonomy.title",

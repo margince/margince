@@ -389,7 +389,7 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 			current, live, err := h.svc.InviteMailRecipient(ctx, inviter, rawToken)
 			if err != nil {
 				slog.Error("reading an invitation before mailing it failed", "err", err)
-				return false, nil
+				return true, err
 			}
 			if !live {
 				slog.Info("invitation not mailed: its link or its member changed before the send")
@@ -404,6 +404,8 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 			}
 			return true, sendErr
 		},
+		// An invitation that never reached the relay counts as refused, because
+		// the admin can only resend from there.
 		Record: func(ctx context.Context, sendErr error) {
 			if err := h.svc.RecordInviteMailOutcome(ctx, inviter, rawToken, sendErr); err != nil {
 				slog.Error("recording an invite email outcome failed", "err", err)

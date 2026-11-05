@@ -26,7 +26,25 @@ type World = Readonly<{
   rows?: readonly object[];
   reason?: string;
   finished?: boolean;
+  aiConnected?: boolean;
 }>;
+
+// An AI tool the reader approved through sign-in, which finishes the AI step.
+const claudeConnection = {
+  id: "00000000-0000-4000-8000-000000000021",
+  label: "Claude",
+  scopes: ["read", "draft"],
+  created_at: "2026-11-01T08:00:00Z",
+  last_used_at: "2026-11-04T10:00:00Z",
+  expires_at: null,
+  revoked_at: null,
+  connection: {
+    client_id: "claude-ai",
+    client_name: "Claude",
+    renewable: true,
+    connected_at: "2026-11-01T08:00:00Z",
+  },
+};
 
 function reminder(world: World = {}) {
   stubWithSession(
@@ -54,6 +72,14 @@ function reminder(world: World = {}) {
           buffer_minutes: 0,
           title: "Intro call",
           location: "",
+        }),
+      "GET /.well-known/oauth-protected-resource": () =>
+        jsonResponse({ resource: "https://margince.example/mcp" }),
+      "GET /passports": () =>
+        jsonResponse({
+          data: (world.aiConnected ?? world.finished) ? [claudeConnection] : [],
+          api_base_url: "https://margince.example/v1",
+          page: { next_cursor: null, has_more: false },
         }),
     },
     { voice_profile: ["read", "create", "update"] },
@@ -150,6 +176,25 @@ export const NeedsReconnect: Story = {
 
 // The default world opened: booking shows the grey Waiting badge.
 export const Waiting: Story = { play: openPanel };
+
+// Mail, voice and booking done: connecting an AI tool is the one step left.
+export const AiToolLeft: Story = {
+  render: () =>
+    reminder({
+      rows: [
+        gmail,
+        {
+          ...gmail,
+          id: "00000000-0000-4000-8000-000000000012",
+          provider: "gcal",
+          scopes: ["https://www.googleapis.com/auth/calendar.events"],
+        },
+      ],
+      finished: true,
+      aiConnected: false,
+    }),
+  play: openPanel,
+};
 
 // Every step done: the reminder stands down and the bar carries no trigger.
 export const AllDone: Story = {

@@ -1390,6 +1390,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.industry": "Ngành",
   "reporting.allIndustries": "Tất cả ngành",
   "reporting.valueBasis": "Cơ sở giá trị",
+  "reporting.filtersMore": "Bộ lọc",
+  "reporting.filtersActive": "Bộ lọc · {active}",
   "reporting.basis.all": "Toàn bộ giá trị",
   "reporting.basis.software": "Chỉ phần mềm",
   "reporting.basis.implementation": "Chỉ triển khai",
@@ -7887,6 +7889,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.deliveryCoversAll":
     "Các số liệu này bao gồm mọi dự án bạn đọc được.",
   "analytics.attention": "Cần chú ý",
+  "analytics.board.rail": "Triển vọng và bước tiếp theo",
   "analytics.attentionNoOwner": "Chưa giao",
   "analytics.attentionOutOfDate": "đã cũ, đã thay đổi kể từ lần kiểm tra",
   "analytics.attentionAtStake": "{amount} bị ảnh hưởng",
@@ -8497,7 +8500,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "passport.noneOption": "Không dùng passport",
   "settings.passportUseAi": "Trong script hoặc công cụ AI khác",
   "settings.passportUseAiDetail":
-    "Cài skill Margince vào công cụ không tự đăng nhập được, rồi cung cấp passport cho công cụ đó. Claude Code, Codex và Antigravity đăng nhập không cần passport, trong mục Agent lập trình.",
+    "Cài skill Margince vào công cụ không tự đăng nhập được, rồi cung cấp passport cho công cụ đó. Claude Code, Codex, Cursor và các trình soạn thảo đăng nhập không cần passport, trong mục Kết nối công cụ AI của bạn.",
   "settings.skillDownload": "Tải xuống skill",
   "settings.skillDownloadFailed": "Không thể tải xuống skill",
   "settings.passportUseCode": "Trong mã nguồn riêng",
@@ -8777,8 +8780,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agents.colConnected": "Kết nối",
   "agents.disconnectConfirm":
     "Thao tác này kết thúc cả kết nối chứ không chỉ một thông tin xác thực. Agent sẽ mất quyền truy cập ở lần gọi tiếp theo và không thể gia hạn. Để kết nối lại, cần duyệt lại quyền truy cập.",
-  "agents.connectAntigravityPath":
-    "Antigravity không có lệnh add. Thêm khối bên dưới vào ~/.gemini/config/mcp_config.json, rồi mở cài đặt agent, “Customizations”, và chọn “Authenticate” bên cạnh margince.",
   "agents.connectorOff": "Công cụ AI chưa thể kết nối với Margince.",
   "agents.connectorOffDetail":
     "Bên vận hành bản cài đặt này bật tính năng này trong cấu hình. Trong lúc chờ, passport vẫn dùng được cho script.",
@@ -8896,7 +8897,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.connect.help": "Trợ giúp từ {vendor}",
   "aiAccess.connect.helpAdmin": "Trợ giúp từ {vendor} cho quản trị viên",
   "aiAccess.connect.devHint":
-    "Bạn dùng công cụ dòng lệnh hoặc mã của riêng bạn? Xem Dành cho nhà phát triển bên dưới.",
+    "Bạn tự viết mã? Tạo khóa API trong mục Dành cho nhà phát triển bên dưới.",
   "aiAccess.step.allow": "Margince mở ra. Đăng nhập và chọn Cấp quyền. Xong.",
   "aiAccess.claude.openConnectors":
     "Trong Claude, mở “Customize”, rồi “Connectors”.",
@@ -8976,14 +8977,86 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.guide.checked": "Các bước này được kiểm tra vào {date}.",
   "aiAccess.dev.title": "Dành cho nhà phát triển",
   "aiAccess.dev.sub":
-    "Khóa API cho mã của riêng bạn, agent lập trình, và những gì agent được làm khi không có bạn.",
+    "Khóa API cho mã của riêng bạn, và những gì agent được làm khi không có bạn.",
   "aiAccess.dev.tab.passports": "Khóa API",
-  "aiAccess.dev.tab.agents": "Agent lập trình",
   "aiAccess.dev.tab.rules": "Quy tắc cho agent",
-  "aiAccess.cli.title": "Agent lập trình",
-  "aiAccess.cli.sub":
-    "Kết nối một lần, rồi đăng nhập trong trình duyệt. Không cần passport.",
-  "aiAccess.cli.then": "Sau đó chạy {command}.",
+  "aiAccess.connect.placeQuestion": "Bạn dùng nó ở đâu?",
+  "aiAccess.connect.copy": "Sao chép",
+  "aiAccess.connect.command": "Nội dung cần sao chép",
+  "aiAccess.choice.other": "Công cụ AI khác",
+  "aiAccess.place.claudeApp": "Ứng dụng Claude: web, máy tính hoặc điện thoại",
+  "aiAccess.place.claudeAppNote":
+    "Một kết nối dùng được cho Claude trên web, ứng dụng máy tính và điện thoại. Claude Code được thiết lập riêng.",
+  "aiAccess.place.claudeCodeTerminal": "Claude Code trong terminal",
+  "aiAccess.place.claudeCodeVsCode": "Claude Code trong VS Code",
+  "aiAccess.place.claudeCodeJetBrains": "Claude Code trong JetBrains",
+  "aiAccess.place.claudeCodeVisualStudio": "Claude Code trong Visual Studio",
+  "aiAccess.place.claudeInCopilot":
+    "Bạn dùng Claude làm mô hình trong GitHub Copilot? Hãy chọn Copilot ở trên.",
+  "aiAccess.place.chatgptApp":
+    "Ứng dụng ChatGPT: web, máy tính hoặc điện thoại",
+  "aiAccess.place.codex": "Codex trong terminal hoặc trình soạn thảo",
+  "aiAccess.place.m365": "Microsoft 365 Copilot hoặc Teams",
+  "aiAccess.place.githubVsCode": "GitHub Copilot trong VS Code",
+  "aiAccess.place.githubVisualStudio": "GitHub Copilot trong Visual Studio",
+  "aiAccess.place.geminiApp": "Ứng dụng Gemini, cho công việc hoặc cá nhân",
+  "aiAccess.place.antigravity": "Antigravity, trình soạn thảo agent của Google",
+  "aiAccess.runIn.vscode":
+    "Chạy lệnh trong terminal của VS Code: “Terminal”, rồi “New Terminal”.",
+  "aiAccess.runIn.jetbrains": "Chạy lệnh trong cửa sổ “Terminal” của IDE.",
+  "aiAccess.runIn.visualStudio":
+    "Chạy lệnh trong terminal của Visual Studio: “View”, rồi “Terminal”.",
+  "aiAccess.local.sub":
+    "Thiết lập trên máy tính của bạn. Không cần quản trị viên.",
+  "aiAccess.local.claudeCode.add":
+    "Chạy lệnh này một lần. Sau đó Margince có trong mọi dự án và trình soạn thảo.",
+  "aiAccess.local.claudeCode.signIn":
+    "Trong Claude Code, gõ /mcp, chọn margince và đăng nhập.",
+  "aiAccess.local.codex.add": "Chạy lệnh này một lần trong terminal.",
+  "aiAccess.local.codex.signIn": "Sau đó chạy “codex mcp login margince”.",
+  "aiAccess.local.vscode.add":
+    "Trong Command Palette, chạy “MCP: Add Server” và chọn “HTTP”.",
+  "aiAccess.local.vscode.paste":
+    "Dán địa chỉ, nhập margince làm mã nhận diện máy chủ và chọn “Global”.",
+  "aiAccess.local.vscode.signIn":
+    "Chấp nhận lời nhắc đăng nhập của VS Code. Margince mở ra: đăng nhập và chọn Cấp quyền.",
+  "aiAccess.local.visualStudio.file":
+    "Trong Visual Studio, tạo hoặc mở tệp %USERPROFILE%\\.mcp.json, thêm nội dung này và lưu lại. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
+  "aiAccess.local.visualStudio.signIn":
+    "Trong tệp, phía trên margince, chọn “Authentication Required”, rồi “Authenticate”. Đăng nhập và chọn Cấp quyền.",
+  "aiAccess.local.visualStudio.tools":
+    "Trong Copilot Chat, chuyển sang chế độ Agent và bật các công cụ margince.",
+  "aiAccess.local.cursor.file":
+    "Mở ~/.cursor/mcp.json, hoặc tạo tệp này, thêm nội dung này và lưu. Sau đó khởi động lại Cursor. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
+  "aiAccess.local.cursor.signIn":
+    "Làm theo lời nhắc đăng nhập của Cursor cho margince. Margince mở ra: đăng nhập và chọn Cấp quyền.",
+  "aiAccess.local.antigravity.file":
+    "Thêm nội dung này vào ~/.gemini/config/mcp_config.json. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
+  "aiAccess.local.antigravity.signIn":
+    "Mở cài đặt agent, rồi “Customizations”, và chọn “Authenticate” bên cạnh margince.",
+  "aiAccess.other.sub":
+    "Margince hoạt động với mọi công cụ AI có thể thêm máy chủ MCP từ xa. Hãy tìm “MCP”, “connectors” hoặc “tools” trong phần cài đặt của nó.",
+  "aiAccess.other.typeLabel": "Loại",
+  "aiAccess.other.type":
+    "Máy chủ từ xa qua HTTP, đôi khi gọi là “Streamable HTTP”",
+  "aiAccess.other.signInLabel": "Đăng nhập",
+  "aiAccess.other.signIn":
+    "OAuth trong trình duyệt. Hầu hết công cụ tự bắt đầu ở lần kết nối đầu tiên.",
+  "aiAccess.other.apiKey":
+    "Công cụ không đăng nhập được? Tạo khóa API trong Cài đặt, mục Quyền truy cập AI, Dành cho nhà phát triển, rồi gửi nó trong header “Authorization: Bearer” kèm khóa phía sau.",
+  "aiAccess.other.notAllowed":
+    "Nếu khi đăng nhập có thông báo công cụ không được phép, quản trị viên chọn các công cụ được phép kết nối trong Cài đặt, mục MCP.",
+  "setup.step.ai": "Kết nối công cụ AI của bạn",
+  "setup.caption.ai":
+    "Dùng Margince từ Claude, ChatGPT, Copilot hoặc trình soạn thảo của bạn.",
+  "setup.action.ai": "Kết nối",
+  "setup.step.aiDone": "{name} đã được kết nối.",
+  "setup.step.aiDoneUnnamed": "Một công cụ AI đã được kết nối.",
+  "ob.conv.connect.aiRow": "Công cụ AI của bạn",
+  "ob.conv.connect.aiBody":
+    "Hỏi Claude, ChatGPT, Copilot hoặc trình soạn thảo về các deal của bạn, và để nó cập nhật Margince giúp bạn.",
+  "ob.conv.connect.aiConnect": "Kết nối",
+  "ob.conv.connect.aiConnected": "Đã kết nối",
   "aiAccess.cli.docs": "Tài liệu {tool}",
   "settings.token": "Thông tin xác thực",
   "settings.autonomy": "Cấp tự chủ",
@@ -14335,6 +14408,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Xác suất mà từ đó một deal đang mở có ngày chốt đã xác nhận được tính là khả năng cao.",
   "forecast.landing": "Dự kiến cuối kỳ",
+  "forecast.landingSection": "Điểm kết thúc kỳ này",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingUnrecorded": "Chưa ghi nhận",
   "forecast.basis.likely": "Đã chốt + deal khả năng cao",
@@ -14349,6 +14423,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.callAbsentLine": "Chưa có ước tính, nên hiển thị deal khả năng cao",
   "forecast.callBelowLine": "Thấp hơn {won} đã chốt, hiển thị như đã ghi",
   "forecast.model.quarter": "Kết quả quý theo mô hình",
+  "forecast.model.short": "80% kết quả ở giữa",
   "forecast.model.month": "Kết quả tháng theo mô hình",
   "forecast.model.week": "Kết quả tuần theo mô hình",
   "forecast.model.value": "{low} đến {high}",
@@ -14845,7 +14920,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.connect.importAndContinue": "Nhập {period} và tiếp tục",
   "ob.conv.connect.alsoTitle": "Cũng nên làm ngay",
   "ob.conv.connect.alsoSub":
-    "Không bắt buộc. Cả hai có thể đổi sau trong Cài đặt.",
+    "Không bắt buộc. Tất cả có thể đổi sau trong Cài đặt.",
   "ob.conv.connect.linkedinRow": "Hồ sơ LinkedIn của bạn",
   "ob.conv.connect.linkedinAdd": "Thêm hồ sơ",
   "setup.reminder.trigger": "Hoàn tất thiết lập",
@@ -20206,6 +20281,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.shortfall": "Thiếu hụt dự kiến {amount}",
   "analytics.hero.surplus": "Vượt dự kiến {amount}",
   "analytics.hero.prior": "Cùng thời điểm kỳ trước: {amount}",
+  "analytics.hero.ofTarget": "so với mục tiêu {target}",
+  "analytics.hero.short": "Thiếu {amount} so với mục tiêu",
+  "analytics.hero.over": "Vượt mục tiêu {amount}",
+  "analytics.trajectory.label": "Doanh số đã chốt trong kỳ",
+  "analytics.trajectory.today": "Hôm nay · {date}",
+  "analytics.trajectory.through": "Tính đến {date}",
+  "analytics.trajectory.target": "Mục tiêu {amount}",
+  "analytics.trajectory.projection": "Dự kiến {amount}",
+  "analytics.trajectory.range": "Kết quả mô hình",
   "analytics.overview.more": "Thêm",
   "analytics.outlook.valuedCount": "Định giá {included}/{eligible}",
   "analytics.outlook.periodPipeline": "Pipeline dự kiến chốt trong quý",
@@ -20214,6 +20298,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.outlook.team": "Triển vọng tìm khách hàng của nhóm",
   "analytics.outlook.prospecting": "Triển vọng tìm khách hàng",
   "analytics.outlook.records": "Xem bản ghi liên quan",
+  "analytics.outlook.more": "Đọc toàn bộ triển vọng",
   "analytics.assessment.refresh": "Làm mới đánh giá",
   "analytics.assessment.retry": "Thử lại",
   "analytics.assessment.evidenceTitle": "Đánh giá dựa trên điều gì",
