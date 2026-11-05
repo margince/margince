@@ -2310,6 +2310,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.domain_triage": "Phân loại trang web",
   "systemJob.employment_import_worker": "Nhập lịch sử công tác",
   "systemJob.enabled_oidc_providers_read": "Đọc nhà cung cấp đăng nhập",
+  "systemJob.client_check_read": "Đọc công tắc kiểm tra công cụ AI",
   "systemJob.client_registration_read": "Đọc cách đăng ký công cụ AI",
   "systemJob.erasure_replay": "Xóa lại dữ liệu sau khi khôi phục",
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
@@ -8826,6 +8827,33 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentClients.methods.alwaysOn": "Luôn bật",
   "agentClients.methods.readOnly":
     "Chỉ quản trị viên mới có thể thay đổi các mục này.",
+  "agentClients.experiments.title": "Thử nghiệm",
+  "agentClients.experiments.sub":
+    "Các tính năng thử nghiệm, có thể thay đổi hoặc bị bỏ. Tắt cho tất cả cho đến khi quản trị viên bật ở đây.",
+  "agentClients.experiments.clientCheck": "Kiểm tra hỗ trợ công cụ",
+  "agentClients.experiments.clientCheckHint":
+    "Cho công cụ AI của quản trị viên hiện một biểu mẫu nhỏ, để kiểm tra nó có trả lời được không.",
+  "agentClients.experiments.about": "Về thử nghiệm này",
+  "agentClients.experiments.whyTitle": "Vì sao",
+  "agentClients.experiments.why":
+    "Margince có thể hỏi bạn ngay trong cuộc trò chuyện trước một thay đổi hàng loạt, hoặc hỏi bạn muốn bản ghi nào, khi công cụ AI hiện được một biểu mẫu nhỏ. Phép kiểm tra này cho biết công cụ AI nào của bạn làm được. Thay đổi cần duyệt vẫn chờ ở mục Phê duyệt.",
+  "agentClients.experiments.howTitle": "Cách kiểm tra",
+  "agentClients.experiments.step1": "Bật mục này.",
+  "agentClients.experiments.step2":
+    "Trong công cụ AI, kết nối lại Margince để nó tải công cụ mới.",
+  "agentClients.experiments.step3": "Hỏi nó:",
+  "agentClients.experiments.clientCheckQuestion":
+    "Dùng công cụ check_client của Margince để kiểm tra xem công cụ AI này có hiện được biểu mẫu của Margince không.",
+  "agentClients.experiments.clientCheckQuestionLabel": "Câu hỏi",
+  "agentClients.experiments.copy": "Sao chép câu hỏi",
+  "agentClients.experiments.copied": "Đã sao chép",
+  "agentClients.experiments.copyRemedy":
+    "Trình duyệt từ chối việc sao chép. Hãy chọn câu hỏi và sao chép thủ công.",
+  "agentClients.experiments.step4":
+    "Nếu công cụ AI hiện biểu mẫu yêu cầu bạn chọn một màu, nó hỗ trợ biểu mẫu. Nếu không, câu trả lời nêu tên công cụ, phiên bản và lý do.",
+  "agentClients.experiments.safeTitle": "An toàn khi thử",
+  "agentClients.experiments.safe":
+    "Khi đang bật, quản trị viên thấy công cụ này trong mọi công cụ AI họ kết nối. Nó không đọc hay thay đổi dữ liệu. Hãy tắt khi bạn dùng xong.",
   "agentClients.title": "MCP client",
   "agentClients.sub":
     "Mỗi ứng dụng mà công cụ AI dùng để đăng nhập, và cách ứng dụng đó được tạo.",

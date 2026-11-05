@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/components/connect-ai-tool.tsx frontend/src/lib/aiconnect.ts frontend/src/features/onboarding/onboarding-conversation/connect-also.tsx frontend/src/lib/setup-checklist.ts frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant frontend/src/features/automations/oauthconsent.tsx backend/internal/modules/agents/prompts.go backend/internal/modules/agents/recordlinks.go backend/internal/modules/agents/bulkconfirm.go backend/internal/modules/agents/anchorpick.go -->
+<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/components/connect-ai-tool.tsx frontend/src/lib/aiconnect.ts frontend/src/features/onboarding/onboarding-conversation/connect-also.tsx frontend/src/lib/setup-checklist.ts frontend/src/features/automations/agent-client-experiments.tsx backend/internal/modules/agents/tools_clientcheck.go backend/internal/compose/mcpclientcheck.go backend/internal/modules/identity/oauth_registrationsettings.go frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant frontend/src/features/automations/oauthconsent.tsx backend/internal/modules/agents/prompts.go backend/internal/modules/agents/recordlinks.go backend/internal/modules/agents/bulkconfirm.go backend/internal/modules/agents/anchorpick.go -->
 # Agents, passports and what they may do
 
 Margince is made to be worked in by AI agents as much as by humans. Here you
@@ -87,8 +87,8 @@ Yes. Before a change to many records, or an undo of one, your AI tool asks you t
 Also called: confirm a bulk change, undo a bulk update, can I undo what the assistant did, which requests cannot be undone.
 
 ### What happens when I name a record and several match?
-When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one.
-Also called: two contacts with the same name, name that matches twice, pick the right record.
+When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one. An admin can test whether their own AI tool shows forms: turn on **Tool support check** on **Settings → MCP**.
+Also called: two contacts with the same name, name that matches twice, pick the right record, client check.
 
 ### How do I revoke an agent's access?
 To stop an agent, open **Settings → AI access**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."

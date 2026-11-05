@@ -31008,6 +31008,9 @@ type AgentClientRegisteredBy string
 
 // AgentClientListResponse defines model for AgentClientListResponse.
 type AgentClientListResponse struct {
+	// ClientCheck Whether admins' AI tools are offered the `check_client` tool. Change it with
+	// `mcp_client_check` on `PATCH /installation/settings`.
+	ClientCheck  bool                    `json:"client_check"`
 	Data         []AgentClient           `json:"data"`
 	Page         PageInfo                `json:"page"`
 	Registration AgentClientRegistration `json:"registration"`
@@ -63431,6 +63434,11 @@ type UpdateInstallationSettingsRequest struct {
 	// IndividualPerformance Show individual performance. Omit to leave it unchanged. Each change is audited.
 	IndividualPerformance *bool `json:"individual_performance,omitempty"`
 
+	// McpClientCheck Offer the `check_client` tool to admins' AI tools, so an admin can test which tools
+	// answer a form. Off by default; off, no one sees the tool. Needs `agent_client`
+	// update. Read as `client_check` on `GET /installation/agent-clients`.
+	McpClientCheck *bool `json:"mcp_client_check,omitempty"`
+
 	// MetadataDocumentClients Accept a client ID that is the URL of the tool's published metadata document (CIMD).
 	// Off stops new sign-ins through such a client; connections already made keep renewing.
 	// Needs `agent_client` update. The deployment file can hold it off.
@@ -64077,10 +64085,10 @@ type User struct {
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
-	// Assignable Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
+	// Assignable Whether the CALLER may name this member as an owner an automation runs as: an active human seat that can write, inside the caller's own write scope. An automation's owner picker is built on it. A record's owner picker reads `can_own_records` instead. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
 	Assignable *bool `json:"assignable,omitempty"`
 
-	// CanOwnRecords Whether this member's seat may own records at all: an active human seat that can write, asked without the caller's own write scope. A website form's owner of new leads is checked this way, because the installation writes those leads, so its picker offers these members. Present on `listUsers`; absent means not computed.
+	// CanOwnRecords Whether this member's seat may own records: an active human seat that can write. The answer is the same for every caller. A record's owner change asks this of the new owner. It also needs the caller to be allowed to change the record, unless the record has no owner and the caller is a human. Every record owner picker and a website form's owner of new leads read it. A form's new leads may also go to an invited colleague, so its picker offers fewer members than its write accepts. Present on `listUsers`; absent means not computed.
 	CanOwnRecords *bool `json:"can_own_records,omitempty"`
 
 	// ConnectedMailboxes How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture.

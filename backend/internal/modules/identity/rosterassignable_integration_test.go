@@ -14,9 +14,8 @@ import (
 )
 
 // The roster marks each member as an owner change would answer for this caller.
-// The admin may hand work to an active rep. A rep may not hand work to the admin
-// outside their scope, though the admin's seat may own records. Nobody may hand
-// work to a member who left.
+// A rep may hand a record to the admin outside their scope, but may not name the
+// admin as an owner an automation runs as. Nobody may own the work of one who left.
 func TestTheRosterSaysWhoTheCallerMayMakeAnOwner(t *testing.T) {
 	e := setupRevocationEnv(t, "roster-assignable")
 	ctx := context.Background()

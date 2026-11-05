@@ -18265,7 +18265,7 @@ export interface paths {
          *     owner. For a member who left, the contacts and companies only they can see move too and
          *     stay private, now to the new owner; an active member keeps theirs. A record the caller may not change stays with the member and is counted
          *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
-         *     owner (an active human seat that can write, inside the caller's write scope), else `422`
+         *     owner (an active human seat that can write), else `422`
          *     with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
          *     caller may not change stays with the member. Automations and deal-room stewardships are not moved.
          */
@@ -25639,6 +25639,12 @@ export interface components {
              *     Needs `agent_client` update. The deployment file can hold it off.
              */
             metadata_document_clients?: boolean;
+            /**
+             * @description Offer the `check_client` tool to admins' AI tools, so an admin can test which tools
+             *     answer a form. Off by default; off, no one sees the tool. Needs `agent_client`
+             *     update. Read as `client_check` on `GET /installation/agent-clients`.
+             */
+            mcp_client_check?: boolean;
             /**
              * @description Directory groups that GRANT roles at corporate sign-in. Each key is a group
              *     exactly as the IdP spells it in the ID token's `groups` claim; each value is
@@ -44864,9 +44870,9 @@ export interface components {
             is_agent: boolean;
             /** @description The extension unit this seat is the service member of: the identity that unit's scheduled feed runs as. Null for every other seat, including an AI agent seat, so a client tells the two apart by this field and not by `is_agent`. Present only for an admin caller, with `roles`. */
             service_extension?: string | null;
-            /** @description Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
+            /** @description Whether the CALLER may name this member as an owner an automation runs as: an active human seat that can write, inside the caller's own write scope. An automation's owner picker is built on it. A record's owner picker reads `can_own_records` instead. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
             assignable?: boolean;
-            /** @description Whether this member's seat may own records at all: an active human seat that can write, asked without the caller's own write scope. A website form's owner of new leads is checked this way, because the installation writes those leads, so its picker offers these members. Present on `listUsers`; absent means not computed. */
+            /** @description Whether this member's seat may own records: an active human seat that can write. The answer is the same for every caller. A record's owner change asks this of the new owner. It also needs the caller to be allowed to change the record, unless the record has no owner and the caller is a human. Every record owner picker and a website form's owner of new leads read it. A form's new leads may also go to an invited colleague, so its picker offers fewer members than its write accepts. Present on `listUsers`; absent means not computed. */
             can_own_records?: boolean;
             /** @description This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree. */
             roles?: string[];
@@ -50294,6 +50300,11 @@ export interface components {
             data: components["schemas"]["AgentClient"][];
             page: components["schemas"]["PageInfo"];
             registration: components["schemas"]["AgentClientRegistration"];
+            /**
+             * @description Whether admins' AI tools are offered the `check_client` tool. Change it with
+             *     `mcp_client_check` on `PATCH /installation/settings`.
+             */
+            client_check: boolean;
         };
         RegisterAgentClientRequest: {
             /** @description Shown on the consent screen and in the client list. */
