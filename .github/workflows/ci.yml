@@ -618,14 +618,9 @@ jobs:
       - name: Enable the reference extension
         working-directory: .
         run: cp -R fixtures/extensions/crm-hello extensions/
-      # Into develop the composed tree is built but not tested: deterministic-gates
-      # runs the unit and extension lanes, and the develop into main pull request
-      # runs them composed.
       - name: Composed build + unit lane
         working-directory: .
-        env:
-          COMPOSED_TESTS: ${{ needs.changes.outputs.full_lane == 'true' && 'test' || '' }}
-        run: make -C backend build check-composition $COMPOSED_TESTS
+        run: make -C backend build test check-composition
       # Tree-derived: every enabled unit's own module lane (the committed
       # first-party extensions AND the copied-in reference fixture). The
       # same run emits the merged coverage profile the sonarcloud job
@@ -633,7 +628,6 @@ jobs:
       # the shard profiles, and this job runs PARALLEL to the shard
       # fleet, so coverage costs no extra test run and no fan-in latency.
       - name: Extension self-test lanes (+ coverage)
-        if: needs.changes.outputs.full_lane == 'true'
         working-directory: .
         run: make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
       - name: Upload extension coverage

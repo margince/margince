@@ -211,7 +211,7 @@ What follows from this:
     one finds a change that made it fail. So a PR that touches either is worth starting from its own branch
     before merging.
 - A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`, plus the
-  census in `backend-lint` and the composed tests in `extension-reference`. The
+  census in `backend-lint`. The
   `full_lane` output of `changes` is false only there. The `develop` into `main` pull request runs
   them under the usual path filters:
   [land-through-develop.md](../how-to/land-through-develop.md).
@@ -441,7 +441,7 @@ The first kind is held by a census, not a scan, because such paths are mostly bu
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-The `backend-lint` job runs the census on every PR into `main`, so the PR that adds such a read fails. `cache-warm`
+The `backend-lint` job runs the census on every ready PR into `main` that touches the backend, so the PR that adds such a read fails. `cache-warm`
 runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
 good one. The second kind is held by
 a gate: a cached test file that runs `git` or `go` must declare its inputs.

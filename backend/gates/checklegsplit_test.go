@@ -149,12 +149,17 @@ func staticLegsRunBy(t *testing.T, wf stepRuns, static []string) ([]string, bool
 		if key == nil {
 			return strings.Fields(match[1]), true
 		}
-		var ran []string
-		for _, entry := range job.Strategy.Matrix.Include {
-			ran = append(ran, strings.Fields(entry[key[1]])...)
+		include := job.Strategy.Matrix.Include
+		if len(include) == 0 {
+			t.Fatalf("job %q passes STATIC_LEGS from matrix.%s, but has no matrix include entries", staticLegsJob, key[1])
 		}
-		if len(ran) == 0 {
-			t.Fatalf("job %q passes STATIC_LEGS from matrix.%s, but no matrix include entry sets it", staticLegsJob, key[1])
+		var ran []string
+		for i, entry := range include {
+			legs := strings.Fields(entry[key[1]])
+			if len(legs) == 0 {
+				t.Errorf("job %q matrix include entry %d sets no %s, so that leg runs no static target", staticLegsJob, i, key[1])
+			}
+			ran = append(ran, legs...)
 		}
 		return ran, true
 	}

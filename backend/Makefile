@@ -632,7 +632,7 @@ lint-base: composition lint-tool
 
 lint-strict: composition lint-tool
 	@if git rev-parse --verify -q "$(CHECK_BASE_REF)" >/dev/null; then \
-		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base="$(CHECK_BASE_REF)" ./...; \
+		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" GOLANGCI_CACHE_PASS=strict ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base="$(CHECK_BASE_REF)" ./...; \
 	else \
 		echo "SKIP strict lint: $(CHECK_BASE_REF) not found — fetch it to arm the new-code gate"; \
 	fi
