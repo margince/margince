@@ -58,6 +58,7 @@
     },
     "activate_home_repair": {
       "checks": [
+        "activity.read",
         "data_task.update"
       ]
     },
@@ -148,7 +149,8 @@
         "custom_field.read",
         "custom_field.update",
         "data_task.read",
-        "data_task.update"
+        "data_task.update",
+        "deal.read"
       ]
     },
     "apply_tag": {
@@ -158,7 +160,9 @@
       ]
     },
     "apply_voice_version": {
-      "checks": []
+      "checks": [
+        "voice_profile.update"
+      ]
     },
     "archive_automation": {
       "checks": [
@@ -482,6 +486,7 @@
     },
     "control_data_task": {
       "checks": [
+        "data_task.read",
         "data_task.update"
       ]
     },
@@ -1026,6 +1031,7 @@
     },
     "enrich_contact_from_provider": {
       "checks": [
+        "company.read",
         "contact.update"
       ]
     },
@@ -2642,6 +2648,7 @@
     "read_card_photo": {
       "checks": [
         "contact.create",
+        "contact.read",
         "contact.update"
       ]
     },
@@ -2693,7 +2700,9 @@
       "checks": []
     },
     "read_onboarding_company_proposal": {
-      "checks": []
+      "checks": [
+        "company.read"
+      ]
     },
     "read_onboarding_state": {
       "checks": []
@@ -2871,7 +2880,9 @@
       ]
     },
     "reject_voice_version": {
-      "checks": []
+      "checks": [
+        "voice_profile.update"
+      ]
     },
     "relink_activities": {
       "checks": [
@@ -3189,7 +3200,9 @@
       ]
     },
     "rollback_voice_version": {
-      "checks": []
+      "checks": [
+        "voice_profile.update"
+      ]
     },
     "run_analytics_query": {
       "checks": [
@@ -3331,8 +3344,8 @@
     },
     "set_ai_model_rate": {
       "checks": [
-        "ai_model_rate.create|update",
-        "ai_model_rate.update"
+        "ai_model_rate.create",
+        "ai_model_rate.create|update"
       ]
     },
     "set_ai_price_sync": {
@@ -3370,8 +3383,8 @@
     },
     "set_fx_rate": {
       "checks": [
+        "fx_rate.create",
         "fx_rate.create|update",
-        "fx_rate.update",
         "installation_settings.read"
       ]
     },

@@ -11736,7 +11736,6 @@ paths:
       operationId: previewAutomation
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: preview_automation, router: read_details, action: automation_preview, tier: auto_execute, scope: read, served_by: route }
-      x-settings-audience: member
       summary: Dry-run an automation's blast radius, writing nothing, sending nothing and staging no approval.
       description: |
         Powers the designer's live dry-run (ADR-0035 Am.1). Evaluates the recipe's trigger + filter and

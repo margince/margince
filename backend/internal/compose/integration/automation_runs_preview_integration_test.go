@@ -64,29 +64,6 @@ func createRouteLeadAutomation(t *testing.T, e *apptest.AppEnv) string {
 	return created.ID
 }
 
-// seedWorkflowRun records one engine firing linked the way the engine
-// links them: handler = catalog key, idempotency key suffixed with
-// "@<automation id>". planned/applied ride the workflow.Action encoding;
-// detail is the raw jsonb payload in the automation module's rundetail.go
-// shape (nil for a clean run) — this suite seeds rows directly at the DB,
-// bypassing the engine, so it must match that shape for the HTTP read
-// side (ListRuns/wireAutomationRun) to render the reason correctly.
-func seedWorkflowRun(t *testing.T, e *apptest.AppEnv, wsID, automationID, status string, planned, applied *string, detail []byte, at time.Time) {
-	t.Helper()
-	runID := ids.NewV7().String()
-	plannedJSON := "[]"
-	if planned != nil {
-		plannedJSON = *planned
-	}
-	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO workflow_run (id, handler, idempotency_key, trigger_event, planned, applied, status, detail, created_at)
-		VALUES ($1, 'assign_lead_owner', $2, $3, $4, $5, $6, $7, $8)`,
-		runID, fmt.Sprintf("assign_lead_owner:%s@%s", runID, automationID),
-		ids.NewV7(), plannedJSON, applied, status, detail, at); err != nil {
-		t.Fatalf("seeding workflow_run: %v", err)
-	}
-}
-
 // runDetailReason builds the workflow_run.detail jsonb payload for a
 // plain reason, matching the shape the automation module's writers
 // produce (rundetail.go's runDetail{Reason: ...}, unexported there — this
@@ -149,16 +126,15 @@ func assertRunsStartEmptyAndHideAbsentInstances(t *testing.T, e *apptest.AppEnv,
 // fired run names its action kinds and first target.
 func assertRunsRenderEveryOutcomeWithItsTrace(t *testing.T, e *apptest.AppEnv, autoID string) {
 	t.Helper()
-	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	targetLead := ids.NewV7().String()
 	actionTrace := fmt.Sprintf(`[{"Kind":"assign_owner","Target":{"Type":"lead","ID":"%s"},"Args":{}}]`, targetLead)
 	base := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 	reason := func(s string) []byte { return runDetailReason(t, s) }
 
-	seedWorkflowRun(t, e, wsID, autoID, "applied", &actionTrace, &actionTrace, nil, base)
-	seedWorkflowRun(t, e, wsID, autoID, "failed", nil, nil, reason("provider error"), base.Add(time.Minute))
-	seedWorkflowRun(t, e, wsID, autoID, "requires_approval", &actionTrace, nil,
-		reason("staged as approval "+ids.NewV7().String()+"; awaiting the human decision"), base.Add(2*time.Minute))
+	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "applied", Trigger: ids.NewV7(), Planned: &actionTrace, Applied: &actionTrace, At: base})
+	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "failed", Trigger: ids.NewV7(), Detail: reason("provider error"), At: base.Add(time.Minute)})
+	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "requires_approval", Trigger: ids.NewV7(), Planned: &actionTrace,
+		Detail: reason("staged as approval " + ids.NewV7().String() + "; awaiting the human decision"), At: base.Add(2 * time.Minute)})
 
 	var page automationRunsPage
 	if status := e.Call(t, "GET", "/v1/automations/"+autoID+"/runs", nil, nil, &page); status != http.StatusOK {

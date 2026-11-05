@@ -77,6 +77,7 @@ var lateKinds = map[string]bool{
 	"logo_site_read": true, "onboarding_with_read": true,
 	"idle_reindex":    true,
 	"voice_candidate": true, "voice_rolled_forward": true,
+	"failed_automation_run": true,
 }
 
 // installationKinds are the late kinds that make a call run alone. Each is what
@@ -91,6 +92,7 @@ var installationKinds = map[string]bool{
 	"logo_site_read": true, "onboarding_with_read": true,
 	"idle_reindex":    true,
 	"voice_candidate": true, "voice_rolled_forward": true,
+	"failed_automation_run": true,
 }
 
 // toolRoleSeeders makes one record of each kind a call can take. An owner, when

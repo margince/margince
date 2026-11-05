@@ -125,12 +125,14 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 		day := p.sweepStart.AddDate(0, 0, int(taxRateDays.Add(1)))
 		return map[string]any{"request_body": map[string]any{"country": "de", "category": "reduced", "rate": "7", "valid_from": day.Format("2006-01-02")}}
 	},
-	"set_fx_rate": func(*recordPool) map[string]any {
-		return map[string]any{"request_body": map[string]any{"from_currency": "USD", "rate": "0.9"}}
+	// Each rate is a new one, so every role's call takes the same path.
+	"set_fx_rate": func(p *recordPool) map[string]any {
+		day := p.sweepStart.AddDate(0, 0, -int(taxRateDays.Add(1)))
+		return map[string]any{"request_body": map[string]any{"from_currency": "USD", "rate": "0.9", "effective_date": day.Format("2006-01-02")}}
 	},
 	"set_ai_model_rate": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{
-			"provider": "anthropic", "model_id": "sweep-model", "input_per_mtok": "1", "output_per_mtok": "2",
+			"provider": "anthropic", "model_id": "sweep-" + ids.NewV7().String(), "input_per_mtok": "1", "output_per_mtok": "2",
 			"cache_read_per_mtok": "0.1", "cache_write_per_mtok": "1.25",
 		}}
 	},
@@ -160,15 +162,17 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 		return versioned(p, "custom_field", map[string]any{"label": uniqueName()})
 	},
 	"retire_custom_field": byID("custom_field"),
+	// A schema change is refused while its table is busy, so the fields are
+	// added to contracts, the table the other roles' calls write least.
 	"create_custom_field": func(*recordPool) map[string]any {
-		return map[string]any{"request_body": map[string]any{"object": "company", "label": uniqueName(), "type": "text", "source": "manual"}}
+		return map[string]any{"request_body": map[string]any{"object": "contract", "label": uniqueName(), "type": "text", "source": "manual"}}
 	},
 	"update_custom_field_options": func(p *recordPool) map[string]any {
 		return unversioned(p, "picklist_field", map[string]any{"options": []any{"A", "B", "C"}})
 	},
 }
 
-// taxRateDays numbers the days the sweep's tax rates start on.
+// taxRateDays numbers the days the sweep's tax and exchange rates start on.
 var taxRateDays atomic.Int32
 
 // fileOf is the arguments of an upload that sends body as a file.
@@ -366,10 +370,10 @@ func setupSeeders(s sweepSeed) map[string]func() string {
 			return profile
 		},
 		"picklist_field": func() string {
-			return versioned("/v1/custom-fields", integration.AnyMap{"object": "company", "label": uniqueName(), "type": "picklist", "options": []string{"A", "B"}, "source": "manual"})
+			return versioned("/v1/custom-fields", integration.AnyMap{"object": "contract", "label": uniqueName(), "type": "picklist", "options": []string{"A", "B"}, "source": "manual"})
 		},
 		"custom_field": func() string {
-			return versioned("/v1/custom-fields", integration.AnyMap{"object": "company", "label": uniqueName(), "type": "text", "source": "manual"})
+			return versioned("/v1/custom-fields", integration.AnyMap{"object": "contract", "label": uniqueName(), "type": "text", "source": "manual"})
 		},
 		// A model call is written by the model path, which the sweep's calls
 		// never reach for every role.

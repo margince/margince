@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -52,6 +53,7 @@ var adminFixtures = map[string]func(p *recordPool) map[string]any{
 		}
 		return map[string]any{"request_body": config}
 	},
+	"retry_automation_run": byID("failed_automation_run"),
 	"apply_legacy_loss_reasons": func(p *recordPool) map[string]any {
 		mapping := p.take("loss_mapping")
 		return map[string]any{"request_body": map[string]any{"mappings": []any{map[string]any{"id": mapping, "version": versionOf(p, mapping)}}}}
@@ -60,22 +62,19 @@ var adminFixtures = map[string]func(p *recordPool) map[string]any{
 
 // seedDataTasks lays down and runs the release's data tasks, as the migrate
 // step does before an installation serves.
-func seedDataTasks(t *testing.T, e *apptest.AppEnv) { runDataTasks(t, e, dataTaskBatches) }
-
-// runDataTasks runs up to batches of the data tasks' work as the migrate step
-// does. A reviewed run another role activated finishes, so the next may start.
-func runDataTasks(t *testing.T, e *apptest.AppEnv, batches int) {
+func seedDataTasks(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	if _, err := compose.DataTaskExecute(t.Context(), e.Pool, batches); err != nil {
+	if _, err := compose.DataTaskExecute(t.Context(), e.Pool, dataTaskBatches); err != nil {
 		t.Fatalf("running the data tasks: %v", err)
 	}
 }
 
-// dataTaskBatches bounds the work that finishes one role's reviewed run.
+// dataTaskBatches bounds the work of the release's data tasks.
 const dataTaskBatches = 1000
 
 // dataTaskRow is one row of the data task list.
 type dataTaskRow struct {
+	Status     string `json:"status"`
 	ReviewKind string `json:"review_kind"`
 	TaskID     string `json:"task_id"`
 	Step       string `json:"step"`
@@ -98,6 +97,17 @@ func adminSeeders(s sweepSeed) map[string]func() string {
 		s.pool.note(id, "version", strconv.Itoa(row.Version))
 		return id
 	}
+	// A reviewed run another role activated is paused, as an administrator
+	// pauses one. The next may then be activated, and no run rewrites records.
+	pauseActivated := func() {
+		for _, row := range dataTasks() {
+			if row.Status == "pending" || row.Status == "running" {
+				s.call("POST", "/v1/admin/data-tasks/control", integration.AnyMap{
+					"task_id": row.TaskID, "step": row.Step, "action": "pause", "version": row.Version,
+				}, nil, nil)
+			}
+		}
+	}
 	return map[string]func() string{
 		"data_task": func() string {
 			rows := dataTasks()
@@ -107,7 +117,7 @@ func adminSeeders(s sweepSeed) map[string]func() string {
 			return noted(rows[0])
 		},
 		"home_repair_review": func() string {
-			runDataTasks(s.t, s.e, dataTaskBatches)
+			pauseActivated()
 			var review json.RawMessage
 			s.call("POST", "/v1/admin/home-repair/preview", integration.AnyMap{"limit": 10}, nil, &review)
 			for _, row := range dataTasks() {
@@ -132,6 +142,22 @@ func adminSeeders(s sweepSeed) map[string]func() string {
 			}
 			return ""
 		},
+		// A lead-routing run that failed on the lead's creation. No route leaves a
+		// failed run, and the sweep's app runs no workflow consumer to fail one.
+		"failed_automation_run": func() string {
+			me := apptest.SessionUserID(s.t, s.e)
+			var automation struct {
+				ID      string `json:"id"`
+				Version int    `json:"version"`
+			}
+			s.call("POST", "/v1/automations", integration.AnyMap{"key": "assign_lead_owner", "name": uniqueName(), "params": integration.AnyMap{"owners": []string{me}}}, nil, &automation)
+			s.call("PATCH", "/v1/automations/"+automation.ID, integration.AnyMap{"status": "enabled"}, pinned(automation.Version), nil)
+			lead := s.create["lead"]()
+			event := s.ownerScalar(`SELECT id::text FROM event_outbox WHERE envelope->>'type' = 'lead.created' AND envelope->'entity'->>'id' = $1`, lead)
+			return apptest.SeedWorkflowRun(s.t, s.e, apptest.WorkflowRun{
+				Automation: automation.ID, Status: "failed", Trigger: ids.MustParse(event), At: clocktest.Now(s.t),
+			})
+		},
 		// The wizard's state names a read of the company's site, which the
 		// proposal is drawn from.
 		"onboarding_with_read": func() string {
@@ -148,7 +174,7 @@ func adminSeeders(s sweepSeed) map[string]func() string {
 		},
 		// A deal lost with a free-text note, the note mapped to a reason code.
 		"loss_mapping": func() string {
-			runDataTasks(s.t, s.e, dataTaskBatches)
+			pauseActivated()
 			lost := apptest.DefaultPipeline(s.t, s.e).Lost
 			note := "Sweep " + ids.NewV7().String()
 			s.call("POST", "/v1/deals/"+s.create["deal"]()+"/advance", integration.AnyMap{"to_stage_id": lost, "lost_reason": note}, nil, nil)

@@ -152,6 +152,21 @@
     },
     {
       "tool": "change_access",
+      "action": "create_former_member",
+      "verb": "create_former_member",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_access",
       "action": "create_record_role",
       "verb": "create_record_role",
       "allowed_for": [
@@ -901,6 +916,42 @@
     },
     {
       "tool": "change_attention",
+      "action": "acknowledge_company_view",
+      "verb": "acknowledge_company_view",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
+      }
+    },
+    {
+      "tool": "change_attention",
+      "action": "acknowledge_contact_view",
+      "verb": "acknowledge_contact_view",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
+      }
+    },
+    {
+      "tool": "change_attention",
       "action": "acknowledge_failed_approval",
       "verb": "acknowledge_approval_failure",
       "allowed_for": [
@@ -945,6 +996,21 @@
     },
     {
       "tool": "change_attention",
+      "action": "archive_signal",
+      "verb": "archive_signal",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops"
+      ],
+      "refused_for": [
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_attention",
       "action": "ask_for_help",
       "verb": "ask_for_weekly_plan_help",
       "allowed_for": [
@@ -971,6 +1037,21 @@
         "rep"
       ],
       "refused_for": []
+    },
+    {
+      "tool": "change_attention",
+      "action": "create_signal",
+      "verb": "create_signal",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_attention",
@@ -1212,6 +1293,21 @@
     },
     {
       "tool": "change_attention",
+      "action": "resolve_signal",
+      "verb": "resolve_signal",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_attention",
       "action": "restore_company_suggestion",
       "verb": "restore_company_suggestion",
       "allowed_for": [
@@ -1368,6 +1464,21 @@
         "rep"
       ],
       "refused_for": []
+    },
+    {
+      "tool": "change_attention",
+      "action": "update_signal",
+      "verb": "update_signal",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_attention",
@@ -1570,6 +1681,36 @@
         "rep"
       ],
       "refused_for": []
+    },
+    {
+      "tool": "change_capture",
+      "action": "import_linkedin_connections",
+      "verb": "import_linkedin_connections",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "import_vcards",
+      "verb": "import_vcards",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_capture",
@@ -1822,6 +1963,21 @@
       "tool": "change_capture",
       "action": "update_import_run",
       "verb": "update_import_run",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_capture",
+      "action": "upload_corpus_document",
+      "verb": "upload_corpus_document",
       "allowed_for": [
         "admin",
         "ops"
@@ -2170,6 +2326,210 @@
     {
       "tool": "change_lists",
       "verb": "change_lists",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "add_voice_source",
+      "verb": "add_voice_source",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "apply_voice_version",
+      "verb": "apply_voice_version",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "archive_voice_profile",
+      "verb": "archive_voice_profile",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops"
+      ],
+      "refused_for": [
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "create_voice_profile",
+      "verb": "create_voice_profile",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "reject_voice_version",
+      "verb": "reject_voice_version",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "rollback_voice_version",
+      "verb": "rollback_voice_version",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "save_display_name",
+      "verb": "save_my_display_name",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "save_greeting_name",
+      "verb": "save_my_greeting_name",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "save_locale",
+      "verb": "save_my_locale",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "save_onboarding_state",
+      "verb": "save_my_onboarding_state",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "save_timezone",
+      "verb": "save_my_timezone",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "save_working_hours",
+      "verb": "save_my_working_hours",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "update_voice_profile",
+      "verb": "update_voice_profile",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_my_settings",
+      "action": "update_voice_source",
+      "verb": "update_voice_source",
       "allowed_for": [
         "admin",
         "management",
@@ -3256,6 +3616,66 @@
     },
     {
       "tool": "change_settings",
+      "action": "activate_home_repair",
+      "verb": "activate_home_repair",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "apply_legacy_loss_reasons",
+      "verb": "apply_legacy_loss_reasons",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "archive_automation",
+      "verb": "archive_automation",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "archive_exit_criterion",
+      "verb": "archive_exit_criterion",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
       "action": "archive_legal_entity",
       "verb": "archive_legal_entity",
       "allowed_for": [
@@ -3265,6 +3685,21 @@
         "management",
         "manager",
         "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "archive_pipeline",
+      "verb": "archive_pipeline",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
         "read_only",
         "rep"
       ]
@@ -3282,6 +3717,36 @@
         "rep"
       ],
       "refused_for": []
+    },
+    {
+      "tool": "change_settings",
+      "action": "archive_stage",
+      "verb": "archive_stage",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "archive_web_form",
+      "verb": "archive_web_form",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_settings",
@@ -3314,6 +3779,21 @@
     },
     {
       "tool": "change_settings",
+      "action": "control_data_task",
+      "verb": "control_data_task",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
       "action": "create_acquisition_source",
       "verb": "create_acquisition_source",
       "allowed_for": [
@@ -3329,8 +3809,53 @@
     },
     {
       "tool": "change_settings",
+      "action": "create_automation",
+      "verb": "create_automation",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "create_custom_field",
+      "verb": "create_custom_field",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
       "action": "create_disqualify_reason",
       "verb": "create_lead_disqualify_reason",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "create_exit_criterion",
+      "verb": "create_exit_criterion",
       "allowed_for": [
         "admin",
         "ops"
@@ -3404,6 +3929,36 @@
     },
     {
       "tool": "change_settings",
+      "action": "create_partner_stage",
+      "verb": "create_partner_stage",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "create_pipeline",
+      "verb": "create_pipeline",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
       "action": "create_saved_view",
       "verb": "create_saved_view",
       "allowed_for": [
@@ -3415,6 +3970,21 @@
         "rep"
       ],
       "refused_for": []
+    },
+    {
+      "tool": "change_settings",
+      "action": "create_stage",
+      "verb": "create_stage",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "change_settings",
@@ -3478,6 +4048,115 @@
     },
     {
       "tool": "change_settings",
+      "action": "disconnect_finance_source",
+      "verb": "disconnect_finance_source",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "disconnect_provider",
+      "verb": "disconnect_provider",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "link_finance_customer",
+      "verb": "link_finance_customer",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ],
+      "colleague_record": {
+        "manager": "refused",
+        "rep": "refused"
+      }
+    },
+    {
+      "tool": "change_settings",
+      "action": "propose_fx_rate_refresh",
+      "verb": "propose_fx_rate_refresh",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "put_product_translation",
+      "verb": "put_product_translation",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "record_tax_rate",
+      "verb": "record_tax_rate",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "refresh_ai_model_rates",
+      "verb": "refresh_ai_model_rates",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
       "action": "remove_legal_entity_logo",
       "verb": "delete_legal_entity_logo",
       "allowed_for": [
@@ -3517,6 +4196,96 @@
         "management",
         "manager",
         "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "rename_custom_field",
+      "verb": "rename_custom_field",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "reorder_pipelines",
+      "verb": "reorder_pipelines",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "reorder_stages",
+      "verb": "reorder_stages",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "restore_pipeline",
+      "verb": "restore_pipeline",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "retire_custom_field",
+      "verb": "retire_custom_field",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "retry_automation_run",
+      "verb": "retry_automation_run",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
         "read_only",
         "rep"
       ]
@@ -3582,8 +4351,113 @@
     },
     {
       "tool": "change_settings",
+      "action": "set_ai_model_rate",
+      "verb": "set_ai_model_rate",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "set_ai_price_sync",
+      "verb": "set_ai_price_sync",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "set_fx_rate",
+      "verb": "set_fx_rate",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "sync_finance_source",
+      "verb": "sync_finance_source",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "unlink_finance_customer",
+      "verb": "unlink_finance_customer",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
       "action": "update_acquisition_source",
       "verb": "update_acquisition_source",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "update_automation",
+      "verb": "update_automation",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "update_custom_field_options",
+      "verb": "update_custom_field_options",
       "allowed_for": [
         "admin",
         "ops"
@@ -3621,6 +4495,21 @@
         "management",
         "manager",
         "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "update_exit_criterion",
+      "verb": "update_exit_criterion",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
         "read_only",
         "rep"
       ]
@@ -3732,6 +4621,36 @@
     },
     {
       "tool": "change_settings",
+      "action": "update_partner_stage",
+      "verb": "update_partner_stage",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "update_pipeline",
+      "verb": "update_pipeline",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
       "action": "update_review_template",
       "verb": "update_activity_review_template",
       "allowed_for": [
@@ -3758,6 +4677,100 @@
         "rep"
       ],
       "refused_for": []
+    },
+    {
+      "tool": "change_settings",
+      "action": "update_stage",
+      "verb": "update_stage",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "update_web_form",
+      "verb": "update_web_form",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "upload_company_logo",
+      "verb": "upload_company_logo",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "upload_company_logo_icon",
+      "verb": "upload_company_logo_icon",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "upload_legal_entity_logo",
+      "verb": "upload_legal_entity_logo",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
+      "action": "upsert_partner",
+      "verb": "upsert_partner",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
+      "colleague_record": {
+        "manager": "refused",
+        "rep": "refused"
+      }
     },
     {
       "tool": "change_state",
@@ -4728,6 +5741,65 @@
     },
     {
       "tool": "read_details",
+      "action": "ai_budget_preview",
+      "verb": "preview_ai_budget",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "ai_routing_preview",
+      "verb": "preview_ai_routing",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "ai_task_overrides_preview",
+      "verb": "preview_ai_task_overrides",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "automation_preview",
+      "verb": "preview_automation",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_details",
       "action": "backfill_preview",
       "verb": "preview_connector_backfill",
       "allowed_for": [
@@ -5394,6 +6466,35 @@
     },
     {
       "tool": "read_details",
+      "action": "job_health_history",
+      "verb": "read_job_health_history",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "jurisdiction_document",
+      "verb": "download_jurisdiction_document",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_details",
       "action": "knowledge_document",
       "verb": "download_corpus_document",
       "allowed_for": [
@@ -5563,6 +6664,21 @@
         "rep"
       ],
       "refused_for": []
+    },
+    {
+      "tool": "read_details",
+      "action": "mail_deal_repair_preview",
+      "verb": "preview_mail_deal_repair",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "read_details",
@@ -5758,6 +6874,20 @@
     },
     {
       "tool": "read_details",
+      "action": "product_translations",
+      "verb": "list_product_translations",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_details",
       "action": "project_filing",
       "verb": "get_activity_project_filing",
       "allowed_for": [
@@ -5848,6 +6978,20 @@
     },
     {
       "tool": "read_details",
+      "action": "site_read_logo",
+      "verb": "read_site_read_logo",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_details",
       "action": "tag_suggestion",
       "verb": "get_tag_suggestion",
       "allowed_for": [
@@ -5918,6 +7062,21 @@
       ],
       "refused_for": [
         "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "voice_source_preview",
+      "verb": "preview_voice_source",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
       ]
     },
     {
@@ -6590,8 +7749,38 @@
     },
     {
       "tool": "read_workspace",
+      "action": "ai_call",
+      "verb": "get_ai_call",
+      "allowed_for": [
+        "admin",
+        "management",
+        "ops"
+      ],
+      "refused_for": [
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
       "action": "ai_call_stats",
       "verb": "get_ai_call_stats",
+      "allowed_for": [
+        "admin",
+        "management",
+        "ops"
+      ],
+      "refused_for": [
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
+      "action": "ai_calls",
+      "verb": "list_ai_calls",
       "allowed_for": [
         "admin",
         "management",
@@ -6613,6 +7802,36 @@
         "ops"
       ],
       "refused_for": [
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
+      "action": "ai_model_rates",
+      "verb": "list_ai_model_rates",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
+      "action": "ai_price_sync",
+      "verb": "read_ai_price_sync",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
         "manager",
         "read_only",
         "rep"
@@ -6643,6 +7862,21 @@
         "ops"
       ],
       "refused_for": [
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
+      "action": "ai_routing",
+      "verb": "read_ai_routing",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
         "manager",
         "read_only",
         "rep"
@@ -6845,6 +8079,21 @@
     },
     {
       "tool": "read_workspace",
+      "action": "automatic_work_health",
+      "verb": "read_automatic_work_health",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
       "action": "automation_runs",
       "verb": "list_automation_runs",
       "allowed_for": [
@@ -6899,6 +8148,21 @@
         "rep"
       ],
       "refused_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "capture_health",
+      "verb": "read_capture_health",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "read_workspace",
@@ -7170,6 +8434,21 @@
     },
     {
       "tool": "read_workspace",
+      "action": "data_tasks",
+      "verb": "read_data_tasks",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
       "action": "domain_questions",
       "verb": "list_domain_questions",
       "allowed_for": [
@@ -7216,6 +8495,21 @@
       "tool": "read_workspace",
       "action": "embed_reindex_status",
       "verb": "embed_reindex_status",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
+      "action": "extension_ingest_health",
+      "verb": "read_extension_ingest_health",
       "allowed_for": [
         "admin",
         "ops"
@@ -7287,6 +8581,35 @@
     },
     {
       "tool": "read_workspace",
+      "action": "fx_rate_currencies",
+      "verb": "list_fx_rate_currencies",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "fx_rates",
+      "verb": "list_fx_rates",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
       "action": "held_threads",
       "verb": "list_held_threads",
       "allowed_for": [
@@ -7303,6 +8626,35 @@
       "tool": "read_workspace",
       "action": "import_runs",
       "verb": "list_import_runs",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
+      "action": "installation_jurisdiction",
+      "verb": "read_installation_jurisdiction",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "job_health",
+      "verb": "read_job_health",
       "allowed_for": [
         "admin",
         "ops"
@@ -7474,6 +8826,20 @@
     },
     {
       "tool": "read_workspace",
+      "action": "my_brief_delivery",
+      "verb": "read_my_brief_delivery",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_workspace",
       "action": "my_capture_activity",
       "verb": "list_my_capture_activity",
       "allowed_for": [
@@ -7504,6 +8870,20 @@
       "tool": "read_workspace",
       "action": "my_linkedin",
       "verb": "get_my_linked_in_account",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "my_working_hours",
+      "verb": "read_my_working_hours",
       "allowed_for": [
         "admin",
         "management",
@@ -7548,6 +8928,34 @@
       "tool": "read_workspace",
       "action": "notification_preferences",
       "verb": "list_notification_preferences",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "onboarding_company_proposal",
+      "verb": "read_onboarding_company_proposal",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "onboarding_state",
+      "verb": "read_onboarding_state",
       "allowed_for": [
         "admin",
         "management",
@@ -7663,6 +9071,21 @@
     },
     {
       "tool": "read_workspace",
+      "action": "recovery_health",
+      "verb": "read_recovery_health",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
       "action": "report_blocks",
       "verb": "describe_report_blocks",
       "allowed_for": [
@@ -7721,6 +9144,21 @@
     },
     {
       "tool": "read_workspace",
+      "action": "retention_settings",
+      "verb": "read_retention_settings",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
       "action": "roles",
       "verb": "list_roles",
       "allowed_for": [
@@ -7761,6 +9199,36 @@
         "rep"
       ],
       "refused_for": []
+    },
+    {
+      "tool": "read_workspace",
+      "action": "system_health",
+      "verb": "read_system_health",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_workspace",
+      "action": "tax_rates",
+      "verb": "list_tax_rates",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "read_workspace",
@@ -8028,6 +9496,40 @@
     },
     {
       "tool": "run_research",
+      "action": "build_voice_profile",
+      "verb": "build_voice_profile",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "run_research",
+      "action": "enrich_contact_from_provider",
+      "verb": "enrich_contact_from_provider",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
+      }
+    },
+    {
+      "tool": "run_research",
       "action": "generate_brief",
       "verb": "generate_morning_brief",
       "allowed_for": [
@@ -8039,6 +9541,21 @@
         "rep"
       ],
       "refused_for": []
+    },
+    {
+      "tool": "run_research",
+      "action": "preview_home_repair",
+      "verb": "preview_home_repair",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "run_research",
@@ -8067,6 +9584,21 @@
         "ops",
         "read_only",
         "rep"
+      ]
+    },
+    {
+      "tool": "run_research",
+      "action": "read_card_photo",
+      "verb": "read_card_photo",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
       ]
     },
     {
@@ -8190,6 +9722,21 @@
       ],
       "refused_for": [
         "read_only"
+      ]
+    },
+    {
+      "tool": "run_research",
+      "action": "start_search_reindex",
+      "verb": "start_search_reindex",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
       ]
     },
     {
@@ -8424,6 +9971,21 @@
         "manager": "ran",
         "rep": "ran"
       }
+    },
+    {
+      "tool": "send_outbound",
+      "action": "resend_member_invite",
+      "verb": "resend_member_invite",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
     },
     {
       "tool": "send_outbound",
