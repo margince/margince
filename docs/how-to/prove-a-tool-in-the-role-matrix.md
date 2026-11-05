@@ -19,7 +19,8 @@ Use this page when a new or changed MCP tool or router action turns one of five 
 
 Every cell is a ✓ or a ✗: the call ran for the role, or a gate refused it. A cell that is neither fails the
 sweep. A refusal counts only where a gate in `platform/auth` recorded refusing that role in that call. The gate
-answered 403, or kept a row out of sight as not there. A 403 no gate recorded fails the sweep as `a 403 no gate recorded`.
+answered 403, or answered 404 for a row the role may not see. A 403 no gate recorded fails the sweep as `a 403 no gate recorded`.
+
 Each record a call takes is owned by the passport's own user, so a cell measures the role's grants. Row scope is
 the colleague pass's subject.
 

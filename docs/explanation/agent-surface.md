@@ -147,6 +147,7 @@ choice. `internal/modules/ai/` owns it:
   left. A router with none left is not listed. A verb with no measured row stays offered. The filter
   changes only the list. A scheduled run may choose any tool its passport may call. The gate still
   checks each call: its grants again, row scope and the arguments.
+
   The catalog itself: [reference/agent-tools.md](../reference/agent-tools.md).
   Connecting: [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md);
   making the passport: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).
