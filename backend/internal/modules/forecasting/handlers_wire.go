@@ -5,6 +5,7 @@ package forecasting
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -21,6 +22,7 @@ func ReadingsToWire(
 	period Period, scope Scope, in Readings, baseCurrency string, asOf time.Time,
 ) crmcontracts.ForecastReadings {
 	out := crmcontracts.ForecastReadings{
+		QualificationMode:  crmcontracts.ForecastReadingsQualificationModeOff,
 		PeriodStart:        openapi_types.Date{Time: period.StartDate},
 		PeriodEnd:          openapi_types.Date{Time: period.EndDate},
 		ScopeKind:          crmcontracts.ForecastReadingsScopeKind(scope.Kind),
@@ -100,7 +102,8 @@ func (h Handlers) GetForecastMovement(
 ) {
 	reading := ReadingOpen
 	if params.Reading != nil {
-		reading = Reading(*params.Reading)
+		// The deprecated qualified readings answer as the reading each was built on.
+		reading = Reading(strings.TrimPrefix(string(*params.Reading), "qualified_"))
 	}
 	out, err := h.store.Movement(r.Context(), reading,
 		ids.UUID(params.From), ids.UUID(params.To))

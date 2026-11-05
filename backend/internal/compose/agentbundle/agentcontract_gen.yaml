@@ -21703,9 +21703,9 @@ paths:
           description: The closing snapshot.
         - name: reading
           in: query
-          schema: {type: string, enum: [open, weighted, evidence], default: open}
+          schema: {type: string, enum: [open, weighted, evidence, qualified_evidence, qualified_weighted], default: open}
           description: >-
-            Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.
+            Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The deprecated `qualified_` readings answer as `evidence` and `weighted`.
       responses:
         '200':
           description: The classified difference.
@@ -25492,6 +25492,26 @@ components:
                   errors:
                     - {field: 'emails[0].email', code: invalid_email}
   schemas:
+    AssuranceReviewDeliveries:
+      type: object
+      description: >-
+        The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+      required: [pending, failed, delivered]
+      properties:
+        pending:
+          type: integer
+          minimum: 0
+          description: Reviews whose task is queued or retrying.
+        failed:
+          type: integer
+          minimum: 0
+          description: Reviews whose task could not be delivered after every retry.
+        delivered:
+          type: integer
+          minimum: 0
+          description: >-
+            Reviews that have their task, including a task somebody already completed while the review stays open.
+      additionalProperties: false
     UpdateCompanyProfileFieldRequest:
       type: object
       description: 'A human correction. The canonical store changes; the machine''s proposal and its evidence survive in history.'
@@ -43928,6 +43948,7 @@ components:
         - priced_count
         - confirmed_date_count
         - fx_missing_count
+        - qualification_mode
         - as_of
         - timezone
         - base_currency
@@ -43998,6 +44019,12 @@ components:
           items: {$ref: '#/components/schemas/ForecastSnapshotRef'}
           description: >-
             The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
+        qualification_mode:
+          type: string
+          enum: ['off', enforcing]
+          deprecated: true
+          description: >-
+            Always `off`, because the qualified forecast is retired. The field stays for one release ahead of its removal.
         self_correcting:
           type: boolean
           description: >-
@@ -44428,7 +44455,7 @@ components:
       type: object
       description: >-
         What the most recent nightly input check found, and how much of the pipeline it was able to reach.
-      required: [run_id, as_of, status, eligible_deals, sources, freshness]
+      required: [run_id, as_of, status, eligible_deals, sources, freshness, review_deliveries]
       properties:
         run_id: {type: string, format: uuid}
         as_of: {type: string, format: date-time}
@@ -44451,6 +44478,9 @@ components:
           description: Every source the run tried, and how far it reached into each.
           items: {$ref: '#/components/schemas/ForecastAssuranceSource'}
         freshness: {$ref: '#/components/schemas/AssuranceFreshness'}
+        review_deliveries:
+          $ref: '#/components/schemas/AssuranceReviewDeliveries'
+          deprecated: true
       additionalProperties: false
     AssuranceFreshness:
       type: object
@@ -50489,7 +50519,7 @@ components:
     Offer:
       type: object
       description: A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
-      required: [id, deal_id, offer_number, revision, status, currency, line_items, source, captured_by, created_at, updated_at]
+      required: [id, deal_id, offer_number, revision, status, currency, net_minor, tax_minor, gross_minor, line_items, source, captured_by, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         deal_id: {type: string, format: uuid}
@@ -50529,7 +50559,7 @@ components:
         valid_until: {type: [string, 'null'], format: date}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
-        net_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line nets; derived, never client-set. Absent when money_withheld.'}
+        net_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line nets; derived, never client-set. Zero when money_withheld.'}
         tax_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line taxes; derived, never client-set.'}
         gross_minor: {type: integer, format: int64, readOnly: true, description: 'net + tax; derived, never client-set.'}
         arr_minor: {type: integer, format: int64, readOnly: true, description: 'The annualized NET value of this offer''s recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.'}

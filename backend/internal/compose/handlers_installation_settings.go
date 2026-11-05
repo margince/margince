@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -178,7 +179,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// quoting the value. Converted to a plain string because the patch carries
 	// what was ASKED for, and the generated enum type would claim it had already
 	// been checked against the vocabulary the projection enforces.
-	patch.ForecastForwardMeasure = enumText(req.ForecastForwardMeasure)
+	patch.ForecastForwardMeasure = savedForwardMeasure(req.ForecastForwardMeasure)
 	// Passed through unvalidated against the deployment's list on purpose. A key
 	// this deployment holds no credentials for enables nothing — the effective
 	// answer is the intersection — so refusing it would be refusing a request
@@ -249,7 +250,8 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		FiscalYearStartMonth: s.FiscalYearStartMonth,
 		DeadWorkBannerHours:  s.DeadWorkBannerHours,
 		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
-			s.ForecastForwardMeasure),
+			s.ForecastForwardMeasure,
+		),
 		OauthAccessTokenTtlMinutes: s.OAuthAccessTokenTTLMinutes,
 		BaseCurrencyLocked:         s.BaseCurrencyLocked,
 		CallWhatsapp:               s.CallWhatsApp,
@@ -328,6 +330,16 @@ func (h installationSettingsHandlers) clock() time.Time {
 		return h.now()
 	}
 	return time.Now()
+}
+
+// savedForwardMeasure keeps the two deprecated qualified measures sendable. The
+// qualified forecast is retired, so each saves as the measure it was built on.
+func savedForwardMeasure[T ~string](value *T) *string {
+	text := enumText(value)
+	if text != nil {
+		*text = strings.TrimPrefix(*text, "qualified_")
+	}
+	return text
 }
 
 func enumText[T ~string](value *T) *string {

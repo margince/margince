@@ -36,7 +36,10 @@ func withholdOfferMoney(ctx context.Context, tx pgx.Tx, offers []crmcontracts.Of
 }
 
 func withholdMoneyOf(o *crmcontracts.Offer) {
-	o.NetMinor, o.TaxMinor, o.GrossMinor, o.ArrMinor, o.NetTcvMinor = nil, nil, nil, nil, nil
+	// The contract requires the three totals, so a withheld offer carries zeros
+	// beside money_withheld.
+	o.NetMinor, o.TaxMinor, o.GrossMinor = new(int64(0)), new(int64(0)), new(int64(0))
+	o.ArrMinor, o.NetTcvMinor = nil, nil
 	o.FxRateToBase, o.FxRateDate, o.PdfAssetRef, o.DiffFromPrevious = nil, nil, nil, nil
 	o.LineItems = &[]crmcontracts.OfferLineItem{}
 	o.MoneyWithheld = new(true)

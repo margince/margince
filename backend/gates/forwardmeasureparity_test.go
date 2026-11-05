@@ -43,7 +43,9 @@ var forwardMeasureSites = []struct {
 	// measure it was frozen under.
 	{"the landing a read returns", []string{"components", "schemas", "ForecastLanding"}, true},
 	{"the stored installation setting", []string{"components", "schemas", "InstallationSettings"}, false},
-	{"the settings patch", []string{"components", "schemas", "UpdateInstallationSettingsRequest"}, false},
+	// The patch still accepts the retired measures, and saves each as the measure
+	// it was built on, so no read ever meets one.
+	{"the settings patch", []string{"components", "schemas", "UpdateInstallationSettingsRequest"}, true},
 	// The weekly review's FROZEN measure. It records which measure a past week
 	// was read under, so it must offer the same set — a review frozen under a
 	// measure the server no longer builds is a record nobody can re-read.

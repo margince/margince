@@ -24245,10 +24245,619 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/stage-progressions/{approvalId}/revert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The stage-progression approval whose move is being taken back. */
+                approvalId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a stage move the product made by itself.
+         * @deprecated
+         * @description Undo for an AUTOMATICALLY applied stage move, inside the window the
+         *     transition's rule allows (`undo_window_hours`, default 72).
+         *
+         *     It is a separate verb rather than the general undo path because a stage
+         *     move is not restorable by writing the field back: it wrote
+         *     `deal_stage_history` and the progression ledger beside the column, so
+         *     restoring `stage_id` alone would leave the history saying the deal is
+         *     somewhere it is not. The general replay engine refuses `advance_stage`
+         *     for exactly this reason.
+         *
+         *     What it does: moves the deal back to the stage it came from, appends a
+         *     new `deal_stage_history` row for the move back (history is append-only;
+         *     nothing is erased), and marks the progression ledger row `reversed` with
+         *     who did it and when.
+         *
+         *     **A reversal does not refute the evidence.** Taking a move back says the
+         *     deal should not have moved, which is a different claim from "the
+         *     criteria were wrongly read" — a rep may agree with every observation and
+         *     still want the deal where it was. Evidence is withdrawn only through its
+         *     own correction path.
+         *
+         *     Refused after the window closes: the move stands, the audit trail keeps
+         *     it, and moving the deal back by hand is the remaining route — which is
+         *     counted as a reversal too, on the same ledger.
+         */
+        post: operations["revertStageProgression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stage-automation/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What each stage transition has earned.
+         * @deprecated
+         * @description Every from→to transition in one pipeline, with what happened to the moves
+         *     the product proposed on it. This is the evidence behind letting a
+         *     transition move deals by itself: it reports, and decides nothing.
+         *
+         *     Every rate is a fraction of `reviewed` — proposals a human actually
+         *     answered. A card nobody opened is not evidence that anyone agreed with
+         *     it, so `proposed`, `expired` and `superseded` are counted and reported
+         *     but kept OUT of the denominator. They are reported because their absence
+         *     would hide the case that matters most: a transition whose cards are
+         *     mostly ignored, whose acceptance rate is then computed over the few
+         *     somebody happened to open.
+         *
+         *     `expired` is not `rejected`. Both are refusals, and the product's answer
+         *     to each is opposite — a rejected transition needs a better proposal, an
+         *     expired one needs somebody to look.
+         *
+         *     `unsafe_rate` is a union, not a sum: a move that was reversed AND whose
+         *     evidence a human corrected is one mistake, and counting it twice would
+         *     put a transition over a ceiling it had not crossed.
+         *
+         *     `observation_days` is the span from the first answered proposal to the
+         *     last, rounded DOWN — a fine acceptance rate earned entirely on one
+         *     afternoon has not been observed, however many proposals it saw.
+         */
+        get: operations["getStageAutomationReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stage-automation/policies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What each transition in this pipeline is allowed to do.
+         * @deprecated
+         * @description One rule per from→to transition an admin has decided about. A transition
+         *     absent from this list has no rule, which is the default state of every
+         *     transition in the product and means it proposes.
+         *
+         *     A rule saying `auto` does NOT mean moves are applying. Asking is not
+         *     being allowed: the thresholds are re-checked in the transaction that
+         *     would apply each move, so a transition can be turned on before it has
+         *     earned the bar and start applying by itself the day its record clears —
+         *     without anybody coming back. Read `/stage-automation/report` to see
+         *     whether it has.
+         *
+         *     `suspended_at` is the product's own act, not an admin's. A rule the
+         *     product turned off went off for a measured reason and comes back only
+         *     through a deliberate resume; the admin's `mode` survives underneath it,
+         *     so resuming returns the transition to what was actually asked for.
+         */
+        get: operations["listTransitionPolicies"];
+        /**
+         * Decide what one transition may do.
+         * @deprecated
+         * @description Records what an admin wants for ONE transition, named in the body rather
+         *     than the path because a pipeline has many and each is decided
+         *     separately.
+         *
+         *     Every threshold is optional and omitting one KEEPS what the rule has,
+         *     or takes the product default on a first write. A caller who only means
+         *     to turn a transition on does not have to restate four thresholds, and
+         *     cannot silently reset them by leaving one out.
+         *
+         *     It does not clear a suspension. A rule the product turned off went off
+         *     for a measured reason, and letting an ordinary save clear it would make
+         *     the safety mechanism a checkbox — `POST .../resume` is the separate,
+         *     deliberate act.
+         */
+        put: operations["setTransitionPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stage-automation/policies/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lift a suspension the product put on a transition.
+         * @deprecated
+         * @description A separate verb from saving a rule, so lifting a safety stop is
+         *     something an admin does on purpose rather than a side effect of editing
+         *     a threshold.
+         *
+         *     It does NOT re-enable. The rule comes back to whatever mode it was in,
+         *     and if that is `auto` the thresholds still have to hold in the
+         *     transaction that would apply — a resumed rule on a record that is still
+         *     bad simply proposes. Resuming a rule that is not suspended does
+         *     nothing and is not an error.
+         */
+        post: operations["resumeTransitionPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/enforcement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether the qualified forecast applies the viability reviews.
+         * @deprecated
+         * @description `state` is `not_enrolled` before the input check has ever run, `observing` once it
+         *     runs and raises reviews and tasks but the forecast figures are unchanged, and
+         *     `enforcing` once an admin switched enforcement on. Only while `enforcing` does a
+         *     forecast reading carry `qualified`, and only then does the close-date sweep stop
+         *     lowering forecast categories.
+         */
+        get: operations["getForecastAssuranceEnforcement"];
+        /**
+         * Switch the qualified forecast's enforcement on or off.
+         * @deprecated
+         * @description Admin only. A setting fixed by the environment is refused with
+         *     `409 setting_locked_by_boot_source`.
+         *
+         *     Switching on changes the qualified forecast figures for every reader. It sends
+         *     `preview_digest`, the `digest` of the preview the admin saw, and is refused with
+         *     `409 preview_stale` when the deals' treatment changed since, so nobody switches
+         *     on a picture that is no longer true. It is then refused with
+         *     `409 input_check_not_started` until a check has judged a deal: before that the
+         *     qualified forecast would count nothing.
+         *
+         *     Switching off takes effect at once. The reviews, their tasks and their history
+         *     stay; only the qualified readings disappear, and the baseline readings never
+         *     changed.
+         */
+        put: operations["setForecastAssuranceEnforcement"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/exceptions/{id}/wait": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a customer review with the day the customer asked you to wait until.
+         * @deprecated
+         * @description For a `deal_viability` review only. One transaction records the customer's wait on
+         *     the deal (`wait_until`) and answers the review `remind_later` for the same day. The
+         *     review stays open and the deal stays out of the qualified forecast while it waits:
+         *     a wait is not support. The review comes back on that day.
+         *
+         *     404 when the finding is not an open customer review.
+         */
+        post: operations["waitInputCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/exceptions/{id}/close-lost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a customer review by closing its deal as lost.
+         * @deprecated
+         * @description For a `deal_viability` review only. One transaction moves the deal to its pipeline's
+         *     lost stage with the reason given, and answers the review `not_relevant` with that
+         *     reason. A review is never answered `not_relevant` while its deal is still open.
+         *
+         *     404 when the finding is not an open customer review. 422 when the pipeline has no
+         *     lost stage.
+         */
+        post: operations["closeLostInputCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/viability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Whether the customer still supports this deal, and the review behind the answer.
+         * @deprecated
+         * @description The deal's treatment in the qualified forecast and what it rests on: the input check's
+         *     last receipt and its reasons, the close date's standing, the stage chance, and the open
+         *     `deal_viability` review with its task. The review is shown while it is open, even when
+         *     its task is done: completing the task does not answer the review.
+         *
+         *     Needs `forecast:read` and the deal under the caller's row scope, checked in the same
+         *     transaction as the read; a deal outside it answers 404. The review's task is shown only
+         *     while it is still linked to this deal and the caller may discover it. Carries no amount,
+         *     so nothing here needs masking.
+         *     `qualification` is computed whether or not the installation enforces it;
+         *     `qualification_mode` says whether the qualified forecast applies it.
+         */
+        get: operations["getDealViability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        DealViability: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * @description Whether the installation's qualified forecast applies `qualification`.
+             * @enum {string}
+             */
+            qualification_mode: "off" | "enforcing";
+            /**
+             * @description The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
+             * @enum {string}
+             */
+            qualification: "eligible" | "excluded" | "unsupported" | "unknown" | "closed";
+            /**
+             * Format: date-time
+             * @description When the input check last assessed the deal; null when it never did.
+             */
+            assessed_at?: string | null;
+            /**
+             * @description The review standing the qualification rests on.
+             * @enum {string}
+             */
+            disposition?: "none" | "open_review" | "override" | "unsupported";
+            /** @description Whether the deal was judged on its current evidence under the current policy. */
+            complete?: boolean;
+            policy_version?: string;
+            receipt?: components["schemas"]["DealViabilityReceipt"];
+            /** Format: date */
+            expected_close_date?: string | null;
+            close_date_provisional: boolean;
+            /** @description True when the expected close date is before today in the installation's zone. */
+            close_date_overdue: boolean;
+            /** @description The baseline chance, the deal's stage probability. */
+            stage_probability: number;
+            review?: components["schemas"]["DealViabilityReview"];
+        };
+        /** @description The input check's last answer about the deal. Absent when it never assessed it. */
+        DealViabilityReceipt: {
+            /** @description The check's outcome, such as `eligible` or `unsupported`. */
+            outcome: string;
+            /** @description The viability policy the check applied. */
+            policy_version: string;
+            /** @description Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`. */
+            current: boolean;
+            /** @description The reason codes the check recorded. */
+            reasons: string[];
+            /** Format: date-time */
+            valid_until: string;
+        };
+        /** @description The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done. */
+        DealViabilityReview: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            opened_at: string;
+            episode: number;
+            /**
+             * @description How far handing the review to a task got; null before a pass queued it.
+             * @enum {string|null}
+             */
+            delivery_state?: "pending" | "failed" | "delivered" | null;
+            task?: components["schemas"]["DealViabilityTask"];
+        };
+        /** @description The task the review was delivered as. Absent until delivered, or when the reader may not see it. */
+        DealViabilityTask: {
+            /** Format: uuid */
+            id: string;
+            done: boolean;
+        };
+        /** @description Whether the qualified forecast applies the viability reviews. */
+        ForecastAssuranceEnforcement: {
+            readonly locks?: components["schemas"]["SettingLocks"];
+            /** @enum {string} */
+            state: "not_enrolled" | "observing" | "enforcing";
+            preview?: components["schemas"]["ForecastEnforcementPreview"];
+        };
+        /** @description What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since. */
+        ForecastEnforcementPreview: {
+            /** @description Open deals the qualified forecast would leave out, under review or unsupported. */
+            left_out_count: number;
+            /** @description Open deals the last check could not judge on current evidence. */
+            unknown_count: number;
+            /** @description Names the policy version and every open deal's treatment this preview counted. */
+            digest: string;
+        };
+        /**
+         * @description Every threshold is optional. Omitting one KEEPS what the rule has, or
+         *     takes the product default on a first write — so a caller turning a
+         *     transition on cannot silently reset a bar somebody set.
+         */
+        SetTransitionPolicyRequest: {
+            /** Format: uuid */
+            from_stage_id: string;
+            /** Format: uuid */
+            to_stage_id: string;
+            /** @enum {string} */
+            mode: "propose" | "auto";
+            /** Format: double */
+            clean_acceptance_threshold?: number;
+            /** Format: double */
+            correction_reversal_threshold?: number;
+            min_reviewed?: number;
+            min_observation_days?: number;
+            window_days?: number;
+            undo_window_hours?: number;
+            /**
+             * Format: int64
+             * @description The rule's version as the caller read it, refusing the write with
+             *     409 when the row has moved on since.
+             *
+             *     OPTIONAL, and its absence is not a conflict. A first write has no
+             *     row to have read, and an edit that offers no pin is a caller who
+             *     did not read first rather than one holding a stale copy — the same
+             *     bargain the exit-criteria editor makes. A client that wants the
+             *     guarantee sends the version it read; one that does not, does not
+             *     get it.
+             */
+            if_version?: number;
+        };
+        StageAutomationReport: {
+            data: components["schemas"]["StageTransitionRecord"][];
+            /** @description The window the counts were taken over. */
+            window_days: number;
+        };
+        StageTransitionEvidenceRecord: {
+            kind: string;
+            reviewed: number;
+            accepted_clean: number;
+            unsafe: number;
+        };
+        StageTransitionRecord: {
+            /** Format: uuid */
+            pipeline_id: string;
+            /** Format: uuid */
+            from_stage_id: string;
+            /** Format: uuid */
+            to_stage_id: string;
+            from_stage_name: string;
+            to_stage_name: string;
+            /**
+             * @description Proposals a human answered. The denominator of every rate here, and
+             *     zero means "nobody has answered one yet" rather than "the rates are
+             *     bad" — read it before reading any rate below.
+             */
+            reviewed: number;
+            /** @description Cards still standing, unanswered. */
+            proposed: number;
+            /**
+             * @description Cards whose window closed with nobody answering. A refusal by
+             *     NOBODY, which is why it is neither a rejection nor reviewed.
+             */
+            expired: number;
+            /** @description Cards a fresher reading replaced before anyone answered. */
+            superseded: number;
+            /** @description Approved with nothing changed. */
+            accepted_clean: number;
+            /**
+             * @description Approved only after the human changed it. Not a clean acceptance:
+             *     the question is whether the proposal is right AS IT STANDS.
+             */
+            accepted_edited: number;
+            rejected: number;
+            /**
+             * @description Applied without anybody being asked. Reported apart so a reader can
+             *     see how much of a transition's record the autopilot wrote about
+             *     itself.
+             */
+            auto_applied: number;
+            /**
+             * @description Reviewed moves that were reversed OR whose evidence a human
+             *     corrected. One outcome counts once even when both are true.
+             */
+            unsafe: number;
+            /**
+             * @description Whole days from the first answered proposal to the last, rounded
+             *     down.
+             */
+            observation_days: number;
+            /** Format: double */
+            clean_acceptance_rate: number;
+            /** Format: double */
+            edit_rate: number;
+            /** Format: double */
+            rejection_rate: number;
+            /**
+             * Format: double
+             * @description The safety number, held to a ceiling rather than a floor.
+             */
+            unsafe_rate: number;
+            /**
+             * @description The same moves cut by the criterion kinds they rested on, so an
+             *     installation can see WHICH evidence it accepts rather than only that
+             *     it accepts most things.
+             */
+            evidence_kinds: components["schemas"]["StageTransitionEvidenceRecord"][];
+        };
+        TransitionPolicy: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            pipeline_id: string;
+            /** Format: uuid */
+            from_stage_id: string;
+            /** Format: uuid */
+            to_stage_id: string;
+            /**
+             * @description What the admin has asked for. `auto` is a request, not a state:
+             *     moves still go to a contact until the thresholds below hold in the
+             *     transaction that would apply them.
+             * @enum {string}
+             */
+            mode: "propose" | "auto";
+            /**
+             * Format: double
+             * @description The share of reviewed proposals a contact must have accepted
+             *     UNCHANGED. An edit is agreement with a correction, which is a
+             *     weaker claim about the proposal than agreement without one.
+             */
+            clean_acceptance_threshold: number;
+            /**
+             * Format: double
+             * @description The ceiling on moves that were undone or whose evidence was
+             *     corrected. The one threshold that is a maximum rather than a
+             *     minimum, and the one the product suspends a rule for crossing.
+             */
+            correction_reversal_threshold: number;
+            /**
+             * @description How many proposals a contact must have answered before the rates
+             *     mean anything. It also bounds suspension: the volume at which a
+             *     record is worth trusting and the volume at which it is worth
+             *     distrusting are one judgement.
+             */
+            min_reviewed: number;
+            /**
+             * @description The span the record must cover. A fine acceptance rate earned
+             *     entirely in one afternoon has not been observed.
+             */
+            min_observation_days: number;
+            /** @description How far back the rates are counted. */
+            window_days: number;
+            /**
+             * @description How long a contact has to take an automatic move back. Frozen onto
+             *     each move as it is applied, so editing this governs the next move
+             *     and not the last one.
+             */
+            undo_window_hours: number;
+            /**
+             * Format: uuid
+             * @description Who FIRST trusted this transition with automatic moves. Not
+             *     overwritten by later threshold edits — who first trusted it is a
+             *     different fact from who last adjusted it, and the first is the one
+             *     an auditor asks for.
+             */
+            enabled_by?: string;
+            /** Format: date-time */
+            enabled_at?: string;
+            /**
+             * Format: date-time
+             * @description When the PRODUCT turned this rule off. Absent on a rule that is
+             *     running. It is not an admin's act and an ordinary save does not
+             *     clear it.
+             */
+            suspended_at?: string;
+            /** @description Why the product stopped it, in words an operator can act on. */
+            suspended_reason?: string;
+            /** Format: int64 */
+            version: number;
+        };
+        TransitionPolicyList: {
+            data: components["schemas"]["TransitionPolicy"][];
+            /**
+             * @description Whether this installation permits stage automation at all
+             *     (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
+             *     off every transition is forced to `propose` regardless of its own rule.
+             *
+             *     A rule's `mode` therefore describes what was asked for, not what will
+             *     happen: read both before telling somebody a transition moves deals by
+             *     itself.
+             */
+            automation_enabled: boolean;
+        };
+        /**
+         * @description One transition, named by the stages at its two ends. Both must belong
+         *     to the pipeline in the path — the foreign keys admit a pair from two
+         *     different pipelines, which would be a rule describing a move no deal
+         *     can make.
+         */
+        TransitionRef: {
+            /** Format: uuid */
+            from_stage_id: string;
+            /** Format: uuid */
+            to_stage_id: string;
+        };
+        /** @description The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check. */
+        AssuranceReviewDeliveries: {
+            /** @description Reviews whose task is queued or retrying. */
+            pending: number;
+            /** @description Reviews whose task could not be delivered after every retry. */
+            failed: number;
+            /** @description Reviews that have their task, including a task somebody already completed while the review stays open. */
+            delivered: number;
+        };
         /** @description A human correction. The canonical store changes; the machine's proposal and its evidence survive in history (PO-AC-N-1/N-2). */
         UpdateCompanyProfileFieldRequest: {
             /** @description The corrected value. Where this field maps to a column on `company`, the COLUMN is what changes — a correction the header ignores is not a correction (PO-AC-N-1). */
@@ -25103,12 +25712,13 @@ export interface components {
              */
             dead_work_banner_hours?: number;
             /**
-             * @description Which remaining-pipeline reading a projected landing is built from. Never frozen:
+             * @description The deprecated `qualified_` values save as `likely` and `weighted`.
+             *     Which remaining-pipeline reading a projected landing is built from. Never frozen:
              *     it is applied on READ and stores nothing, so changing it re-computes every landing
              *     at once and re-means no stored row.
              * @enum {string}
              */
-            forecast_forward_measure?: "likely" | "weighted" | "manager_call";
+            forecast_forward_measure?: "likely" | "weighted" | "manager_call" | "qualified_likely" | "qualified_weighted";
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -44562,6 +45172,12 @@ export interface components {
             sufficiency?: components["schemas"]["ForecastSufficiency"];
             /** @description The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against. */
             snapshots?: components["schemas"]["ForecastSnapshotRef"][];
+            /**
+             * @deprecated
+             * @description Always `off`, because the qualified forecast is retired. The field stays for one release ahead of its removal.
+             * @enum {string}
+             */
+            qualification_mode: "off" | "enforcing";
             /** @description Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed. */
             self_correcting?: boolean;
             /**
@@ -44926,6 +45542,8 @@ export interface components {
             /** @description Every source the run tried, and how far it reached into each. */
             sources: components["schemas"]["ForecastAssuranceSource"][];
             freshness: components["schemas"]["AssuranceFreshness"];
+            /** @deprecated */
+            review_deliveries: components["schemas"]["AssuranceReviewDeliveries"];
         };
         /** @description Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none. */
         AssuranceFreshness: {
@@ -51954,19 +52572,19 @@ export interface components {
             terms_text?: string | null;
             /**
              * Format: int64
-             * @description Σ line nets; derived, never client-set. Absent when money_withheld.
+             * @description Σ line nets; derived, never client-set. Zero when money_withheld.
              */
-            readonly net_minor?: number;
+            readonly net_minor: number;
             /**
              * Format: int64
              * @description Σ line taxes; derived, never client-set.
              */
-            readonly tax_minor?: number;
+            readonly tax_minor: number;
             /**
              * Format: int64
              * @description net + tax; derived, never client-set.
              */
-            readonly gross_minor?: number;
+            readonly gross_minor: number;
             /**
              * Format: int64
              * @description The annualized NET value of this offer's recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.
@@ -89769,8 +90387,8 @@ export interface operations {
                 from: string;
                 /** @description The closing snapshot. */
                 to: string;
-                /** @description Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. */
-                reading?: "open" | "weighted" | "evidence";
+                /** @description Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The deprecated `qualified_` readings answer as `evidence` and `weighted`. */
+                reading?: "open" | "weighted" | "evidence" | "qualified_evidence" | "qualified_weighted";
             };
             header?: never;
             path?: never;
@@ -94120,6 +94738,322 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    revertStageProgression: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The stage-progression approval whose move is being taken back. */
+                approvalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal, back at the stage it came from. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /**
+             * @description No such deal, no such progression, or the caller may not see it.
+             *     Also the answer when the approval names a different deal, so a
+             *     caller cannot learn that a progression exists by probing ids.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The move cannot be taken back: the undo window has closed, the move
+             *     was made by a contact rather than automatically, or it has already
+             *     been reversed.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getStageAutomationReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pipeline's transitions and their record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageAutomationReport"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listTransitionPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pipeline's transition rules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionPolicyList"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setTransitionPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetTransitionPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description The rule as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionPolicy"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            /** @description No such pipeline, or the stages named are not both in it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    resumeTransitionPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionRef"];
+            };
+        };
+        responses: {
+            /** @description The rule, no longer suspended. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionPolicy"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getForecastAssuranceEnforcement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The installation's enforcement state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastAssuranceEnforcement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    setForecastAssuranceEnforcement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    enabled: boolean;
+                    /** @description The `digest` of the preview shown before switching on. */
+                    preview_digest?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The state after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastAssuranceEnforcement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    waitInputCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    until: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The wait was recorded on the deal and the review. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    closeLostInputCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    lost_reason: string;
+                    /** @description An active key from `/loss-reasons`. Without one the loss is recorded with its note alone, as unmapped. */
+                    lost_reason_code?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The deal was closed as lost and the review answered. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getDealViability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's viability. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealViability"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };

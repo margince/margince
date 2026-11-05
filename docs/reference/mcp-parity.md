@@ -9,8 +9,8 @@ Counting what another tool covers, it is 87.1%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1023 | 839 | 82.0% |
-| Operations a signed-in user reaches | 983 | 839 | 85.3% |
+| Every operation in the contract | 1033 | 839 | 81.2% |
+| Operations a signed-in user reaches | 993 | 839 | 84.4% |
 | Operations the web app calls for a signed-in user | 850 | 727 | 85.5% |
 
 The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 112 of those are open, so an agent can do them.
@@ -46,10 +46,10 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 
 | Group | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| [Business operations](#business-operations) | 561 | 529 | 33 | 0 | 17 | 15 | 475 | 94.5% | 94.2% |
+| [Business operations](#business-operations) | 567 | 529 | 33 | 0 | 17 | 21 | 475 | 94.5% | 93.2% |
 | [Compliance and privacy](#compliance-and-privacy) | 58 | 42 | 14 | 0 | 16 | 0 | 43 | 72.0% | 72.4% |
 | [Capture and connectors](#capture-and-connectors) | 49 | 40 | 9 | 0 | 9 | 0 | 48 | 81.2% | 81.6% |
-| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 79 | 67 | 4 | 0 | 11 | 1 | 66 | 84.8% | 84.8% |
+| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 83 | 67 | 4 | 0 | 11 | 5 | 66 | 84.8% | 80.7% |
 | [Admin settings](#admin-settings) | 158 | 118 | 31 | 0 | 40 | 0 | 146 | 76.7% | 74.6% |
 | [The user's own account and security](#the-users-own-account-and-security) | 29 | 18 | 5 | 0 | 9 | 1 | 26 | 65.3% | 62.0% |
 | [Agent governance](#agent-governance) | 26 | 8 | 0 | 0 | 17 | 1 | 26 | 30.7% | 30.7% |
@@ -66,7 +66,7 @@ The daily sales work: records, deals, activities, offers, reports and lists.
 | Duplicates | 8 | 8 | 0 | 0 | 0 | 0 | 5 | 100.0% | 100.0% |
 | Companies | 58 | 55 | 2 | 0 | 2 | 1 | 48 | 93.7% | 94.8% |
 | Partners | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 100.0% | 100.0% |
-| Deals | 37 | 36 | 0 | 0 | 1 | 0 | 30 | 96.6% | 97.2% |
+| Deals | 39 | 36 | 0 | 0 | 1 | 2 | 30 | 96.6% | 92.3% |
 | Deal rooms | 24 | 23 | 3 | 0 | 1 | 0 | 21 | 95.2% | 95.8% |
 | Legal reviews | 6 | 6 | 0 | 0 | 0 | 0 | 6 | 100.0% | 100.0% |
 | Leads | 18 | 16 | 0 | 0 | 0 | 2 | 17 | 88.2% | 88.8% |
@@ -76,7 +76,7 @@ The daily sales work: records, deals, activities, offers, reports and lists.
 | Contracts | 8 | 8 | 2 | 0 | 0 | 0 | 7 | 100.0% | 100.0% |
 | Projects | 18 | 17 | 1 | 0 | 1 | 0 | 15 | 93.3% | 94.4% |
 | Reports and analytics | 68 | 68 | 6 | 0 | 0 | 0 | 61 | 100.0% | 100.0% |
-| Forecast | 15 | 15 | 0 | 0 | 0 | 0 | 12 | 100.0% | 100.0% |
+| Forecast | 19 | 15 | 0 | 0 | 0 | 4 | 12 | 100.0% | 78.9% |
 | Commissions | 4 | 4 | 1 | 0 | 0 | 0 | 2 | 100.0% | 100.0% |
 | Lists and saved views | 22 | 21 | 2 | 0 | 0 | 1 | 22 | 95.4% | 95.4% |
 | Tags | 14 | 13 | 0 | 0 | 0 | 1 | 14 | 92.8% | 92.8% |
@@ -120,7 +120,7 @@ How the workspace is set up, where the seeded `rep` role passes the check. Most 
 
 | Area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Pipelines and stages | 6 | 6 | 0 | 0 | 0 | 0 | 5 | 100.0% | 100.0% |
+| Pipelines and stages | 10 | 6 | 0 | 0 | 0 | 4 | 5 | 100.0% | 60.0% |
 | Sales lists and reasons | 6 | 6 | 0 | 0 | 0 | 0 | 5 | 100.0% | 100.0% |
 | Sales rules and templates | 6 | 6 | 0 | 0 | 0 | 0 | 6 | 100.0% | 100.0% |
 | Your company and legal entities | 12 | 11 | 0 | 0 | 1 | 0 | 7 | 85.7% | 91.6% |

@@ -59,7 +59,13 @@ function Individual({
   });
   const update = {
     mutate: (patch: Patch) => {
-      if (!refused) setSettings((was) => ({ ...was, ...patch }));
+      if (!refused) {
+        setSettings((was) => ({
+          ...was,
+          individual_performance:
+            patch.individual_performance ?? was.individual_performance,
+        }));
+      }
     },
     isPending: false,
     isError: refused,
