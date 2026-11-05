@@ -37,6 +37,6 @@ describe("a receipt's source", () => {
     });
 
     expect(source.classList).toContain("btn-valuelabel");
-    expect(source.classList).toContain("btn-align-start");
+    expect(source.dataset.align).toBe("start");
   });
 });

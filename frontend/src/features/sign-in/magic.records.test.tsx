@@ -223,7 +223,7 @@ describe("a done line's opener", () => {
     });
 
     expect(opener.classList).toContain("btn-valuelabel");
-    expect(opener.classList).toContain("btn-align-start");
+    expect(opener.dataset.align).toBe("start");
   });
 });
 

@@ -1,16 +1,10 @@
-import {
-  CheckSquare,
-  FileText,
-  Search,
-  Send,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
+import { taskLine, useTaskHolder } from "../../components/taskassignee";
 import { TaskCallAction } from "../../components/tasknextsteps";
-import { Button } from "../../design-system/atoms";
+import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatDue, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
@@ -248,6 +242,7 @@ function TaskBar({
   more,
 }: Readonly<{ task: Activity; view: Contact360; more: More }>) {
   const t = useT();
+  const holder = useTaskHolder(task.assignee_id);
   const { locale } = useLocale();
   const zone = useViewerZone();
   return (
@@ -255,13 +250,14 @@ function TaskBar({
       title={task.subject ?? t("task.untitled")}
       late={lateness(task.due_at, view, t, locale)}
       detail={taskDetail(task)}
-      sub={
+      sub={taskLine([
+        holder,
         task.due_at
           ? t("co.next.due", {
               when: formatDue(task.due_at, task.due_has_time, locale, zone),
             })
-          : t("co.next.undated")
-      }
+          : t("co.next.undated"),
+      ])}
       action={
         <>
           <TaskCallAction task={task} pageContact={view.contact} />
@@ -417,7 +413,12 @@ function recordsTheMoveNames(move: ContactMoment | undefined): Set<string> {
   );
 }
 
-// One verb: the button, and under it what will happen when it is pressed.
+// The bar has one filled verb, its lead; indigo when the model writes it.
+function verbVariant(drafts: boolean, lead: boolean): ButtonVariant {
+  if (lead) return drafts ? "ai" : "primary";
+  return drafts ? "aiQuiet" : "ghost";
+}
+
 function ActionVerb({
   action,
   primary,
@@ -429,10 +430,10 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  // A rule ladder picks the verb, not a model. Only a press that has the model
-  // write the mail wears indigo; the rest keep the accent.
+  // A rule ladder picks the verb, not a model. Only the bar's lead verb is
+  // filled; a press that has the model write the mail carries the ✦.
   const drafts = momentDrafts(action);
-  const variant = drafts ? "ai" : primary ? "primary" : "ghost";
+  const variant = verbVariant(drafts, primary === true);
   return (
     <span className="today-verb">
       {/* A blocked verb hands its sentence to the Button, whose `reason`
@@ -445,7 +446,7 @@ function ActionVerb({
         onClick={() => onAction(action)}
         reason={blocked ? blockedReason(action, t) : undefined}
       >
-        {drafts ? <Sparkles aria-hidden="true" /> : actionIcon(action.kind)}
+        {!drafts && actionIcon(action.kind)}
         {action.label}
       </Button>
     </span>

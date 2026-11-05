@@ -542,18 +542,20 @@ describe("the link variant is the .link-button affordance, not a copy of it", ()
 });
 
 describe("align sets where the label's lines sit", () => {
-  it("centres by default and emits no alignment class", () => {
+  it("centres by default and marks no alignment", () => {
     render(<Button variant="link">Acme Holdings</Button>);
-    expect(classesOf("Acme Holdings")).not.toContain("btn-align-start");
+    const label = screen.getByRole("button", { name: "Acme Holdings" });
+    expect(label).not.toHaveAttribute("data-align");
   });
 
-  it("emits the start class for align start", () => {
+  it("marks align start on the button", () => {
     render(
       <Button variant="link" align="start">
         Acme Holdings
       </Button>,
     );
-    expect(classesOf("Acme Holdings")).toContain("btn-align-start");
+    const label = screen.getByRole("button", { name: "Acme Holdings" });
+    expect(label).toHaveAttribute("data-align", "start");
   });
 
   it("compiles only for a button with a label", () => {
@@ -574,7 +576,7 @@ describe("align sets where the label's lines sit", () => {
 
   it("outranks the button box on specificity, not on sheet order", () => {
     const css = stripComments(readFileSync(join(here, "base.css"), "utf8"));
-    const rule = /(?:^|\n)\.btn\.btn-align-start\s*\{([^}]*)\}/.exec(css);
+    const rule = /(?:^|\n)\.btn\[data-align="start"\]\s*\{([^}]*)\}/.exec(css);
     expect(rule).not.toBeNull();
     expect(rule?.[1]).toMatch(/justify-content:\s*flex-start/);
     expect(rule?.[1]).toMatch(/text-align:\s*start/);
