@@ -29,7 +29,8 @@ name: cache-warm
 on:
   schedule:
     # Every three hours. Ten-ish merges of drift against a content-addressed
-    # cache, which is still a warm restore.
+    # cache, which is still a warm restore. pace.yml starts a run from a push once
+    # the newest is three hours old, because GitHub drops some of these.
     - cron: "0 */3 * * *"
   workflow_dispatch:
 
