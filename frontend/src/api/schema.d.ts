@@ -5897,6 +5897,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/deal-filing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How a call or meeting logged from this record will be filed on a deal.
+         * @description Uses the same current employer and open-deal resolver as activity creation.
+         *     One accessible open deal is suggested; several require a deal choice or an explicit
+         *     choice of none. Hidden deals are never named. Needs activity create and read on the
+         *     source record. A role that cannot read deals gets no suggestion.
+         */
+        get: operations["getActivityDealFiling"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/latest-inbound": {
         parameters: {
             query?: never;
@@ -39067,8 +39090,41 @@ export interface components {
             }[];
             source: string;
         };
+        /** @enum {string} */
+        ActivityDealFilingRecordType: "contact" | "company";
+        ActivityDealFiling: {
+            record_type: components["schemas"]["ActivityDealFilingRecordType"];
+            /** Format: uuid */
+            record_id: string;
+            /**
+             * Format: uuid
+             * @description Explicitly selected deal; omitted for automatic filing.
+             */
+            deal_id?: string;
+            /**
+             * @description True explicitly chooses no deal. Otherwise the one-open-deal rule applies unless links already name a deal.
+             * @default false
+             */
+            skip: boolean;
+        };
+        ActivityDealFilingOptions: {
+            /** Format: uuid */
+            company_id?: string;
+            /** Format: uuid */
+            suggested_deal_id?: string;
+            /** @description Choose a deal or set deal_filing.skip. Required for several open deals, and whenever deal access is limited. */
+            choice_required: boolean;
+        };
         /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`. */
         CreateActivityRequest: {
+            /**
+             * @description Call and meeting only. The contact or company the logging form started on.
+             *     One open deal of its current company is added automatically. With this field,
+             *     several require an explicit deal link or skip=true. Without this field,
+             *     contact/company links supply the context when they identify one company;
+             *     several open deals remain unfiled. Existing deal links stay.
+             */
+            deal_filing?: components["schemas"]["ActivityDealFiling"];
             recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
              * Format: uuid
@@ -39312,6 +39368,8 @@ export interface components {
         };
         /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same. */
         UpdateActivityRequest: {
+            /** @description Optional filing choice when recording a call or meeting outcome. Existing deal links remain. */
+            deal_filing?: components["schemas"]["ActivityDealFiling"];
             subject?: string | null;
             body?: string | null;
             /** Format: date-time */
@@ -66649,6 +66707,33 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getActivityDealFiling: {
+        parameters: {
+            query: {
+                record_type: components["schemas"]["ActivityDealFilingRecordType"];
+                record_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The filing decision for the current company and its open deals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityDealFilingOptions"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

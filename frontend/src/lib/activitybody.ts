@@ -40,7 +40,13 @@ export const CALL_OUTCOMES: readonly CallOutcome[] = [
   "put_through",
 ];
 
+export type ActivityDealSelection = Readonly<{
+  context: components["schemas"]["ActivityDealFiling"];
+  dealId?: string;
+}>;
+
 export type ActivityDraft = {
+  dealFiling?: ActivityDealSelection;
   kind: "note" | "task" | "meeting" | "call";
   subject: string;
   body: string;
@@ -170,6 +176,7 @@ export function activityRequestBody(
   const isTranscript = input.kind === "meeting" && input.asTranscript;
   return {
     kind: input.kind,
+    ...callAndMeetingFields(input),
     ...occurredFields(input, recordZone),
     ...(input.kind === "task"
       ? {
@@ -183,20 +190,18 @@ export function activityRequestBody(
             ? { follow_up_task: taskRequestFields(input.followUp, recordZone) }
             : {}),
         }),
-    // Held: a hand-logged meeting already took place (the date caps at
-    // today), and held is what the lead ladder reads as engagement.
-    ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
-    // A call always names its outcome; "No outcome" is an explicit null.
-    ...(input.kind === "call"
-      ? { call_outcome: input.callOutcome === "" ? null : input.callOutcome }
-      : {}),
     ...(isTranscript ? { source_system: "transcript" } : {}),
     // Only for the kinds that ask who attended. Switching to a note hides the
     // fields but keeps their picks in state. A note must not be filed against them.
     links:
       entityType && entityId
         ? withAttendees
-          ? meetingLinks(entityType, entityId, attendees.contacts)
+          ? meetingLinks(
+              entityType,
+              entityId,
+              attendees.contacts,
+              input.dealFiling?.dealId,
+            )
           : [{ entity_type: entityType, entity_id: entityId }]
         : [],
     ...(withAttendees && attendees.colleagueIds.length > 0
@@ -204,6 +209,21 @@ export function activityRequestBody(
       : {}),
     ...input.custom,
     source: "manual",
+  };
+}
+
+function callAndMeetingFields(input: ActivityDraft) {
+  return {
+    ...(KINDS_WITH_A_CONTACT.has(input.kind) && input.dealFiling
+      ? { deal_filing: input.dealFiling.context }
+      : {}),
+    // Held: a hand-logged meeting already took place (the date caps at
+    // today), and held is what the lead ladder reads as engagement.
+    ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
+    // A call always names its outcome; "No outcome" is an explicit null.
+    ...(input.kind === "call"
+      ? { call_outcome: input.callOutcome === "" ? null : input.callOutcome }
+      : {}),
   };
 }
 
@@ -215,6 +235,7 @@ function meetingLinks(
   entityType: EntityKind,
   entityId: string,
   contacts: readonly RecordPickerCandidate[],
+  dealId?: string,
 ): { entity_type: EntityKind; entity_id: string }[] {
   const record = { entity_type: entityType, entity_id: entityId };
   const links = entityType === "company" ? [] : [record];
@@ -223,6 +244,7 @@ function meetingLinks(
       links.push({ entity_type: "contact", entity_id: contact.id });
     }
   }
+  if (dealId) links.push({ entity_type: "deal", entity_id: dealId });
   return links.length > 0 ? links : [record];
 }
 

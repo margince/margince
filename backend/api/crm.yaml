@@ -8932,6 +8932,38 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /activities/deal-filing:
+    get:
+      tags: [Activities]
+      operationId: getActivityDealFiling
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: get_activity_deal_filing, router: read_details, action: activity_deal_filing, tier: auto_execute, scope: read, served_by: route }
+      summary: How a call or meeting logged from this record will be filed on a deal.
+      description: |
+        Uses the same current employer and open-deal resolver as activity creation.
+        One accessible open deal is suggested; several require a deal choice or an explicit
+        choice of none. Hidden deals are never named. Needs activity create and read on the
+        source record. A role that cannot read deals gets no suggestion.
+      parameters:
+        - name: record_type
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/ActivityDealFilingRecordType' }
+        - name: record_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The filing decision for the current company and its open deals.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivityDealFilingOptions' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /activities/latest-inbound:
     get:
       tags: [Activities]
@@ -53898,10 +53930,47 @@ components:
               entity_id: { type: string, format: uuid }
         source: { type: string }
       additionalProperties: false
+    ActivityDealFilingRecordType:
+      type: string
+      enum: [contact, company]
+
+    ActivityDealFiling:
+      type: object
+      required: [record_type, record_id]
+      properties:
+        record_type: { $ref: '#/components/schemas/ActivityDealFilingRecordType' }
+        record_id: { type: string, format: uuid }
+        deal_id:
+          type: string
+          format: uuid
+          description: Explicitly selected deal; omitted for automatic filing.
+        skip:
+          type: boolean
+          default: false
+          description: True explicitly chooses no deal. Otherwise the one-open-deal rule applies unless links already name a deal.
+
+    ActivityDealFilingOptions:
+      type: object
+      required: [choice_required]
+      properties:
+        company_id: { type: string, format: uuid }
+        suggested_deal_id: { type: string, format: uuid }
+        choice_required:
+          type: boolean
+          description: Choose a deal or set deal_filing.skip. Required for several open deals, and whenever deal access is limited.
+
     CreateActivityRequest:
       type: object
       required: [kind, source]
       properties:
+        deal_filing:
+          $ref: '#/components/schemas/ActivityDealFiling'
+          description: |
+            Call and meeting only. The contact or company the logging form started on.
+            One open deal of its current company is added automatically. With this field,
+            several require an explicit deal link or skip=true. Without this field,
+            contact/company links supply the context when they identify one company;
+            several open deals remain unfiled. Existing deal links stay.
         recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         source_activity_id:
           type: string
@@ -54274,6 +54343,9 @@ components:
     UpdateActivityRequest:
       type: object
       properties:
+        deal_filing:
+          $ref: '#/components/schemas/ActivityDealFiling'
+          description: Optional filing choice when recording a call or meeting outcome. Existing deal links remain.
         subject: { type: [string, 'null'] }
         body: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }

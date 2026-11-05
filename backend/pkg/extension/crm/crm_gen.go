@@ -288,6 +288,24 @@ func (e ActivityAuthorKind) Valid() bool {
 	}
 }
 
+// Defines values for ActivityDealFilingRecordType.
+const (
+	ActivityDealFilingRecordTypeCompany ActivityDealFilingRecordType = "company"
+	ActivityDealFilingRecordTypeContact ActivityDealFilingRecordType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealFilingRecordType enum.
+func (e ActivityDealFilingRecordType) Valid() bool {
+	switch e {
+	case ActivityDealFilingRecordTypeCompany:
+		return true
+	case ActivityDealFilingRecordTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityEmailTargetEntityType.
 const (
 	ActivityEmailTargetEntityTypeCompany ActivityEmailTargetEntityType = "company"
@@ -1876,6 +1894,20 @@ type ActivityAuthor struct {
 // ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 type ActivityAuthorKind string
 
+// ActivityDealFiling defines model for ActivityDealFiling.
+type ActivityDealFiling struct {
+	// DealId Explicitly selected deal; omitted for automatic filing.
+	DealId     *string                      `json:"deal_id,omitempty"`
+	RecordId   string                       `json:"record_id"`
+	RecordType ActivityDealFilingRecordType `json:"record_type"`
+
+	// Skip True explicitly chooses no deal. Otherwise the one-open-deal rule applies unless links already name a deal.
+	Skip *bool `json:"skip,omitempty"`
+}
+
+// ActivityDealFilingRecordType defines model for ActivityDealFilingRecordType.
+type ActivityDealFilingRecordType string
+
 // ActivityEmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
 type ActivityEmailTarget struct {
 	EntityId   string                        `json:"entity_id"`
@@ -2246,6 +2278,7 @@ type CreateActivityRequest struct {
 	// `422 code: field_not_valid_for_kind`. Must name a provider this installation has
 	// registered.
 	ChannelProvider *ProviderRef                    `json:"channel_provider,omitempty"`
+	DealFiling      *ActivityDealFiling             `json:"deal_filing,omitempty"`
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 
@@ -4945,6 +4978,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "channel_provider")
 	}
 
+	if raw, found := object["deal_filing"]; found {
+		err = json.Unmarshal(raw, &a.DealFiling)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_filing': %w", err)
+		}
+		delete(object, "deal_filing")
+	}
+
 	if raw, found := object["direction"]; found {
 		err = json.Unmarshal(raw, &a.Direction)
 		if err != nil {
@@ -5212,6 +5253,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'channel_provider': %w", err)
+		}
+	}
+
+	if a.DealFiling != nil {
+		object["deal_filing"], err = json.Marshal(a.DealFiling)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_filing': %w", err)
 		}
 	}
 

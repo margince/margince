@@ -523,6 +523,24 @@ func (e ActivityAuthorKind) Valid() bool {
 	}
 }
 
+// Defines values for ActivityDealFilingRecordType.
+const (
+	ActivityDealFilingRecordTypeCompany ActivityDealFilingRecordType = "company"
+	ActivityDealFilingRecordTypeContact ActivityDealFilingRecordType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealFilingRecordType enum.
+func (e ActivityDealFilingRecordType) Valid() bool {
+	switch e {
+	case ActivityDealFilingRecordTypeCompany:
+		return true
+	case ActivityDealFilingRecordTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityEmailTargetEntityType.
 const (
 	ActivityEmailTargetEntityTypeCompany ActivityEmailTargetEntityType = "company"
@@ -30378,6 +30396,28 @@ type ActivityAuthor struct {
 // ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 type ActivityAuthorKind string
 
+// ActivityDealFiling defines model for ActivityDealFiling.
+type ActivityDealFiling struct {
+	// DealId Explicitly selected deal; omitted for automatic filing.
+	DealId     *openapi_types.UUID          `json:"deal_id,omitempty"`
+	RecordId   openapi_types.UUID           `json:"record_id"`
+	RecordType ActivityDealFilingRecordType `json:"record_type"`
+
+	// Skip True explicitly chooses no deal. Otherwise the one-open-deal rule applies unless links already name a deal.
+	Skip *bool `json:"skip,omitempty"`
+}
+
+// ActivityDealFilingOptions defines model for ActivityDealFilingOptions.
+type ActivityDealFilingOptions struct {
+	// ChoiceRequired Choose a deal or set deal_filing.skip. Required for several open deals, and whenever deal access is limited.
+	ChoiceRequired  bool                `json:"choice_required"`
+	CompanyId       *openapi_types.UUID `json:"company_id,omitempty"`
+	SuggestedDealId *openapi_types.UUID `json:"suggested_deal_id,omitempty"`
+}
+
+// ActivityDealFilingRecordType defines model for ActivityDealFilingRecordType.
+type ActivityDealFilingRecordType string
+
 // ActivityEmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
 type ActivityEmailTarget struct {
 	EntityId   openapi_types.UUID            `json:"entity_id"`
@@ -42431,6 +42471,7 @@ type CreateActivityRequest struct {
 	// `422 code: field_not_valid_for_kind`. Must name a provider this installation has
 	// registered.
 	ChannelProvider *ProviderRef                    `json:"channel_provider,omitempty"`
+	DealFiling      *ActivityDealFiling             `json:"deal_filing,omitempty"`
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 
@@ -62062,6 +62103,7 @@ type UpdateActivityRequest struct {
 
 	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.
 	CallOutcome *UpdateActivityRequestCallOutcome `json:"call_outcome,omitempty"`
+	DealFiling  *ActivityDealFiling               `json:"deal_filing,omitempty"`
 	DueAt       *time.Time                        `json:"due_at,omitempty"`
 
 	// DueHasTime Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.
@@ -67082,6 +67124,12 @@ type LogActivityParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetActivityDealFilingParams defines parameters for GetActivityDealFiling.
+type GetActivityDealFilingParams struct {
+	RecordType ActivityDealFilingRecordType `form:"record_type" json:"record_type"`
+	RecordId   openapi_types.UUID           `form:"record_id" json:"record_id"`
 }
 
 // ListLatestInboundParams defines parameters for ListLatestInbound.
@@ -78912,6 +78960,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "channel_provider")
 	}
 
+	if raw, found := object["deal_filing"]; found {
+		err = json.Unmarshal(raw, &a.DealFiling)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_filing': %w", err)
+		}
+		delete(object, "deal_filing")
+	}
+
 	if raw, found := object["direction"]; found {
 		err = json.Unmarshal(raw, &a.Direction)
 		if err != nil {
@@ -79179,6 +79235,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'channel_provider': %w", err)
+		}
+	}
+
+	if a.DealFiling != nil {
+		object["deal_filing"], err = json.Marshal(a.DealFiling)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_filing': %w", err)
 		}
 	}
 
@@ -86227,6 +86290,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "call_outcome")
 	}
 
+	if raw, found := object["deal_filing"]; found {
+		err = json.Unmarshal(raw, &a.DealFiling)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_filing': %w", err)
+		}
+		delete(object, "deal_filing")
+	}
+
 	if raw, found := object["due_at"]; found {
 		err = json.Unmarshal(raw, &a.DueAt)
 		if err != nil {
@@ -86328,6 +86399,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["call_outcome"], err = json.Marshal(a.CallOutcome)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
+	if a.DealFiling != nil {
+		object["deal_filing"], err = json.Marshal(a.DealFiling)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_filing': %w", err)
 		}
 	}
 
@@ -88639,6 +88717,9 @@ type ServerInterface interface {
 	// Log an activity (the `log_activity` MCP verb).
 	// (POST /activities)
 	LogActivity(w http.ResponseWriter, r *http.Request, params LogActivityParams)
+	// How a call or meeting logged from this record will be filed on a deal.
+	// (GET /activities/deal-filing)
+	GetActivityDealFiling(w http.ResponseWriter, r *http.Request, params GetActivityDealFilingParams)
 	// How long a sent message may go unanswered before the worklist reminds its sender.
 	// (GET /activities/follow-up-settings)
 	GetFollowUpSettings(w http.ResponseWriter, r *http.Request)
@@ -91723,6 +91804,12 @@ func (_ Unimplemented) ListActivities(w http.ResponseWriter, r *http.Request, pa
 // Log an activity (the `log_activity` MCP verb).
 // (POST /activities)
 func (_ Unimplemented) LogActivity(w http.ResponseWriter, r *http.Request, params LogActivityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How a call or meeting logged from this record will be filed on a deal.
+// (GET /activities/deal-filing)
+func (_ Unimplemented) GetActivityDealFiling(w http.ResponseWriter, r *http.Request, params GetActivityDealFilingParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -98287,6 +98374,60 @@ func (siw *ServerInterfaceWrapper) LogActivity(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LogActivity(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetActivityDealFiling operation middleware
+func (siw *ServerInterfaceWrapper) GetActivityDealFiling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetActivityDealFilingParams
+
+	// ------------- Required query parameter "record_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "record_type", r.URL.Query(), &params.RecordType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "record_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "record_id", r.URL.Query(), &params.RecordId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetActivityDealFiling(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -142360,6 +142501,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities", wrapper.LogActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/deal-filing", wrapper.GetActivityDealFiling)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/follow-up-settings", wrapper.GetFollowUpSettings)
