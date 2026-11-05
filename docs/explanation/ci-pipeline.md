@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/scheduled.yml .github/actions/go-build-cache scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -210,7 +210,8 @@ What follows from this:
   - Neither workflow proves itself on a schedule, since both only run by hand. The next user to start
     one finds a change that made it fail. So a PR that touches either is worth starting from its own branch
     before merging.
-- A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`. The
+- A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`, plus the
+  census in `backend-lint`. The
   `full_lane` output of `changes` is false only there. The `develop` into `main` pull request runs
   them under the usual path filters:
   [land-through-develop.md](../how-to/land-through-develop.md).
@@ -409,6 +410,17 @@ output can be used again as well as a green run's.
 local action through, because the repo versions its own code. That holds for the action's own ref, but
 not for the outside actions it calls. Those would come in with nobody reading them.
 
+### The lint cache is also written on each push
+
+The cache of `golangci-lint` is the exception to "not on each push". A cold pass costs about 39 minutes of
+CPU. `internal/compose` is one package that imports every module, so a change to any module makes lint
+read all of it again. So a `backend-lint` that restores an entry many merges old runs close to cold.
+
+[`lint-cache.yml`](../../.github/workflows/lint-cache.yml) runs `make lint` after each push to `main` or
+`develop` that touches Go. It starts from the entry of the push before, so it only reads what that push
+changed. Each entry is about 30 MB, so the job deletes the older entries of its branch once the new one is
+saved. `cache-warm.yml` still restores and saves the same entry, also with `!cancelled()`.
+
 ### Test results replay only on a stable mtime
 
 The build cache holds test results as well as compiled packages. So a PR whose change does not reach a
@@ -440,7 +452,7 @@ The first kind is held by a census, not a scan, because such paths are mostly bu
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-The `backend-lint` job runs the census on every PR, so the PR that adds such a read fails. `cache-warm`
+The `backend-lint` job runs the census on every ready PR into `main` that touches the backend, so the PR that adds such a read fails. `cache-warm`
 runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
 good one. The second kind is held by
 a gate: a cached test file that runs `git` or `go` must declare its inputs.
