@@ -117,10 +117,12 @@
   color: var(--textOnAccentControl);
   font-family: var(--fontFamilyBody);
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition:
+    background 0.12s ease,
+    filter 0.12s ease;
 }
 .ob-gate-submit:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--accent) 88%, var(--overlayDark));
+  filter: brightness(1.06);
 }
 .ob-gate-submit:disabled {
   /* In-flight, and the control is coming back. Pale reads as "wait". */

@@ -452,7 +452,7 @@ export interface paths {
         };
         /**
          * Scoped capability readings and evidence coverage for System health.
-         * @description Human sessions admitted by any existing System health page grant. Each source is checked against its own grant before reading. Failed sources remain explicit beside successful sources. Observations are independent, not a database snapshot. Reads stored evidence only; never starts a probe, model call or repair.
+         * @description A user or their agent admitted by any existing System health page grant. Each source is checked against its own grant before reading. Failed sources remain explicit beside successful sources. Observations are independent, not a database snapshot. Reads stored evidence only; never starts a probe, model call or repair.
          */
         get: operations["getSystemHealth"];
         put?: never;
@@ -472,7 +472,7 @@ export interface paths {
         };
         /**
          * What the background system is holding, and whose work failed.
-         * @description Gated by the `job_health` read grant (admin and ops hold it by default). Reports the caller's own workspace's background jobs by kind — waiting, running, retrying, and dead — plus the untenanted dispatcher rows that fan work out to every workspace. Another workspace's jobs are never included: river_job carries no workspace column and therefore no RLS, so this endpoint imposes the scope itself. Failure text is the job layer's own vetted sentence, never a worker's raw cause (that column is fleet-visible and has no redaction path). Human session only (x-agent-access: human-only).
+         * @description Gated by the `job_health` read grant (admin and ops hold it by default). Reports the caller's own workspace's background jobs by kind — waiting, running, retrying, and dead — plus the untenanted dispatcher rows that fan work out to every workspace. Another workspace's jobs are never included: river_job carries no workspace column and therefore no RLS, so this endpoint imposes the scope itself. Failure text is the job layer's own vetted sentence, never a worker's raw cause (that column is fleet-visible and has no redaction path).
          */
         get: operations["getJobHealth"];
         put?: never;
@@ -514,7 +514,7 @@ export interface paths {
          * What capture's judgement queues are holding, and in whose mailbox.
          * @description Gated by the `job_health` read grant (admin and ops hold it by default). Reports how much is waiting on a sender decision or a thread verdict, by mailbox, plus the classifier queue as a whole. COUNTS AND AGES ONLY — never a subject, a body, or the reason a thread was held: those describe the correspondence, and an operational page is not an exemption from the capture-privacy boundary.
          *
-         *     The contacts it counts are owner-private and invisible to an administrator by design (the importing user only, not even Admin) — which is exactly why a count is worth serving: nobody could otherwise tell that a backlog exists. Human session only (x-agent-access: human-only).
+         *     The contacts it counts are owner-private and invisible to an administrator by design (the importing user only, not even Admin) — which is exactly why a count is worth serving: nobody could otherwise tell that a backlog exists.
          */
         get: operations["getCaptureHealth"];
         put?: never;
@@ -538,7 +538,7 @@ export interface paths {
          *
          *     A unit moves its cursor past a record the core cannot express — stopping on one malformed message parks the whole connection — so the drop leaves the unit's own logs and nothing else. Without this an installation reading only the CRM cannot tell a provider format change from a feed with nothing on it: every record refused presents exactly like a healthy quiet feed.
          *
-         *     COUNTS AND A CLASS ONLY. Never the refused record, and never the core's own sentence about it: that sentence quotes the record back — a participant's account id, a provider name — and the extension tier deliberately holds no third-party content and no retention apparatus for any. The class is the core's closed vocabulary and is the granularity an operator acts on. Human session only (x-agent-access: human-only).
+         *     COUNTS AND A CLASS ONLY. Never the refused record, and never the core's own sentence about it: that sentence quotes the record back — a participant's account id, a provider name — and the extension tier deliberately holds no third-party content and no retention apparatus for any. The class is the core's closed vocabulary and is the granularity an operator acts on.
          */
         get: operations["getExtensionIngestHealth"];
         put?: never;
@@ -558,7 +558,7 @@ export interface paths {
         };
         /**
          * When the restore procedure was last rehearsed, and what it measured.
-         * @description Admin and ops only (`job_health:read`). Reports the most recent restore drill from the installation's drill ledger, against the two published recovery targets: back within four hours, and no more than one hour of data lost. The recovery time is measured by the database clock between drill-start and drill-finish. The data lost is the start minus the restore point the operator gave to drill-start. `last_drill` is null on an installation that has never recorded a drill. Drills are recorded by the operator with `margince-migrate drill-start` and `drill-finish`; there is no HTTP write. Margince does not observe backups, so this report names none. Human session only (x-agent-access: human-only).
+         * @description Admin and ops only (`job_health:read`). Reports the most recent restore drill from the installation's drill ledger, against the two published recovery targets: back within four hours, and no more than one hour of data lost. The recovery time is measured by the database clock between drill-start and drill-finish. The data lost is the start minus the restore point the operator gave to drill-start. `last_drill` is null on an installation that has never recorded a drill. Drills are recorded by the operator with `margince-migrate drill-start` and `drill-finish`; there is no HTTP write. Margince does not observe backups, so this report names none.
          */
         get: operations["getRecoveryHealth"];
         put?: never;
@@ -578,7 +578,7 @@ export interface paths {
         };
         /**
          * Per colleague and day, how much work automation handed out and what became of it.
-         * @description Admin and ops only (`job_health:read`). Counts the items Margince created by itself for one colleague (a task from a promise, a reply reminder, an approval request) in the last `days` days, and what each one has become since. An item counts once, on the day it was created, in the installation's time zone, with the outcome it holds now, so an outcome that arrives on a later day still counts against its creation day. The colleague is the one the item first named. Derived from the audit log and the items themselves; no counter is kept. COUNTS ONLY: never a subject or a body. Human session only (x-agent-access: human-only).
+         * @description Admin and ops only (`job_health:read`). Counts the items Margince created by itself for one colleague (a task from a promise, a reply reminder, an approval request) in the last `days` days, and what each one has become since. An item counts once, on the day it was created, in the installation's time zone, with the outcome it holds now, so an outcome that arrives on a later day still counts against its creation day. The colleague is the one the item first named. Derived from the audit log and the items themselves; no counter is kept. COUNTS ONLY: never a subject or a body.
          */
         get: operations["getAutomaticWorkHealth"];
         put?: never;
@@ -862,9 +862,10 @@ export interface paths {
         /**
          * Import a .vcf address-card file.
          * @description A handed-over card is first-party data: the contact gave it, which is what justifies
-         *     storing their contact details. A human presses this button, so the import WRITES
+         *     storing their contact details. A user or their agent asks for this, so the import WRITES
          *     rather than staging — the same rule the site read applies from the other side, where
-         *     an automatic read proposes and a human click writes.
+         *     an automatic read proposes and a human click writes. An agent's card fills blanks
+         *     and replaces no value the contact already holds; a user's card may correct one.
          *
          *     Three outcomes per card, reported in the order the file listed them. An exact email
          *     match applies what the card states by RECENCY: a card handed over now is the contact's
@@ -1087,15 +1088,15 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record that the calling human has now seen this contact — the baseline `since_last_visit` counts from.
+         * Record that the user has now seen this contact — the baseline `since_last_visit` counts from.
          * @description The baseline moves forward only here, never as a side effect of reading the 360: a
          *     GET that silently advanced it would destroy the very "what changed" answer the
          *     caller opened the page to read, and would make a prefetch indistinguishable from a
          *     visit. The upsert is monotonic (`GREATEST(last_viewed_at, now())`), so a
          *     late-arriving ack from a slower tab can never rewind a newer one.
          *
-         *     Human-only: an agent reading a record through a passport is not a visit, and must
-         *     not consume the human's unread marker.
+         *     An agent reading a record is not a visit and consumes nothing. An agent calling this
+         *     spends its user's unread marker, so its tool tells it to ask first.
          */
         post: operations["acknowledgeContactView"];
         delete?: never;
@@ -2087,7 +2088,8 @@ export interface paths {
          * @description Returns after the durable run is committed; no provider call occurs on this request path.
          *     The run freezes the effective connection configuration. A second request for the same live
          *     contact/provider/input/configuration fingerprint returns that run rather than another paid
-         *     submission. This human operation does not re-tier the agent `enrich` verb (ADR-0099).
+         *     submission. This operation does not re-tier the agent `enrich` verb (ADR-0099). An agent
+         *     reaches it through `run_research`, on the enrich scope, and asks its user first.
          */
         post: operations["createContactEnrichmentRun"];
         delete?: never;
@@ -3172,15 +3174,15 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record that the calling human has now seen this company — the baseline `since_last_visit` counts from.
+         * Record that the user has now seen this company — the baseline `since_last_visit` counts from.
          * @description The baseline moves forward only here, never as a side effect of reading the 360:
          *     a GET that silently advanced it would destroy the very "what changed" answer the
          *     caller opened the page to read, and would make a prefetch indistinguishable from
          *     a visit. The upsert is monotonic (`GREATEST(last_viewed_at, now())`), so a
          *     late-arriving ack from a slower tab can never rewind a newer one.
          *
-         *     Human-only: an agent reading a record through a passport is not a visit, and must
-         *     not consume the human's unread marker.
+         *     An agent reading a record is not a visit and consumes nothing. An agent calling this
+         *     spends its user's unread marker, so its tool tells it to ask first.
          */
         post: operations["acknowledgeCompanyView"];
         delete?: never;
@@ -3206,12 +3208,11 @@ export interface paths {
          * @description Promotes a company to a first-class partner (ADR-0032) by upserting its `partner` row and
          *     adding `partner` to its `relationship_types`. (`classification` is retired and no longer
          *     set here — ADR-0079 replaced it, because what a company IS to us is multi-valued.)
-         *     Company identity is never duplicated. Admin write, and a HUMAN one.
+         *     Company identity is never duplicated. Admin write.
          *
-         *     Human-only for the same reason `decideCommissionEntry` is: `margin_tier` is the rate the
-         *     commission ledger multiplies a won deal by, so this sets what a partner is paid on every
-         *     future deal. Reopening it to an agent is a deliberate act, and the tier is part of that
-         *     decision — a rate change is not an auto-execute shape.
+         *     An agent asks its user first, and is refused `margin_tier` (422) for the reason
+         *     `decideCommissionEntry` is human-only: it is the rate the commission ledger multiplies a
+         *     won deal by, so it sets what a partner is paid on every future deal.
          */
         put: operations["upsertPartner"];
         post?: never;
@@ -5393,8 +5394,10 @@ export interface paths {
         put?: never;
         /**
          * Create a stage in a pipeline.
-         * @description `position` is unique within the pipeline, from 0 to 1048576. A won stage is always at
-         *     100 and a lost stage at 0, whatever `win_probability` says.
+         * @description `position` is unique within the pipeline, from 0 to 1048576: an occupied one is 409
+         *     `stage_position_taken`, naming it. A won stage is always at 100 and a lost stage at 0,
+         *     whatever `win_probability` says. An agent is refused a won or lost stage, and any new
+         *     stage while a transition on the pipeline is trusted to move deals by itself.
          *
          *     Won and lost stages come after every open stage. An open stage created past them is
          *     placed in front of them, and that shift rides one `pipeline.updated` with the
@@ -7811,7 +7814,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
+         * Dry-run an automation's blast radius, writing nothing, sending nothing and staging no approval.
          * @description Powers the designer's live dry-run (ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
          *     returns how many records match **now** and an estimate of how many times it *would have* fired over a
          *     trailing window — **without** performing any action. This is a pure READ, executed under the caller's
@@ -7891,6 +7894,8 @@ export interface paths {
          *       synthesizes its trigger id per evaluation pass and never stages it, so those are
          *       unreplayable by construction. Nothing is lost: the schedule re-examines the same
          *       condition on its own next pass.
+         *     - `passport_revoked` — the agent that set the rule up lost its passport, so the rule
+         *       is paused. A user resuming it makes it their own.
          *
          *     A retry is a NEW firing with its own run record, so the history shows both the
          *     failure and what followed it. Retrying a run whose retry also failed is allowed and
@@ -11289,7 +11294,7 @@ export interface paths {
          *     embedded images, filters, masks or a blank result) is refused as 422 with code
          *     `svg_not_drawable`.
          *
-         *     The upload is a HUMAN write and takes precedence: while it stands, a website read
+         *     The upload is a user's write, or their agent's, and takes precedence: while it stands, a website read
          *     resolving a different mark leaves it alone. `DELETE` gives the field back — the
          *     record returns to its monogram and the next read may resolve a mark again.
          */
@@ -14802,8 +14807,8 @@ export interface paths {
          *     the editable document, and it is the one that decides where an installation's text is
          *     sent.
          *
-         *     Human session only for now: an agent does not read which vendor processes the
-         *     installation's correspondence until this read is opened to agents.
+         *     An agent reads it under its user's grant. Changing it stays with a signed-in user,
+         *     because it decides where the installation's text is sent.
          */
         get: operations["getAiRouting"];
         /**
@@ -16529,8 +16534,8 @@ export interface paths {
         /**
          * Define a new custom field on an existing core object (a schema change).
          * @description CUSTOM-FIELDS-WIRE-2. Runs the governed engine's single-transaction add: schema
-         *     change + catalog row + one audit entry land or roll back together. A schema change
-         *     is a human's to make, so an agent principal is refused. `column_name` is server-derived and never client-supplied —
+         *     change + catalog row + one audit entry land or roll back together. An agent asks its
+         *     user first, because a schema change reaches everyone. `column_name` is server-derived and never client-supplied —
          *     immutable once live. When the requested `label`/`type`/`object` combination is
          *     judged structural — a new object, a relationship, or logic, never one of the six
          *     closed types on one of the five closed objects — the request is refused with a
@@ -16617,7 +16622,7 @@ export interface paths {
          * Retire (soft-retire) a custom field. It cannot be undone.
          * @description CUSTOM-FIELDS-WIRE-4. Sets `status=retired`; hides the field from the API and
          *     filtering while the column and every value in it are preserved — the engine never
-         *     drops a column as a side effect (CUSTOM-FIELDS-AC-13). An agent principal is refused.
+         *     drops a column as a side effect (CUSTOM-FIELDS-AC-13). An agent asks its user first.
          *     Not the generic archive shape: this is a status flip
          *     on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
          *     refused because a Live List filters on the field: the list keeps evaluating on the kept
@@ -16656,7 +16661,7 @@ export interface paths {
          *     one-transaction owner-ALTER shape as `createCustomField` — this is the
          *     one DDL path rename/retire never touch). Removing every option is refused (422,
          *     detail "A picklist needs at least one option") — a picklist always keeps at least
-         *     one allowed value. Like `retireCustomField`, an agent principal is refused: this
+         *     one allowed value. Like `retireCustomField`, an agent asks its user first: this
          *     mutates a schema-adjacent CHECK constraint. A retired field
          *     refuses the edit with a 409 `conflict` — retirement is terminal, so its options
          *     are frozen; removing an option that stored values still use is also a 409
@@ -16777,8 +16782,7 @@ export interface paths {
          *     Admin/ops-only, read included: the retention screen is an admin surface and no other
          *     role has a consumer for it. Governed by the `retention_policy` RBAC object.
          *
-         *     Human-only for now: what an installation destroys and whether destruction is currently
-         *     suspended stays with a signed-in user until this read is opened to agents.
+         *     An agent reads it under its user's grant. Changing it stays with a signed-in user.
          */
         get: operations["getRetentionSettings"];
         put?: never;
@@ -17933,7 +17937,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record a colleague who has already left. Admin-only, human-only.
+         * Record a colleague who has already left. Admin-only.
          * @description Creates a DEACTIVATED seat for somebody who worked here before this installation
          *     existed, so imported history can name them as its author and the interface can
          *     resolve that name.
@@ -17948,7 +17952,7 @@ export interface paths {
          *     reads that put a name on a timeline row, and a former member exists precisely so
          *     their name still appears on the work they did.
          *
-         *     Admin-only (`role: admin`); an agent may never provision a human. An email merged into another member returns the live surviving account with status 200. Removed identities without a live survivor answer 409 `removed_member_email`. Other duplicate emails
+         *     Admin-only (`role: admin`). An agent never names the admin role here. An email merged into another member returns the live surviving account with status 200. Removed identities without a live survivor answer 409 `removed_member_email`. Other duplicate emails
          *     answer 409 `email_taken` — if that member is merely deactivated they are already
          *     what this route would create, and if they are active this is the wrong route.
          *
@@ -18342,7 +18346,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mail an invited member a new set-password link. Admin-only, human-only.
+         * Mail an invited member a new set-password link. Admin-only.
          * @description For any invited human member, whatever became of the last invitation: a link that
          *     expired, a mail that was sent or refused, or a member who was never mailed. Mints a new
          *     single-use set-password link exactly as `issueUserPasswordLink` does (it supersedes any
@@ -22742,7 +22746,9 @@ export interface paths {
          *     `source` says who picked the zone. `browser` is the app's first guess
          *     from the browser, and is stored only while no zone is stored. `chosen`
          *     is the user's own pick: it is always stored and marks the zone as
-         *     chosen. Saving the zone already stored writes nothing.
+         *     chosen. `agent` is their agent setting the zone they asked for: it takes
+         *     effect the same way, and the row and the audit name the agent until the
+         *     user chooses a zone themselves. Saving the zone already stored writes nothing.
          *
          *     Not open to agents: an agent acting for a user must not change the
          *     clock that user's times, bookings and mail are read on.
@@ -23679,8 +23685,7 @@ export interface paths {
          *     that already had a rate;
          *     any other past date is refused (422 `fx_rate_past`). `to`
          *     is resolved to the workspace base currency server-side; `from == base` is
-         *     refused. Human session only
-         *     (x-agent-access: human-only) — an agent never sets a rate directly.
+         *     refused.
          */
         post: operations["setFxRate"];
         delete?: never;
@@ -23746,8 +23751,7 @@ export interface paths {
          * Set an AI model price effective today or later (append-forward).
          * @description Admin/ops-only. Prices are USD per 1M tokens (decimal strings) — the server
          *     stores µUSD integers. Appends one effective-dated price; same UTC day corrects
-         *     in place, a past date is refused (422). Human session only
-         *     (x-agent-access: human-only). Transparency-only: model prices never gate routing.
+         *     in place, a past date is refused (422). Transparency-only: model prices never gate routing.
          */
         post: operations["setAiModelRate"];
         /**
@@ -23805,7 +23809,7 @@ export interface paths {
          * @description Admin/ops-only. Enqueues a background job that fetches fresh rates for the
          *     currencies this workspace already tracks and stages a confirm-first proposal
          *     per changed rate into the approvals inbox. Returns immediately; review the
-         *     proposals in the inbox. Human session only (x-agent-access: human-only).
+         *     proposals in the inbox.
          */
         post: operations["proposeFxRateRefresh"];
         delete?: never;
@@ -23833,7 +23837,6 @@ export interface paths {
          *     future-dated price is not touched. A model at its catalogue price writes nothing and
          *     leaves no audit row; the run itself is recorded as the last sync. Runs inline and
          *     answers with what happened per provider.
-         *     Human session only (x-agent-access: human-only).
          */
         post: operations["refreshAiModelRates"];
         delete?: never;
@@ -35241,10 +35244,13 @@ export interface components {
             timezone: string;
             /**
              * @description `browser` is the app's guess from the browser, stored only while no
-             *     zone is stored. `chosen` is the user's own pick, always stored.
+             *     zone is stored. `chosen` is the user's own pick, always stored. `agent`
+             *     is the agent carrying out what its user asked, always stored and held
+             *     against a browser's guess as a chosen zone is. Only an agent sends it,
+             *     and an agent never sends `chosen`.
              * @enum {string}
              */
-            source: "browser" | "chosen";
+            source: "browser" | "chosen" | "agent";
         };
         /** @description The caller's own working hours, and whether they are theirs or the fallback. */
         MyWorkingHoursResponse: {
@@ -40665,6 +40671,8 @@ export interface components {
             source: string;
             /** @description The label the deprecated lead_source list gives `source`; null for connector, seed and other free values. */
             readonly source_label?: string | null;
+            /** @description The current name of the website form this lead came through; null for every other lead, and for one whose form was deleted. */
+            readonly web_form_name?: string | null;
             /** @description Where the lead came from, a key from `/lead-origins`. Null when nobody has classified the lead; such a lead scores neutral. Set by a human, an importer or capture, and the only lead fact the score and the origin filter read. */
             origin?: string | null;
             /** @description The label `/lead-origins` gives `origin`; null when `origin` is null. */
@@ -44041,6 +44049,8 @@ export interface components {
             service_extension?: string | null;
             /** @description Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
             assignable?: boolean;
+            /** @description Whether this member's seat may own records at all: an active human seat that can write, asked without the caller's own write scope. A website form's owner of new leads is checked this way, because the installation writes those leads, so its picker offers these members. Present on `listUsers`; absent means not computed. */
+            can_own_records?: boolean;
             /** @description This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree. */
             roles?: string[];
             /** @description The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have. */
@@ -46607,7 +46617,7 @@ export interface components {
             page: components["schemas"]["PageInfo"];
         };
         /**
-         * @description 🟡 always (a schema change is never 🟢) — see `createCustomField`. `currency` is
+         * @description A schema change, so an agent asks its user first — see `createCustomField`. `currency` is
          *     required when `type=currency` (pattern `^[A-Z]{3}$`); `options` is required
          *     non-empty when `type=picklist` (CUSTOM-FIELDS-PARAM-5). Neither conditional
          *     requirement is expressed as an OpenAPI 3.1 `oneOf`/`if`-`then` here — a prose note
@@ -47208,6 +47218,8 @@ export interface components {
                 if_version?: boolean;
                 /** @description Whether the app asks its user to confirm it first. */
                 ask_user_first?: boolean;
+                /** @description Whether it takes filename, content_type and content_base64. */
+                uploads_a_file?: boolean;
                 /** @description The JSON schema of its body argument. */
                 body?: Record<string, never>;
             }[];
@@ -50494,10 +50506,10 @@ export interface components {
              */
             owner_id?: string | null;
             /**
-             * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
+             * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the passport of the agent that set the rule up was revoked. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
              * @enum {string|null}
              */
-            paused_reason?: "list_archived" | "list_invalid" | "list_unavailable" | "burst" | null;
+            paused_reason?: "list_archived" | "list_invalid" | "list_unavailable" | "burst" | "passport_revoked" | null;
             params: {
                 [key: string]: unknown;
             };
@@ -50633,9 +50645,10 @@ export interface components {
              *     means nobody has established that running this handler twice is safe.
              *     `trigger_event_unavailable` means the event cannot be rebuilt, which is
              *     permanent for a scheduled firing rather than a condition that clears.
+             *     `passport_revoked` means the rule stopped with the passport that set it up.
              * @enum {string}
              */
-            refusal?: "not_failed" | "repeats_its_effect" | "trigger_event_unavailable";
+            refusal?: "not_failed" | "repeats_its_effect" | "trigger_event_unavailable" | "passport_revoked";
         };
         /** @description The calling owner's live personal Voice DNA control record and active derived artifact. */
         VoiceProfile: {
@@ -57578,7 +57591,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
+            /** @description Refused: the caller, or the user an agent works for, holds no `job_health:read` (the admin and ops roles hold it). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -57636,7 +57649,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
+            /** @description Refused: the caller, or the user an agent works for, holds no `job_health:read` (the admin and ops roles hold it). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -57666,7 +57679,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
+            /** @description Refused: the caller, or the user an agent works for, holds no `job_health:read` (the admin and ops roles hold it). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -57696,7 +57709,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
+            /** @description Refused: the caller, or the user an agent works for, holds no `job_health:read` (the admin and ops roles hold it). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -57729,7 +57742,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
+            /** @description Refused: the caller, or the user an agent works for, holds no `job_health:read` (the admin and ops roles hold it). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -75384,6 +75397,8 @@ export interface operations {
             query: {
                 /** @description The router whose actions to describe. */
                 router: string;
+                /** @description One action to describe. Leave it out for all of them. */
+                action?: string;
             };
             header?: never;
             path?: never;
@@ -82148,7 +82163,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or the caller is an agent principal. */
+            /** @description RBAC denied. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -82321,7 +82336,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or the caller is an agent principal. */
+            /** @description RBAC denied. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -82383,7 +82398,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or the caller is an agent principal. */
+            /** @description RBAC denied. */
             403: {
                 headers: {
                     [name: string]: unknown;

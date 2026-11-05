@@ -5,11 +5,13 @@ package ai
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -114,6 +116,9 @@ func (s *VoiceStore) persistPreparedSource(ctx context.Context, tx pgx.Tx, profi
 	// so without this, a replacement can report itself as a first ingest. The
 	// domain writers beside this one take the same lock for the same reason.
 	if err := storekit.LockWriteIdentity(ctx, tx, voiceSourceWriteIdentity, profileID.String()+" "+prepared.SourceRef); err != nil {
+		return VoiceCorpusSource{}, priorVoiceSource{}, err
+	}
+	if err := refuseAgentReplacingSource(ctx, tx, profileID, prepared.SourceRef); err != nil {
 		return VoiceCorpusSource{}, priorVoiceSource{}, err
 	}
 	occurredAt := prepared.OccurredAt
@@ -279,4 +284,26 @@ func (s *VoiceStore) ListSources(ctx context.Context, profileID ids.UUID) ([]Voi
 		return nil, CorpusSummary{}, err
 	}
 	return sources, summary, nil
+}
+
+// refuseAgentReplacingSource keeps a filed sample as its user left it. The upsert
+// replaces text for good and clears an exclusion or an erasure, so an agent files
+// only under a reference nothing holds.
+func refuseAgentReplacingSource(ctx context.Context, tx pgx.Tx, profileID ids.UUID, sourceRef string) error {
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalAgent {
+		return nil
+	}
+	var held bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM voice_corpus_source WHERE voice_profile_id = $1 AND source_ref = $2)`,
+		profileID, sourceRef).Scan(&held); err != nil {
+		return err
+	}
+	if !held {
+		return nil
+	}
+	return &httperr.DetailedError{
+		Status: http.StatusConflict, Code: "agent_replaces_no_source",
+		Detail: "an agent does not replace a sample already filed under this source_ref; file it under a new one",
+	}
 }

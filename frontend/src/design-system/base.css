@@ -137,6 +137,12 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* `Button align="start"`. Two classes, so it outranks `.btn` on specificity
+   rather than on which sheet the bundler emitted first. */
+.btn[data-align="start"] {
+  justify-content: flex-start;
+  text-align: start;
+}
 /* Every button in the product had NO focus style: no rule here, none in
    app.css, none in tokens.css or brand.css, so a keyboard reader got whatever
    the engine drew by default and one screen file had patched its own chips
@@ -198,7 +204,7 @@
 /* The agent's own verb as the one filled control of its screen, panel or
    card. --ai does not lift in dark, so the ink is --textOnAccent, the light
    ink every fill that stays put takes: the dark --textOnAccentControl reads
-   3.26:1 on it. The sparkle takes the label's ink. */
+   3.73:1 on it. The sparkle takes the label's ink. */
 .btn-ai {
   background: var(--ai);
   color: var(--textOnAccent);

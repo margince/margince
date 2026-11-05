@@ -76,3 +76,5 @@
 1793829963_a_vouch_belongs_to_one_sending_entity.up.sql | *, audit_log, communication_override | the recursive walk only reads merge chains of the same table; audit_log gets one row per vouch revoked here; one row per vouch a rep typed by hand for a contact the engine refused, so the set is a handful of rows per refused contact; a row whose recorder cannot be named is revoked rather than given an entity
 1793829966_the_decision_ground_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793830466_the_vouch_entity_link_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793861795_a_rule_names_the_passport_that_set_it_up.down.sql | automation | runs only on a rollback; an installation holds a catalog-bounded handful of rules, so the update is small
+1793861797_the_rule_setter_constraints_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

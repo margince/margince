@@ -62,6 +62,7 @@ export function EmployerValue({
         })}
         placeholder={notSet}
         link={Boolean(employer)}
+        block={Boolean(employer)}
         onEdit={() =>
           employer
             ? setChanging((prior) => ({ open: true, seq: prior.seq + 1 }))
