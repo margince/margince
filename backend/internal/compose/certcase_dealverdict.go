@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/dealverdict"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -112,10 +113,10 @@ func dealVerdictFixtureInput(f dealVerdictFixture) (dealverdict.Input, error) {
 	amount, currency := f.Deal.Amount*100, f.Deal.Currency
 	in := dealverdict.Input{
 		Today: today, DealName: f.Deal.Name, Stage: f.Deal.Stage, AmountMinor: &amount, Currency: &currency,
-		Probability: f.Deal.Probability, ProbabilitySource: "stage",
+		Probability: f.Deal.Probability, ProbabilitySource: string(deals.SourceStage),
 	}
-	if close, err := time.Parse(time.DateOnly, f.Deal.CloseDate); err == nil {
-		in.CloseDate = &close
+	if closeDate, err := time.Parse(time.DateOnly, f.Deal.CloseDate); err == nil {
+		in.CloseDate = &closeDate
 	}
 	stageFixtureInput(f.Deal, &in)
 	for _, a := range f.Activities {

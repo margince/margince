@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
+// UpdateActivityInput is a sparse activity edit. A nil field stays as stored.
 type UpdateActivityInput struct {
 	DealFiling         *crmcontracts.ActivityDealFiling
 	recordedAt         *time.Time

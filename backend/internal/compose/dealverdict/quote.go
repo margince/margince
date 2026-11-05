@@ -37,11 +37,11 @@ var (
 	quotedSuffix    = regexp.MustCompile(`^[kKmM](?:\PL|$)`)
 )
 
-// quotedPrice is the one price a quote states, in exact minor units, and its
+// QuotedPrice is the one price a quote states, in exact minor units, and its
 // currency. It reports false when the quote holds no number, or no currency,
 // or more than one currency. It also reports false for several numbers unless
 // only one of them has its currency written next to it.
-func quotedPrice(quote string) (int64, string, bool) {
+func QuotedPrice(quote string) (int64, string, bool) {
 	start, end, ok := priceNumber(quote)
 	if !ok {
 		return 0, "", false
@@ -160,7 +160,3 @@ func toMinor(whole, scale int64) (int64, bool) {
 	}
 	return whole * scale, true
 }
-
-// QuotedPrice is quotedPrice for a caller outside the verdict: the one price a
-// quote states, in exact minor units, and its currency.
-func QuotedPrice(quote string) (int64, string, bool) { return quotedPrice(quote) }

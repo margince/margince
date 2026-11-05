@@ -21,7 +21,7 @@ import (
 func declaredUniqueArgs(inputSchema json.RawMessage) []string {
 	var schema struct {
 		Properties map[string]struct {
-			UniqueItems bool `json:"uniqueItems"`
+			UniqueItems bool `json:"uniqueItems"` //nolint:tagliatelle // JSON Schema's keyword, not ours to rename
 		} `json:"properties"`
 	}
 	if err := json.Unmarshal(inputSchema, &schema); err != nil {
