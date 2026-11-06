@@ -307,7 +307,11 @@ describe("SetupReminder at phone width", () => {
     await mountTopBar().answered();
     expect(screen.queryByRole("button", { name: /Finish setup/ })).toBeNull();
 
-    const rows = await openAccount(userEvent.setup());
+    await openAccount(userEvent.setup());
+    await screen.findByRole("menuitem", { name: /Finish setup/ });
+    const rows = screen
+      .getAllByRole("menuitem")
+      .map((row) => row.textContent ?? "");
     expect(rows.indexOf("Finish setup1 of 4")).toBe(
       rows.indexOf("Help and feedback") + 1,
     );

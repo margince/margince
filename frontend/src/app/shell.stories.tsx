@@ -860,8 +860,11 @@ export const PhoneAgentPanel: Story = {
     // Named from the catalogue, not written out: the orb's name is a message
     // key now, and a literal here went stale the day the copy moved.
     await userEvent.click(
-      canvas.getByRole("button", { name: en["agent.rail.open"] }),
+      await canvas.findByRole("button", { name: en["agent.rail.open"] }),
     );
+    await within(canvasElement.ownerDocument.body).findByRole("switch", {
+      name: en["agent.setting.edgeLight"],
+    });
   },
   render: () => {
     stubEntitlement(WITHIN_CAP);

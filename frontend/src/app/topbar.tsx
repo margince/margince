@@ -1,11 +1,12 @@
 import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
-import { type RefObject, useEffect, useRef } from "react";
+import { type RefObject, Suspense, useEffect, useRef } from "react";
 import { AppLink } from "../design-system/applink";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
 import { IconAction } from "../design-system/iconaction";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
+import { lazy } from "../i18n/lazy";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import {
   leaveRecord,
@@ -28,9 +29,13 @@ import { NotificationBell } from "./notificationbell";
 import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
 import { paletteHotkeyCaps } from "./palettehotkey";
-import { SetupReminder } from "./setup-reminder";
 import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
 import "./topbar.css";
+
+const SetupReminder = lazy(
+  async () => ({ default: (await import("./setup-reminder")).SetupReminder }),
+  "essential",
+);
 
 // The top bar: the one strip that is true of the whole session rather than of
 // the page under it — where you are (the trail), how you reach anything (the
@@ -247,10 +252,12 @@ export function TopBar({
         {/* Keyed on the route: a step's action navigates, and the new page
             should not open under a panel left over from the last one. */}
         {!phone && (
-          <SetupReminder
-            key={routeHash(route)}
-            onHide={() => searchRef.current?.focus()}
-          />
+          <Suspense fallback={null}>
+            <SetupReminder
+              key={routeHash(route)}
+              onHide={() => searchRef.current?.focus()}
+            />
+          </Suspense>
         )}
         <OutboxButton />
         <NotificationBell />

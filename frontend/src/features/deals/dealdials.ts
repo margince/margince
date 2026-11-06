@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { operations } from "../api/schema";
-import { dealStatusFilter } from "../format/dealstatus";
-import { useT } from "../i18n";
+import type { operations } from "../../api/schema";
+import { dealStatusFilter } from "../../format/dealstatus";
+import { useT } from "../../i18n";
 import {
   admitCloseDay,
   admitCountry,
@@ -13,16 +13,16 @@ import {
   CLOSE_DAY_DIAL,
   VALUE_DIAL,
   WIN_PROBABILITY_DIAL,
-} from "../lib/dealranges";
+} from "../../lib/dealranges";
 
 export {
   DEAL_STATUS_LABEL,
   DEAL_STATUS_VALUES,
   dealStatusFilter,
   dealStatusLabel,
-} from "../format/dealstatus";
+} from "../../format/dealstatus";
 
-import { useEntityName } from "./entityref.queries";
+import { useEntityName } from "../../components/entityref.queries";
 
 // The deals list's enum-valued dials, narrowed to what the wire admits.
 //
