@@ -37,7 +37,7 @@ func TestACanceledMeetingIsNotAnExchangeTheScanReads(t *testing.T) {
 	onAccount := []datasource.EntityRef{{Type: "contact", ID: contact}}
 	now := clocktest.Now(t)
 	held := integration.CalendarMeeting{Event: "evt-scan-held", At: now.AddDate(0, 0, -10), Links: onAccount}
-	called := integration.CalendarMeeting{Event: "evt-scan-called", At: now.AddDate(0, 0, -2), Links: onAccount}
+	called := integration.CalendarMeeting{Event: "evt-scan-called", At: now.AddDate(0, 0, 2), Links: onAccount}
 	heldID, calledID := held.Capture(t, e), called.Capture(t, e)
 	e.RecordHeld(t, heldID)
 
@@ -76,10 +76,10 @@ func TestTheScanReadsOnlyWhatTheSenderWrote(t *testing.T) {
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Quote Scan Co", nil)
 	mail := ids.NewV7()
-	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id, source, captured_by)
-		VALUES ($1, 'email', 'next steps', $2, 'inbound', 'gmail', $3, 'gmail:seed', 'connector:gmail')`, mail,
-		"Works for me.\n\nFrom: Sam Seller <sam@seller.example>\nSent: Monday\n\nWe will send the contract by Friday.",
-		mail.String())
+	at := clocktest.Now(t).Add(-time.Hour)
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id, source, captured_by, occurred_at)
+		VALUES (@activity, 'email', 'next steps', @body, 'inbound', 'gmail', @source, 'gmail:seed', 'connector:gmail', @at)`, pgx.StrictNamedArgs{"activity": mail, "body": "Works for me.\n\nFrom: Sam Seller <sam@seller.example>\nSent: Monday\n\nWe will send the contract by Friday.",
+		"source": mail.String(), "at": at})
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id) VALUES ($1, 'company', $2)`, mail, company)
 
 	var words []MessageIn

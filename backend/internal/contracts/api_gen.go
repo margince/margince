@@ -32832,14 +32832,23 @@ type AiUsageSummary struct {
 
 // AnalyticsAnswer defines model for AnalyticsAnswer.
 type AnalyticsAnswer struct {
+	// BaseCurrency Base currency used by this answer.
+	BaseCurrency *string `json:"base_currency,omitempty"`
+
 	// Columns What each value in a row means, in order.
 	Columns []string `json:"columns"`
+
+	// ExcludedByPermission Visible records excluded by field masks. Absent when no mask applies.
+	ExcludedByPermission *int `json:"excluded_by_permission,omitempty" minimum:"0"`
 
 	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
 	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
 
 	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
 	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
+
+	// RateDate Reference instant used to select conversion rates for this answer.
+	RateDate *time.Time `json:"rate_date,omitempty"`
 
 	// Rows One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
 	Rows []map[string]interface{} `json:"rows"`
@@ -44083,11 +44092,15 @@ type DataSubjectRequest struct {
 	// DueRule The rule set the deadline came from: `gdpr` (one calendar month, Art. 12(3)) or
 	// `<jurisdiction> v<version>` for a pack's own deadline. Null on a request filed before
 	// deadlines were computed, whose date was typed by hand.
-	DueRule    *string                  `json:"due_rule,omitempty"`
-	Id         openapi_types.UUID       `json:"id"`
-	Kind       DataSubjectRequestKind   `json:"kind"`
-	Resolution *string                  `json:"resolution,omitempty"`
-	Status     DataSubjectRequestStatus `json:"status"`
+	DueRule *string            `json:"due_rule,omitempty"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// IdentityVerified The request arrived through the subject's own confirmation link.
+	IdentityVerified *bool                    `json:"identity_verified,omitempty"`
+	Kind             DataSubjectRequestKind   `json:"kind"`
+	Proof            *DataSubjectRequestProof `json:"proof,omitempty"`
+	Resolution       *string                  `json:"resolution,omitempty"`
+	Status           DataSubjectRequestStatus `json:"status"`
 
 	// SubjectKind Which kind of record `subject_label` was read from. Null when nothing resolved: an
 	// external identifier, an erased subject, or one the caller may not read.
@@ -44111,6 +44124,23 @@ type DataSubjectRequestStatus string
 // DataSubjectRequestSubjectKind Which kind of record `subject_label` was read from. Null when nothing resolved: an
 // external identifier, an erased subject, or one the caller may not read.
 type DataSubjectRequestSubjectKind string
+
+// DataSubjectRequestProof defines model for DataSubjectRequestProof.
+type DataSubjectRequestProof struct {
+	AnsweredAt        time.Time      `json:"answered_at"`
+	CompletedById     *string        `json:"completed_by_id,omitempty"`
+	CompletedByType   *string        `json:"completed_by_type,omitempty"`
+	ErasedCounts      map[string]int `json:"erased_counts"`
+	ErasedCountsKnown bool           `json:"erased_counts_known"`
+	ErasedUncounted   []string       `json:"erased_uncounted"`
+	IdentityCheck     string         `json:"identity_check"`
+	KeepUntil         time.Time      `json:"keep_until"`
+	ReceivedAt        time.Time      `json:"received_at"`
+	RequestKind       string         `json:"request_kind"`
+	RequestNumber     string         `json:"request_number"`
+	RequesterEmail    *string        `json:"requester_email,omitempty"`
+	Result            string         `json:"result"`
+}
 
 // DataTaskControl defines model for DataTaskControl.
 type DataTaskControl struct {
@@ -47861,6 +47891,9 @@ type HandoverCounts struct {
 	Contact int `json:"contact" minimum:"0"`
 	Deal    int `json:"deal" minimum:"0"`
 	Lead    int `json:"lead" minimum:"0"`
+
+	// List Live lists owned by the member.
+	List    int `json:"list" minimum:"0"`
 	Project int `json:"project" minimum:"0"`
 
 	// Task Open tasks assigned to the member.
@@ -71868,6 +71901,15 @@ type ListInputChecksParams struct {
 
 	// ScopeId The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// ProductId Narrows deal findings to this product. Other findings cover the selected population.
+	ProductId *openapi_types.UUID `form:"product_id,omitempty" json:"product_id,omitempty"`
+
+	// Country Narrows deal findings by the readable company's country.
+	Country *string `form:"country,omitempty" json:"country,omitempty"`
+
+	// Industry Narrows deal findings by the readable company's industry.
+	Industry *string `form:"industry,omitempty" json:"industry,omitempty"`
 }
 
 // ListInputChecksParamsScopeKind defines parameters for ListInputChecks.
@@ -123644,6 +123686,45 @@ func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *htt
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "product_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "product_id", r.URL.Query(), &params.ProductId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "product_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "product_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "industry" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "industry", r.URL.Query(), &params.Industry, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "industry"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "industry", Err: err})
 		}
 		return
 	}

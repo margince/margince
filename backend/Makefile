@@ -736,6 +736,7 @@ arch-lint: ## Import-boundary lint (go-arch-lint over .go-arch-lint.yml)
 # today, the composed client types and docs as their slices land) — the same
 # split Task 11's tsconfig alias makes for TypeScript.
 gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the contract
+	cd ../frontend && pnpm gen:approval-reading
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
 	$(GOWORK_ROOT) $(GO) generate ./internal/contracts
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm

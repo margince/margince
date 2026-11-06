@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useCallback, useState } from "react";
+import { lazy, type ReactNode, Suspense, useCallback, useState } from "react";
 import { useMailboxConnected } from "../../lib/connectors";
 import { WriteToProvider, type WriteToTarget } from "../../lib/writeto";
-import { ComposeModal } from "../mail/compose";
+
+const ComposeModal = lazy(() =>
+  import("../mail/compose").then((module) => ({
+    default: module.ComposeModal,
+  })),
+);
 
 /**
  * The shell's composer for an address pressed anywhere under it. It opens the
@@ -29,21 +34,23 @@ export function WriteToHost({ children }: Readonly<{ children: ReactNode }>) {
       {target !== null && (
         // Keyed by the record and the open: text written for one record must
         // never be filed against another.
-        <ComposeModal
-          key={`${target.entityId}:${target.seq}`}
-          entityType={target.entityType}
-          entityId={target.entityId}
-          // A contact files under itself; other records resolve their contacts.
-          contactId={
-            target.entityType === "contact" ? target.entityId : undefined
-          }
-          recordAddress={target.address}
-          intent={target.draftIntent}
-          draftOnOpen={target.draftIntent !== undefined}
-          kind="email"
-          open={writing}
-          onClose={() => setWriting(false)}
-        />
+        <Suspense fallback={null}>
+          <ComposeModal
+            key={`${target.entityId}:${target.seq}`}
+            entityType={target.entityType}
+            entityId={target.entityId}
+            // A contact files under itself; other records resolve their contacts.
+            contactId={
+              target.entityType === "contact" ? target.entityId : undefined
+            }
+            recordAddress={target.address}
+            intent={target.draftIntent}
+            draftOnOpen={target.draftIntent !== undefined}
+            kind="email"
+            open={writing}
+            onClose={() => setWriting(false)}
+          />
+        </Suspense>
       )}
     </WriteToProvider>
   );

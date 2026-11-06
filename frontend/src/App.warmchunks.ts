@@ -7,6 +7,7 @@ import { ROUTE_CHUNKS } from "./App.screens";
 // suspends as it would without this hook, so the worst case is no slower.
 export function useWarmRouteChunks() {
   useEffect(() => {
+    if (window.matchMedia?.("(pointer: coarse)").matches) return;
     let cancelled = false;
     // One chunk in flight at a time. Asking for all of them empties the
     // browser's per-host connection pool. The record the reader just opened

@@ -6,8 +6,36 @@ import {
   useDealSuggestions,
 } from "./components/dealsuggestions.queries";
 import { QueryGate } from "./design-system/querystates";
-import { ApprovalDetailModal } from "./features/automations/approvaleditor";
-import { OpenActivityDrawer } from "./features/voice-knowledge/activitydrawer";
+
+const LazyApprovalDetailModal = lazy(() =>
+  import("./features/automations/approvaleditor").then((module) => ({
+    default: module.ApprovalDetailModal,
+  })),
+);
+function ApprovalDetailModal(
+  props: ComponentProps<typeof LazyApprovalDetailModal>,
+) {
+  return (
+    <Suspense fallback={null}>
+      <LazyApprovalDetailModal {...props} />
+    </Suspense>
+  );
+}
+const LazyOpenActivityDrawer = lazy(() =>
+  import("./features/voice-knowledge/activitydrawer").then((module) => ({
+    default: module.OpenActivityDrawer,
+  })),
+);
+function OpenActivityDrawer(
+  props: ComponentProps<typeof LazyOpenActivityDrawer>,
+) {
+  return (
+    <Suspense fallback={null}>
+      <LazyOpenActivityDrawer {...props} />
+    </Suspense>
+  );
+}
+
 import { useT } from "./i18n";
 import { type ReviewActions, ReviewActionsContext } from "./lib/reviewactions";
 

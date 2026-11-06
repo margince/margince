@@ -305,7 +305,6 @@ internal/compose/weekly/weeklyscorecard_integration_test.go 1
 internal/compose/weeklymetricscoverage_integration_test.go 1
 internal/compose/weeklyplancapacity_integration_test.go 1
 internal/compose/worklistageout_integration_test.go 1
-internal/compose/worklistbacklog_integration_test.go 2
 internal/modules/activities/activityread_test.go 2
 internal/modules/activities/answertouchequivalence_integration_test.go 2
 internal/modules/activities/awaitingreply_integration_test.go 1
@@ -405,7 +404,7 @@ internal/modules/contacts/geocode_test.go 1
 internal/modules/contacts/leadconstraints_integration_test.go 2
 internal/modules/contacts/leadladder_integration_test.go 2
 internal/modules/contacts/leadreopen_integration_test.go 2
-internal/modules/contacts/leadsla_integration_test.go 21
+internal/modules/contacts/leadsla_integration_test.go 17
 internal/modules/contacts/leadsla_test.go 1
 internal/modules/contacts/leadworkqueue_test.go 1
 internal/modules/contacts/nudgedismissal_integration_test.go 6
@@ -413,7 +412,7 @@ internal/modules/contacts/occurrenceimage_integration_test.go 1
 internal/modules/contacts/profilefieldprecedence_integration_test.go 1
 internal/modules/contacts/promoteconsent_integration_test.go 1
 internal/modules/contacts/strengthasof_integration_test.go 2
-internal/modules/contacts/vcardimport_integration_test.go 2
+internal/modules/contacts/vcardimport_integration_test.go 1
 internal/modules/deals/edgegrant_test.go 5
 internal/modules/deals/fxrates_integration_test.go 2
 internal/modules/deals/stageevidence_integration_test.go 5

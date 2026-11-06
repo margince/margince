@@ -1,5 +1,5 @@
-import { routeHash } from "../../lib/router";
-import { hashWithParams } from "../../lib/urlstate";
+import { routeHash } from "./router";
+import { hashWithParams } from "./urlstate";
 
 /** The address parameter that opens one decision over Home. */
 export const APPROVAL_PARAM = "approval";

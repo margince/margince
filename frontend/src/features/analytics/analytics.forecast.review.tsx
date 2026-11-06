@@ -6,6 +6,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { useUrlParams } from "../../lib/urlstate";
 import { type AnalyticsScope, scopeQuery } from "./analytics.context";
 import { CheckTable } from "./analytics.forecast.checktable";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
@@ -15,6 +16,7 @@ import {
   outOfDate,
   verdictStands,
 } from "./analytics.forecast.freshness";
+import type { Dimensions } from "./reporting.dimensions";
 
 type Assurance = components["schemas"]["ForecastAssurance"];
 
@@ -79,8 +81,18 @@ export function ForecastReview({
 // them shares, so answering one here clears it everywhere it is counted.
 // The findings, for one record scope when given; without one, every finding
 // the reader may see. The answer carries the server's groups and totals.
-export function useInputChecks(enabled = true, scope?: AnalyticsScope) {
-  const query = scope ? scopeQuery(scope) : {};
+export function useInputChecks(
+  enabled = true,
+  scope?: AnalyticsScope,
+  dimensions?: Dimensions,
+) {
+  const [params] = useUrlParams();
+  const query = {
+    ...(scope ? scopeQuery(scope) : {}),
+    product_id: dimensions?.product_id ?? params.get("product") ?? undefined,
+    country: dimensions?.country ?? params.get("country") ?? undefined,
+    industry: dimensions?.industry ?? params.get("industry") ?? undefined,
+  };
   return useQuery({
     enabled,
     queryKey: ["input-checks", query],

@@ -38525,6 +38525,8 @@ export interface components {
             task: number;
             /** @description Live webhook subscriptions the member owns. Each delivers only while its owner is active. */
             webhook: number;
+            /** @description Live lists owned by the member. */
+            list: number;
         };
         UserHandover: {
             owned: components["schemas"]["HandoverCounts"];
@@ -46195,6 +46197,15 @@ export interface components {
             run_id?: string;
             labels?: components["schemas"]["AnalyticsIdLabels"];
             population_narrowed?: components["schemas"]["PopulationNarrowed"];
+            /** @description Base currency used by this answer. */
+            base_currency?: string;
+            /**
+             * Format: date-time
+             * @description Reference instant used to select conversion rates for this answer.
+             */
+            rate_date?: string;
+            /** @description Visible records excluded by field masks. Absent when no mask applies. */
+            excluded_by_permission?: number;
         };
         /**
          * @description Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
@@ -50719,6 +50730,29 @@ export interface components {
             dispute_open: boolean;
             /** Format: date-time */
             created_at: string;
+            /** @description The request arrived through the subject's own confirmation link. */
+            identity_verified?: boolean;
+            proof?: components["schemas"]["DataSubjectRequestProof"];
+        };
+        DataSubjectRequestProof: {
+            request_number: string;
+            requester_email?: string | null;
+            /** Format: date-time */
+            received_at: string;
+            request_kind: string;
+            identity_check: string;
+            result: string;
+            erased_counts: {
+                [key: string]: number;
+            };
+            erased_uncounted: string[];
+            erased_counts_known: boolean;
+            completed_by_type?: string | null;
+            completed_by_id?: string | null;
+            /** Format: date-time */
+            answered_at: string;
+            /** Format: date-time */
+            keep_until: string;
         };
         /**
          * @description What this installation must be able to say about itself when it writes to somebody.
@@ -90803,6 +90837,12 @@ export interface operations {
                 scope_kind?: "workspace" | "team" | "owner";
                 /** @description The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject. */
                 scope_id?: string;
+                /** @description Narrows deal findings to this product. Other findings cover the selected population. */
+                product_id?: string;
+                /** @description Narrows deal findings by the readable company's country. */
+                country?: string;
+                /** @description Narrows deal findings by the readable company's industry. */
+                industry?: string;
             };
             header?: never;
             path?: never;

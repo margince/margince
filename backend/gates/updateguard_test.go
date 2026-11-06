@@ -36,7 +36,7 @@ import (
 // obligation applies to VERSIONED tables (the schema's own declaration
 // that a row is a concurrently-edited entity), derived from the
 // migrations rather than maintained as a list.
-var byIDUpdate = regexp.MustCompile(`(?is)\bUPDATE\s+([a-z_]+)\s.*\bSET\b.*\bWHERE\s+(?:[a-z]\.)?id\s*=\s*\$`)
+var byIDUpdate = regexp.MustCompile(`(?is)\bUPDATE\s+([a-z_]+)\s.*\bSET\b.*\bWHERE\s+(?:[a-z]\.)?id\s*=\s*(?:\$|@)`)
 
 // versionPredicate is a version compared against a PARAMETER, which is a
 // compare-and-set. `version = version + 1` in the SET clause is not one and does
@@ -46,7 +46,7 @@ var byIDUpdate = regexp.MustCompile(`(?is)\bUPDATE\s+([a-z_]+)\s.*\bSET\b.*\bWHE
 // Matched against the WHERE clause only, never the whole statement. `SET …,
 // version = $5` assigns a client-supplied version and guards nothing, so
 // crediting it would wave through the lost update this gate exists to refuse.
-var versionPredicate = regexp.MustCompile(`(?i)\bversion\s*=\s*\$\d+`)
+var versionPredicate = regexp.MustCompile(`(?i)\bversion\s*=\s*(?:\$\d+|@[a-z_][a-z0-9_]*)`)
 
 // whereClause is the tail of a statement from its last WHERE onward, which is
 // the only part where a predicate can constrain which row is written.
@@ -121,12 +121,20 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/consent:assessNoticeSourceTx":         "lockNoticeCase holds this privacy_notice_case FOR UPDATE before the assessment reads or writes it",
+	"internal/modules/consent:ReviewUnverifiedNoticeTx":     "lockNoticeCase holds this privacy_notice_case FOR UPDATE before the source decision is read or changed",
+	"internal/modules/contacts:refreshContactPhoneEvidence": "recheckBatch holds every candidate from lockOpenPairs FOR UPDATE OF d through the evidence refresh in the same transaction",
+	"internal/modules/identity:applyMemberRetirement":       "retireMemberTx locks the source with readRetirementMember and both members through retirementPreviewTx before applying the confirmed preview",
+	"internal/modules/identity:recordMemberSurvivor":        "retirementPreviewTx locks the survivor with readRetirementTarget before retireMemberTx reaches this merge receipt",
+	"internal/modules/identity:recordTeamChange":            "the app_user touch runs only for setTeamMemberTx, under lockAuthorization; it writes only updated_at and no domain before-image",
+	"internal/modules/identity:changeUserRoleTx":            "lockAuthorization serializes the role change and the app_user touch in one transaction",
+	"internal/modules/privacy:clearActivityContent":         "terminal erasure empties the activity regardless of concurrent content changes; preserving a competing value would retain the erased content",
 	"internal/modules/assurance:recordReadThrough": "the pass sets one column on the run row it inserted in the same transaction, " +
 		"under the assurance pass lock, so no other writer can hold that row",
 	"internal/modules/contacts:DisqualifyLead":             "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
 	"internal/modules/privacy:EraseUntoldLeadTx":           "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
 	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
-	"internal/modules/collections:ArchiveSavedView":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
+	"internal/modules/collections:archiveSavedViewTx":      "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveTag":              "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/contacts:absorbCompanyReferences":    "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",
 	"internal/modules/contacts:bindSiteReadLogo":           "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",

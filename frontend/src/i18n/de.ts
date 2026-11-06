@@ -168,6 +168,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.work.projects": "Projekte",
   "users.work.alerts": "Offene Hinweise",
   "users.work.tasks": "Aufgaben",
+  "users.work.lists": "Listen",
+  "privacy.proofReference": "Anfragenummer",
+  "privacy.proofAnswered": "Beantwortet am",
+  "privacy.proofKeptUntil": "Nachweis aufbewahrt bis",
+  "privacy.proofCompletedBy": "Abgeschlossen von",
+  "privacy.proofAutomated": "Automatisierter Vorgang",
+  "privacy.proofErasureChanges": "Erfasste Löschänderungen",
+  "privacy.proofPartialCounts":
+    "Ein Teil der Löschung lässt sich nicht zählen. Der Auskunftsexport enthält die erfasste Aufstellung.",
+  "privacy.proofExportCounts":
+    "Der Auskunftsexport enthält die erfasste Aufstellung.",
+  "privacy.proofUnknown": "Nicht erfasst",
+  "analytics.q.conversionFrame":
+    "Basiswährung: {currency}. Wechselkurse vom {date}.",
 
   "homeRepair.taskPermission":
     "Zum Archivieren geprüfter Aufgaben brauchst du die Berechtigung, Aktivitäten zu archivieren.",
@@ -8200,6 +8214,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.emptyTeamBody": "Niemand in {scope} hat einen Deal.",
   "analytics.deliveryCoversAll":
     "Diese Zahlen umfassen jedes Projekt, das du lesen kannst.",
+  "analytics.wholeScopeForecast":
+    "Prognosewerte und Prüfungen ohne Deal gelten für die gesamte ausgewählte Gruppe, unabhängig von Produkt-, Länder- oder Branchenfiltern.",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
   "analytics.board.rail": "Ausblick und nächste Schritte",
   "analytics.attentionNoOwner": "Kein Verantwortlicher",
@@ -14490,6 +14506,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.tasks_other": "{count} offene Aufgaben",
   "users.handover.webhooks_one": "{count} Webhook",
   "users.handover.webhooks_other": "{count} Webhooks",
+  "users.handover.lists_one": "{count} Liste",
+  "users.handover.lists_other": "{count} Listen",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
   "users.removeMfaConfirmTitle": "Zweistufige Anmeldung für {name} entfernen?",
   "users.removeMfaConfirmBody":

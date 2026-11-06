@@ -68,7 +68,7 @@ describe("a call started under the shell's host", () => {
 
     expect(link.getAttribute("href")).toBe(telUri(DIALS));
     expect(fireEvent.click(link)).toBe(true);
-    const dialog = screen.getByRole("dialog", { name: "Log activity" });
+    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
     expect(
       within(dialog).getByRole("combobox", { name: "Type" }).textContent,
     ).toContain("Call");

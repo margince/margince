@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  lazy,
   type ReactNode,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -25,8 +27,14 @@ import {
 import { useCanWrite } from "../lib/capability";
 import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
 import { EntityRef } from "./entityref";
+
 import { LogActivityForm } from "./logactivity";
-import { LogActivityAction } from "./logactivity.action";
+
+const LogActivityAction = lazy(() =>
+  import("./logactivity.action").then((module) => ({
+    default: module.LogActivityAction,
+  })),
+);
 
 type StartedCall = CallRecord & Readonly<{ seq: number }>;
 
@@ -70,15 +78,17 @@ export function CallLogHost({ children }: Readonly<{ children: ReactNode }>) {
     <CallStartProvider start={start}>
       {children}
       {call !== null && (
-        <LogActivityAction
-          key={`${call.entityId}:${call.seq}`}
-          entityType={call.entityType}
-          entityId={call.entityId}
-          askedKind="call"
-          openOnMount
-          onClose={close}
-          about={<EntityRef kind="contact" id={call.entityId} asText />}
-        />
+        <Suspense fallback={null}>
+          <LogActivityAction
+            key={`${call.entityId}:${call.seq}`}
+            entityType={call.entityType}
+            entityId={call.entityId}
+            askedKind="call"
+            openOnMount
+            onClose={close}
+            about={<EntityRef kind="contact" id={call.entityId} asText />}
+          />
+        </Suspense>
       )}
     </CallStartProvider>
   );

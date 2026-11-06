@@ -138,7 +138,7 @@ function SalesReviewBody({
     if (scopeKey(next.scope) !== scopeKey(scope))
       replaceDial("scope", scopeKey(next.scope));
   };
-  const checks = useInterventions(scope);
+  const checks = useInterventions(scope, filters.dimensions);
   const invalid = problemCodeOf(query.error) === "reporting_interval_invalid";
   // The evaluation the page draws below its readings; a cached answer to a
   // question the page no longer asks is never drawn.

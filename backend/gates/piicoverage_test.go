@@ -29,6 +29,8 @@ import (
 
 // piiHandling declares how erasure and SAR must reach a PII table.
 type piiHandling struct {
+	// proofExpiry names the owner that deletes accountability evidence after its retention date.
+	proofExpiry string
 	// erasureWrite: erasure.go must UPDATE/DELETE this table (redact or purge).
 	erasureWrite bool
 	// retentionErase: the nightly retention sweep is this table's ONLY
@@ -433,7 +435,8 @@ var piiTables = map[string]piiHandling{
 	// with them and disclosed to them — a subject who asked to be erased and
 	// was refused could not otherwise see that the refusal exists, which is the
 	// one thing they need to appeal it.
-	"data_subject_request": {erasureWrite: true, sarRead: true},
+	"data_subject_request":  {erasureWrite: true, sarRead: true},
+	"privacy_request_proof": {sarRead: true, proofExpiry: "internal/modules/consent/requestproofexpiry.go"},
 	// The unsubscribe links minted for a subject: a capability over their own
 	// record, carrying the address it was written to, living twenty-four
 	// months. Erased with them for that reason, and disclosed because "does the
@@ -516,6 +519,7 @@ var sarAssemblyFiles = []string{
 	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/sar.go",
 	"internal/modules/privacy/sarsections.go",
+	"internal/modules/privacy/sarrequestproofs.go",
 	// What this installation CONCLUDED about the subject's correspondence —
 	// what their replies meant, and what ours did about what they asked. Its
 	// own file for the reason the others have theirs, and named here because a
@@ -669,9 +673,21 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 
 	var missing []string
 	for table, h := range piiTables {
-		if !h.erasureWrite && !h.retentionErase {
+		if !h.erasureWrite && !h.retentionErase && h.proofExpiry == "" {
 			missing = append(missing, "PII table "+table+
 				" is registered with no eraser at all — declare erasureWrite (the Art. 17 cascade) or retentionErase (the time-based sweep)")
+		}
+		if h.proofExpiry != "" {
+			if writes[table] {
+				missing = append(missing, "erasure reaches retained accountability proof "+table)
+			}
+			deleted := false
+			for _, statement := range sqlLiterals(t, h.proofExpiry) {
+				deleted = deleted || strings.Contains(strings.ToLower(statement), "delete from "+table)
+			}
+			if !deleted {
+				missing = append(missing, "accountability proof has no expiry delete: "+table)
+			}
 		}
 		if h.erasureWrite && !writes[table] {
 			missing = append(missing, "erasure never writes PII table "+table+

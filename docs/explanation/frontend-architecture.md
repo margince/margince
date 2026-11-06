@@ -119,6 +119,11 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   reader uses (`format/plural.ts`). `one-plural-rule.test.ts` refuses a
   `count === 1` that chooses a message key in any file outside this folder.
 
+  `catalogs.ts` loads the language in use. `bootstrap.ts` starts that read while the app loads.
+  `LocaleProvider` waits for the catalog before drawing its content.
+  The error fallback uses a small copy generated from `en`, so a failed load can still offer Retry.
+  Retry clears the failed catalog request before reading it again.
+
   The order of choice is: the user's own choice, then the languages the browser
   asks for, then the default. English with no setting is `en-GB`, never
   `en-US`. The locale only changes how things show: it never changes what is
