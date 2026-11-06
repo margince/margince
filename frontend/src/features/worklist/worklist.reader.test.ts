@@ -1,13 +1,8 @@
 import { expect, it } from "vitest";
 import { translate } from "../../i18n";
-import { whenText } from "../../lib/worklistcopy";
+import { readerTask, sentenceTitled, whenText } from "../../lib/worklistcopy";
 import { taskRow } from "../../testing/brief.fixtures";
-import {
-  noticeDetail,
-  readerTask,
-  sentenceTitled,
-  sharedResponsibility,
-} from "./worklist.reader";
+import { noticeDetail, sharedResponsibility } from "./worklist.reader";
 
 const t = (
   key: Parameters<typeof translate>[1],
@@ -233,4 +228,31 @@ it("titles an approval row by its sentence, falling back to the whole title", ()
     "Update record deal: name=Acme, Inc.",
   );
   expect(sentenceTitled(task)).toBe(task);
+});
+
+// A task's row says its agreed time when it has one, and leaves the end of a
+// day with no time to the "due today" reason. The server's flag decides, never
+// what the clock reads.
+it("reads a task's due moment by its time-of-day flag", () => {
+  const now = new Date("2026-09-14T08:00:00Z");
+  const when = (dueAt: string, due_has_time: boolean) =>
+    whenText(
+      { ...task, due_at: dueAt, due_has_time },
+      t,
+      "en",
+      "UTC",
+      "UTC",
+      now,
+    );
+  expect(when("2026-09-14T23:59:59Z", false)).toBeNull();
+  expect(when("2026-09-14T15:00:00Z", false)).toBeNull();
+  expect(when("2026-09-16T15:00:00Z", false)).toBe(
+    t("worklist.when.due", { when: "16/09/2026" }),
+  );
+  expect(when("2026-09-14T15:00:00Z", true)).toBe(
+    t("worklist.when.due", { when: "15:00" }),
+  );
+  expect(when("2026-09-16T15:00:00Z", true)).toBe(
+    t("worklist.when.due", { when: "16/09/2026, 15:00" }),
+  );
 });

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -144,7 +144,7 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 | Scope | Paths | Gates |
 |---|---|---|
 | `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in: every lane that opens a database |
-| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, extension reference, craftsmanship, unit coverage, vuln |
+| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, the staged `crm-hello` walk, craftsmanship, unit coverage, vuln |
 | `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs) | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
@@ -210,6 +210,11 @@ What follows from this:
   - Neither workflow proves itself on a schedule, since both only run by hand. The next user to start
     one finds a change that made it fail. So a PR that touches either is worth starting from its own branch
     before merging.
+- A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`, plus the
+  census in `backend-lint`. The
+  `full_lane` output of `changes` is false only there. The `develop` into `main` pull request runs
+  them under the usual path filters:
+  [land-through-develop.md](../how-to/land-through-develop.md).
 - **A draft PR runs nothing** until marked ready (`draft == false` guards every job). That is because the
   many agents push many commits while the work is not done.
 - `craft-residue` and `secret-scan` are the exceptions: both run on **every** change that is not a
@@ -228,7 +233,6 @@ changes ──┬─> deterministic-gates
           ├─> integration  →  _lane-integration.yml ────────────────┐
           │                     integration-shards (×6) ──┐         │
           │                     integration-unit-coverage ┴─> fan-in│
-          ├─> extension-reference ──────────────────────────────┐   │
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
           ├─> frontend  →  _lane-frontend.yml                  │   │
@@ -238,15 +242,15 @@ changes ──┬─> deterministic-gates
           ├─> uat  (`frontend` scope, beside the lane)          │   │
           ├─> live-boot                                         │   │
           v                                                     v   v
- deterministic-gates + integration + extension-reference + frontend ──> sonarcloud
+ deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
   secret-scan    (every non-draft change, independent — + the image-pin gate)
 
   ci  ── the ONE required context. needs: deterministic-gates,
-         backend-lint, craftsmanship, craft-residue, secret-scan,
-         extension-reference, integration, frontend, uat, license-gate,
-         images   (eleven — vuln and live-boot stay advisory and are NOT
-         in the fan-in)
+         test-budget, backend-lint, craftsmanship, craft-residue,
+         secret-scan, integration, frontend, uat, license-gate, images
+         (eleven — vuln and live-boot stay advisory and are NOT in the
+         fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -359,8 +363,8 @@ loads that first snapshot forever.
 
 - On this repo, that blob is **about 25 MB**, while a warm Go build cache is **about 550 MB**. So the
   module cache was loaded, and the build cache was not.
-- 11 Go jobs per backend run each compiled the module from the start. Those are the shards, the merge
-  gate, the composed build lane, the coverage pass, `live-boot` and `govulncheck`.
+- Every Go job of a backend run compiled the module from the start: the shards, the merge gate, the
+  coverage pass, `live-boot` and `govulncheck`.
 - setup-go still owns the module cache; this action owns the build cache beside it.
 
 Two kinds exist. A build tag and coverage code change the package builds, and only the
@@ -368,14 +372,15 @@ dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
+| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `integration unit coverage`, `live-boot`, `vuln` |
 | `integration` | `cache-warm.yml` job `integration` | every shard |
 
 ### The writer lives in `cache-warm.yml`, on a schedule
 
 `ci.yml` only ever **loads** the cache. The writing lives in
 [`.github/workflows/cache-warm.yml`](../../.github/workflows/cache-warm.yml). It runs on `main` every
-three hours, plus `workflow_dispatch`, and **gates nothing**. A red or cancelled run there costs time on
+three hours, plus `workflow_dispatch`, and **gates nothing**. GitHub drops some cron runs, so `pace.yml`
+also starts one from a push to `main` once the newest run is three hours old. A red or cancelled run there costs time on
 the next lane, and nothing else.
 
 Three limits shaped that, and each rules out a choice that looks less hard:
@@ -387,7 +392,8 @@ Three limits shaped that, and each rules out a choice that looks less hard:
   on `main`.
 - **The writer cannot run on each push.** Seeding a kind is a side effect of compiling. The `plain` job
   runs a full `make check-backend`, and the `integration` job runs a shard against a live Postgres. At
-  about 80 merges a day, that pair would run about 80 times and mostly cancel itself.
+  about 80 merges a day, that pair would run about 80 times and mostly cancel itself. Paced to one run
+  in three hours, pushes start at most 8 a day.
 - **A stale entry is not a wrong entry.** Go's build cache is keyed by content, and the key falls back
   twice: `…-<deps-hash>-<sha>` → `…-<deps-hash>-` → `…-`. The last step drops the dependency hash,
   because a stale load only misses the entries whose inputs changed. A cache three hours old is mostly
@@ -404,6 +410,30 @@ output can be used again as well as a green run's.
 `scripts/check-image-pins.sh` scans `.github/actions/` beside the workflows. The `./path` allowance lets a
 local action through, because the repo versions its own code. That holds for the action's own ref, but
 not for the outside actions it calls. Those would come in with nobody reading them.
+
+### The lint caches are saved on `main`, and the golangci one on `develop` too
+
+Two smaller caches follow the same rule: `ci.yml` loads them and never saves them. An entry that a PR
+saves can be read by that PR alone. It still counts against the 10 GB cache quota of the repository,
+and there it pushes out the `main` entries that every PR loads.
+
+| Cache | Key | Saved by |
+|---|---|---|
+| Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss on `main` |
+| golangci analysis, `~/.cache/golangci-lint` | [`golangci-cache-key`](../../.github/actions/golangci-cache-key/action.yml): `go.mod`, `go.sum`, both lint configs, then the commit | `cache-warm.yml` job `plain`, and [`lint-cache.yml`](../../.github/workflows/lint-cache.yml) after each push to `main` or `develop` |
+
+- **The gate binaries key reads the recipe.** An edit elsewhere in `backend/Makefile` keeps the
+  key, and a new tool or pin in `make tools` changes it.
+- **Only a lint run saves the golangci entry.** A step stamps the cache after the
+  restore. The save runs under `!cancelled()`, and only if a cache file is newer than the stamp. A
+  red lint run still saves, because it read the whole tree. A run that stopped before lint saves
+  nothing. The census does not hold this entry back, because golangci replays no test result.
+- `lint-cache.yml` also saves the golangci entry, after each push to `main` or `develop` that changes Go
+  files. A cold pass costs about 39 minutes of CPU, and `internal/compose` imports every module, so an old
+  entry lints close to cold. The job runs `make lint` on the pushed tree from the entry of the push before.
+  Lint keeps the result of each package whose inputs did not change; the job then deletes older entries.
+- **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
+  entry until `cache-warm` runs after the merge.
 
 ### Test results replay only on a stable mtime
 
@@ -436,7 +466,7 @@ The first kind is held by a census, not a scan, because such paths are mostly bu
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-The `backend-lint` job runs the census on every PR, so the PR that adds such a read fails. `cache-warm`
+The `backend-lint` job runs the census on every ready PR into `main` that touches the backend, so the PR that adds such a read fails. `cache-warm`
 runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
 good one. The second kind is held by
 a gate: a cached test file that runs `git` or `go` must declare its inputs.
@@ -450,8 +480,9 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 - **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
 - **`craftsmanship` starts beside `deterministic-gates`.** It reads source only, so a red build does
   not change its findings, and both reds show in one round.
-- **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
-  and the shard profiles cannot reach them.
+- **`deterministic-gates (unit)` stages `crm-hello` last.** After the merge gate it copies the fixture
+  into `extensions/`, then runs the composed build, the tests of `cmd/` and every unit's own tests. Its
+  coverage profile goes to `sonarcloud`, because the shard profiles cannot reach a unit's module.
 - **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws
   the slow `e2e` tests work through its part without running minutes past its siblings.
 - **`integration unit coverage`** exists because the shards run just the packages tagged for
@@ -508,10 +539,10 @@ exceptions above. `make check-backend` runs it too, so a laptop `make check` get
 
 ## Coverage → SonarCloud
 
-The `sonarcloud` job runs **last**, and does **not** run any suite again. It fetches the coverage
-artifacts that the `integration` fan-in and `frontend` jobs already made. Those are Go's `coverage.out`
-(merged from each shard and unit binary pod), and the frontend lcov. It then runs only the scanner. So
-there is no second Postgres/Redis/MinIO stack, and no second test run.
+The `sonarcloud` job runs **last** and runs no suite again. It fetches the coverage that `integration`,
+`deterministic-gates (unit)` and `frontend` already made. Those are `coverage.out` (from each shard and
+unit pod), `coverage-extensions.out`, and two lcov reports: the core frontend and the unit screens
+(`frontend/coverage-ext`). It then runs only the scanner, with no second stack and no second test run.
 
 Those pod files are uploaded through
 [`.github/actions/upload-artifact-retried`](../../.github/actions/upload-artifact-retried/action.yml).

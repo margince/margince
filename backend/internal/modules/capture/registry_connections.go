@@ -143,15 +143,16 @@ func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, provider st
 	return sender, auth, granted, nil
 }
 
-// Connections refuses delegated user ids so only humans read their mailbox connections.
+// Connections lists the caller's own mailbox connections, for a user or their
+// agent. It carries status and cursors, never the credential.
 func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 	return r.connectionViews(ctx, true)
 }
 
 func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([]ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return nil, fmt.Errorf("capture: only a human lists their connections: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return nil, fmt.Errorf("capture: only a user or their agent lists their connections: %w", apperrors.ErrPermissionDenied)
 	}
 	var out []ConnectionView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -236,8 +237,8 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 // (keyvault contract), so the retry is safe.
 func (r *Registry) Disconnect(ctx context.Context, name string) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return fmt.Errorf("capture: only a human disconnects a connector: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return fmt.Errorf("capture: only a user or their agent disconnects a connector: %w", apperrors.ErrPermissionDenied)
 	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {

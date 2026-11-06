@@ -402,7 +402,7 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 			return err
 		}
 		if errors.Is(err, pgx.ErrNoRows) || (profile.ReplaceLink != nil && *profile.ReplaceLink) {
-			id, err = s.replaceBookingPage(ctx, tx, host)
+			id, err = s.replaceBookingPage(ctx, tx, host, profile.Enabled)
 			if err != nil {
 				return err
 			}
@@ -426,7 +426,7 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 	})
 }
 
-func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID) (ids.UUID, error) {
+func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID, enabled bool) (ids.UUID, error) {
 	args := schedulingArgs{}
 	if _, err := tx.Exec(ctx, `UPDATE booking_page SET revoked_at=now() WHERE host_user_id=`+args.add(host)+` AND revoked_at IS NULL`, args...); err != nil {
 		return ids.Nil, err
@@ -442,6 +442,8 @@ func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.User
 	}
 	args = schedulingArgs{}
 	var id ids.UUID
-	err = tx.QueryRow(ctx, `SELECT id FROM booking_page WHERE slug=`+args.add(slug), args...).Scan(&id)
-	return id, err
+	if err := tx.QueryRow(ctx, `SELECT id FROM booking_page WHERE slug=`+args.add(slug), args...).Scan(&id); err != nil {
+		return ids.Nil, err
+	}
+	return id, carryBookingPageUseTx(ctx, tx, host, id, enabled)
 }

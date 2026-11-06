@@ -218,7 +218,7 @@ func (s *Store) ListActivitiesIn(ctx context.Context, tx pgx.Tx, in ListActiviti
 	// Measured only when the waiting filter is asked for. The spread is a
 	// percentile over a year, a scan no other list should pay for.
 	if in.WaitingReplyAsOf != nil {
-		if in.horizonDays, err = s.waitingHorizonFor(ctx, tx); err != nil {
+		if in.horizonDays, err = s.waitingHorizonFor(ctx, tx, *in.WaitingReplyAsOf); err != nil {
 			return nil, storekit.Page{}, err
 		}
 	}
@@ -302,25 +302,11 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 		return crmcontracts.Activity{}, err
 	}
 	one := []crmcontracts.Activity{a}
-	if err := WithEmailRowFacts(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := AttachLinks(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithCreators(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithOffersEmail(ctx, tx, one); err != nil {
+	// No columns: each caller fills the custom values with the catalog it read.
+	if err := FinishActivityRows(ctx, tx, CustomColumns{}, one, asOf); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := attachColleagues(ctx, tx, &one[0]); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithCommitmentAdmissions(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := StampActivityAffordances(ctx, tx, one, asOf); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	return one[0], nil

@@ -189,6 +189,8 @@ export function PageAsideToggle({
     // How much is behind the pane, beside the verb — the queue's own total,
     // so a reader knows what the switch opens before pressing it.
     count?: number;
+    // The count is a floor, drawn "25+".
+    floor?: boolean;
   };
 }> = {}) {
   const t = useT();
@@ -220,7 +222,7 @@ export function PageAsideToggle({
       <PanelRight aria-hidden="true" />
       {open ? words.hide : words.show}
       {controlled?.count !== undefined && (
-        <OptionCount count={controlled.count} />
+        <OptionCount count={controlled.count} floor={controlled.floor} />
       )}
     </Button>
   );

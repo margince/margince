@@ -7,7 +7,6 @@ import type { components } from "../../api/schema";
 import { Button, EmptyState, OverflowMenu } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { CellStack } from "../../design-system/cellstack";
-import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -18,6 +17,7 @@ import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
+import { useCopyBookingLink } from "../../lib/bookinglinkcopy";
 import { navigate } from "../../lib/router";
 import {
   bookingPagePaused,
@@ -244,7 +244,7 @@ function LinkActions({
   onReplace,
 }: Readonly<{ profile: Profile; onEdit: () => void; onReplace: () => void }>) {
   const t = useT();
-  const copy = useClipboardCopy(profile.public_url ?? "", {
+  const copy = useCopyBookingLink(profile.public_url ?? "", {
     copy: t("scheduling.copyLink"),
     copied: t("scheduling.copied"),
     remedy: t("scheduling.copyFallback"),
@@ -295,13 +295,15 @@ function NoInvitationsCallout({
       title={t("scheduling.liveNoInvitesTitle")}
       actions={
         <>
-          <Button
-            variant="primary"
-            pending={calendar.connect.isPending}
-            onClick={() => calendar.start(known ?? calendar.target)}
-          >
-            {t("scheduling.reconnectCalendar")}
-          </Button>
+          {!calendar.refusal && (
+            <Button
+              variant="primary"
+              pending={calendar.connect.isPending}
+              onClick={() => calendar.start(known ?? calendar.target)}
+            >
+              {t("scheduling.reconnectCalendar")}
+            </Button>
+          )}
           <Button pending={pausing} onClick={onPause}>
             {t("scheduling.pause")}
           </Button>
@@ -309,6 +311,7 @@ function NoInvitationsCallout({
       }
     >
       <p>{attentionBody(t, standing, connection)}</p>
+      {calendar.refusal && <p>{t(calendar.refusal)}</p>}
       <ConnectRefusal connect={calendar.connect} />
     </Callout>
   );

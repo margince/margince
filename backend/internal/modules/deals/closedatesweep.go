@@ -24,7 +24,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -96,13 +95,21 @@ type closeDateCandidate struct {
 	meetingAhead   bool
 	expectedClose  *time.Time
 	provisional    bool
-	forecastCat    *string
 	pipelineID     ids.PipelineID
 	// ownerID is whose deal it is, for the policy that says whether the sweep
 	// may correct it unasked. Nil where nobody owns it.
-	ownerID        *ids.UUID
-	winProbability int
-	remainingOpen  int
+	ownerID *ids.UUID
+	// override and overrideBy are the deal's own probability columns;
+	// stageProbability is its stage's.
+	override         *int
+	overrideBy       *string
+	stageProbability int
+	remainingOpen    int
+}
+
+// winProbability is the candidate's effective probability and its source.
+func (c closeDateCandidate) winProbability() (int, Source) {
+	return EffectiveWinProbability(c.override, c.overrideBy, c.stageProbability)
 }
 
 // sweepWorkspace walks one pass's FROZEN membership, page by page, from
@@ -158,6 +165,10 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 		return err
 	}
 
+	likelyThreshold, err := c.policy.LikelyThreshold(ctx)
+	if err != nil {
+		return err
+	}
 	velocities := map[ids.PipelineID]closeDatePace{}
 	for {
 		var page []closeDateCandidate
@@ -177,7 +188,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 			live[cand.id] = cand
 		}
 		for _, m := range members {
-			outcome, settleErr := c.settleMember(ctx, live, m, velocities, now, loc, run.ID)
+			outcome, settleErr := c.settleMember(ctx, live, m, velocities, likelyThreshold, now, loc, run.ID)
 			if settleErr != nil {
 				// One deal's failure is that deal's outcome, not the end of the
 				// pass. Recording it and walking on is what keeps a single bad
@@ -207,7 +218,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 // the denominator.
 func (c *CloseDateCorrector) settleMember(
 	ctx context.Context, live map[ids.DealID]closeDateCandidate, m closeDateMember,
-	velocities map[ids.PipelineID]closeDatePace, now time.Time, loc *time.Location, runID ids.UUID,
+	velocities map[ids.PipelineID]closeDatePace, likelyThreshold int, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
 	if m.gone {
 		return closeDateMemberSkipped, nil
@@ -224,7 +235,7 @@ func (c *CloseDateCorrector) settleMember(
 		}
 		velocities[cand.pipelineID] = velocity
 	}
-	category := effectiveForecastCategory(cand.forecastCat, cand.winProbability)
+	probability, _ := cand.winProbability()
 	hygiene := CloseDateAssessment(CloseDateInput{
 		Status:              string(DealOpen),
 		ExpectedClose:       cand.expectedClose,
@@ -232,16 +243,16 @@ func (c *CloseDateCorrector) settleMember(
 		LastActivityAt:      cand.lastActivityAt,
 		WaitUntil:           cand.waitUntil,
 		MeetingAhead:        cand.meetingAhead,
-		StageWinProbability: cand.winProbability,
+		StageWinProbability: cand.stageProbability,
 		RemainingOpenStages: cand.remainingOpen,
-		InForecastCommit:    category == forecastCommit || category == forecastBestCase,
+		Likely:              probability >= likelyThreshold,
 		StageVelocityDays:   velocity.days,
 	}, now, loc)
 	// The outcome is whatever correct actually DID — see closeDateOutcome. A
 	// tier that decided to act and then wrote nothing (the switch off, or the
 	// deal already holding what it proposed) settles as checked, so the run's
 	// counters never claim a correction that did not reach a deal.
-	outcome, err := c.correct(ctx, cand, hygiene, category, velocity, now, loc, runID)
+	outcome, err := c.correct(ctx, cand, hygiene, velocity, now, loc, runID)
 	if err != nil {
 		return "", fmt.Errorf("close-date correction on %s: %w", cand.id, err)
 	}
@@ -288,6 +299,14 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 	var version int64
 	var wrote bool
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The owner first, before any row lock: the bind waits for
+		// authorization changes, and removing a member locks the deals that
+		// member owns. Their grants and switch as they stand now stop a write
+		// a suspension, lost role or switch turned off since the page forbids.
+		actor, mayWrite, err := c.ownerAllows(ctx, tx, cand.ownerID)
+		if err != nil {
+			return err
+		}
 		// The candidate scan and this write are separate transactions:
 		// a deal closed or archived in between must not be re-dated.
 		lock, err := storekit.LockRow(ctx, tx, dealTable, cand.id.UUID, storekit.LiveOnly)
@@ -306,11 +325,9 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		if DealStatus(status) != DealOpen {
 			return nil
 		}
-		stillMine, err := c.ownerStillConsents(ctx, cand.ownerID, owner)
-		if err != nil {
-			return err
-		}
-		if !stillMine {
+		// A deal handed over since the page was read waits for the next pass,
+		// which asks its new owner.
+		if !mayWrite || !sameOwner(cand.ownerID, owner) {
 			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
 		}
 		// The kill switch, read here rather than once per pass: an operator who
@@ -334,43 +351,17 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 			// one. The version is still read, because a 🟡 staging binds to it.
 			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
 		}
-		if err := applyDealPatchLocked(ctx, tx, patch, lock); err != nil {
-			return fmt.Errorf("apply %s patch: %w", correction, err)
-		}
-		if err := tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version); err != nil {
-			return err
-		}
-		// The evidence goes on the AUDIT row, not only into the event's changed
-		// fields. The morning receipt reads its reason back out of
-		// audit_log.evidence long after the event has been consumed, so an
-		// event-only basis renders a correction with no stated reason.
 		auditEvidence := map[string]any{CloseDateCorrectionKind: correction}
 		maps.Copy(auditEvidence, extra)
-		auditID, err := storekit.AuditWithEvidence(
-			ctx, tx, "update", "deal", cand.id.UUID, patch.Before(), patch.After(), auditEvidence)
-		if err != nil {
-			return fmt.Errorf("audit %s: %w", correction, err)
-		}
 		changedFields := map[string]any{CloseDateCorrectionKind: correction}
-		maps.Copy(changedFields, patch.After())
 		maps.Copy(changedFields, extra)
-		if err := storekit.EmitEvent(ctx, tx, auditID, cand.id.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}); err != nil {
-			return fmt.Errorf("emit %s: %w", correction, err)
+		if err := commitCorrection(actor, tx, lock, correctionWrite{
+			deal: cand.id, correction: correction, patch: patch, auditEvidence: auditEvidence,
+			changedFields: changedFields, evidence: evidence, runID: &runID,
+		}); err != nil {
+			return err
 		}
-		// The lifecycle row commits WITH the change it describes. Written in a
-		// second transaction it could be lost to a crash, and then the deal has
-		// moved while nothing records that a correction moved it — which is the
-		// state this row exists to make impossible.
-		if _, err := recordCorrection(ctx, tx, DealCorrection{
-			DealID:     cand.id,
-			AuditLogID: auditID,
-			Correction: correction,
-			// Moved, not After: After holds every column the tier SET, and a
-			// reversal that tried to restore a field which never changed would
-			// be putting back a value that is already there.
-			Fields:   movedFields(patch),
-			Evidence: evidence,
-		}, &runID); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version); err != nil {
 			return err
 		}
 		wrote = true
@@ -387,32 +378,31 @@ func dateString(t *time.Time) *string {
 	return &s
 }
 
-// ownerStillConsents re-asks the policy when a deal has changed hands since the
-// member page read it.
+// ownerAllows binds who a correction on a deal writes as, and reports whether
+// it may write. An owned deal is written by the owner's agent, with the
+// owner's grants and close-date switch as they stand in tx. An owner who left,
+// lost the deal grant or switched corrections off answers false.
 //
-// The page and the write are separate transactions, and the row lock is taken
-// between them — the same window the status re-check beside it exists for. A
-// deal handed over inside that window belongs to a rep whose answer was never
-// sought, and if they had switched corrections off, or sat on veto, the sweep
-// would be writing for the one contact who declined.
-//
-// Asked only when the owner actually moved, so the ordinary deal costs no
-// second query and no second authority resolution.
-func (c *CloseDateCorrector) ownerStillConsents(ctx context.Context, before, now *ids.UUID) (bool, error) {
-	if sameOwner(before, now) {
-		return true, nil
+// An unowned deal has nobody to ask and nobody to leave alone, so the sweep
+// writes it as itself. A date nobody maintains is the one that goes stale.
+func (c *CloseDateCorrector) ownerAllows(ctx context.Context, tx pgx.Tx, owner *ids.UUID) (context.Context, bool, error) {
+	if owner == nil {
+		return ctx, true, nil
 	}
-	var owner ids.UUID
-	if now != nil {
-		owner = *now
+	actor, held, err := actAsOwnerNow(ctx, tx, c.policy.ActForOwner(*owner), requireDealUpdate)
+	if err != nil || !held {
+		return nil, false, err
 	}
-	return c.policy.CorrectsWithoutAsking(ctx, owner)
+	allowed, err := c.policy.CorrectsWithoutAsking(actor, tx, *owner)
+	if err != nil || !allowed {
+		return nil, false, err
+	}
+	return actor, true, nil
 }
 
-// sameOwner reports whether a deal is still held by the contact the candidate
-// page named. Both sides are nullable — owner_id is ON DELETE SET NULL — and
-// two unowned deals are the same owner, which is what lets the re-ask below
-// stay off the ordinary path.
+// sameOwner reports whether a deal is still held by the member the candidate
+// page named. Both sides are nullable, since owner_id is ON DELETE SET NULL,
+// and two unowned deals have the same owner.
 func sameOwner(before, now *ids.UUID) bool {
 	if before == nil || now == nil {
 		return before == nil && now == nil

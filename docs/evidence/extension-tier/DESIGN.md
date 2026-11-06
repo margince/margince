@@ -159,8 +159,8 @@ Each is a property some gate would fail on:
   registry is built. RBAC vocabulary registration happens only after every verb validates.
 - The empty tree reproduces the vanilla build byte-for-byte. With `extensions/` emptied,
   `extensions_gen.go`, `extensions.gen.ts` and all four merged contracts are byte-identical to their
-  committed vanilla copies, and `check-composition` is green. CI's `extension-reference` job proves it on
-  every backend PR by moving the tracked units aside and `cmp`-ing. The two-lane tsconfig setup keeps the
+  committed vanilla copies, and `check-composition` is green. `stubMatchesVanilla` holds every committed
+  stub to what an empty set generates, in `check-composition` and in the `gen-composition` tests. The two-lane tsconfig setup keeps the
   committed vanilla `schema.d.ts` and its drift gate intact. The hand-written core-screen registry sits
   outside the generated tree so it cannot perturb the gate. The property survived every slice of
   accretion and three new generated artifacts.

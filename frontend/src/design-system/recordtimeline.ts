@@ -9,7 +9,7 @@ import { startOfDayInZone } from "../format/timezone";
 import { timelineBaseKey } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
+import { useViewerZone } from "../lib/viewerzone";
 import type { ISODate } from "./dateinput";
 
 type Activity = components["schemas"]["Activity"];
@@ -173,7 +173,7 @@ export function useRecordTimeline(
   const filters = options.filters ?? NO_TIMELINE_FILTERS;
   // The seed stands only for the unfiltered read it was cut from.
   const seed = hasTimelineFilters(filters) ? undefined : options.firstPage;
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const seedCursor = seed?.page.next_cursor ?? undefined;
   const query = useInfiniteQuery({
     // The key the write path invalidates, extended by the filters, the seed's

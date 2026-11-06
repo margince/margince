@@ -24,6 +24,7 @@ import (
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
+	dealFilingResolver DealFilingResolver
 	taskRecommendation TaskRecommendation
 	calendar           SchedulingCalendar
 	schedulingBrand    SchedulingBrand
@@ -104,6 +105,9 @@ type Store struct {
 	// (WithRecipientDirectory wires it). A reply never consults it — its
 	// addressees come from the captured conversation it answers.
 	recipients RecipientDirectory
+	// recipientFiler makes a contact for a typed address no record holds.
+	// Nil files nothing, and recipients then refuses the address.
+	recipientFiler RecipientFiler
 	// heldNotifier puts a stopped scheduled message in the rep's approval
 	// inbox; nil holds silently (WithHeldNotifier wires it).
 	heldNotifier HeldNotifier

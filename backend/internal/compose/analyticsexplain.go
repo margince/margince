@@ -64,6 +64,9 @@ func ExplainAnalyticsCell(
 	if err := requireAnalyticsRead(ctx, spec.entity); err != nil {
 		return AnalyticsExplanation{}, err
 	}
+	if err := in.CheckCell(); err != nil {
+		return AnalyticsExplanation{}, err
+	}
 
 	// The cell's own size, judged before anything is opened. Asked by RUNNING
 	// the question again rather than trusting a size the caller sent: a caller

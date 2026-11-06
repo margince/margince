@@ -176,6 +176,9 @@ func (e *Engine) measureWeek(
 	if review.Money, err = countWeekMoney(ctx, tx, userID, start, end); err != nil {
 		return err
 	}
+	if review.DailyActivity, err = countWeekDays(ctx, tx, userID, start, end); err != nil {
+		return err
+	}
 	if err := e.measureNumeric(ctx, tx, review, start, end, now); err != nil {
 		return err
 	}

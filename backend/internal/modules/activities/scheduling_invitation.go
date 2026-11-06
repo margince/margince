@@ -171,7 +171,7 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 			return crmcontracts.MeetingInvitation{}, err
 		}
 	}
-	roster, err := s.invitationRoster(ctx, host, in, intent)
+	roster, err := s.resolveRoster(ctx, host, in, intent)
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
@@ -319,6 +319,12 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		_, err = tx.Exec(ctx, `INSERT INTO meeting_invitation(activity_id,host_user_id,provider,calendar_id,appointment,status,management_hash,management_ref,next_attempt_at,reminder_status,public_intent,created_at) VALUES (`+strings.Join(values, ",")+`)`, args...)
 		if err != nil {
 			return err
+		}
+		// The door's own flag: Public is nil for a booking sent without a key.
+		if intent.DescriptionFromBooker {
+			if _, err := stampBookingPageUseTx(ctx, tx, host, s.now()); err != nil {
+				return err
+			}
 		}
 		if proposalID != ids.Nil {
 			if err := consumeProposal(ctx, tx, proposalID, row.ID); err != nil {

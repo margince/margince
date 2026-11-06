@@ -29,9 +29,12 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { useFoldedViewport } from "../lib/viewport";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button, type ButtonVariant } from "./atoms";
+import { Heading } from "./heading";
 import { useHoverIntent } from "./hoverintent";
+import { Modal } from "./modal";
 import { usePanelDismiss } from "./popoverdismiss";
 import { usePortalPanelFocus } from "./portalfocus";
 import "./popover.css";
@@ -57,6 +60,7 @@ export function Popover({
   panelClassName,
   width = "default",
   align = "start",
+  pinned = false,
   children,
 }: Readonly<{
   label: ReactNode;
@@ -112,6 +116,9 @@ export function Popover({
   width?: "default" | "wide";
   /** `end` for a trigger at the end of its row, so the panel stays over it. */
   align?: "start" | "end";
+  /** `panelClassName` places the panel, as the top bar does for every panel
+   *  it opens, so it is not moved to the trigger. */
+  pinned?: boolean;
   children: ReactNode;
 }>) {
   const [ownOpen, setOwnOpen] = useState(false);
@@ -133,7 +140,7 @@ export function Popover({
   const triggerId = useId();
   // The leading edge by default, since words open a popover as often as a chip
   // does. A panel hung off the end of a full-width sentence lands at the margin.
-  const at = useAnchoredToTrigger(open, trigger, panel, align);
+  const at = useAnchoredToTrigger(open && !pinned, trigger, panel, align);
 
   // Focus, shared with the evidence mark's own portalled panel: into the panel
   // when a press opened it, back to the trigger if the close dropped it, and
@@ -185,7 +192,8 @@ export function Popover({
         reasonId={reasonId}
         aria-haspopup={dialog ? "dialog" : undefined}
         aria-expanded={open}
-        aria-controls={panelId}
+        // Only a panel on the page can be named; a closed one is not drawn.
+        aria-controls={open ? panelId : undefined}
         onClick={press}
         {...(onHover ? hover : {})}
       >
@@ -214,11 +222,15 @@ export function Popover({
             aria-labelledby={triggerId}
             {...(onHover ? hover : {})}
             {...panelFocus}
-            style={{
-              top: `${at.top}px`,
-              left: `${at.left}px`,
-              maxHeight: `${at.maxHeight}px`,
-            }}
+            style={
+              pinned
+                ? undefined
+                : {
+                    top: `${at.top}px`,
+                    left: `${at.left}px`,
+                    maxHeight: `${at.maxHeight}px`,
+                  }
+            }
           >
             {children}
           </section>,
@@ -256,5 +268,77 @@ function PopoverTrigger({
       disabled={refused}
       aria-describedby={refused ? reasonId : undefined}
     />
+  );
+}
+
+/** A non-modal `Popover`, or below the fold a drawer `Modal` headed by `title`.
+ * There a panel anchored to a small trigger leaves no room for the keyboard. */
+export function PopoverSheet({
+  label,
+  title,
+  variant,
+  className,
+  reasonId,
+  align,
+  panelClassName,
+  open,
+  onOpenChange,
+  children,
+}: Readonly<{
+  label: ReactNode;
+  title: string;
+  variant: ButtonVariant;
+  className?: string;
+  reasonId?: string;
+  align?: "start" | "end";
+  panelClassName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+}>) {
+  // Modal's own fold, so no width draws a panel the sheet would also draw.
+  const phone = useFoldedViewport();
+  const titleId = useId();
+  if (!phone) {
+    return (
+      <Popover
+        label={label}
+        variant={variant}
+        className={className}
+        reasonId={reasonId}
+        align={align}
+        open={open}
+        onOpenChange={onOpenChange}
+        dialog
+        panelClassName={panelClassName}
+      >
+        {children}
+      </Popover>
+    );
+  }
+  return (
+    <>
+      <Button
+        variant={variant}
+        className={className}
+        reasonId={reasonId}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => onOpenChange(true)}
+      >
+        {label}
+      </Button>
+      <Modal
+        intent="drawer"
+        open={open}
+        onClose={() => onOpenChange(false)}
+        labelledBy={titleId}
+      >
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {title}
+        </Heading>
+        {children}
+      </Modal>
+    </>
   );
 }

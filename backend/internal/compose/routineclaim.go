@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -30,6 +31,13 @@ type routineClaim struct {
 
 func routineBriefEngine(pool *pgxpool.Pool) *briefs.BriefEngine {
 	return briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool)))
+}
+
+// routineBriefWorker is the morning writer the weekly and digest sends borrow
+// when a seat combines its routine mail. The morning read needs the engine for
+// the last send, so a borrowed worker carries one just as the job does.
+func routineBriefWorker(pool *pgxpool.Pool, users *identity.Service, log *slog.Logger, mail BriefMailConfig) briefGenerateWorker {
+	return briefGenerateWorker{engine: routineBriefEngine(pool), pool: pool, users: users, log: log, mail: mail}
 }
 
 func claimRoutine(ctx context.Context, pool *pgxpool.Pool, runID, reviewID ids.UUID, part morningDigest, now time.Time, holds ...func(pgx.Tx) error) (routineClaim, bool, error) {

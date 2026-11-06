@@ -26,8 +26,8 @@ import { formatNumber } from "../../format/format";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { WithheldRateCard } from "./rates";
 
 type TaxRate = components["schemas"]["TaxRate"];
@@ -129,7 +129,7 @@ function TaxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
   const formId = useId();
   // The sheet counts its days in the installation's zone, so the form opens
   // on the day the server reads as today.
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [draft, setDraft] = useState<Draft>(() => ({
     country: "",
     category: "standard",

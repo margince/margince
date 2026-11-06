@@ -36,12 +36,14 @@ import {
   useLeadOrigins,
 } from "../../lib/leadorigins";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
-import { listQueryParams } from "../../lib/tagfilter";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import { LeadBulkBar } from "./leadbulk";
 import { useLeadSettings } from "./leadhandling";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
@@ -55,8 +57,13 @@ import {
 } from "./leads.companydials";
 import { leadIdentityFields } from "./leads.contactoffers";
 import "./leads.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
-import { createLead, UNASSIGNED_OWNER } from "./leads.list.queries";
+import {
+  createLead,
+  leadsQueryParams,
+  UNASSIGNED_OWNER,
+} from "./leads.list.queries";
 
 export { mapLeadBody, UNASSIGNED_OWNER } from "./leads.list.queries";
 
@@ -87,12 +94,9 @@ export async function fetchLeadsPage(
     await api.GET("/leads", {
       params: {
         query: {
-          q: query.q || undefined,
-          sort: query.sort || undefined,
-          include_archived: query.includeArchived || undefined,
+          ...leadsQueryParams(query),
           cursor: cursor || undefined,
           limit: listFetchLimit(query.perPage),
-          ...listQueryParams(query.filters),
         },
       },
     }),
@@ -168,7 +172,7 @@ function LeadsWorkbench({
   );
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const leadSettings = useLeadSettings();
   const slaOn = leadSettings.data?.first_response_enabled === true;
   // Bulk selection, by lead id; cleared after any bulk run, since the rows
@@ -257,13 +261,12 @@ function LeadsWorkbench({
             mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })
           )
         }
-        // The board renders INSIDE the surface, so the search, the chips and
-        // the saved views stay above it. A board that replaced the surface
-        // took the filter bar with it, leaving the reader looking at a
-        // narrowed answer with no way to see or change what narrowed it.
+        // The board renders inside the surface, so the toolbar stays above it:
+        // a narrowed answer always shows the way to change what narrowed it.
         body={
           view === "board" && refused.length === 0 ? (
             <LeadBoard
+              query={state.query}
               rows={state.rows}
               onMoved={() => state.refetch()}
               hasMore={state.hasMore}
@@ -320,7 +323,7 @@ function LeadsWorkbench({
             ]}
           />
         }
-        columns={leadColumns(t, locale, recordZone, origins.data, partners)}
+        columns={leadColumns(t, locale, readerZone, origins.data, partners)}
         rowKey={(lead) => lead.id}
         selection={{
           selected: liveSelection,
@@ -478,10 +481,7 @@ function LeadsWorkbench({
         // was the one record list without them, while the contract has
         // carried `leads` in the saved-view vocabulary all along.
         dataViews={savedViews}
-        tools={
-          // Board or table is how the SAME rows are drawn, so it belongs with
-          // the drawing dials rather than above the surface — the slot the
-          // deals screen's pipeline picker already uses.
+        layout={
           <SegmentedControl
             options={["table", "board"] as const}
             value={view}
@@ -492,7 +492,8 @@ function LeadsWorkbench({
             }}
           />
         }
-        saveView={<SaveViewAction resource="leads" query={state.query} />}
+        saveView={<SaveViewAction resource="leads" state={state} />}
+        notice={<SavedViewsFailure resource="leads" />}
       />
     </>
   );

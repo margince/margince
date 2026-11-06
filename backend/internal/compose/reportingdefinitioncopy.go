@@ -14,6 +14,7 @@ import (
 //
 //nolint:dupl // every metric table is a map of phrases, so the tables share one shape and no text
 var reportingMetricNames = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
+	reportingLeadsAwaitingResponseNow:      {En: "Leads awaiting a first reply now", De: "Leads, die jetzt auf die erste Antwort warten", Vi: "Lead hiện chờ phản hồi đầu tiên"},
 	reportingBookingsWon:                   {En: "Sales won", De: "Gewonnener Umsatz", Vi: "Doanh số đã chốt"},
 	reportingClosedWinRate:                 {En: "Closed win rate", De: "Gewinnquote abgeschlossener Deals", Vi: "Tỷ lệ thắng trên deal đã đóng"},
 	reportingOpenPipeline:                  {En: "Open pipeline", De: "Offene Pipeline", Vi: "Pipeline đang mở"},
@@ -27,7 +28,7 @@ var reportingMetricNames = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	reportingLeadsQualified:                {En: "Leads qualified", De: "Qualifizierte Leads", Vi: "Lead đủ điều kiện"},
 	reportingLeadsPromoted:                 {En: "Arriving leads qualified", De: "Qualifizierte eingegangene Leads", Vi: "Lead đến trong kỳ đã đủ điều kiện"},
 	reportingLeadFirstResponse:             {En: "First response time", De: "Zeit bis zur ersten Antwort", Vi: "Thời gian phản hồi đầu tiên"},
-	reportingLeadsAwaitingResponse:         {En: "Leads still waiting for a reply", De: "Leads, die noch auf eine Antwort warten", Vi: "Lead vẫn đang chờ phản hồi"},
+	reportingLeadsAwaitingResponse:         {En: "This period’s arrivals awaiting a reply", De: "Eingänge dieses Zeitraums ohne Antwort", Vi: "Lead đến trong kỳ vẫn chờ phản hồi"},
 	reportingPartnerPipeline:               {En: "Partner pipeline", De: "Pipeline über Partnerunternehmen", Vi: "Pipeline từ đối tác"},
 	reportingPartnerWon:                    {En: "Partner sales won", De: "Umsatz über Partnerunternehmen", Vi: "Doanh số chốt từ đối tác"},
 	reportingPartnerCommission:             {En: "Partner commission", De: "Provision für Partnerunternehmen", Vi: "Hoa hồng đối tác"},
@@ -53,7 +54,8 @@ func reportingMetricName(frame crmcontracts.ReportingContext, metric crmcontract
 // gets credit, what missing data does. Each sentence states only what that
 // metric's reader computes.
 var reportingDefinitionWords = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
-	reportingLeadsQualified: {En: "Leads first qualified into a deal during the period, credited to their owner at first qualification. Each lead counts once, regardless of arrival date or later reassignment.", De: "Leads, die im Zeitraum erstmals zu einem Deal qualifiziert wurden, gutgeschrieben ihrer verantwortlichen Person zu diesem Zeitpunkt. Jeder Lead zählt einmal, unabhängig vom Eingang oder einer späteren Neuzuweisung.", Vi: "Lead lần đầu đủ điều kiện thành deal trong kỳ, tính cho người phụ trách tại thời điểm đó. Mỗi lead chỉ được tính một lần, không phụ thuộc ngày đến hay việc đổi người phụ trách sau đó."},
+	reportingLeadsAwaitingResponseNow: {En: "Open incoming-email leads still awaiting their first reply now, regardless of when they arrived.", De: "Offene eingehende E-Mail-Leads ohne erste Antwort, unabhängig vom Eingangsdatum.", Vi: "Lead email đến đang mở và chưa có phản hồi đầu tiên, bất kể ngày đến."},
+	reportingLeadsQualified:           {En: "Leads first qualified into a deal during the period, credited to their owner at first qualification. Each lead counts once, regardless of arrival date or later reassignment.", De: "Leads, die im Zeitraum erstmals zu einem Deal qualifiziert wurden, gutgeschrieben ihrer verantwortlichen Person zu diesem Zeitpunkt. Jeder Lead zählt einmal, unabhängig vom Eingang oder einer späteren Neuzuweisung.", Vi: "Lead lần đầu đủ điều kiện thành deal trong kỳ, tính cho người phụ trách tại thời điểm đó. Mỗi lead chỉ được tính một lần, không phụ thuộc ngày đến hay việc đổi người phụ trách sau đó."},
 	reportingBookingsWon: {
 		En: "The total value of deals won with a close date in the period you picked, credited to the deal's current owner. Example: a €10,000 deal marked won on 12 March counts in March, even if its expected close date was in April.",
 		De: "Der Gesamtwert der gewonnenen Deals mit einem Abschlussdatum im gewählten Zeitraum, gutgeschrieben der Person, die den Deal jetzt verantwortet. Beispiel: Ein Deal über 10.000 €, gewonnen am 12. März, zählt im März, auch wenn der erwartete Abschluss im April lag.",
@@ -168,7 +170,8 @@ var reportingDefinitionWords = map[crmcontracts.ReportingMetricID]langcopy.Phras
 
 //nolint:dupl // every metric table is a map of phrases, so the three share one shape and no text
 var reportingAttributionWords = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
-	reportingLeadsQualified: {En: "Owner at first qualification; team membership follows the reporting population.", De: "Verantwortliche Person bei der ersten Qualifizierung; die Teamzugehörigkeit folgt der Berichtspopulation.", Vi: "Người phụ trách tại lần đầu đủ điều kiện; thành viên nhóm theo phạm vi báo cáo."},
+	reportingLeadsAwaitingResponseNow: {En: "Credited to the lead’s current owner.", De: "Für die Person, die den Lead jetzt verantwortet.", Vi: "Tính cho người hiện phụ trách lead."},
+	reportingLeadsQualified:           {En: "Owner at first qualification; team membership follows the reporting population.", De: "Verantwortliche Person bei der ersten Qualifizierung; die Teamzugehörigkeit folgt der Berichtspopulation.", Vi: "Người phụ trách tại lần đầu đủ điều kiện; thành viên nhóm theo phạm vi báo cáo."},
 	reportingBookingsWon: {
 		En: "Credit goes to the deal's current owner and pipeline, so a reassigned deal moves with it; a saved snapshot keeps the owner it had when it was captured.",
 		De: "Gutgeschrieben wird der aktuell verantwortlichen Person und der aktuellen Pipeline des Deals, ein neu zugewiesener Deal wandert also mit; ein gespeicherter Snapshot behält die Zuordnung vom Zeitpunkt der Erfassung.",
@@ -283,7 +286,8 @@ var reportingAttributionWords = map[crmcontracts.ReportingMetricID]langcopy.Phra
 
 //nolint:dupl // every metric table is a map of phrases, so the three share one shape and no text
 var reportingIncompleteWords = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
-	reportingLeadsQualified: {En: "Qualification events without recorded ownership are partial history; no current owner is substituted.", De: "Qualifizierungen ohne gespeicherte Verantwortung gelten als unvollständige Historie.", Vi: "Sự kiện đủ điều kiện không ghi nhận người phụ trách là lịch sử chưa đầy đủ."},
+	reportingLeadsAwaitingResponseNow: {En: "Only leads you may read are counted; hidden leads make the reading incomplete.", De: "Nur sichtbare Leads werden gezählt; ausgeblendete Leads machen den Wert unvollständig.", Vi: "Chỉ tính lead bạn được đọc; lead bị ẩn làm số liệu chưa đầy đủ."},
+	reportingLeadsQualified:           {En: "Qualification events without recorded ownership are partial history; no current owner is substituted.", De: "Qualifizierungen ohne gespeicherte Verantwortung gelten als unvollständige Historie.", Vi: "Sự kiện đủ điều kiện không ghi nhận người phụ trách là lịch sử chưa đầy đủ."},
 	reportingBookingsWon: {
 		En: "Only deals you may see are counted; a won deal with no amount, or with no exchange rate into the reporting currency, adds nothing and marks the figure as partial.",
 		De: "Gezählt werden nur Deals, die du sehen darfst; ein gewonnener Deal ohne Betrag oder ohne Wechselkurs in die Berichtswährung fließt nicht in den Wert ein, und die Zahl gilt dann als unvollständig.",

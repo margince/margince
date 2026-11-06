@@ -32,7 +32,7 @@
 .emailtext__quoted > .disclosure-summary,
 .emailtext__quoted > .disclosure-summary:hover {
   justify-content: start;
-  color: var(--accent);
+  color: var(--accentText);
   font-weight: inherit;
 }
 .emailtext__quoted > .disclosure-summary > .disclosure-label {

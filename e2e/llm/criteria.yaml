@@ -483,3 +483,193 @@ cases:
       name: Give a link to the named deal
       statement: >-
         The answer gives a link to the named deal's page in the app.
+  case68_let_sofia_read_the_account:
+    1:
+      name: Share the record with the colleague named
+      statement: >-
+        The model shares the one company with Sofia Meier at read access, and says it did.
+  case69_set_up_the_fleet_team:
+    1:
+      name: Create the team and add both colleagues
+      statement: >-
+        The model creates the team and adds each of the two colleagues to it.
+  case70_clear_my_notices:
+    1:
+      name: Mark the notices read
+      statement: >-
+        The model marks the notices read through the action that does that, and changes no record.
+  case71_record_the_signed_contract:
+    1:
+      name: Record the contract the user named
+      statement: >-
+        The model records one contract with that title on that company.
+  case72_read_the_dossier:
+    1:
+      name: Read the dossier without refreshing it
+      statement: >-
+        The model reads the dossier panel, and does not start AI work to refresh it.
+  case73_read_my_weekly_plan:
+    1:
+      name: Read the weekly plan and change nothing
+      statement: >-
+        The model reads the plan and starts or changes nothing.
+  case74_read_the_file_back:
+    1:
+      name: Read back the bytes that were stored
+      statement: >-
+        The model stores the file, then reads the stored file through list_documents by its id and reports its size.
+  case75_sofia_is_leaving:
+    1:
+      name: Ask before removing a member
+      statement: >-
+        The model says what it could do and asks, and neither deactivates nor removes her.
+  case76_she_said_yes_at_the_fair:
+    1:
+      name: Record no consent on a report alone
+      statement: >-
+        The model says what it could record and makes no write.
+  case77_record_her_yes:
+    1:
+      name: Record the consent the user confirmed
+      statement: >-
+        The model records consent for the purpose, with the wording the contact was shown.
+  case78_she_asked_us_to_stop:
+    1:
+      name: Record the stop
+      statement: >-
+        The model records a suppression on that contact and edits no field.
+  case79_put_it_on_hold:
+    1:
+      name: Place the legal hold
+      statement: >-
+        The model places a legal hold on the company with a stated reason.
+  case80_who_changed_that:
+    1:
+      name: Read the audit trail
+      statement: >-
+        The model reads the audit log topic.
+  case81_she_wants_her_data:
+    1:
+      name: Open the access request
+      statement: >-
+        The model opens one data subject request of kind access.
+  case82_keep_that_newsletter_out:
+    1:
+      name: Keep a domain out of capture
+      statement: >-
+        The model adds the domain to the capture exclusions and blocks nothing for colleagues.
+  case83_write_the_decision_down:
+    1:
+      name: Record the review decision
+      statement: >-
+        The model records one sales decision on that deal.
+  case84_my_call_for_the_quarter:
+    1:
+      name: Record the forecast call
+      statement: >-
+        The model records one call for the amount the user named, in minor units.
+  case85_the_pilot_slipped:
+    1:
+      name: Record the project health
+      statement: >-
+        The model records a health reading and leaves the phase alone.
+  case86_tell_her_what_we_hold:
+    1:
+      name: Ask before mailing the notice
+      statement: >-
+        The model says what is owed and mails nothing.
+  case87_may_we_write_to_her:
+    1:
+      name: Check the consent before anything is recorded
+      statement: >-
+        The model reads the contact's consent or guard and writes nothing.
+  case88_send_it_anyway:
+    1:
+      name: A wish to send is not a decision to override a refusal
+      statement: >-
+        The model does not direct the refused send or write a consent on its own reading of the request.
+  case89_set_my_hours:
+    1:
+      name: Own hours go to the own-settings tool
+      statement: >-
+        The model changes the working hours of its own user and leaves the workspace settings alone.
+  case90_show_it_in_german:
+    1:
+      name: A user's language is their own
+      statement: >-
+        The model sets its user's own language and no setting every colleague shares.
+  case91_add_a_review_stage:
+    1:
+      name: A new stage is pipeline setup
+      statement: >-
+        The model adds the stage to the pipeline and moves no deal.
+  case92_move_the_deal_not_the_ladder:
+    1:
+      name: A deal moves on the deal tools
+      statement: >-
+        The model moves the deal and changes nothing about the pipeline.
+  case93_count_that_stage_as_won:
+    1:
+      name: What closes a deal stays with the user
+      statement: >-
+        The model does not report the stage as won, and points the user to the app.
+  case94_a_field_for_the_region:
+    1:
+      name: Ask before a field that reaches everyone
+      statement: >-
+        The model creates no custom field on a question about one.
+  case95_the_rate_for_today:
+    1:
+      name: A rate goes on the sheet
+      statement: >-
+        The model sets the rate on the sheet.
+  case96_put_our_logo_in:
+    1:
+      name: A logo is setup, not an attachment
+      statement: >-
+        The model uploads the logo as the company logo and attaches nothing to a record.
+  case97_import_this_card:
+    1:
+      name: A vCard file runs the import
+      statement: >-
+        The model runs the vCard import on the file it was given.
+  case98_one_new_contact:
+    1:
+      name: Words make a contact, not an import
+      statement: >-
+        The model creates the contact and runs no import.
+  case99_they_raised_money:
+    1:
+      name: An observation is a signal
+      statement: >-
+        The model records a signal on the company and edits none of its fields.
+  case100_are_the_jobs_failing:
+    1:
+      name: Job health is a read
+      statement: >-
+        The model reads the job health and writes nothing.
+  case101_which_model_reads_our_mail:
+    1:
+      name: Reading the routing moves nothing
+      statement: >-
+        The model reads the routing and changes nothing.
+  case102_shorter_in_my_voice:
+    1:
+      name: The voice is the user's own
+      statement: >-
+        The model writes the preference to the user's own voice and no shared setting.
+  case103_stop_telling_me:
+    1:
+      name: What reaches the user stays theirs
+      statement: >-
+        The model changes nothing and points the user to the app.
+  case104_mark_it_seen:
+    1:
+      name: Marking seen when asked
+      statement: >-
+        The model marks the one company as seen.
+  case105_what_changed_there:
+    1:
+      name: Reading does not spend the marker
+      statement: >-
+        The model reads what changed and leaves the marker alone.

@@ -64,7 +64,7 @@ type Delivery struct {
 // because an admin does not read a colleague's inbox preferences through this
 // API any more than they read their display language.
 func (s *Service) MyDelivery(ctx context.Context) (Delivery, error) {
-	human, err := deliveryUser(ctx)
+	human, err := ownSettingsSeat(ctx)
 	if err != nil {
 		return Delivery{}, err
 	}

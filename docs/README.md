@@ -84,9 +84,9 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [how-to/operate-reporting.md](how-to/operate-reporting.md): run sales reports and their schedules.
 - [how-to/pre-register-a-forecast-evaluation.md](how-to/pre-register-a-forecast-evaluation.md): set the values
   a new forecast model is tested against, before it is scored.
-- [how-to/implement-deal-viability-review.md](how-to/implement-deal-viability-review.md): the plan for the
-  review of deals whose customer stopped answering, and what is still open.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
+- [prove-a-tool-in-the-role-matrix.md](how-to/prove-a-tool-in-the-role-matrix.md): make a new MCP tool show
+  ✓ or ✗ for every role.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
 - [add-a-setting.md](how-to/add-a-setting.md): add, rename or remove a setting.
@@ -96,6 +96,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-a-data-task.md](how-to/add-a-data-task.md): add a data task.
 - [data-tasks.md](explanation/data-tasks.md): how a data task keeps its place.
 - [claim-a-red-main.md](how-to/claim-a-red-main.md): say that you fix a red `main` before you start.
+- [land-through-develop.md](how-to/land-through-develop.md): merge into `develop` on a shorter CI run, and how
+  `develop` reaches `main`.
 - [work-on-an-issue.md](how-to/work-on-an-issue.md): check that an issue is free, claim it, and release
   it when you stop.
 - [mint-a-passport.md](how-to/mint-a-passport.md): make a passport token for an agent.
@@ -181,6 +183,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.
 - [ai-certification.md](reference/ai-certification.md): which AI features each model passed. Generated.
+- [mcp-parity.md](reference/mcp-parity.md): how much of the web app an agent can do through MCP. Generated.
+- [mcp-tool-roles.md](reference/mcp-tool-roles.md): which role can use which MCP tool, measured by a test. Generated.
 - [mcp-tool-coverage.md](reference/mcp-tool-coverage.md): which MCP tools the tests use, and how they
   score. Generated.
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.

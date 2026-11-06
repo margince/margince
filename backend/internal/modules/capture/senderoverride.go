@@ -18,13 +18,17 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -70,22 +74,24 @@ func NewSenderOverrideStore(db *database.DB) *SenderOverrideStore {
 // never from the request, so there is no shape of this call that records one
 // contact's answer under another's name.
 func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string) (SenderOverride, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return SenderOverride{}, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
 		return SenderOverride{}, apperrors.ErrPermissionDenied
 	}
-	// A read seat is licensed to look. RequireHuman refuses an agent and reads
-	// no grant at all, so on its own it would let one change what the CRM
-	// records — a `business` decision is how a contact gets created, and
-	// `keep_out` is how mail gets destroyed.
+	// A read seat is licensed to look. RequireHumanOrItsAgent reads no grant at
+	// all, and a `business` decision is how a contact gets created.
 	if !actor.SeatType.CanMutate() {
 		return SenderOverride{}, apperrors.ErrPermissionDenied
 	}
 	if decision != OverrideBusiness && decision != OverrideKeepOut {
 		return SenderOverride{}, &InvalidOverrideError{Field: fieldDecision, Reason: "decision is business or keep_out"}
+	}
+	// keep_out destroys mail for good, which only the user's own session does.
+	if decision == OverrideKeepOut && actor.Type == principal.PrincipalAgent {
+		return SenderOverride{}, fmt.Errorf("keep_out destroys this sender's mail, so the user decides it in the app: %w", apperrors.ErrPermissionDenied)
 	}
 	// The grant follows the DECISION, because the two are different acts.
 	// `business` is how a contact comes to exist, so it takes create;
@@ -112,6 +118,13 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 			senderOverrideIdentity(actor.UserID, folded)); err != nil {
 			return err
 		}
+		if err := refuseAgentOverAUsersDecisionTx(ctx, tx, actor, folded); err != nil {
+			return err
+		}
+		capturedBy, err := storekit.CapturedBy(ctx)
+		if err != nil {
+			return err
+		}
 		// The kind the machine had reached, read BEFORE the write so the page
 		// can say what was overruled. A contact who sees only their own answer
 		// cannot tell a correction from a preference they set months ago.
@@ -120,14 +133,15 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 			return err
 		}
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO capture_sender_override (user_id, address, decision, overruled_kind)
-			VALUES ($1, $2, $3, NULLIF($4, ''))
+			INSERT INTO capture_sender_override (user_id, address, decision, overruled_kind, captured_by)
+			VALUES ($1, $2, $3, NULLIF($4, ''), $5)
 			ON CONFLICT (user_id, address) DO UPDATE
 			   SET decision = EXCLUDED.decision,
 			       overruled_kind = COALESCE(EXCLUDED.overruled_kind, capture_sender_override.overruled_kind),
+			       captured_by = EXCLUDED.captured_by,
 			       updated_at = now()
 			RETURNING id, address, decision, coalesce(overruled_kind, '')`,
-			actor.UserID, folded, decision, kind).
+			actor.UserID, folded, decision, kind, capturedBy).
 			Scan(&out.ID, &out.Address, &out.Decision, &out.OverruledKind); err != nil {
 			return fmt.Errorf("capture: recording a sender decision: %w", err)
 		}
@@ -143,45 +157,9 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 	return out, err
 }
 
-// List answers the caller's own decisions.
-//
-// Own rows only, and there is no id that reaches a colleague's: whose senders a
-// contact keeps out is itself private, and an admin view of it would be a list
-// of somebody's private correspondents.
-func (s *SenderOverrideStore) List(ctx context.Context) ([]SenderOverride, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
-		return nil, err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID == ids.Nil {
-		return nil, apperrors.ErrPermissionDenied
-	}
-	var out []SenderOverride
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id, address, decision, coalesce(overruled_kind, '')
-			  FROM capture_sender_override
-			 WHERE user_id = $1
-			 ORDER BY created_at DESC`, actor.UserID)
-		if err != nil {
-			return fmt.Errorf("capture: listing sender decisions: %w", err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var o SenderOverride
-			if err := rows.Scan(&o.ID, &o.Address, &o.Decision, &o.OverruledKind); err != nil {
-				return fmt.Errorf("capture: listing sender decisions: %w", err)
-			}
-			out = append(out, o)
-		}
-		return rows.Err()
-	})
-	return out, err
-}
-
 // Remove withdraws a decision, handing the sender back to the machine.
 func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	actor, ok := principal.Actor(ctx)
@@ -192,9 +170,17 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 		return apperrors.ErrPermissionDenied
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		folded := normalizeEmail(address)
+		if err := storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
+			senderOverrideIdentity(actor.UserID, folded)); err != nil {
+			return err
+		}
+		if err := refuseAgentOverAUsersDecisionTx(ctx, tx, actor, folded); err != nil {
+			return err
+		}
 		tag, err := tx.Exec(ctx, `
 			DELETE FROM capture_sender_override WHERE user_id = $1 AND address = $2`,
-			actor.UserID, normalizeEmail(address))
+			actor.UserID, folded)
 		if err != nil {
 			return fmt.Errorf("capture: withdrawing a sender decision: %w", err)
 		}
@@ -209,6 +195,43 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 		return err
 	})
 }
+
+// refuseAgentOverAUsersDecisionTx keeps a decision the user made about a sender
+// from their agent. The caller holds the sender's write lock.
+func refuseAgentOverAUsersDecisionTx(ctx context.Context, tx pgx.Tx, actor principal.Principal, folded string) error {
+	if actor.Type != principal.PrincipalAgent {
+		return nil
+	}
+	var decidedBy *string
+	err := tx.QueryRow(ctx, `SELECT captured_by FROM capture_sender_override
+		 WHERE user_id = $1 AND address = $2`, actor.UserID, folded).Scan(&decidedBy)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("capture: reading who decided about a sender: %w", err)
+	}
+	return refuseAgentOverAUsersDecision(actor, decidedBy, "this sender")
+}
+
+// refuseAgentOverAUsersDecision is the one answer to whether an agent may change a
+// capture decision, from the stamp of whoever made it. A row with no stamp
+// predates agents, so a user made it.
+func refuseAgentOverAUsersDecision(actor principal.Principal, decidedBy *string, what string) error {
+	if actor.Type != principal.PrincipalAgent || (decidedBy != nil && strings.HasPrefix(*decidedBy, agentStampPrefix)) {
+		return nil
+	}
+	return &httperr.DetailedError{
+		Status: http.StatusConflict, Code: "user_decided",
+		Detail: "the user already decided about " + what + ", so the user changes it",
+	}
+}
+
+// agentDecisionTakeoverSQL keeps a rule's stamp on a repeat add, unless an agent
+// made it: a user adding it again makes the decision theirs. %[1]s is the table.
+const agentDecisionTakeoverSQL = `CASE WHEN %[1]s.created_by LIKE 'agent:%%' THEN EXCLUDED.created_by ELSE %[1]s.created_by END`
+
+const agentStampPrefix = "agent:"
 
 // OverrideForTx answers what this seat decided about a sender, or "" when they
 // have not.

@@ -8,14 +8,16 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // open builds a contribution that is in the open pipeline at a base amount.
 func open(id string, base int64) Contribution {
 	return Contribution{
 		DealID: id, AmountMinor: &base, Currency: "EUR", BaseMinor: &base,
-		Category: CategoryCommit, StageProbability: 50, WeightedMinor: base / 2,
-		InOpen: true, InEvidence: true, InBestCase: true,
+		Source: SourceStage, StageProbability: 50, WeightedMinor: base / 2,
+		InOpen: true, InEvidence: true,
 	}
 }
 
@@ -79,15 +81,24 @@ func TestEachBucketInIsolation(t *testing.T) {
 			dealID: "d1", wantBucket: BucketAmount,
 		},
 		{
-			// Category is asserted on the EVIDENCE reading, where it moves
-			// money: a deal dropping from commit to best_case leaves the
-			// evidence total. On the open reading the same change moves
-			// nothing, and a waterfall bar of zero is noise rather than news.
-			name: "a category change, on the reading it moves",
+			// Asserted on the Likely reading, where it moves money: a deal a
+			// colleague set below the threshold leaves the Likely total.
+			name: "a probability set below Likely, on the reading it moves",
 			from: side(v, open("d1", 10_000)),
 			to: side(v, withoutEvidence(
-				withCategory(open("d1", 10_000), CategoryBestCase))),
+				withProbabilitySet(open("d1", 10_000), SourceHuman),
+			)),
 			dealID: "d1", wantBucket: BucketPushedOut, reading: ReadingEvidence,
+		},
+		{
+			name: "a probability set on the deal, on the weighted reading",
+			from: side(v, open("d1", 10_000)),
+			to: side(v, func() Contribution {
+				c := withProbabilitySet(open("d1", 10_000), SourceHuman)
+				c.StageProbability, c.WeightedMinor = 80, 8_000
+				return c
+			}()),
+			dealID: "d1", wantBucket: BucketCategory, reading: ReadingWeighted,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -194,7 +205,7 @@ func TestADealCreatedAndWonBetweenSnapshotsAppearsOnce(t *testing.T) {
 	t.Parallel()
 	// Both "new" and "won" are true of it. Counted in both, its money doubles.
 	won := open("d1", 10_000)
-	won.InOpen, won.InEvidence, won.InBestCase = false, false, false
+	won.InOpen, won.InEvidence = false, false
 	won.InWon = true
 
 	m := Classify(ReadingOpen, side(DefinitionVersion), side(DefinitionVersion, won))
@@ -262,7 +273,7 @@ func TestTheBucketsAlwaysReachTheClosingTotal(t *testing.T) {
 				after = append(after, was)
 			case 4: // won
 				now := was
-				now.InOpen, now.InEvidence, now.InBestCase = false, false, false
+				now.InOpen, now.InEvidence = false, false
 				now.InWon = true
 				before, after = append(before, was), append(after, now)
 			case 5: // became unpriced
@@ -286,13 +297,13 @@ func TestTheBucketsAlwaysReachTheClosingTotal(t *testing.T) {
 	}
 }
 
-func withCategory(c Contribution, category string) Contribution {
-	c.Category = category
+func withProbabilitySet(c Contribution, source ProbabilitySource) Contribution {
+	c.Source = source
 	return c
 }
 
-// withoutEvidence is what a drop from commit to best_case does: the deal stays
-// open pipeline and leaves the reading that claims confirmed support.
+// withoutEvidence is what a drop below the Likely threshold does: the deal
+// stays open pipeline and leaves the reading that claims confirmed support.
 func withoutEvidence(c Contribution) Contribution {
 	c.InEvidence = false
 	return c
@@ -316,7 +327,7 @@ func TestEveryBucketNameIsDrawn(t *testing.T) {
 	}
 	for _, name := range []string{
 		BucketNew, BucketPulledIn, BucketPushedOut, BucketAmount, BucketCategory,
-		BucketStageWeight, BucketRecordChanged, BucketExcluded, BucketReinstated, BucketNotChecked,
+		BucketStageWeight, BucketRecordChanged,
 		BucketWon, BucketLost, BucketArchived, BucketFx, BucketDefinition, BucketModel,
 	} {
 		if !drawn[name] {
@@ -337,7 +348,7 @@ func TestEveryBucketNameIsDrawn(t *testing.T) {
 func TestAReopenedDealIsNotReportedAsAModelChange(t *testing.T) {
 	t.Parallel()
 	was := open("d1", 10_000)
-	was.InOpen, was.InEvidence, was.InBestCase = false, false, false
+	was.InOpen, was.InEvidence = false, false
 	was.InWon = true
 
 	m := Classify(ReadingOpen, side(DefinitionVersion, was), side(DefinitionVersion, open("d1", 10_000)))
@@ -352,11 +363,39 @@ func TestAReopenedDealIsNotReportedAsAModelChange(t *testing.T) {
 func TestADealThatWasLostBetweenSnapshotsLeavesAsLost(t *testing.T) {
 	t.Parallel()
 	lost := open("d1", 10_000)
-	lost.InOpen, lost.InEvidence, lost.InBestCase, lost.InLost = false, false, false, true
+	lost.InOpen, lost.InEvidence, lost.InLost = false, false, true
 
 	m := Classify(ReadingOpen, side(DefinitionVersion, open("d1", 10_000)), side(DefinitionVersion, lost))
 	if delta := bucketOf(t, m, "d1"); delta.Bucket != BucketLost || delta.AmountMinor != -10_000 {
 		t.Errorf("a lost deal landed in %q moving %d, want %q moving -10000", delta.Bucket, delta.AmountMinor, BucketLost)
 	}
 	reconciles(t, m)
+}
+
+// A movement names the base currency its two snapshots converted to, so every
+// amount in it can be read in that currency.
+func TestAMovementNamesItsBaseCurrency(t *testing.T) {
+	t.Parallel()
+	from, to := side(DefinitionVersion, open("d1", 10_000)), side(DefinitionVersion, open("d1", 12_000))
+	from.BaseCurrency, to.BaseCurrency = "EUR", "EUR"
+
+	if got := Classify(ReadingWeighted, from, to).BaseCurrency; got != "EUR" {
+		t.Errorf("the movement's base currency = %q, want EUR", got)
+	}
+}
+
+func TestOnlyADeclaredQualifiedReadingAnswersAsItsBase(t *testing.T) {
+	for sent, want := range map[crmcontracts.GetForecastMovementParamsReading]Reading{
+		"qualified_evidence": ReadingEvidence,
+		"qualified_weighted": ReadingWeighted,
+		"qualified_open":     "qualified_open",
+		"evidence":           ReadingEvidence,
+	} {
+		if got := movementReading(&sent); got != want {
+			t.Errorf("movementReading(%q) = %q, want %q", sent, got, want)
+		}
+	}
+	if got := movementReading(nil); got != ReadingOpen {
+		t.Errorf("no reading answered %q, want open", got)
+	}
 }

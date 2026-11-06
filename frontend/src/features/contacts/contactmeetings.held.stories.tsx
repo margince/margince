@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import {
   installFetchStub,
   meRoute,
@@ -44,9 +44,9 @@ const meta: Meta<typeof HeldMeetingsTable> = {
       installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
       return (
         <StoryProviders>
-          <RecordZoneProvider zone={RECORD_ZONE}>
+          <CompanyZoneProvider zone={RECORD_ZONE}>
             <Story />
-          </RecordZoneProvider>
+          </CompanyZoneProvider>
         </StoryProviders>
       );
     },

@@ -377,7 +377,7 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
       ) ?? [],
     ).map((title) => title.textContent);
     expect(cards).toEqual([
-      "Also on your list",
+      "Other open tasks",
       "Deals and projects",
       "Latest",
       "Contacts",

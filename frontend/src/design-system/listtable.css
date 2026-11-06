@@ -74,10 +74,10 @@
   background: var(--groundHover);
   color: var(--textPrimary);
 }
-/* The view in use takes the pressed filter pill's neutral pair
-   (filterpills.css): it says where the reader is, and the accent is kept for
-   the action on the same row. */
-.lt-vtab.on {
+/* The view in use, and a toggle row while on, take the pressed filter pill's
+   neutral pair (filterpills.css): the accent is kept for the row's action. */
+.lt-vtab.on,
+.lt-vtoggle[aria-pressed="true"] {
   background: var(--bgChip);
   box-shadow: inset 0 0 0 1px var(--borderStrong);
   color: var(--textPrimary);
@@ -99,9 +99,8 @@
 .lt-count {
   flex: 1 1 auto;
   min-width: 0;
-  /* Holds its line while the rows are loading, so the header does not resize
-   * under the reader when the count appears. */
-  min-height: 1em;
+  /* Holds its line while a count is pending, so the toolbar under it stays. */
+  min-block-size: 1lh;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -133,7 +132,7 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 
-/* ---- toolbar: search, chips, column picker, density ---- */
+/* ---- toolbar: search, View, applied filters ---- */
 
 .lt-tools {
   display: flex;
@@ -144,23 +143,16 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 
-.lt-spacer {
-  flex: 1;
-}
-
-/* The toolbar's own field shell, and a text field is ONE box: it stands at
-   --inputHeight like the field in a form and like the palette this toolbar's
-   magnifier promises, because 30px here and 40px there was the same control
-   twice. A floor rather than a height, so the box cannot clip what it holds.
-   Nothing on the row has to be re-aligned for it — the select triggers beside
-   this are the same box (`.select-control` in atoms.css), and the buttons that
-   are shorter sit on the middle line `.lt-tools` centres them on. */
+/* The toolbar's field, as tall as View beside it at every pointer (the coarse
+   floor ends this sheet). A `tools` verb that does not fit wraps under it. */
 .lt-search {
   display: inline-flex;
+  flex: 1 1 10rem;
+  min-inline-size: 0;
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-3);
-  min-block-size: var(--inputHeight);
+  min-block-size: var(--controlHeight);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
@@ -181,7 +173,8 @@
   font: inherit;
   background: transparent;
   color: inherit;
-  width: 180px;
+  width: 100%;
+  min-inline-size: 0;
 }
 .lt-search-input::placeholder {
   color: var(--textSecondary);
@@ -220,10 +213,126 @@
  * control's own leading glyph. One rule and not a `size=` per call site,
  * because inside a button `.btn svg` would override the attribute anyway —
  * which is how the trigger carets and the menu's came to be sized two ways. */
-.lt-tools .lt-caret {
+.lt-tools .lt-caret,
+.lt-vpanel .lt-caret {
   inline-size: 12px;
   block-size: 12px;
   flex: none;
+}
+
+.lt-vface {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--controlGap);
+}
+/* Neutral, not the accent: it says the list left its view, and the accent is
+   the primary action's (selectedstate.test.ts). */
+.lt-vdot {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: currentColor;
+}
+
+.lt-applied {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
+/* A notice is a line of its own under the search, and no notice is no line. */
+.lt-notice {
+  display: contents;
+}
+.lt-notice > * {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
+.lt-applied-rows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* THE VIEW PANEL. Each band sets its own inline padding and the panel none, so
+   the rule between two bands spans the panel's whole width. */
+.popover-panel.lt-vpopover {
+  --vpanel-inset: var(--controlGap);
+  inline-size: 20rem;
+  max-inline-size: calc(100vw - var(--space-4));
+  padding: var(--controlGap) 0;
+}
+.modal-drawer:has(> .lt-vpanel) {
+  --vpanel-inset: var(--space-4);
+  padding-inline: 0;
+}
+.modal-drawer:has(> .lt-vpanel) > .modal-title {
+  padding-inline-start: var(--vpanel-inset);
+}
+.lt-vstep {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.lt-vrows,
+.lt-vgroup,
+.lt-vpanel .lt-vstep {
+  padding-inline: var(--vpanel-inset);
+}
+.lt-vlayout {
+  padding: var(--controlGap) calc(var(--vpanel-inset) + var(--space-2));
+}
+/* On a pressed row's chip fill the value takes the row's ink, whose contrast
+   holds there; the quieter ink does not. */
+.lt-vtoggle[aria-pressed="true"] .lt-vrow-value {
+  color: var(--textPrimary);
+}
+/* Standing alone on a bare list's toolbar, it is as wide as its words. */
+.lt-tools > .lt-vtoggle {
+  inline-size: auto;
+}
+/* Off keeps the check's column, so On and Off rows line up. */
+.lt-vcheck-off {
+  visibility: hidden;
+}
+/* A dial's name, then what it holds, which is the part that gives way. */
+.lt-vrow {
+  gap: var(--space-3);
+}
+.lt-vrow-label {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--controlGap);
+}
+.lt-vrow-value {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: end;
+  color: var(--textSecondary);
+}
+.lt-vgroup,
+.lt-vfoot {
+  margin-block-start: var(--controlGap);
+  padding-block-start: var(--controlGap);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.lt-vfoot {
+  display: flex;
+  padding-inline: calc(var(--vpanel-inset) + var(--space-2));
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+/* Save view and Manage views share the footer's width, on a phone as above. */
+.lt-vfoot > .btn {
+  flex: 1 1 0;
+}
+/* A Save view with nothing to save draws nothing, and its rule goes too. */
+.lt-vfoot:empty {
+  display: none;
 }
 
 /* An applied filter's compound row: attribute, condition, value and the "⋮"
@@ -547,6 +656,26 @@
   display: flex;
 }
 
+/* A column row in the Display menu: the grip that moves it, then its tick.
+   The carried row lifts on a solid ground, since it passes over the others. */
+.lt-mcol {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--r-sm);
+}
+.lt-mcols.is-sorting,
+.lt-mcols.is-sorting .lt-mi {
+  cursor: grabbing;
+  user-select: none;
+}
+.lt-mcol.is-lifted {
+  position: relative;
+  z-index: 1;
+  background-color: var(--ground);
+  box-shadow: var(--shadow-pop);
+}
+
 /* WHAT THIS LIST IS SHOWING, where its picker would stand — the pipeline on the
  * deals board when an installation has only one of them. A control offering one
  * option refuses every press, so it is not drawn; the name it carried still is,
@@ -575,12 +704,15 @@
    as two rows of navigation rather than one row with more in it. `min-width: 0`
    is what lets it shrink below its content; without it a flex item refuses to.
    The scrollbar is hidden because the row is short and a bar under it would
-   read as a rule. */
+   read as a rule.
+
+   The verbs are one menu here, and it keeps the tabs' line: the tabs take what
+   the title and the menu leave, and the count drops to its own line. */
 @media (max-width: 1100px) {
   .lt-views {
-    /* No grow: the room the tabs leave is the count's. */
-    flex: 0 1 auto;
+    flex: 1 1 0;
     min-width: 0;
+    position: relative;
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -590,6 +722,15 @@
   .lt-vtab {
     flex: 0 0 auto;
     white-space: nowrap;
+  }
+  .lt-head-end {
+    display: contents;
+  }
+  .lt-count {
+    order: 9;
+    width: 100%;
+    white-space: normal;
+    text-align: start;
   }
 }
 
@@ -601,6 +742,7 @@
 .lt-scroll {
   flex: 1;
   min-height: 0;
+  position: relative;
   overflow: auto;
   /* The column widths are computed from this box's clientWidth, and with
    * classic (non-overlay) scrollbars a vertical bar takes part of that width.
@@ -1298,7 +1440,6 @@
     content: none;
   }
 
-  .lt-tools,
   .lt-foot {
     flex-wrap: wrap;
   }
@@ -1308,17 +1449,6 @@
      page this is. */
   .lt-title {
     width: 100%;
-  }
-
-  /* Dissolved so the count can drop to a line of its own and the verbs stay. */
-  .lt-head-end {
-    display: contents;
-  }
-  .lt-count {
-    order: 9;
-    width: 100%;
-    white-space: normal;
-    text-align: start;
   }
 
   /* The view rail is ONE row that continues sideways, never two rows that
@@ -1335,42 +1465,43 @@
      (contacts, deals) at the height it already had.
 
      The rules that do it are in the 1100px block above, which covers this
-     width too — they were spelled here first, and a second copy at the phone
-     breakpoint is two authors of one behaviour. */
+     width too. */
 
-  .lt-search {
-    flex: 1 1 100%;
-  }
-  .lt-search-input {
-    width: 100%;
-  }
-
-  /* ON A PHONE A MENU BELONGS TO THE TOOLBAR, NOT TO ITS TRIGGER. The row wraps
-     here, so which end of a line a dial sits at is decided by how many dials
-     came before it — and a panel anchored to the trigger then opens off
-     whichever edge that lands near: Sort, wrapped to the leading edge, hung its
-     right-aligned menu off the left of the viewport.
-
-     Anchored to the row instead, every panel is one sheet: the full width of
-     the toolbar, below ALL of it, wherever the dial that opened it happens to
-     have wrapped to. It gives up pointing at its own trigger, which is the
-     trade — and the right way round on a phone, where a 250px panel under a
-     dial near either edge has nowhere to go, and where a sheet the width of
-     the screen is the shape a reader already knows. The `aria-expanded` on the
-     trigger is what still says which dial is open.
-
-     The applied filter row's own condition, value and delete popups take this
-     too: they are `.lt-menu` inside `.lt-menu-wrap` inside this row, and
-     `.lt-frow` is `inline-flex` with no position of its own. */
-  .lt-tools {
+  /* The applied filters are ONE line that scrolls sideways, each row whole. */
+  .lt-applied {
     position: relative;
   }
-  .lt-menu-wrap {
-    position: static;
+  .lt-applied-rows {
+    position: relative;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
-  .lt-menu,
-  .lt-menu.right {
-    inset-inline: var(--space-3);
+  .lt-applied-rows::-webkit-scrollbar {
+    display: none;
+  }
+  .lt-applied .lt-frow {
+    flex: none;
+    flex-wrap: nowrap;
+    max-inline-size: none;
+  }
+  .lt-applied .lt-frow > .lt-menu-wrap:has(> .lt-frow-value) {
+    max-inline-size: none;
+  }
+  /* A long value is cut short, so the row's "⋮" stays on screen; the
+     truncation tip and the row's name carry the whole value. */
+  .lt-applied .lt-frow-value {
+    max-inline-size: 45vw;
+  }
+  .lt-applied .lt-frow-valuetext {
+    white-space: nowrap;
+  }
+
+  /* An applied row's menu opens under the whole line, the full width of it,
+     wherever its segment has scrolled to (`AppliedFilters`). */
+  .lt-applied-menus .lt-menu,
+  .lt-applied-menus .lt-menu.right {
+    inset-inline: 0;
     min-inline-size: 0;
   }
 
@@ -1607,5 +1738,18 @@
 }
 .lt-emptyline > .empty {
   padding: 0;
+  border: 0;
   background: none;
+}
+
+/* The coarse-pointer floor (WCAG 2.2 AA), the way `.segmented button` takes it
+   in atoms.css: the View trigger, the search beside it, and the panel's rows
+   and way back under a thumb. */
+@media (pointer: coarse) {
+  .lt-search,
+  .lt-vtrigger,
+  .lt-vpanel :is(.lt-mi, .lt-mback),
+  .lt-vfoot .btn {
+    min-block-size: max(var(--controlHeight), 44px);
+  }
 }

@@ -48,6 +48,18 @@ func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 		t.Fatal("subject erasure no longer calls the party-source owner's purge seam")
 	}
 	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "PurgePartySourcesForEmailsTx"))
+	copied := false
+	for path := range reached {
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		copied = copied || gatekit.CallsAny(file, []string{"PurgeTextCopiesTx"})
+	}
+	if !copied {
+		t.Fatal("subject erasure no longer calls the seam that empties copies of the erased mail text")
+	}
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/ai", "EraseSamplesCopiedFromTx"))
 
 	cascade := map[string]bool{}
 	for _, path := range erasureCascadeFiles {

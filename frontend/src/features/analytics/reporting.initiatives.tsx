@@ -9,15 +9,18 @@ import { AppLink } from "../../design-system/applink";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useUrlParams } from "../../lib/urlstate";
+import { useAnalyticsContext } from "./analytics.context";
 import { OVERVIEW_DIAL } from "./analytics.overview.choice";
 import { InitiativeDrawer } from "./reporting.initiativedrawer";
+import { reportingAmount } from "./reporting.model";
+import { useReportingCatalog } from "./reporting.queries";
 
 export type SalesInitiative = components["schemas"]["SalesInitiative"];
 
@@ -40,8 +43,10 @@ export function useSalesInitiatives(enabled = true) {
 export function InitiativeReports() {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [params] = useUrlParams();
+  const catalog = useReportingCatalog();
+  const context = useAnalyticsContext();
   const initiatives = useSalesInitiatives();
   const canCreate = useCanWrite("sales_initiative", "create");
   const [drawer, setDrawer] = useState<"new" | SalesInitiative | null>(null);
@@ -88,7 +93,16 @@ export function InitiativeReports() {
                       </AppLink>
                     )}
                     <p className="t-caption">
-                      {initiativeSummary(initiative, t, locale, zone)}
+                      {initiativeSummary(
+                        initiative,
+                        t,
+                        locale,
+                        zone,
+                        catalog.data?.metrics.find(
+                          (metric) => metric.id === initiative.objective_metric,
+                        )?.unit,
+                        context.data?.base_currency,
+                      )}
                     </p>
                   </div>
                   <Badge>
@@ -114,13 +128,23 @@ function initiativeSummary(
   initiative: SalesInitiative,
   t: ReturnType<typeof useT>,
   locale: ReturnType<typeof useLocale>["locale"],
-  zone: ReturnType<typeof useRecordZone>,
+  zone: ReturnType<typeof useCompanyZone>,
+  unit: string | undefined,
+  currency: string | undefined,
 ): string {
   const objective =
     initiative.target_value == null
       ? t("reporting.trackingOnly")
       : t("reporting.initiativeTarget", {
-          target: formatNumber(initiative.target_value, locale),
+          target:
+            unit && (unit !== "money" || currency)
+              ? reportingAmount(
+                  initiative.target_value,
+                  unit,
+                  currency ?? "",
+                  locale,
+                )
+              : "—",
         });
   return t("reporting.initiativeSummary", {
     objective,

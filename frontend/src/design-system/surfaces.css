@@ -37,7 +37,6 @@
   .rail,
   .topbar,
   .backfill-estimate,
-  .agents-guide-command,
   .aiconnect-path,
   .aiconnect-admin,
   .mb-open,
@@ -89,7 +88,9 @@
   .ob-voice-building,
   .voicekind,
   .compose-reasons-card,
-  .page-pane
+  .page-pane,
+  .brief-main .brief-agent-section .magic-line,
+  .analytics-sheet
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -134,7 +135,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -186,7 +186,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -216,7 +218,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -268,7 +269,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -313,7 +316,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -365,7 +367,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -395,7 +399,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -447,7 +450,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -477,7 +482,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -529,7 +533,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -574,7 +580,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -626,7 +631,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -656,7 +663,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -708,7 +714,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -738,7 +746,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -790,7 +797,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -820,7 +829,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -872,7 +880,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -972,7 +982,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1024,7 +1033,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1089,7 +1100,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1141,7 +1151,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -1171,7 +1183,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1223,7 +1234,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1288,7 +1301,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1340,7 +1352,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -1370,7 +1384,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1422,7 +1435,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -1452,7 +1467,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1504,7 +1518,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1588,7 +1604,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1640,7 +1655,9 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line,
+    .analytics-sheet
   ) {
   background-color: var(--ground);
 }

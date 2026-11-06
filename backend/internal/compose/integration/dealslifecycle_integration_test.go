@@ -60,7 +60,6 @@ func TestALostDealIsNotInTheForecastsOpenPipeline(t *testing.T) {
 
 	type readings struct {
 		OpenMinor     int64 `json:"open_minor"`
-		BestCaseMinor int64 `json:"best_case_minor"`
 		EvidenceMinor int64 `json:"evidence_minor"`
 		EligibleCount int   `json:"eligible_count"`
 		PricedCount   int   `json:"priced_count"`
@@ -92,7 +91,7 @@ func TestALostDealIsNotInTheForecastsOpenPipeline(t *testing.T) {
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/deals/"+deal.ID, AnyMap{"forecast_category": "commit"},
+	if status := e.Call(t, "PATCH", "/v1/deals/"+deal.ID, AnyMap{"win_probability": 95},
 		map[string]string{"If-Match": strconv.FormatInt(deal.Version, 10)}, nil); status != http.StatusOK {
 		t.Fatalf("committing the deal → %d", status)
 	}

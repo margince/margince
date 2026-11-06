@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	aiConnectModule = "../frontend/src/features/automations/aiconnect.ts"
+	aiConnectModule = "../frontend/src/lib/aiconnect.ts"
 	skillReadme     = "internal/compose/agentbundle/README.md.tmpl"
 	enCatalog       = "../frontend/src/i18n/en.ts"
 )
