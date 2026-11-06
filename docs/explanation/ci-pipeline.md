@@ -485,9 +485,9 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   coverage profile goes to `sonarcloud`, because the shard profiles cannot reach a unit's module.
 - **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws
   the slow `e2e` tests work through its part without running minutes past its siblings.
-- **`integration unit coverage`** exists because the shards run just the packages tagged for
-  integration. Without it, SonarCloud would see the packages with only unit tests at a false coverage
-  of about 0% for new code.
+- **`integration unit coverage`** exists because the shards run only the integration packages, and
+  SonarCloud would see the rest at a false 0% for new code. It skips `backend/gates`, which has no code
+  of its own: the tests of the code it reaches cover nearly all of it.
 - **A fan-in turns red, not skipped**, when a job in its lane fails. The aggregate reads a skip as "this
   part was out of scope". The `frontend` fan-in checks its jobs before the merge half. So a red shard
   ends the job, and does not hand the merge a partial set of blob reports.
