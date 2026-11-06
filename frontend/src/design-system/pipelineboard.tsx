@@ -8,12 +8,8 @@ import { ColumnTotals, largestStageTotal } from "./boardtotals";
 import { Callout } from "./callout";
 import "./composed.css";
 
-import {
-  type BoardDealMail,
-  DealCard,
-  type DealCardHooks,
-  type DealOwnerSeat,
-} from "./dealcard";
+import { type BoardDealMail, DealCard, type DealCardHooks } from "./dealcard";
+import type { DealOwnerSeat } from "./dealowner";
 import {
   matchesTitle,
   matchingColumns,

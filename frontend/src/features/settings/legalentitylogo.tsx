@@ -8,7 +8,6 @@ import { ErrorLine } from "../../design-system/errorline";
 import { ImageSlot } from "../../design-system/imageslot";
 import { useT } from "../../i18n";
 import type { LegalEntity, LogoWrite } from "../../lib/legalentities.queries";
-import { problemMessageOf } from "../../lib/problem";
 
 const ACCEPTED_IMAGES =
   "image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/x-icon";
@@ -81,7 +80,7 @@ export function EntityLogo({
       <p className="t-caption" id={hintId}>
         {t("legalEntities.logoHint")}
       </p>
-      <ErrorLine error={write.isError && problemMessageOf(write.error, t)} />
+      <ErrorLine error={write.error} />
     </>
   );
 }

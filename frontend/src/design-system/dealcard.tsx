@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
-import { type ReactNode, type RefObject, useRef } from "react";
+import { type ReactNode, useRef } from "react";
 import { type ActivityMoment, activityAgo } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
 import {
@@ -15,12 +15,12 @@ import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
 import { AppLink } from "./applink";
 import { Avatar, Badge } from "./atoms";
+import { DealOwner } from "./dealowner";
 import { IconAction } from "./iconaction";
 import type { BoardDeal } from "./pipelineboard";
 import { Popover } from "./popover";
 import { FieldGuard } from "./rbac";
 import { Chip } from "./readings";
-import { useTooltip } from "./tooltip";
 
 // One deal, as a card on the pipeline board (pipelineboard.tsx draws the board).
 // The card's vocabulary — `BoardDeal` — stays with the board, because a column
@@ -122,67 +122,6 @@ function DealCardCompany({
       ) : (
         <span className="deal-company-name">{deal.company}</span>
       )}
-    </span>
-  );
-}
-
-/** The colleague who owns a deal, with their picture when they have one. */
-export type DealOwnerSeat = Readonly<{
-  id: string;
-  name: string;
-  photo?: string | null;
-}>;
-
-/**
- * Who carries the deal, as a mark at the edge of the company line.
- *
- * A monogram is not an answer on its own — a teammate has to decode it — so the
- * mark carries the full name as its label, which a screen reader gets as part
- * of the card's own name and a pointer gets as a tip. The tip grants no tab
- * stop of its own: the card is a link and already has one, and a second stop
- * inside it would be a control that does nothing.
- */
-function DealOwner({
-  owner: { id, name, photo },
-  dealLink,
-}: Readonly<{
-  owner: DealOwnerSeat;
-  dealLink: RefObject<HTMLAnchorElement | null>;
-}>) {
-  const tip = useTooltip<HTMLSpanElement>(name);
-  // The mark sits above the deal's stretched link so its tip can open, so it
-  // hands a press on, button and modifier keys included, to keep the card one door.
-  const handOn = (event: React.MouseEvent) =>
-    dealLink.current?.dispatchEvent(
-      new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        button: event.button,
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
-        shiftKey: event.shiftKey,
-        altKey: event.altKey,
-      }),
-    );
-  return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path to the deal is the card's own link, which holds the card's one tab stop
-    <span // NOSONAR: forwards a pointer press to the deal's link; the mark itself is not a control
-      className="deal-owner"
-      role="img"
-      aria-label={name}
-      ref={tip.ref}
-      {...tip.trigger}
-      onClick={handOn}
-      // The middle button opens the deal in a new tab from this real press: a
-      // dispatched button-1 click can leave that tab blank under load.
-      onAuxClick={(event) => {
-        if (event.button === 1 && dealLink.current) {
-          window.open(dealLink.current.href, "_blank", "noopener");
-        }
-      }}
-    >
-      <Avatar name={name} identity={id} photo={photo} />
-      {tip.tip}
     </span>
   );
 }

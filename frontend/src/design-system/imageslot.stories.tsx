@@ -109,6 +109,11 @@ export const Uploading: Story = {
   args: { ...Filled.args, uploading: true },
 };
 
+// The removal is out: the same wait as an upload, on the stored picture.
+export const Removing: Story = {
+  args: { ...Filled.args, removing: true },
+};
+
 // A reader who may not change it sees the picture and no pill.
 export const ReadOnly: Story = {
   args: { ...Filled.args, editable: false },

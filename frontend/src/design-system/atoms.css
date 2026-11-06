@@ -1804,8 +1804,6 @@ span.error-line {
 .overflow-menu .overflow-menu-labelled {
   --ghostEdge: var(--borderControl);
   min-inline-size: 0;
-  min-block-size: 0;
-  block-size: calc(var(--controlHeight) - var(--space-1));
   padding-inline: var(--space-2) var(--space-3);
   gap: var(--space-1);
   border-radius: var(--r-full);

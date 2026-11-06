@@ -33,6 +33,25 @@ it("hands a control inside a Panel the Panel's own box", () => {
   expect(seen.edge?.current).toBe(container.querySelector("section.panel"));
 });
 
+it("hands the same box to a control in the title band, the verbs and the foot", () => {
+  const seen: Edge[] = [];
+  const report = (edge: Edge) => {
+    seen.push(edge);
+  };
+  const { container } = render(
+    <Panel
+      title="Brand"
+      titleAction={<ReportsEdge onEdge={report} />}
+      actions={<ReportsEdge onEdge={report} />}
+      footer={<ReportsEdge onEdge={report} />}
+    >
+      <p>Body</p>
+    </Panel>,
+  );
+  const box = container.querySelector("section.panel");
+  expect(seen.map((edge) => edge?.current)).toEqual([box, box, box]);
+});
+
 it("hands a control outside any Panel nothing", () => {
   const seen: { edge: Edge } = { edge: { current: null } };
   render(

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -67,4 +67,15 @@ it("leaves the arrows of a layer an item opened to that layer", async () => {
   await user.keyboard("{ArrowDown}");
 
   expect(copy).toHaveFocus();
+});
+
+it("consumes the arrow at either end, so the page does not scroll", async () => {
+  const user = userEvent.setup();
+  render(<Menu />);
+  await user.click(screen.getByRole("button", { name: "More actions" }));
+  const last = screen.getByRole("button", { name: "Share" });
+  last.focus();
+
+  expect(fireEvent.keyDown(last, { key: "ArrowDown" })).toBe(false);
+  expect(last).toHaveFocus();
 });

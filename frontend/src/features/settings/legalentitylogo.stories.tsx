@@ -75,6 +75,11 @@ export const StoredMenuOpen: Story = {
   },
 };
 
+export const StoredMenuOpenDark: Story = {
+  ...StoredMenuOpen,
+  globals: { theme: "dark" },
+};
+
 export const StoredPhone: Story = {
   render: slot({ ...VIENNA, logo_url: WORDMARK }),
   globals: { viewport: { value: "phone" } },

@@ -275,13 +275,16 @@ describe("AuditLogCard", () => {
     expect(
       screen.getByRole("button", { name: "Copy record ID" }),
     ).toBeInTheDocument();
-    const asked = backend.mock.calls.map(([input]) =>
-      String(input instanceof Request ? input.url : input),
+    const asked = backend.mock.calls.map(
+      ([input]) =>
+        new URL(
+          String(input instanceof Request ? input.url : input),
+          "http://localhost",
+        ).pathname,
     );
     // The names read is the actor's picture; no record is read to name the row.
-    expect(
-      asked.every((url) => /\/v1\/(me|audit-log|users\/names)/.test(url)),
-    ).toBe(true);
+    const allowed = new Set(["/v1/me", "/v1/audit-log", "/v1/users/names"]);
+    expect(asked.filter((path) => !allowed.has(path))).toEqual([]);
   });
 
   it("keeps the change detail hidden until the row is expanded", async () => {

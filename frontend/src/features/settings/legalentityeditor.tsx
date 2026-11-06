@@ -282,9 +282,7 @@ export function EditEntityDialog({
               />
             </>
           )}
-          <ErrorLine
-            error={update.isError && problemMessageOf(update.error, t)}
-          />
+          <ErrorLine error={update.error} />
         </form>
       }
       actions={

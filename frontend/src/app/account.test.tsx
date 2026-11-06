@@ -434,10 +434,9 @@ describe("AccountMenu", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
-  // The trigger prints nothing, and its hidden initials tell a screen reader
-  // nothing. The sentence is carried as clipped text and wired as the trigger's
-  // description — the `title` is the pointer's copy of it and is never the
-  // accessible name.
+  // The trigger shows the seat's chip, whose initials a screen reader never
+  // hears. Who is signed in is clipped text wired as the trigger's description;
+  // the `title` is the pointer's copy of it, never the accessible name.
   it("carries the identity for a screen reader without printing it", () => {
     const { container } = render(<AccountMenu />);
     const trigger = glyphTrigger();

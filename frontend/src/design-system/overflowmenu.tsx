@@ -76,11 +76,9 @@ function walkItems(event: ReactKeyboardEvent<HTMLDivElement>) {
       "button:not(:disabled), a[href]",
     ),
   ];
-  const next = items[items.indexOf(here) + step];
-  if (next) {
-    event.preventDefault();
-    next.focus();
-  }
+  // Consumed at the ends too, or the page scrolls under an open menu.
+  event.preventDefault();
+  items[items.indexOf(here) + step]?.focus();
 }
 
 // OverflowMenu folds the verbs a record offers but a reader rarely wants

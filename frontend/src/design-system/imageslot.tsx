@@ -107,11 +107,15 @@ export function ImageSlot({
           icon={<Pencil aria-hidden="true" />}
           pending={busy}
         >
-          <Button onClick={choose} aria-describedby={refusalId}>
+          <Button onClick={choose} aria-describedby={refusalId} disabled={busy}>
             {verbs.upload}
           </Button>
           {filled && (
-            <Button onClick={onRemove} aria-describedby={refusalId}>
+            <Button
+              onClick={onRemove}
+              aria-describedby={refusalId}
+              disabled={busy}
+            >
               {verbs.remove}
             </Button>
           )}

@@ -31,7 +31,8 @@ export function useAnchoredToTrigger(
   // the margin, so a panel it opens asks for "start", where the reading does.
   // A pill centred under what it edits asks for "center".
   align: "start" | "end" | "center" = "end",
-  // The box the panel stays inside as well as the window: a card it belongs to.
+  // A card the panel stays inside sideways. Up and down it keeps to the window
+  // alone: a popover may hang below its card, as a menu does.
   within?: RefObject<HTMLElement | null> | null,
 ): { top: number; left: number; maxHeight: number } {
   const [at, setAt] = useState({ top: 0, left: 0, maxHeight: 0 });

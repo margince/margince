@@ -143,28 +143,30 @@ export function Panel({
         .join(" ")}
       aria-labelledby={title ? titleId : undefined}
     >
-      {title && (
-        <header
-          className={flatHead ? "panel-head panel-head-flat" : "panel-head"}
-        >
-          {/* The title is the row's far-end push: it absorbs the free space, so
+      <PanelEdge.Provider value={edge}>
+        {title && (
+          <header
+            className={flatHead ? "panel-head panel-head-flat" : "panel-head"}
+          >
+            {/* The title is the row's far-end push: it absorbs the free space, so
               a titleAction lands at the end of the band whatever the title's
               length. */}
-          <Heading
-            size={flatHead ? "small" : "medium"}
-            as={TITLE_ELEMENT[titleLevel ?? 2]}
-            className="panel-title"
-            id={titleId}
-            tabIndex={-1}
-          >
-            {title}
-          </Heading>
-          {titleAction}
-        </header>
-      )}
-      <PanelEdge.Provider value={edge}>{children}</PanelEdge.Provider>
-      {actions && <div className="panel-actions">{actions}</div>}
-      {footer && <footer className="panel-foot">{footer}</footer>}
+            <Heading
+              size={flatHead ? "small" : "medium"}
+              as={TITLE_ELEMENT[titleLevel ?? 2]}
+              className="panel-title"
+              id={titleId}
+              tabIndex={-1}
+            >
+              {title}
+            </Heading>
+            {titleAction}
+          </header>
+        )}
+        {children}
+        {actions && <div className="panel-actions">{actions}</div>}
+        {footer && <footer className="panel-foot">{footer}</footer>}
+      </PanelEdge.Provider>
     </section>
   );
 }
