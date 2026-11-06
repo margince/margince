@@ -245,6 +245,10 @@ fail() {
 tree_namespaces="$(find "$MIGRATIONS_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null || true)"
 # sed, not xargs basename: same empty-input hazard as migrations_at_base above.
 base_namespaces="$(git ls-tree --name-only -d "$BASE_REF" "$MIGRATIONS_DIR/" 2>/dev/null | sed 's#.*/##')"
+if [[ -n "$SYNC_BASE" ]]; then
+  base_namespaces="$base_namespaces
+$(git ls-tree --name-only -d "$SYNC_BASE" "$MIGRATIONS_DIR/" 2>/dev/null | sed 's#.*/##')"
+fi
 all_namespaces="$(printf '%s\n%s\n' "$tree_namespaces" "$base_namespaces" | sort -u)"
 
 for ns in $all_namespaces; do
@@ -253,10 +257,14 @@ for ns in $all_namespaces; do
   tree_rows="$(migrations_in_tree "$ns")"
   base_rows="$(migrations_at "$BASE_REF" "$ns")"
   fork_rows="$(migrations_at "$FORK_REF" "$ns")"
+  sync_rows=""
+  if [[ -n "$SYNC_BASE" ]]; then
+    sync_rows="$(migrations_at "$SYNC_BASE" "$ns")"
+  fi
 
   # A namespace is a directory holding migrations, not merely a directory:
   # `testdata/` sits beside core/ and custom/ and is neither, on either side.
-  if [[ -z "$tree_rows" ]] && [[ -z "$base_rows" ]]; then
+  if [[ -z "$tree_rows" ]] && [[ -z "$base_rows" ]] && [[ -z "$sync_rows" ]]; then
     continue
   fi
   checked=$((checked + 1))
@@ -279,7 +287,7 @@ for ns in $all_namespaces; do
   # re-stamp changes the version and keeps the name.
   if [[ -n "$SYNC_BASE" ]]; then
     tree_names="$(echo "$tree_rows" | cut -d' ' -f2 | sort)"
-    lost="$(comm -23 <(migrations_at "$SYNC_BASE" "$ns" | cut -d' ' -f2 | sort -u) <(echo "$tree_names" | sort -u))"
+    lost="$(comm -23 <(echo "$sync_rows" | cut -d' ' -f2 | sort -u) <(echo "$tree_names" | sort -u))"
     for name in $lost; do
       echo "FAIL: $ns migration '$name' is on $SYNC_BASE but this sync no longer has it under any version — keep it, re-stamped above what $MAIN_REF carries" >&2
       failed=1

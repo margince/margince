@@ -47,14 +47,16 @@ nightly session fixes it, so it does not need a `claim: main-red` pull request.
 
 1. On a branch off `origin/develop`, run `git merge origin/main` and resolve every conflict.
    Keep the migration stamps `main` has, and give anything only `develop` has a stamp above them.
-2. Run `make db-up` and `make check-all`, and fix every red on the same branch.
+2. Run `make db-up` and `make check-all CHECK_BASE_REF=origin/develop`, and fix every red on the same
+   branch. With the default base, the run never asks whether the branch kept what `develop` has.
 3. Open a pull request into `develop` and merge it with `gh pr merge <n> --merge`.
 4. Open or update the pull request from `develop` into `main`. Merge it with `gh pr merge <n> --merge`
    once `ci` and `cla` are green and every review thread is resolved.
 
 A branch that carries `main` commits `develop` lacks is judged by the migration check against the `main`
 it merged, since `main` sets the order an installation applies. It must also keep every migration on
-`develop`, once, under any stamp. Anyone running `develop` then needs `make dev-fresh`.
+`develop`, once, under any stamp. After a sync that re-stamps a migration, a database that ran `develop`
+needs `make dev-fresh`.
 
 The pull request into `main` runs every lane under the usual path filters, and CodeRabbit reviews it.
 Answer its findings with a fix on `develop`, through a pull request of its own.
