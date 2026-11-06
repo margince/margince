@@ -103,9 +103,9 @@ func TestTransferProjectOwnershipMovesEveryLiveProjectTheFromOwnerHolds(t *testi
 // A rep moves only the from-owner's projects they hold WRITE authority over.
 // Rep3 (team 2) owns two projects; Rep1 (team 1) is handed a `write` share of
 // one and a `read` share of the other. Every seat READS every project, so the
-// list shows Rep1 both — but the bulk door moves only the one the single
-// update door would have let them change. Rep1's own row scope does not hold
-// Rep2, and Rep2 still receives.
+// list shows Rep1 both. The bulk door moves only the one the single update
+// door would let them change. Rep1's own row scope does not hold Rep2, and
+// Rep2 still receives.
 func TestTransferProjectOwnershipMovesOnlyWhatTheCallerCouldWrite(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
