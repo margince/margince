@@ -160,7 +160,7 @@ func TestModelRateCreateAndUpdateGrantsGateSeparately(t *testing.T) {
 	// OWN clock inside the transaction, so a real clock crossing UTC midnight
 	// between the two would refuse this write as past-dated.
 	today := pinnedRateDay()
-	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
 	setOn := func(ctx context.Context, input string, day time.Time) error {
 		_, err := store.SetModelRate(ctx, ai.SetModelRateInput{
 			Provider: "anthropic", ModelID: "m",
@@ -215,7 +215,7 @@ func TestModelRateOverwriteAuditsAsUpdate(t *testing.T) {
 	// Pinned so both writes land on the SAME day: a real clock crossing UTC
 	// midnight between them would create two rows and audit two creates.
 	today := pinnedRateDay()
-	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
 	ctx := e.Admin()
 	for _, price := range []string{"1", "2"} {
 		if _, err := store.SetModelRate(ctx, ai.SetModelRateInput{
@@ -276,7 +276,7 @@ func modelRateEntry(ctx context.Context, t *testing.T, store *ai.RateStore, mode
 func TestModelRateDeleteRemovesTheWholeEntryAndNothingElse(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
-	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
 	ctx := e.Admin()
 	modelRateEntry(ctx, t, store, "typo/jev-latest", ai.LaneChat, ai.LaneDecisions, today)
 	modelRateEntry(ctx, t, store, "claude-opus-4-8", ai.LaneChat, ai.LaneChat, today)
@@ -319,7 +319,7 @@ func TestModelRateDeleteRemovesTheWholeEntryAndNothingElse(t *testing.T) {
 func TestModelRateDeleteTakesTheUpdateGrant(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
-	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
 	modelRateEntry(e.Admin(), t, store, "m", ai.LaneChat, ai.LaneChat, today)
 	key := ai.ModelRateKey{Provider: "anthropic", ModelID: "m", Lane: ai.LaneChat}
 

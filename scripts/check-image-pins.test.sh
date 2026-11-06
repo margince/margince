@@ -16,6 +16,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GATE="$SCRIPT_DIR/check-image-pins.sh"
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$SCRIPT_DIR/lib-git-fixture.sh"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT

@@ -24,7 +24,6 @@ package gatekit
 // write sites are derived from source, and only the column is named.
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -192,7 +191,7 @@ func requireSubjects(t testing.TB, dir, column string, found int) {
 // clock.
 func packageSourceFiles(t testing.TB, dir string) []string {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := ReadDir(dir)
 	if err != nil {
 		t.Errorf("reading the package directory %s: %v", dir, err)
 		return nil

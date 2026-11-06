@@ -40,6 +40,14 @@ func (s *Store) CreatePipeline(ctx context.Context, in CreatePipelineInput) (crm
 	if err := auth.Require(ctx, "pipeline", principal.ActionCreate); err != nil {
 		return crmcontracts.Pipeline{}, err
 	}
+	for _, stage := range in.Stages {
+		if stage.Semantic == "" {
+			continue
+		}
+		if err := refuseAgentSemanticChange(ctx, string(SemanticOpen), &stage.Semantic); err != nil {
+			return crmcontracts.Pipeline{}, err
+		}
+	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		out, err = createPipelineTx(ctx, tx, in)

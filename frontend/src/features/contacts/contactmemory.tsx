@@ -9,7 +9,7 @@ import {
 } from "../../design-system/overviewcard";
 import { useLocale, useT } from "../../i18n";
 import { useSourceOpener } from "../../lib/opensource";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { omitted } from "./contact360";
 import { CardLink, rowPill } from "./contactcards";
 import { callBackNumber, memoryRows } from "./contactmemory.rows";
@@ -39,14 +39,14 @@ export function ContactMemory({
   const { locale } = useLocale();
   // When a conversation happened is a fact about the record, so it reads in
   // the record's zone and two colleagues name the same day.
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const interactionLabel = useInteractionLabel();
   const openerFor = useSourceOpener(onOpenEmail);
   const withheld =
     omitted(view, "activities") && omitted(view, "conversation_memory");
   const rows = withheld
     ? []
-    : memoryRows(view, t, interactionLabel, locale, recordZone).slice(
+    : memoryRows(view, t, interactionLabel, locale, readerZone).slice(
         0,
         GLANCE,
       );

@@ -52,7 +52,7 @@ type AwaitingContact struct {
 // ContactsAwaitingDecisionFor lists the caller's own contacts that are waiting
 // on a sender decision, oldest first.
 func ContactsAwaitingDecisionFor(ctx context.Context, db *database.DB) ([]AwaitingContact, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	// The list names contacts, which is what the contact grant governs.

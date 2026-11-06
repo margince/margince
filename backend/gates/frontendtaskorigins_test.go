@@ -14,12 +14,12 @@ package gates
 // names is a dead sentence.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendTaskOrigins = "../frontend/src/components/taskorigin.ts"
@@ -31,7 +31,7 @@ var tsOriginEntry = regexp.MustCompile(`(?m)^\s*["']?([a-z][a-z_-]*)["']?:\s*"ta
 
 func TestTheFrontendExplainsEveryAutomaticTaskSource(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendTaskOrigins)
+	source, err := gatekit.ReadFile(frontendTaskOrigins)
 	if err != nil {
 		t.Fatalf("reading the frontend task origins: %v", err)
 	}

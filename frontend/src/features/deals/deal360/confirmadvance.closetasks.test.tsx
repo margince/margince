@@ -58,7 +58,10 @@ type Sent = { path: string; body: unknown };
 type BulkBody = { items: { id: string; version: number }[] };
 
 const OPEN_TASKS = [
-  task("t-invoice", "Send the final invoice"),
+  {
+    ...task("t-invoice", "Send the final invoice"),
+    due_at: "2026-11-04T12:00:00Z",
+  },
   task("t-device", "Return the loan device"),
   task("t-done", "Already handled", true),
   { ...task("n-kickoff", "Kickoff notes"), kind: "note", is_done: undefined },
@@ -179,19 +182,24 @@ async function answer(
 it("lists the deal's open tasks and asks before it closes", async () => {
   stubServer();
   renderClose(async () => ({ id: "deal-1", version: 4 }));
-  const list = await screen.findByRole("list", {
-    name: "Open tasks on this deal",
+  const question = await screen.findByRole("group", {
+    name: "What happens to the 2 open tasks on this deal?",
   });
+  // Listed inside the question, each with its due day.
+  const list = within(question).getByRole("list");
+  const rows = within(list).getAllByRole("listitem");
+  expect(rows.map((row) => row.firstChild?.textContent)).toEqual([
+    "Send the final invoice",
+    "Return the loan device",
+  ]);
+  expect(rows[0]).toHaveTextContent(/^Send the final invoiceDue \S/);
+  expect(rows[1]).toHaveTextContent("No due date");
+  // Each answer reads the tasks out as its description.
   expect(
-    within(list)
-      .getAllByRole("listitem")
-      .map((item) => item.textContent),
-  ).toEqual(["Send the final invoice", "Return the loan device"]);
-  expect(
-    screen.getByRole("group", {
-      name: "What happens to the 2 open tasks on this deal?",
-    }),
-  ).toBeInTheDocument();
+    screen.getByRole("radio", { name: /Complete all/ }),
+  ).toHaveAccessibleDescription(
+    /Send the final invoice.*Return the loan device/,
+  );
   expect(screen.getByRole("radio", { name: /Complete all/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Keep/ })).not.toBeChecked();
 
@@ -209,7 +217,7 @@ it("completes exactly the listed tasks after the close lands, with undo", async 
     order.push("advance");
     return { id: "deal-1", version: 4 };
   });
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   await answer(user, "Complete all");
 
   await waitFor(() =>
@@ -238,7 +246,7 @@ it("keeps every task open when the reader picks Keep", async () => {
   const user = userEvent.setup();
   const onConfirm = vi.fn(async () => ({ id: "deal-1", version: 4 }));
   renderClose(onConfirm);
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   await answer(user, "Keep");
 
   await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
@@ -252,7 +260,7 @@ it("completes nothing when the close is refused", async () => {
     throw new Error("version conflict");
   });
   renderClose(onConfirm);
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   await answer(user, "Complete all");
 
   await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
@@ -277,7 +285,7 @@ it("holds Confirm while the deal's tasks are still loading", async () => {
   ).toBeInTheDocument();
 
   answerRead(json({ data: OPEN_TASKS, page: { has_more: false } }));
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   expect(screen.queryByText("Loading the deal’s open tasks…")).toBeNull();
 });
 
@@ -317,7 +325,7 @@ it("says so when Complete all could complete none of the tasks", async () => {
   });
   const user = userEvent.setup();
   renderClose(async () => ({ id: "deal-1", version: 4 }));
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   await answer(user, "Complete all");
 
   const note = await screen.findByText(/No task could be completed\./);
@@ -334,7 +342,7 @@ it("completes more tasks than one bulk change holds in batches of 500", async ()
   });
   const user = userEvent.setup();
   renderClose(async () => ({ id: "deal-1", version: 4 }));
-  await screen.findByRole("list", { name: "Open tasks on this deal" });
+  await screen.findByRole("list");
   await answer(user, "Complete all");
 
   await waitFor(() => expect(sent).toHaveLength(4));
@@ -348,4 +356,17 @@ it("completes more tasks than one bulk change holds in batches of 500", async ()
   await waitFor(() =>
     expect(sent.at(-1)?.path).toBe("/v1/bulk/batch-t-0/undo/preview"),
   );
+});
+
+it("lists the first five tasks and counts the rest", async () => {
+  const many = Array.from({ length: 7 }, (_, at) =>
+    task(`t-${at}`, `Task ${at + 1}`),
+  );
+  stubServer({
+    activities: () => json({ data: many, page: { has_more: false } }),
+  });
+  renderClose(async () => ({ id: "deal-1", version: 4 }));
+  const list = await screen.findByRole("list");
+  expect(within(list).getAllByRole("listitem")).toHaveLength(5);
+  expect(screen.getByText("and 2 more")).toBeInTheDocument();
 });

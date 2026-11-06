@@ -95,7 +95,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
-    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "confirm.done.body",
@@ -169,6 +168,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   de: [
+    "analytics.team.eventCredit",
+    "analytics.team.qualificationBasis",
+    "analytics.team.targetBasis",
     // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
     "contactCase.intro",
     "contactCase.pair.notSame",
@@ -216,13 +218,13 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
-    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "common.permissionDenied",
     "confirm.done.body",
     "deal.notYoursToChange",
     "deals.totalsOwnerNotMeasurable",
+    "lead.boardCountsOwnerNotMeasurable",
     "lead.notYoursToChange",
     // The same refusal as the two above, for a colleague's queue.
     "worklist.owner.refused",
@@ -233,6 +235,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "ob.manual.icpHint",
     "contact.intro.answerSuggestHelp",
     "contact.notYoursToChange",
+    "provider.profile.lookupNotYours",
     "project.notYoursToChange",
     "record.notYoursToChange",
     "retention.lawfulBasisHint",
@@ -284,6 +287,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.objected",
     "sendPermission.reason.restricted",
     "sendPermission.reason.tooMany",
+    "sendPermission.reason.optedOutAfterRequest",
+    "sendPermission.reason.consentRequired",
+    "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
     // A human being on the committee, or who owns or sets something, not the record type.
@@ -292,6 +298,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   vi: [
+    "analytics.team.eventCredit",
+    "analytics.team.qualificationBasis",
+    "analytics.team.arrivalCredit",
+    "analytics.team.qualificationUnattributed_one",
+    "analytics.team.qualificationUnattributed_other",
     // Operators and mailbox owners are human roles, not contact record types.
     "health.stoppedNext",
     "health.readFailedNext",
@@ -433,10 +444,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "brief.weekly.sharedDefinitions",
     "company.rejectReasonHint",
     "contact.notYoursToChange",
+    "provider.profile.lookupNotYours",
     "deal.notYoursToChange",
     "history.field.lifted_by",
     "history.field.revoked_by",
-    "installationSettings.timezoneHint",
     "lead.bulkOutcomeConflict",
     "lead.notYoursToChange",
     "lists.members.addedBy",
@@ -508,6 +519,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.objected",
     "sendPermission.reason.restricted",
     "sendPermission.reason.tooMany",
+    "sendPermission.reason.optedOutAfterRequest",
+    "sendPermission.reason.consentRequired",
+    "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
     "buyer.contact",
@@ -641,6 +655,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "files.originUnknown",
     "heldThreads.heldByOthers_one",
     "heldThreads.heldByOthers_other",
+    "lead.boardCountsOwnerNotMeasurable",
     "lead.bulkOwnerPick",
     "log.transcriptHint",
     "ob.manual.buying_centerHint",
@@ -667,8 +682,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "privacy.correctionsSub",
     "project.stakeholders.empty",
     // "người chịu trách nhiệm" is the deal's owner, a colleague, as deal.ownerKeep says it.
-    "review.deliveryFailed_one",
-    "review.deliveryFailed_other",
     "role.rep",
     "room.card.lastSeen",
     // "người mua" — the BUYER who walks into the room: a human being from
@@ -691,6 +704,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "dealSuggestion.field.owner",
     "systemJob.assign_owner_release",
     "history.field.owner_id",
+    "reporting.initiativeOwner",
     "share.access.writeNote",
     "worklist.owner.left",
     "list.owner",

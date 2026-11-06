@@ -86,3 +86,24 @@ export function useCompanyMarksByID(ids: readonly string[]): CompanyMarksByID {
   });
   return { marks, unreadable, pending };
 }
+
+/**
+ * Every company the loaded deals name, id → mark (`useCompanyMarks` resolves them).
+ *
+ * A company this reader may not read is in no map. The wire sends
+ * `company_id` as null and names it in `masked_fields`. The card then shows
+ * the withheld reading as its own mask, not a name this screen could supply.
+ */
+export type CompanyMarks = ReadonlyMap<string, CompanyMark>;
+
+/**
+ * What the screen knows about the companies its deals name.
+ *
+ * `unreadable` holds the companies whose read failed: a 403, a 5xx or a
+ * dropped connection. That is not the same fact as a deal naming no company.
+ * The table shows it through `EntityRef`'s failed state; this is the board's half.
+ */
+export type CompanyNaming = Readonly<{
+  marks: CompanyMarks;
+  unreadable: ReadonlySet<string>;
+}>;

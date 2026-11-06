@@ -7,11 +7,12 @@ package gates
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestTheSeenSenderRuleIsSpelledOnce holds the claim addressWasSeen makes about
@@ -31,7 +32,7 @@ import (
 func TestTheSeenSenderRuleIsSpelledOnce(t *testing.T) {
 	t.Parallel()
 	const pkg = "internal/modules/capture"
-	entries, err := os.ReadDir(pkg)
+	entries, err := gatekit.ReadDir(pkg)
 	if err != nil {
 		t.Fatalf("reading the capture package: %v", err)
 	}
@@ -56,7 +57,7 @@ func TestTheSeenSenderRuleIsSpelledOnce(t *testing.T) {
 		if e.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join(pkg, name))
+		body, err := gatekit.ReadFile(filepath.Join(pkg, name))
 		if err != nil {
 			t.Fatalf("reading %s: %v", name, err)
 		}
@@ -66,7 +67,7 @@ func TestTheSeenSenderRuleIsSpelledOnce(t *testing.T) {
 			at := bytes.Index(body, decl)
 			window := body[at:min(at+600, len(body))]
 			if compares.Match(window) {
-				if name == "registry_calendar.go" && bytes.HasPrefix(decl, []byte("func calendarWriteGranted(")) {
+				if name == "registry_calendar.go" && bytes.HasPrefix(decl, []byte("func CalendarWriteGranted(")) {
 					// Provider scopes are OAuth grants, not sender addresses.
 					oauthScopeComparison = true
 					continue

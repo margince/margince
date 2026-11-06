@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { RichText } from "./richtext";
 
@@ -44,7 +45,6 @@ function Demo({
           bulletList: "Bulleted list",
           numberList: "Numbered list",
           link: "Link",
-          linkPrompt: "Web address for this link",
         }}
         placeholder="Write your message…"
         rows={6}
@@ -76,10 +76,38 @@ export const Formatted: Story = {
         "<p>Hallo Marine,</p>" +
         "<p>the <b>deadline</b> is <em>Friday</em>. Two things before then:</p>" +
         "<ul><li>the signed scope</li><li>the depot list</li></ul>" +
-        '<p>Details on <a href="https://gradion.com">our page</a>.</p>'
+        '<p>Details on <a href="https://example.com">our page</a>.</p>'
       }
     />
   ),
+};
+
+/** The caret in a link: the link mark (or Cmd/Ctrl+K) offers its address and Remove link. */
+export const EditingLink: Story = {
+  render: () => (
+    <Demo
+      initial={'<p>Details on <a href="https://example.com">our page</a>.</p>'}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    // The editor writes its value in an effect, after the first paint.
+    const link = await within(canvasElement).findByRole("link", {
+      name: "our page",
+    });
+    const words = link.firstChild;
+    if (!words) throw new Error("the story holds no link");
+    window.getSelection()?.collapse(words, 2);
+    await userEvent.click(
+      within(canvasElement).getByRole("button", { name: "Link" }),
+    );
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    await expect(dialog.getByLabelText("Web or email address")).toHaveValue(
+      "https://example.com",
+    );
+    await expect(
+      dialog.getByRole("button", { name: "Remove link" }),
+    ).toBeEnabled();
+  },
 };
 
 /**
@@ -116,7 +144,6 @@ function MarkdownDemo({ initial }: Readonly<{ initial: string }>) {
           bulletList: "Bulleted list",
           numberList: "Numbered list",
           link: "Link",
-          linkPrompt: "Web address for this link",
           heading: "Heading",
         }}
         rows={8}

@@ -101,7 +101,7 @@ func TestCloseDateAssessmentFlags(t *testing.T) {
 
 func TestCloseDateActionTiers(t *testing.T) {
 	commit := func(in CloseDateInput) CloseDateInput {
-		in.InForecastCommit = true
+		in.Likely = true
 		return in
 	}
 	cases := []struct {
@@ -269,40 +269,43 @@ func TestOverdueIsAskedInTheInstallationsZone(t *testing.T) {
 	}
 }
 
-// The 🔻 branch used to assign the notched category unconditionally. Since
-// forecastDowngrade floors at "omitted", a deal already sitting there was
-// assigned "omitted" again every night it stayed quiet — and storekit.Patch
-// records an assignment without comparing it, so that non-empty patch became
-// a real audit row and a real deal.updated event for a change that never
-// happened. Thirty-two of forty such rows in one installation were identical
-// before/after images.
-func TestAnUnchangedForecastCategoryIsNotWritten(t *testing.T) {
-	omitted, pipeline := "omitted", "pipeline"
-	// Below every forecast threshold, so a deal with no override derives
-	// "pipeline" — the state a first downgrade actually moves away from.
-	const lowStageWinProbability = 20
+// The downgrade tier halves a quiet deal's probability, floored to a multiple
+// of five, and nothing under ten survives.
+func TestAQuietDealsProbabilityDropsOneNotchANight(t *testing.T) {
+	t.Parallel()
+	ladder := []int{90, 45, 20, 10, 5, 0, 0}
+	for i := 0; i+1 < len(ladder); i++ {
+		if got := lowerWinProbability(ladder[i]); got != ladder[i+1] {
+			t.Errorf("a deal at %d%% drops to %d%%, want %d%%", ladder[i], got, ladder[i+1])
+		}
+	}
+	if got := lowerWinProbability(75); got != 35 {
+		t.Errorf("a deal at 75%% drops to %d%%, want 35%%", got)
+	}
+}
+
+// A write that sets the probability the deal already holds leaves the patch
+// empty. So a quiet deal sitting at zero writes no audit row night after night.
+func TestAnUnchangedWinProbabilityIsNotWritten(t *testing.T) {
+	t.Parallel()
+	zero, twenty := 0, 20
+	margince := string(SourceMargince)
 	cases := []struct {
 		name      string
-		stored    *string
-		notched   string
+		stored    *int
+		storedBy  *string
+		set       *int
 		wantWrite bool
 	}{
-		// The floor case, and the one that wrote a row every night: an
-		// explicitly-omitted deal notches to omitted, which is where it
-		// already is.
-		{"already at the floor", &omitted, "omitted", false},
-		// A deal carrying no override sits at the probability-derived
-		// default, so the first notch down is a real move and must write.
-		{"no override, first notch down", nil, "omitted", true},
-		{"a real notch down still writes", &pipeline, "omitted", true},
+		{"already at the floor", &zero, &margince, &zero, false},
+		{"a stage deal gets its own probability", nil, nil, &twenty, true},
+		{"a real notch down still writes", &twenty, &margince, &zero, true},
+		{"back to the stage from an override", &twenty, &margince, nil, true},
+		{"back to the stage on a deal that follows it", nil, nil, nil, false},
 	}
 	for _, c := range cases {
-		// Derive the effective category the way the sweep does rather than
-		// stating it: a hand-written pair can describe a deal
-		// effectiveForecastCategory would never produce.
-		effective := effectiveForecastCategory(c.stored, lowStageWinProbability)
 		p := storekit.NewPatch()
-		setForecastCategory(p, c.stored, effective, c.notched)
+		setWinProbability(p, c.stored, c.storedBy, c.set, SourceMargince)
 		if p.Empty() == c.wantWrite {
 			t.Errorf("%s: patch empty = %v, want a write = %v", c.name, p.Empty(), c.wantWrite)
 		}

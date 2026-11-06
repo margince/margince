@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import type { Transport } from "../../lib/contacttransports";
 import {
   installFetchStub,
@@ -678,7 +678,7 @@ const SCHEDULED_EDIT = editSeedOf({
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
   status: "scheduled",
   scheduled_at: new Date(Date.now() + 86_400_000).toISOString(),
-  scheduled_tz: viewerZone(),
+  scheduled_tz: browserZone(),
   subject: "The renewal quote",
   to: ["dana@brandt.example"],
   body: "Hi Dana, here is the renewal quote. The terms are on the site.",

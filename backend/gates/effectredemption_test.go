@@ -230,7 +230,7 @@ func composeFilesFor(t *testing.T) []gatekit.ParsedFile {
 	t.Helper()
 	root := filepath.Join(repoRoot, "backend", "internal", "compose")
 	var parsed []gatekit.ParsedFile
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}

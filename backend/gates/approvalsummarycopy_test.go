@@ -108,7 +108,7 @@ func TestNoApprovalSummaryIsWrittenAsEnglishProse(t *testing.T) {
 func TestApprovalSummaryCensusSeesEveryShapeItClaims(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	planted, err := os.ReadFile("gates/testdata/approvalsummarycopy.go.txt")
+	planted, err := gatekit.ReadFile("gates/testdata/approvalsummarycopy.go.txt")
 	if err != nil {
 		t.Fatalf("reading the planted package: %v", err)
 	}
@@ -201,7 +201,7 @@ type callIn struct {
 func loadSummaryTree(t *testing.T, root string) *summaryTree {
 	t.Helper()
 	tree := &summaryTree{fset: gatekit.SourceFileSet(), pkgs: map[string]*summaryPackage{}}
-	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

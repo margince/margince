@@ -267,7 +267,7 @@ func TestTheNightlyScanRecordsWhatItSaw(t *testing.T) {
 	past := time.Now().UTC().AddDate(0, 0, -10)
 	sick := Subject{
 		DealID: e.seedDeal(t), Owner: e.rep.String(),
-		ExpectedClose: &past, Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
+		ExpectedClose: &past, WinProbability: 90, Likely: true, HasNextStep: true, HasEconomicBuyer: true,
 	}
 	scanner := NewScanner(e.store,
 		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) {

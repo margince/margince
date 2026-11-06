@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/scheduling_alias.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
+<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/scheduling_alias.go backend/internal/modules/activities/scheduling_used.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
 # Meetings and booking
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
@@ -29,6 +29,13 @@ To fix a Margince invitation that shows **Invitation needs attention**, open the
 Retry sends the same invitation again, so the guest does not get a second one. The time stays held for you while Margince is not sure the invitation went out.
 Also called: resend invite, invitation failed, calendar refused.
 
+### What happens when my calendar refuses Margince?
+When your calendar refuses Margince, for example because its connection ran out or it lost permission to add events, Margince stops trying. Every invitation still waiting on that calendar is paused, and each shows **Your calendar refused Margince**. You get one notification about it, not one per meeting.
+1. Choose **Reconnect calendar** on any paused meeting, or go to **Settings → Connections**.
+2. Reconnect the calendar with permission to add events.
+The paused invitations then go out on their own. You do not need to retry each one.
+Also called: calendar disconnected, invitations paused, reconnect calendar.
+
 ### How do I move a meeting to another time?
 To move a Margince meeting, open it from its line on the timeline and choose **Reschedule**. Pick the new time and choose **Confirm new time**.
 Your current time stays held until the calendar accepts the change. The meeting moves in Margince only once the calendar provider takes the new time. A meeting you move keeps the video call it already has.
@@ -40,7 +47,8 @@ Also called: reschedule, change the time, postpone a meeting.
 A meeting that took place takes one press: **Held** on its Worklist row. A customer meeting that
 has started with no outcome also shows **Held** and **Add notes** on the contact's **Meetings** tab
 and on the timeline. To say more, or to record a no-show, press **Add notes**:
-1. Pick **Held** or **No-show** and write what was said.
+1. Pick **Held** or **No-show** and write what was said. Change any of your company's own fields
+   for meetings here too.
 2. Change **Date** only if the meeting was on another day.
 3. Press **Log**.
 The meeting keeps its start time. A meeting moved to another day keeps its time of day there. One
@@ -60,6 +68,9 @@ Also called: call off a meeting, delete a meeting.
 To offer times in Margince, open the contact's **Meetings** tab, choose **Book a meeting**, then choose **Propose times**.
 1. Pick two or three **Times to offer** in the calendar. Two times you offer cannot share a minute.
 2. Choose **Review email**, read the email, and send it.
+
+The email fills **Reason for contact** from the booking. A current seat on an open deal gives **Active deal**. Starting from an email gives **Follow-up they requested**. You can change the choice. With no matching context, choose a reason before sending.
+
 The contact gets a personal link with your times. It books one meeting, and runs out after 7 days or at the last time offered.
 Also called: suggest times, propose a slot, send options.
 
@@ -110,6 +121,10 @@ When you paste the link into chat or email, the preview card shows your name and
 A paused page gives a card that names nobody. A replaced or unknown address gives no card. The card never shows guest details.
 
 If your account is suspended or removed, your page and your short address stop working. Nobody else can take your short address, so it never leads to someone else's page.
+
+A page is paused when **Accept bookings** is off. It is also paused when your calendar cannot take bookings: none is set, it is read-only, or it is disconnected. A guest who opens a paused page reads that you are not taking bookings through it right now. The page names you and shows nothing else: no free times, no meeting details. **My booking link** in the account menu shows **Paused** while it is. A personal link you sent stays open while your calendar can take its booking, even when **Accept bookings** is off.
+
+Home shows you one card while your page is paused by its calendar, so you can fix it. It shows the card only when **Accept bookings** is on and the page was used: somebody booked through it, or you copied its link. The card names the reason and opens your booking settings.
 
 Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace address** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 

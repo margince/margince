@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // attendeeCap bounds who is named. This is "who is in the room" for prep, not
@@ -134,7 +135,9 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(activityID)
 	requestedPos := arg(nullableProject(requested))
-	happened := occurredday.HappenedSQL("pa", fmt.Sprintf("$%d", arg(now)))
+	// A last touch is contact we had: not a canceled meeting, and not a call
+	// that reached nobody (relstrength.NotCalledOffSQL).
+	happened := occurredday.HappenedSQL("pa", fmt.Sprintf("$%d", arg(now))) + " AND " + relstrength.NotCalledOffSQL("pa")
 	clauses, err := roomClauses(ctx, arg)
 	if err != nil {
 		return meeting{}, err

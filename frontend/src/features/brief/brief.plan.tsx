@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { SquareCheck } from "lucide-react";
 import { useState } from "react";
 import { EntityRef } from "../../components/entityref";
 import {
@@ -18,7 +19,7 @@ import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { useMe } from "../../lib/session";
 import {
   type SettableState,
@@ -29,7 +30,8 @@ import {
   type WeeklyPlanCommitment,
 } from "../worklist/weeklyplan.queries";
 import { AddCommitment } from "./brief.plan.add";
-import { PlanContract } from "./brief.plan.contract";
+import { PlanContract, planEditable } from "./brief.plan.contract";
+import { ReportTitle } from "./brief.reportcard";
 
 import "./brief.plan.css";
 
@@ -124,7 +126,12 @@ function hasFoot(
   return reading.unsaved > 0 || (reading.editable && reading.staged > 0);
 }
 
-export function PlanSection() {
+export function PlanSection({
+  withContract = true,
+}: Readonly<{
+  /** False where the constraints stand in a column of their own. */
+  withContract?: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const plan = useWeeklyPlan();
@@ -155,10 +162,7 @@ export function PlanSection() {
       ? "unavailable"
       : "ready";
   const commitments = plan.data?.commitments ?? [];
-  // A closed week is history. The weekly job settles it and freezes its outcome
-  // into the review, so accepting an edit afterwards would make the review's
-  // counts disagree with the rows they were counted from.
-  const editable = canEdit && plan.data?.status === "open";
+  const editable = planEditable(canEdit, plan.data);
   // A closed week says nothing about posture — it is not this seat that the
   // plan is shut to, and `editable` above is what closes it.
   const readOnly = statesReadOnly({
@@ -216,15 +220,18 @@ export function PlanSection() {
   return (
     <section id="brief-plan">
       <Panel
+        flatHead
         title={
-          plan.data
-            ? t("plan.title", {
-                week: formatNumber(
-                  isoWeekOf(plan.data.local_week_start),
-                  locale,
-                ),
-              })
-            : t("plan.titleThisWeek")
+          <ReportTitle icon={SquareCheck}>
+            {plan.data
+              ? t("plan.title", {
+                  week: formatNumber(
+                    isoWeekOf(plan.data.local_week_start),
+                    locale,
+                  ),
+                })
+              : t("plan.titleThisWeek")}
+          </ReportTitle>
         }
         titleAction={
           editable && !adding ? (
@@ -298,7 +305,7 @@ export function PlanSection() {
       {/* What the week is up against, after what it is for. Its own panel
           because it is the half a lead reads first and a reader should be able
           to find it without walking the commitment list. */}
-      <PlanContract plan={plan.data} editable={editable} />
+      {withContract && <PlanContract plan={plan.data} editable={editable} />}
     </section>
   );
 }
@@ -367,7 +374,7 @@ function CommitmentRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const settleable = editable && isSettleable(commitment);
   // The box shows what the row WILL be once saved, not what it is: a staged tick
   // that drew itself unchecked would make the stage invisible.

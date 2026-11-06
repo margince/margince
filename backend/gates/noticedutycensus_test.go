@@ -18,7 +18,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -128,7 +127,7 @@ func decidedKinds(t *testing.T) map[string]bool {
 // a second way, so both censuses see a file identically.
 func parseModuleFile(t *testing.T, path string) *ast.File {
 	t.Helper()
-	source, err := os.ReadFile(path)
+	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

@@ -97,8 +97,8 @@ func ageQueuedRun(t *testing.T, e *apptest.AppEnv, runID string) {
 // approvedButUnworked answers a run whose commit job is queued and never worked.
 func approvedButUnworked(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
@@ -279,8 +279,8 @@ func TestPastTheResumeLimitTheRunFails(t *testing.T) {
 	})
 
 	t.Run("an undo keeps undoing until undone again", func(t *testing.T) {
-		profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-		run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+		profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+		run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 		approveAndRead(t, e, run.ID)
 		if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); status != http.StatusAccepted {
 			t.Fatalf("undo → %d, want 202", status)

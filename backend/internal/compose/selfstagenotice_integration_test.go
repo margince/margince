@@ -86,7 +86,7 @@ func TestStageNotificationsAgreeAcrossDeliveryHistoryAndPreview(t *testing.T) {
 	if err := f.conn.QueryRow(f.ctx, `SELECT id FROM automation WHERE key = @key`, pgx.NamedArgs{"key": handler}).Scan(&automationID); err != nil {
 		t.Fatal(err)
 	}
-	preview, err := automation.NewAutomationStore(f.db).WithClock(func() time.Time { return selfMove.OccurredAt.Add(time.Hour) }).Preview(f.ctx, automationID, automation.AutomationPreviewInput{})
+	preview, err := automation.NewAutomationStore(f.db).SetClock(func() time.Time { return selfMove.OccurredAt.Add(time.Hour) }).Preview(f.ctx, automationID, automation.AutomationPreviewInput{})
 	if err != nil {
 		t.Fatal(err)
 	}

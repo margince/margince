@@ -423,6 +423,22 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     expect(screen.getAllByText("unpriced, excluded from total").length).toBe(2);
     expect(screen.queryByText("€0.00")).toBeNull();
   });
+
+  it("names the tax category a line takes its rate from, and nothing for a typed rate", async () => {
+    const standard = { ...existingLine, tax_category: "standard" };
+    const typed = {
+      ...existingLine,
+      id: "li-2",
+      position: 2,
+      tax_category: null,
+    };
+    stubOffer({ ...baseOffer, line_items: [standard, typed] });
+    render(<OfferScreen id="o-1" />);
+    expect(
+      (await screen.findByTestId("line-tax-category-li-1")).textContent,
+    ).toBe("Standard");
+    expect(screen.queryByTestId("line-tax-category-li-2")).toBeNull();
+  });
 });
 
 // A method-aware backend for the regenerate action (Task 4.1, OP-11): GETs
@@ -767,7 +783,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     ).toBeTruthy();
   });
 
-  it("accepts the offer and invalidates the deal + deal-offers queries so the deal screen resyncs", async () => {
+  it("accepts the offer and invalidates the deal, its offers, its products and the report figures", async () => {
     const calls: { url: string; body: unknown; ifMatch: string | null }[] = [];
     stubOfferWithLifecycle(
       { ...baseOffer, status: "sent" },
@@ -778,6 +794,16 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     const { client } = render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+    // Acceptance moves the deal's amount and products, which these read.
+    const readers = [
+      ["deal-products", "d-1"],
+      ["reporting-evaluation", "this-month"],
+      ["reporting-live", "this-month"],
+      ["reporting-forecast", "this-month"],
+    ];
+    for (const key of readers) {
+      client.setQueryData(key, {});
+    }
 
     await userEvent.click(screen.getByTestId("accept-offer"));
     await userEvent.click(confirmInDialog("Accept"));
@@ -791,6 +817,11 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     );
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ["deal-offers", "d-1"] }),
+    );
+    await waitFor(() =>
+      expect(
+        readers.filter((key) => !client.getQueryState(key)?.isInvalidated),
+      ).toEqual([]),
     );
   });
 

@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // epoch anchors the timestamp sentinels. Each column gets epoch plus its own
@@ -204,6 +205,7 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 	// same hazard: a swap reads as a valid-looking wrong value.
 	assertString(t, "a.direction", stringOf(got.Direction))
 	assertString(t, "a.meeting_status", stringOf(got.MeetingStatus))
+	assertString(t, "a.call_outcome", stringOf(got.CallOutcome))
 	assertString(t, "a.capture_label", stringOf(got.CaptureLabel))
 	assertString(t, "a.audience", stringOf(got.Audience))
 	// Served for mail only, and the sentinel row's kind is not mail.
@@ -258,6 +260,10 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 	// therefore the easiest to transpose undetected.
 	assertBool(t, "a.is_done", got.IsDone, boolFor(index["a.is_done"]) != flip)
 	assertBool(t, "a.bulk_mail_attested", got.BulkMailAttested, boolFor(index["a.bulk_mail_attested"]) != flip)
+	// Answered on a task alone, and the sentinel row is no task.
+	if got.DueHasTime != nil {
+		t.Errorf("a.due_has_time served on a %q row", got.Kind)
+	}
 }
 
 // boolFor answers what the row wrote for the boolean at this column, by
@@ -281,7 +287,7 @@ func boolFor(at int) bool {
 // before one exists.
 func isBoolColumn(sql string) bool {
 	switch sql {
-	case "a.is_done", "a.bulk_mail_attested", "":
+	case "a.is_done", "a.bulk_mail_attested", "a.due_has_time", "":
 		return true
 	}
 	return false
@@ -542,6 +548,8 @@ func TestAutomaticKindFollowsTheContentAudience(t *testing.T) {
 		{"an invitation the reader may not open", activityScan{kind: "email", origin: "human", calendarMethod: &invite}, false, ""},
 		{"a notice the reader may open", activityScan{kind: "email", origin: "human", senderIsMachine: true}, true, crmcontracts.ActivityAutomaticKindSendingSystem},
 		{"a notice the reader may not open", activityScan{kind: "email", origin: "human", senderIsMachine: true}, false, ""},
+		{"a newsletter the reader may open", activityScan{kind: "email", origin: "human", bulkMailAttested: true}, true, crmcontracts.ActivityAutomaticKindBulk},
+		{"a newsletter the reader may not open", activityScan{kind: "email", origin: "human", bulkMailAttested: true}, false, ""},
 		{"the product's own mail, withheld", activityScan{kind: "email", origin: OriginSystemNotice}, false, crmcontracts.ActivityAutomaticKindProduct},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -557,5 +565,27 @@ func TestAutomaticKindFollowsTheContentAudience(t *testing.T) {
 				t.Fatalf("automatic_kind = %v, want %s", got, tc.want)
 			}
 		})
+	}
+}
+
+// automaticKindToWire converts without a check, so a kind the contract does
+// not list would reach a client as a value it cannot name.
+func TestEveryAutomaticKindIsAContractValue(t *testing.T) {
+	t.Parallel()
+	for _, kind := range relstrength.AutomaticKinds() {
+		if !crmcontracts.ActivityAutomaticKind(kind).Valid() {
+			t.Errorf("relstrength names %q, which automatic_kind in crm.yaml does not list", kind)
+		}
+	}
+}
+
+// A task says whether its due date has a time; the column's value reaches it.
+func TestATaskSaysWhetherItsDueDateHasATime(t *testing.T) {
+	for _, want := range []bool{true, false} {
+		scan := activityScan{contentAvailable: true, kind: "task", dueHasTime: want}
+		got := scan.record()
+		if got.DueHasTime == nil || *got.DueHasTime != want {
+			t.Errorf("a task scanned with due_has_time %t reads %v", want, got.DueHasTime)
+		}
 	}
 }

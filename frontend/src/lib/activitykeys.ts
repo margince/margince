@@ -50,6 +50,15 @@ export function entityTimelineKeys(
   if (derived) {
     keys.push(derived);
   }
+  if (entityType === "deal") {
+    keys.push(
+      dealKey(entityId),
+      ["deals"],
+      DEAL_COVERAGE_KEY,
+      ["company-coverage"],
+      ...EVERY_COMPANY_TIMELINE,
+    );
+  }
   return keys;
 }
 
@@ -82,6 +91,8 @@ const DERIVED_FROM_TIMELINE: Partial<
   deal: (id) => DEAL_STATUS_KEY(id),
 };
 
+const dealKey = (id: string): QueryKey => ["deal", id];
+
 const DEAL_STATUS_KEY = (id: string): QueryKey => ["deal-status", id];
 
 // A deal's outcome reviews hang off its CLOSING rather than off the deal, and
@@ -107,7 +118,7 @@ export const dealOutcomeReviewsKey = (dealId: string): QueryKey => [
 // the derived reads by using the helper rather than by remembering them.
 export function dealRecordKeys(dealId: string): QueryKey[] {
   return [
-    ["deal", dealId],
+    dealKey(dealId),
     dealOutcomeReviewsKey(dealId),
     ...derivedRecordKeys("deal", dealId),
   ];

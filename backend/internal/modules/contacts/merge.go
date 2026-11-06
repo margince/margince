@@ -195,6 +195,9 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
+	if err := s.bindRequestsToTheirAddressesTx(ctx, tx, sourceID, targetID); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
 	counts, err := relinkContactReferences(ctx, tx, sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err

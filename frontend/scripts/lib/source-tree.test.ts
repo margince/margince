@@ -384,10 +384,16 @@ describe("the one parser the source-wide gates share", () => {
     ];
     // The census must have read something, or an emptied corpus passes vacuously.
     expect(corpus.length).toBeGreaterThan(100);
-    // Spelled in two halves so this file does not name itself a parser.
-    const call = ["ts.createSourceFile", "("].join("");
+    // Spelled in two halves so this file does not name itself a parser. A
+    // program is a parser too: it parses every file it reads.
+    const calls = ["ts.createSourceFile", "ts.createProgram"].map((name) =>
+      [name, "("].join(""),
+    );
     const parsers = corpus
-      .filter((file) => readFileSync(file, "utf8").includes(call))
+      .filter((file) => {
+        const text = readFileSync(file, "utf8");
+        return calls.some((call) => text.includes(call));
+      })
       .map((file) => file.slice(frontendRoot.length + 1))
       .sort();
     expect(parsers).toEqual(["scripts/lib/source-tree.ts"]);

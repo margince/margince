@@ -378,7 +378,7 @@ func refuseWhenBothCarryProjects(ctx context.Context, tx pgx.Tx, sourceID, targe
 	// naming asks for the grant it actually needs, and a caller without it is
 	// still refused the merge — on counts, which say the work exists without
 	// saying whose it is or what it is called.
-	mayName := auth.Require(ctx, "project", principal.ActionRead) == nil
+	mayName := auth.Allows(ctx, "project", principal.ActionRead)
 
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

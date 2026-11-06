@@ -1,7 +1,7 @@
 import { countryBeyondCity } from "../format/address";
 import { formatDateAbbrev, formatMoney } from "../format/format";
 import { toMinorUnits } from "../format/minorunits";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import type { Locale, useT } from "../i18n";
 import {
   type CreateField,
@@ -18,7 +18,7 @@ export function dateDisplay(
   locale: Locale,
 ): string | undefined {
   return field.type === "date" && stored
-    ? formatDateAbbrev(stored, locale, viewerZone())
+    ? formatDateAbbrev(stored, locale, browserZone())
     : undefined;
 }
 

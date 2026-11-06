@@ -29,7 +29,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -220,7 +219,7 @@ func constFromPackage(t *testing.T, file *ast.File, selector *ast.SelectorExpr) 
 // catalogObjects is the distinct objects the catalog offers masks on.
 func catalogObjects(t *testing.T) []string {
 	t.Helper()
-	body, err := os.ReadFile(maskableCatalog)
+	body, err := gatekit.ReadFile(maskableCatalog)
 	if err != nil {
 		t.Fatalf("reading %s: %v", maskableCatalog, err)
 	}

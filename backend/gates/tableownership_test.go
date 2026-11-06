@@ -32,12 +32,12 @@ package gates
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -79,16 +79,11 @@ const jobsStoreDir = "internal/platform/jobs"
 // integration-tagged file can never reach a shipped binary, and its
 // seeding writes are the suites' own fixtures.
 func isIntegrationTagged(path string) bool {
-	f, err := os.Open(path) // #nosec G304 -- path is a *.go file from walking the trusted source tree
+	body, err := gatekit.ReadFile(path) // #nosec G304 -- path is a *.go file from walking the trusted source tree
 	if err != nil {
 		return false
 	}
-	defer func() {
-		if cerr := f.Close(); cerr != nil {
-			panic(cerr) // a leaked fd in a test helper is a bug, not a condition
-		}
-	}()
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(bytes.NewReader(body))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "//go:build integration" {
@@ -134,7 +129,7 @@ func stringConstsByPackage(t *testing.T, fset *token.FileSet, roots []string) ma
 	t.Helper()
 	consts := map[string]map[string]string{}
 	for _, root := range roots {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
@@ -254,7 +249,7 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 	roots := append([]string{"internal/modules", "internal/compose"}, platformStoreDirs(t)...)
 	consts := stringConstsByPackage(t, fset, roots)
 	for _, root := range roots {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") ||
 				isIntegrationTagged(path) {

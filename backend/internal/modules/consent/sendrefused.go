@@ -93,8 +93,9 @@ func (e *SendRefusedError) FaultReference() map[string]any {
 }
 
 // refusalReference is what a sender may read of each refused recipient. That
-// is the address, the reason, the category and whether a reason may lift it. The subject id stays off the wire, because the sender may not
-// be able to read that record.
+// is the address, the reason, the category the engine resolved, the category
+// the sender asked for, and whether a reason may lift it. The subject id stays
+// off the wire, because the sender may not be able to read that record.
 func refusalReference(refusals []RefusedRecipient) []map[string]any {
 	out := make([]map[string]any, 0, len(refusals))
 	for _, r := range refusals {
@@ -104,6 +105,9 @@ func refusalReference(refusals []RefusedRecipient) []map[string]any {
 		}
 		if r.Category != "" {
 			entry["category"] = r.Category
+		}
+		if r.RequestedCategory != "" {
+			entry["requested_category"] = r.RequestedCategory
 		}
 		out = append(out, entry)
 	}
