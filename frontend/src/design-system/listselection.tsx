@@ -94,7 +94,8 @@ export function useSelectAll<Row>({
   const limit = selection?.limit ?? Number.POSITIVE_INFINITY;
   const count = selection?.selected.size ?? 0;
   const canLoad = hasMore && onLoadMore !== undefined;
-  const holdsEnough = !canLoad || held.length >= limit;
+  // Distinct keys: a row read twice across pages must not end the walk early.
+  const holdsEnough = !canLoad || new Set(held.map(rowKey)).size >= limit;
   const complete = !canLoad && held.every(isSelected);
   const atLimit = count >= limit;
   // The walk ends once its ticks have landed or a read failed. Fewer rows than
