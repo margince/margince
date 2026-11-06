@@ -86,8 +86,10 @@ type promptTypeDecl struct {
 }
 
 func newMinorUnitSources(moduleRoot string, parse func(string) (*ast.File, error)) *minorUnitSources {
-	return &minorUnitSources{moduleRoot: moduleRoot, parse: parse, files: map[string][]*ast.File{},
-		types: map[promptTypeKey]promptTypeDecl{}, funcs: map[promptFuncKey]promptFuncDecl{}}
+	return &minorUnitSources{
+		moduleRoot: moduleRoot, parse: parse, files: map[string][]*ast.File{},
+		types: map[promptTypeKey]promptTypeDecl{}, funcs: map[promptFuncKey]promptFuncDecl{},
+	}
 }
 
 func (p *minorUnitSources) load(dir string) []*ast.File {
@@ -573,9 +575,11 @@ func TestThePromptMinorUnitDetectorSeesWhatItClaimsTo(t *testing.T) {
 	})
 	brief, money := filepath.Join(root, "internal/brief"), filepath.Join(root, "internal/money")
 	var want []string
-	for _, name := range []string{"Assigned.AssignedMinor", "Built.TaxMinor", "DealIn.AmountMinor", "Embedded.FeeMinor",
+	for _, name := range []string{
+		"Assigned.AssignedMinor", "Built.TaxMinor", "DealIn.AmountMinor", "Embedded.FeeMinor",
 		"Encoded.EncMinor", "Fielded.FieldedMinor", "Helper.ExtraMinor", "Indented.IndentMinor", "Input.Tagged",
-		"Made.CostMinor", "Passed.PassedMinor", "Variants.ByStageMinor", "Variants.DoubleMinor", "Variants.PriceMinor"} {
+		"Made.CostMinor", "Passed.PassedMinor", "Variants.ByStageMinor", "Variants.DoubleMinor", "Variants.PriceMinor",
+	} {
 		want = append(want, brief+"."+name)
 	}
 	want = append(want, filepath.Join(root, toolResultDir)+".Inner.NetMinor", money+".Line.TotalMinor", money+".Sum.SumMinor")

@@ -20,8 +20,8 @@ import (
 // WalkDir answer what their os and filepath namesakes answer. So a gate keeps
 // its own corpus and skip rules, and stops paying for the disk again.
 //
-// A path under the temp directory is never held: a fixture can change within
-// one tick of the file clock, so no stat can tell its two versions apart.
+// A path under the temp directory is never held. A fixture there can change
+// within one tick of the file clock, and no stat tells two such versions apart.
 
 // held is one version of one file, filled once by whichever caller asks first.
 type held[T any] struct {
@@ -119,7 +119,7 @@ func ReadFile(path string) ([]byte, error) {
 	}
 	body, err := entry.fill(func() (heldBody, error) {
 		body, readErr := os.ReadFile(path) // #nosec G304 -- see above
-		body = body[:len(body):len(body)]
+		body = slices.Clip(body)
 		return heldBody{bytes: body, sum: maphash.Bytes(bodySeed, body)}, readErr
 	})
 	return body.bytes, err
@@ -147,7 +147,7 @@ func WalkDir(root string, visit fs.WalkDirFunc) error {
 	if err != nil {
 		err = visit(root, nil, err)
 	} else {
-		err = walkDir(root, fs.FileInfoToDirEntry(info), visit)
+		err = walkEntry(root, fs.FileInfoToDirEntry(info), visit)
 	}
 	if errors.Is(err, fs.SkipDir) || errors.Is(err, fs.SkipAll) {
 		return nil
@@ -155,7 +155,7 @@ func WalkDir(root string, visit fs.WalkDirFunc) error {
 	return err
 }
 
-func walkDir(path string, entry fs.DirEntry, visit fs.WalkDirFunc) error {
+func walkEntry(path string, entry fs.DirEntry, visit fs.WalkDirFunc) error {
 	if err := visit(path, entry, nil); err != nil || !entry.IsDir() {
 		if errors.Is(err, fs.SkipDir) && entry.IsDir() {
 			return nil
@@ -173,7 +173,7 @@ func walkDir(path string, entry fs.DirEntry, visit fs.WalkDirFunc) error {
 		}
 	}
 	for _, child := range children {
-		if err := walkDir(filepath.Join(path, child.Name()), child, visit); err != nil {
+		if err := walkEntry(filepath.Join(path, child.Name()), child, visit); err != nil {
 			if errors.Is(err, fs.SkipDir) {
 				break
 			}
