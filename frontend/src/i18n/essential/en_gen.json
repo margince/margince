@@ -614,6 +614,7 @@
   "reporting.addRecord": "Add",
   "reporting.searchRecords": "Search records",
   "reporting.noMatchingRecords": "No matching records",
+  "reporting.typeToFindRecord": "Type a name to find one",
   "reporting.pickExplains": "Picking a deal does not enroll every contact at its company. A lead keeps its promotion history.",
   "reporting.memberCounts": "{leads} leads · {deals} deals · {companies} related companies",
   "reporting.membersTruncated": "The rule matches more records than one read lists.",
