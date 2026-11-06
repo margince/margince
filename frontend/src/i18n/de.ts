@@ -6226,6 +6226,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.selected_one": "{count} ausgewählt",
   "bulk.selected_other": "{count} ausgewählt",
   "bulk.selectRow": "{name} auswählen",
+  "bulk.selectPage": "Alle Zeilen dieser Seite auswählen",
+  "bulk.selectAll": "Alle auswählen",
+  "bulk.clearSelection": "Auswahl aufheben",
+  "bulk.selectionLimit_one":
+    "Eine Änderung umfasst höchstens {count} Datensatz, daher ist der erste ausgewählt.",
+  "bulk.selectionLimit_other":
+    "Eine Änderung umfasst höchstens {count} Datensätze, daher sind die ersten {count} ausgewählt.",
   "bulk.owner": "Neue Verantwortung",
   "bulk.ownerPick": "Verantwortung wählen",
   "bulk.assign": "Verantwortung zuweisen",
@@ -17907,18 +17914,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch nichts ausgew\u00e4hlt. F\u00fcge Datens\u00e4tze \u00fcber eine Datensatzseite oder eine Auswahl hinzu.",
   "lists.members.projects":
     "Projektlisten zeigen ihre Mitglieder in der Projektliste.",
-  "lists.members.selectAll_one": "{count} Mitglied auswählen",
-  "lists.members.selectAll_other": "Alle {count} Mitglieder auswählen",
-  "lists.members.selectionFullTitle": "Die Auswahl ist voll",
-  "lists.members.selectionFull_one":
-    "Eine Änderung kann höchstens {count} Mitglied umfassen. Hebe die Auswahl eines Mitglieds auf, um ein anderes auszuwählen.",
-  "lists.members.selectionFull_other":
-    "Eine Änderung kann höchstens {count} Mitglieder umfassen. Hebe die Auswahl eines Mitglieds auf, um ein anderes auszuwählen.",
-  "lists.members.selectAllCappedTitle": "Nicht alle Mitglieder ausgewählt",
-  "lists.members.selectAllCapped_one":
-    "Nur {count} Mitglied lässt sich auf einmal auswählen. Bearbeite dieses Mitglied und wähle dann den Rest aus.",
-  "lists.members.selectAllCapped_other":
-    "Nur die ersten {count} Mitglieder lassen sich auf einmal auswählen. Bearbeite diese Mitglieder und wähle dann den Rest aus.",
   "lists.history.title": "Was sich ge\u00e4ndert hat",
   "lists.history.empty": "Bisher hat sich nichts ge\u00e4ndert.",
   "lists.history.loading": "Verlauf wird geladen",

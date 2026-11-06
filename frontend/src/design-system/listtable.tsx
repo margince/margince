@@ -27,7 +27,7 @@ import {
 } from "./listtable.query";
 import { Pager } from "./pager";
 import "./listtable.css";
-import { SelectionBar } from "./selectionbar";
+import { ListBulkBar, useSelectAll } from "./listselection";
 
 export type {
   ListChip,
@@ -58,16 +58,6 @@ import { EmptyRow, GridBody, ListGrid } from "./listgrid";
 
 export type { ListColumn, ListSelection } from "./listcolumn";
 export { CellStrip } from "./listgrid";
-
-/** The bulk bar over the grid, while anything is selected. */
-function BulkBar<Row>({
-  selection,
-}: Readonly<{ selection?: ListSelection<Row> }>) {
-  if (!selection || selection.selected.size === 0) {
-    return null;
-  }
-  return <SelectionBar>{selection.bar}</SelectionBar>;
-}
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
@@ -370,6 +360,15 @@ export function ListTable<Row>({
     },
     scroller,
   );
+  const all = useSelectAll({
+    rows,
+    pageRows: paging.pageRows,
+    rowKey,
+    selection,
+    hasMore,
+    onLoadMore,
+    failed: problem != null,
+  });
   const frozen = useFrozenEdge(scroller, shown.length, display.dense);
   const displayDials = useDisplayRows({
     optional: placed.filter((column) => !column.fixed),
@@ -453,7 +452,7 @@ export function ListTable<Row>({
         </>
       }
     >
-      <BulkBar selection={selection} />
+      <ListBulkBar selection={selection} all={all} />
       {short && !problem && rows.length === 0 ? (
         <div className="lt-emptyline">
           <EmptyState>{emptyLine}</EmptyState>
@@ -477,6 +476,7 @@ export function ListTable<Row>({
           layout={layout}
           shown={shown}
           sort={sort}
+          all={all}
         >
           <GridBody
             rows={rows}
