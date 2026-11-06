@@ -27,10 +27,12 @@ import (
 )
 
 func TestARefileRetriesCommittedActivitiesWhenItsQueueTransactionIsLost(t *testing.T) {
-	f := newDealRefileFixture(t, 201)
+	f := newDealRefileFixture(t, refileTestPage+1)
+	f.page = refileTestPage
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
 	production := newCapturedDealRefileWorker(e.Pool)
+	production.page = f.page
 	if _, err := production.repairCohorts(principal.SystemActing(e.Admin(), dealRefileActor), []ids.UUID{f.contact}); err != nil {
 		t.Fatal(err)
 	}
@@ -54,11 +56,11 @@ func TestARefileRetriesCommittedActivitiesWhenItsQueueTransactionIsLost(t *testi
 	if result.EventKind != river.EventKindJobSnoozed {
 		t.Fatalf("first page ended as %s", result.EventKind)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != capture.DealRefileLimit {
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != f.page {
 		t.Fatalf("domain transactions committed %d links", got)
 	}
 	f.run(t, args)
-	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != 203 {
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != f.page+3 {
 		t.Fatalf("recovery left %d links", got)
 	}
 	before := e.WsCount(t, `SELECT count(*) FROM audit_log`)
