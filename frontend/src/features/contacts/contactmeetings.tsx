@@ -28,7 +28,8 @@ import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { useMe } from "../../lib/session";
-import { HeldMeetingsTable } from "./contactmeetings.held";
+import { MeetingFigures } from "./contactmeetings.figures";
+import { HeldMeetingsList } from "./contactmeetings.held";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
   type CopiedLink,
@@ -175,8 +176,19 @@ function heldState(
   return listed.isPending ? "loading" : "empty";
 }
 
+// A count only once it is the whole count: meetings still ahead can sit on a
+// page not read yet until the list has reached the past.
+function bookedCount(
+  upcoming: string,
+  complete: boolean,
+  booked: readonly unknown[],
+): number | null {
+  if (upcoming !== "ready" || !complete) return null;
+  return booked.filter(Boolean).length;
+}
+
 /**
- * ContactMeetingsTab reads as three panels: what is booked, what is still
+ * ContactMeetingsTab reads as its figures, then three panels: what is booked, what is still
  * waiting on the contact's answer, and what has already been held. The booked
  * meeting leads, from the server's own next-meeting read taken through this
  * contact's activity link rather than their account's — the company's answer
@@ -243,19 +255,23 @@ export function ContactMeetingsTab({
       {briefOf(activity)}
     </>
   );
+  const booked = bookedCount(upcoming, pastReached || !listed.hasNextPage, [
+    next,
+    ...ahead,
+  ]);
+  const figured = view && (upcoming === "ready" || upcoming === "empty");
   return (
     <div className="record-stack pe-meetings">
-      <Panel
-        title={t("contact.meetings.upcoming")}
-        titleAction={
-          // A count only once it is the whole count: meetings still ahead can
-          // sit on a page not read yet until the list has reached the past.
-          upcoming === "ready" &&
-          (pastReached || !listed.hasNextPage) && (
-            <Badge>{formatNumber((next ? 1 : 0) + ahead.length, locale)}</Badge>
-          )
-        }
-      >
+      <div className="pe-meetings-head">
+        {figured && (
+          <MeetingFigures
+            next={next}
+            booked={booked}
+            held={held}
+            heldMore={listed.hasNextPage}
+            asOf={view.as_of}
+          />
+        )}
         <MeetingsToolbar
           view={view}
           loading={loading}
@@ -263,6 +279,13 @@ export function ContactMeetingsTab({
           copied={copied}
           bookButton={bookButton}
         />
+      </div>
+      <Panel
+        title={t("contact.meetings.upcoming")}
+        titleAction={
+          booked !== null && <Badge>{formatNumber(booked, locale)}</Badge>
+        }
+      >
         {upcoming === "ready" ? (
           <>
             {view && next && (
@@ -310,7 +333,7 @@ export function ContactMeetingsTab({
         detail={{ onRetry: () => void listed.refetch() }}
         footer={listed.hasNextPage ? <LoadMoreButton query={listed} /> : null}
       >
-        {held.length > 0 && <HeldMeetingsTable held={held} verbs={heldVerbs} />}
+        {held.length > 0 && <HeldMeetingsList held={held} verbs={heldVerbs} />}
       </RailPanel>
     </div>
   );
@@ -396,7 +419,7 @@ function MeetingsToolbar({
   const t = useT();
   const bookingLink = useBookingLink(copied);
   return (
-    <PanelBody className="pe-meetings-toolbar">
+    <div className="pe-meetings-toolbar">
       <div className="pe-meetings-verbs">
         <BookMeeting
           view={view}
@@ -421,7 +444,7 @@ function MeetingsToolbar({
           <p className="pe-copy-url">{bookingLink.url}</p>
         </div>
       )}
-    </PanelBody>
+    </div>
   );
 }
 
