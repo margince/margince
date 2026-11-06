@@ -18,6 +18,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -444,5 +446,98 @@ func TestCorrectedSourceContentLeavesOneRowOfWork(t *testing.T) {
 		AND source_activity_id = $2`, activities.EmailRequestTaskSource, first)
 	if tasks != 1 {
 		t.Errorf("%d request tasks name the corrected message, want one", tasks)
+	}
+}
+
+// Later evidence renews a promise and the day keeps the one row it had.
+//
+// A renewal is an upsert on the commitment's own key. The admission moves its
+// evidence and its renewal instant rather than opening a second one.
+//
+// The work a reader sees derives from that admission, so a second row here
+// would be the same promise counted twice on one day.
+func TestRenewedEvidenceKeepsTheOnePromiseItRenews(t *testing.T) {
+	o := setupOwed(t)
+	readers := o.day(t)
+	o.contact(t, "Buyer", "buyer@customer.example")
+	first := o.capture(t, owedMail{
+		from: "buyer@customer.example", to: o.seat, subject: "Account plan for the rollout",
+		body: "Please send the account plan.", at: o.now.Add(-2 * time.Hour),
+		messageID: ids.NewV7().String() + "@customer.example",
+	})
+	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), first, "commitment"); err != nil {
+		t.Fatal(err)
+	}
+	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
+	before := rowIDs(o.page(readers.rep1, t, "mine", o.now))
+	if len(before) != 1 {
+		t.Fatalf("the first capture left %v on the day, want one promise", before)
+	}
+
+	// A later message in the same conversation, naming the same promise. The
+	// admission is keyed by the source and the locator, so this renews rather
+	// than admits.
+	renewal := o.capture(t, owedMail{
+		from: "buyer@customer.example", to: o.seat, subject: "Re: Account plan for the rollout",
+		body: "Still waiting on the account plan, end of next week is fine.", at: o.now.Add(-time.Hour),
+		messageID: ids.NewV7().String() + "@customer.example",
+	})
+	// The first admission, naming the mail it was read from. The owed worker
+	// files the request task; a commitment admission is a separate record, so
+	// a renewal has to have something to renew.
+	admit := func(evidence ids.UUID, at time.Time, renewedBy *crmcontracts.Id) {
+		id := crmcontracts.Id(evidence)
+		admission := crmcontracts.CommitmentAdmission{
+			Locator: "account-plan", Summary: "the account plan",
+			SourceQuote: "Please send the account plan.", CurrentWork: true,
+			RuleVersion: activities.CommitmentAdmissionVersion,
+			EvidenceIds: []crmcontracts.Id{id}, EvaluatedAt: at,
+			RenewedBy: renewedBy, RenewedAt: nil,
+			Meaning: &crmcontracts.CommitmentMeaning{State: "open", DeadlinePrecision: "none"},
+		}
+		if renewedBy != nil {
+			admission.RenewedAt = &at
+		}
+		if err := o.e.DB().Tx(o.judge(), func(tx pgx.Tx) error {
+			return activities.RecordCommitmentAdmissionTx(
+				o.judge(), tx, ids.From[ids.ActivityKind](first), admission)
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	admit(first, o.now.Add(-2*time.Hour), nil)
+	if held := o.e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission
+		WHERE source_activity_id = $1`, first); held != 1 {
+		t.Fatalf("%d admissions after the first, want one to renew", held)
+	}
+
+	renewedAt := o.now
+	renewedBy := crmcontracts.Id(renewal)
+	admission := crmcontracts.CommitmentAdmission{
+		Locator: "account-plan", Summary: "the account plan", SourceQuote: "Please send the account plan.",
+		CurrentWork: true, RuleVersion: activities.CommitmentAdmissionVersion,
+		EvidenceIds: []crmcontracts.Id{renewedBy}, EvaluatedAt: renewedAt,
+		RenewedBy: &renewedBy, RenewedAt: &renewedAt,
+		Meaning: &crmcontracts.CommitmentMeaning{State: "open", DeadlinePrecision: "none"},
+	}
+	if err := o.e.DB().Tx(o.judge(), func(tx pgx.Tx) error {
+		return activities.RecordCommitmentAdmissionTx(o.judge(), tx, ids.From[ids.ActivityKind](first), admission)
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	after := rowIDs(o.page(readers.rep1, t, "mine", o.now))
+	if !slices.Equal(after, before) {
+		t.Errorf("after the renewal the day holds %v, want the same one promise %v", after, before)
+	}
+	admissions := o.e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission
+		WHERE source_activity_id = $1`, first)
+	if admissions != 1 {
+		t.Errorf("%d admissions name the promise, want the one it renewed", admissions)
+	}
+	renewals := o.e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission
+		WHERE source_activity_id = $1 AND renewed_at IS NOT NULL AND renewed_by = $2`, first, renewal)
+	if renewals != 1 {
+		t.Errorf("the admission does not name %s as what renewed it", renewal)
 	}
 }
