@@ -202,12 +202,40 @@ describe("every response the web tier sends carries the whole security set", () 
           expect(own.get(name), "the views' own CSP").toBeDefined();
           continue;
         }
+        if (
+          name === "Cross-Origin-Opener-Policy" &&
+          where.pattern === "/consent"
+        ) {
+          expect(own.get(name), "the consent screen's own COOP").toBe(
+            "unsafe-none",
+          );
+          continue;
+        }
         expect(own.get(name), `${name} in location ${where.pattern}`).toBe(
           value,
         );
       }
     }
   });
+});
+
+// A client may open the consent screen in a popup and read the code back
+// through window.opener, which same-origin would cut.
+it("serves the consent screen as the shell, leaving a popup its opener", () => {
+  const server = headers(conf.slice(0, conf.search(/^\s*location\s/m)));
+  const where = locate("/consent");
+  expect(where.modifier).toBe("=");
+  expect(where.body).toContain("try_files /index.html =404;");
+  expect(headers(where.body).get("Cross-Origin-Opener-Policy")).toBe(
+    "unsafe-none",
+  );
+  for (const path of ["/", "/consent/", "/consentx", "/index.html"]) {
+    expect(
+      headers(locate(path).body).get("Cross-Origin-Opener-Policy") ??
+        server.get("Cross-Origin-Opener-Policy"),
+      path,
+    ).toBe("same-origin");
+  }
 });
 
 it("routes a record card to the public metadata endpoint rather than the static shell", () => {

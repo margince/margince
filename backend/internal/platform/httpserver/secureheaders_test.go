@@ -33,6 +33,26 @@ func TestSecureHeadersSetsTheWholeBrowserFacingSet(t *testing.T) {
 	}
 }
 
+// A client may open the authorization server in a popup and read the code back
+// through window.opener. same-origin on any page of the flow cuts that.
+func TestSecureHeadersLeaveTheOpenerToAnAuthorizationPopup(t *testing.T) {
+	h := SecureHeaders(http.NotFoundHandler())
+	for path, want := range map[string]string{
+		"/oauth/authorize":          OpenerPolicyPopup,
+		"/oauth/token":              OpenerPolicyPopup,
+		"/oauth":                    OpenerPolicyIsolated,
+		"/oauthorize":               OpenerPolicyIsolated,
+		"/v1/oauth/consent-request": OpenerPolicyIsolated,
+		"/":                         OpenerPolicyIsolated,
+	} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
+		if got := rec.Header().Get("Cross-Origin-Opener-Policy"); got != want {
+			t.Errorf("%s: Cross-Origin-Opener-Policy = %q, want %q", path, got, want)
+		}
+	}
+}
+
 // The policy denies what the app never asks for and allows only what it uses,
 // for this origin only.
 func TestPermissionsPolicyAllowsOnlyTheClipboardWriteTheAppUses(t *testing.T) {

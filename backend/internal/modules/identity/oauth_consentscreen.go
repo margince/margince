@@ -25,7 +25,11 @@ import (
 // It is relative on purpose. The SPA and this api share an origin — the SPA
 // reads its API base from location.origin — so naming a host here would add
 // configuration that could only ever disagree with reality.
-const ConsentScreenPath = "/#/oauth-consent"
+//
+// The route rides the fragment, but the screen has a path of its own. A client
+// may run the flow in a popup, so nginx serves this one document without
+// Cross-Origin-Opener-Policy same-origin. Only a path can mark it for nginx.
+const ConsentScreenPath = "/consent#/oauth-consent"
 
 // The screen's own vocabulary for a refusal it has to render. These are the
 // SPA's words, not RFC 6749's: no client ever sees them, and the screen turns
