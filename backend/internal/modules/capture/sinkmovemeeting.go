@@ -145,10 +145,27 @@ func (s *Sink) moveOnReplay(
 	return err
 }
 
-// settleMeetingReplay is what a proven replay of a meeting still owes the row:
-// its current identity, its guests and its current start. Only a replay of this
-// calendar's own key moves it. A row reached through the cross-door identity is
-// another door's filing, and a second calendar on the old time would move it back.
+// replayIncumbent is assertedIncumbent for the row a capture replays onto. A
+// meeting's replay settles its guests and start under the row lock, so it takes
+// that lock first. Taken after its own import row shares the row, the lock would
+// wait on a colleague's import of the meeting. That import's recompute waits here.
+// A restricted meeting takes none of those writes, so it is not locked.
+func replayIncumbent(ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields) (string, bool, error) {
+	if fields.Kind == meetingKind {
+		var locked ids.ActivityID
+		err := tx.QueryRow(ctx,
+			`SELECT id FROM activity WHERE id = $1 AND restricted_at IS NULL FOR UPDATE`, id).Scan(&locked)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return "", false, fmt.Errorf("capture: locking the meeting a replay settles: %w", err)
+		}
+	}
+	return assertedIncumbent(ctx, tx, id)
+}
+
+// settleMeetingReplay is what a proven replay of a meeting still owes the row.
+// That is its identity, guests, documents, current start and host. Only a replay of this calendar's own key moves it. A row reached through
+// the cross-door identity is another door's filing. A second calendar on the old
+// time would move it back. Either replay may hand the host to the organizer.
 func (s *Sink) settleMeetingReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {
@@ -158,10 +175,14 @@ func (s *Sink) settleMeetingReplay(
 	if err := s.stampLaterGuests(ctx, tx, id, rec); err != nil {
 		return err
 	}
+	if err := s.recordMeetingDocuments(ctx, tx, id, rec, true); err != nil {
+		return err
+	}
 	if err := s.moveOnReplay(ctx, tx, id, rec, viaIdentity); err != nil {
 		return err
 	}
-	if s.keepMeetingHost == nil {
+	fields, isActivity := rec.Fields.(ActivityFields)
+	if s.keepMeetingHost == nil || !isActivity || fields.Kind != meetingKind {
 		return nil
 	}
 	return s.keepMeetingHost(ctx, tx, id)

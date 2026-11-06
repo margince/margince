@@ -476,8 +476,8 @@ func ParticipantListAttested(rec connector.NormalizedRecord) bool {
 //
 // It records WHOSE CALENDAR the row came from, not who organized the meeting.
 // An attendee's own connector captures an event somebody else called. A later
-// replay hands the row to its organizer (activities.ClaimOrganizerHostTx). The
-// brief lanes read it to say whose meeting a row is. No read is granted from it
+// replay or duplicate fold may move the row to its organizer when they qualify
+// (Store.ClaimOrganizerHostTx in activities). The brief lanes read it to say whose meeting a row is. No read is granted from it
 // alone: "this came off your calendar" is ownership, not membership.
 func meetingHostUserID(ctx context.Context, kind string) *ids.UUID {
 	if kind != meetingKind {

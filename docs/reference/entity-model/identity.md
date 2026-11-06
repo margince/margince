@@ -6,11 +6,14 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-34 columns · primary key `(id)` · referenced by 152 foreign keys
+39 columns · primary key `(id)` · referenced by 153 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `avatar_object_key` | `text` |  |  |
+| `avatar_origin` | `text` |  | One of `upload`, `google`. |
+| `avatar_removed_at` | `timestamp with time zone` |  |  |
 | `combine_routine_email` | `boolean` |  |  |
 | `delivery_hour_local` | `integer` |  |  |
 | `display_name` | `text` | yes |  |
@@ -36,6 +39,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `service_extension` | `text` |  |  |
 | `status` | `text`, default `'active'::text` | yes | One of `invited`, `active`, `suspended`, `deactivated`. |
 | `timezone` | `text` |  |  |
+| `timezone_chosen` | `boolean`, default `false` | yes |  |
+| `timezone_set_by` | `text` |  |  |
 | `weekly_delivery` | `text` |  |  |
 | `weekly_delivery_day` | `integer` |  |  |
 | `work_days` | `smallint[]` |  |  |
@@ -56,6 +61,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `app_user_agent_is_full`: `CHECK (((NOT is_agent) OR (seat_type = 'full')))`
 - `app_user_agent_never_forced`: `CHECK ((NOT (is_agent AND must_change_password)))`
+- `app_user_avatar_names_its_origin`: `CHECK (((avatar_object_key IS NULL) = (avatar_origin IS NULL)))`
+- `app_user_avatar_origin_check`: `CHECK ((avatar_origin = ANY (ARRAY['upload', 'google'])))`
 - `app_user_delivery_hour_check`: `CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))`
 - `app_user_does_not_merge_into_itself`: `CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))`
 - `app_user_failed_login_count_check`: `CHECK ((failed_login_count >= 0))`
@@ -95,12 +102,15 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## auth_token
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `expires_at` | `timestamp with time zone` | yes |  |
+| `mail_failed_at` | `timestamp with time zone` |  |  |
+| `mail_queued_at` | `timestamp with time zone` |  |  |
+| `mail_sent_at` | `timestamp with time zone` |  |  |
 | `purpose` | `text` | yes | One of `password_reset`, `email_verify`, `invite`. |
 | `token_hash` | `text` | yes |  |
 | `used_at` | `timestamp with time zone` |  |  |
@@ -415,7 +425,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## passport
 
-11 columns · primary key `(id)` · referenced by 8 foreign keys
+11 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

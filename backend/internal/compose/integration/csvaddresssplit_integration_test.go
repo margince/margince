@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 type importedAddressDTO struct {
@@ -52,8 +53,8 @@ func TestCSVImportSplitsAWholeAddressMappedToLineOne(t *testing.T) {
 	const file = "Company,Address\n" +
 		`Splitwerk GmbH,"Example Street 4, 12345 Example City, Germany"` + "\n" +
 		"Loosewerk GmbH,Somewhere near the river\n"
-	profile, _ := uploadCSV(t, e, "company", file)
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "Address": "address.line1"})
 
 	report := readImportReport(t, e, run.ID)
@@ -85,8 +86,8 @@ func TestCSVImportSplitsAWholeAddressMappedToLineOne(t *testing.T) {
 func TestCSVImportKeepsLineOneAsWrittenWhenTheCityIsMapped(t *testing.T) {
 	e := setupImportApp(t)
 	const file = "Company,Street,City\n" + `Mapwerk GmbH,"Example Street 4, 12345 Example City",Example City` + "\n"
-	profile, _ := uploadCSV(t, e, "company", file)
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "Street": "address.line1", "City": "address.city"})
 	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
@@ -100,8 +101,8 @@ func TestCSVUpdateWithASplitLineOneClearsTheStaleParts(t *testing.T) {
 	e := setupImportApp(t)
 	const full = "Company,Street,Suite,Region,Postal,City,Country\n" +
 		"Movewerk GmbH,Old Road 2,Old Suite,CA,94043,Mountain View,US\n"
-	p1, _ := uploadCSV(t, e, "company", full)
-	r1, _ := createRunWithMapping(t, e, "company", p1.SourceRef, map[string]string{
+	p1, _ := importjobtest.UploadCSV(t, e, "company", full)
+	r1, _ := importjobtest.CreateRunWithMapping(t, e, "company", p1.SourceRef, map[string]string{
 		"Company": "display_name", "Street": "address.line1", "Suite": "address.line2", "Region": "address.region",
 		"Postal": "address.postal_code", "City": "address.city", "Country": "address.country",
 	})
@@ -109,8 +110,8 @@ func TestCSVUpdateWithASplitLineOneClearsTheStaleParts(t *testing.T) {
 		t.Fatalf("approve 1 → %d, want 202", status)
 	}
 	const moved = "Company,Address\n" + `Movewerk GmbH,"Neue Straße 1, 10115 Berlin, Germany"` + "\n"
-	p2, _ := uploadCSV(t, e, "company", moved)
-	r2, _ := createRunWithMapping(t, e, "company", p2.SourceRef, map[string]string{"Company": "display_name", "Address": "address.line1"})
+	p2, _ := importjobtest.UploadCSV(t, e, "company", moved)
+	r2, _ := importjobtest.CreateRunWithMapping(t, e, "company", p2.SourceRef, map[string]string{"Company": "display_name", "Address": "address.line1"})
 	if status := importCall(t, e, r2.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve 2 → %d, want 202", status)
 	}

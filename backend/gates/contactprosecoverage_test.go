@@ -6,7 +6,6 @@
 package gates
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -71,7 +70,7 @@ var (
 // key AND carry a column prose can be stored in.
 func contactProseTables(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

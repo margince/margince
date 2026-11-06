@@ -12,22 +12,23 @@ import { EvidenceReceipt } from "../../design-system/evidencereceipt";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
 import {
+  formatAnalyticsNumber,
   formatDateTime,
   formatDayRange,
-  formatNumber,
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import {
   currentParams,
   replaceDial,
   replaceParams,
   useUrlParams,
 } from "../../lib/urlstate";
+import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
-import { ForecastAnswer } from "./analytics.forecast.answer";
+import { ForecastAnswer, ForecastLanding } from "./analytics.forecast.answer";
 import { ForecastCallEditor } from "./analytics.forecast.calleditor";
 import { ForecastDeals, openForecastDeals } from "./analytics.forecast.deals";
 import { forecastFit, periodDial } from "./analytics.forecast.fit";
@@ -102,6 +103,8 @@ export function ForecastView({
           nested among them would read as filtering one. */}
       <FilterBar
         label={t("analytics.filters")}
+        quiet
+        labels="inside"
         actions={
           canCall && !editing ? (
             <Button onClick={() => setEditing(true)}>
@@ -138,61 +141,88 @@ export function ForecastView({
               />
             ) : null}
             {emptyNotice?.(data.scope_holds_deals)}
-            <ForecastAnswer
-              readings={data}
-              locale={locale}
-              period={period}
-              onOpenDeals={openForecastDeals}
+            <AnalyticsBoard
+              railLabel={t("analytics.board.rail")}
+              main={
+                <AnalyticsSheet>
+                  <ForecastAnswer
+                    readings={data}
+                    locale={locale}
+                    period={period}
+                    landing={false}
+                    density="plate"
+                    onOpenDeals={openForecastDeals}
+                  />
+                  {/* What to check comes before the deals and charts: a
+                      manager with ten minutes reads what needs doing first. */}
+                  <CallEditorProvider
+                    editor={
+                      canCall
+                        ? {
+                            open: () => setEditing(true),
+                            scope: writableScope(selection.scope) ?? {
+                              scope_kind: "",
+                            },
+                            periodStart: data.period_start ?? "",
+                          }
+                        : null
+                    }
+                  >
+                    <ForecastReview scope={selection.scope} />
+                  </CallEditorProvider>
+                  <ForecastDeals scope={selection.scope} period={period} />
+                  {period === "quarter" && (
+                    <ReportingForecastGraphs scope={selection.scope} inSheet />
+                  )}
+                </AnalyticsSheet>
+              }
+              rail={
+                <>
+                  <ForecastLanding
+                    readings={data}
+                    locale={locale}
+                    period={period}
+                    density="plate"
+                    title={t("forecast.landingSection")}
+                    onOpenDeals={openForecastDeals}
+                  />
+                  <EvidenceReceipt
+                    title={t("forecast.receipt")}
+                    counts={[
+                      {
+                        key: "eligible",
+                        term: t("forecast.eligible"),
+                        value: formatAnalyticsNumber(
+                          data.eligible_count,
+                          locale,
+                        ),
+                      },
+                      {
+                        key: "priced",
+                        term: t("forecast.priced"),
+                        value: formatAnalyticsNumber(data.priced_count, locale),
+                      },
+                      {
+                        key: "confirmed",
+                        term: t("forecast.confirmed"),
+                        value: formatAnalyticsNumber(
+                          data.confirmed_date_count,
+                          locale,
+                        ),
+                      },
+                      {
+                        key: "fx",
+                        term: t("forecast.fxMissing"),
+                        value: formatAnalyticsNumber(
+                          data.fx_missing_count,
+                          locale,
+                        ),
+                      },
+                    ]}
+                  />
+                </>
+              }
             />
-            <ForecastDeals scope={selection.scope} period={period} />
-            {period === "quarter" && (
-              <ReportingForecastGraphs scope={selection.scope} />
-            )}
-            {/* What to check comes first: a manager with ten minutes reads what
-                needs doing, and reads the receipt beside it when a number looks
-                wrong. */}
-            <div className="analytics-pair">
-              <CallEditorProvider
-                editor={
-                  canCall
-                    ? {
-                        open: () => setEditing(true),
-                        scope: writableScope(selection.scope) ?? {
-                          scope_kind: "",
-                        },
-                        periodStart: data.period_start ?? "",
-                      }
-                    : null
-                }
-              >
-                <ForecastReview scope={selection.scope} />
-              </CallEditorProvider>
-              <EvidenceReceipt
-                title={t("forecast.receipt")}
-                counts={[
-                  {
-                    key: "eligible",
-                    term: t("forecast.eligible"),
-                    value: formatNumber(data.eligible_count, locale),
-                  },
-                  {
-                    key: "priced",
-                    term: t("forecast.priced"),
-                    value: formatNumber(data.priced_count, locale),
-                  },
-                  {
-                    key: "confirmed",
-                    term: t("forecast.confirmed"),
-                    value: formatNumber(data.confirmed_date_count, locale),
-                  },
-                  {
-                    key: "fx",
-                    term: t("forecast.fxMissing"),
-                    value: formatNumber(data.fx_missing_count, locale),
-                  },
-                ]}
-              />
-            </div>
           </>
         )}
       </QueryGate>
@@ -273,7 +303,7 @@ function forecastPeriod(
 export function SharedForecastView({ token }: Readonly<{ token: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const query = useQuery({
     queryKey: ["shared-forecast", token],
     queryFn: async () => {

@@ -26,8 +26,8 @@ import { Select } from "../../design-system/select";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 
 export type SalesDecision = components["schemas"]["SalesDecision"];
 type DecisionInput = components["schemas"]["SalesDecisionInput"];
@@ -56,19 +56,31 @@ export function useSalesDecisions(dealId?: string) {
 export function DecisionsPanel() {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const decisions = useSalesDecisions();
   const canRecord = useCanWrite("activity", "create");
   const canClose = useCanWrite("activity", "update");
   const [recording, setRecording] = useState(false);
   const [closing, setClosing] = useState<SalesDecision | null>(null);
-  if (!decisions.isError && !decisions.data?.length && !recording)
+  // Before the first decision the panel is one line and its step, so the
+  // rail holds a card rather than a loose button.
+  if (decisions.isSuccess && decisions.data.length === 0 && !recording)
     return canRecord ? (
-      <div className="actions">
-        <Button variant="ghost" onClick={() => setRecording(true)}>
-          {t("analytics.decisions.record")}
-        </Button>
-      </div>
+      <Panel
+        title={t("analytics.decisions.title")}
+        flatHead
+        className="analytics-decision-start"
+        actions={
+          <>
+            <p className="t-caption">{t("analytics.decisions.none")}</p>
+            <Button variant="primary" onClick={() => setRecording(true)}>
+              {t("analytics.decisions.record")}
+            </Button>
+          </>
+        }
+      >
+        {null}
+      </Panel>
     ) : null;
   return (
     <Panel

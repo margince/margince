@@ -77,7 +77,7 @@ func (s *Store) SetAnchorCompanyLogo(ctx context.Context, slot LogoSlot, objectK
 		}
 		return recordLogoWrite(ctx, tx, companyID, slot, logoWrite{
 			previousOrigin: previousOrigin, origin: &named,
-			source: CompanySourceHuman, by: by,
+			source: companyAuthorSource(ctx), by: by,
 		})
 	})
 	if err != nil {
@@ -121,7 +121,7 @@ func (s *Store) ClearCompanyLogo(ctx context.Context, slot LogoSlot) (superseded
 			return err
 		}
 		return recordLogoWrite(ctx, tx, companyID, slot, logoWrite{
-			previousOrigin: previousOrigin, source: CompanySourceHuman, by: by,
+			previousOrigin: previousOrigin, source: companyAuthorSource(ctx), by: by,
 		})
 	})
 	if err != nil {

@@ -80,6 +80,7 @@ export function useDealEdit(
       attributedPartner: attributedPartner(deal, partnerName),
       currentCompany,
       masked,
+      closed: deal.status === "won" || deal.status === "lost",
       me: meId,
       currentOwner: deal.owner_id ?? null,
       currency: deal.currency ?? "",

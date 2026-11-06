@@ -184,7 +184,7 @@ func TestNoMergeGateTestDecidesByTheClock(t *testing.T) {
 	// silence as a clean one, and silence is the one answer a census may not
 	// give.
 	swept := 0
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() || !strings.HasSuffix(path, "_test.go") {
 			return walkErr
 		}

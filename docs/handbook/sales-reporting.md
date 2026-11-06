@@ -49,7 +49,6 @@ With the time span set to this quarter, **This quarter against its target** sits
 - **Gap to target** is the target minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
 - **Left to win** is the target minus sales won so far, and never below zero.
 - **Coverage, deals closing this quarter** is the open value eligible to close this quarter, over what is left to win. It is not all open pipeline, which also holds deals expected later.
-- **Coverage, qualified deals** counts only the deals the qualified forecast keeps; see [Deals the customer still supports](deals-the-customer-supports.md). While the qualified forecast is off, it says **Not switched on**.
 
 When nothing is left to win, the panel says **Target reached** and shows no coverage. When it cannot compare, it says why:
 
@@ -143,7 +142,9 @@ A forecast link can share a live view or a stored capture. The user who gets it 
 
 **Quarter outlook** explains the measured figures in connected paragraphs. **View supporting records** opens the evidence, and **Refresh assessment** asks again. A suggested decision can fill in the deal and owner when you choose **Record decision**.
 
-The figures and actions remain available without AI text. **My prospecting** puts work and booked meetings before the text. **Team prospecting** puts team results and work before the text. See [Analytics](analytics.md) for qualification credit and the team readings.
+Amounts in Analytics use grouped whole currency units. The ≈ mark means the value was rounded. An amount below one unit keeps its sign and shows <1. Exports keep the exact amount.
+
+The figures and actions remain available without AI text. Actions for quarter deals without amounts or exchange rates open those deals. **My prospecting** puts work and booked meetings before the text. **Team prospecting** puts team results and work before the text. See [Analytics](analytics.md) for qualification credit and the team readings.
 
 ## Can I describe a report or an initiative in words?
 

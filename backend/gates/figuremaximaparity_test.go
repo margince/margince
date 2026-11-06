@@ -16,7 +16,6 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
-	"os"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -41,7 +40,7 @@ var priceMaxima = []figureMaximum{
 func TestAPriceMaximumTheCodeAppliesIsTheContractsOrIsRecordedAsUnstated(t *testing.T) {
 	t.Parallel()
 
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

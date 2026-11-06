@@ -93,7 +93,7 @@ func collectDealActivityLists(ctx context.Context, tx pgx.Tx, rows pgx.Rows, col
 		return nil, err
 	}
 	rows.Close()
-	if err := finishActivityList(ctx, tx, columns, unique, asOf); err != nil {
+	if err := FinishActivityRows(ctx, tx, columns, unique, asOf); err != nil {
 		return nil, err
 	}
 	out := make(map[ids.UUID]DealActivityList, len(byDeal))

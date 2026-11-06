@@ -2,8 +2,9 @@ import "./reporting.css";
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { cohortOutcomeLabel } from "./reporting.cohort";
 import { EvidenceFrame } from "./reporting.evidenceframe";
@@ -57,9 +58,10 @@ export function ReportingEvidenceDrawer({
         evaluation.context.timezone,
       )
     : t("reporting.currentPipeline");
+  const heading = evidenceHeading(evaluation, reference, metricName, t);
   return (
     <EvidenceFrame
-      title={metricName(reference.metric)}
+      title={heading.title}
       onClose={onClose}
       lines={[
         evaluation.context.scope.label +
@@ -67,7 +69,7 @@ export function ReportingEvidenceDrawer({
             ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : breakdownLabel(point.key, point.label, t)}`
             : "") +
           (outcome
-            ? ` · ${cohortOutcomeLabel(outcome, t)} · ${formatNumber(outcome.count, locale)}`
+            ? ` · ${cohortOutcomeLabel(outcome, t)} · ${formatAnalyticsNumber(outcome.count, locale)}`
             : ""),
         interval
           ? reportingPeriodLabel(
@@ -89,11 +91,11 @@ export function ReportingEvidenceDrawer({
         ),
       ]}
     >
-      <p>
-        {editionId && definition && metric?.version !== definition.version
-          ? t("reporting.earlierDefinition")
-          : definition?.definition}
-      </p>
+      <EvidenceDefinition
+        editionId={editionId}
+        version={metric?.version}
+        definition={definition}
+      />
       {selected.coverage && selected.coverage.status !== "ok" && (
         <p className="t-caption">
           {t(`reporting.status.${selected.coverage.status}`)}
@@ -110,6 +112,7 @@ export function ReportingEvidenceDrawer({
           zero={state === "zero"}
           unit={selected.metric?.unit ?? definition?.unit ?? "count"}
           selectedValue={selected.selectedValue}
+          knownTotal={heading.total}
           onClose={onClose}
         />
       )}
@@ -202,6 +205,9 @@ function evidenceSelection(
       : undefined);
   const interval =
     chart?.interval ??
+    (reference.context_id.startsWith("forecast_")
+      ? evaluation.context.close_interval
+      : undefined) ??
     (reference.context_id === "target"
       ? evaluation.context.target_interval
       : reference.context_id === "state"
@@ -227,4 +233,50 @@ function selectedCoverage(
   if (metric?.evidence.context_id === reference.context_id)
     return metric.coverage;
   return chart?.coverage ?? metric?.coverage;
+}
+
+function EvidenceDefinition({
+  editionId,
+  version,
+  definition,
+}: Readonly<{
+  editionId: string | undefined;
+  version: string | undefined;
+  definition: components["schemas"]["ReportingMetricDefinition"] | undefined;
+}>) {
+  const t = useT();
+  if (editionId && definition && version !== definition.version)
+    return <p>{t("reporting.earlierDefinition")}</p>;
+  return (
+    <Disclosure summary={t("reporting.definitions")}>
+      <p>{definition?.definition}</p>
+    </Disclosure>
+  );
+}
+
+function evidenceHeading(
+  evaluation: ReportingEvaluation,
+  reference: ReportingEvidenceRef,
+  name: ReturnType<typeof useMetricNames>,
+  t: ReturnType<typeof useT>,
+) {
+  const action = evaluation.overview_actions?.find(
+    (action) =>
+      action.evidence.metric === reference.metric &&
+      action.evidence.context_id === reference.context_id &&
+      action.evidence.group_key === reference.group_key &&
+      action.evidence.through === reference.through,
+  );
+  const period = reference.context_id === "forecast_period_deals";
+  return {
+    title: period
+      ? t("analytics.outlook.periodPipeline")
+      : (action?.label ?? name(reference.metric)),
+    total:
+      action?.count ??
+      (period
+        ? evaluation.metrics.find((metric) => metric.id === reference.metric)
+            ?.forecast_basis?.open_count
+        : undefined),
+  };
 }

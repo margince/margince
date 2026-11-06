@@ -17,7 +17,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-func changedScheduledContext(ctx context.Context, tx pgx.Tx, in SendEmailInput, created time.Time) (string, error) {
+func changedScheduledContext(ctx context.Context, tx pgx.Tx, in SendEmailInput, anchor ids.UUID, created time.Time) (string, error) {
+	replied, err := pursuitPausedByReply(ctx, tx, in, anchor, created)
+	if err != nil {
+		return "", err
+	}
+	if replied {
+		return HeldRecipientReplied, nil
+	}
 	if in.Context != commsauthz.CategoryRequestedFollowup || in.Evidence.ActivityID.IsZero() {
 		return "", nil
 	}
@@ -31,7 +38,13 @@ func changedScheduledContext(ctx context.Context, tx pgx.Tx, in SendEmailInput, 
 	if reason := changedFollowup(source, created); reason != "" {
 		return reason, nil
 	}
-	settlement, err := settlementImage(ctx, tx, in.Evidence.ActivityID)
+	return settledAfterScheduling(ctx, tx, in.Evidence.ActivityID, created)
+}
+
+// settledAfterScheduling answers HeldFollowupSettled when the request's
+// settlement rests on an answer that arrived after the mail was scheduled.
+func settledAfterScheduling(ctx context.Context, tx pgx.Tx, request ids.UUID, created time.Time) (string, error) {
+	settlement, err := settlementImage(ctx, tx, request)
 	if err != nil || settlement == nil {
 		return "", err
 	}

@@ -24,10 +24,11 @@ package gates
 // on both sides.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // authWait names each bound and where it is declared.
@@ -41,7 +42,7 @@ func TestEveryFetchAnAuthenticationWaitsOnHasTheSameBound(t *testing.T) {
 
 	found := map[string]string{}
 	for name, where := range authWait {
-		raw, err := os.ReadFile(filepath.Join(repoRoot, where.file))
+		raw, err := gatekit.ReadFile(filepath.Join(repoRoot, where.file))
 		if err != nil {
 			t.Fatalf("reading %s: %v", where.file, err)
 		}

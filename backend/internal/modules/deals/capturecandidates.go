@@ -44,6 +44,20 @@ func (s *Store) OpenDealsOfCompany(ctx context.Context, tx pgx.Tx, companyID ids
 		ORDER BY d.id LIMIT 2`, companyID)
 }
 
+// IsOpenDealOfCompanies answers whether deal is an open deal of one of the
+// companies. A seat without the deal read grant learns no deal.
+func (s *Store) IsOpenDealOfCompanies(ctx context.Context, tx pgx.Tx, deal ids.UUID, companies []ids.UUID) (bool, error) {
+	if denied, err := candidateReadDenied(ctx); denied || err != nil {
+		return false, err
+	}
+	var open bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal d
+		 WHERE d.id = $1 AND d.company_id = ANY($2) AND `+openDealSQL+`)`, deal, companies).Scan(&open); err != nil {
+		return false, fmt.Errorf("deals: checking the chosen deal of a logged activity: %w", err)
+	}
+	return open, nil
+}
+
 // OpenDealsWithStakeholders answers up to two open deals of one company on
 // which one of contacts is a live stakeholder. A caller without the edge grant
 // learns no stakeholder and gets none.

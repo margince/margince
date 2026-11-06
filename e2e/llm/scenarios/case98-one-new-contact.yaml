@@ -1,0 +1,31 @@
+# CASE 98 — Near neighbour of case97. A contact described in words is an ordinary new contact, with no file to import.
+name: case98_one_new_contact
+criteria: [1]
+writes: true
+
+prompt: |
+  Add a new contact please: Tom Hagen, tom.hagen@hagen-werke.test, purchasing lead at Hagen Werke.
+
+must_call:
+  - create_record
+
+must_call_with:
+  - create_record.record_type=contact
+
+must_call_matching:
+  - 'create_record~"(?:full_name|first_name)": "Tom'
+  - 'create_record~tom\.hagen@hagen-werke\.test'
+  - 'create_record~purchasing'
+  - 'create_record~hagen werke'
+
+must_not_call_with:
+  - change_capture~import_vcards
+
+may_call:
+  - find_records
+  - search_records
+  - read_workspace
+  - whoami
+
+runs: 3
+pass_at: 2

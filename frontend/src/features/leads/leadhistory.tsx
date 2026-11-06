@@ -22,7 +22,7 @@ import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
 import { leadKey } from "../../lib/leadkeys";
 import { invalidateRecord } from "../../lib/recordwritekeys";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { RecordHistoryTab, useFieldHistory } from "../records/history";
 import {
   ChronologyFooter,
@@ -74,7 +74,7 @@ export function LeadHistoryTab({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const [filter, setFilter] = useChronologyFilter(lead.id);
   const [filters, setFilters] = useTimelineFilters(lead.id);
   // Older pages and every narrowed read come from the activity list itself —
@@ -92,7 +92,7 @@ export function LeadHistoryTab({
     loadMore: timeline,
     // A lead holds no money of its own: the currency is absent and a
     // minor-unit column says so rather than printing a bare integer.
-    values: { currency: null, locale, zone: recordZone },
+    values: { currency: null, locale, zone: readerZone },
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}
@@ -149,7 +149,7 @@ export function LeadHistoryTab({
                   chronology.entries,
                   timeline.hasNextPage,
                 )}
-                zone={recordZone}
+                zone={readerZone}
               />
             )}
           </div>

@@ -4,14 +4,14 @@
 import type { components } from "../../api/schema";
 import { DataTable } from "../../design-system/datatable";
 import { QueryGate } from "../../design-system/querystates";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
   type HandoffScope,
   MoreRows,
   useHandoffPages,
-  WaitingRow,
-} from "./analytics.outcomes.sdr";
+} from "./analytics.outcomes.handoffpages";
+import { WaitingRow } from "./analytics.outcomes.sdr";
 import { EvidenceFrame } from "./reporting.evidenceframe";
 import { reportingPeriodLabel } from "./reporting.model";
 
@@ -61,7 +61,7 @@ export function ReasonsDrawer({
             zone,
             locale,
           ),
-          total: formatNumber(total, locale),
+          total: formatAnalyticsNumber(total, locale),
         }),
       ]}
       onClose={onClose}
@@ -82,7 +82,7 @@ export function ReasonsDrawer({
             key: "count",
             header: t("analytics.team.count"),
             align: "end",
-            render: (reason) => formatNumber(reason.count, locale),
+            render: (reason) => formatAnalyticsNumber(reason.count, locale),
           },
         ]}
       />

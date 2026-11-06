@@ -74,6 +74,8 @@ type OpenCommitment struct {
 	Quote   string
 	Subject string
 	DueAt   *time.Time
+	// DueHasTime is true when DueAt names a time of day; a claim never does.
+	DueHasTime bool
 	// FiledAt is when the promise was made: a task's creation, a claim's
 	// message. It breaks ties between two promises sharing a deadline, so the
 	// answer does not depend on which source a seam happened to read first.
@@ -101,7 +103,9 @@ const (
 // handed states without the instant cannot tell a stale answer from a fresh
 // one, and "overdue" is a claim that is only true relative to a moment.
 type CommitmentSweep struct {
-	AsOf        time.Time
+	AsOf time.Time
+	// TimeZone is the installation's zone, where a due date is a day.
+	TimeZone    string
 	Commitments []OpenCommitment
 	Truncated   bool
 }
@@ -131,12 +135,10 @@ func RegisterCommitmentTool(r *Registry, list CommitmentLister) {
 
 // The states one promise can be in, and the whole vocabulary of them.
 //
-// THERE IS NO "DUE TODAY". A calendar day is a claim that needs a timezone,
-// and this build stores none — not on the workspace, not on the user — so a
-// bucket named for one would be UTC's day wearing the reader's name. The
-// three states below need no calendar: a promise either has no date, has
-// passed its date, or has not. The exact due date rides alongside for a
-// reader who has a timezone of their own.
+// THERE IS NO "DUE TODAY". The three states below need no calendar: a
+// promise either has no date, has passed its date, or has not. The exact due
+// date rides alongside, with the installation's time_zone for a reader who
+// prints it as a day.
 const (
 	commitmentUndated  = "undated"
 	commitmentOverdue  = "overdue"
@@ -217,7 +219,7 @@ func (t reviewCommitments) Handle(ctx context.Context, in json.RawMessage) (json
 	if sweep.Truncated {
 		noteWarning(ctx, warningSweepTruncated, commitmentsTruncatedMessage)
 	}
-	return json.Marshal(ReviewCommitmentsResult{AsOf: sweep.AsOf, Commitments: items})
+	return json.Marshal(ReviewCommitmentsResult{AsOf: sweep.AsOf, TimeZone: sweep.TimeZone, Commitments: items})
 }
 
 // requireCommitmentLimit refuses a limit the schema already forbids. The
@@ -240,7 +242,8 @@ func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
 		TaskID: c.TaskID, ClaimID: c.ClaimID, Source: c.Source,
 		SourceActivityID: c.SourceActivityID,
 		Quote:            c.Quote, Subject: c.Subject, DueAt: c.DueAt,
-		State: commitmentState(c.DueAt, asOf),
+		DueHasTime: c.DueHasTime,
+		State:      commitmentState(c.DueAt, asOf),
 		// Never null: a model handed null reads it as "unknown" where an empty
 		// array says "this promise names no record".
 		About: c.About,

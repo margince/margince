@@ -324,3 +324,38 @@ func TestALiveFoldKeepsBothSeatsBusyAndEveryGuest(t *testing.T) {
 		}
 	}
 }
+
+// A fold keeps the meeting's notes documents. Here the organiser's row is the
+// copy that retires onto the guest's worked row, and the notes link it held
+// moves to the survivor, keyed under the survivor so a later sync finds it.
+//
+// Mutation: drop carryMeetingDocumentLinksTx from RetireMeetingCopyTx and the
+// link stays on the archived copy.
+func TestAFoldMovesTheCopysNotesLinksToTheSurvivor(t *testing.T) {
+	p := newPairEnv(t)
+	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
+	organiser, guest := p.loseRace(t, start)
+	p.workedByHand(t, guest)
+	p.exec(t, `INSERT INTO attachment (id, entity_type, entity_id, activity_id, filename, storage_key, source, captured_by,
+		category, external_source_id, external_part_id, bytes_withheld, url)
+		VALUES (uuidv7(), 'activity', $1::uuid, $1::uuid, 'Review - Notes by Gemini', '', 'meeting', 'connector:gcal',
+		        'link', 'meeting:' || $1::uuid::text, 'link:notes', true, 'https://docs.google.com/document/d/1notesFileId0123/edit')`,
+		organiser)
+
+	p.sync(t, "b")
+
+	if survivor := p.wantOneMeeting(t, start); survivor != guest {
+		t.Fatalf("the surviving row is %v, want the guest's worked row %v", survivor, guest)
+	}
+	if got := countRows(t, p.env.e, `SELECT count(*) FROM attachment WHERE entity_id = '`+guest.String()+
+		`' AND activity_id = '`+guest.String()+`' AND external_source_id = 'meeting:`+guest.String()+`' AND category = 'link'`); got != 1 {
+		t.Errorf("%d notes links on the surviving meeting, want the one the copy held", got)
+	}
+	if got := countRows(t, p.env.e, `SELECT count(*) FROM attachment WHERE entity_id = '`+organiser.String()+`'`); got != 0 {
+		t.Errorf("%d links left on the retired copy, want 0", got)
+	}
+	if got := countRows(t, p.env.e, `SELECT count(*) FROM audit_log WHERE entity_type = 'attachment' AND action = 'update'
+		AND after ->> 'entity_id' = '`+guest.String()+`'`); got != 1 {
+		t.Errorf("%d audit rows record the moved link, want 1", got)
+	}
+}

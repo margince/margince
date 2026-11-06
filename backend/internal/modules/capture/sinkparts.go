@@ -60,8 +60,9 @@ type FileKeeper interface {
 		from FileSource, files []CapturedFile) error
 	// RecordLinks writes a row for each document link a message carried, with
 	// no bytes: the address and the text it was shown under.
+	// It answers how many rows are new; a link already recorded is not.
 	RecordLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-		from FileSource, links []MailLink) error
+		from FileSource, links []MailLink) (int, error)
 }
 
 // CapturedFile is one file a message carried, already bounded, renamed safely

@@ -11,7 +11,7 @@ import {
   dealCloseOutcome,
 } from "../../lib/approvalpreview";
 import type { MagicLine } from "../../lib/magic.queries";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Preview = components["schemas"]["ApprovalPreview"];
 
@@ -30,7 +30,7 @@ export function MagicApproval({
 }: Readonly<{ line: MagicLine; subject: ReactNode; action: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const preview = line.approval_preview;
   if (!preview) return null;
   const display = commercialPreviewDisplay(
@@ -40,11 +40,9 @@ export function MagicApproval({
     (value) => formatDate(middayInstant(value, zone), locale, zone),
     zone,
   );
-  const commercialStage = [
-    "advance_deal",
-    "progress_deal",
-    "stage_progression",
-  ].includes(line.approval_kind ?? "");
+  const commercialStage = ["advance_deal", "progress_deal"].includes(
+    line.approval_kind ?? "",
+  );
   const fields = display.filter((field) => {
     if (!commercialStage) return field.value !== null;
     if (field.field === "reviewer_reason" || field.field === "preview_status")

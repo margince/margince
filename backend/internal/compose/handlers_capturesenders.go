@@ -9,6 +9,7 @@ package compose
 import (
 	"log/slog"
 	"net/http"
+	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // captureSenderHandlers serves one seat's own view of what was decided about
@@ -74,19 +76,31 @@ func (h captureSenderHandlers) ListCaptureContactsAwaitingDecision(w http.Respon
 
 // ListHeldThreads answers what the caller's mailbox is withholding.
 //
-// It sits beside the senders list rather than in a file of its own: both are
-// this seat's view of what the capture posture decided on their behalf, both
-// are human-only and owner-scoped, and both are read from the same db.
-func (h captureSenderHandlers) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
-	threads, err := capture.HeldThreadsFor(r.Context(), h.db)
+// It sits beside the senders list rather than in a file of its own. Both are
+// this seat's view of what the capture posture decided on their behalf. Both
+// are owner-scoped and read from the same db.
+func (h captureSenderHandlers) ListHeldThreads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListHeldThreadsParams) {
+	if params.Q != nil && utf8.RuneCountInString(*params.Q) > capture.HeldSearchMax {
+		httperr.Write(w, r, httperr.Validation("q", "too_long", "Search for at most 200 characters."))
+		return
+	}
+	page, err := capture.HeldThreadsFor(r.Context(), h.db, heldThreadQuery(params))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	out := crmcontracts.HeldThreadListResponse{
-		Data: make([]crmcontracts.HeldThread, 0, len(threads)),
+		Data: make([]crmcontracts.HeldThread, 0, len(page.Threads)),
+		Page: crmcontracts.PageInfo{HasMore: page.Next != ""},
+		Counts: crmcontracts.HeldThreadCounts{
+			Pending: page.Counts.Pending, Unsure: page.Counts.Unsure, Held: page.Counts.Held,
+			HeldByOwner: page.Counts.HeldByOwner, Stalled: page.Counts.Stalled,
+		},
 	}
-	for _, t := range threads {
+	if page.Next != "" {
+		out.Page.NextCursor = &page.Next
+	}
+	for _, t := range page.Threads {
 		out.Data = append(out.Data, toContractHeldThread(t))
 	}
 	if h.threadPass != nil {
@@ -213,4 +227,24 @@ func toContractSenderDecision(d capture.SenderDecision) crmcontracts.CaptureSend
 		out.OverruledKind = &overruled
 	}
 	return out
+}
+
+// heldThreadQuery reads the list's query off the request.
+func heldThreadQuery(params crmcontracts.ListHeldThreadsParams) capture.HeldThreadQuery {
+	var query capture.HeldThreadQuery
+	if params.Cursor != nil {
+		query.Cursor = *params.Cursor
+	}
+	query.Limit = params.Limit
+	if params.Q != nil {
+		query.Q = *params.Q
+	}
+	if params.Status != nil {
+		query.Status = string(*params.Status)
+	}
+	if params.ContactId != nil {
+		contact := ids.UUID(*params.ContactId)
+		query.ContactID = &contact
+	}
+	return query
 }
