@@ -59,6 +59,7 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
     call_zalo: true,
     individual_performance: true,
     forecast_self_correcting: true,
+    forecast_likely_threshold: 90,
     ...(opts.lockedReason
       ? { base_currency_locked_reason: opts.lockedReason }
       : {}),
@@ -158,7 +159,7 @@ describe("InstallationSettingsCard", () => {
       "Only an administrator or operations user can change these settings.",
     );
     expect(reason.id).not.toBe("");
-    for (const fact of [/edit reporting timezone/i, /edit base currency/i]) {
+    for (const fact of [/edit company time zone/i, /edit base currency/i]) {
       const edit = screen.getByRole("button", { name: fact });
       expect((edit as HTMLButtonElement).disabled).toBe(true);
       expect(edit.getAttribute("aria-describedby") ?? "").toContain(reason.id);
@@ -176,8 +177,8 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit reporting timezone/i);
-    const zone = within(dialog).getByLabelText(/reporting timezone/i);
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
     await user.clear(zone);
     await user.type(zone, "Europe/Vilnius");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
@@ -186,6 +187,26 @@ describe("InstallationSettingsCard", () => {
     // unchanged base currency may be frozen, and the server would refuse it.
     await waitFor(() =>
       expect(patch()).toEqual({ timezone: "Europe/Vilnius" }),
+    );
+  });
+
+  it("edits the Likely threshold from its own row, and sends it alone", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<InstallationSettingsCard />);
+
+    expect(await screen.findByText("90%")).toBeTruthy();
+    const dialog = await openFrom(user, /edit likely threshold/i);
+    const threshold = within(dialog).getByLabelText(/likely threshold/i);
+    await waitFor(() => expect(document.activeElement).toBe(threshold));
+    await user.clear(threshold);
+    await user.type(threshold, "75");
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() =>
+      expect(patch()).toEqual({ forecast_likely_threshold: 75 }),
     );
   });
 
@@ -211,10 +232,10 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit reporting timezone/i);
+    const dialog = await openFrom(user, /edit company time zone/i);
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        within(dialog).getByLabelText(/reporting timezone/i),
+        within(dialog).getByLabelText(/company time zone/i),
       ),
     );
   });
@@ -282,7 +303,7 @@ describe("InstallationSettingsCard", () => {
     expect(within(dialog).getByText(reason)).not.toBeNull();
     // The editor can still change everything else.
     const zone = within(dialog).getByLabelText(
-      /reporting timezone/i,
+      /company time zone/i,
     ) as HTMLInputElement;
     expect(zone.disabled).toBe(false);
   });
@@ -313,14 +334,14 @@ describe("InstallationSettingsCard", () => {
     expect(languageEdit.disabled).toBe(true);
     expect(screen.getByText(reason)).toBeTruthy();
 
-    const dialog = await openFrom(user, /edit reporting timezone/i);
+    const dialog = await openFrom(user, /edit company time zone/i);
     expect(
       within(dialog).getByLabelText<HTMLButtonElement>(/base language/i)
         .disabled,
     ).toBe(true);
     expect(within(dialog).getByText(reason)).toBeTruthy();
     const zone =
-      within(dialog).getByLabelText<HTMLInputElement>(/reporting timezone/i);
+      within(dialog).getByLabelText<HTMLInputElement>(/company time zone/i);
     expect(zone.disabled).toBe(false);
     await user.clear(zone);
     await user.type(zone, "Europe/Vienna");
@@ -356,8 +377,8 @@ describe("InstallationSettingsCard", () => {
       expect(within(panel).getByText(value)).toBeTruthy();
     }
 
-    const dialog = await openFrom(user, /edit reporting timezone/i);
-    expect(within(dialog).getByLabelText(/reporting timezone/i)).toBeTruthy();
+    const dialog = await openFrom(user, /edit company time zone/i);
+    expect(within(dialog).getByLabelText(/company time zone/i)).toBeTruthy();
     expect(within(dialog).getByLabelText(/base currency/i)).toBeTruthy();
 
     // The currency keeps a heading of its own, one level down: the lock rule is
@@ -372,7 +393,7 @@ describe("InstallationSettingsCard", () => {
     expect(saves).toHaveLength(1);
     expect(dialog.contains(saves[0])).toBe(true);
 
-    const zone = within(dialog).getByLabelText(/reporting timezone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
     await user.clear(zone);
     await user.type(zone, "Europe/Vilnius");
     const base = within(dialog).getByLabelText(/base currency/i);
@@ -405,8 +426,8 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit reporting timezone/i);
-    for (const label of [/reporting timezone/i, /base currency/i]) {
+    const dialog = await openFrom(user, /edit company time zone/i);
+    for (const label of [/company time zone/i, /base currency/i]) {
       const control = within(dialog).getByLabelText(label);
       expect(control.className.split(/\s+/)).toContain("input");
     }
@@ -430,8 +451,8 @@ describe("InstallationSettingsCard", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit reporting timezone/i);
-    const zone = within(dialog).getByLabelText(/reporting timezone/i);
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
     await user.clear(zone);
     await user.type(zone, "Europe/Berlim");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
@@ -462,8 +483,8 @@ describe("InstallationSettingsCard", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit reporting timezone/i);
-    const zone = within(dialog).getByLabelText(/reporting timezone/i);
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
     await user.type(zone, "/Extra");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
@@ -576,8 +597,8 @@ describe("the calling switches", () => {
     const invalidate = vi.spyOn(client, "invalidateQueries");
     render(<InstallationSettingsCard />, client);
 
-    const dialog = await openFrom(user, /edit reporting timezone/i);
-    const zone = within(dialog).getByLabelText(/reporting timezone/i);
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
     await user.clear(zone);
     await user.type(zone, "Asia/Ho_Chi_Minh");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));

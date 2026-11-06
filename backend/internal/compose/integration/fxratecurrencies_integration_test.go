@@ -24,7 +24,7 @@ import (
 // The sheet head then holds two currencies, and one of them has a history.
 func seedSheet(t *testing.T, e *Env) {
 	t.Helper()
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	today := fxTestNow.Truncate(24 * time.Hour)
 	for _, in := range []deals.SetFxRateInput{
 		{FromCurrency: "USD", Rate: "0.91", EffectiveDate: today},

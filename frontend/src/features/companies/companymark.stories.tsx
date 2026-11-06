@@ -68,15 +68,61 @@ export const BothMarksDark: Story = {
   globals: { theme: "dark" },
 };
 
-// At 390px the wide tile gives up width so the pair stays on one row.
+// At 390px the pair stacks, each mark at its own size.
 export const BothMarksPhone: Story = {
   ...BothMarks,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
 
+// The wide logo's Edit menu, open over a stored mark.
+export const WideLogoMenuOpen: Story = {
+  ...BothMarks,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole("button", { name: "Edit wide logo" }),
+    );
+    await within(canvasElement.ownerDocument.body).findByRole("button", {
+      name: "Remove wide logo",
+    });
+  },
+};
+
+export const WideLogoMenuOpenDark: Story = {
+  ...WideLogoMenuOpen,
+  globals: { theme: "dark" },
+};
+
+// An upload still out: that slot's Edit pill waits, the other stays free.
+export const SquareIconUploading: Story = {
+  args: { profile: WITHOUT_MARK, canEdit: true },
+  render: (args) => {
+    installFetchStub({
+      "POST /company/logo/icon": () => new Promise<Response>(() => undefined),
+    });
+    return (
+      <StoryProviders>
+        <CompanyMark {...args} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const region = await within(canvasElement).findByRole("region", {
+      name: "Square icon",
+    });
+    const tile = region.querySelector<HTMLInputElement>("input[type=file]");
+    if (tile === null) {
+      throw new Error("the square icon tile takes no file");
+    }
+    await userEvent.upload(
+      tile,
+      new File(["png"], "icon.png", { type: "image/png" }),
+    );
+  },
+};
+
 // Read-only: the marks are facts about the company, so they are still shown.
-// The verbs and the drop target go; the profile card below says why.
+// The Edit pills and the drop target go; the profile card below says why.
 export const NotYoursToChange: Story = {
   args: { profile: BOTH, canEdit: false },
 };

@@ -137,6 +137,12 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* `Button align="start"`. Two classes, so it outranks `.btn` on specificity
+   rather than on which sheet the bundler emitted first. */
+.btn[data-align="start"] {
+  justify-content: flex-start;
+  text-align: start;
+}
 /* Every button in the product had NO focus style: no rule here, none in
    app.css, none in tokens.css or brand.css, so a keyboard reader got whatever
    the engine drew by default and one screen file had patched its own chips
@@ -195,12 +201,10 @@
 .btn-danger:hover {
   filter: brightness(1.06);
 }
-/* The agent's own verb. Filled indigo rather than outlined, because it is the
-   move the card is recommending and an outlined control beside a bordered
-   "not now" offers a reader two equal choices when only one advances the
-   account. --ai does not lift in dark, so the ink is --textOnAccent, the light
+/* The agent's own verb as the one filled control of its screen, panel or
+   card. --ai does not lift in dark, so the ink is --textOnAccent, the light
    ink every fill that stays put takes: the dark --textOnAccentControl reads
-   3.26:1 on it. */
+   3.73:1 on it. The sparkle takes the label's ink. */
 .btn-ai {
   background: var(--ai);
   color: var(--textOnAccent);
@@ -208,18 +212,11 @@
 .btn-ai:hover {
   filter: brightness(1.06);
 }
-/* The agent's own verb where it is ONE of several equal offers — the four
-   rewrites of a draft, where no single one is the move. Tinted and outlined
-   rather than filled: four filled indigo buttons in a row read as four
-   recommendations, and the colour stops meaning "the machine does this" and
-   starts meaning "press me". */
-.btn-aiQuiet {
-  background: var(--aiLight);
+/* Every other agent verb is a ghost that also carries this class (see
+   `faceClass` in button.tsx), so a row of verbs reads as one volume, and only
+   the sparkle in --aiText says the press starts a model. */
+.btn-aiQuiet .lucide-sparkles {
   color: var(--aiText);
-  border-color: var(--aiMed);
-}
-.btn-aiQuiet:hover {
-  background: var(--aiChip);
 }
 
 /* The outlined verb: the pane's own ground with a hairline, in the primary
@@ -663,6 +660,7 @@ kbd {
 .code-block {
   margin: 0;
   max-height: 300px;
+  position: relative;
   overflow: auto;
   padding: var(--space-3);
   border: 1px solid var(--groundEdge);

@@ -2,12 +2,14 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { formatMoneyCompact } from "../../format/format";
+import { formatAnalyticsMoney } from "../../format/format";
+import { translate } from "../../i18n";
 import { en } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import {
   REPORTING_FIXTURE_ZONE,
   reportingMetricNames,
+  reportingStoryEvaluation,
 } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
@@ -15,7 +17,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { MyTargets } from "./analytics.outcomes.targets";
+import { MyTargets, targetCard } from "./analytics.outcomes.targets";
 import { reportingPeriodLabel } from "./reporting.model";
 import {
   reportingSectionsCatalog,
@@ -159,7 +161,7 @@ describe("the seat's figures against its own targets", () => {
     expect(text).toContain(
       en["analytics.noTargetSetActual"].replace(
         "{actual}",
-        formatMoneyCompact(2_500_000, "EUR", "en"),
+        formatAnalyticsMoney(2_500_000, "EUR", "en"),
       ),
     );
   });
@@ -192,4 +194,33 @@ describe("the seat's figures against its own targets", () => {
     expect(screen.queryByText(en["analytics.myTargets"])).toBeNull();
     expect(asked).toEqual([]);
   });
+});
+
+it("does not present incomplete first-qualification credit as exact attainment", () => {
+  const card = targetCard(
+    {
+      id: "leads_qualified",
+      version: "1",
+      unit: "count",
+      value: 5,
+      target: 8,
+      target_actual: 5,
+      attainment: 62.5,
+      coverage: {
+        status: "partial",
+        withheld: false,
+        reason: "Some qualification ownership was not recorded.",
+      },
+      evidence: { metric: "leads_qualified", context_id: "interval" },
+    },
+    reportingStoryEvaluation.context,
+    "Leads qualified",
+    (key, params) => translate("en", key, params),
+    "en",
+  );
+  expect(card.value).toBe("At least 5 of 8");
+  expect(card.meter).toBeUndefined();
+  expect(card.detail).toContain(
+    "Some qualification ownership was not recorded.",
+  );
 });

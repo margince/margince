@@ -76,8 +76,8 @@ type unitManifest struct {
 // extensionTools reads every shipped unit's manifest and returns the agent
 // tools the tier contributes to the registry, sorted.
 //
-// PRESENCE UNDER extensions/ IS THE ENABLEMENT (AGENTS.md), so the directory
-// listing is the shipped set and no allowlist is kept here. A tree with no
+// instance/go.mod requires the units under extensions/ and no others (a gate holds
+// the two equal), so the directory listing is the shipped set. A tree with no
 // units returns nothing, which is the honest answer for a core-only build and
 // not a scan that failed.
 // shippedUnits is the set of unit directories git TRACKS under the extension
@@ -131,11 +131,9 @@ func extensionTools(dir string) ([]unitTool, error) {
 			continue
 		}
 		// SHIPPED units only, which is what this page is about. A unit that is
-		// merely PRESENT is not necessarily one the product ships: the
-		// extension-reference lane copies fixtures/extensions/crm-hello into
-		// extensions/ before running this suite, and counting it made the
-		// published page depend on which lane generated it — 7 tools locally, 8
-		// there, and a drift gate that could not be green in both.
+		// merely present is not necessarily one the product ships. Counted, a
+		// fixture copied into extensions/ would change the published page.
+		// The drift gate would then fail on the tree that did not generate it.
 		if !shipped[entry.Name()] {
 			continue
 		}

@@ -32,7 +32,6 @@ import (
 	"go/parser"
 	"go/token"
 	"maps"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -114,7 +113,7 @@ func endpointColumnsFromShapeConstraints(t *testing.T) ([]string, []string) {
 	t.Helper()
 	bodies := map[string]string{}
 	for _, path := range sortedMigrationsUp(t) {
-		raw, err := os.ReadFile(path) // #nosec G304 -- a *.up.sql name from the trusted migrations tree, test-only
+		raw, err := gatekit.ReadFile(path) // #nosec G304 -- a *.up.sql name from the trusted migrations tree, test-only
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
@@ -490,7 +489,7 @@ func endpointColumnName(t *testing.T, source string, expr ast.Expr) (string, boo
 // as the list, and companyIDColumn does not.
 func dirStringConsts(t *testing.T, dir string) map[string]string {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}

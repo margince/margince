@@ -6,9 +6,11 @@ package contacts
 import (
 	"bytes"
 	"context"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
@@ -71,5 +73,45 @@ func TestACardPhotoAtTheImageBoundReachesTheReading(t *testing.T) {
 	rec, reads := postCardPhoto(t, imagenorm.MaxReadImageBytes)
 	if reads != 1 || rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, reads = %d, want the reader's own 422 after one reading", rec.Code, reads)
+	}
+}
+
+// A file over the route's ceiling says what the ceiling is, in the chassis's own
+// figure. Anything else that will not parse keeps the sentence about the form field.
+func TestAVCardOverTheCeilingNamesTheLimit(t *testing.T) {
+	const ceiling = 2_000_000
+	post := func(t *testing.T, body io.Reader, contentType string) *httptest.ResponseRecorder {
+		t.Helper()
+		member := ids.NewV7()
+		ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:" + member.String(), UserID: member,
+			Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{entityContact: {Create: true, Update: true}}},
+		})
+		req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/contacts/vcard-import", body)
+		req.Header.Set("Content-Type", contentType)
+		rec := httptest.NewRecorder()
+		req.Body = http.MaxBytesReader(rec, req.Body, ceiling)
+		Handlers{}.ImportVCards(rec, req)
+		return rec
+	}
+	var large bytes.Buffer
+	form := multipart.NewWriter(&large)
+	part, err := form.CreateFormFile("file", "cards.vcf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write(make([]byte, ceiling+1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := form.Close(); err != nil {
+		t.Fatal(err)
+	}
+	over := post(t, &large, form.FormDataContentType())
+	if over.Code != http.StatusRequestEntityTooLarge || !strings.Contains(over.Body.String(), "body_too_large") || !strings.Contains(over.Body.String(), "2 MB") {
+		t.Errorf("over the ceiling answered %d: %s", over.Code, over.Body)
+	}
+	plain := post(t, strings.NewReader("not a form"), "text/plain")
+	if plain.Code != http.StatusUnprocessableEntity || !strings.Contains(plain.Body.String(), "multipart form field") {
+		t.Errorf("not a form answered %d: %s", plain.Code, plain.Body)
 	}
 }

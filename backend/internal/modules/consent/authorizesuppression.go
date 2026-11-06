@@ -11,6 +11,7 @@ package consent
 // stopping that contact's INVOICE is the case this file exists to prevent.
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -108,6 +109,25 @@ func suppressionBindsAny(stops []liveStop, category commsauthz.Category, sendPur
 		}
 	}
 	return false
+}
+
+// stopBindingPurpose names the first stop that binds a send under one named
+// purpose. The legacy gate asks it of a contact and of a lead.
+//
+// The purpose is always known here, unlike on the transmit path's evidence
+// arms, so a narrow row is compared against it rather than skipped.
+func stopBindingPurpose(stops []liveStop, purpose PurposeRow) (liveStop, bool, error) {
+	asked, err := ids.Parse(purpose.ID)
+	if err != nil {
+		return liveStop{}, false, fmt.Errorf("consent: the asked purpose is not an id: %w", err)
+	}
+	category := categoryForClass(purpose.Class)
+	for _, s := range stops {
+		if suppressionBinds(s.Kind, category, s.PurposeID, &asked) {
+			return s, true, nil
+		}
+	}
+	return liveStop{}, false, nil
 }
 
 // suppressionBinds reports whether one kind of suppression stops one category.

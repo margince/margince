@@ -34,6 +34,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // docsIndex is the one page every other page must be reachable from.
@@ -69,7 +71,7 @@ func linkedPages(t *testing.T, docsRoot, page string) []string {
 	if info.Mode()&os.ModeSymlink != 0 {
 		return nil
 	}
-	raw, err := os.ReadFile(full)
+	raw, err := gatekit.ReadFile(full)
 	if err != nil {
 		t.Fatalf("reading %s: %v", page, err)
 	}

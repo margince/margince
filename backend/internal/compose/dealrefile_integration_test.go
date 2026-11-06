@@ -43,6 +43,10 @@ type dealRefileFixture struct {
 	contact, company, deal, mail, meeting, old ids.UUID
 }
 
+// refileTestPage is the page a full-page test fills. A page of
+// capture.DealRefileLimit proves the same with 201 captures instead of 6.
+const refileTestPage = 5
+
 func newDealRefileFixture(t *testing.T, extra int) dealRefileFixture {
 	t.Helper()
 	o := setupOwed(t)
@@ -110,11 +114,19 @@ func (f dealRefileFixture) enqueueEvent(t *testing.T, envelope events.Envelope) 
 
 func (f dealRefileFixture) run(t *testing.T, args CapturedDealRefileArgs) int {
 	t.Helper()
+	return f.runPaged(t, args, capture.DealRefileLimit)
+}
+
+// runPaged is run with a worker that inspects page candidates per pass.
+func (f dealRefileFixture) runPaged(t *testing.T, args CapturedDealRefileArgs, page int) int {
+	t.Helper()
 	spec, ok := jobs.SpecFor(args.Kind())
 	if !ok {
 		t.Fatal("missing job declaration")
 	}
-	worker := rivertest.NewWorker(t, riverpgxv5.New(f.o.e.Pool), &river.Config{}, jobs.Govern(newCapturedDealRefileWorker(f.o.e.Pool), spec))
+	production := newCapturedDealRefileWorker(f.o.e.Pool)
+	production.page = page
+	worker := rivertest.NewWorker(t, riverpgxv5.New(f.o.e.Pool), &river.Config{}, jobs.Govern(production, spec))
 	var row *rivertype.JobRow
 	for pass := range 10 {
 		tx, err := f.o.e.Pool.Begin(t.Context())
@@ -179,14 +191,14 @@ func TestAContactEventReconsidersCapturedMailAndMeetingsAfterCohortResolution(t 
 }
 
 func TestDealReconsiderationContinuesBeyondItsFirstPage(t *testing.T) {
-	f := newDealRefileFixture(t, 201)
+	f := newDealRefileFixture(t, refileTestPage+1)
 	integration.ApplyRiverSchema(t)
-	passes := f.run(t, f.enqueue(t, "contact.created", f.contact))
+	passes := f.runPaged(t, f.enqueue(t, "contact.created", f.contact), refileTestPage)
 	if passes < 3 {
 		t.Fatalf("only %d passes for cohort resolution and more than one page", passes)
 	}
-	if got := f.o.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != 203 {
-		t.Fatalf("filed %d activities, want 203", got)
+	if got := f.o.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != refileTestPage+3 {
+		t.Fatalf("filed %d activities, want %d", got, refileTestPage+3)
 	}
 }
 
@@ -399,7 +411,7 @@ func TestReopeningADealReconsidersActivitiesAClosedDealCouldNotTake(t *testing.T
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
-	store := e.Deals.WithClock(func() time.Time { return f.o.now })
+	store := e.Deals.SetClock(func() time.Time { return f.o.now })
 	deal := ids.From[ids.DealKind](f.deal)
 	if _, err := store.AdvanceDeal(e.Admin(), deal, deals.AdvanceDealInput{ToStageID: f.closed, WonWithoutContractReason: new("verbal")}); err != nil {
 		t.Fatal(err)
@@ -435,7 +447,7 @@ func TestReopeningADealReconsidersActivitiesAClosedDealCouldNotTake(t *testing.T
 }
 
 func TestDealReconsiderationAdvancesPastAFullPageOfAmbiguousActivities(t *testing.T) {
-	f := newDealRefileFixture(t, 201)
+	f := newDealRefileFixture(t, refileTestPage+1)
 	e := f.o.e
 	company := ids.From[ids.CompanyKind](f.company)
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Name: "Another rollout", PipelineID: f.pipeline, StageID: f.stage, CompanyID: &company, Source: "manual"}); err != nil {
@@ -461,7 +473,7 @@ func TestDealReconsiderationAdvancesPastAFullPageOfAmbiguousActivities(t *testin
 	}
 	args := f.enqueue(t, "deal.created", f.deal)
 	args.Scope = capture.DealRefileScope{All: true}
-	if passes := f.run(t, args); passes < 2 {
+	if passes := f.runPaged(t, args, refileTestPage); passes < 2 {
 		t.Fatalf("drained in %d passes", passes)
 	}
 	if e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND deal_id=$2`, last, deal.Id) != 1 {
@@ -532,7 +544,7 @@ func TestAFutureDatedEmailAgesOutWithoutDroppingAnUpcomingMeeting(t *testing.T) 
 	}
 	if err := InstallationDB(e.Pool).Tx(ctx, func(tx pgx.Tx) error {
 		asOf := receipt.Add(31 * 24 * time.Hour)
-		candidates, err := worker.repair.RefileCandidatesTx(ctx, tx, capture.DealRefileScope{All: true}, asOf, ids.Nil, future)
+		candidates, err := worker.repair.RefileCandidatesTx(ctx, tx, capture.DealRefileScope{All: true}, asOf, ids.Nil, future, capture.DealRefileLimit)
 		if err != nil {
 			return err
 		}

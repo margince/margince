@@ -17,7 +17,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -133,7 +132,7 @@ func TestTheMeetingEndCensusSeesBothSpellings(t *testing.T) {
 func TestAFutureMeetingTestAdmitsAnUnmarkedStatus(t *testing.T) {
 	t.Parallel()
 
-	body, err := os.ReadFile(meetingOverDealsOwner)
+	body, err := gatekit.ReadFile(meetingOverDealsOwner)
 	if err != nil {
 		t.Fatalf("reading the deals spelling: %v", err)
 	}

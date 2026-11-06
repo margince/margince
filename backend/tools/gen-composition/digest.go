@@ -57,6 +57,21 @@ func (h *treeHasher) addFileOrEmpty(rel string) error {
 	return nil
 }
 
+// addOutsideFileOrEmpty is addFileOrEmpty for a file that may sit outside the
+// root (an instance's go.mod), recorded under label.
+func (h *treeHasher) addOutsideFileOrEmpty(label, path string) error {
+	content, err := os.ReadFile(path) // #nosec G304 -- the instance's go.mod or go.sum
+	if os.IsNotExist(err) {
+		h.lines = append(h.lines, label+"\x00absent")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	h.lines = append(h.lines, label+"\x00"+digestBytes(content))
+	return nil
+}
+
 // addTree hashes every regular file under rel — the whole subtree, not
 // just .go — so a non-Go asset the published surface gains (a go:embed
 // template or schema, including a dot-prefixed one an `all:` pattern can

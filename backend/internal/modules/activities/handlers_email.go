@@ -83,6 +83,13 @@ func (h Handlers) WithRecipientDirectory(dir RecipientDirectory) Handlers {
 	return h
 }
 
+// WithRecipientFiler returns handlers whose account-started sends and previews
+// make a contact for a typed address that no record holds.
+func (h Handlers) WithRecipientFiler(filer RecipientFiler) Handlers {
+	h.store = h.store.WithRecipientFiler(filer)
+	return h
+}
+
 // GetReplyRecipient answers who a reply to this message would go to, without
 // drafting one. A composer opening on a thread shows the recipient straight
 // away rather than after a model call that takes tens of seconds.

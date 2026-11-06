@@ -16,12 +16,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse, stubRoutes } from "./compose.testkit";
 import { ScheduledSendsScreen } from "./scheduledsends";
 
-const readerZone = viewerZone();
+const readerZone = browserZone();
 
 const NEW_MESSAGE = {
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",

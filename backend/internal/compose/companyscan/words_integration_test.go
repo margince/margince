@@ -75,16 +75,19 @@ func TestTheScanReadsOnlyWhatTheSenderWrote(t *testing.T) {
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Quote Scan Co", nil)
 	mail := ids.NewV7()
-	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id, source, captured_by)
-		VALUES ($1, 'email', 'next steps', $2, 'inbound', 'gmail', $3, 'gmail:seed', 'connector:gmail')`, mail,
+	now := clocktest.Now(t)
+	// Dated from the scan's clock, not the column default. The drift lane parts
+	// the two, and the mail would fall out of the window.
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, direction, occurred_at, source_system, source_id, source, captured_by)
+		VALUES ($1, 'email', 'next steps', $2, 'inbound', $3, 'gmail', $4, 'gmail:seed', 'connector:gmail')`, mail,
 		"Works for me.\n\nFrom: Sam Seller <sam@seller.example>\nSent: Monday\n\nWe will send the contract by Friday.",
-		mail.String())
+		now.Add(-time.Hour), mail.String())
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id) VALUES ($1, 'company', $2)`, mail, company)
 
 	var words []MessageIn
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		words, err = readWords(ctx, tx, ids.From[ids.CompanyKind](company), clocktest.Now(t))
+		words, err = readWords(ctx, tx, ids.From[ids.CompanyKind](company), now)
 		return err
 	}); err != nil {
 		t.Fatal(err)

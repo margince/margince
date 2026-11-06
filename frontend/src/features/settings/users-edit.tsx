@@ -22,6 +22,7 @@ import {
   type User,
   useMemberRefresh,
 } from "./users-members";
+import { useCaptureStopWarning } from "./users-rolecell";
 import { MemberTeamsField } from "./users-teams";
 
 export function EditMember({
@@ -39,6 +40,7 @@ export function EditMember({
   const [role, setRole] = useState(memberRole(member));
   const [teamIds, setTeamIds] = useState(memberTeams(member));
   const roles = useAssignableRoles(true);
+  const stopsCapture = useCaptureStopWarning(baseline, roles.data ?? []);
   const managesTeams = useHoldsAdminRole();
   const teams = useRoster("team", true);
   const partial = useRosterPartial("team", true);
@@ -155,7 +157,11 @@ export function EditMember({
         <QueryStates query={roles} pendingLabel={t("users.roleLabel")}>
           {null}
         </QueryStates>
-        <Field label={t("users.roleLabel")}>
+        <Field
+          label={t("users.roleLabel")}
+          hint={stopsCapture(role, memberRole(baseline))}
+          hintLive
+        >
           {(control) => (
             <Select
               {...control}

@@ -37,6 +37,19 @@ func OwnershipTransferDecider(body json.RawMessage) ids.UUID {
 	return transfer.decider()
 }
 
+// OwnershipTransferRequester is the party who staged a transfer, or zero for a
+// body whose parties do not form one.
+func OwnershipTransferRequester(body json.RawMessage) ids.UUID {
+	var transfer OwnershipTransfer
+	if err := json.Unmarshal(body, &transfer); err != nil {
+		return ids.Nil
+	}
+	if transfer.decider().IsZero() {
+		return ids.Nil
+	}
+	return transfer.RequestedBy
+}
+
 func (t OwnershipTransfer) decider() ids.UUID {
 	parties := t.FromID != t.ToID && !t.FromID.IsZero() && !t.ToID.IsZero()
 	sides := (t.RequestedBy == t.FromID && t.DeciderID == t.ToID) ||

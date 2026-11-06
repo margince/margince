@@ -99,3 +99,10 @@ func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
 	}
 	return nil
 }
+
+// liveContactSQL is true while the contact in column is not archived. Every
+// edge fold asks it, so an archived contact has no edges and its archive event
+// can drop them without reading its history.
+func liveContactSQL(column string) string {
+	return `NOT EXISTS (SELECT 1 FROM contact lc WHERE lc.id = ` + column + ` AND lc.archived_at IS NOT NULL)`
+}

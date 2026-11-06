@@ -50,7 +50,6 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -154,14 +153,14 @@ func backendSQLCorpus(t *testing.T) []sqlStatement {
 			out = append(out, sqlStatement{path: src.Path, text: text})
 		}
 	}
-	err := filepath.WalkDir("migrations", func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir("migrations", func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
 		if entry.IsDir() || !strings.HasSuffix(path, ".sql") {
 			return nil
 		}
-		body, readErr := os.ReadFile(path)
+		body, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
@@ -266,7 +265,7 @@ func TestTheWholeRowProbeStillSeesAWholeRow(t *testing.T) {
 // nothing, which is the shape of a pass.
 func TestEveryRuntimeDDLObjectIsATableInTheSchema(t *testing.T) {
 	t.Parallel()
-	catalog, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	catalog, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

@@ -20,7 +20,7 @@ tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 require (
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/jackc/pgx/v5 v5.11.0
-	github.com/margince/margince/backend v0.0.0
+	github.com/margince/margince/backend v0.0.0-00010101000000-000000000000
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	golang.org/x/mod v0.41.0
@@ -28,7 +28,7 @@ require (
 )
 
 require (
-	github.com/andybalholm/brotli v1.2.4 // indirect
+	github.com/andybalholm/brotli v1.2.7 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

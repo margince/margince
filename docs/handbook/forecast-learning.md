@@ -64,7 +64,7 @@ file holds one row that says only that.
 ## The modelled finish beside the landing
 
 The **Landing** card on the forecast names what it counts, such as
-**Won + confirmed commit**, and then the won and still-to-come amounts. A
+**Won + Likely deals**, and then the won and still-to-come amounts. A
 manager's call that the landing does not use shows on the same card as a
 figure that is not added. Next to it, **Modelled quarter finish** shows a span
 such as "€610k to €880k". **Expected finish** in Sales review and

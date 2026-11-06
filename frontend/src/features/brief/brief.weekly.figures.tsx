@@ -3,7 +3,6 @@
 
 import { Badge } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
-import { Panel } from "../../design-system/panel";
 import { isoWeekBefore, isoWeekOf } from "../../format/calendarday";
 import {
   formatDayRange,
@@ -14,7 +13,7 @@ import {
 } from "../../format/format";
 import { startOfDayInZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import {
   figureReading,
   figureValue,
@@ -178,24 +177,22 @@ export function HeadlineFigures({
 }: Readonly<{ review: WeeklyReview; figures: WeeklyFigures }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const priorStart = review.prior?.local_week_start;
   return (
     <>
-      <Panel>
-        <div className="brief-report-tiles" data-testid="weekly-strip">
-          {carried(review, t, locale)
-            .filter((figure) => HEADLINE.includes(figure.key))
-            .map((figure) => (
-              <HeadlineTile
-                key={figure.key}
-                figure={figure}
-                review={review}
-                state={figures[figure.figure]}
-              />
-            ))}
-        </div>
-      </Panel>
+      <div className="brief-report-tiles" data-testid="weekly-strip">
+        {carried(review, t, locale)
+          .filter((figure) => HEADLINE.includes(figure.key))
+          .map((figure) => (
+            <HeadlineTile
+              key={figure.key}
+              figure={figure}
+              review={review}
+              state={figures[figure.figure]}
+            />
+          ))}
+      </div>
       {priorStart && (
         <p className="t-caption">
           {t("brief.report.priorWeek", {
@@ -228,7 +225,7 @@ function HeadlineTile({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const reading = figureReading(
     state,
     { value: figure.shown(review.counts) },

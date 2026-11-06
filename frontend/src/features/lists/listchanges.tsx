@@ -8,9 +8,9 @@
 import { Fragment } from "react";
 import { Button } from "../../design-system/atoms";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { List } from "../../lib/lists.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./lists.css";
 
 type Summary = NonNullable<List["changes_since_visit"]>;
@@ -24,6 +24,7 @@ export function ListChangeSummary({
   /** Opens a named record; absent for a record type with no page. */
   onOpen?: (id: string) => void;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -34,7 +35,7 @@ export function ListChangeSummary({
   return (
     <p className="t-caption">
       {t("lists.changes.since", {
-        when: formatDateAbbrev(summary.since, locale, viewerZone()),
+        when: formatDateAbbrev(summary.since, locale, readerZone),
       })}{" "}
       {moved.length === 0
         ? t("lists.changes.nothing")

@@ -34,13 +34,13 @@ package gates
 // proof that the copy is true.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // sendTools are the tool verbs whose tier decides whether the absolute claim is
@@ -139,7 +139,7 @@ func autoExecutingSendVerbs(t *testing.T) []string {
 // be covered, and an uncovered locale FAILS rather than being skipped.
 func shippedLocales(t *testing.T, dir string) []string {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the locale directory: %v", err)
 	}
@@ -213,7 +213,7 @@ func TestNoLocaleClaimsSendingAlwaysWaitsForAHuman(t *testing.T) {
 			continue
 		}
 
-		raw, err := os.ReadFile(filepath.Join(dir, locale+".ts"))
+		raw, err := gatekit.ReadFile(filepath.Join(dir, locale+".ts"))
 		if err != nil {
 			t.Fatalf("reading the %s locale: %v", locale, err)
 		}

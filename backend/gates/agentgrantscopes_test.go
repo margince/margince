@@ -24,7 +24,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -138,7 +137,7 @@ func toolScopes(t *testing.T) map[string]string {
 	t.Helper()
 	out := map[string]string{}
 	dir := filepath.Join("internal", "modules", "agents")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the agents package: %v", err)
 	}

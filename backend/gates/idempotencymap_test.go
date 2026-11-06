@@ -18,7 +18,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -62,7 +61,7 @@ type contractOperation struct {
 // crm.yaml but on the chi route pattern the middleware matches.
 func idempotencyKeyDeclarations(t *testing.T) map[string]bool {
 	t.Helper()
-	src, err := os.ReadFile("api/crm.yaml")
+	src, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading api/crm.yaml: %v", err)
 	}

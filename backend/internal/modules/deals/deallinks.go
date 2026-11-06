@@ -39,10 +39,8 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 	}
 	if in.OwnerID != nil {
 		// Handing the deal on is an assignment, and the destination is checked
-		// the same way a lead's is: an active human seat inside the caller's
-		// own write scope. Without it a deal could be handed to a suspended
-		// seat or out of the assigner's reach, which the FK alone does not
-		// refuse.
+		// the same way a lead's is: an active human seat that can write. The FK
+		// alone would admit a suspended seat or an agent.
 		if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
 			return err
 		}

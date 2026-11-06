@@ -61,7 +61,7 @@ type InternalEventAiTaskStateChanged struct {
 	AiTask *string `json:"ai_task,omitempty"`
 
 	// Attempt Which attempt this state belongs to. The lifecycle is NOT monotonic — a claimed run can be released and re-claimed — so state alone cannot order two events.
-	Attempt int `json:"attempt"`
+	Attempt int `json:"attempt" minimum:"1"`
 
 	// DegradeReason SERVER-AUTHORED prose, never a provider message and never err.Error(). That is the property that matters rather than the spelling: a provider's own text can echo key material or a prompt injection's payload, and this column reaches an ordinary rep. The emitters satisfy it with fixed literals today; what a reviewer has to check of a new one is where the string came from, not what shape it is.
 	DegradeReason *string `json:"degrade_reason,omitempty"`
@@ -73,13 +73,13 @@ type InternalEventAiTaskStateChanged struct {
 	Kind string `json:"kind"`
 
 	// LeaseSeconds The source's own lease on a live attempt. The projection stores started_at (or queued_at) plus this as stale_after, and the read renders a live row past it as stalled rather than as live.
-	LeaseSeconds *int `json:"lease_seconds,omitempty"`
+	LeaseSeconds *int `json:"lease_seconds,omitempty" minimum:"1"`
 
 	// OccurrenceKey That source's own idempotency key for this occurrence.
 	OccurrenceKey string `json:"occurrence_key"`
 
 	// Quantity How much the occurrence handled, in quantity_unit.
-	Quantity *int `json:"quantity,omitempty"`
+	Quantity *int `json:"quantity,omitempty" minimum:"0"`
 
 	// QuantityUnit What quantity counts.
 	QuantityUnit *string `json:"quantity_unit,omitempty"`
@@ -122,13 +122,13 @@ type InternalEventBookingPageUpdated struct {
 // Entity-less, and that is what keeps it internal. Every catalogued type that is NOT in the entity-less pipeline class is subscribable by an outside consumer — publicevents_test.go derives the set exactly as webhooks.validateEventTypes does — so naming brief_run here would make "this rep opened their Brief at 06:42" a webhook anyone may select. The run id stays on the system_log row the emit writes, where it is attributable without being deliverable.
 type InternalEventBriefOpened struct {
 	// Items How many items the run held when it was opened, AFTER expired snoozes resurfaced — what the rep actually saw, not what the night ranked. Zero is a real and interesting reading: a quiet morning that was still opened.
-	Items int `json:"items"`
+	Items int `json:"items" minimum:"0"`
 
 	// LocalDay The run's own local day, which is its identity — one run per rep per day. Carried so a consumer can tell today's first open from a re-open of yesterday's without reaching back into brief_run.
 	LocalDay openapi_types.Date `json:"local_day"`
 
 	// Unread How many of those carried no act, dismiss or snooze mark yet. Together with items it separates a first open from a return visit without needing a second event type for the difference.
-	Unread int `json:"unread"`
+	Unread int `json:"unread" minimum:"0"`
 }
 
 // InternalEventDealSuggestionAccepted A rep accepted a suggestion and a deal was opened from it. The deal publishes its own deal.created; this records the decision.
@@ -137,7 +137,7 @@ type InternalEventDealSuggestionAccepted struct{}
 // InternalEventDealSuggestionCreated Deal Scout suggested opening a deal for a company with no open deal. Entity-less, which keeps it off the subscribable set: a suggestion is visible only to a reader who may see every piece of its evidence, and no webhook consumer can be held to that. The suggestion id stays on the audit row the emit points at.
 type InternalEventDealSuggestionCreated struct {
 	// EvidenceCount How many pieces of evidence the suggestion cites.
-	EvidenceCount int `json:"evidence_count"`
+	EvidenceCount int `json:"evidence_count" minimum:"1"`
 }
 
 // InternalEventDealSuggestionDismissed A rep dismissed a suggestion for the whole workspace. The company is suggested again only on evidence newer than the dismissal.
@@ -145,6 +145,14 @@ type InternalEventDealSuggestionDismissed struct{}
 
 // InternalEventDealSuggestionSuperseded A suggestion stopped standing without anybody deciding it: its company gained an open deal or was archived, or a piece of its evidence was erased.
 type InternalEventDealSuggestionSuperseded struct{}
+
+// InternalEventExistingCustomerNoticeCreated An administrator declared that a group of customers was told at collection that they may object to advertising.
+type InternalEventExistingCustomerNoticeCreated struct {
+	LegalEntityId openapi_types.UUID `json:"legal_entity_id"`
+}
+
+// InternalEventExistingCustomerNoticeWithdrawn An administrator withdrew a collection-notice declaration.
+type InternalEventExistingCustomerNoticeWithdrawn struct{}
 
 // InternalEventLeadPrivacyNoticeCreated A website lead's Art. 14 notice was queued, or could not be given and nothing about the lead was kept. Entity-less and without the lead, which keeps it off the subscribable set: a named lead's unmet legal obligation is not a subscriber's to read. The proof row stays on the audit row the emit points at.
 type InternalEventLeadPrivacyNoticeCreated struct {
@@ -221,7 +229,7 @@ type InternalEventTagSuggestionAccepted struct{}
 // InternalEventTagSuggestionCreated The tag scout suggested a tag on a contact or company. Entity-less and without the tag or the record, which keeps it off the subscribable set: a suggestion built from mail only its owner may read is visible only to that owner, and no webhook consumer can be held to that.
 type InternalEventTagSuggestionCreated struct {
 	// EvidenceCount How many activities the suggestion cites.
-	EvidenceCount int `json:"evidence_count"`
+	EvidenceCount int `json:"evidence_count" minimum:"1"`
 }
 
 // InternalEventTagSuggestionDismissed A user dismissed a tag suggestion for the whole workspace. The tag is suggested on that record again only on evidence newer than the dismissal.
@@ -261,6 +269,22 @@ func (InternalEventDealSuggestionDismissed) EntityType() string { return "" }
 func (InternalEventDealSuggestionSuperseded) EventType() string { return "deal_suggestion.superseded" }
 
 func (InternalEventDealSuggestionSuperseded) EntityType() string { return "" }
+
+func (InternalEventExistingCustomerNoticeCreated) EventType() string {
+	return "existing_customer_notice.created"
+}
+
+func (InternalEventExistingCustomerNoticeCreated) EntityType() string {
+	return "existing_customer_notice"
+}
+
+func (InternalEventExistingCustomerNoticeWithdrawn) EventType() string {
+	return "existing_customer_notice.withdrawn"
+}
+
+func (InternalEventExistingCustomerNoticeWithdrawn) EntityType() string {
+	return "existing_customer_notice"
+}
 
 func (InternalEventLeadPrivacyNoticeCreated) EventType() string { return "lead_privacy_notice.created" }
 
