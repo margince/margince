@@ -68463,6 +68463,14 @@ type GetSdrSummaryParams struct {
 
 	// ScopeId The owner or team named by `scope_kind`.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// AsOf The instant to count at, so the summary describes the same moment as an evaluation
+	// read beside it (its `context.evaluated_at`). Omitted means now. A future instant is
+	// refused, since nothing has happened by then to count. It bounds each handoff's state,
+	// submitter and reason, and which meetings existed. The recipient, whether that
+	// recipient can still act, team membership and a meeting's status keep no history, so
+	// they read as they stand now. An `as_of` far in the past is not a historical report.
+	AsOf *time.Time `form:"as_of,omitempty" json:"as_of,omitempty"`
 }
 
 // GetSdrSummaryParamsScopeKind defines parameters for GetSdrSummary.
@@ -68482,6 +68490,11 @@ type ListSdrWaitingHandoffsParams struct {
 	// Cursor Opaque position from a previous page's `next_cursor`.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
+
+	// AsOf The instant to list at, so the rows describe the same moment as a summary read beside
+	// them (its `as_of`). Omitted means now; a future instant is refused. It bounds the same
+	// facts as the summary's `as_of`: the recipient and team membership read as they stand now.
+	AsOf *time.Time `form:"as_of,omitempty" json:"as_of,omitempty"`
 }
 
 // ListSdrWaitingHandoffsParamsScopeKind defines parameters for ListSdrWaitingHandoffs.
@@ -105346,6 +105359,19 @@ func (siw *ServerInterfaceWrapper) GetSdrSummary(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "as_of" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "as_of", r.URL.Query(), &params.AsOf, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "as_of"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "as_of", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSdrSummary(w, r, params)
 	}))
@@ -105435,6 +105461,19 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "as_of" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "as_of", r.URL.Query(), &params.AsOf, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "as_of"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "as_of", Err: err})
 		}
 		return
 	}

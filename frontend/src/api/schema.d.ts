@@ -90760,6 +90760,15 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 /** @description The owner or team named by `scope_kind`. */
                 scope_id?: string;
+                /**
+                 * @description The instant to count at, so the summary describes the same moment as an evaluation
+                 *     read beside it (its `context.evaluated_at`). Omitted means now. A future instant is
+                 *     refused, since nothing has happened by then to count. It bounds each handoff's state,
+                 *     submitter and reason, and which meetings existed. The recipient, whether that
+                 *     recipient can still act, team membership and a meeting's status keep no history, so
+                 *     they read as they stand now. An `as_of` far in the past is not a historical report.
+                 */
+                as_of?: string;
             };
             header?: never;
             path?: never;
@@ -90794,6 +90803,12 @@ export interface operations {
                 /** @description Opaque position from a previous page's `next_cursor`. */
                 cursor?: string;
                 limit?: number;
+                /**
+                 * @description The instant to list at, so the rows describe the same moment as a summary read beside
+                 *     them (its `as_of`). Omitted means now; a future instant is refused. It bounds the same
+                 *     facts as the summary's `as_of`: the recipient and team membership read as they stand now.
+                 */
+                as_of?: string;
             };
             header?: never;
             path?: never;
