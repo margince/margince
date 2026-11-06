@@ -537,3 +537,68 @@
   border-radius: var(--r-md);
   padding: var(--space-4) var(--padPane);
 }
+
+/* A record tab past Overview is one body, so its plain panels are sections of
+   the sheet split by hairlines, not boxes inside a box. Overview is always the
+   strip's first tab (lib/recordtaborder.ts), so a first tab not pressed means
+   another body is open. Toned panels keep their box: the tone is what they
+   say. Here, with the head band's other shapes, so the band has one sheet. */
+.record-split-sheet:has(
+    > .record-split-tabs .recordtabs-tab:first-child[aria-pressed="false"]
+  )
+  .record-split-feed
+  .panel:not(
+    .panel .panel,
+    .panel-ai,
+    .panel-accent,
+    .panel-info,
+    .panel-success,
+    .panel-warning,
+    .panel-danger,
+    .panel-discovery
+  ) {
+  margin-inline: calc(-1 * var(--padPanel));
+  border: 0;
+  border-block-start: 1px solid var(--borderSubtle);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.record-split-sheet:has(
+    > .record-split-tabs .recordtabs-tab:first-child[aria-pressed="false"]
+  )
+  .record-split-feed
+  .panel:not(
+    .panel .panel,
+    .panel-ai,
+    .panel-accent,
+    .panel-info,
+    .panel-success,
+    .panel-warning,
+    .panel-danger,
+    .panel-discovery
+  )
+  > .panel-head {
+  min-block-size: 0;
+  padding-block: var(--space-4) 0;
+  border-block-end: 0;
+}
+/* The first section sits right under the tab rule, which is its line. */
+.record-split-sheet:has(
+  > .record-split-tabs .recordtabs-tab:first-child[aria-pressed="false"]
+)
+.panel:not(
+  .panel .panel,
+  .panel-ai,
+  .panel-accent,
+  .panel-info,
+  .panel-success,
+  .panel-warning,
+  .panel-danger,
+  .panel-discovery
+):first-child:is(
+  .record-split-feed > *,
+  .record-split-feed > :first-child > *
+) {
+  border-block-start-color: transparent;
+}
