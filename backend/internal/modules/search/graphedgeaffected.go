@@ -45,7 +45,7 @@ type pair struct {
 // It is a WIDER target than the rows alone, and deliberately: over-including a
 // pair costs a refold that writes back what was already there, while omitting
 // one leaves a claim nobody can see is false. The lookup is served by
-// idx_graph_edge_user and idx_graph_edge_contact, and recomputePairs folds the
+// idx_graph_edge_user and idx_graph_edge_contact, and foldPairs folds the
 // whole target set in one statement rather than one per pair.
 func affectedPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, includePrior bool) ([]pair, error) {
 	args := []any{activityIDs, includePrior}

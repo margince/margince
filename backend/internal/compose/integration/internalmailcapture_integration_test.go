@@ -56,7 +56,7 @@ func TestInternalMailUsesTheSameSourceDecisionInPreflightAndStorage(t *testing.T
 	reg.Register(internalMailLiveProvider{act: func(runCtx context.Context, target connector.Sink) error {
 		judge, ok := target.(connector.PreStoreJudge)
 		if !ok {
-			return fmt.Errorf("sink has no preflight")
+			return errors.New("sink has no preflight")
 		}
 		drop, err := judge.DropBeforeStore(runCtx, rec)
 		if err != nil {

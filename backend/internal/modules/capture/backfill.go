@@ -419,6 +419,6 @@ func widestWindowTx(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*int, erro
 		SELECT max(b.window_months)
 		FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
 		WHERE b.connection_id = $1
-		  AND (c.account_bound_at IS NULL OR b.created_at >= c.account_bound_at)`, connID).Scan(&widest)
+		  AND `+backfillMatchesAccount, connID).Scan(&widest)
 	return widest, err
 }

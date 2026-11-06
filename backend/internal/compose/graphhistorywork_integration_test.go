@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -70,7 +71,15 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 		logHistoryGraphMail(ctx, t, b, []ids.UUID{counterpart, peerID}, at.Add(time.Duration(day)*24*time.Hour))
 	}
 	logMail(0)
-	gen := NewGraphEdgeConsumer(b.env.Pool)
+	observer := &graphFoldObserver{marker: "INSERT INTO graph_", started: make(chan uint32, 1)}
+	config := b.env.Pool.Config()
+	config.ConnConfig.Tracer = observer
+	graphPool, err := testdb.OwnPoolFromConfig(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(graphPool.Close)
+	gen := NewGraphEdgeConsumer(graphPool)
 	first := historyGraphEvents(t, b, run)
 	if len(first) != 1 {
 		t.Fatalf("captured events=%d want=1", len(first))
@@ -80,6 +89,9 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	}
 	if err := gen.HandleEvent(context.Background(), first[0]); err != nil {
 		t.Fatal(err)
+	}
+	if reads := observer.folds.Load(); reads != 4 {
+		t.Fatalf("new pairs needed %d folds, want four across two tables", reads)
 	}
 	b.env.WsExec(t, `UPDATE graph_interaction_edge SET computed_at='2000-01-01T00:00:00Z' WHERE contact_id=@contact`, pgx.NamedArgs{"contact": counterpart})
 	for day := 1; day < 32; day++ {
@@ -98,6 +110,9 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_contact_edge WHERE count_total=1 AND deferred_run_id=@run AND requested_generation>processed_generation`, pgx.NamedArgs{"run": run}); got != 1 {
 		t.Fatalf("contact pair was not coalesced: %d", got)
 	}
+	if reads := observer.folds.Load(); reads != 4 {
+		t.Fatalf("history repeated exact folds: %d", reads)
+	}
 	// Archival must remove evidence while the import still owns its deferred work.
 	if _, err := b.env.Activities.ArchiveActivity(b.env.Admin(), ids.From[ids.ActivityKind](first[0].Entity.ID), nil); err != nil {
 		t.Fatal(err)
@@ -108,6 +123,9 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE contact_id=@contact AND count_total=31 AND computed_at<>'2000-01-01T00:00:00Z'`, pgx.NamedArgs{"contact": counterpart}); got != 1 {
 		t.Fatalf("archival waited for the history drain: %d", got)
 	}
+	if reads := observer.folds.Load(); reads != 6 {
+		t.Fatalf("existing-pair removal needed %d extra folds, want two", reads-4)
+	}
 	if _, err := b.registry.CancelBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1)); err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +133,7 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithWorkspaceTx(system, graphPool, func(tx pgx.Tx) error {
 		more, err := search.DrainPendingGraphTx(system, tx, 100)
 		if more {
 			return errors.New("one pair unexpectedly filled the drain cohort")
@@ -132,6 +150,9 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	}
 	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE requested_generation>processed_generation`); got != 0 {
 		t.Fatalf("covered backlog reopened %d pairs", got)
+	}
+	if reads := observer.folds.Load(); reads != 8 {
+		t.Fatalf("drain and redelivery needed %d extra folds, want two", reads-6)
 	}
 	v := edgeEnv{b.env}
 	drained := v.snapshot(t)

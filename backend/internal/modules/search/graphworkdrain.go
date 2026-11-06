@@ -87,7 +87,7 @@ func settleContactPairs(ctx context.Context, tx pgx.Tx, work []contactPairWork) 
 		pairs = append(pairs, request.pair)
 		generations = append(generations, request.generation)
 	}
-	if err := recomputeContactPairs(ctx, tx, pairs); err != nil {
+	if err := recomputeContactPairs(ctx, tx, pairs, nil); err != nil {
 		return err
 	}
 	a, b := contactPairKeys(pairs)
@@ -108,7 +108,7 @@ func settleInteractionPairs(ctx context.Context, tx pgx.Tx, work []interactionPa
 		pairs = append(pairs, request.pair)
 		generations = append(generations, request.generation)
 	}
-	if err := recomputePairs(ctx, tx, pairs); err != nil {
+	if err := recomputePairs(ctx, tx, pairs, nil); err != nil {
 		return err
 	}
 	users, contacts := interactionPairKeys(pairs)

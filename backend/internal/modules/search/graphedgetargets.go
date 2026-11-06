@@ -83,17 +83,18 @@ func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
 	if err := lockGraphWrites(ctx, tx); err != nil {
 		return err
 	}
-	if err := t.lockContactPairs(ctx, tx); err != nil {
+	missingContacts, err := t.lockContactPairs(ctx, tx)
+	if err != nil {
 		return err
 	}
-	if err := recomputeContactPairs(ctx, tx, t.contactPairs); err != nil {
+	if err := recomputeContactPairs(ctx, tx, t.contactPairs, missingContacts); err != nil {
 		return err
 	}
 
 	if err := t.history.markContacts(ctx, tx); err != nil {
 		return err
 	}
-	if err := t.history.prepareContacts(ctx, tx); err != nil {
+	if err := t.history.prepareContacts(ctx, tx, missingContacts); err != nil {
 		return err
 	}
 	if len(t.dropped) > 0 {
@@ -101,17 +102,18 @@ func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
 			return fmt.Errorf("search: dropping a contact's observed peer edges: %w", err)
 		}
 	}
-	if err := t.lockInteractionPairs(ctx, tx); err != nil {
+	missingInteractions, err := t.lockInteractionPairs(ctx, tx)
+	if err != nil {
 		return err
 	}
-	if err := recomputePairs(ctx, tx, t.pairs); err != nil {
+	if err := recomputePairs(ctx, tx, t.pairs, missingInteractions); err != nil {
 		return err
 	}
 
 	if err := t.history.markInteractions(ctx, tx); err != nil {
 		return err
 	}
-	if err := t.history.prepareInteractions(ctx, tx); err != nil {
+	if err := t.history.prepareInteractions(ctx, tx, missingInteractions); err != nil {
 		return err
 	}
 	if len(t.dropped) > 0 {

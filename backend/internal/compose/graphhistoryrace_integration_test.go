@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -31,22 +30,36 @@ type graphFoldBarrierTx struct {
 	release <-chan struct{}
 	once    sync.Once
 	fold    string
+	observe func([]any)
 }
 
-func (tx *graphFoldBarrierTx) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
-	tag, err := tx.Tx.Exec(ctx, sql, args...)
-	if err != nil {
-		return tag, err
+func (tx *graphFoldBarrierTx) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	isFold := strings.Contains(sql, tx.fold)
+	if isFold && tx.observe != nil {
+		tx.observe(args)
 	}
-	if strings.Contains(sql, tx.fold) {
-		tx.once.Do(func() { close(tx.entered) })
+	rows, err := tx.Tx.Query(ctx, sql, args...)
+	if err != nil || !isFold {
+		return rows, err
+	}
+	return &graphFoldBarrierRows{Rows: rows, boundary: tx, ctx: ctx}, nil
+}
+
+type graphFoldBarrierRows struct {
+	pgx.Rows
+	boundary *graphFoldBarrierTx
+	ctx      context.Context
+}
+
+func (rows *graphFoldBarrierRows) Close() {
+	rows.Rows.Close()
+	rows.boundary.once.Do(func() {
+		close(rows.boundary.entered)
 		select {
-		case <-tx.release:
-		case <-ctx.Done():
-			return pgconn.CommandTag{}, ctx.Err()
+		case <-rows.boundary.release:
+		case <-rows.ctx.Done():
 		}
-	}
-	return tag, nil
+	})
 }
 
 func TestALateHistoricalEventRemainsPendingAfterAConcurrentGraphDrain(t *testing.T) {

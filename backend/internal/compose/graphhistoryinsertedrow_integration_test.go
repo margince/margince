@@ -9,9 +9,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -33,10 +35,12 @@ type graphFoldObserver struct {
 	marker  string
 	started chan uint32
 	once    sync.Once
+	folds   atomic.Int64
 }
 
 func (o *graphFoldObserver) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	if strings.Contains(data.SQL, o.marker) {
+		o.folds.Add(1)
 		o.once.Do(func() { o.started <- conn.PgConn().PID() })
 	}
 	return ctx
@@ -51,11 +55,15 @@ func TestAConcurrentFirstGraphFoldCannotHideANewerHistoricalArrival(t *testing.T
 		{"contact pair", "graph_contact_edge", 2},
 		{"interaction pair", "graph_interaction_edge", 1},
 	} {
-		t.Run(test.name, func(t *testing.T) { assertHistorySurvivesFirstGraphFold(t, test.table, test.parties) })
+		for _, newerWins := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s_newer_finishes_first_%v", test.name, newerWins), func(t *testing.T) {
+				assertHistorySurvivesFirstGraphFold(t, test.table, test.parties, newerWins)
+			})
+		}
 	}
 }
 
-func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int) {
+func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int, newerWins bool) {
 	b := setupBackfillWire(t)
 	firstRun := strandedBackfill(t, b)
 	other, secondRun := startSecondHistory(t, b)
@@ -63,16 +71,7 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 	if err := b.registry.DispatchBackfills(dispatch, backfillScheduler(b.env.WS), false); err != nil {
 		t.Fatal(err)
 	}
-	var allContacts []ids.UUID
-	for i := range parties * 2 {
-		contact, err := b.env.Contacts.CreateContact(b.env.Admin(), contacts.CreateContactInput{FullName: fmt.Sprintf("Insert correspondent %d", i), Source: "manual"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		allContacts = append(allContacts, ids.UUID(contact.Id))
-	}
-	slices.SortFunc(allContacts, func(a, b ids.UUID) int { return bytes.Compare(a[:], b[:]) })
-	blockers, targets := allContacts[:parties], allContacts[parties:]
+	blockers, targets := graphContactSets(t, b, parties)
 	oldSource := storekit.WithBatch(b.env.Admin(), secondRun)
 	blocker := logHistoryGraphMail(oldSource, t, b, blockers, clocktest.Now(t).Add(-72*time.Hour))
 	first := logHistoryGraphMail(oldSource, t, b, targets, clocktest.Now(t).Add(-48*time.Hour))
@@ -105,10 +104,74 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 	}
 	second := logHistoryGraphMail(storekit.WithBatch(b.env.Admin(), firstRun), t, b, targets, clocktest.Now(t).Add(-24*time.Hour))
 	latest := latestDerivedEvent(t, b.env, "activity.captured", second, "")
+	if newerWins {
+		if err := NewGraphEdgeConsumer(b.env.Pool).HandleEvent(ctx, latest); err != nil {
+			t.Fatal(err)
+		}
+		commitBlocker()
+		if err := <-olderResult; err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		finishGraphFoldAfterOlder(ctx, t, b.env.Pool, table, latest, commitBlocker, olderResult, cancel)
+	}
+	if reads := observer.folds.Load(); reads != 2 {
+		t.Fatalf("first-creation batch ran %d exact folds, want two", reads)
+	}
+	if _, err := b.registry.CancelBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.registry.CancelBackfill(other, "gmail", ids.From[ids.UserKind](b.env.Rep2)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { _, err := search.DrainPendingGraphTx(system, tx, 100); return err }); err != nil {
+		t.Fatal(err)
+	}
+	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE count_total=2 AND requested_generation=processed_generation`); got != parties {
+		t.Fatalf("first fold lost interaction arrivals: %d", got)
+	}
+	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_contact_edge WHERE count_total=2 AND requested_generation=processed_generation`); got != parties*(parties-1)/2 {
+		t.Fatalf("first fold lost contact arrivals: %d", got)
+	}
+	drained := graphProjectionSnapshot(system, t, b.env.Pool)
+	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { return search.RebuildEdges(system, tx) }); err != nil {
+		t.Fatal(err)
+	}
+	if rebuilt := graphProjectionSnapshot(system, t, b.env.Pool); !maps.Equal(drained, rebuilt) {
+		t.Fatalf("concurrent folds disagree with rebuild: drained=%v rebuilt=%v", drained, rebuilt)
+	}
+}
+
+func awaitBlockedGraphFold(ctx context.Context, t *testing.T, pool *pgxpool.Pool, pid uint32) {
+	t.Helper()
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Release()
+	for {
+		if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+			t.Fatal(err)
+		}
+		var blocked bool
+		if err := conn.QueryRow(ctx, `SELECT cardinality(pg_blocking_pids(@pid))>0`, pgx.NamedArgs{"pid": pid}).Scan(&blocked); err != nil {
+			t.Fatal(err)
+		}
+		if blocked {
+			return
+		}
+	}
+}
+
+func finishGraphFoldAfterOlder(ctx context.Context, t *testing.T, pool *pgxpool.Pool, table string, latest events.Envelope, commitBlocker func(), olderResult <-chan error, cancel context.CancelFunc) {
+	t.Helper()
 	entered, release := make(chan struct{}), make(chan struct{})
 	var once sync.Once
 	unblock := func() { once.Do(func() { close(release) }) }
-	config = b.env.Pool.Config()
+	config := pool.Config()
 	config.ConnConfig.Tracer = &graphMarkBarrier{entered: entered, release: release, marker: "LEFT JOIN " + table + " e ON"}
 	newerPool, err := testdb.OwnPoolFromConfig(ctx, config)
 	if err != nil {
@@ -136,43 +199,18 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 	if err := <-newerResult; err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.registry.CancelBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1)); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := b.registry.CancelBackfill(other, "gmail", ids.From[ids.UserKind](b.env.Rep2)); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {
-		t.Fatal(err)
-	}
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { _, err := search.DrainPendingGraphTx(system, tx, 100); return err }); err != nil {
-		t.Fatal(err)
-	}
-	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE count_total=2 AND requested_generation=processed_generation`); got != parties {
-		t.Fatalf("first fold lost interaction arrivals: %d", got)
-	}
-	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_contact_edge WHERE count_total=2 AND requested_generation=processed_generation`); got != parties*(parties-1)/2 {
-		t.Fatalf("first fold lost contact arrivals: %d", got)
-	}
 }
 
-func awaitBlockedGraphFold(ctx context.Context, t *testing.T, pool *pgxpool.Pool, pid uint32) {
+func graphContactSets(t *testing.T, b *backfillWireEnv, parties int) ([]ids.UUID, []ids.UUID) {
 	t.Helper()
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer conn.Release()
-	for {
-		if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+	var allContacts []ids.UUID
+	for i := range parties * 2 {
+		contact, err := b.env.Contacts.CreateContact(b.env.Admin(), contacts.CreateContactInput{FullName: fmt.Sprintf("Insert correspondent %d", i), Source: "manual"})
+		if err != nil {
 			t.Fatal(err)
 		}
-		var blocked bool
-		if err := conn.QueryRow(ctx, `SELECT cardinality(pg_blocking_pids(@pid))>0`, pgx.NamedArgs{"pid": pid}).Scan(&blocked); err != nil {
-			t.Fatal(err)
-		}
-		if blocked {
-			return
-		}
+		allContacts = append(allContacts, ids.UUID(contact.Id))
 	}
+	slices.SortFunc(allContacts, func(a, b ids.UUID) int { return bytes.Compare(a[:], b[:]) })
+	return allContacts[:parties], allContacts[parties:]
 }
