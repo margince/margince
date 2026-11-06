@@ -465,10 +465,22 @@ jobs:
         # so lint and the unit tests stop sharing four cores.
         run: |
           set -o pipefail
-          make check-backend CHECK_LEGS="${{ matrix.legs }}" \
-            EXT_COVER_OUT="$PWD/backend/coverage-extensions.out" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
-      # Extension units are their own Go modules, so neither the shards' profile
-      # nor ./... reaches them; test-extensions in this leg is their only test run.
+          make check-backend CHECK_LEGS="${{ matrix.legs }}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
+      # crm-hello declares capabilities no shipped unit does, so this is the one
+      # walk of them; TestEveryPublishedCapabilityHasALiveDeclaringUnit reads the
+      # cp below. It runs after the merge gate, which must see only the committed
+      # units. Only cmd/ imports the composition (TestCompositionWiredOnlyFromCmd),
+      # so ./cmd/... is every package the fixture can change.
+      - name: Stage the reference fixture and walk the composed path
+        if: ${{ matrix.part == 'unit' }}
+        working-directory: .
+        run: |
+          cp -R fixtures/extensions/crm-hello extensions/
+          make -C backend build check-composition
+          (cd backend && GOWORK="$PWD/../build/composition/go.work" go test ./cmd/...)
+          make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
+      # Extension units are their own Go modules, so the shards' profile never
+      # reaches them.
       - name: Upload extension coverage
         if: ${{ matrix.part == 'unit' }}
         uses: ./.github/actions/upload-artifact-retried

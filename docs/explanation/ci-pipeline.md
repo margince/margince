@@ -480,9 +480,9 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 - **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
 - **`craftsmanship` starts beside `deterministic-gates`.** It reads source only, so a red build does
   not change its findings, and both reds show in one round.
-- **The `unit` leg writes the extension coverage.** Extension units are separate Go modules, and
-  `test-extensions` in that leg of `deterministic-gates` is their only test run. Every check builds the
-  core with the units under `extensions/`.
+- **`deterministic-gates (unit)` stages `crm-hello` last.** After the merge gate it copies the fixture
+  into `extensions/`, then runs the composed build, the tests of `cmd/` and every unit's own tests. Its
+  coverage profile goes to `sonarcloud`, because the shard profiles cannot reach a unit's module.
 - **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws
   the slow `e2e` tests work through its part without running minutes past its siblings.
 - **`integration unit coverage`** exists because the shards run just the packages tagged for
