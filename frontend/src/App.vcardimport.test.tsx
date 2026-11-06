@@ -12,6 +12,9 @@ import {
   sessionOnlyFetch,
   teardownApp,
 } from "./testing/appharness";
+// The screens these cases open, loaded while the file is collected. A screen's
+// first import costs seconds; inside a case it races the case's own waiters.
+import "./features/contacts/contacts";
 
 // `#/contacts/import` is asserted through the real router, shell and trail:
 // the screens alone cannot see `import` being read as a contact id.
