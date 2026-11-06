@@ -169,7 +169,11 @@ export const screenOfAddress = (address: string) => {
 
 function screenWithLocale(address: string) {
   const view = screenOfAddress(address);
-  return parseHash(address).screen === "analytics" ? view : <CompleteLocale>{view}</CompleteLocale>;
+  return parseHash(address).screen === "analytics" ? (
+    view
+  ) : (
+    <CompleteLocale>{view}</CompleteLocale>
+  );
 }
 
 // What the held address is about, which is what the screen below is keyed on.

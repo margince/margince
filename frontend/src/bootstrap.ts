@@ -20,7 +20,7 @@ if (parseHash(location.hash).screen === "analytics") {
   void import("./App.analytics").catch((error: unknown) =>
     console.error("Analytics code could not be loaded", error),
   );
-  void import("./features/analytics/analytics.prefetch")
+  void import("./app/analytics-prefetch")
     .then(({ prefetchAnalytics }) => prefetchAnalytics(queryClient))
     .catch((error: unknown) =>
       console.error("Analytics startup could not be prepared", error),

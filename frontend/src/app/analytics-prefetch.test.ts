@@ -1,11 +1,11 @@
 /** @vitest-environment happy-dom */
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
-import { sessionOptions } from "../../lib/session";
-import { meFixture } from "../../testing/mefixture";
-import { analyticsContextOptions } from "./analytics.context";
-import { prefetchAnalytics } from "./analytics.prefetch";
-import { reportingCatalogOptions } from "./reporting.queries";
+import { analyticsContextOptions } from "../features/analytics/analytics.context";
+import { reportingCatalogOptions } from "../features/analytics/reporting.queries";
+import { sessionOptions } from "../lib/session";
+import { meFixture } from "../testing/mefixture";
+import { prefetchAnalytics } from "./analytics-prefetch";
 
 const clients: QueryClient[] = [];
 afterEach(() => {
