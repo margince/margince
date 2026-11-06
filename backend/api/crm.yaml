@@ -8717,6 +8717,7 @@ paths:
       security: [ { cookieAuth: [] } ]   # Reports and Home draw it; an agent asks the report tools
       x-agent-access: human-only
       x-human-only-reason: covered
+      x-settings-audience: member
       summary: The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
       description: |
         Each count and breakdown an installed extension declares, run through the report engine for

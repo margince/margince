@@ -217,6 +217,7 @@ var parityPathAreas = map[string]string{
 	"/exports":                            "exports",
 	"/ext-oauth/{provider}/callback":      "oauth_callbacks",
 	"/ext-oauth/{provider}/connect":       "extensions",
+	"/extension-reports":                  "extensions",
 	"/extensions":                         "extensions",
 	"/field-history":                      "audit",
 	"/forecast":                           "forecast",
