@@ -11,7 +11,11 @@ import {
   useState,
 } from "react";
 import { pluralCategory } from "../format/plural";
-import { useDateTimePreferences } from "../format/preferences";
+import {
+  type DateTimePreferences,
+  dateTimePreferences,
+  useDateTimePreferences,
+} from "../format/preferences";
 import { STORAGE_KEYS, writeStored } from "../lib/storage";
 import {
   type CatalogLevel,
@@ -221,8 +225,11 @@ type LocaleContextValue = {
   adoptLocale: (locale: Locale) => void;
 };
 
-const LocaleContext = createContext<LocaleContextValue>({
+const LocaleContext = createContext<
+  LocaleContextValue & { formats: DateTimePreferences }
+>({
   locale: DEFAULT_LOCALE,
+  formats: dateTimePreferences(),
   setLocale: () => {},
   adoptLocale: () => {},
 });
@@ -316,9 +323,10 @@ export function LocaleProvider({
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+  const formats = useDateTimePreferences();
   const value = useMemo(
-    () => ({ locale, setLocale, adoptLocale }),
-    [locale, setLocale, adoptLocale],
+    () => ({ locale, setLocale, adoptLocale, formats }),
+    [locale, setLocale, adoptLocale, formats],
   );
   return (
     <LocaleContext.Provider value={value}>
@@ -332,7 +340,6 @@ export function LocaleProvider({
 }
 
 export function useLocale(): LocaleContextValue {
-  useDateTimePreferences();
   return useContext(LocaleContext);
 }
 
@@ -387,9 +394,20 @@ export function usePluralKey() {
   return (base: PluralBase, count: number) => pluralKey(locale, base, count);
 }
 
+export function LocaleBoundary({
+  children,
+  level,
+}: Readonly<{ children: ReactNode; level: CatalogLevel }>) {
+  const { locale } = useContext(LocaleContext);
+  return (
+    <LocaleReady locale={locale} level={level}>
+      {children}
+    </LocaleReady>
+  );
+}
+
 export function CompleteLocale({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const { locale } = useContext(LocaleContext);
-  return <LocaleReady locale={locale}>{children}</LocaleReady>;
+  return <LocaleBoundary level="complete">{children}</LocaleBoundary>;
 }

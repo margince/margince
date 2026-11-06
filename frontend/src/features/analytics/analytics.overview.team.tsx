@@ -3,9 +3,10 @@
 
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Field } from "../../design-system/atoms";
+import { Field, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FilterBar } from "../../design-system/filterbar";
 import { OverflowMenu } from "../../design-system/overflowmenu";
@@ -18,7 +19,6 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
-import { AssessmentPanel } from "./analytics.assessment";
 import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
@@ -31,11 +31,11 @@ import {
   MetricReading,
   OverviewSaveActions,
 } from "./analytics.overview.readings";
-import { MemberTable } from "./analytics.overview.team.members";
 import {
   TeamStanding,
   useTeamSummary,
 } from "./analytics.overview.team.standing";
+import { AssessmentPanel, MemberTable } from "./analytics.overview.work";
 import { periodCaption } from "./analytics.period";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
@@ -264,20 +264,24 @@ function TeamBody({
                 </SurfaceState>
               ) : (
                 <>
-                  <MemberTable
-                    review={data}
-                    zone={zone}
-                    onOpen={(id, owner) => {
-                      const metric = query.data?.metrics.find(
-                        (metric) => metric.id === id,
-                      );
-                      if (metric)
-                        onEvidence({
-                          ...metric.evidence,
-                          group_key: `owner:${owner}`,
-                        });
-                    }}
-                  />
+                  <Suspense
+                    fallback={<PendingBody label={t("common.loading")} />}
+                  >
+                    <MemberTable
+                      review={data}
+                      zone={zone}
+                      onOpen={(id, owner) => {
+                        const metric = query.data?.metrics.find(
+                          (metric) => metric.id === id,
+                        );
+                        if (metric)
+                          onEvidence({
+                            ...metric.evidence,
+                            group_key: `owner:${owner}`,
+                          });
+                      }}
+                    />
+                  </Suspense>
                   {data.workflow === "qualification" && <QualificationNote />}
                   {data.handoffs && data.handoffs.unattributed > 0 && (
                     <Unattributed count={data.handoffs.unattributed} />
@@ -291,14 +295,16 @@ function TeamBody({
       rail={
         <>
           {query.data && !query.isError && !withheld && (
-            <AssessmentPanel
-              view="team"
-              work={review.data?.members_withheld ? undefined : summary.data}
-              workPending={summary.isPending || review.isPending}
-              selection={query.data.selection}
-              evaluation={query.data}
-              onEvidence={onEvidence}
-            />
+            <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+              <AssessmentPanel
+                view="team"
+                work={review.data?.members_withheld ? undefined : summary.data}
+                workPending={summary.isPending || review.isPending}
+                selection={query.data.selection}
+                evaluation={query.data}
+                onEvidence={onEvidence}
+              />
+            </Suspense>
           )}
           {review.data && !withheld && (
             <TeamStanding

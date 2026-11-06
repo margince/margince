@@ -4,7 +4,7 @@
 import { useEffect, useRef } from "react";
 import "./ambient-waves.css";
 import { createWavesRenderer, type WavesFrame } from "./ambient-waves-gl";
-import { readHue } from "./margince-core-gl";
+import { readHue } from "./margince-core-color";
 import { usePrefersReducedMotion } from "./motion";
 
 /**

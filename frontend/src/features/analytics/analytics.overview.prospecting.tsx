@@ -3,8 +3,10 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
+import { PendingBody } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
@@ -16,7 +18,6 @@ import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import { problemCodeOf } from "../../lib/problem";
-import { AssessmentPanel } from "./analytics.assessment";
 import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { scopeKey } from "./analytics.context";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
@@ -29,14 +30,9 @@ import {
   ProspectingResults,
 } from "./analytics.overview.prospectinghero";
 import {
-  OutcomeHistory,
   type ProspectingOutcome,
   useProspectingWeeks,
-} from "./analytics.overview.prospectingweeks";
-import {
-  HandoffCohort,
-  UpcomingMeetings,
-} from "./analytics.overview.prospectingwork";
+} from "./analytics.overview.prospectingweeks.queries";
 import {
   OVERVIEW_DEFAULT_PERIOD,
   prospectingQuestion,
@@ -44,6 +40,12 @@ import {
   prospectingTemplate,
 } from "./analytics.overview.questions";
 import { OverviewSaveActions } from "./analytics.overview.readings";
+import {
+  AssessmentPanel,
+  HandoffCohort,
+  OutcomeHistory,
+  UpcomingMeetings,
+} from "./analytics.overview.work";
 import { periodCaption } from "./analytics.period";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingFilters } from "./reporting.filters";
@@ -240,14 +242,16 @@ export function MyProspecting({
         rail={
           <>
             {query.data && known && !query.isError && (
-              <AssessmentPanel
-                view="prospecting"
-                work={summary.data}
-                workPending={summary.isLoading}
-                selection={query.data.selection}
-                evaluation={query.data}
-                onEvidence={openFrom}
-              />
+              <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+                <AssessmentPanel
+                  view="prospecting"
+                  work={summary.data}
+                  workPending={summary.isLoading}
+                  selection={query.data.selection}
+                  evaluation={query.data}
+                  onEvidence={openFrom}
+                />
+              </Suspense>
             )}
             <DoNext />
           </>
@@ -286,22 +290,28 @@ function ProspectingWork({
   return (
     <>
       {workflow === "handoff" && <Waiting self={self} summary={summary} />}
-      <UpcomingMeetings
-        self={self}
-        summary={summary}
-        title={t(
-          workflow === "qualification"
-            ? "analytics.prospect.prepTitle"
-            : "analytics.prospect.upcomingTitle",
-        )}
-      />
+      <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+        <UpcomingMeetings
+          self={self}
+          summary={summary}
+          title={t(
+            workflow === "qualification"
+              ? "analytics.prospect.prepTitle"
+              : "analytics.prospect.upcomingTitle",
+          )}
+        />
+      </Suspense>
       {workflow === "handoff" && week && (
-        <HandoffCohort self={self} evaluation={week} />
+        <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+          <HandoffCohort self={self} evaluation={week} />
+        </Suspense>
       )}
       {workflow === "qualification" && <QualificationNote />}
       {week && (
         <Disclosure summary={t("analytics.prospect.historyTitle")}>
-          <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
+          <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+            <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
+          </Suspense>
         </Disclosure>
       )}
     </>

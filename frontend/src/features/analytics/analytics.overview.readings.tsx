@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, Suspense, useState } from "react";
 import { AppLink } from "../../design-system/applink";
 import { Button, StatCard } from "../../design-system/atoms";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { lazy } from "../../i18n/lazy";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
@@ -17,7 +18,10 @@ import {
   reportingMoneyUnit,
 } from "./reporting.model";
 import { useMetricNames } from "./reporting.queries";
-import { SaveReportingDialog } from "./reporting.save";
+
+const SaveReportingDialog = lazy(async () => ({
+  default: (await import("./reporting.save")).SaveReportingDialog,
+}));
 
 type Metric = ReportingEvaluation["metrics"][number];
 
@@ -136,15 +140,17 @@ export function OverviewSaveActions({
         {t("analytics.overview.templates")}
       </AppLink>
       {saving && selection && (
-        <SaveReportingDialog
-          selection={selection}
-          note={t("analytics.overview.saveViewNote")}
-          onClose={() => setSaving(false)}
-          onSaved={(report) => {
-            setSaving(false);
-            navigate({ screen: "analytics", id: "reports", id2: report.id });
-          }}
-        />
+        <Suspense fallback={null}>
+          <SaveReportingDialog
+            selection={selection}
+            note={t("analytics.overview.saveViewNote")}
+            onClose={() => setSaving(false)}
+            onSaved={(report) => {
+              setSaving(false);
+              navigate({ screen: "analytics", id: "reports", id2: report.id });
+            }}
+          />
+        </Suspense>
       )}
     </>
   );

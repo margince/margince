@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
-import { Button } from "../../design-system/atoms";
+import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { QueryGate } from "../../design-system/querystates";
 import { useLocale, useT } from "../../i18n";
@@ -14,10 +15,8 @@ import { useCompanyZone } from "../../lib/companyzone";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
-import { AssessmentPanel } from "./analytics.assessment";
 import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
-import { DecisionsPanel } from "./analytics.decisions";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { useSalesCharts } from "./analytics.overview.board";
 import {
@@ -39,6 +38,7 @@ import { metricOf } from "./analytics.overview.readings";
 import { SalesFigures } from "./analytics.overview.salesfigures";
 import { SalesHeader } from "./analytics.overview.salesheader";
 import { SinceLastReview } from "./analytics.overview.since";
+import { AssessmentPanel, DecisionsPanel } from "./analytics.overview.work";
 import { periodCaption } from "./analytics.period";
 import { applyDimensions } from "./reporting.dimensions";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -212,18 +212,22 @@ function SalesReviewBody({
         rail={
           <>
             {answered && (
-              <AssessmentPanel
-                selection={selection}
-                evaluation={answered}
-                onEvidence={openEvidence}
-              />
+              <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+                <AssessmentPanel
+                  selection={selection}
+                  evaluation={answered}
+                  onEvidence={openEvidence}
+                />
+              </Suspense>
             )}
             <InterventionPanel
               interventions={checks}
               dials={findingDials(doors)}
               emptyLabel=""
             />
-            <DecisionsPanel />
+            <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+              <DecisionsPanel />
+            </Suspense>
           </>
         }
       />

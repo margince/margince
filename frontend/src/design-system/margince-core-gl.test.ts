@@ -4,7 +4,7 @@
 /** @vitest-environment happy-dom */
 
 import { afterEach, describe, expect, it } from "vitest";
-import { readHue } from "./margince-core-gl";
+import { readHue } from "./margince-core-color";
 
 // The seam between the design tokens and a shader, which both the Core and the
 // lit window edge read through. A shader cannot read a custom property, so this

@@ -7,9 +7,9 @@
 
 import { type ReactNode, type RefObject, useRef } from "react";
 import { useT } from "../i18n";
+import { opensRow } from "../lib/linkclick";
 import { AppLink } from "./applink";
 import { Checkbox, type useScrollRegion } from "./atoms";
-import { opensRow } from "./datatable";
 import type { ListColumn, ListSelection } from "./listcolumn";
 import { useListFocusHandoff } from "./listfocus";
 import { HeaderCell } from "./listheader";

@@ -93,6 +93,11 @@ const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
 const entries = initialEntries(frontendRoot);
 const bootstrap = entryChunks("bootstrap", entries.bootstrap, 20);
 const startup = entryChunks("startup", entries.startup);
+const analyticsPreparation = entryChunks(
+  "analytics-preparation",
+  entries.analyticsPreparation,
+  15,
+);
 const analytics = entryChunks("analytics", entries.analytics);
 
 export default defineConfig({
@@ -103,6 +108,7 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             bootstrap.group,
+            analyticsPreparation.group,
             startup.group,
             analytics.group,
             {
@@ -124,8 +130,9 @@ export default defineConfig({
   // module scripts and /@vite/client, which the api's admission check refuses by
   // name — so both views would be permanently unadvertised in every dev stack.
   plugins: [
-    preloadEntries(entries.startup),
+    preloadEntries([...entries.startup, ...entries.analyticsPreparation]),
     bootstrap.plugin,
+    analyticsPreparation.plugin,
     startup.plugin,
     analytics.plugin,
     react(),

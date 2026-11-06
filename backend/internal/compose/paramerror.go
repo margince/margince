@@ -21,6 +21,7 @@ import (
 // resolves to before the router serves it.
 func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.MiddlewareFunc) *chi.Mux {
 	router := chi.NewRouter()
+	router.Use(compressAPIJSON)
 	crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
 		BaseRouter:  router,

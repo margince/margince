@@ -131,3 +131,25 @@ it("retries a dictionary failure without remounting a cached lazy module", async
     reported.mockRestore();
   }
 });
+
+it("keeps first-page lazy children on their essential catalog", async () => {
+  const { loadEssentialLocale, loadedCatalogs, LocaleProvider, lazy } =
+    await freshLocale();
+  await loadEssentialLocale("en");
+  expect(loadedCatalogs.has("en")).toBe(false);
+  const View = lazy(
+    async () => ({ default: () => <p>Initial view</p> }),
+    "essential",
+  );
+  await act(async () => {
+    render(
+      <LocaleProvider initial="en" initialEssential>
+        <Suspense fallback={null}>
+          <View />
+        </Suspense>
+      </LocaleProvider>,
+    );
+  });
+  expect(await screen.findByText("Initial view")).toBeTruthy();
+  expect(loadedCatalogs.has("en")).toBe(false);
+});

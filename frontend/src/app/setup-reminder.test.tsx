@@ -297,6 +297,7 @@ describe("SetupReminder", () => {
 describe("SetupReminder at phone width", () => {
   const openAccount = async (user: UserEvent) => {
     await user.click(screen.getByRole("button", { name: /Account/ }));
+    await screen.findByRole("menu", { name: "Account" });
     return screen.getAllByRole("menuitem").map((row) => row.textContent ?? "");
   };
 
