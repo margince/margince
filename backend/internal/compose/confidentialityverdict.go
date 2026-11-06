@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -80,14 +79,6 @@ func NewConfidentialityVerdictEngine(pool *pgxpool.Pool, brain completer, log *s
 		released:  newHeldContactReleaser(pool, log),
 		documents: newThreadDocuments(pool, nil),
 	}
-}
-
-// WithObjectStore lets the engine read the documents a verdict judges. Without
-// one every document is marked unreadable, which the prompt says.
-func (e *ConfidentialityVerdictEngine) WithObjectStore(blob blobstore.Store) *ConfidentialityVerdictEngine {
-	out := *e
-	out.documents = newThreadDocuments(e.pool, blob)
-	return &out
 }
 
 // CanJudge reports whether a model lane was composed. A deployment without one

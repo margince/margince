@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"time"
 	"unicode/utf8"
 
@@ -96,6 +97,14 @@ func newThreadDocuments(pool *pgxpool.Pool, blob blobstore.Store) *threadDocumen
 	}
 }
 
+// WithObjectStore lets the engine read the documents a verdict judges. Without
+// one every document is marked unreadable, which the prompt says.
+func (e *ConfidentialityVerdictEngine) WithObjectStore(blob blobstore.Store) *ConfidentialityVerdictEngine {
+	out := *e
+	out.documents = newThreadDocuments(e.pool, blob)
+	return &out
+}
+
 // documentPass is what one verdict pass may still fetch.
 type documentPass struct {
 	bytesLeft int64
@@ -106,60 +115,54 @@ func newDocumentPass() *documentPass {
 }
 
 // read returns row with an excerpt or an unreadable mark on each document. A
-// document erased since the claim is dropped: there is nothing left to judge.
+// file the store no longer serves is marked, not dropped. A lost object must
+// not leave the verdict believing it saw every file.
 func (d *threadDocuments) read(
 	ctx context.Context, row capture.PendingThread, pass *documentPass,
 ) (capture.PendingThread, error) {
 	if len(row.Documents) == 0 {
 		return row, nil
 	}
-	kept := make([]capture.ThreadDocument, 0, len(row.Documents))
-	for _, doc := range row.Documents {
-		found, err := d.readOne(ctx, &doc, pass)
-		if err != nil {
+	docs := slices.Clone(row.Documents)
+	for i := range docs {
+		if err := d.readOne(ctx, &docs[i], pass); err != nil {
 			return row, err
 		}
-		if found {
-			kept = append(kept, doc)
-		}
 	}
-	row.Documents = kept
+	row.Documents = docs
 	return row, nil
 }
 
-// readOne fills one document's excerpt, or marks it unreadable. It answers
-// false for a file that no longer exists, and an error only for a cause the
-// thread is not to blame for.
-func (d *threadDocuments) readOne(ctx context.Context, doc *capture.ThreadDocument, pass *documentPass) (bool, error) {
+// readOne fills one document's excerpt, or marks it unreadable. It answers an
+// error only for a cause the thread is not to blame for.
+func (d *threadDocuments) readOne(ctx context.Context, doc *capture.ThreadDocument, pass *documentPass) error {
 	if doc.ByteSize > confidentialityDocumentBytes {
 		doc.Unreadable = true
-		return true, nil
+		return nil
 	}
 	if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < confidentialityDocumentMargin {
-		return false, fmt.Errorf("%w: the pass is out of time", errDocumentsDeferred)
+		return fmt.Errorf("%w: the pass is out of time", errDocumentsDeferred)
 	}
 	if doc.ByteSize > pass.bytesLeft {
-		return false, fmt.Errorf("%w: the pass spent its read budget", errDocumentsDeferred)
+		return fmt.Errorf("%w: the pass spent its read budget", errDocumentsDeferred)
 	}
 	select {
 	case d.slots <- struct{}{}:
 	case <-ctx.Done():
-		return false, fmt.Errorf("%w: %w", errDocumentsDeferred, ctx.Err())
+		return fmt.Errorf("%w: %w", errDocumentsDeferred, ctx.Err())
 	}
 	defer func() { <-d.slots }()
 	raw, mediaType, err := d.fetch(ctx, doc.AttachmentID)
 	switch {
 	case errors.Is(err, activities.ErrBlobstoreUnconfigured), errors.Is(err, errDocumentTooLarge),
-		errors.Is(err, activities.ErrBytesWithheld):
+		errors.Is(err, apperrors.ErrNotFound):
 		doc.Unreadable = true
-		return true, nil
-	case errors.Is(err, apperrors.ErrNotFound):
-		return false, nil
+		return nil
 	case err != nil:
-		return false, fmt.Errorf("%w: %w", errDocumentsDeferred, err)
+		return fmt.Errorf("%w: %w", errDocumentsDeferred, err)
 	}
 	pass.bytesLeft -= int64(len(raw))
-	return true, d.excerpt(ctx, doc, raw, mediaType)
+	return d.excerpt(ctx, doc, raw, mediaType)
 }
 
 // errDocumentTooLarge is a file whose bytes outgrew the size its row states.

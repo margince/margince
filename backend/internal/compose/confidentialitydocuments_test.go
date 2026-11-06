@@ -124,13 +124,13 @@ func TestAFileWithheldSinceTheClaimIsMarkedNotDropped(t *testing.T) {
 	}
 }
 
-func TestAFileErasedSinceTheClaimIsLeftOut(t *testing.T) {
+func TestAFileTheStoreNoLongerServesIsMarkedNotDropped(t *testing.T) {
 	reader, _ := readerOver(map[ids.UUID]storedFile{})
 	read, err := reader.read(context.Background(),
 		capture.PendingThread{Documents: []capture.ThreadDocument{{AttachmentID: ids.NewV7(), Filename: "gone.pdf"}}},
 		newDocumentPass())
-	if err != nil || len(read.Documents) != 0 {
-		t.Errorf("read = %+v, %v; want the erased file left out and no error", read.Documents, err)
+	if err != nil || len(read.Documents) != 1 || !read.Documents[0].Unreadable {
+		t.Errorf("read = %+v, %v; want the missing file kept and marked unreadable", read.Documents, err)
 	}
 }
 
