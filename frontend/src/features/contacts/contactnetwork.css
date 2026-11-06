@@ -218,8 +218,9 @@
 .pn-hero-link {
   position: relative;
   margin: 0;
-  /* As tall as the large avatars, so the line runs through their centres. */
-  min-height: 46px;
+  /* As tall as the large avatars, so the line runs through their centres
+     even when a long tie wraps. */
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;

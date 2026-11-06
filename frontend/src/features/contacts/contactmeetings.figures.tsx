@@ -5,7 +5,11 @@ import type { components } from "../../api/schema";
 import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
 import { activityDay } from "../../format/activitywhen";
-import { formatDayMonthNearYear, formatNumber } from "../../format/format";
+import {
+  formatDayMonthNearYear,
+  formatNumber,
+  MONEY_ABSENT,
+} from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 
@@ -24,6 +28,7 @@ export function MeetingFigures({
   booked,
   held,
   heldMore,
+  withheld = false,
   asOf,
 }: Readonly<{
   next?: NextMeeting;
@@ -32,6 +37,8 @@ export function MeetingFigures({
   // Meetings held, newest first, without those called off. Null until read.
   held: readonly Activity[] | null;
   heldMore: boolean;
+  // The meetings are not this reader's to see, so the counts stay unknown.
+  withheld?: boolean;
   asOf: string;
 }>) {
   const t = useT();
@@ -45,12 +52,13 @@ export function MeetingFigures({
   // A page not read yet may hold the last meeting held.
   const last = held?.[0];
   const none = t("contact.meetings.noneYet");
+  const unread = withheld ? MONEY_ABSENT : "…";
   let lastValue = none;
   if (last) lastValue = day(last.occurred_at, last.occurred_precision);
-  else if (held === null || heldMore) lastValue = "…";
+  else if (held === null || heldMore) lastValue = unread;
   const heldValue =
     held === null
-      ? "…"
+      ? unread
       : `${formatNumber(held.length, locale)}${heldMore ? "+" : ""}`;
   return (
     <StatStrip density="plate" label={t("contact.meetings.figures")}>
@@ -60,7 +68,7 @@ export function MeetingFigures({
       />
       <StatCard
         label={t("contact.meetings.bookedLabel")}
-        value={booked === null ? "…" : formatNumber(booked, locale)}
+        value={booked === null ? unread : formatNumber(booked, locale)}
       />
       <StatCard label={t("contact.meetings.heldLabel")} value={heldValue} />
       <StatCard label={t("contact.meetings.lastHeld")} value={lastValue} />

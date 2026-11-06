@@ -184,6 +184,19 @@ function heldState(
   return listed.isPending ? "loading" : "empty";
 }
 
+// A cached page outlives a withheld section, so the gate is checked too.
+function timelineRead(
+  view: Contact360 | undefined,
+  listed: Readonly<{ isSuccess: boolean; hasNextPage: boolean }>,
+) {
+  const withheld = view !== undefined && omitted(view, "activities");
+  return {
+    withheld,
+    isSuccess: !withheld && listed.isSuccess,
+    hasNextPage: listed.hasNextPage,
+  };
+}
+
 // A count only once it is the whole count. Until the list reaches the past,
 // meetings still ahead can sit on a page not read yet.
 function bookedCount(
@@ -266,7 +279,8 @@ export function ContactMeetingsTab({
       {briefOf(activity)}
     </>
   );
-  const booked = bookedCount(upcoming, listed, pastReached, [next, ...ahead]);
+  const { withheld, ...timeline } = timelineRead(view, listed);
+  const booked = bookedCount(upcoming, timeline, pastReached, [next, ...ahead]);
   const figured = view && (upcoming === "ready" || upcoming === "empty");
   return (
     <div className="record-stack pe-meetings">
@@ -275,8 +289,9 @@ export function ContactMeetingsTab({
           <MeetingFigures
             next={next}
             booked={booked}
-            held={listed.isSuccess ? happened : null}
+            held={timeline.isSuccess ? happened : null}
             heldMore={listed.hasNextPage}
+            withheld={withheld}
             asOf={view.as_of}
           />
         )}
