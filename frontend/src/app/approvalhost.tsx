@@ -1,20 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  lazy,
-  type ReactNode,
-  Suspense,
-  useCallback,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, Suspense, useCallback, useRef, useState } from "react";
+import { lazy } from "../i18n/lazy";
 
-const ApprovalDecisionDrawer = lazy(() =>
-  import("../features/automations/approvaldrawer").then((module) => ({
-    default: module.ApprovalDecisionDrawer,
-  })),
-);
+const ApprovalDecisionDrawer = lazy(async () => ({
+  default: (await import("../features/automations/approvaldrawer"))
+    .ApprovalDecisionDrawer,
+}));
 
 import { OpenApprovalProvider } from "../lib/openapproval";
 

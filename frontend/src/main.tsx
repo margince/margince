@@ -2,22 +2,18 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
-import { api } from "./api/client";
 import { AttentionProvider } from "./app/attention";
 import { AppErrorBoundary } from "./app/errorboundary";
-import { createQueryClient } from "./app/queryclient";
+import { queryClient } from "./app/queryclient.instance";
 import { BulkUndoProvider } from "./components/bulkchange";
 import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
-import { resetLocaleFailures } from "./i18n/catalogs";
 import { listenForInstall, registerServiceWorker } from "./lib/pwa";
 import { restoreReturnRoute } from "./lib/returnroute";
-import { sessionRefusalWatch } from "./lib/session";
+import { parseHash } from "./lib/router";
 import { startTheme } from "./lib/theme";
 import "./app.css";
-
-const queryClient = createQueryClient();
 
 // BEFORE the first render, and before any authentication is known. The theme
 // used to be applied by an effect inside the signed-in chrome, so every
@@ -39,8 +35,6 @@ restoreReturnRoute();
 listenForInstall();
 registerServiceWorker();
 
-api.use(sessionRefusalWatch(queryClient));
-
 const root = document.getElementById("root");
 if (!root) {
   throw new Error("index.html must provide #root");
@@ -51,8 +45,10 @@ createRoot(root).render(
       {/* Inside the query provider so it can follow the signed-in person's own
           locale from `/me` — the choice has to survive moving browsers, and
           localStorage alone cannot do that. */}
-      <AppErrorBoundary onReset={resetLocaleFailures}>
-        <LocaleProvider>
+      <AppErrorBoundary>
+        <LocaleProvider
+          initialEssential={parseHash(location.hash).screen === "analytics"}
+        >
           {/* Inside the locale provider: the fallback is translated copy like
             every other user-facing string, so it cannot render above the
             catalog it reads from. */}

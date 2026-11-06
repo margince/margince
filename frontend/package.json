@@ -30,7 +30,8 @@
     "build:composed": "tsc -p tsconfig.composed.json && pnpm build:bundle",
     "e2e": "pnpm build:bundle && playwright test",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build -o storybook-static"
+    "build-storybook": "storybook build -o storybook-static",
+    "gen:essential-copy": "node scripts/gen-essential-copy.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",

@@ -1,45 +1,29 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { lazy } from "react";
+import { lazy } from "../../i18n/lazy";
 
-export const ForecastView = lazy(() =>
-  import("./analytics.forecast").then((module) => ({
-    default: module.ForecastView,
-  })),
-);
-export const SharedForecastView = lazy(() =>
-  import("./analytics.forecast").then((module) => ({
-    default: module.SharedForecastView,
-  })),
-);
-export const FramedSection = lazy(() =>
-  import("./analytics.framed").then((module) => ({
-    default: module.FramedSection,
-  })),
-);
-export const QuestionsView = lazy(() =>
-  import("./analytics.questions").then((module) => ({
-    default: module.QuestionsView,
-  })),
-);
-export const ReportingDefinitions = lazy(() =>
-  import("./reporting.definitions").then((module) => ({
-    default: module.ReportingDefinitions,
-  })),
-);
-export const ReportingLibrary = lazy(() =>
-  import("./reporting.library").then((module) => ({
-    default: module.ReportingLibrary,
-  })),
-);
-export const ReportingTargets = lazy(() =>
-  import("./reporting.targets").then((module) => ({
-    default: module.ReportingTargets,
-  })),
-);
-export const ReportBoard = lazy(() =>
-  import("./analytics.reportboard").then((module) => ({
-    default: module.ReportBoard,
-  })),
-);
+export const ForecastView = lazy(async () => ({
+  default: (await import("./analytics.forecast")).ForecastView,
+}));
+export const SharedForecastView = lazy(async () => ({
+  default: (await import("./analytics.forecast")).SharedForecastView,
+}));
+export const FramedSection = lazy(async () => ({
+  default: (await import("./analytics.framed")).FramedSection,
+}));
+export const QuestionsView = lazy(async () => ({
+  default: (await import("./analytics.questions")).QuestionsView,
+}));
+export const ReportingDefinitions = lazy(async () => ({
+  default: (await import("./reporting.definitions")).ReportingDefinitions,
+}));
+export const ReportingLibrary = lazy(async () => ({
+  default: (await import("./reporting.library")).ReportingLibrary,
+}));
+export const ReportingTargets = lazy(async () => ({
+  default: (await import("./reporting.targets")).ReportingTargets,
+}));
+export const ReportBoard = lazy(async () => ({
+  default: (await import("./analytics.reportboard")).ReportBoard,
+}));

@@ -46,6 +46,7 @@ import { CUSTOM_SCREEN } from "./app/custom";
 import { opensReservedPage } from "./app/nav";
 import { UnsavedGuard } from "./components/unsaved";
 import { RESET_ROUTE } from "./features/sign-in/auth";
+import { CompleteLocale } from "./i18n";
 import { isContactTab } from "./lib/contacttab";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import { routeIdentity } from "./lib/routeidentity";
@@ -166,6 +167,15 @@ export const screenOfAddress = (address: string) => {
   return SCREEN_VIEWS[route.screen](route);
 };
 
+function screenWithLocale(address: string) {
+  const view = screenOfAddress(address);
+  return parseHash(address).screen === "analytics" ? (
+    view
+  ) : (
+    <CompleteLocale>{view}</CompleteLocale>
+  );
+}
+
 // What the held address is about, which is what the screen below is keyed on.
 // Parsed from the same string for the same reason as the view above it.
 const identityOfAddress = (address: string) =>
@@ -245,7 +255,7 @@ export function ScreenView({
       <UnsavedGuard address={shownAddress} onKeep={navigateToAddress}>
         {(held) => (
           <Fragment key={identityOfAddress(held)}>
-            {screenOfAddress(held)}
+            {screenWithLocale(held)}
           </Fragment>
         )}
       </UnsavedGuard>

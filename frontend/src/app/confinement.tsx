@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { lazy, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
 import { ForcedPasswordChangeScreen } from "../features/sign-in/forcedpassword";
+import { lazy } from "../i18n/lazy";
 import { AuthProbeError, type AuthProbeKind } from "../lib/session";
 import { AuthSplash } from "./bootsplash";
 
 // Split off: the setup carries the QR encoder, which the sign-in surface must not download.
-const ForcedMfaScreen = lazy(() =>
-  import("../features/sign-in/forcedmfa").then((m) => ({
-    default: m.ForcedMfaScreen,
-  })),
-);
+const ForcedMfaScreen = lazy(async () => ({
+  default: (await import("../features/sign-in/forcedmfa")).ForcedMfaScreen,
+}));
 
 type ConfinedKind = Extract<
   AuthProbeKind,

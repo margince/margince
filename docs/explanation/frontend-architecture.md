@@ -124,6 +124,12 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   The error fallback uses a small copy generated from `en`, so a failed load can still offer Retry.
   Retry clears the failed catalog request before reading it again.
 
+  The `Analytics` route starts with the messages reached by its static imports.
+  `frontend/scripts/gen-essential-copy.mjs` derives that copy from the same entry paths as the
+  bundle groups. `fe-drift` checks the generated copy. Other routes and dialogs wait for the
+  complete catalog through `CompleteLocale` and `frontend/src/i18n/lazy.tsx`.
+  A language change also loads the complete catalog.
+
   The order of choice is: the user's own choice, then the languages the browser
   asks for, then the default. English with no setting is `en-GB`, never
   `en-US`. The locale only changes how things show: it never changes what is

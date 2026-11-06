@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { lazy, type ReactNode, Suspense, useCallback, useState } from "react";
+import { type ReactNode, Suspense, useCallback, useState } from "react";
+import { lazy } from "../i18n/lazy";
 
-const OpenEmailDrawer = lazy(() =>
-  import("../features/mail/openemaildrawer").then((module) => ({
-    default: module.OpenEmailDrawer,
-  })),
-);
-const OpenActivityDrawer = lazy(() =>
-  import("../features/voice-knowledge/activitydrawer").then((module) => ({
-    default: module.OpenActivityDrawer,
-  })),
-);
+const OpenEmailDrawer = lazy(async () => ({
+  default: (await import("../features/mail/openemaildrawer")).OpenEmailDrawer,
+}));
+const OpenActivityDrawer = lazy(async () => ({
+  default: (await import("../features/voice-knowledge/activitydrawer"))
+    .OpenActivityDrawer,
+}));
 
 import { useActivity } from "../lib/activityread";
 import { OpenSourceProvider } from "../lib/opensource";

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type QueryClient, useQuery } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  queryOptions,
+  useQuery,
+} from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
@@ -23,22 +27,21 @@ type CompanyProfile = components["schemas"]["CompanyProfile"];
 // The rail's brand block does not: it reads /me's installation_brand, which
 // every seat receives. Only an admin asks: the read is admin-only (contacts'
 // requireAnchorAdministrator), so any other seat's request can only be refused.
+export const companyOptions = queryOptions({
+  queryKey: ["company"],
+  queryFn: async (): Promise<CompanyProfile | null> => {
+    const { data, error, response } = await api.GET("/company");
+    if (error) {
+      if (response.status === 404) return null;
+      throwProblem(error);
+    }
+    return data;
+  },
+});
+
 export function useCompany(enabled: boolean) {
   const isAdmin = useHoldsAdminRole();
-  return useQuery({
-    queryKey: ["company"],
-    enabled: enabled && isAdmin,
-    queryFn: async (): Promise<CompanyProfile | null> => {
-      const { data, error, response } = await api.GET("/company");
-      if (error) {
-        if (response.status === 404) {
-          return null;
-        }
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  return useQuery({ ...companyOptions, enabled: enabled && isAdmin });
 }
 
 // storeCompany writes a saved profile into the company entry and refreshes /me,

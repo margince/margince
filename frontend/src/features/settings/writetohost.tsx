@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { lazy, type ReactNode, Suspense, useCallback, useState } from "react";
+import { type ReactNode, Suspense, useCallback, useState } from "react";
+import { lazy } from "../../i18n/lazy";
 import { useMailboxConnected } from "../../lib/connectors";
 import { WriteToProvider, type WriteToTarget } from "../../lib/writeto";
 
-const ComposeModal = lazy(() =>
-  import("../mail/compose").then((module) => ({
-    default: module.ComposeModal,
-  })),
-);
+const ComposeModal = lazy(async () => ({
+  default: (await import("../mail/compose")).ComposeModal,
+}));
 
 /**
  * The shell's composer for an address pressed anywhere under it. It opens the

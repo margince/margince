@@ -1,18 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  lazy,
-  type ReactNode,
-  Suspense,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, Suspense, useMemo, useRef, useState } from "react";
+import { lazy } from "../../i18n/lazy";
 
-const ComposeWindow = lazy(() =>
-  import("./compose").then((module) => ({ default: module.ComposeWindow })),
-);
+const ComposeWindow = lazy(async () => ({
+  default: (await import("./compose")).ComposeWindow,
+}));
 
 import {
   type ComposeDock,

@@ -29,6 +29,7 @@ func TestSourceAssessmentVocabularyMatchesTheDutyDecision(t *testing.T) {
 	if duty == nil {
 		t.Fatal("DutyFor not found")
 	}
+	constants := gatekit.PackageStringConstants(t, filepath.Join(root, "internal/modules/consent"))
 	eligible := map[string]bool{}
 	decided := map[string]bool{}
 	ast.Inspect(duty.Body, func(node ast.Node) bool {
@@ -47,9 +48,9 @@ func TestSourceAssessmentVocabularyMatchesTheDutyDecision(t *testing.T) {
 		}
 		state := assessmentDutyState(t, returned.Results[0], functions, 0)
 		for _, expr := range clause.List {
-			kind, ok := literalString(expr)
+			kind, ok := gatekit.StringExpr(expr, constants, gatekit.FoldStrict)
 			if !ok {
-				t.Fatal("acquisition switch kind is not a literal")
+				t.Fatal("acquisition switch kind cannot be resolved")
 			}
 			decided[kind] = true
 			if state != "NoticeSourceReview" {

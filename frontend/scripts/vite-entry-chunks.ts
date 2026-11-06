@@ -1,11 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { join } from "node:path";
 import type { Plugin, Rolldown } from "vite";
+
+export function initialEntries(root: string) {
+  return {
+    bootstrap: [join(root, "src/bootstrap.ts")],
+    startup: [join(root, "src/main.tsx")],
+    analytics: [join(root, "src/App.analytics.tsx")],
+  };
+}
 
 export function entryChunks(
   name: string,
   entries: readonly string[],
+  priority = 10,
 ): {
   plugin: Plugin;
   group: Rolldown.CodeSplittingGroup;
@@ -33,7 +43,42 @@ export function entryChunks(
       name,
       test: (id) => modules.has(id),
       includeDependenciesRecursively: false,
-      priority: 10,
+      priority,
+    },
+  };
+}
+
+export function preloadEntries(entries: readonly string[]): Plugin {
+  let base = "/";
+  return {
+    name: "preload-initial-entries",
+    configResolved(config) {
+      base = config.base;
+    },
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(_html, context) {
+        if (!context.bundle) return;
+        return Object.values(context.bundle).flatMap((output) => {
+          if (
+            output.type !== "chunk" ||
+            !entries.some((entry) => Object.hasOwn(output.modules, entry))
+          )
+            return [];
+          return [
+            {
+              tag: "link",
+              attrs: {
+                rel: "modulepreload",
+                crossorigin: "",
+                href: `${base}${output.fileName}`,
+              },
+              injectTo: "head" as const,
+            },
+          ];
+        });
+      },
     },
   };
 }

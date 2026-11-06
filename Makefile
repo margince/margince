@@ -618,6 +618,7 @@ else
 	@./scripts/check-contract-frontend-drift.sh
 	cd frontend && pnpm gen:approval-reading --check
 endif
+	cd frontend && pnpm gen:essential-copy --check
 
 ## fe-unit — the vitest suite. FE_COVERAGE=1 instruments the run so it also
 ## writes frontend/coverage/lcov.info for the `sonarcloud` job — ONE execution

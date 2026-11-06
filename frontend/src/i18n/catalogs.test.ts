@@ -41,3 +41,34 @@ it("allows Retry to start a fresh dictionary request after failure", async () =>
   await retry;
   expect(loadedCatalogs.has("de")).toBe(true);
 });
+
+it("loads initial copy before completing only the selected dictionary", async () => {
+  vi.resetModules();
+  const { catalogs, loadEssentialLocale, localeLoaded, loadLocale } =
+    await import("./catalogs");
+  const { en } = await import("./en");
+  const initial = loadEssentialLocale("en");
+  expect(loadEssentialLocale("en")).toBe(initial);
+  await initial;
+  expect(localeLoaded("en", "essential")).toBe(true);
+  expect(localeLoaded("en", "complete")).toBe(false);
+  expect(Object.keys(catalogs.en).length).toBeLessThan(
+    Object.keys(en).length / 2,
+  );
+  expect(catalogs.en["common.loading"]).toBe(en["common.loading"]);
+  expect(Object.keys(catalogs.de).length).toBe(4);
+  await loadLocale("en");
+  expect(catalogs.en).toEqual(en);
+  expect(localeLoaded("en", "complete")).toBe(true);
+  expect(localeLoaded("de", "complete")).toBe(false);
+});
+
+it("keeps the complete dictionary when initial and complete downloads overlap", async () => {
+  vi.resetModules();
+  const { catalogs, loadEssentialLocale, loadLocale } = await import(
+    "./catalogs"
+  );
+  const { de } = await import("./de");
+  await Promise.all([loadEssentialLocale("de"), loadLocale("de")]);
+  expect(catalogs.de).toEqual(de);
+});

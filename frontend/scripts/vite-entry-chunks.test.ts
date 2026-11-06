@@ -9,7 +9,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "vite";
 import { expect, it } from "vitest";
-import { entryChunks } from "./vite-entry-chunks";
+import { entryChunks, preloadEntries } from "./vite-entry-chunks";
 
 it("groups static dependencies once and leaves unopened features lazy", async () => {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "entry-chunks-")));
@@ -128,6 +128,54 @@ it("the production dictionary loader preloads only the selected language", async
     );
     const result: unknown = JSON.parse(output.trim());
     expect(result).toEqual({ loaded: ["en"], unwanted: [] });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+it("preloads the main entry under the configured base without preloading unopened routes", async () => {
+  const dir = await realpath(await mkdtemp(join(tmpdir(), "entry-preload-")));
+  try {
+    await writeFile(
+      join(dir, "index.html"),
+      '<script type="module" src="/entry.js"></script>',
+    );
+    await writeFile(join(dir, "entry.js"), 'void import("./main.js");');
+    await writeFile(
+      join(dir, "main.js"),
+      'globalThis.open = () => import("./other.js");',
+    );
+    await writeFile(join(dir, "other.js"), "globalThis.opened = true;");
+    const result = await build({
+      root: dir,
+      configFile: false,
+      base: "/crm/",
+      logLevel: "silent",
+      plugins: [preloadEntries([join(dir, "main.js")])],
+      build: { write: false },
+    });
+    const outputs = Array.isArray(result) ? result : [result];
+    const bundle = outputs.flatMap((output) =>
+      "output" in output ? output.output : [],
+    );
+    const html = bundle.find(
+      (file) => file.type === "asset" && file.fileName === "index.html",
+    );
+    const main = bundle.find(
+      (file) =>
+        file.type === "chunk" &&
+        Object.hasOwn(file.modules, join(dir, "main.js")),
+    );
+    const other = bundle.find(
+      (file) =>
+        file.type === "chunk" &&
+        Object.hasOwn(file.modules, join(dir, "other.js")),
+    );
+    if (!html || html.type !== "asset" || !main || !other)
+      throw new Error("Missing built fixture entries");
+    const markup = String(html.source);
+    expect(markup).toContain(`href="/crm/${main.fileName}"`);
+    expect(markup).not.toContain(`href="/crm/${other.fileName}"`);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

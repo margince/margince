@@ -1,4 +1,4 @@
-import { type ComponentProps, lazy, type ReactNode, Suspense } from "react";
+import { type ComponentProps, type ReactNode, Suspense } from "react";
 import { CompanyDealPicker } from "./components/companydealpicker";
 import { DealSuggestionCard, suggestedName } from "./components/dealsuggestion";
 import {
@@ -6,12 +6,12 @@ import {
   useDealSuggestions,
 } from "./components/dealsuggestions.queries";
 import { QueryGate } from "./design-system/querystates";
+import { lazy } from "./i18n/lazy";
 
-const LazyApprovalDetailModal = lazy(() =>
-  import("./features/automations/approvaleditor").then((module) => ({
-    default: module.ApprovalDetailModal,
-  })),
-);
+const LazyApprovalDetailModal = lazy(async () => ({
+  default: (await import("./features/automations/approvaleditor"))
+    .ApprovalDetailModal,
+}));
 function ApprovalDetailModal(
   props: ComponentProps<typeof LazyApprovalDetailModal>,
 ) {
@@ -21,11 +21,10 @@ function ApprovalDetailModal(
     </Suspense>
   );
 }
-const LazyOpenActivityDrawer = lazy(() =>
-  import("./features/voice-knowledge/activitydrawer").then((module) => ({
-    default: module.OpenActivityDrawer,
-  })),
-);
+const LazyOpenActivityDrawer = lazy(async () => ({
+  default: (await import("./features/voice-knowledge/activitydrawer"))
+    .OpenActivityDrawer,
+}));
 function OpenActivityDrawer(
   props: ComponentProps<typeof LazyOpenActivityDrawer>,
 ) {
@@ -39,11 +38,9 @@ function OpenActivityDrawer(
 import { useT } from "./i18n";
 import { type ReviewActions, ReviewActionsContext } from "./lib/reviewactions";
 
-const NewDealAction = lazy(() =>
-  import("./features/companies/companyactions").then((module) => ({
-    default: module.NewDealAction,
-  })),
-);
+const NewDealAction = lazy(async () => ({
+  default: (await import("./features/companies/companyactions")).NewDealAction,
+}));
 function ComposedNewDealAction(props: ComponentProps<typeof NewDealAction>) {
   return (
     <Suspense fallback={null}>

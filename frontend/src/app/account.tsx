@@ -1,7 +1,6 @@
 import { UserRound } from "lucide-react";
 import {
   type KeyboardEvent,
-  lazy,
   type ReactNode,
   type RefObject,
   Suspense,
@@ -17,6 +16,7 @@ import { Avatar, Button } from "../design-system/atoms";
 import { StatusBadge } from "../design-system/statusbadge";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
+import { lazy } from "../i18n/lazy";
 import { routeHash } from "../lib/router";
 import {
   bookingPagePaused,
@@ -40,11 +40,9 @@ import {
 } from "./setup-reminder";
 
 // Lazy: the list reads the Brief's deck vocabulary, and most sessions never open it.
-const ShortcutsDialog = lazy(() =>
-  import("./shortcutsdialog").then((module) => ({
-    default: module.ShortcutsDialog,
-  })),
-);
+const ShortcutsDialog = lazy(async () => ({
+  default: (await import("./shortcutsdialog")).ShortcutsDialog,
+}));
 
 export { THEME_LABEL_KEYS } from "./accounttheme";
 
