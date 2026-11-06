@@ -10401,6 +10401,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.centre": "Benachrichtigungen",
   "notifications.markAllRead": "Alle als gelesen markieren",
   "notifications.markRead": "Als gelesen markieren",
+  "notifications.action.openContact": "Kontakt öffnen",
+  "notifications.action.openCompany": "Unternehmen öffnen",
+  "notifications.action.openDeal": "Deal öffnen",
+  "notifications.action.openLead": "Lead öffnen",
+  "notifications.action.openProject": "Projekt öffnen",
+  "notifications.action.review": "Anfrage prüfen",
+  "notifications.action.systemHealth": "Systemzustand öffnen",
   "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
   "notifications.markReadFailed":
     "Diese Benachrichtigung wurde nicht als gelesen markiert",

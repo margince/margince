@@ -29745,12 +29745,17 @@ export interface components {
              */
             read_at?: string;
             /**
-             * @description The record the notice is about, when it is about one. Both halves or neither — a type
-             *     with no id names a KIND of thing and cannot be opened. Absent is the common case: a
-             *     capture backlog and a colleague's word are about no single record.
+             * @description What the notice is about, when it is about one thing a reader can open. Both halves or
+             *     neither — a type with no id names a KIND of thing and cannot be opened. Absent where
+             *     the notice names nothing: a capture backlog and a colleague's word are about no single
+             *     record.
              */
             target?: {
-                /** @description The record's class, as its own endpoint spells it. */
+                /**
+                 * @description A record's class, as its own endpoint spells it, or one of two non-record targets:
+                 *     `approval` (a pending decision, `id` is the approval) and `data_task` (a
+                 *     background correction run, `id` is its `run_id` in `GET /admin/data-tasks`).
+                 */
                 type: string;
                 /** Format: uuid */
                 id: string;
