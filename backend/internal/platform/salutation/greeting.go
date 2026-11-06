@@ -16,6 +16,7 @@ import (
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -37,11 +38,7 @@ func WordBoundary(text string, i int) bool {
 		return true
 	}
 	// The whole character holding byte i, which may start before it.
-	start := i
-	for start > 0 && !utf8.RuneStart(text[start]) {
-		start--
-	}
-	r, _ := utf8.DecodeRuneInString(text[start:])
+	r, _ := utf8.DecodeRuneInString(text[len(textcut.Bytes(text, i)):])
 	return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '\''
 }
 
