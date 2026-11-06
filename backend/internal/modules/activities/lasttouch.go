@@ -83,7 +83,7 @@ func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 				SELECT a.id, a.occurred_at
 				FROM activity a
 				WHERE `+genuineEngagement("a", 1, 4, 5)+`
-				  AND `+relstrength.LastActivityCountsSQL("a", "now()")+`
+				  AND `+relstrength.ExternalActivityCountsSQL("a", "now()")+`
 			), live_accounts AS (
 				SELECT o.id, o.owner_id
 				FROM company o

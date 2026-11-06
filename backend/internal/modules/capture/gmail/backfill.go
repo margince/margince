@@ -203,6 +203,7 @@ func dropFromHeaders(ctx context.Context, fetched Message, judge connector.PreSt
 	}
 	rec := msg.AttestSentByOwner(fetched.FiledAsSent).ToRecord(connectorName, nil)
 	rec.Containers = labelContainers(fetched.Labels)
+	rec.ProviderReceivedAt = fetched.ReceivedAt
 	return judge.DropBeforeStore(ctx, rec)
 }
 

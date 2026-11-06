@@ -81,7 +81,7 @@ func leadLastActivityPrecisionSQL() string {
 func leadTouchesSQL() string {
 	return `FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	     AND ` + relstrength.LastActivityCountsSQL("a", "now()") + auth.OriginIsEngagement("a")
+	     AND ` + relstrength.ExternalActivityCountsSQL("a", "now()") + auth.OriginIsEngagement("a")
 }
 
 func leadColumns(ctx context.Context, arg func(any) int) (string, error) {

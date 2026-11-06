@@ -234,6 +234,11 @@ say, and shows what the AI work will likely cost. It counts up to 20,000
 messages. A larger mailbox is shown as "{count} emails or more. Counting stopped
 there." and not as a made-up guess.
 
+Internal mail is left out unless an Admin has authorized its source and history
+range. You must also choose to include that scope in a new run. Read the scope before
+starting. [Who can see an email](who-can-see-an-email.md) explains the separate
+admin and mailbox-owner choices.
+
 You can stop it with **Stop**: "Everything imported so far is kept."
 
 The window can only be **widened** later, never made smaller: "A wider window

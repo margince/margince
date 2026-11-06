@@ -195,7 +195,7 @@ func boundToAnotherRecordType(statement string) bool {
 // path probes with it and nothing else, and a reader inside such a transaction
 // is guarded by a call this gate could not otherwise see.
 var heldScopeMarkers = []string{
-	"ActivityDiscoverClause", "ActivityContentClause", "ActivityAvailableClause",
+	"ActivityDiscoverClause", "ActivityContentClause", "ActivityAvailableClause", "ActivityExternalEvidenceClause",
 	"EnsureActivityVisible", "EnsureActivityVisibleLive",
 	"EnsureActivityContentVisible", "EnsureActivityContentVisibleLive",
 	"EnsureActivityWritable",

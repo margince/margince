@@ -87,3 +87,7 @@
 1793903351_signature_work_keeps_its_requested_generation.down.sql | * | the procedural block only checks for unread or pending signature work and refuses rollback; it rewrites no rows
 1793903929_a_link_insert_advances_the_activity_clock.down.sql | * | the procedural block restores trigger functions with DDL and checks the migration ledger; it rewrites no domain rows
 1793912983_derived_work_constraints_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793927373_internal_mail_retains_its_source_authorization.down.sql | * | the procedural body checks for one retained row and refuses rollback; it rewrites no data
+1793927374_internal_mail_restriction_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793927375_internal_history_needs_its_own_authorization.down.sql | * | the procedural body checks for one authorized run and refuses rollback; it rewrites no data
+1793927376_internal_history_authorization_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

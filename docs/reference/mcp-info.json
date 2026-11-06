@@ -10,16 +10,16 @@
   "totals": {
     "tools": 47,
     "resources": 13,
-    "tool_catalog_bytes": 212369,
+    "tool_catalog_bytes": 212445,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 54407,
+    "approx_wire_tokens_total": 54426,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 49396,
-      "input_schema_bytes": 103702,
+      "input_schema_bytes": 103778,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 153098
+      "description_plus_input_schema_bytes": 153174
     }
   },
   "tools": {
@@ -9850,6 +9850,10 @@
             },
             "buildId": {
               "description": "voice_build only",
+              "type": "string"
+            },
+            "connection_id": {
+              "description": "connector_containers only",
               "type": "string"
             },
             "contact_id": {

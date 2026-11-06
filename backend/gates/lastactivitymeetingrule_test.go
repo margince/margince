@@ -58,7 +58,7 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 			t.Errorf("%s (%s): %v", file, what, err)
 			continue
 		}
-		if !strings.Contains(string(src), "relstrength.LastActivityCountsSQL(") {
+		if !strings.Contains(string(src), "relstrength.LastActivityCountsSQL(") && !strings.Contains(string(src), "relstrength.ExternalActivityCountsSQL(") {
 			t.Errorf("%s no longer calls relstrength.LastActivityCountsSQL, so %s can count an unheld "+
 				"meeting, or one still ahead, as a touch", file, what)
 		}

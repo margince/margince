@@ -119,7 +119,7 @@ func outboundToTx(ctx context.Context, tx pgx.Tx, tail string, addresses []strin
 		SELECT occurred_at, COALESCE(subject, ''), COALESCE(body, '')
 		  FROM activity
 		 WHERE counterparty_email = ANY($1::text[]) AND counterparty_outbound_attested
-		   AND `+auth.ActivityAvailableClause("activity")+tail, append([]any{addresses}, args...)...)
+		   AND `+auth.ActivityExternalEvidenceClause("activity")+tail, append([]any{addresses}, args...)...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 	}
@@ -272,7 +272,7 @@ func wroteBack() string {
 	return `EXISTS (
 		SELECT 1 FROM activity inbound
 		 WHERE ` + answeredExchange("inbound", "$1") + `
-		   AND ` + auth.ActivityAvailableClause("inbound") + `)`
+		   AND ` + auth.ActivityExternalEvidenceClause("inbound") + `)`
 }
 
 // answeredExchange is an exchange. The message at alias is an inbound, non-bulk
@@ -294,7 +294,7 @@ func answeredExchange(alias, address string) string {
 		            AND ours.counterparty_email = %[2]s
 		            AND ours.kind = %[1]s.kind
 		            AND ours.counterparty_outbound_attested
-		            AND `, alias, address) + auth.ActivityAvailableClause("ours") + `)`
+		            AND `, alias, address) + auth.ActivityExternalEvidenceClause("ours") + `)`
 }
 
 // wroteOnTwoThreadsTx reports whether this workspace has written to the address
@@ -322,7 +322,7 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 		   WHERE counterparty_email = ANY($1::text[])
 		     AND counterparty_outbound_attested
 		     AND thread_key <> ''
-		     AND `+auth.ActivityAvailableClause("activity")+`
+		     AND `+auth.ActivityExternalEvidenceClause("activity")+`
 		   LIMIT 2) AS distinct_threads`, storedSpellings(email)).Scan(&threads); err != nil {
 		return false, fmt.Errorf("capture: counting the threads this workspace wrote on: %w", err)
 	}
@@ -417,7 +417,7 @@ func metInPersonTx(
 		             WHERE pe.contact_id = p.contact_id
 		               AND lower(pe.email) = $1
 		               AND pe.archived_at IS NULL))
-		     AND `+auth.ActivityAvailableClause("a"),
+		     AND `+auth.ActivityExternalEvidenceClause("a"),
 		normalized, meetingHorizonInterval, capturing).Scan(&met, &elsewhere); err != nil {
 		return false, false, fmt.Errorf("capture: reading whether this workspace is meeting the sender: %w", err)
 	}

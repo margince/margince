@@ -629,9 +629,10 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	// the readable half names. Collected from the syntax tree rather than the
 	// text, for the reason assembledSweepTargets gives.
 	assembled := map[string]string{}
+	consts := sqlConstants(t, "internal/modules/privacy", "internal/platform/database/storekit")
 	for _, path := range retentionSweepFiles {
-		maps.Copy(assembled, assembledSweepTargets(t, path))
-		for _, lit := range sqlLiterals(t, path) {
+		maps.Copy(assembled, assembledSweepTargets(t, path, consts))
+		for _, lit := range sqlLiterals(t, path, consts) {
 			if form := unclosedWriteSpan(lit); form != "" {
 				t.Fatalf("%s carries an unclosed SQL span %q; complete the literal before the statement scan", path, form)
 			}

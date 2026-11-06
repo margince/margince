@@ -4751,6 +4751,57 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.reason.verdict": "Durch Einstufung zurückgehalten",
   "compose.reason.counterparty": "Zurückgehalten: E-Mail mit der Gegenseite",
   "compose.reason.explicitlyConfidential": "Als vertraulich markiert",
+  "internalMail.authorizeHistory":
+    "Einen gesonderten Import interner E-Mail-Historie für diese Quelle freigeben",
+  "internalMail.historySince": "Ältere E-Mails empfangen ab (UTC)",
+  "internalMail.historyApprovalNote":
+    "Diese Freigabe startet keinen Import. Der Postfachnutzer muss den Umfang prüfen und interne Historie beim Start ausdrücklich einschließen.",
+  "internalMail.needHistoryDate":
+    "Für jede freigegebene interne Historienquelle ein frühestes Empfangsdatum wählen.",
+  "internalMail.reauthorizeSource":
+    "Die Postfachfreigabe hat sich geändert. Zum erneuten Aufnehmen speichern. Die interne Erfassung bleibt bis dahin gestoppt.",
+  "internalMail.historyTitle": "Freigabe interner Historie",
+  "internalMail.historyAfter":
+    "Freigegebene interne E-Mails empfangen nach {date}",
+  "internalMail.historyFolders": "Ordner der internen Quelle",
+  "internalMail.historyImportNote":
+    "Mit dieser Option beginnt ein neuer Import. Die Anbieterschätzung umfasst das gesamte Postfachfenster. Interne E-Mails werden nur innerhalb der freigegebenen Quelle und des Zeitraums bis zum Importstart ergänzt. Übliche Ausschlüsse und der Zugriff für Teilnehmende bleiben bestehen.",
+  "internalMail.includeHistory":
+    "Freigegebene interne E-Mails in einen neuen Historienimport einschließen",
+  "internalMail.title": "Interne betriebliche E-Mails",
+  "internalMail.scope":
+    "Ausgewählte betriebliche E-Mails zwischen Teammitgliedern speichern. Zunächst lesen nur Teilnehmende mit. Teilnehmende können einzelne Nachrichten mit benannten Teammitgliedern teilen. Verknüpfungen und das Teilen eines Threads erweitern den Zugriff nicht.",
+  "internalMail.authorization":
+    "Vor dem Aktivieren die betriebliche Freigabe und Information der Mitarbeitenden sicherstellen. Die Auswahl verwendet vorhandene Postfachrechte und erteilt keine neuen Anbieterrechte.",
+  "internalMail.enable": "Interne betriebliche E-Mails erfassen",
+  "internalMail.sources": "Betriebliche Postfachverbindungen",
+  "internalMail.noSources":
+    "Zuerst ein Postfach verbinden, dann eine betriebliche Quelle wählen.",
+  "internalMail.unavailableSource": "Postfachverbindung nicht verfügbar",
+  "internalMail.needSource":
+    "Vor dem Aktivieren mindestens eine betriebliche Postfachverbindung wählen.",
+  "internalMail.disable":
+    "Deaktivieren oder Entfernen einer Quelle stoppt neue interne E-Mails. Gespeicherte Nachrichten behalten ihre Zugriffsbeschränkungen und Datenschutzregeln.",
+  "internalMail.future":
+    "Die Erfassung beginnt mit neuen E-Mails. Interne Historie bleibt ausgeschlossen, bis ein Admin einen Zeitraum freigibt und der Postfachnutzer sie in einem gesonderten Import ausdrücklich einschließt.",
+  "internalMail.allFolders": "Alle zulässigen Ordner",
+  "internalMail.selectedFolders": "Nur ausgewählte Ordner",
+  "internalMail.chooseFolders": "Ordner wählen",
+  "internalMail.folders": "Ordner dieser Verbindung",
+  "internalMail.loadingFolders": "Postfachordner werden geladen",
+  "internalMail.foldersUnsupported":
+    "Dieser Anbieter kann Ordner nicht auflisten. Die gesamte Verbindung kann mit den üblichen Ausschlüssen gewählt werden.",
+  "internalMail.unavailableFolder": "Ordner nicht verfügbar",
+  "internalMail.removeFolder": "Ordner entfernen",
+  "internalMail.searchFolders": "Ordner suchen",
+  "internalMail.noFolders": "Keine passenden Ordner",
+  "internalMail.done": "Fertig",
+  "internalMail.partialFolders":
+    "Der Anbieter lieferte nur einen Teil der Ordnerliste. Vorhandene Auswahlen bleiben erhalten.",
+  "internalMail.shareNote":
+    "Dies ändert nur die benannten Lesenden dieser Nachricht. Teilnehmende behalten Zugriff. Eine neue Auswahl ersetzt die bisher benannten Lesenden.",
+  "compose.reason.internalOperational":
+    "Interne betriebliche E-Mail: Teilnehmende und ausgewählte Teammitglieder",
   "compose.reason.membersOnly": "Zurückgehalten: E-Mail unter Teammitgliedern",
   "compose.reason.noCounterparty": "Zurückgehalten: keine Gegenseite",
   "compose.audience": "Sichtbarkeit ändern",
@@ -15940,7 +15991,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.removeRule": "Regel entfernen",
   "ownDomains.title": "Eigene E-Mail-Domains",
   "ownDomains.sub":
-    "Domains, die zu diesem Unternehmen gehören. Nachrichten zwischen Teammitgliedern werden für niemanden gespeichert, auch nicht für dich.",
+    "Domains, die zu diesem Unternehmen gehören. Nachrichten zwischen Teammitgliedern werden übersprungen, sofern ihre Quelle nicht für interne betriebliche E-Mails freigegeben ist.",
   "ownDomains.curatedTitle": "Hier verwaltet",
   "ownDomains.irreversible":
     "Eine hinzugefügte Domain gilt ab der nächsten Nachricht. Wird die Domain entfernt, werden E-Mails ab dann wieder erfasst. E-Mails, die während der Eintragung übersprungen wurden, bietet kein Postfach erneut an. Erfasste E-Mails bleiben erhalten.",

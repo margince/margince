@@ -4634,6 +4634,55 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.reason.verdict": "Giữ lại theo phân loại",
   "compose.reason.counterparty": "Giữ lại: thư với bên ngoài",
   "compose.reason.explicitlyConfidential": "Đã đánh dấu bảo mật",
+  "internalMail.authorizeHistory":
+    "Cho phép nhập lịch sử thư nội bộ riêng cho nguồn này",
+  "internalMail.historySince": "Thư lịch sử nhận từ ngày (UTC)",
+  "internalMail.historyApprovalNote":
+    "Việc cho phép này không bắt đầu nhập. Chủ hộp thư phải xem trước phạm vi và chủ động chọn nhập lịch sử thư nội bộ khi bắt đầu.",
+  "internalMail.needHistoryDate":
+    "Chọn ngày nhận sớm nhất cho từng nguồn được phép nhập lịch sử thư nội bộ.",
+  "internalMail.reauthorizeSource":
+    "Quyền hộp thư đã thay đổi. Lưu để đăng ký lại. Việc thu thập thư nội bộ vẫn dừng cho đến lúc đó.",
+  "internalMail.historyTitle": "Cho phép nhập lịch sử thư nội bộ",
+  "internalMail.historyAfter": "Thư nội bộ được phép nhận sau {date}",
+  "internalMail.historyFolders": "Thư mục nguồn nội bộ",
+  "internalMail.historyImportNote":
+    "Bắt đầu với tùy chọn này sẽ tạo một lần nhập mới. Ước tính của nhà cung cấp bao gồm toàn bộ cửa sổ hộp thư. Chỉ bổ sung thư nội bộ trong nguồn và khoảng ngày được phép, đến thời điểm bắt đầu nhập. Quy tắc loại trừ và quyền đọc cho người tham gia vẫn giữ nguyên.",
+  "internalMail.includeHistory":
+    "Bao gồm thư nội bộ được phép trong lần nhập lịch sử mới",
+  "internalMail.title": "Thư vận hành nội bộ",
+  "internalMail.scope":
+    "Lưu thư vận hành được chọn giữa đồng nghiệp. Ban đầu chỉ người tham gia được đọc. Người tham gia có thể chia sẻ từng thư với đồng nghiệp được chỉ định. Liên kết và việc chia sẻ chuỗi thư không mở rộng quyền đọc.",
+  "internalMail.authorization":
+    "Xác nhận quyền của tổ chức và thông báo cho nhân viên trước khi bật. Việc chọn nguồn chỉ dùng quyền hộp thư hiện có, không cấp thêm quyền tại nhà cung cấp.",
+  "internalMail.enable": "Bật thu thập thư vận hành nội bộ",
+  "internalMail.sources": "Kết nối hộp thư vận hành",
+  "internalMail.noSources": "Kết nối hộp thư trước khi chọn nguồn vận hành.",
+  "internalMail.unavailableSource": "Kết nối hộp thư không khả dụng",
+  "internalMail.needSource":
+    "Chọn ít nhất một kết nối hộp thư vận hành trước khi bật.",
+  "internalMail.disable":
+    "Tắt hoặc gỡ nguồn sẽ dừng thu thập thư nội bộ mới. Thư đã lưu vẫn giữ giới hạn người đọc và quy trình bảo vệ dữ liệu.",
+  "internalMail.future":
+    "Bắt đầu thu thập từ thư mới. Lịch sử thư nội bộ vẫn bị loại trừ trừ khi quản trị viên cho phép phạm vi ngày và chủ hộp thư chủ động chọn trong lần nhập riêng.",
+  "internalMail.allFolders": "Tất cả thư mục được phép",
+  "internalMail.selectedFolders": "Chỉ thư mục đã chọn",
+  "internalMail.chooseFolders": "Chọn thư mục",
+  "internalMail.folders": "Thư mục của kết nối này",
+  "internalMail.loadingFolders": "Đang tải thư mục hộp thư",
+  "internalMail.foldersUnsupported":
+    "Nhà cung cấp này không thể liệt kê thư mục. Bạn có thể chọn cả hộp thư theo các điều kiện loại trừ đã đặt.",
+  "internalMail.unavailableFolder": "Thư mục không khả dụng",
+  "internalMail.removeFolder": "Gỡ thư mục",
+  "internalMail.searchFolders": "Tìm thư mục",
+  "internalMail.noFolders": "Không có thư mục phù hợp",
+  "internalMail.done": "Xong",
+  "internalMail.partialFolders":
+    "Nhà cung cấp chỉ trả về một phần danh sách thư mục. Các lựa chọn hiện có vẫn được giữ.",
+  "internalMail.shareNote":
+    "Chỉ thay đổi người đọc được chỉ định cho thư này. Người tham gia vẫn có quyền đọc. Lưu lựa chọn mới sẽ thay thế danh sách người đọc được chỉ định trước đó.",
+  "compose.reason.internalOperational":
+    "Thư nội bộ: người tham gia và đồng nghiệp được chọn",
   "compose.reason.membersOnly": "Giữ lại: thư giữa đồng nghiệp",
   "compose.reason.noCounterparty": "Giữ lại: không có bên đối tác",
   "compose.audience": "Đổi phạm vi hiển thị",
@@ -15532,7 +15581,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.removeRule": "Gỡ quy tắc",
   "ownDomains.title": "Tên miền email của công ty",
   "ownDomains.sub":
-    "Các tên miền thuộc về công ty này. Thư giữa các đồng nghiệp không được lưu cho bất kỳ ai, kể cả bạn.",
+    "Các tên miền thuộc về công ty này. Thư giữa đồng nghiệp được bỏ qua, trừ khi nguồn thư đã được cho phép trong mục Thư nội bộ về công việc.",
   "ownDomains.curatedTitle": "Quản lý tại đây",
   "ownDomains.irreversible":
     "Thêm tên miền có hiệu lực từ thư tiếp theo; gỡ tên miền thì thu thập tiếp tục từ lúc đó. Thư đã bỏ qua trong thời gian tên miền được đăng ký sẽ không bao giờ được hộp thư nào đưa lại. Thư đã thu thập vẫn giữ nguyên.",

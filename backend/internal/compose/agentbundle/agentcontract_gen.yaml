@@ -12718,6 +12718,12 @@ paths:
     get:
       tags: [Connectors]
       operationId: listConnectorContainers
+      parameters:
+        - name: connection_id
+          in: query
+          required: false
+          description: Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox.
+          schema: {type: string, format: uuid}
       summary: The folders or labels this mailbox has, to pick one to keep out of capture.
       description: |-
         What a container exclusion names, in a form somebody can choose from. A container rule
@@ -12734,6 +12740,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: 'This provider does not list folders (`code: containers_unsupported`).'
           content:
@@ -24086,11 +24093,24 @@ components:
       required: [window]
       properties:
         window: {type: string, enum: [none, 3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m], description: 'Bounded mail-history window, up to ten years. The default UI selection is six months.'}
+    InternalMailHistoryPreview:
+      type: object
+      readOnly: true
+      required: [preview_token, received_after, folders]
+      description: A separate internal-mail import is allowed only within this administrator-authorized scope and only after the mailbox owner explicitly selects it when starting.
+      properties:
+        folders:
+          type: array
+          description: Selected provider folder names. Empty means the whole connection, subject to ordinary exclusions.
+          items: {type: string}
+        preview_token: {type: string}
+        received_after: {type: string, format: date-time}
     BackfillPreview:
       type: object
       description: 'The scope before the spend: what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.'
       required: [window, estimated_messages, computed_at]
       properties:
+        internal_mail: {$ref: '#/components/schemas/InternalMailHistoryPreview'}
         window: {type: string, enum: [none, 3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m]}
         estimated_messages: {type: integer, description: 'Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number.'}
         estimate_is_floor:
@@ -24107,6 +24127,10 @@ components:
       type: object
       required: [window]
       properties:
+        internal_mail_preview_token:
+          type: string
+          minLength: 1
+          description: Explicitly include internal operational history within the administrator's authorized source and date range. Must match this window's current preview. Omit to exclude internal history.
         window: {type: string, enum: [3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m], description: '`none` is expressed by never calling this op. Widen-only versus a prior run.'}
         start_over: {type: boolean, description: 'Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one.'}
     BackfillStatus:
@@ -33908,6 +33932,10 @@ components:
         `withheld`.
       required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at, offers_email]
       properties:
+        can_share_internal:
+          type: boolean
+          readOnly: true
+          description: Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
         writable:
           type: boolean
           readOnly: true

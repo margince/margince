@@ -1419,7 +1419,7 @@ func (stubs) ConnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, prov
 	httperr.NotImplemented(w, r, "ConnectConnector")
 }
 
-func (stubs) ListConnectorContainers(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) ListConnectorContainers(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.ListConnectorContainersParams) {
 	httperr.NotImplemented(w, r, "ListConnectorContainers")
 }
 

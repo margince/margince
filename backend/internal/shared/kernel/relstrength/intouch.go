@@ -11,6 +11,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -147,7 +148,7 @@ func LastActivityCountsSQL(alias, now string) string {
 // so a past meeting nobody reported held is no exchange. It also needs a row a
 // human wrote (WrittenByHumanSQL).
 func InteractionCountsSQL(alias string) string {
-	return alias + ".kind IN " + InteractionKindSQLGroup() + " AND " + HadContactSQL(alias) +
+	return correspondence.ExternalSQL(alias) + " AND " + alias + ".kind IN " + InteractionKindSQLGroup() + " AND " + HadContactSQL(alias) +
 		" AND " + WrittenByHumanSQL(alias)
 }
 
@@ -236,4 +237,9 @@ func ReadInTouch(lastInbound, lastMeeting, nextMeeting *occurredday.Moment, now 
 		reading.Basis = InTouchNever
 	}
 	return reading
+}
+
+// ExternalActivityCountsSQL keeps operational discussion out of customer activity clocks.
+func ExternalActivityCountsSQL(alias, now string) string {
+	return correspondence.ExternalSQL(alias) + " AND " + LastActivityCountsSQL(alias, now)
 }

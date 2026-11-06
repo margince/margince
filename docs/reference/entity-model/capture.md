@@ -118,7 +118,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_backfill
 
-30 columns · primary key `(id)` · referenced by 5 foreign keys
+31 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -141,6 +141,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `inflight_captured` | `integer`, default `0` | yes |  |
 | `inflight_scanned` | `integer`, default `0` | yes |  |
 | `inflight_skipped` | `integer`, default `0` | yes |  |
+| `internal_mail_authorization` | `jsonb` |  |  |
 | `last_error_class` | `text` |  |  |
 | `scanned` | `integer`, default `0` | yes |  |
 | `skipped` | `integer`, default `0` | yes |  |
@@ -162,6 +163,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `capture_backfill_admission_slot_check`: `CHECK ((admission_slot > 0))`
+- `capture_backfill_internal_mail_authorization`: `CHECK (((internal_mail_authorization IS NULL) OR ((jsonb_typeof(internal_mail_authorization) = 'object') AND (internal_mail_authorization ?& ARRAY['admission', 'after', 'before', 'authorized_by']))))`
 - `capture_backfill_status_check`: `CHECK ((status = ANY (ARRAY['queued', 'running', 'done', 'error', 'cancelled'])))`
 - `capture_backfill_window_months_check`: `CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 36, 60, 84, 120])))`
 

@@ -18,6 +18,7 @@ public.activity.activity_due_time_follows_due_at CREATE TRIGGER activity_due_tim
 public.activity.activity_exact_booking_duration CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))
 public.activity.activity_guests_left_out_check CHECK ((guests_left_out >= 0))
 public.activity.activity_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE SET NULL (host_user_id)
+public.activity.activity_internal_mail_remains_restricted CHECK (((internal_mail_authorization IS NULL) OR ((kind = 'email'::text) AND (audience = ANY (ARRAY['participants'::text, 'selected'::text])) AND (jsonb_typeof(internal_mail_authorization) = 'object'::text) AND (internal_mail_authorization ?& ARRAY['connection_id'::text, 'owner_user_id'::text, 'provider'::text, 'generation'::text, 'enrolled_at'::text, 'enrolled_by'::text, 'policy_since'::text]))))
 public.activity.activity_invitation_sender_fkey FOREIGN KEY (invitation_sender) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind)
 public.activity.activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text, 'vi'::text]))))
@@ -89,6 +90,7 @@ public.activity.home_read_fence_activity_reach CREATE TRIGGER home_read_fence_ac
 public.activity.host_user_id uuid gen=- def=-
 public.activity.id uuid NOT NULL gen=- def=uuidv7()
 public.activity.inbound_sender_authenticated boolean NOT NULL gen=- def=false
+public.activity.internal_mail_authorization jsonb gen=- def=-
 public.activity.invitation_sender uuid gen=- def=-
 public.activity.is_done boolean NOT NULL gen=- def=false
 public.activity.kind text NOT NULL gen=- def=-
@@ -1897,6 +1899,7 @@ public.capture_backfill.after_date date NOT NULL gen=- def=-
 public.capture_backfill.backoff_is_mailbox_scoped boolean NOT NULL gen=- def=false
 public.capture_backfill.capture_backfill_admission_slot_check CHECK ((admission_slot > 0))
 public.capture_backfill.capture_backfill_connection_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
+public.capture_backfill.capture_backfill_internal_mail_authorization CHECK (((internal_mail_authorization IS NULL) OR ((jsonb_typeof(internal_mail_authorization) = 'object'::text) AND (internal_mail_authorization ?& ARRAY['admission'::text, 'after'::text, 'before'::text, 'authorized_by'::text]))))
 public.capture_backfill.capture_backfill_pkey PRIMARY KEY (id)
 public.capture_backfill.capture_backfill_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'error'::text, 'cancelled'::text])))
 public.capture_backfill.capture_backfill_window_months_check CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 36, 60, 84, 120])))
@@ -1917,6 +1920,7 @@ public.capture_backfill.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_backfill.inflight_captured integer NOT NULL gen=- def=0
 public.capture_backfill.inflight_scanned integer NOT NULL gen=- def=0
 public.capture_backfill.inflight_skipped integer NOT NULL gen=- def=0
+public.capture_backfill.internal_mail_authorization jsonb gen=- def=-
 public.capture_backfill.last_error_class text gen=- def=-
 public.capture_backfill.scanned integer NOT NULL gen=- def=0
 public.capture_backfill.skipped integer NOT NULL gen=- def=0

@@ -19,7 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -124,7 +124,8 @@ func (r *Registry) connectionForUser(ctx context.Context, tx pgx.Tx, provider st
 // BackfillPreview binds the provider's count to the date it actually queried.
 type BackfillPreview struct {
 	connector.BackfillEstimate
-	AfterDate time.Time
+	AfterDate    time.Time
+	InternalMail *InternalMailHistoryPreview
 }
 
 // EstimateBackfill previews a window's scope: the provider-side message count
@@ -175,7 +176,9 @@ func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID
 	if err != nil {
 		return BackfillPreview{}, err
 	}
-	return BackfillPreview{BackfillEstimate: estimate, AfterDate: after}, nil
+	preview := BackfillPreview{BackfillEstimate: estimate, AfterDate: after}
+	preview.InternalMail, err = r.internalMailHistoryPreview(ctx, connID, userID, windowMonths, after)
+	return preview, err
 }
 
 // EnqueueBackfill schedules the worker job that will page a run. It runs
@@ -201,16 +204,16 @@ type EnqueueBackfill func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) e
 // CONTINUES that run (resumeFailedBackfillTx) instead of reading the mailbox
 // again from the newest message. StartBackfillOver is the explicit fresh start.
 func (r *Registry) StartBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
-	return r.openBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, true)
+	return r.openBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, backfillStart{resume: true})
 }
 
 // StartBackfillOver starts a new run from the top of the window even where a
 // failed run could be continued — the human's "start over".
 func (r *Registry) StartBackfillOver(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
-	return r.openBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, false)
+	return r.openBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, backfillStart{})
 }
 
-func (r *Registry) openBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, resume bool) (BackfillRun, error) {
+func (r *Registry) openBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, options backfillStart) (BackfillRun, error) {
 	// Checked HERE as well as at the estimate, and not only there: the estimate
 	// is a preview a client may skip, and a start that trusted it would take
 	// the whole window from anyone who called this door directly.
@@ -226,92 +229,70 @@ func (r *Registry) openBackfill(ctx context.Context, provider string, userID ids
 	}
 	var run BackfillRun
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		connID, err := r.connectionForUser(ctx, tx, provider, userID)
-		if err != nil {
-			return err
-		}
-		// The connection row first, before anything reads capture_backfill.
-		// uq_capture_backfill_live is what stops a second live run, and the
-		// violation it raises is answerable HERE (ErrBackfillRunning) and not on
-		// the other path that can create one: reviveTruncatedBackfillTx runs
-		// inside a successful sync's own transaction, where a failed statement
-		// takes the sync down with it. Serializing on the connection is what
-		// keeps that from being a race somebody loses.
-		if err := lockConnectionTx(ctx, tx, connID); err != nil {
-			return err
-		}
-		// Widen-only protects a mailbox from re-importing a window narrower than
-		// one it already has: the narrower run would look like a fresh import and
-		// end with less history than before. That reasoning is about the ACCOUNT,
-		// so the runs it consults stop at the connection's last account rebind —
-		// a mailbox connected today has imported nothing, and holding it to the
-		// previous account's window leaves its human no way to import it at all
-		// short of a year of a mailbox they just connected. A connection that
-		// never changed account (account_bound_at IS NULL) consults every run.
-		widest, err := widestWindowTx(ctx, tx, connID)
-		if err != nil {
-			return err
-		}
-		if widest != nil && windowMonths < *widest {
-			return ErrWindowNarrowing
-		}
-		resumed, err := resumeOrNil(ctx, tx, resume, connID, windowMonths, widest, enqueue)
-		if err != nil {
-			return err
-		}
-		if resumed != nil {
-			run = *resumed
-			return nil
-		}
-		after := r.now().AddDate(0, -windowMonths, 0)
-		err = tx.QueryRow(ctx, `
-			INSERT INTO capture_backfill (connection_id, window_months, after_date, total_estimate, total_estimate_is_floor, status, started_at)
-			VALUES ($1, $2, $3, NULLIF($4, 0), $5, 'queued', now())
-			RETURNING id`, connID, windowMonths, after, estimate.Messages, estimate.Floor).Scan(&run.ID)
-		if err != nil {
-			if storekit.IsUniqueViolation(err) {
-				return ErrBackfillRunning
-			}
-			return err
-		}
-		if err := enqueue(ctx, tx, run.ID); err != nil {
-			return fmt.Errorf("capture: scheduling the backfill: %w", err)
-		}
-		// How far back this import reaches, on the CONNECTION's own trail.
-		//
-		// capture_backfill holds the number, but a run is retained on its own
-		// terms and the question outlives it: "how much history did this
-		// mailbox bring in" is asked long afterwards, by somebody reading the
-		// connection rather than hunting its runs. The connection's audit
-		// image carries provider, status and account label and would answer
-		// everything about the grant except its reach.
-		//
-		// After the enqueue, so a schedule that failed records no import that
-		// never started.
-		// The before-image is the connection's PREVIOUS reach, which the
-		// widen-only check above has already read: a trail saying only how far
-		// this run goes cannot show that a mailbox's history was extended, and
-		// extending it is the act somebody asks about later. Null where no run
-		// has ever imported this account.
-		if err := auditLifecycle(ctx, tx, "update", captureConnectionObject, connID,
-			map[string]any{auditBackfillWindowMonths: widest},
-			map[string]any{auditBackfillWindowMonths: windowMonths}); err != nil {
-			return err
-		}
-		run.ConnectionID = connID
-		run.WindowMonths = windowMonths
-		run.AfterDate = after
-		run.Status = "queued"
-		if estimate.Messages > 0 {
-			// The previewed estimate rides the returned run exactly as the row
-			// stores it (NULLIF above): the start response's progress denominator.
-			messages := estimate.Messages
-			run.Estimate = &messages
-			run.EstimateIsFloor = estimate.Floor
-		}
-		return nil
+		var err error
+		run, err = r.openBackfillTx(ctx, tx, provider, userID, windowMonths, estimate, enqueue, options)
+		return err
 	})
 	return run, err
+}
+
+func (r *Registry) openBackfillTx(ctx context.Context, tx pgx.Tx, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, options backfillStart) (BackfillRun, error) {
+	var run BackfillRun
+	if options.internalMailToken != "" {
+		if err := settings.ShareLockForDecision(ctx, tx, internalMailPolicyKey); err != nil {
+			return run, err
+		}
+	}
+	connID, err := r.connectionForUser(ctx, tx, provider, userID)
+	if err != nil {
+		return run, err
+	}
+	// New runs and sync-triggered continuations serialize on the connection.
+	// Both paths must preserve one live run per connection.
+	if err := lockConnectionTx(ctx, tx, connID); err != nil {
+		return run, err
+	}
+	// Only the current account binding's history bounds this import.
+	widest, err := widestWindowTx(ctx, tx, connID)
+	if err != nil {
+		return run, err
+	}
+	resumed, err := resumeOrNil(ctx, tx, options.resume, connID, windowMonths, widest, enqueue)
+	if err != nil {
+		return run, err
+	}
+	if resumed != nil {
+		run = *resumed
+		return run, nil
+	}
+	after := r.now().AddDate(0, -windowMonths, 0)
+	var history *internalMailHistoryAuthorization
+	if options.internalMailToken != "" {
+		history, err = authorizeInternalMailHistoryTx(ctx, tx, connID, userID, windowMonths, options.internalMailToken, after)
+		if err != nil {
+			return run, err
+		}
+	}
+	run.ConnectionID, run.WindowMonths, run.AfterDate, run.Status = connID, windowMonths, after, "queued"
+	err = insertBackfillRunTx(ctx, tx, &run, estimate, history)
+	if err != nil {
+		return run, err
+	}
+	if err := enqueue(ctx, tx, run.ID); err != nil {
+		return run, fmt.Errorf("capture: scheduling the backfill: %w", err)
+	}
+	// The connection audit keeps the previous and next reach after individual runs expire.
+	// A failed schedule must leave neither a run nor an import audit.
+	if err := auditOpenedBackfillTx(ctx, tx, run, history, widest); err != nil {
+		return run, err
+	}
+
+	if estimate.Messages > 0 {
+		messages := estimate.Messages
+		run.Estimate = &messages
+		run.EstimateIsFloor = estimate.Floor
+	}
+	return run, nil
 }
 
 // BackfillStatus reads the latest run for the user's connection — the

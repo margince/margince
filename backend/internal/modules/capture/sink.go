@@ -25,6 +25,7 @@ import (
 // Sink is the one connector.Sink implementation — the chokepoint every
 // captured record passes on its way into the domain.
 type Sink struct {
+	internalMailRecorder   InternalMailRecorder
 	partyReceiptSettlement PartyReceiptSettlement
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db     *database.DB
@@ -227,6 +228,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 	var ref datasource.EntityRef
 	var dedupeHit *ids.LeadID
 	var dedupeFields json.RawMessage
+	var internalOperational bool
 	var activityCreated bool
 	var decision counterpartyDecision
 	// internalOnly is set INSIDE the transaction and read after it commits.
@@ -248,7 +250,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// The pre-store gates run BEFORE the raw store, which is the whole
 		// point: raw capture is append-once evidence, so a message that gets
 		// that far has been kept whatever happens next.
-		drop, err := s.dropBeforeStoreTx(ctx, tx, rec)
+		ctx, drop, err := s.dropBeforeStoreTx(ctx, tx, rec)
 		if err != nil {
 			return err
 		}
@@ -260,23 +262,12 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
-			// First of everything that touches an activity row in this transaction,
-			// alias adoption included. Adoption recomputes the audience of every message
-			// it adopts, which locks those rows. A transaction holding one before it asks
-			// for the merge lock is the cycle takeMergeLockFirst exists to break.
 			if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
 				return err
 			}
-			var err error
-			if rec, fields, err = s.readMailForTheSeatTx(ctx, tx, actor.UserID, rec, fields); err != nil {
-				return err
-			}
-			// Stored only now, so the original's privacy question sees the record
-			// staging sees, after it was read against the seat's own addresses.
-			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
-				return err
-			}
-			ref, activityCreated, decision, err = s.captureActivity(ctx, tx, rec, fields)
+			landed, err := s.landActivityTx(ctx, tx, rec, fields, actor.UserID)
+			ref, activityCreated = landed.ref, landed.created
+			decision, internalOperational = landed.decision, landed.internal
 			return err
 		case LeadFields:
 			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
@@ -300,6 +291,9 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// does for any other skip — which is what makes the classification
 		// irreversible, and why the own-domain set is admin-visible (ADR-0082 §4).
 		return datasource.EntityRef{}, fmt.Errorf("%w: %s", connector.ErrSkip, dropped)
+	}
+	if internalOperational {
+		return ref, nil
 	}
 	// Everything after the commit, merge staging included, is the ensure stage.
 	ensureStart := time.Now()

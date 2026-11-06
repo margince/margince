@@ -50,6 +50,13 @@ are scanned again, and the duplicates are dropped.
 When the preview reached its cap, both screens say the count is a floor. They explain that the estimate
 covers only the counted messages: the full import may hold more and cost more.
 
+Internal mail needs a separate authorization. The admin adds the source and
+allows a history start date. The mailbox owner then previews that scope and
+chooses to include it in a new run. The run keeps its authorization in
+`capture_backfill.internal_mail_authorization`; ordinary runs never use it.
+`capture/internalmailhistorystart.go` checks the preview again inside the
+existing start transaction. The same worker and paging limits run both kinds.
+
 Every section below answers a question from that screen.
 
 ## "~3,436 messages": counting the scope without reading the mail

@@ -48,6 +48,9 @@ const resumableRunPredicate = `b.status = 'error' AND b.cursor IS NOT NULL
 // run, which is also the answer when the caller asked to start over (resume
 // false).
 func resumeOrNil(ctx context.Context, tx pgx.Tx, resume bool, connID ids.UUID, windowMonths int, widest *int, enqueue EnqueueBackfill) (*BackfillRun, error) {
+	if widest != nil && windowMonths < *widest {
+		return nil, ErrWindowNarrowing
+	}
 	if !resume {
 		return nil, nil //nolint:nilnil // starting over resumes nothing
 	}

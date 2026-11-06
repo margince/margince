@@ -12652,7 +12652,9 @@ export interface paths {
          *     colleague to type one would be asking them to look it up, so the picker reads the list from
          *     here and stores the id behind the name.
          *
-         *     The caller's OWN mailbox and no other: the read matches on the authenticated user, and a
+         *     By default the read matches the authenticated user's own mailbox. An administrator may
+         *     supply `connection_id` to select operational source folders; this does not grant new
+         *     provider permissions. A
          *     container rule is `scope: user` by database constraint because a label lives in one mailbox
          *     and means nothing in anybody else's.
          *
@@ -25435,11 +25437,61 @@ export interface components {
             /** @description Only under the payload posture, and only from the caller's own stored rows. */
             subject?: string | null;
         };
+        InternalMailSelection: {
+            /**
+             * Format: date
+             * @description Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import.
+             */
+            history_since?: string;
+            /** Format: uuid */
+            connection_id: string;
+            /** @description Exact provider-qualified folder identifiers. An empty list selects the whole connection, subject to ordinary exclusions. */
+            containers: string[];
+        };
+        InternalMailSource: {
+            /** Format: date */
+            readonly history_since?: string;
+            /** Format: uuid */
+            connection_id: string;
+            containers: string[];
+            /** Format: uuid */
+            owner_user_id: string;
+            provider: string;
+            generation: number;
+            /** Format: date-time */
+            enrolled_at: string;
+            enrolled_by: string;
+        };
+        InternalMailSourceOption: {
+            /** Format: uuid */
+            connection_id: string;
+            /** Format: uuid */
+            owner_user_id: string;
+            provider: string;
+            account_label: string;
+            owner_name: string;
+            generation: number;
+        };
+        /** @description Administrator-only internal operational mail policy. Disabling stops new capture and preserves existing message restrictions. Employee notice and organizational authorization remain rollout responsibilities. */
+        InternalMailSettings: {
+            /** @default false */
+            enabled: boolean;
+            /** Format: date-time */
+            readonly since?: string | null;
+            sources: components["schemas"]["InternalMailSource"][];
+            available_sources: components["schemas"]["InternalMailSourceOption"][];
+        };
+        /** @description Only a human administrator may change source authorization. This authorizes future capture only, never a historical import. */
+        UpdateInternalMailRequest: {
+            enabled: boolean;
+            sources: components["schemas"]["InternalMailSelection"][];
+        };
         /**
          * @description The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
          *     changed only by admin/ops.
          */
         CaptureSettings: {
+            internal_mail?: components["schemas"]["InternalMailSettings"];
             locks?: components["schemas"]["SettingLocks"];
             /**
              * @description How many held mail threads one confidentiality pass asks the model about, per run,
@@ -26262,6 +26314,7 @@ export interface components {
         };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
+            internal_mail?: components["schemas"]["UpdateInternalMailRequest"];
             /** @description Toggle captured-company auto-enrichment. */
             auto_enrich?: boolean;
             /** @description Set the daily ceiling on automatic website reads. */
@@ -27741,8 +27794,17 @@ export interface components {
              */
             window: "none" | "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
         };
+        /** @description A separate internal-mail import is allowed only within this administrator-authorized scope and only after the mailbox owner explicitly selects it when starting. */
+        InternalMailHistoryPreview: {
+            /** @description Selected provider folder names. Empty means the whole connection, subject to ordinary exclusions. */
+            folders: string[];
+            preview_token: string;
+            /** Format: date-time */
+            received_after: string;
+        };
         /** @description The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task. */
         BackfillPreview: {
+            internal_mail?: components["schemas"]["InternalMailHistoryPreview"];
             /** @enum {string} */
             window: "none" | "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
             /** @description Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number. */
@@ -27769,6 +27831,8 @@ export interface components {
             computed_at: string;
         };
         StartBackfillRequest: {
+            /** @description Explicitly include internal operational history within the administrator's authorized source and date range. Must match this window's current preview. Omit to exclude internal history. */
+            internal_mail_preview_token?: string;
             /**
              * @description `none` is expressed by never calling this op. Widen-only versus a prior run.
              * @enum {string}
@@ -38836,6 +38900,8 @@ export interface components {
          *     `withheld`.
          */
         Activity: {
+            /** @description Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities. */
+            readonly can_share_internal?: boolean;
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
             /** @description Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
@@ -78213,7 +78279,10 @@ export interface operations {
     };
     listConnectorContainers: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox. */
+                connection_id?: string;
+            };
             header?: never;
             path: {
                 /**
@@ -78246,6 +78315,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description This provider does not list folders (`code: containers_unsupported`). */
             501: {
                 headers: {

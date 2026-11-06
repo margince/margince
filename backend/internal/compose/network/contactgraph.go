@@ -287,9 +287,7 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = "true"
-	}
+	scope += " AND " + auth.ActivityExternalEvidenceClause("a")
 	limitPos := arg(receiptsPerEdge)
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(`

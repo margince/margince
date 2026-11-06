@@ -48,6 +48,7 @@ const QUIET_CAPTURE: Schemas["CaptureActivityResponse"] = {
 };
 
 const CAPTURE_SETTINGS: Schemas["CaptureSettings"] = {
+  internal_mail: { enabled: false, sources: [], available_sources: [] },
   auto_enrich: true,
   mail_sharing: true,
   shared_posture_allowed: false,

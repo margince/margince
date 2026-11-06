@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -165,7 +166,7 @@ func capturingMailboxSQL(activity string) string {
 // audience='selected' is deliberately absent: it admits named users and teams
 // beyond the participants, so it is not bounded by "the owner was there".
 func SignatureSourceEligible(contact, activity string) string {
-	return fmt.Sprintf(`(
+	return correspondence.ExternalSQL(activity) + " AND " + fmt.Sprintf(`(
 		    %[2]s.audience = 'workspace'
 		    OR (%[1]s.visibility = 'owner' AND %[2]s.audience = 'participants'
 		        AND (EXISTS (SELECT 1 FROM capture_import ci

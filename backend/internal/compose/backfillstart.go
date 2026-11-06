@@ -31,6 +31,19 @@ func (h backfillHandlers) begin(ctx context.Context, ws ids.UUID, provider strin
 	if startOver {
 		start = h.registry.StartBackfillOver
 	}
+	return h.beginWith(ctx, ws, provider, userID, months, estimate, start)
+}
+
+type backfillStarter func(context.Context, string, ids.UserID, int, connector.BackfillEstimate, capture.EnqueueBackfill) (capture.BackfillRun, error)
+
+func (h backfillHandlers) beginInternalHistory(ctx context.Context, ws ids.UUID, provider string, owner ids.UserID, months int, estimate connector.BackfillEstimate, token string) (capture.BackfillRun, error) {
+	start := func(ctx context.Context, provider string, owner ids.UserID, months int, estimate connector.BackfillEstimate, enqueue capture.EnqueueBackfill) (capture.BackfillRun, error) {
+		return h.registry.StartBackfillWithInternalHistory(ctx, provider, owner, months, estimate, token, enqueue)
+	}
+	return h.beginWith(ctx, ws, provider, owner, months, estimate, start)
+}
+
+func (h backfillHandlers) beginWith(ctx context.Context, ws ids.UUID, provider string, userID ids.UserID, months int, estimate connector.BackfillEstimate, start backfillStarter) (capture.BackfillRun, error) {
 	// Kept apart from the run's own error so a refused queue keeps its own
 	// answer instead of the generic connector-fault mapping.
 	var enqueueErr error

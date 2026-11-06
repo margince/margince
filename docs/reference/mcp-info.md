@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 47 |
 | Resources | 13 |
-| Tool catalog | 207.4 KB |
+| Tool catalog | 207.5 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 54407 |
+| Approx. wire tokens | 54426 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -36,7 +36,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Descriptions (incl. governance clause) | 48.2 KB | 23% | Yes, every step |
 | Input schemas | 101.3 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 5% | Partly |
-| **Description + input schema** | **149.5 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **149.6 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -103,7 +103,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2498 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 984 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2061 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2080 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 408 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
@@ -10690,6 +10690,10 @@ every name verbatim; a custom field is spelled cf_<slug>.
     },
     "buildId": {
       "description": "voice_build only",
+      "type": "string"
+    },
+    "connection_id": {
+      "description": "connector_containers only",
       "type": "string"
     },
     "contact_id": {

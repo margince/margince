@@ -4710,6 +4710,57 @@ export const en = {
   "compose.reason.verdict": "Held by classification",
   "compose.reason.counterparty": "Held: counterparty mail",
   "compose.reason.explicitlyConfidential": "Marked confidential",
+  "internalMail.authorizeHistory":
+    "Authorize a separate internal history import for this source",
+  "internalMail.historySince": "Historical mail received on or after (UTC)",
+  "internalMail.historyApprovalNote":
+    "This approval does not start an import. The mailbox owner must preview the scope and explicitly include internal history when starting an import.",
+  "internalMail.needHistoryDate":
+    "Choose an earliest received date for each authorized internal history source.",
+  "internalMail.reauthorizeSource":
+    "This mailbox authorization changed. Save to enroll it again. Internal capture remains stopped until then.",
+  "internalMail.historyTitle": "Internal history authorization",
+  "internalMail.historyAfter":
+    "Authorized internal mail received after {date}",
+  "internalMail.historyFolders": "Internal source folders",
+  "internalMail.historyImportNote":
+    "Starting with this option creates a new import. The provider estimate covers the whole mailbox window. Internal mail is added only within the approved source and date range, through the time the import starts. Ordinary exclusions and participant access remain in place.",
+  "internalMail.includeHistory":
+    "Include authorized internal mail in a new history import",
+  "internalMail.title": "Internal operational mail",
+  "internalMail.scope":
+    "Store selected operational email between colleagues. Only participants can read it initially. A participant may share one message with named colleagues. Links and thread sharing never widen access.",
+  "internalMail.authorization":
+    "Confirm organizational authorization and employee notice before enabling capture. Selecting a source uses its existing mailbox permissions and grants no new provider access.",
+  "internalMail.enable": "Enable internal operational mail capture",
+  "internalMail.sources": "Operational mail connections",
+  "internalMail.noSources":
+    "Connect a mailbox before selecting an operational source.",
+  "internalMail.unavailableSource": "Unavailable mail connection",
+  "internalMail.needSource":
+    "Select at least one operational mail connection before enabling capture.",
+  "internalMail.disable":
+    "Disabling capture or removing a source stops new internal mail. Stored messages retain their reader restrictions and privacy lifecycle.",
+  "internalMail.future":
+    "Capture starts with future mail. Internal history stays excluded unless an administrator approves a date range and the mailbox owner explicitly includes it in a separate import.",
+  "internalMail.allFolders": "All permitted folders",
+  "internalMail.selectedFolders": "Selected folders only",
+  "internalMail.chooseFolders": "Choose folders",
+  "internalMail.folders": "Folders for this connection",
+  "internalMail.loadingFolders": "Loading mailbox folders",
+  "internalMail.foldersUnsupported":
+    "This provider cannot list folders. You can select the whole connection with ordinary exclusions.",
+  "internalMail.unavailableFolder": "Unavailable folder",
+  "internalMail.removeFolder": "Remove folder",
+  "internalMail.searchFolders": "Find a folder",
+  "internalMail.noFolders": "No matching folders",
+  "internalMail.done": "Done",
+  "internalMail.partialFolders":
+    "The provider returned part of its folder list. Existing selections remain in place.",
+  "internalMail.shareNote":
+    "This changes the named readers of this message only. Participants retain access. Saving a new selection replaces the previous named readers.",
+  "compose.reason.internalOperational":
+    "Internal operational mail: participants and named colleagues",
   "compose.reason.membersOnly": "Held: mail between colleagues",
   "compose.reason.noCounterparty": "Held: no counterparty",
   "compose.audience": "Change visibility",
@@ -15838,7 +15889,7 @@ export const en = {
   "captureExclusions.removeRule": "Remove rule",
   "ownDomains.title": "Own email domains",
   "ownDomains.sub":
-    "Domains that belong to this company. Messages between colleagues are not stored for anyone, including you.",
+    "Domains that belong to this company. Messages between colleagues are skipped unless their source is enrolled under Internal operational mail.",
   "ownDomains.curatedTitle": "Managed here",
   "ownDomains.irreversible":
     "Adding a domain applies from the next message; removing it resumes capture from then on. Mail skipped while registered is never offered again by any mailbox. Captured mail stays.",

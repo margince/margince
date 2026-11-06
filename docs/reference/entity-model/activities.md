@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-71 columns · primary key `(id)` · referenced by 43 foreign keys
+72 columns · primary key `(id)` · referenced by 43 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -39,6 +39,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `has_calendar_part` | `boolean`, default `false` | yes |  |
 | `host_user_id` | `uuid` |  | Meeting only: the member of this company who held it. |
 | `inbound_sender_authenticated` | `boolean`, default `false` | yes |  |
+| `internal_mail_authorization` | `jsonb` |  |  |
 | `invitation_sender` | `uuid` |  | Points at `app_user.id`. |
 | `is_done` | `boolean`, default `false` | yes | Task only. |
 | `kind` | `text` | yes | Points at `activity_kind.kind`. |
@@ -111,6 +112,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_done_at`: `CHECK (((is_done = false) OR (done_at IS NOT NULL)))`
 - `activity_exact_booking_duration`: `CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))`
 - `activity_guests_left_out_check`: `CHECK ((guests_left_out >= 0))`
+- `activity_internal_mail_remains_restricted`: `CHECK (((internal_mail_authorization IS NULL) OR ((kind = 'email') AND (audience = ANY (ARRAY['participants', 'selected'])) AND (jsonb_typeof(internal_mail_authorization) = 'object') AND (internal_mail_authorization ?& ARRAY['connection_id', 'owner_user_id', 'provider', 'generation', 'enrolled_at', 'enrolled_by', 'policy_since']))))`
 - `activity_language_check`: `CHECK (((language IS NULL) OR (language = ANY (ARRAY['de', 'en', 'vi']))))`
 - `activity_meeting_host`: `CHECK (((host_user_id IS NULL) OR (kind = 'meeting')))`
 - `activity_meeting_no_overlap`: `EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC', occurred_at), (timezone('UTC', occurred_at) + (( CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)::double precision * '00:00:01'::interval)), '[)') WITH &&) WHERE (((kind = 'meeting') AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled')))`

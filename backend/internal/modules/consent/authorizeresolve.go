@@ -347,7 +347,7 @@ func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (str
 		SELECT a.thread_key
 		  FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
-		 WHERE o.id = $1 AND `+auth.ActivityAvailableClause("a"), deliveryID).Scan(&key)
+		 WHERE o.id = $1 AND `+auth.ActivityExternalEvidenceClause("a"), deliveryID).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The delivery (or its activity) is gone, or the activity is held under
 		// a statutory retention restriction. Either way, not this function's
@@ -384,7 +384,7 @@ func deliveryLinks(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) ([]ids.U
 		  FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
 		  JOIN activity_link l ON l.activity_id = o.activity_id AND l.deal_id IS NOT NULL
-		 WHERE o.id = $1 AND `+auth.ActivityAvailableClause("a"), deliveryID)
+		 WHERE o.id = $1 AND `+auth.ActivityExternalEvidenceClause("a"), deliveryID)
 	if err != nil {
 		return nil, fmt.Errorf("consent: read the delivery's linked records: %w", err)
 	}

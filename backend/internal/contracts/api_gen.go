@@ -30286,6 +30286,9 @@ type Activity struct {
 	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
 	CallOutcome *ActivityCallOutcome `json:"call_outcome,omitempty"`
 
+	// CanShareInternal Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
+	CanShareInternal *bool `json:"can_share_internal,omitempty"`
+
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
 
@@ -35295,8 +35298,11 @@ type BackfillPreview struct {
 	EstimatedCostMinor *int `json:"estimated_cost_minor,omitempty"`
 
 	// EstimatedMessages Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number.
-	EstimatedMessages int                   `json:"estimated_messages"`
-	Window            BackfillPreviewWindow `json:"window"`
+	EstimatedMessages int `json:"estimated_messages"`
+
+	// InternalMail A separate internal-mail import is allowed only within this administrator-authorized scope and only after the mailbox owner explicitly selects it when starting.
+	InternalMail *InternalMailHistoryPreview `json:"internal_mail,omitempty"`
+	Window       BackfillPreviewWindow       `json:"window"`
 }
 
 // BackfillPreviewEstimateQuality observed = priced from this workspace's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
@@ -36694,6 +36700,9 @@ type CaptureSettings struct {
 	// pass runs. Read at the start of every pass, so a change applies without a restart.
 	// Default 40.
 	ConfidentialityPassCap int `json:"confidentiality_pass_cap" maximum:"200" minimum:"1"`
+
+	// InternalMail Administrator-only internal operational mail policy. Disabling stops new capture and preserves existing message restrictions. Employee notice and organizational authorization remain rollout responsibilities.
+	InternalMail *InternalMailSettings `json:"internal_mail,omitempty"`
 
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
@@ -49379,6 +49388,55 @@ type IntegrationsSettings struct {
 	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
+// InternalMailHistoryPreview A separate internal-mail import is allowed only within this administrator-authorized scope and only after the mailbox owner explicitly selects it when starting.
+type InternalMailHistoryPreview struct {
+	// Folders Selected provider folder names. Empty means the whole connection, subject to ordinary exclusions.
+	Folders       []string  `json:"folders"`
+	PreviewToken  string    `json:"preview_token"`
+	ReceivedAfter time.Time `json:"received_after"`
+}
+
+// InternalMailSelection defines model for InternalMailSelection.
+type InternalMailSelection struct {
+	ConnectionId openapi_types.UUID `json:"connection_id"`
+
+	// Containers Exact provider-qualified folder identifiers. An empty list selects the whole connection, subject to ordinary exclusions.
+	Containers []string `json:"containers" unique:"items"`
+
+	// HistorySince Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import.
+	HistorySince *openapi_types.Date `json:"history_since,omitempty"`
+}
+
+// InternalMailSettings Administrator-only internal operational mail policy. Disabling stops new capture and preserves existing message restrictions. Employee notice and organizational authorization remain rollout responsibilities.
+type InternalMailSettings struct {
+	AvailableSources []InternalMailSourceOption `json:"available_sources"`
+	Enabled          bool                       `json:"enabled"`
+	Since            *time.Time                 `json:"since,omitempty"`
+	Sources          []InternalMailSource       `json:"sources"`
+}
+
+// InternalMailSource defines model for InternalMailSource.
+type InternalMailSource struct {
+	ConnectionId openapi_types.UUID  `json:"connection_id"`
+	Containers   []string            `json:"containers"`
+	EnrolledAt   time.Time           `json:"enrolled_at"`
+	EnrolledBy   string              `json:"enrolled_by"`
+	Generation   int                 `json:"generation"`
+	HistorySince *openapi_types.Date `json:"history_since,omitempty"`
+	OwnerUserId  openapi_types.UUID  `json:"owner_user_id"`
+	Provider     string              `json:"provider"`
+}
+
+// InternalMailSourceOption defines model for InternalMailSourceOption.
+type InternalMailSourceOption struct {
+	AccountLabel string             `json:"account_label"`
+	ConnectionId openapi_types.UUID `json:"connection_id"`
+	Generation   int                `json:"generation"`
+	OwnerName    string             `json:"owner_name"`
+	OwnerUserId  openapi_types.UUID `json:"owner_user_id"`
+	Provider     string             `json:"provider"`
+}
+
 // IntroFallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
 type IntroFallbackPolicy string
 
@@ -61257,6 +61315,9 @@ type StageOrderRequest struct {
 
 // StartBackfillRequest defines model for StartBackfillRequest.
 type StartBackfillRequest struct {
+	// InternalMailPreviewToken Explicitly include internal operational history within the administrator's authorized source and date range. Must match this window's current preview. Omit to exclude internal history.
+	InternalMailPreviewToken *string `json:"internal_mail_preview_token,omitempty"`
+
 	// StartOver Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one.
 	StartOver *bool `json:"start_over,omitempty"`
 
@@ -62402,6 +62463,9 @@ type UpdateCaptureSettingsRequest struct {
 	// ConfidentialityPassCap Set how many held mail threads one confidentiality pass judges.
 	ConfidentialityPassCap *int `json:"confidentiality_pass_cap,omitempty" maximum:"200" minimum:"1"`
 
+	// InternalMail Only a human administrator may change source authorization. This authorizes future capture only, never a historical import.
+	InternalMail *UpdateInternalMailRequest `json:"internal_mail,omitempty"`
+
 	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
@@ -63139,6 +63203,12 @@ type UpdateInstallationSettingsRequestTimeFormat string
 type UpdateIntegrationsSettingsRequest struct {
 	// AutomaticLookup Toggle whether contacts are looked up automatically for the free details.
 	AutomaticLookup *bool `json:"automatic_lookup,omitempty"`
+}
+
+// UpdateInternalMailRequest Only a human administrator may change source authorization. This authorizes future capture only, never a historical import.
+type UpdateInternalMailRequest struct {
+	Enabled bool                    `json:"enabled"`
+	Sources []InternalMailSelection `json:"sources"`
 }
 
 // UpdateLeadDisqualifyReasonRequest defines model for UpdateLeadDisqualifyReasonRequest.
@@ -69585,6 +69655,12 @@ type ConnectorOAuthCallbackParams struct {
 
 	// Error Set instead of `code` when the user denied consent.
 	Error *string `form:"error,omitempty" json:"error,omitempty"`
+}
+
+// ListConnectorContainersParams defines parameters for ListConnectorContainers.
+type ListConnectorContainersParams struct {
+	// ConnectionId Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox.
+	ConnectionId *openapi_types.UUID `form:"connection_id,omitempty" json:"connection_id,omitempty"`
 }
 
 // ListContactsParams defines parameters for ListContacts.
@@ -76409,6 +76485,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "call_outcome")
 	}
 
+	if raw, found := object["can_share_internal"]; found {
+		err = json.Unmarshal(raw, &a.CanShareInternal)
+		if err != nil {
+			return fmt.Errorf("error reading 'can_share_internal': %w", err)
+		}
+		delete(object, "can_share_internal")
+	}
+
 	if raw, found := object["capture_label"]; found {
 		err = json.Unmarshal(raw, &a.CaptureLabel)
 		if err != nil {
@@ -76875,6 +76959,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["call_outcome"], err = json.Marshal(a.CallOutcome)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
+	if a.CanShareInternal != nil {
+		object["can_share_internal"], err = json.Marshal(a.CanShareInternal)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'can_share_internal': %w", err)
 		}
 	}
 
@@ -89956,7 +90047,7 @@ type ServerInterface interface {
 	ConnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// The folders or labels this mailbox has, to pick one to keep out of capture.
 	// (GET /connectors/{provider}/containers)
-	ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params ListConnectorContainersParams)
 	// Set the word this connector files what it captures under.
 	// (PUT /connectors/{provider}/context-tag)
 	SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
@@ -94090,7 +94181,7 @@ func (_ Unimplemented) ConnectConnector(w http.ResponseWriter, r *http.Request, 
 
 // The folders or labels this mailbox has, to pick one to keep out of capture.
 // (GET /connectors/{provider}/containers)
-func (_ Unimplemented) ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params ListConnectorContainersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -113589,8 +113680,24 @@ func (siw *ServerInterfaceWrapper) ListConnectorContainers(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListConnectorContainersParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListConnectorContainers(w, r, provider)
+		siw.Handler.ListConnectorContainers(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

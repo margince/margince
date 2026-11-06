@@ -312,6 +312,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// briefly readable before a later pass narrows it has already been
 		// readable.
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
+		WithInternalMailRecorder(activities.MarkInternalMailTx).
 		// The attendee naming, from the module that owns `contact`. Inside the
 		// capture transaction for a plainer reason than the audience above: the
 		// name it completes is read off the participant rows this same

@@ -19312,6 +19312,13 @@ paths:
     get:
       tags: [Connectors]
       operationId: listConnectorContainers
+      parameters:
+        - name: connection_id
+          in: query
+          required: false
+          description: Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox.
+          schema: { type: string, format: uuid }
+
       summary: The folders or labels this mailbox has, to pick one to keep out of capture.
       description: |
         What a container exclusion names, in a form somebody can choose from. A container rule
@@ -19319,7 +19326,9 @@ paths:
         colleague to type one would be asking them to look it up, so the picker reads the list from
         here and stores the id behind the name.
 
-        The caller's OWN mailbox and no other: the read matches on the authenticated user, and a
+        By default the read matches the authenticated user's own mailbox. An administrator may
+        supply `connection_id` to select operational source folders; this does not grant new
+        provider permissions. A
         container rule is `scope: user` by database constraint because a label lives in one mailbox
         and means nothing in anybody else's.
 
@@ -19342,6 +19351,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: 'This provider does not list folders (`code: containers_unsupported`).'
           content:
@@ -37618,6 +37628,72 @@ components:
           type: [string, 'null']
           description: 'Only under the payload posture, and only from the caller''s own stored rows.'
 
+    InternalMailSelection:
+      type: object
+      additionalProperties: false
+      required: [connection_id, containers]
+      properties:
+        history_since:
+          type: string
+          format: date
+          description: Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import.
+
+        connection_id: { type: string, format: uuid }
+        containers:
+          type: array
+          maxItems: 200
+          uniqueItems: true
+          description: Exact provider-qualified folder identifiers. An empty list selects the whole connection, subject to ordinary exclusions.
+          items: { type: string, minLength: 1, maxLength: 1024 }
+    InternalMailSource:
+      type: object
+      required: [connection_id, containers, owner_user_id, provider, generation, enrolled_at, enrolled_by]
+      properties:
+        history_since: { type: string, format: date, readOnly: true }
+
+        connection_id: { type: string, format: uuid }
+        containers:
+          type: array
+          items: { type: string }
+        owner_user_id: { type: string, format: uuid }
+        provider: { type: string }
+        generation: { type: integer }
+        enrolled_at: { type: string, format: date-time }
+        enrolled_by: { type: string }
+    InternalMailSourceOption:
+      type: object
+      required: [connection_id, owner_user_id, provider, account_label, owner_name, generation]
+      properties:
+        connection_id: { type: string, format: uuid }
+        owner_user_id: { type: string, format: uuid }
+        provider: { type: string }
+        account_label: { type: string }
+        owner_name: { type: string }
+        generation: { type: integer }
+    InternalMailSettings:
+      type: object
+      description: Administrator-only internal operational mail policy. Disabling stops new capture and preserves existing message restrictions. Employee notice and organizational authorization remain rollout responsibilities.
+      required: [enabled, sources, available_sources]
+      properties:
+        enabled: { type: boolean, default: false }
+        since: { type: [string, 'null'], format: date-time, readOnly: true }
+        sources:
+          type: array
+          items: { $ref: '#/components/schemas/InternalMailSource' }
+        available_sources:
+          type: array
+          items: { $ref: '#/components/schemas/InternalMailSourceOption' }
+    UpdateInternalMailRequest:
+      type: object
+      additionalProperties: false
+      description: Only a human administrator may change source authorization. This authorizes future capture only, never a historical import.
+      required: [enabled, sources]
+      properties:
+        enabled: { type: boolean }
+        sources:
+          type: array
+          maxItems: 200
+          items: { $ref: '#/components/schemas/InternalMailSelection' }
     CaptureSettings:
       type: object
       description: |
@@ -37625,6 +37701,7 @@ components:
         changed only by admin/ops.
       required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds, confidentiality_pass_cap]
       properties:
+        internal_mail: { $ref: '#/components/schemas/InternalMailSettings' }
         locks: { $ref: '#/components/schemas/SettingLocks' }
         confidentiality_pass_cap:
           type: integer
@@ -38792,6 +38869,7 @@ components:
       type: object
       description: A sparse capture-settings patch (admin/ops).
       properties:
+        internal_mail: { $ref: '#/components/schemas/UpdateInternalMailRequest' }
         auto_enrich: { type: boolean, description: Toggle captured-company auto-enrichment. }
         auto_enrich_daily_cap: { type: integer, minimum: 1, maximum: 20000, description: 'Set the daily ceiling on automatic website reads.' }
         site_read_max_pages: { type: integer, minimum: 1, maximum: 200, description: 'Set the page limit of one website read.' }
@@ -40473,11 +40551,26 @@ components:
       required: [window]
       properties:
         window: { type: string, enum: [none, 3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m], description: 'Bounded mail-history window, up to ten years. The default UI selection is six months.' }
+    InternalMailHistoryPreview:
+      type: object
+      readOnly: true
+      required: [preview_token, received_after, folders]
+      description: A separate internal-mail import is allowed only within this administrator-authorized scope and only after the mailbox owner explicitly selects it when starting.
+      properties:
+        folders:
+          type: array
+          description: Selected provider folder names. Empty means the whole connection, subject to ordinary exclusions.
+          items: { type: string }
+
+        preview_token: { type: string }
+        received_after: { type: string, format: date-time }
     BackfillPreview:
       type: object
       description: 'The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.'
       required: [window, estimated_messages, computed_at]
       properties:
+        internal_mail: { $ref: '#/components/schemas/InternalMailHistoryPreview' }
+
         window: { type: string, enum: [none, 3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m] }
         estimated_messages: { type: integer, description: 'Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number.' }
         estimate_is_floor:
@@ -40503,6 +40596,11 @@ components:
       type: object
       required: [window]
       properties:
+        internal_mail_preview_token:
+          type: string
+          minLength: 1
+          description: Explicitly include internal operational history within the administrator's authorized source and date range. Must match this window's current preview. Omit to exclude internal history.
+
         window: { type: string, enum: [3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m], description: '`none` is expressed by never calling this op. Widen-only versus a prior run.' }
         start_over: { type: boolean, description: 'Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one.' }
     BackfillStatus:
@@ -53523,6 +53621,11 @@ components:
         `withheld`.
       required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at, offers_email]
       properties:
+        can_share_internal:
+          type: boolean
+          readOnly: true
+          description: Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
+
         writable:
           type: boolean
           readOnly: true
