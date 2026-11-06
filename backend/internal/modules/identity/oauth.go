@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -47,11 +48,21 @@ const authCodeTTL = 5 * time.Minute
 func (h Handlers) OAuthRouter() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /oauth/register", h.oauthRegister)
-	mux.HandleFunc("GET "+authorizePath, h.oauthConsentRedirect)
-	mux.HandleFunc("POST "+authorizePath, h.oauthAuthorize)
+	mux.HandleFunc("GET "+authorizePath, keepOpener(h.oauthConsentRedirect))
+	mux.HandleFunc("POST "+authorizePath, keepOpener(h.oauthAuthorize))
 	mux.HandleFunc("POST /oauth/token", h.oauthToken)
 	mux.HandleFunc("POST /oauth/revoke", h.oauthRevoke)
 	return mux
+}
+
+// keepOpener lets a client that runs the consent flow in a popup read the code
+// back through window.opener. Set on the route, not by path, so an unmounted
+// connector's 404 here matches every other 404.
+func keepOpener(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cross-Origin-Opener-Policy", httpserver.OpenerPolicyPopup)
+		next(w, r)
+	}
 }
 
 func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
@@ -345,9 +356,18 @@ func (h Handlers) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	// a second ceiling: every mainstream MCP client sends no scope parameter at
 	// all, so intersecting with it would make every real connection read-only
 	// whatever the human chose.
-	code, err := h.svc.mintConsentedAuthorizationCode(
-		r.Context(), id, r.PostForm.Get("scopes"), req,
-	)
+	// Areas outside the role's reach were never on the screen, so they are
+	// refused like a scope outside the vocabulary.
+	areas, err := parseConsentedAreas(r.PostForm.Get(fieldAreas))
+	if err == nil && h.admitReachable(r.Context(), areas) != nil {
+		err = fmt.Errorf("an area the role does not reach: %w", apperrors.ErrInvalidArgument)
+	}
+	var code string
+	if err == nil {
+		code, err = h.svc.mintConsentedAuthorizationCode(
+			r.Context(), id, consentChoice{scopes: r.PostForm.Get("scopes"), areas: areas}, req,
+		)
+	}
 	if errors.Is(err, apperrors.ErrInvalidArgument) {
 		// Not something the human's next click fixes: this server rendered
 		// five checkboxes over a closed vocabulary, so a scope list it will

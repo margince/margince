@@ -29,9 +29,10 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEveryMailRelayOptionIsWiredByARoleBinary(t *testing.T) {
@@ -43,7 +44,7 @@ func TestEveryMailRelayOptionIsWiredByARoleBinary(t *testing.T) {
 			"pass however many relays went unwired")
 	}
 
-	roles, err := os.ReadDir("cmd")
+	roles, err := gatekit.ReadDir("cmd")
 	if err != nil {
 		t.Fatalf("reading the process roles under cmd/: %v", err)
 	}

@@ -3,9 +3,9 @@
 
 package approvals
 
-// A colleague's own open request, read and withdrawn by the colleague who
-// staged it. The inbox shows a payload-owned card only to its decider, so the
-// one who asked reaches their request here, matched on proposed_by.
+// A colleague's own open request, read and withdrawn by that colleague or their
+// agent, whichever staged it. The inbox shows a payload-owned card only to its
+// decider, so the one who asked reaches their request here.
 
 import (
 	"context"
@@ -22,10 +22,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ownRequestKinds are the kinds a human stages for a colleague to answer.
+// ownRequestKinds are the kinds a user or their agent stages for a colleague to answer.
 var ownRequestKinds = map[string]bool{approvalsubject.KindOwnershipTransfer: true}
 
-// OwnRequest is one open request the calling human staged.
+// OwnRequest is one open request the caller or their agent staged.
 type OwnRequest struct {
 	ID             ids.ApprovalID
 	ProposedChange json.RawMessage
@@ -41,10 +41,11 @@ func OwnRequestForTargetTx(ctx context.Context, tx pgx.Tx, kind, targetType stri
 	}
 	var out OwnRequest
 	err = tx.QueryRow(ctx, `SELECT id, proposed_change, expires_at FROM approval
-		 WHERE kind = $1 AND target_entity_type = $2 AND target_entity_id = $3 AND proposed_by = $4
+		 WHERE kind = $1 AND target_entity_type = $2 AND target_entity_id = $3
+		   AND (proposed_by = $4 OR (on_behalf_of = $5 AND passport_id IS NOT NULL))
 		   AND status = 'pending' AND expires_at > now()
 		 ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
-		kind, targetType, targetID, stager).Scan(&out.ID, &out.ProposedChange, &out.ExpiresAt)
+		kind, targetType, targetID, principal.HumanIDPrefix+stager.String(), stager).Scan(&out.ID, &out.ProposedChange, &out.ExpiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return OwnRequest{}, apperrors.ErrNotFound
 	}
@@ -72,18 +73,18 @@ func WithdrawOwnRequestTx(ctx context.Context, tx pgx.Tx, kind, targetType strin
 	return own.ID, nil
 }
 
-// ownRequestStager is the proposed_by a human's own request carries. Only a
-// human signed in as themselves has one.
-func ownRequestStager(ctx context.Context, kind string) (string, error) {
+// ownRequestStager is the colleague whose request this is. A user's request
+// names them in proposed_by, and their agent's names them in on_behalf_of.
+func ownRequestStager(ctx context.Context, kind string) (ids.UUID, error) {
 	if !ownRequestKinds[kind] {
-		return "", fmt.Errorf("crmapprovals: %q is not a request a colleague stages", kind)
+		return ids.Nil, fmt.Errorf("crmapprovals: %q is not a request a colleague stages", kind)
 	}
 	p, ok := principal.Actor(ctx)
-	if !ok || p.Type != principal.PrincipalHuman || p.UserID.IsZero() {
-		return "", fmt.Errorf("crmapprovals: a colleague's own request is read by that colleague: %w",
+	if !ok || !p.HumanOrItsAgent() || p.UserID.IsZero() {
+		return ids.Nil, fmt.Errorf("crmapprovals: a colleague's own request is read by that colleague or their agent: %w",
 			apperrors.ErrPermissionDenied)
 	}
-	return p.ID, nil
+	return p.UserID, nil
 }
 
 // OpenRequestsForTargetTx answers every open request of kind on one record,

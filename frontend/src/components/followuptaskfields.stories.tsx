@@ -14,11 +14,15 @@ const meta: Meta<typeof FollowUpTaskFields> = {
 };
 export default meta;
 type Story = StoryObj<typeof FollowUpTaskFields>;
-function FollowUpFieldsStory() {
+function FollowUpFieldsStory({
+  day = "",
+  time = "",
+}: Readonly<{ day?: string; time?: string }>) {
   const [value, setValue] = useState<TaskDraft | undefined>({
     subject: "Send revised pricing",
     body: "Include the agreed scope.",
-    day: "",
+    day,
+    time,
     assigneeId: "",
   });
   return (
@@ -38,4 +42,11 @@ export const UndatedTask: Story = {
 export const UndatedTaskDark: Story = {
   ...UndatedTask,
   globals: { theme: "dark" },
+};
+// A callback agreed for a set hour: the time box is open once a day is picked.
+export const TaskWithCallbackTime: Story = {
+  render() {
+    installFetchStub({ "GET /me": meRoute({ activity: ["create"] }) });
+    return <FollowUpFieldsStory day="2026-10-27" time="15:00" />;
+  },
 };

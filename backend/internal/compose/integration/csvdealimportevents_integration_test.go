@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
@@ -58,7 +59,7 @@ func TestTheArchiveAnUndoWritesOnAnImportedDealNamesTheRunToo(t *testing.T) {
 		"deals.csv": fmt.Sprintf("ref,name,pipeline,stage,close_date\nD-1,Undone open,%s,%s,2099-01-01\n", pipeline, open),
 	}, dealImportParts("ref,name,pipeline,stage,close_date"))
 	deal := dealNamed(t, e, "Undone open")
-	var undone importRunDTO
+	var undone importjobtest.Run
 	if status := importCall(t, e, run.ID, "undo", nil, &undone); status != http.StatusAccepted {
 		t.Fatalf("undo -> %d", status)
 	}

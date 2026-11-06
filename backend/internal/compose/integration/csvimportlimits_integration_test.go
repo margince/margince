@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // overlongCell is longer than any column the importer writes may hold.
@@ -59,17 +61,17 @@ func TestAnOverlongCellInAnyTargetIsReportedByTheTestRunAndNotTheCommit(t *testi
 	for _, object := range []string{"company", "contact", "lead"} {
 		t.Run(object, func(t *testing.T) {
 			e := setupImportApp(t)
-			probe, status := uploadCSV(t, e, object, "ref\nR-0\n")
+			probe, status := importjobtest.UploadCSV(t, e, object, "ref\nR-0\n")
 			if status != http.StatusOK || len(probe.Targets) == 0 {
 				t.Fatalf("profiling → %d with targets %v", status, probe.Targets)
 			}
-			profile, _ := uploadCSV(t, e, object, overlongFile(t, object, probe.Targets))
+			profile, _ := importjobtest.UploadCSV(t, e, object, overlongFile(t, object, probe.Targets))
 			mapping := map[string]string{}
 			for _, target := range probe.Targets {
 				mapping[target] = target
 			}
-			var run importRunDTO
-			if status := testCall(t, e, "/v1/imports", AnyMap{
+			var run importjobtest.Run
+			if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 				"connector": "csv", "object": object, "source_ref": profile.SourceRef,
 				"mapping": mapping, "source_key": "ref",
 			}, &run); status != http.StatusAccepted {

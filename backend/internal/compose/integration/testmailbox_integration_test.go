@@ -66,7 +66,7 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 		t,
 		compose.WithCaptureConfig(compose.CaptureConfig{AllowTestMailbox: true}),
 		compose.WithKeyvault(vault),
-		compose.WithOperatorMail(discardingMailer{}),
+		compose.WithOperatorMail(apptest.DiscardingMailer{}),
 		compose.WithPublicBaseURL(preflightBaseURL),
 	)
 	e.Vault = vault
@@ -82,15 +82,16 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
-	// A deal with the recipient staked on it — real evidence for the
-	// "transactional" claim below, since the purpose key alone authorizes
-	// nothing. It rides the anchor's own links, inherited by the reply
+	// A deal with the recipient staked on it and their own captured enquiry
+	// filed on it. That is the evidence for the "transactional" claim below,
+	// since the purpose key alone authorizes nothing. It rides the anchor's own links, inherited by the reply
 	// sendExpectingAcceptance stages off this activity. Automatic here (unlike
 	// setupPreflightIn's opt-in stakeADeal) because this fixture has exactly
 	// one consumer — TestTestMailboxFullLoop — so nothing else's authorization
 	// basis is silently changed by it.
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	dealID := apptest.StakeOnOpenDeal(t, e, "Test mailbox opportunity", stages, contact.ID)
+	apptest.AskedAboutTheDeal(t, e, contact.ID, "buyer@preflight.test", dealID)
 
 	var activity struct {
 		ID string `json:"id"`

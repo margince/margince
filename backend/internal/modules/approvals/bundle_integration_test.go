@@ -15,12 +15,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -290,6 +292,38 @@ func TestABundleWithNoDecidableMemberReadsAsAbsent(t *testing.T) {
 	}
 	if _, err := e.svc.DecideBundle(staging, ids.NewV7(), true, nil); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound for a bundle id nothing points at", err)
+	}
+}
+
+// A bundle hidden by the caller's authority is noted as a hidden row. An agent
+// rule can keep a bundle the caller sees. That bundle reads as absent too, and
+// is not noted as a row its scope hides.
+func TestOnlyABundleTheScopeHidesIsNotedAsAHiddenRow(t *testing.T) {
+	e := setupStaging(t)
+	staging := e.asHumanWith(decidesEverything())
+	bundle := ids.NewV7()
+	e.stageInto(staging, t, bundle, e.company(t), kindDeepRead, "facts-hash")
+
+	ungranted, hidden := auth.RecordChecksForTest(e.asHumanWith(grantsFor(map[string]principal.ObjectGrant{})))
+	if _, err := e.svc.DecideBundle(ungranted, bundle, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound for a caller without the grants", err)
+	}
+	if got := hidden().Refused; !slices.Contains(got, "row:approval") {
+		t.Errorf("a bundle the caller's grants hide noted %v, want row:approval", got)
+	}
+
+	p, ok := principal.Actor(staging)
+	if !ok {
+		t.Fatal("no actor")
+	}
+	p.Type, p.ID, p.PassportID, p.OnBehalfOf = principal.PrincipalAgent, "agent:"+ids.NewV7().String(), ids.NewV7(), p.UserID
+	p.Scopes = principal.ScopeSet{principal.ScopeRead: {}}
+	readOnly, kept := auth.RecordChecksForTest(principal.WithActor(staging, p))
+	if _, err := e.svc.DecideBundle(readOnly, bundle, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound for an agent without the write cap", err)
+	}
+	if got := kept().Refused; slices.Contains(got, "row:approval") {
+		t.Errorf("an agent rule refusing a bundle it sees noted %v, which reads as a row its scope hides", got)
 	}
 }
 

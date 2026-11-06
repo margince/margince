@@ -22,11 +22,12 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // anyTable is the scope a spelling applies when it cannot be attributed to one
@@ -143,7 +144,7 @@ func TestEveryRowScopeSpellingSaysWhichTableItBounds(t *testing.T) {
 // `partner_company` and no such table exists.
 func referenceColumns(t *testing.T, tables map[string]bool) map[string]string {
 	t.Helper()
-	catalog, err := os.ReadFile(filepath.Join(repoRoot, headCatalogPath))
+	catalog, err := gatekit.ReadFile(filepath.Join(repoRoot, headCatalogPath))
 	if err != nil {
 		t.Fatalf("reading the schema catalog this census derives its columns from: %v", err)
 	}
@@ -631,5 +632,13 @@ const (
 	// 152: activities.carryMissingParticipantsTx copies a folded meeting copy's
 	// guests onto the meeting that stays, under a system job or a calendar sync.
 	// The contacts move between two rows of one meeting, and nothing is returned.
-	modulesTierUnscopedCeiling = 152
+	//
+	// 153: deals.correctionReceiptSelect is the SELECT list every change report
+	// shares, with no `WHERE` of its own. Each caller (RecentCorrectionsOwnedBy,
+	// DealChanges, TeamChanges) adds auth.ScopeClauseFor or auth.EnsureVisible.
+	//
+	// 154: privacy.readLeadNotice names the kinds of data a notice link's own
+	// website lead holds, for the privacy page. It reads presence flags only,
+	// for the lead the link resolved, and returns no reference.
+	modulesTierUnscopedCeiling = 154
 )

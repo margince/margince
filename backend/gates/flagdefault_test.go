@@ -28,6 +28,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // A flag default read straight from the environment, in the two registration
@@ -48,14 +50,14 @@ func TestNoStringFlagDefaultsToAnEnvironmentValue(t *testing.T) {
 	checked := 0
 
 	for _, root := range roots {
-		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
 			if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return nil
 			}
-			src, readErr := os.ReadFile(filepath.Clean(path))
+			src, readErr := gatekit.ReadFile(filepath.Clean(path))
 			if readErr != nil {
 				return readErr
 			}

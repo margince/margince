@@ -1,12 +1,13 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/agents/registry.go backend/internal/compose/agentgate.go backend/internal/modules/agents/runner backend/internal/modules/ai/selectbrain.go backend/internal/modules/ai/router.go backend/internal/modules/ai/budget.go backend/tools/gen-agentcontract backend/internal/compose/agentbundle -->
+<!-- describes: backend/internal/modules/agents/registry.go backend/internal/compose/agentgate.go backend/internal/modules/agents/runner backend/internal/modules/ai/selectbrain.go backend/internal/modules/ai/router.go backend/internal/modules/ai/budget.go backend/tools/gen-agentcontract backend/internal/compose/agentbundle backend/internal/platform/workarea backend/internal/compose/workareaseam.go -->
 # The agent surface & the model runtime
 
 How AI agents *act* inside Margince, and what *runs the model* behind them. The write path covers how
 data changes; here we look at the other side, how a proposal becomes a checked action. The rules that
 govern it (the autonomy tiers, passports, and the one admission gate) are in
 [authorization.md](authorization.md). What follows is what the agent *does* and how the model runtime
-is put together.
+is put together. Which actions an agent may take at all is
+[An agent does what its user does](../principles/an-agent-does-what-its-user-does.md).
 
 ## Two surfaces, one gate
 
@@ -61,8 +62,10 @@ optional `contract_id`. The store checks the contract as it checks one a human n
 
 `agents.AttachLimit` (`internal/modules/agents/tools_documents.go`) sets one file size limit for an
 agent on MCP and REST. It is what one MCP request carries inline, or the operator's attachment limit
-when that is smaller. A human's upload keeps the route's own limit. The routes that fetch, delete
-or hide a file stay human-only, so no tool or route returns a file's contents to an agent.
+when that is smaller. A human's upload keeps the route's own limit. An agent reads a file through
+`list_documents` by naming its `id`, or through the file actions of `read_details`. The answer is
+`content_base64`, up to `agents.MaxInlineFileBytes`; `routeAnswer`
+(`internal/compose/routeverbseam.go`) refuses a larger file.
 
 `TestNoAgentLoopAttachesAToolThatCarriesAFile` (`internal/compose/agentcatalog_test.go`) fails when a
 scheduled agent's tool list names any tool whose input bound is over 1 MiB. The size and type bounds
@@ -135,9 +138,32 @@ choice. `internal/modules/ai/` owns it:
   workflow engine itself is in [who reads the events](write-backbone.md#5-the-consumer-side--groups--dedupe).)
 - **MCP** serves the tool surface at `/mcp` on the api: one registry, one admission gate, one audit
   stream, one transport.
-  `tools/list` is filtered on **scope** per caller. So the list shows the passport's scopes,
-  and does not promise that every listed tool will run. The seat limit and object RBAC are checked
-  again at each call, so either one can still refuse a listed tool.
+  `tools/list` is filtered per caller on the passport's **scopes**, the **seat** of its user and
+  that user's **grants**. A read seat is offered only read tools. A tool, or one action of a router,
+  is offered only when the user holds every check its call was measured to ask
+  ([mcp-tool-roles.md](../reference/mcp-tool-roles.md#what-each-call-needs)).
+
+  A router that picks its action from an `action` list has that list, its tier, description,
+  arguments and result shape cut to the actions left. A router that reads its action from the
+  arguments has no list to cut. It stays listed whole while one of its actions is left. A router with
+  none left is not listed, and a verb with no measured row stays offered.
+
+  The filter changes only the list. A scheduled run may choose any tool its passport's scopes and its
+  user's seat allow, whatever the user's grants. The gate still checks each call: the grants, row
+  scope and the arguments.
+
+  The list also drops a tool, or a router action, in a group the passport's `work_areas` leave off.
+
+- **`work_areas`** hold a passport to the groups of work its human chose, checked in three places.
+  `Gate.Admit` checks them after its per-call read of the passport, so a change binds a run or a
+  session from its next call. A verb whose operations sit in several groups is admitted while one of
+  them is on. The record type a call names then narrows it to one group.
+
+  The REST gate holds each route to its one operation's group, and that includes a tool's own
+  in-process call. Work an agent queued is made again with the passport's `work_areas` as they stand
+  when it runs. The table is `backend/internal/platform/workarea/workareas.json`, written by the
+  test that writes [mcp-parity.md](../reference/mcp-parity.md).
+
   The catalog itself: [reference/agent-tools.md](../reference/agent-tools.md).
   Connecting: [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md);
   making the passport: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).

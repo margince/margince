@@ -47,7 +47,6 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -141,7 +140,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// the specific destruction it performs rather than a restatement of that
 	// sentence: an erasure stamps archived_at itself, so its own subject is
 	// archived by the time the statement beside it runs.
-	"internal/modules/privacy:anonymizeSubjectRows":    "Art. 17 erasure of the subject row, and it is the statement that SETS archived_at — coalesced, so a subject already archived keeps the instant they were retired. A liveness filter here would make erasure refuse every already-archived subject, which is the population most likely to ask for it",
 	"internal/modules/privacy:anonymizeLeadTwins":      "the lead half of the same erasure, reaching the twins a promotion left behind. They are found by promoted_contact_id and by address, and an archived twin holds the same personal data a live one does",
 	"internal/modules/privacy:archiveActivity":         "the retention sweep retiring a message whose window closed. The write IS the archive transition, chosen by a clock rather than by a caller",
 	"internal/modules/privacy:archiveDeal":             "the deal arm of the same sweep, and the same transition: a deal past its window is archived because of when it closed",
@@ -218,11 +216,11 @@ func retirableTables(t *testing.T) map[string]bool {
 	t.Helper()
 	tables := map[string]bool{}
 	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
 				return err
 			}
-			raw, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
+			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
 			if err != nil {
 				return err
 			}
@@ -350,7 +348,7 @@ func TestEveryByIDWriteOfARetirableRowAnswersForLiveness(t *testing.T) {
 	heldCache := map[string]map[string][]string{}
 	judged := 0
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
 				isIntegrationTagged(path) {
 				return err

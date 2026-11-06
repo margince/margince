@@ -19,10 +19,11 @@ package gates
 // of any other shape is reported rather than silently skipped.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var (
@@ -36,7 +37,7 @@ var (
 func TestContractRefsResolve(t *testing.T) {
 	t.Parallel()
 	const path = "api/crm.yaml"
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read contract: %v", err)
 	}

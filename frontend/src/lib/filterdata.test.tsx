@@ -10,6 +10,7 @@ import { en, type MessageKey } from "../i18n/en";
 import {
   fieldLabel,
   groupFields,
+  PREVIEW_PAGE,
   useFilterPreview,
   useFilterVocabulary,
   type VocabularyField,
@@ -179,6 +180,55 @@ describe("the preview read", () => {
     expect(seen.filter((url) => url.includes("/filters/preview"))).toHaveLength(
       1,
     );
+  });
+});
+
+describe("paging the preview", () => {
+  it("asks for page two with the first page's cursor and the same page size", async () => {
+    const bodies: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : null;
+        const body: unknown = request ? await request.json() : undefined;
+        bodies.push(body);
+        const second = bodies.length > 1;
+        return new Response(
+          JSON.stringify({
+            resource: "contact",
+            match_count: 3,
+            columns: ["id"],
+            rows: second ? [{ id: "c" }] : [{ id: "a" }, { id: "b" }],
+            truncated: !second,
+            next_cursor: second ? null : "b",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(
+      () =>
+        useFilterPreview(
+          "contact",
+          newGroup("and", [newLeaf("full_name", "contains", "ann")]),
+        ),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.hasNextPage).toBe(true));
+    await result.current.fetchNextPage();
+    await waitFor(() => expect(result.current.data?.rows).toHaveLength(3));
+
+    expect(bodies[0]).not.toHaveProperty("cursor");
+    expect(bodies[1]).toMatchObject({ cursor: "b", limit: PREVIEW_PAGE });
+    expect(result.current.data?.match_count).toBe(3);
+    expect(result.current.hasNextPage).toBe(false);
   });
 });
 

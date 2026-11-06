@@ -13,7 +13,7 @@ import { formatDayMonth } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
   Citations,
@@ -160,7 +160,7 @@ export function DealStatusCardPanel({
 // instant of its own has no day to head the card with, so it draws nothing.
 function VerdictOnly({ head }: Readonly<{ head: DealStandingHead }>) {
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   if (!head.readAt) {
     return null;
   }

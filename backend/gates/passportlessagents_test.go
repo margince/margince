@@ -42,7 +42,7 @@ import (
 // exception, so the census reads that package too.
 var passportlessAgentPrincipals = gatekit.Waive(map[string]string{
 	"internal/compose/extjobsrun.go:extensionJobPrincipal": "an extension job TICK, not a credential: it names the JOB and carries no user, no seat and no permissions — just the single scope the extension's manifest declared. There is no authority for a passport to attest and none for the gate to re-ask about: every object is denied to it (extjobprincipal_test.go), and the records a tick lands go through Runtime.Ingest, which resolves the member's own live grants and discards this principal entirely",
-	"internal/compose/autoapply.go:asOwnersAgent":          "the auto-apply actor, minted per decision from the record owner's live authority (EffectiveAuthority) and carrying write and nothing else. It exists for the length of one staged action; the owner losing their seat or their grants stops it at the next admission, which is the whole of what revoking it would mean",
+	"internal/compose/dealownerseam.go:withOwnersAgent":    "the auto-apply actor and Margince's own deal writes, minted per decision from the record owner's live authority (EffectiveAuthority, and again inside the write's transaction) and carrying write and nothing else. It exists for the length of one staged action; the owner losing their seat or their grants stops it at the next admission or at the write, which is the whole of what revoking it would mean",
 })
 
 // TestEveryPassportlessAgentPrincipalIsRatified is the census.
@@ -54,7 +54,7 @@ func TestEveryPassportlessAgentPrincipalIsRatified(t *testing.T) {
 	// mint in the package that defines it would be the one place nobody
 	// thought to look.
 	for _, root := range []string{"internal/compose", "internal/modules", "internal/platform", "internal/shared", "cmd"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 				return err

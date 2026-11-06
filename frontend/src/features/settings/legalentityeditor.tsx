@@ -3,30 +3,27 @@
 
 import { type FormEvent, useId, useState } from "react";
 import {
-  Avatar,
   Button,
   Field,
   SectionHeader,
   Textarea,
   TextInput,
 } from "../../design-system/atoms";
-import { CompanyLogo } from "../../design-system/companylogo";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
-import { FileDropzone } from "../../design-system/filedropzone";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
 import { countryOptions } from "../../format/assignedcountries";
 import { useLocale, useT } from "../../i18n";
-import { problemMessageOf } from "../../lib/problem";
 import {
   type LegalEntity,
-  type LogoWrite,
   type UpdateLegalEntity,
   useArchiveLegalEntity,
   useLegalEntityLogo,
   useUpdateLegalEntity,
-} from "./legalentities.queries";
+} from "../../lib/legalentities.queries";
+import { problemMessageOf } from "../../lib/problem";
+import { EntityLogo } from "./legalentitylogo";
 
 // The editor's fields, flat. The contract nests the address and the offering;
 // draftOf and changesOf are the one place that maps between the two shapes.
@@ -285,9 +282,7 @@ export function EditEntityDialog({
               />
             </>
           )}
-          <ErrorLine
-            error={update.isError && problemMessageOf(update.error, t)}
-          />
+          <ErrorLine error={update.error} />
         </form>
       }
       actions={
@@ -307,71 +302,6 @@ export function EditEntityDialog({
         </>
       }
     />
-  );
-}
-
-const ACCEPTED_IMAGES =
-  "image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/x-icon";
-
-// The logo is stored the moment it is chosen, as on the company profile. A
-// file is no text the form could hold back until Save.
-function EntityLogo({
-  entity,
-  write,
-  saving,
-  version,
-  onVersion,
-}: Readonly<{
-  entity: LegalEntity;
-  write: LogoWrite;
-  saving: boolean;
-  version: number;
-  onVersion: (version: number) => void;
-}>) {
-  const t = useT();
-  const [src, setSrc] = useState(entity.logo_url ?? null);
-  const uploading = write.isPending && write.variables?.file !== null;
-  const send = (file: File | null) =>
-    write.mutate(
-      { id: entity.id, version, file },
-      {
-        onSuccess: (written) => {
-          if (written === null) return;
-          onVersion(written.version);
-          setSrc(written.logoUrl);
-        },
-      },
-    );
-  return (
-    <>
-      <SectionHeader level={3} title={t("legalEntities.sectionLogo")} />
-      {src && (
-        <CompanyLogo
-          name={entity.display_name}
-          src={src}
-          fallback={<Avatar identity={entity.id} name={entity.display_name} />}
-        />
-      )}
-      <FileDropzone
-        label={t(src ? "legalEntities.logoReplace" : "legalEntities.logoAdd")}
-        hint={t("legalEntities.logoHint")}
-        emptyLabel={t("legalEntities.logoEmpty")}
-        accept={ACCEPTED_IMAGES}
-        disabled={write.isPending || saving}
-        onPick={send}
-      />
-      {src && (
-        <Button
-          variant="ghost"
-          onClick={() => send(null)}
-          disabled={saving || uploading}
-          pending={write.isPending && write.variables?.file === null}
-        >
-          {t("legalEntities.logoRemove")}
-        </Button>
-      )}
-      <ErrorLine error={write.isError && problemMessageOf(write.error, t)} />
-    </>
   );
 }
 

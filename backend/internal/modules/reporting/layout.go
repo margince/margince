@@ -15,6 +15,15 @@ import (
 // cardID is the short id a client mints for a card, the contract's pattern.
 var cardID = regexp.MustCompile(`^[a-z0-9-]{1,32}$`)
 
+// withChartList keeps a selection's blocks a list, because the contract requires
+// one and a selection with no charts can reach a door with none. It also keeps
+// the evaluation key the same whichever door built the selection.
+func withChartList(selection *crmcontracts.ReportingSelection) {
+	if selection.Blocks == nil {
+		selection.Blocks = []crmcontracts.ReportingBlockKind{}
+	}
+}
+
 // deriveLayoutBlocks sets Blocks from Layout: each kind once, in the order the
 // layout first names it. The evaluation still reads Blocks, and so does a
 // client that predates layouts.

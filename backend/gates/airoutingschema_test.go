@@ -32,6 +32,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func compiledRoutingSchema(t *testing.T) *jsonschema.Schema {
@@ -400,7 +401,7 @@ func TestTheSchemaAndTheParserAgreeOnEveryThinkingLevel(t *testing.T) {
 // Held by: TestTheServedRoutingSchemaIsTheGatedSchema (backend/gates/airoutingschema_test.go) — this test.
 func TestTheServedRoutingSchemaIsTheGatedSchema(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile("../config/margince.schema.json")
+	raw, err := gatekit.ReadFile("../config/margince.schema.json")
 	if err != nil {
 		t.Fatalf("read schema: %v", err)
 	}
@@ -438,7 +439,7 @@ func TestTheTaskOverrideContractIsTheServersBounds(t *testing.T) {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

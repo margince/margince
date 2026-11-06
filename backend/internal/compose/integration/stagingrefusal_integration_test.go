@@ -86,7 +86,7 @@ func suppressContact(t *testing.T, e *apptest.AppEnv, contactID string) {
 // whole transaction, so no delivery row survives it.
 func TestAMailSendToASuppressedRecipientStagesNothing(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	suppressContact(t, p.AppEnv, p.contactID)
 
 	status, code, _ := p.send(t)
@@ -105,8 +105,8 @@ func TestAMailSendToASuppressedRecipientStagesNothing(t *testing.T) {
 // asserted separately.
 func TestAChannelSendToASuppressedRecipientStagesNothing(t *testing.T) {
 	c := setupChannelSend(t)
-	c.grantConsent(t, "transactional")
-	suppressContact(t, c.AppEnv, c.contactID)
+	c.GrantConsent(t, "transactional")
+	suppressContact(t, c.AppEnv, c.ContactID)
 
 	status, code, _ := c.sendReply(t, "transactional", "Yes — shipping Monday.", nil)
 
@@ -158,7 +158,7 @@ type stagedDecision struct {
 // exactly as unanswerable later as no refusal at all.
 func TestAnAllowedSendRecordsItsStagingDecision(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	sent := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
@@ -239,7 +239,7 @@ func (p *preflightEnv) sendClaiming(t *testing.T, context string) (status int, c
 // support is visible later rather than silently honoured or silently dropped.
 func TestAClaimedContextReachesTheDecision(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	sent := p.sendExpectingAcceptanceClaiming(t, "reply_to_inbound")
 	deliveryID, _ := p.deliveryFor(t, sent)
@@ -262,7 +262,7 @@ func TestAClaimedContextReachesTheDecision(t *testing.T) {
 // and pass a suppression that exists to stop exactly that.
 func TestASendCannotClaimAControllerCategory(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	status, code := p.sendClaiming(t, "security_notice")
 
@@ -287,7 +287,7 @@ func TestASendCannotClaimAControllerCategory(t *testing.T) {
 // no test anywhere posted a communication_context to this route.
 func TestAChannelSendCannotClaimAControllerCategory(t *testing.T) {
 	c := setupChannelSend(t)
-	c.grantConsent(t, "transactional")
+	c.GrantConsent(t, "transactional")
 
 	status, code, _ := c.sendReplyClaiming(t, "transactional", "Yes — shipping Monday.", "security_notice", nil)
 
@@ -304,7 +304,7 @@ func TestAChannelSendCannotClaimAControllerCategory(t *testing.T) {
 // is a category check rather than the channel door rejecting the field itself.
 func TestAChannelSendMayClaimAnOrdinaryCategory(t *testing.T) {
 	c := setupChannelSend(t)
-	c.grantConsent(t, "transactional")
+	c.GrantConsent(t, "transactional")
 
 	status, _, detail := c.sendReplyClaiming(t, "transactional", "Yes — shipping Monday.", "reply_to_inbound", nil)
 

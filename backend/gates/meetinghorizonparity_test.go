@@ -25,7 +25,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -79,7 +78,7 @@ func TestOneSpellingOfTheMeetingHorizon(t *testing.T) {
 // gate that stops applying the moment somebody writes about it.
 func meetingHorizonIn(t *testing.T, dir string) string {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}

@@ -166,7 +166,7 @@ func (s *Store) RecordCapturedFiles(
 	for _, file := range staged {
 		checksum := file.checksum
 		row := capturedFileRow{id: file.id, file: file.file, byteSize: len(file.file.Body), key: file.key, checksum: &checksum}
-		if err := insertCapturedAttachment(ctx, tx, activityID, from, row); err != nil {
+		if _, err := insertCapturedAttachment(ctx, tx, activityID, from, row); err != nil {
 			return err
 		}
 		// On the CALLER's transaction, the one that just gave the key a row:
@@ -230,10 +230,13 @@ func (r capturedFileRow) auditImage(activityID ids.ActivityID, from CapturedFile
 // that path emits (attachmentupload.go).
 //
 // Held by TestACapturedFileEmitsNoAttachmentEventOfItsOwn.
+//
+// It reports whether the row is new: false is the conflict arm, a file or link
+// already recorded.
 func insertCapturedAttachment(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from CapturedFileSource, row capturedFileRow,
-) error {
+) (bool, error) {
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO attachment (
 			id, entity_type, entity_id, filename, content_type,
@@ -251,21 +254,21 @@ func insertCapturedAttachment(
 		from.Category, providerMessageKey(from), row.file.PartID,
 		nullIfEmpty(row.file.DeclaredType), row.withheld, row.url)
 	if err != nil {
-		return fmt.Errorf("record a captured file: %w", err)
+		return false, fmt.Errorf("record a captured file: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		// The conflict arm: this file is already recorded, so there is no new
 		// fact to audit. Auditing anyway would report a second arrival of a
 		// file that arrived once.
-		return nil
+		return false, nil
 	}
 	// Every mutation leaves an audit row. The image is metadata only — never
 	// the bytes and never anything a sender wrote beyond the name we already
 	// sanitized — matching how a captured activity is audited (ADR-0072/A118).
 	if _, err := storekit.Audit(ctx, tx, "create", "attachment", row.id, nil, row.auditImage(activityID, from)); err != nil {
-		return fmt.Errorf("audit a captured file: %w", err)
+		return false, fmt.Errorf("audit a captured file: %w", err)
 	}
-	return nil
+	return true, nil
 }
 
 // refuseUnderivedCategory rejects a file whose category nobody derived.

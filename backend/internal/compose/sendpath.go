@@ -180,6 +180,9 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// nothing but the caller's transaction, so a deployment cannot forget
 		// it and leave an account-started send unable to resolve anyone.
 		WithRecipientDirectory(recipientDirectory{}).
+		// A new address becomes a contact through the writer a typed create
+		// uses, so it gets the same dedupe, audit and event.
+		WithRecipientFiler(newContactsStore(InstallationDB(pool))).
 		// When a host is bookable, so the tool surface reads the same hours the
 		// HTTP one does. A rep asking an agent for times and a customer opening
 		// the booking page must be told about the same calendar.
@@ -290,6 +293,7 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		WithSendAuthority(send.SendAuthority).
 		WithChannelReachability(send.ChannelRecipients).
 		WithRecipientDirectory(recipientDirectory{}).
+		WithRecipientFiler(newContactsStore(InstallationDB(pool))).
 		// When a host is bookable, so the tool surface reads the same hours the
 		// HTTP one does. A rep asking an agent for times and a customer opening
 		// the booking page must be told about the same calendar.

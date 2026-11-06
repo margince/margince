@@ -61,6 +61,9 @@ type Handlers struct {
 	// when it finishes, so a test can wait for the captured mail without
 	// sleeping. Nil in production.
 	resetSendStarted func()
+	// sendBudget is a test seam: a shorter budget for the invitation send, so
+	// a test can see a send run out of time. Zero in production.
+	sendBudget time.Duration
 
 	// The unauthenticated endpoints carry their own throttles: login
 	// attempts cost a full Argon2 verification each and reset requests
@@ -152,6 +155,8 @@ type Handlers struct {
 	// passportUsage reads each live passport's running window. Nil lists
 	// passports without usage.
 	passportUsage PassportUsageReader
+	// reachableAreas lists the areas a passport may be limited to for the caller.
+	reachableAreas ReachableAreas
 
 	// oidcProviders/stateSigner/oidcRoutes wire /auth/oidc/{provider}/start
 	// and /callback (WithOIDCProviders). Absent from oidcProviders means the

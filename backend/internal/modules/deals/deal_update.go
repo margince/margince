@@ -57,9 +57,11 @@ type UpdateDealInput struct {
 	Priority          *string
 	AcquisitionSource *string
 	ExpectedClose     *time.Time
-	ForecastCategory  *string
-	WaitUntil         *time.Time
-	IfVersion         *int64
+	// WinProbability is the deal's own probability; Clear names
+	// win_probability to set it back to the stage's.
+	WinProbability *int
+	WaitUntil      *time.Time
+	IfVersion      *int64
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
 	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any

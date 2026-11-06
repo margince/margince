@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -138,10 +139,20 @@ class CodexArgumentsTest(unittest.TestCase):
 
 FAKE_CODEX = """#!/usr/bin/env python3
 import json, os, sys, time
+home = os.environ.get("CODEX_HOME", "")
+auth = os.path.join(home, "auth.json")
 with open(os.environ["FAKE_CODEX_ARGV"], "w") as f:
     cdir = sys.argv[sys.argv.index("-C") + 1]
     json.dump({"argv": sys.argv[1:], "token": os.environ.get("MARGINCE_E2E_TOKEN"),
-               "cdir": os.listdir(cdir)}, f)
+               "cdir": os.listdir(cdir), "home": home, "user_home": os.environ.get("HOME"), "home_listing": sorted(os.listdir(home)) if home else None,
+               "auth": open(auth).read() if os.path.isfile(auth) else None,
+               "auth_mode": oct(os.stat(auth).st_mode & 0o777) if os.path.isfile(auth) else None}, f)
+if os.environ.get("FAKE_OPERATOR_RELOGIN"):
+    with open(os.environ["FAKE_OPERATOR_AUTH"], "w") as relogin:
+        relogin.write(os.environ["FAKE_OPERATOR_RELOGIN"])
+if os.environ.get("FAKE_CODEX_REFRESH"):
+    with open(auth, "w") as refreshed:
+        refreshed.write(os.environ["FAKE_CODEX_REFRESH"])
 if os.environ.get("FAKE_CODEX_SLEEP"):
     time.sleep(float(os.environ["FAKE_CODEX_SLEEP"]))
 sys.stdout.write(open(os.environ["FAKE_CODEX_OUT"]).read())
@@ -159,13 +170,24 @@ class RunCodexTest(unittest.TestCase):
             handle.write(FAKE_CODEX)
         os.chmod(os.path.join(self.bin, "codex"), 0o755)
         self.argv_file = os.path.join(self.bin, "argv.json")
+        # The operator's own home, holding what a clean candidate must not see.
+        self.operator_home = tempfile.mkdtemp()
+        for name, text in (("auth.json", '{"tokens": "login-v1"}'), ("AGENTS.md", "the operator's rules"),
+                           ("memories_1.sqlite", "memory")):
+            with open(os.path.join(self.operator_home, name), "w", encoding="utf-8") as handle:
+                handle.write(text)
+        os.makedirs(os.path.join(self.operator_home, "plugins", "cache"))
+        os.makedirs(os.path.join(self.operator_home, "skills", "a-skill"))
         self.env = {"PATH": self.bin + os.pathsep + os.environ["PATH"], "FAKE_CODEX_ARGV": self.argv_file,
-                    "FAKE_CODEX_OUT": SAMPLE, "MARGINCE_E2E_TOKEN": "s3cr3t-passport"}
+                    "FAKE_CODEX_OUT": SAMPLE, "MARGINCE_E2E_TOKEN": "s3cr3t-passport",
+                    "CODEX_HOME": self.operator_home}
         self.mcp = FakeMcp([{"name": t, "inputSchema": {"type": "object"}} for t in OFFERED])
         self.mcp.__enter__()
 
     def tearDown(self):
         self.mcp.__exit__(None, None, None)
+        shutil.rmtree(self.operator_home, ignore_errors=True)
+        shutil.rmtree(self.bin, ignore_errors=True)
 
     def run_codex(self, timeout=60, **env):
         import candidates
@@ -198,6 +220,42 @@ class RunCodexTest(unittest.TestCase):
         self.assertEqual(argv[-1], "List the pipelines.")
         self.assertTrue(check.tool_matches(check.read_transcript(out)[0], "list_pipelines"))
         self.assertIn("mcp__margince_e2e_llm__search_context", open(out, encoding="utf-8").read())
+
+    def seen(self):
+        with open(self.argv_file, encoding="utf-8") as handle:
+            return json.load(handle)
+
+    def test_codex_gets_a_home_of_its_own_holding_only_the_login(self):
+        self.assertEqual(self.run_codex()[0], 0)
+        seen = self.seen()
+        self.assertNotEqual(os.path.realpath(seen["home"]), os.path.realpath(self.operator_home))
+        self.assertIn("auth.json", seen["home_listing"])
+        for operators_own in ("AGENTS.md", "memories_1.sqlite", "plugins", "skills"):
+            self.assertNotIn(operators_own, seen["home_listing"])
+        self.assertEqual(seen["user_home"], seen["home"])
+        self.assertEqual((seen["auth"], seen["auth_mode"]), ('{"tokens": "login-v1"}', "0o600"))
+        self.assertNotIn("login-v1", " ".join(seen["argv"]))
+        self.assertFalse(os.path.exists(seen["home"]))
+
+    def test_plugins_hooks_and_memories_are_forced_off(self):
+        self.run_codex()
+        argv = self.seen()["argv"]
+        for feature in ("plugins", "hooks", "memories"):
+            self.assertIn(f"features.{feature}=false", argv)
+
+    def test_a_login_codex_refreshed_goes_back_to_the_operator(self):
+        # The refresh voids the old token, so keeping only the copy would sign the operator out.
+        self.run_codex(FAKE_CODEX_REFRESH='{"tokens": "login-v2"}')
+        with open(os.path.join(self.operator_home, "auth.json"), encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), '{"tokens": "login-v2"}')
+        self.assertEqual(sorted(os.listdir(self.operator_home)),
+                         ["AGENTS.md", "auth.json", "memories_1.sqlite", "plugins", "skills"])
+
+    def test_a_login_the_operator_renewed_during_the_run_is_kept(self):
+        auth = os.path.join(self.operator_home, "auth.json")
+        self.run_codex(FAKE_OPERATOR_AUTH=auth, FAKE_OPERATOR_RELOGIN='{"tokens": "operator-v2"}')
+        with open(auth, encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), '{"tokens": "operator-v2"}')
 
     def test_a_codex_that_exits_nonzero_is_a_harness_fault_even_with_a_complete_stream(self):
         code, _out = self.run_codex(FAKE_CODEX_EXIT="1")

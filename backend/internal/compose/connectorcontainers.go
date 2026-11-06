@@ -45,11 +45,11 @@ func (h connectorHandlers) ListConnectorContainers(w http.ResponseWriter, r *htt
 		return
 	}
 	actor, ok := principal.Actor(r.Context())
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnauthorized,
 			Code:   codeUnauthorized,
-			Detail: "Reading your mailbox's folders is a signed-in human action.",
+			Detail: "Reading a mailbox's folders needs a signed-in user, or an agent on their passport.",
 		})
 		return
 	}

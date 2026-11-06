@@ -119,7 +119,7 @@ func TestTheirLaterMailSettlesTheNoticeCase(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "Late Writer")
 	withAddress(t, e, contact, "late.writer@customer.test")
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 	if _, state, _, found := noticeCaseFor(t, e, contact); !found || state != "source_review" {
 		t.Fatalf("setup: case found=%v state=%q, want a source review for an unknown source", found, state)
 	}
@@ -151,7 +151,7 @@ func TestTheirEarlierMailOpensNoCase(t *testing.T) {
 	withAddress(t, e, contact, "early.writer@customer.test")
 	capturedMailFrom(t, e, "early.writer@customer.test", false)
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	if _, _, _, found := noticeCaseFor(t, e, contact); found {
 		t.Error("a contact whose own mail was already captured was recorded as owed a notice")
@@ -164,7 +164,7 @@ func TestABulkMailSettlesTheCaptureUnknownDuty(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "List Sender")
 	withAddress(t, e, contact, "news@list.test")
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "news@list.test", true))
 
@@ -180,7 +180,7 @@ func TestAReferralStaysOwedAfterTheyWrite(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Referred", "referral")
 	withAddress(t, e, contact, "referred@customer.test")
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "referred@customer.test", false))
 
@@ -197,7 +197,7 @@ func TestAHandLoggedMailSettlesNothing(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "Typed Sender")
 	withAddress(t, e, contact, "typed@customer.test")
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	driveCapturedMail(t, e, mailFrom(t, e, "typed@customer.test", false, "human:seed"))
 
@@ -212,7 +212,7 @@ func TestAnUnknownASeatStatedStillNeedsSourceReview(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Seat Unknown", "unknown_legacy")
 	withAddress(t, e, contact, "seat.unknown@customer.test")
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "seat.unknown@customer.test", false))
 
@@ -228,7 +228,7 @@ func TestTheirMailSettlesTheCaseOfAContactTheVerdictMade(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknownBy(t, e, "Verdict Made", "agent:capture_counterparty_verdict")
 	withAddress(t, e, contact, "verdict.made@customer.test")
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "verdict.made@customer.test", false))
 
@@ -246,7 +246,7 @@ func TestTheirEarlierMailOpensNoCaseForAContactTheVerdictMade(t *testing.T) {
 	withAddress(t, e, contact, "verdict.early@customer.test")
 	capturedMailFrom(t, e, "verdict.early@customer.test", false)
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	if _, state, _, found := noticeCaseFor(t, e, contact); found && state == "open" {
 		t.Error("a verdict-made contact who had already written to us was given an open notice case")
@@ -265,7 +265,7 @@ func TestALateContactCreatedOpensNoCaseForAWithdrawnContact(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	if _, _, _, found := noticeCaseFor(t, e, contact); found {
 		t.Error("a contact archived before contact.created was handled was given a notice case")
@@ -277,7 +277,7 @@ func TestUnverifiedBulkCannotSettleACaptureDuty(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "Unverified Sender")
 	withAddress(t, e, contact, "unverified@sender.test")
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 	mail := capturedMailFrom(t, e, "unverified@sender.test", true)
 	if _, err := e.Owner.Exec(context.Background(), `UPDATE activity SET inbound_sender_authenticated = false WHERE id = $1`, mail); err != nil {
 		t.Fatal(err)

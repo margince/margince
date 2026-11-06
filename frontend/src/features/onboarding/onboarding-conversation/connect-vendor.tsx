@@ -30,9 +30,8 @@ import {
 } from "../onboarding-connect-panels";
 
 // The connect step's ask, inline on the step: the work account picked once,
-// then what to bring in from it. Mail and calendar are two grants of one
-// account, so one press asks for both. The server chains the second consent
-// onto the first's return.
+// then what to bring in from it. One press asks for mail and calendar: Google
+// on one consent screen, Microsoft on two that the server chains.
 
 export type MailProvider = AccountVendor | "imap";
 
@@ -218,7 +217,8 @@ function OAuthAsk({
   const name = t(
     vendor === "google" ? "ob.s4.provGoogle" : "ob.s4.provMicrosoft",
   );
-  const both = services.length === 2;
+  const asksTwice =
+    services.length === 2 && !VENDOR_SERVICES[vendor].oneConsent;
   const label = connectLabel(services);
   const unwired = notConfiguredProvider(connect.data);
   const choices = serviceChoices(t, { account: vendor });
@@ -255,14 +255,14 @@ function OAuthAsk({
             tone="info"
             kind="standing"
             title={t(
-              both
+              asksTwice
                 ? "ob.conv.connect.asksTwiceTitle"
                 : "ob.conv.connect.asksOnceTitle",
               { vendor: name },
             )}
           >
             <p>
-              {both && `${t("ob.conv.connect.asksTwiceBody")} `}
+              {asksTwice && `${t("ob.conv.connect.asksTwiceBody")} `}
               {t(OAUTH_COPY[vendor].unverified)}
             </p>
           </Callout>

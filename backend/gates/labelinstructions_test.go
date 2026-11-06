@@ -42,12 +42,13 @@ package gates
 // takes.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // claimSpan matches a claim label as prose writes one — inside a fenced span,
@@ -121,7 +122,7 @@ func TestEveryLabelTheDocsNameIsDeclared(t *testing.T) {
 func TestTheRulebookStillTellsSessionsToRunTheClaimLookup(t *testing.T) {
 	t.Parallel()
 
-	body, err := os.ReadFile(rulebookPath)
+	body, err := gatekit.ReadFile(rulebookPath)
 	if err != nil {
 		t.Fatalf("reading the rulebook: %v", err)
 	}
@@ -233,7 +234,7 @@ func labelsTheDocsName(t *testing.T) map[string][]string {
 		if file.symlink || !strings.HasSuffix(file.path, ".md") {
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join(repoRoot, file.path))
+		body, err := gatekit.ReadFile(filepath.Join(repoRoot, file.path))
 		if err != nil {
 			t.Fatalf("reading %s: %v", file.path, err)
 		}

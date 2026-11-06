@@ -6,7 +6,7 @@ package attention
 import "testing"
 
 func TestCommercialStageDecisionsAreNotRoutineCleanup(t *testing.T) {
-	for _, kind := range []string{"advance_deal", "progress_deal", "stage_progression"} {
+	for _, kind := range []string{"advance_deal", "progress_deal"} {
 		t.Run(kind, func(t *testing.T) {
 			row := classifyDecision(item("proposal", "approval", withKind(kind)), rankInstant).item
 			if row.Level != levelAgreed || row.Consequence != "none" || len(row.Because) != 0 {

@@ -61,6 +61,7 @@ export function MomentEvidence({
               // DATA, and a record's name is one.
               <Button
                 variant="link"
+                align="start"
                 className="btn-valuelabel"
                 onClick={() => onOpen(item)}
               >

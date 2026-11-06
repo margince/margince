@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Mail, Send } from "lucide-react";
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, OverflowMenu } from "../../design-system/atoms";
-import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { ProviderRow } from "../../design-system/providerrow";
@@ -15,23 +12,19 @@ import { Chip } from "../../design-system/readings";
 import { SettingList } from "../../design-system/settingrow";
 import {
   ACCOUNT_NAME,
-  type AccountVendor,
   type ConnectionAccount,
   isMailbox,
 } from "../../format/connectorprovider";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
-import { type Translator, useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { useLocale, useT } from "../../i18n";
 import { isLiveRun } from "../../lib/backfill-run";
 import {
-  type ConnectAccountInput,
   type ImportWindow,
   isOAuthConnectProvider,
   notConfiguredProvider,
   useConnectAccount,
 } from "../../lib/connect-account";
-import { connectInputFor, type Service } from "../../lib/connect-flow-draft";
+import { connectInputFor } from "../../lib/connect-flow-draft";
 import {
   accountHealth,
   healthBadge,
@@ -39,11 +32,18 @@ import {
   needsReconnect,
   serviceReason,
 } from "../../lib/connector-status";
-import { problemMessageOf, throwProblem } from "../../lib/problem";
+import { problemMessageOf } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ImportPastEmailDialog } from "./backfill";
 import { type BringsInChange, BringsInDialog } from "./connection-bringsin";
 import { AccountServices } from "./connection-service";
 import { AccountSettings } from "./connection-settings";
+import {
+  type PendingStop,
+  StopConfirm,
+  servicesOf,
+  vendorOfAccount,
+} from "./connection-stop";
 import { HistoryBaselineRow } from "./connectors.historybaseline";
 
 // One account on Connections: Google, Microsoft 365, an IMAP mailbox or the
@@ -53,40 +53,6 @@ import { HistoryBaselineRow } from "./connectors.historybaseline";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Provider = CaptureConnection["provider"];
-
-// Disconnecting deletes OUR stored credential and does not revoke the grant at
-// the vendor, so the confirm names where a careful reader finishes that.
-const REVOKE_NOTE: Record<AccountVendor, MessageKey> = {
-  google: "connectors.disconnectBodyGoogleNote",
-  microsoft: "connectors.disconnectBodyMicrosoftNote",
-};
-
-function vendorOfAccount(account: ConnectionAccount): AccountVendor | null {
-  return account.key === "google" || account.key === "microsoft"
-    ? account.key
-    : null;
-}
-
-function servicesLabel(services: readonly Service[], t: Translator): string {
-  if (services.length === 2) return t("connectors.servicesBoth");
-  return services[0] === "calendar"
-    ? t("connectors.bringsCalendar")
-    : t("connectors.bringsMail");
-}
-
-// What one disconnect stops: the services, and what may follow it once they
-// are gone (a service the same change ticked).
-type PendingStop = Readonly<{
-  services: readonly Service[];
-  afterwards: ConnectAccountInput | null;
-}>;
-
-function servicesOf(account: ConnectionAccount): Service[] {
-  const services: Service[] = [];
-  if (account.mail) services.push("mail");
-  if (account.calendar) services.push("calendar");
-  return services;
-}
 
 /** The services the account still holds, broken or not. */
 function liveServices(account: ConnectionAccount): CaptureConnection[] {
@@ -182,6 +148,7 @@ export function ConnectionAccountRow({
   heldWindow,
   onImapReconnect,
   reconnectPrimary = true,
+  canConnect = true,
 }: Readonly<{
   account: ConnectionAccount;
   /** A past-email window asked for at connect and held for the reader. */
@@ -190,6 +157,9 @@ export function ConnectionAccountRow({
   /** False for every broken account after the first in one panel, so the
    *  panel keeps one primary verb. */
   reconnectPrimary?: boolean;
+  /** False when the reader's role or seat cannot capture: the server
+   *  refuses every connect, reconnect and import, so none is offered. */
+  canConnect?: boolean;
 }>) {
   const t = useT();
   const { mail, calendar } = account;
@@ -199,7 +169,9 @@ export function ConnectionAccountRow({
   const actions = useAccountActions(account, onImapReconnect);
   const { connect } = actions;
   const health = healthBadge(accountHealth(account));
-  const { reasonKey, offerReconnect } = accountAlert(account);
+  const alert = accountAlert(account);
+  const reasonKey = alert.reasonKey;
+  const offerReconnect = canConnect && alert.offerReconnect;
 
   return (
     <ProviderRow
@@ -225,6 +197,7 @@ export function ConnectionAccountRow({
         <AccountMenu
           account={account}
           name={name}
+          canConnect={canConnect}
           reconnectInMenu={!offerReconnect}
           onBringsIn={() => actions.bringsIn.set(true)}
           onImport={() => actions.importing.set(true)}
@@ -241,7 +214,7 @@ export function ConnectionAccountRow({
         connectPendingFor={
           connect.isPending ? connect.variables?.provider : undefined
         }
-        onConnect={actions.reconnect}
+        onConnect={canConnect ? actions.reconnect : null}
         onImport={() => actions.importing.set(true)}
       />
       {!actions.bringsIn.open && (
@@ -325,6 +298,7 @@ function AccountDialogs({
 function AccountMenu({
   account,
   name,
+  canConnect,
   reconnectInMenu,
   onBringsIn,
   onImport,
@@ -333,6 +307,7 @@ function AccountMenu({
 }: Readonly<{
   account: ConnectionAccount;
   name: string;
+  canConnect: boolean;
   /** False while Reconnect is the row's visible verb, so it is not offered twice. */
   reconnectInMenu: boolean;
   onBringsIn: () => void;
@@ -345,13 +320,13 @@ function AccountMenu({
   const mail = account.mail;
   return (
     <OverflowMenu label={t("connectors.account.menu", { account: name })}>
-      {vendor && (
+      {canConnect && vendor && (
         <Button onClick={onBringsIn}>{t("connectors.menu.bringsIn")}</Button>
       )}
-      {vendor && mail && !isLiveRun(mail.backfill?.state) && (
+      {canConnect && vendor && mail && !isLiveRun(mail.backfill?.state) && (
         <Button onClick={onImport}>{t("connectors.menu.importOlder")}</Button>
       )}
-      {account.key !== "test_mailbox" && reconnectInMenu && (
+      {canConnect && account.key !== "test_mailbox" && reconnectInMenu && (
         <Button onClick={onReconnect}>{t("connectors.reconnect")}</Button>
       )}
       <Button variant="danger" onClick={onDisconnect}>
@@ -363,6 +338,7 @@ function AccountMenu({
 
 /** What the account brings in, and since when. */
 function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const { mail, calendar } = account;
@@ -389,7 +365,7 @@ function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
       {createdAt && (
         <span>
           {t("connectors.account.connectedOn", {
-            date: formatDateTime(createdAt, locale, viewerZone()),
+            date: formatDateTime(createdAt, locale, readerZone),
           })}
         </span>
       )}
@@ -413,82 +389,4 @@ function ConnectRefusal({
   return connect.isError ? (
     <ErrorLine>{problemMessageOf(connect.error, t)}</ErrorLine>
   ) : null;
-}
-
-/** One confirm for every disconnect: the whole account from the overflow, or
- *  the services "Change what it brings in" unticked. */
-function StopConfirm({
-  account,
-  title,
-  stop,
-  onClose,
-  onStopped,
-}: Readonly<{
-  account: ConnectionAccount;
-  title: string;
-  stop: PendingStop | null;
-  onClose: () => void;
-  onStopped: (afterwards: ConnectAccountInput | null) => void;
-}>) {
-  const t = useT();
-  const disconnect = useDisconnectServices();
-  const vendor = vendorOfAccount(account);
-  const services = stop?.services ?? [];
-  const whole = services.length === servicesOf(account).length;
-  const providers = services
-    .map((service) =>
-      service === "mail" ? account.mail?.provider : account.calendar?.provider,
-    )
-    .filter((provider): provider is Provider => provider !== undefined);
-  return (
-    <ConfirmModal
-      open={stop !== null}
-      onClose={() => {
-        disconnect.reset();
-        onClose();
-      }}
-      title={
-        whole
-          ? t("connectors.disconnectAccountTitle", { account: title })
-          : t("connectors.stopServicesTitle", {
-              services: servicesLabel(services, t),
-            })
-      }
-      confirmLabel={t("connectors.disconnect")}
-      confirmVariant="danger"
-      pending={disconnect.isPending}
-      error={disconnect.isError ? problemMessageOf(disconnect.error, t) : null}
-      onConfirm={() =>
-        disconnect.mutate(providers, {
-          onSuccess: () => onStopped(stop?.afterwards ?? null),
-        })
-      }
-    >
-      <p>
-        {t("connectors.disconnectServicesBody", {
-          services: servicesLabel(services, t),
-        })}
-      </p>
-      {vendor && <p className="t-caption">{t(REVOKE_NOTE[vendor])}</p>}
-    </ConfirmModal>
-  );
-}
-
-/** Stops each named service in turn. One failure stops the rest, and the
- *  roster read afterwards says which are still connected. */
-function useDisconnectServices() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (providers: readonly Provider[]) => {
-      for (const provider of providers) {
-        const { error } = await api.POST("/connectors/{provider}/disconnect", {
-          params: { path: { provider } },
-        });
-        if (error) {
-          throwProblem(error);
-        }
-      }
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["connectors"] }),
-  });
 }
