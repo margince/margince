@@ -223,7 +223,6 @@ asks "is this diff good?", and runs because a diff exists.
 |---|---|---|---|
 | `govulncheck` | daily | Go packages against the vulnerability database | The database changes daily, so a scan per PR proves only the day it merged. |
 | SonarCloud quality gate | daily | The stored gate of `main`, read through the API (no new scan) | It is not a required PR check, so nothing else reads it. `main-health.yml` publishes the analysis. |
-| backend lane | daily | The backend gate, always | A docs-only commit after a breaking one matches no classifier scope. Every gate skips, and the run reports green over a broken tree. |
 | frontend clock drift | daily | The Vitest tests run as if it were 200 days from now, with the same result | A fixture whose fixed date a page part compares to `now` breaks on a calendar date, with no diff. |
 | every story renders | daily | `make fe-uat ARGS=--all-stories`: every story the Storybook build registers renders clean | `make fe-uat` on a branch renders only the stories the diff reaches, so a story that fails on `main` stays hidden until a change reaches it. |
 | backend clock drift | daily | The Go tests, unit and real-Postgres, run on a runner whose clock is 200 days later, with the same result | The same calendar break on the backend, where a test can read the clock of Go or the `now()` of Postgres. |
@@ -236,8 +235,8 @@ asks "is this diff good?", and runs because a diff exists.
 
 Notes on the jobs:
 
-- The backend lane covers the same checks as the merge gate, by design. It is the one check that
-  does not trust the classifier of the gate.
+- The backend gate on `main` is `main-health.yml`'s, not a daily job here. It runs the same
+  `make check-backend` on every health check, so a daily copy would only repeat it.
 - No rule a scan can apply finds the next test that needs the clock. "A fixed date in a file that never
   pins the clock" matches 129 files, and nearly all of them do no harm. So the gate is a second run.
 - Many backend test files read the wall clock, and
