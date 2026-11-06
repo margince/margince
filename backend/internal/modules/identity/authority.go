@@ -128,9 +128,9 @@ func (s *Service) AdmittedAuthority(ctx context.Context, workspaceID, humanID, p
 		// rather than from a token somebody can revoke. There is nothing to
 		// re-ask about, and asking anyway would refuse every such call.
 		// platform/auth's Admit names the two paths that mint one.
+		var areas []string
 		if !passportID.IsZero() {
-			var live int
-			err := tx.QueryRow(ctx, passportStillLiveQuery, passportID, humanID).Scan(&live)
+			err := tx.QueryRow(ctx, passportStillLiveQuery, passportID, humanID).Scan(&areas)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}
@@ -142,7 +142,7 @@ func (s *Service) AdmittedAuthority(ctx context.Context, workspaceID, humanID, p
 		if err != nil {
 			return err
 		}
-		rbac = authz.RBAC{Permissions: perms, TeamIDs: rawTeamIDs(teams)}
+		rbac = authz.RBAC{Permissions: perms, TeamIDs: rawTeamIDs(teams), PassportAreas: areasFromColumn(areas)}
 		seat = principal.SeatType(seatType)
 		return nil
 	})

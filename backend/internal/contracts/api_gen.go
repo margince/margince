@@ -17782,6 +17782,24 @@ func (e PartnerStageMeaning) Valid() bool {
 	}
 }
 
+// Defines values for PassportAreasMode.
+const (
+	PassportAreasModeAll    PassportAreasMode = "all"
+	PassportAreasModeCustom PassportAreasMode = "custom"
+)
+
+// Valid indicates whether the value is a known member of the PassportAreasMode enum.
+func (e PassportAreasMode) Valid() bool {
+	switch e {
+	case PassportAreasModeAll:
+		return true
+	case PassportAreasModeCustom:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PipelineStageRungStatus.
 const (
 	PipelineStageRungStatusDone          PipelineStageRungStatus = "done"
@@ -25390,6 +25408,36 @@ func (e WeeklyReviewOutlookPeriodKind) Valid() bool {
 	case WeeklyReviewOutlookPeriodKindWeeklyOutlookPeriodQuarter:
 		return true
 	case WeeklyReviewOutlookPeriodKindWeeklyOutlookPeriodWeek:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkArea.
+const (
+	WorkAreaAdminSettings     WorkArea = "admin_settings"
+	WorkAreaBusiness          WorkArea = "business"
+	WorkAreaCapture           WorkArea = "capture"
+	WorkAreaCompliance        WorkArea = "compliance"
+	WorkAreaOwnAccount        WorkArea = "own_account"
+	WorkAreaWorkspaceSettings WorkArea = "workspace_settings"
+)
+
+// Valid indicates whether the value is a known member of the WorkArea enum.
+func (e WorkArea) Valid() bool {
+	switch e {
+	case WorkAreaAdminSettings:
+		return true
+	case WorkAreaBusiness:
+		return true
+	case WorkAreaCapture:
+		return true
+	case WorkAreaCompliance:
+		return true
+	case WorkAreaOwnAccount:
+		return true
+	case WorkAreaWorkspaceSettings:
 		return true
 	default:
 		return false
@@ -40731,7 +40779,11 @@ type ConsentQualifyingEventSourceEntityType string
 // The consent nonce is NOT here: it reaches the screen in the redirect fragment, because
 // the consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
 type ConsentRequest struct {
-	ClientName string `json:"client_name"`
+	// Areas The work areas the human's role reaches, which the screen offers to choose from. The
+	// screen posts the choice back as `areas`: `all`, or the chosen areas separated by spaces.
+	// The screen shows no choice when this holds one area or none, and posts `all`.
+	Areas      []WorkArea `json:"areas"`
+	ClientName string     `json:"client_name"`
 
 	// Offline The client asked to stay connected without asking again (offline_access).
 	Offline bool                   `json:"offline"`
@@ -49906,6 +49958,9 @@ type InviteUserRequest struct {
 
 // IssuePassportRequest defines model for IssuePassportRequest.
 type IssuePassportRequest struct {
+	// Areas Where the passport may act. Absent means all areas.
+	Areas *PassportAreas `json:"areas,omitempty"`
+
 	// Label Which agent this binds, e.g. "Claude Desktop".
 	Label *string `json:"label,omitempty"`
 
@@ -54671,6 +54726,20 @@ type PartnerStageListResponse struct {
 // active and went quiet. `ended`: the partnership is over or never fit.
 type PartnerStageMeaning string
 
+// PassportAreas defines model for PassportAreas.
+type PassportAreas struct {
+	// Areas The chosen areas, at least one, when `mode` is `custom`. Empty when it is `all`.
+	Areas []WorkArea `json:"areas" unique:"items"`
+
+	// Mode `all` admits every area, those added later included. `custom` admits only `areas`, so an
+	// area added later starts off.
+	Mode PassportAreasMode `json:"mode"`
+}
+
+// PassportAreasMode `all` admits every area, those added later included. `custom` admits only `areas`, so an
+// area added later starts off.
+type PassportAreasMode string
+
 // PassportConnection The connection a grant-bound passport belongs to, so Settings can name it by the client the
 // human actually approved instead of the raw DCR client id its label carries.
 type PassportConnection struct {
@@ -54698,7 +54767,8 @@ type PassportConnection struct {
 // PassportSummary Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token.
 type PassportSummary struct {
 	// AgentId The agent this passport is bound to, if any.
-	AgentId *string `json:"agent_id,omitempty"`
+	AgentId *string       `json:"agent_id,omitempty"`
+	Areas   PassportAreas `json:"areas"`
 
 	// Connection Present when this passport IS a connection's credential — issued to an MCP client by the
 	// token exchange, not minted by a human. **Omitted entirely** on a human-minted passport —
@@ -65648,6 +65718,11 @@ type WeeklyScorecardLeadBlock struct {
 	Promoted               int `json:"promoted" minimum:"0"`
 }
 
+// WorkArea One area of work a passport may be limited to. Each operation an agent can call sits in one
+// group, as `docs/reference/mcp-parity.md` places it, and that page names the area each group
+// is held to. The values are the groups a user can choose, held to that placement by a gate.
+type WorkArea string
+
 // WorkEvidenceBasis A recommendation's scoped source and classification. Known request kinds
 // are current_request and request_review; unknown kinds remain neutral.
 // Source age is not a deadline. Evaluation time is not source time.
@@ -76485,6 +76560,9 @@ type UpdatePartnerStageJSONRequestBody = UpdatePartnerStageRequest
 
 // IssuePassportJSONRequestBody defines body for IssuePassport for application/json ContentType.
 type IssuePassportJSONRequestBody = IssuePassportRequest
+
+// SetPassportAreasJSONRequestBody defines body for SetPassportAreas for application/json ContentType.
+type SetPassportAreasJSONRequestBody = PassportAreas
 
 // CreatePipelineJSONRequestBody defines body for CreatePipeline for application/json ContentType.
 type CreatePipelineJSONRequestBody = CreatePipelineRequest
@@ -91746,6 +91824,9 @@ type ServerInterface interface {
 	// Revoke a Passport (kill switch for one agent binding).
 	// (DELETE /passports/{id})
 	RevokePassport(w http.ResponseWriter, r *http.Request, id Id)
+	// Choose the work areas one of the caller's own passports may act in.
+	// (PUT /passports/{id}/areas)
+	SetPassportAreas(w http.ResponseWriter, r *http.Request, id Id)
 	// List pipelines.
 	// (GET /pipelines)
 	ListPipelines(w http.ResponseWriter, r *http.Request, params ListPipelinesParams)
@@ -97128,6 +97209,12 @@ func (_ Unimplemented) IssuePassport(w http.ResponseWriter, r *http.Request) {
 // Revoke a Passport (kill switch for one agent binding).
 // (DELETE /passports/{id})
 func (_ Unimplemented) RevokePassport(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose the work areas one of the caller's own passports may act in.
+// (PUT /passports/{id}/areas)
+func (_ Unimplemented) SetPassportAreas(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -131530,6 +131617,38 @@ func (siw *ServerInterfaceWrapper) RevokePassport(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// SetPassportAreas operation middleware
+func (siw *ServerInterfaceWrapper) SetPassportAreas(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetPassportAreas(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListPipelines operation middleware
 func (siw *ServerInterfaceWrapper) ListPipelines(w http.ResponseWriter, r *http.Request) {
 
@@ -146342,6 +146461,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/passports/{id}", wrapper.RevokePassport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/passports/{id}/areas", wrapper.SetPassportAreas)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/pipelines", wrapper.ListPipelines)

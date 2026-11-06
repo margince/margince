@@ -8539,7 +8539,50 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "passport.scope.draft": "Soạn nháp tin nhắn",
   "passport.scope.write": "Sửa hồ sơ",
   "passport.scope.send": "Gửi tin nhắn",
-  "passport.scope.enrich": "Mua dữ liệu liên hệ",
+  "passport.scope.enrich": "Dùng AI và mua dữ liệu",
+  "workArea.name.business": "Công việc bán hàng",
+  "workArea.name.compliance": "Tuân thủ và quyền riêng tư",
+  "workArea.name.capture": "Thu thập email và lịch",
+  "workArea.name.workspace_settings": "Cài đặt công ty",
+  "workArea.name.admin_settings": "Cài đặt quản trị",
+  "workArea.name.own_account": "Tài khoản của tôi",
+  "workArea.hint.business":
+    "Hồ sơ, deal, hoạt động, báo giá, báo cáo và danh sách",
+  "workArea.hint.compliance":
+    "Sự đồng ý, yêu cầu về quyền riêng tư, lưu trữ và nhật ký hoạt động",
+  "workArea.hint.capture":
+    "Thu thập email và lịch cùng các kết nối mà dữ liệu đi qua",
+  "workArea.hint.workspace_settings":
+    "Cách công ty được thiết lập, ở những chỗ vai trò của bạn được phép đổi",
+  "workArea.hint.admin_settings":
+    "Các cài đặt cần nhiều quyền hơn nhân viên bán hàng",
+  "workArea.hint.own_account": "Hồ sơ cá nhân và tùy chọn của bạn",
+  "workArea.legend": "Được làm việc ở đâu",
+  "workArea.mode.all": "Mọi khu vực",
+  "workArea.mode.allNote":
+    "Mọi thứ vai trò của bạn với tới, kể cả các khu vực thêm sau này",
+  "workArea.mode.custom": "Chọn khu vực",
+  "workArea.mode.customNote":
+    "Chỉ các khu vực bạn đánh dấu. Khu vực mới sẽ bắt đầu ở trạng thái tắt",
+  "workArea.pickLegend": "Các khu vực được làm việc",
+  "workArea.pickOne": "Chọn ít nhất một khu vực.",
+  "passportAreas.open": "Đổi khu vực",
+  "passportAreas.openNamed": "Đổi khu vực cho {name}",
+  "passportAreas.for": "Cho {name}. Các quyền vẫn giữ nguyên.",
+  "passportAreas.gains": "Từ giờ sẽ làm việc thêm ở: {areas}.",
+  "passportAreas.loses":
+    "Sẽ không còn làm việc ở: {areas}. Lệnh gọi tiếp theo ở đó sẽ bị từ chối.",
+  "passportAreas.unchanged": "Đổi một khu vực trước.",
+  "passportAreas.closesLater":
+    "Các khu vực thêm sau và công cụ do tiện ích mở rộng thêm vẫn tắt với nó.",
+  "passportAreas.refusalTitle": "Agent được báo gì khi một khu vực bị tắt",
+  "passportAreas.refusal":
+    "Passport này không được làm việc ở khu vực “{area}”. Hãy đề nghị bật khu vực đó cho passport này trong Cài đặt → Quyền truy cập AI, mục Passport của bạn hoặc Kết nối của bạn.",
+  "passportAreas.cancel": "Hủy",
+  "passportAreas.save": "Lưu khu vực",
+  "passportAreas.saving": "Đang lưu khu vực…",
+  "passportAreas.failed": "Chưa đổi được khu vực",
+  "settings.passportColAreas": "Khu vực",
   "passport.select": "Passport",
   "passport.noneOption": "Không dùng passport",
   "settings.passportUseAi": "Trong script hoặc công cụ AI khác",
@@ -16590,8 +16633,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
   "consent.scopeNote.send":
     "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
-  "consent.scopeNote.enrich":
-    "tiêu credit bổ sung dữ liệu; mỗi lần mua vẫn hỏi bạn trước",
+  "consent.scopeNote.enrich": "chạy việc AI và mua dữ liệu liên hệ",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Quyền truy cập AI.",
   "consent.preset.label": "Quyền của trợ lý",

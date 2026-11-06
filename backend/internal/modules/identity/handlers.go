@@ -155,6 +155,8 @@ type Handlers struct {
 	// passportUsage reads each live passport's running window. Nil lists
 	// passports without usage.
 	passportUsage PassportUsageReader
+	// reachableAreas lists the areas a passport may be limited to for the caller.
+	reachableAreas ReachableAreas
 
 	// oidcProviders/stateSigner/oidcRoutes wire /auth/oidc/{provider}/start
 	// and /callback (WithOIDCProviders). Absent from oidcProviders means the

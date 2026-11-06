@@ -8734,9 +8734,52 @@ export const en = {
   "passport.scope.draft": "Draft messages",
   "passport.scope.write": "Change records",
   "passport.scope.send": "Send messages",
-  "passport.scope.enrich": "Buy contact data",
+  "passport.scope.enrich": "Use AI and buy data",
   "passport.select": "Passport",
   "passport.noneOption": "No passport",
+  // Where a passport may act, beside what it may do. "Workspace" is retired
+  // vocabulary, so the workspace_settings area reads as company settings.
+  "workArea.name.business": "Sales work",
+  "workArea.name.compliance": "Compliance and privacy",
+  "workArea.name.capture": "Email and calendar capture",
+  "workArea.name.workspace_settings": "Company settings",
+  "workArea.name.admin_settings": "Admin settings",
+  "workArea.name.own_account": "My account",
+  "workArea.hint.business":
+    "Records, deals, activities, offers, reports and lists",
+  "workArea.hint.compliance":
+    "Consent, privacy requests, retention and the audit trail",
+  "workArea.hint.capture":
+    "Mail and calendar capture and the connections it comes through",
+  "workArea.hint.workspace_settings":
+    "How the company is set up, where your role may change it",
+  "workArea.hint.admin_settings": "Settings a sales rep may not change",
+  "workArea.hint.own_account": "Your profile and preferences",
+  "workArea.legend": "Where it may work",
+  "workArea.mode.all": "All areas",
+  "workArea.mode.allNote":
+    "Everything your role reaches, including areas added later",
+  "workArea.mode.custom": "Choose areas",
+  "workArea.mode.customNote": "Only the areas you tick. A new area starts off",
+  "workArea.pickLegend": "Areas it may work in",
+  "workArea.pickOne": "Tick at least one area.",
+  "passportAreas.open": "Change areas",
+  "passportAreas.openNamed": "Change areas for {name}",
+  "passportAreas.for": "For {name}. Its permissions stay as they are.",
+  "passportAreas.gains": "It will also work in: {areas}.",
+  "passportAreas.loses":
+    "It will no longer work in: {areas}. Its next call there is refused.",
+  "passportAreas.unchanged": "Change an area first.",
+  "passportAreas.closesLater":
+    "Areas added later, and tools an extension adds, stay off for it.",
+  "passportAreas.refusalTitle": "What an agent is told when an area is off",
+  "passportAreas.refusal":
+    "This passport may not work in the “{area}” area. Ask the user to turn that area on for this passport in Settings → AI access, under Your passports or Your connections.",
+  "passportAreas.cancel": "Cancel",
+  "passportAreas.save": "Save areas",
+  "passportAreas.saving": "Saving areas…",
+  "passportAreas.failed": "Areas not changed",
+  "settings.passportColAreas": "Areas",
   "settings.passportUseAi": "In a script or another AI tool",
   "settings.passportUseAiDetail":
     "Install the Margince skill in a tool that cannot sign in by itself, then give it your passport. Claude Code, Codex, Cursor and the editors sign in without one, under Connect your AI tool.",
@@ -16861,8 +16904,7 @@ export const en = {
   "consent.scopeNote.draft": "prepares messages for your review",
   "consent.scopeNote.write": "creates, edits and archives records as you",
   "consent.scopeNote.send": "sends messages as you, without asking first",
-  "consent.scopeNote.enrich":
-    "spends enrichment credits; each purchase still asks you first",
+  "consent.scopeNote.enrich": "runs AI work and buys contact data",
   "consent.ceiling":
     "Never more than your own permissions. You can disconnect at any time in Settings under AI access.",
   "consent.preset.label": "Assistant permissions",

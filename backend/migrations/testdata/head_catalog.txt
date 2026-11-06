@@ -6644,6 +6644,7 @@ public.oauth_authorization_code.redirect_uri text NOT NULL gen=- def=-
 public.oauth_authorization_code.resource text gen=- def=-
 public.oauth_authorization_code.scopes text[] NOT NULL gen=- def=-
 public.oauth_authorization_code.user_id uuid NOT NULL gen=- def=-
+public.oauth_authorization_code.work_areas text[] gen=- def=-
 public.oauth_authorization_code_pkey CREATE UNIQUE INDEX oauth_authorization_code_pkey ON public.oauth_authorization_code USING btree (id)
 public.oauth_client acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.oauth_client.client_id text NOT NULL gen=- def=-
@@ -6679,6 +6680,7 @@ public.oauth_grant.resource text gen=- def=-
 public.oauth_grant.revoked_at timestamp with time zone gen=- def=-
 public.oauth_grant.scopes text[] NOT NULL gen=- def=-
 public.oauth_grant.user_id uuid NOT NULL gen=- def=-
+public.oauth_grant.work_areas text[] gen=- def=-
 public.oauth_grant_lent_passport_ix CREATE INDEX oauth_grant_lent_passport_ix ON public.oauth_grant USING btree (lent_passport_id)
 public.oauth_grant_pkey CREATE UNIQUE INDEX oauth_grant_pkey ON public.oauth_grant USING btree (id)
 public.oauth_grant_user_live_ix CREATE INDEX oauth_grant_user_live_ix ON public.oauth_grant USING btree (user_id, id) WHERE (revoked_at IS NULL)
@@ -6924,6 +6926,7 @@ public.passport.revoked_at timestamp with time zone gen=- def=-
 public.passport.scopes text[] NOT NULL gen=- def=-
 public.passport.token_hash text NOT NULL gen=- def=-
 public.passport.uq_passport_id_owner UNIQUE (id, on_behalf_of)
+public.passport.work_areas text[] gen=- def=-
 public.passport_oauth_grant_ix CREATE INDEX passport_oauth_grant_ix ON public.passport USING btree (oauth_grant_id)
 public.passport_pkey CREATE UNIQUE INDEX passport_pkey ON public.passport USING btree (id)
 public.passport_token_hash_key CREATE UNIQUE INDEX passport_token_hash_key ON public.passport USING btree (token_hash)
