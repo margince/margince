@@ -5,7 +5,11 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
-import { entryChunks } from "./scripts/vite-entry-chunks.ts";
+import {
+  entryChunks,
+  initialEntries,
+  preloadEntries,
+} from "./scripts/vite-entry-chunks.ts";
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { materialSymbolsLicense } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
@@ -86,14 +90,15 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? "")
 const release = process.env.MARGINCE_RELEASE_VERSION ?? "";
 const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
 
-const startup = entryChunks("startup", [
-  join(frontendRoot, "src", "bootstrap.ts"),
-  join(frontendRoot, "src", "main.tsx"),
-]);
-
-const analytics = entryChunks("analytics", [
-  join(frontendRoot, "src", "App.analytics.tsx"),
-]);
+const entries = initialEntries(frontendRoot);
+const bootstrap = entryChunks("bootstrap", entries.bootstrap, 20);
+const startup = entryChunks("startup", entries.startup);
+const analyticsData = entryChunks(
+  "analytics-data",
+  [join(frontendRoot, "src/features/analytics/analytics.prefetch.ts")],
+  15,
+);
+const analytics = entryChunks("analytics", entries.analytics);
 
 export default defineConfig({
   build: {
@@ -102,7 +107,9 @@ export default defineConfig({
         strictExecutionOrder: true,
         codeSplitting: {
           groups: [
+            bootstrap.group,
             startup.group,
+            analyticsData.group,
             analytics.group,
             {
               name: "shared",
@@ -123,7 +130,10 @@ export default defineConfig({
   // module scripts and /@vite/client, which the api's admission check refuses by
   // name — so both views would be permanently unadvertised in every dev stack.
   plugins: [
+    preloadEntries(entries.startup),
+    bootstrap.plugin,
     startup.plugin,
+    analyticsData.plugin,
     analytics.plugin,
     react(),
     tailwindcss(),

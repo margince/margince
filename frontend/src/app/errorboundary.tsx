@@ -2,6 +2,7 @@ import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { Component, type ReactNode } from "react";
 import { Button, EmptyState } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { resetLocaleFailures } from "../i18n/catalogs";
 import { isStaleChunkError, reloadForNewBuild } from "../lib/stalebuild";
 import "./errorboundary.css";
 
@@ -82,6 +83,7 @@ export function AppErrorBoundary({
       {({ reset }) => (
         <RenderErrorBoundary
           onReset={() => {
+            resetLocaleFailures();
             reset();
             onReset?.();
           }}

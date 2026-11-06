@@ -45,7 +45,7 @@ import {
   fetchSetupStatus,
   SetupClaimScreen,
 } from "./features/sign-in/setupclaim";
-import { useLocale } from "./i18n";
+import { CompleteLocale, useLocale } from "./i18n";
 import {
   CompanyZoneProvider,
   useConfiguredCompanyZone,
@@ -118,7 +118,9 @@ export function App() {
   if (route.screen === RESET_ROUTE) {
     return (
       <RaillessFrame>
-        <ResetRoute />
+        <CompleteLocale>
+          <ResetRoute />
+        </CompleteLocale>
       </RaillessFrame>
     );
   }

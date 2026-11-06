@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -29,13 +29,14 @@ export type AnalyticsSelection = {
  * asking the question itself would be a second answer, and the two would
  * disagree the first time somebody's grants changed.
  */
+export const analyticsContextOptions = queryOptions({
+  queryKey: ANALYTICS_CONTEXT_KEY,
+  queryFn: async ({ signal }) =>
+    unwrap(await api.GET("/analytics/context", { signal })),
+});
+
 export function useAnalyticsContext() {
-  return useQuery({
-    queryKey: ANALYTICS_CONTEXT_KEY,
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/context", {}));
-    },
-  });
+  return useQuery(analyticsContextOptions);
 }
 
 /**

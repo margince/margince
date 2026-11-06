@@ -62,7 +62,11 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { resolveRelative, sourceFileAt } from "../../scripts/lib/source-tree";
+import {
+  parseSource,
+  resolveRelative,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 
 const srcRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROUTER = join(srcRoot, "lib/router.tsx");
@@ -840,12 +844,9 @@ describe("page gutter", () => {
       true,
     ],
   ])("checks every Suspense branch: %s", (name, expression, expected) => {
-    const fixture = ts.createSourceFile(
+    const fixture = parseSource(
       `${name}.tsx`,
       `import { Suspense, Suspense as Wait } from "react"; import * as React from "react"; function Screen() { return ${expression}; }`,
-      ts.ScriptTarget.Latest,
-      true,
-      ts.ScriptKind.TSX,
     );
     const body = bodyOfComponent(fixture, "Screen");
     expect(body).toBeDefined();

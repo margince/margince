@@ -13,8 +13,14 @@ import {
 import { pluralCategory } from "../format/plural";
 import { useDateTimePreferences } from "../format/preferences";
 import { STORAGE_KEYS, writeStored } from "../lib/storage";
-import { catalogs, loadedCatalogs, localeReady } from "./catalogs";
+import {
+  type CatalogLevel,
+  catalogs,
+  localeLoaded,
+  localeReady,
+} from "./catalogs";
 import type { MessageKey } from "./en";
+
 import {
   DEFAULT_LOCALE,
   isLocale,
@@ -51,8 +57,9 @@ export { catalogs, loadLocale } from "./catalogs";
 function LocaleReady({
   locale,
   children,
-}: Readonly<{ locale: Locale; children: ReactNode }>) {
-  if (!loadedCatalogs.has(locale)) use(localeReady(locale));
+  level = "complete",
+}: Readonly<{ locale: Locale; children: ReactNode; level?: CatalogLevel }>) {
+  if (!localeLoaded(locale, level)) use(localeReady(locale, level));
   return children;
 }
 
@@ -222,9 +229,11 @@ const LocaleContext = createContext<LocaleContextValue>({
 
 export function LocaleProvider({
   initial,
+  initialEssential = false,
   children,
 }: Readonly<{
   initial?: Locale;
+  initialEssential?: boolean;
   children: ReactNode;
 }>) {
   // Three sources, in falling order of authority: the server's answer for this
@@ -251,6 +260,9 @@ export function LocaleProvider({
   // Adopted only when it DIFFERS from the last adopted value, so a reader who
   // switches language mid-session is not dragged back to their saved one while
   // the write is still in flight.
+  const [level, setLevel] = useState<CatalogLevel>(
+    initialEssential ? "essential" : "complete",
+  );
   const [adopted, setAdopted] = useState<Locale | undefined>(initial);
   const adoptLocale = useCallback(
     (next: Locale) => {
@@ -275,16 +287,18 @@ export function LocaleProvider({
       if (usable === adopted) {
         return;
       }
+      if (usable !== locale) setLevel("complete");
       setAdopted(usable);
       setLocaleState(usable);
     },
-    [adopted],
+    [adopted, locale],
   );
   // A pick is remembered where a detected default is not, so the two cannot be
   // confused later. Wrapped rather than persisted in an effect: an effect would
   // also fire for the detected value on first render and store a choice nobody
   // made.
   const setLocale = useCallback((next: Locale) => {
+    setLevel("complete");
     rememberLocale(next);
     setLocaleState(next);
   }, []);
@@ -309,7 +323,9 @@ export function LocaleProvider({
   return (
     <LocaleContext.Provider value={value}>
       <Suspense fallback={null}>
-        <LocaleReady locale={locale}>{children}</LocaleReady>
+        <LocaleReady locale={locale} level={level}>
+          {children}
+        </LocaleReady>
       </Suspense>
     </LocaleContext.Provider>
   );
@@ -369,4 +385,11 @@ export type Words = Readonly<{
 export function usePluralKey() {
   const { locale } = useLocale();
   return (base: PluralBase, count: number) => pluralKey(locale, base, count);
+}
+
+export function CompleteLocale({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  const { locale } = useContext(LocaleContext);
+  return <LocaleReady locale={locale}>{children}</LocaleReady>;
 }

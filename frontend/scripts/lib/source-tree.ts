@@ -258,13 +258,14 @@ export function resolveRelative(
 // "values" drops only `import type` and `export type … from`, the forms erased.
 export function moduleSpecifiers(
   source: ts.SourceFile,
-  edges: "all" | "values",
+  edges: "all" | "values" | "static",
 ): string[] {
   const found: string[] = [];
   const visit = (node: ts.Node): void => {
     const declared = declaredSpecifier(node, edges);
     if (declared !== null) found.push(declared);
     if (
+      edges !== "static" &&
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword &&
       node.arguments.length > 0 &&
@@ -280,7 +281,7 @@ export function moduleSpecifiers(
 
 function declaredSpecifier(
   node: ts.Node,
-  edges: "all" | "values",
+  edges: "all" | "values" | "static",
 ): string | null {
   if (!ts.isImportDeclaration(node) && !ts.isExportDeclaration(node)) {
     return null;
@@ -292,7 +293,7 @@ function declaredSpecifier(
   const typeOnly = ts.isImportDeclaration(node)
     ? node.importClause?.phaseModifier === ts.SyntaxKind.TypeKeyword
     : node.isTypeOnly;
-  return edges === "values" && typeOnly ? null : specifier.text;
+  return edges !== "all" && typeOnly ? null : specifier.text;
 }
 
 // Every literal piece of a JSX `className`, however the caller composed it. A

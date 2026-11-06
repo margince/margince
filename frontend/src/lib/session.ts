@@ -1,5 +1,6 @@
 import {
   type QueryClient,
+  queryOptions,
   useMutation,
   useQuery,
   useQueryClient,
@@ -82,21 +83,22 @@ export function consumeAuthExitNotice(): "signed-out" | null {
 // card, and role-aware affordances all read the same probe. The server binds
 // the installation's singleton company itself, so the probe needs nothing but
 // the session cookie.
+export const sessionOptions = queryOptions({
+  queryKey: ["me"],
+  staleTime: 5 * 60_000,
+  // A role change does not revoke live sessions, and the UI scopes
+  // affordances by the grants this snapshot carries. So it must not sit stale
+  // for its full staleTime. "always", not `true`: `true`
+  // refetches on focus only once the entry is stale, and that five-minute
+  // window is the one this needs to close.
+  refetchOnWindowFocus: "always",
+  retry: false,
+  queryFn: ({ signal }) => readSession(signal),
+});
+
 export function useMe(enabled = true) {
   const client = useQueryClient();
-  const query = useQuery({
-    queryKey: ["me"],
-    enabled,
-    staleTime: 5 * 60_000,
-    // A role change does not revoke live sessions, and the UI scopes
-    // affordances by the grants this snapshot carries. So it must not sit stale
-    // for its full staleTime. "always", not `true`: `true`
-    // refetches on focus only once the entry is stale, and that five-minute
-    // window is the one this needs to close.
-    refetchOnWindowFocus: "always",
-    retry: false,
-    queryFn: ({ signal }) => readSession(signal),
-  });
+  const query = useQuery({ ...sessionOptions, enabled });
   const scope = healthScope(query.data);
   const previousScope = useRef(scope);
   useEffect(() => {

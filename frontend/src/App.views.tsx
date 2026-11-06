@@ -46,6 +46,7 @@ import { CUSTOM_SCREEN } from "./app/custom";
 import { opensReservedPage } from "./app/nav";
 import { UnsavedGuard } from "./components/unsaved";
 import { RESET_ROUTE } from "./features/sign-in/auth";
+import { CompleteLocale } from "./i18n";
 import { isContactTab } from "./lib/contacttab";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import { routeIdentity } from "./lib/routeidentity";
@@ -163,7 +164,12 @@ const navigateToAddress = (address: string) => navigate(parseHash(address));
 // says it is holding.
 export const screenOfAddress = (address: string) => {
   const route = parseHash(address);
-  return SCREEN_VIEWS[route.screen](route);
+  const view = SCREEN_VIEWS[route.screen](route);
+  return route.screen === "analytics" ? (
+    view
+  ) : (
+    <CompleteLocale>{view}</CompleteLocale>
+  );
 };
 
 // What the held address is about, which is what the screen below is keyed on.

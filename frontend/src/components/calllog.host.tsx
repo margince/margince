@@ -3,7 +3,6 @@
 
 import {
   type ComponentProps,
-  lazy,
   type ReactNode,
   Suspense,
   useCallback,
@@ -19,6 +18,7 @@ import { useFocusHandoff } from "../design-system/focushandoff";
 import { Heading } from "../design-system/heading";
 import { DiscardDraftQuestion } from "../design-system/modal";
 import { useT } from "../i18n";
+import { lazy } from "../i18n/lazy";
 import {
   type CallRecord,
   type CallStart,
@@ -29,17 +29,13 @@ import { useCanWrite } from "../lib/capability";
 import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
 import { EntityRef } from "./entityref";
 
-const LogActivityForm = lazy(() =>
-  import("./logactivity").then((module) => ({
-    default: module.LogActivityForm,
-  })),
-);
+const LogActivityForm = lazy(async () => ({
+  default: (await import("./logactivity")).LogActivityForm,
+}));
 
-const LogActivityAction = lazy(() =>
-  import("./logactivity.action").then((module) => ({
-    default: module.LogActivityAction,
-  })),
-);
+const LogActivityAction = lazy(async () => ({
+  default: (await import("./logactivity.action")).LogActivityAction,
+}));
 
 type StartedCall = CallRecord & Readonly<{ seq: number }>;
 

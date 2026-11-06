@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Settings } from "lucide-react";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { AiPending } from "../design-system/aipending";
 import { AiReveal } from "../design-system/aireveal";
 import { EmptyState } from "../design-system/atoms";
@@ -10,17 +10,16 @@ import { Button } from "../design-system/button";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { useVisibleSettingsPages } from "../features/settings/settingsnav";
+import { lazy } from "../i18n/lazy";
 
-const CitedDocument = lazy(() =>
-  import("../features/voice-knowledge/citeddocument").then((module) => ({
-    default: module.CitedDocument,
-  })),
-);
-const AnswerView = lazy(() =>
-  import("../features/voice-knowledge/corpusanswer").then((module) => ({
-    default: module.AnswerView,
-  })),
-);
+const CitedDocument = lazy(async () => ({
+  default: (await import("../features/voice-knowledge/citeddocument"))
+    .CitedDocument,
+}));
+const AnswerView = lazy(async () => ({
+  default: (await import("../features/voice-knowledge/corpusanswer"))
+    .AnswerView,
+}));
 
 import {
   type Answer,
