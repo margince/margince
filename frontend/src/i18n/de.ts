@@ -1371,6 +1371,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.addRecord": "Hinzufügen",
   "reporting.searchRecords": "Datensätze suchen",
   "reporting.noMatchingRecords": "Keine passenden Datensätze",
+  "reporting.typeToFindRecord": "Gib einen Namen ein, um ihn zu finden",
   "reporting.pickExplains":
     "Ein gewählter Deal nimmt nicht jeden Kontakt seines Unternehmens auf. Ein Lead behält seine Umwandlungshistorie.",
   "reporting.memberCounts":
