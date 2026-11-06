@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "node-html-parser";
 import { describe, expect, it } from "vitest";
@@ -35,6 +35,43 @@ const indexPage = parse(readFileSync(join(frontendRoot, "index.html"), "utf8"));
 function purposeOf(icon: ManifestIcon): string {
   return icon.purpose ?? "any";
 }
+
+// The browser asks for whatever index.html names. A name no file in public/
+// answers falls through to the SPA's index.html. The browser then parses a
+// page as a manifest and reports it invalid rather than missing.
+describe("the install manifest is where the page says it is", () => {
+  const head = parse(readFileSync(join(frontendRoot, "index.html"), "utf8"));
+  const manifestLinks = head
+    .querySelectorAll("link")
+    .filter((link) => link.getAttribute("rel") === "manifest");
+  const href = manifestLinks[0]?.getAttribute("href");
+
+  it("is linked once, from a root-relative path", () => {
+    // Counted, not found: a second link would be discarded by a search for
+    // the first, and the browser would read whichever it reached first.
+    expect(manifestLinks).toHaveLength(1);
+    expect(href).toBeDefined();
+    expect(href?.startsWith("/")).toBe(true);
+  });
+
+  it("names a file public/ actually holds, and holds JSON", () => {
+    const served = join(publicDir, (href ?? "").replace(/^\//, ""));
+
+    // join resolves `..`, so a path can climb out of public/.
+    //
+    // It would read a file no browser is served, and still satisfy the rest
+    // of this test.
+    const inside = relative(publicDir, served);
+    expect(isAbsolute(inside)).toBe(false);
+    expect(inside.split("/")).not.toContain("..");
+
+    const body = readFileSync(served, "utf8");
+    expect(() => JSON.parse(body) as unknown).not.toThrow();
+    const { name } = JSON.parse(body) as { name?: unknown };
+    expect(typeof name).toBe("string");
+    expect(name).not.toBe("");
+  });
+});
 
 describe("the install manifest", () => {
   it("offers an unmasked icon and the PNGs Android masks", () => {
