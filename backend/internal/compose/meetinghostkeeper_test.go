@@ -63,10 +63,10 @@ func hostTaskActor(kind principal.PrincipalType) context.Context {
 func TestOnlyTheSystemRunsTheOrganizerHostTask(t *testing.T) {
 	meetings := &activities.Store{}
 	if _, err := claimOrganizerHostsBatch(hostTaskActor(principal.PrincipalHuman), refusingTx{}, meetings, datatask.BatchIn{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a person's batch answered %v, want permission denied", err)
+		t.Errorf("a human's batch answered %v, want permission denied", err)
 	}
 	if _, _, err := estimateOrganizerHosts(hostTaskActor(principal.PrincipalHuman), refusingTx{}, 10); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a person's estimate answered %v, want permission denied", err)
+		t.Errorf("a human's estimate answered %v, want permission denied", err)
 	}
 }
 

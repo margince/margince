@@ -19,13 +19,13 @@ func hostClaimActor(kind principal.PrincipalType) context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{Type: kind, ID: "actor:test"})
 }
 
-// No human grant covers a colleague's meeting row, so a person never names its
+// No human grant covers a colleague's meeting row, so a human never names its
 // host, and the refusal comes before any statement.
-func TestAPersonCannotNameAMeetingsHost(t *testing.T) {
+func TestAHumanCannotNameAMeetingsHost(t *testing.T) {
 	var noTx pgx.Tx
 	moved, err := (&Store{}).ClaimOrganizerHostTx(hostClaimActor(principal.PrincipalHuman), noTx, ids.New[ids.ActivityKind]())
 	if moved || !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a person's claim answered moved=%v, err=%v, want permission denied", moved, err)
+		t.Errorf("a human's claim answered moved=%v, err=%v, want permission denied", moved, err)
 	}
 }
 
