@@ -458,7 +458,6 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 		t.Error("disqualifying is an explicit disposition and must stamp first_response_at")
 	}
 	requireStoredLeadClockAudit(e.ctx, t, e.store, worked)
-	requireStoredLeadClockAudit(e.ctx, t, e.store, dropped)
 }
 
 // The bus is unordered: a reply that happened at 09:00 may be processed

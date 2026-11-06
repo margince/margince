@@ -31,10 +31,10 @@ import { isRealCalendarDay } from "../../format/calendarday";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { approvalHref } from "../../lib/approvalhref";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import type { Approval } from "../../lib/approvals.queries";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
-import { approvalHref } from "../../lib/approvalhref";
 import {
   EDITABLE_FIELDS,
   type EditableField,
