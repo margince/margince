@@ -11,6 +11,11 @@
   max-width: 100%;
 }
 
+/* The name heads its picture from the picture's own left edge. */
+.image-slot-name {
+  align-self: flex-start;
+}
+
 .image-slot-tile {
   position: relative;
   box-sizing: border-box;

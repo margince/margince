@@ -9,6 +9,9 @@
 .account {
   /* The trail is a flex row that would otherwise squeeze it. */
   flex: none;
+  /* Not a block: a block sets the button on a text baseline, which grows the
+     box and lifts the chip off the bar's centre. */
+  display: flex;
 }
 
 /* Two lines in a box that is narrower than either of them can be: both clip

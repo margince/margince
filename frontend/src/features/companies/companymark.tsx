@@ -20,6 +20,7 @@ import {
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
+import "../../design-system/settingrow.css";
 import "./companymark.css";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];
@@ -132,7 +133,7 @@ export function CompanyMark({
             )}
           </div>
         )}
-        <p className="t-caption" id={hintId}>
+        <p className="settingrow-description" id={hintId}>
           {t("settings.brandHint")}
         </p>
       </PanelBody>

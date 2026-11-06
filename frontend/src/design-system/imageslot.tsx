@@ -79,6 +79,11 @@ export function ImageSlot({
       className={`image-slot image-slot-${shape}`}
       aria-labelledby={name === undefined ? undefined : nameId}
     >
+      {name !== undefined && (
+        <span className="t-name image-slot-name" id={nameId}>
+          {name}
+        </span>
+      )}
       <div ref={tile} className="image-slot-tile" aria-busy={busy || undefined}>
         {editable && (
           <FileDropzoneControl
@@ -108,11 +113,6 @@ export function ImageSlot({
             </Button>
           )}
         </OverflowMenu>
-      )}
-      {name !== undefined && (
-        <span className="t-name" id={nameId}>
-          {name}
-        </span>
       )}
     </section>
   );
