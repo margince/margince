@@ -60,7 +60,7 @@ func TestSourceReferenceDowngradeKeepsAnAssessmentWithoutATypedNote(t *testing.T
 		WHERE id = @id`, pgx.NamedArgs{"id": id}); err != nil {
 		t.Fatal(err)
 	}
-	sql, err := os.ReadFile("core/1793958479_notice_source_reference_note_check_validated.down.sql")
+	sql, err := os.ReadFile("core/1793983514_notice_source_reference_note_check_validated.down.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
