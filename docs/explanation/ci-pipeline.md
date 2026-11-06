@@ -539,10 +539,10 @@ exceptions above. `make check-backend` runs it too, so a laptop `make check` get
 
 ## Coverage → SonarCloud
 
-The `sonarcloud` job runs **last**, and does **not** run any suite again. It fetches the coverage that
-`integration`, `deterministic-gates (unit)` and `frontend` already made. Those are `coverage.out` (from
-each shard and unit pod), `coverage-extensions.out` and the frontend lcov. It then runs only the scanner. So
-there is no second Postgres/Redis/MinIO stack, and no second test run.
+The `sonarcloud` job runs **last** and runs no suite again. It fetches the coverage that `integration`,
+`deterministic-gates (unit)` and `frontend` already made. Those are `coverage.out` (from each shard and
+unit pod), `coverage-extensions.out`, and two lcov reports: the core frontend and the unit screens
+(`frontend/coverage-ext`). It then runs only the scanner, with no second stack and no second test run.
 
 Those pod files are uploaded through
 [`.github/actions/upload-artifact-retried`](../../.github/actions/upload-artifact-retried/action.yml).
