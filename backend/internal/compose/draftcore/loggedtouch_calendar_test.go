@@ -44,25 +44,31 @@ func TestLoggedTouchOrderFollowsTheRecordCalendar(t *testing.T) {
 	}
 }
 
-// A past meeting is prior contact only once someone recorded it held. One
-// still booked, or with no status, is awaiting its outcome.
-func TestOnlyAHeldPastMeetingIsPriorContact(t *testing.T) {
+// A past meeting nobody called off is prior contact, whether or not anyone
+// reported it held. A meeting still to come, a canceled one and a no-show are not.
+func TestAPastMeetingNobodyCalledOffIsPriorContact(t *testing.T) {
 	now := time.Date(2026, 6, 12, 9, 0, 0, 0, time.UTC)
 	booked, held := crmcontracts.ActivityMeetingStatusBooked, crmcontracts.ActivityMeetingStatusHeld
+	canceled, noShow := crmcontracts.ActivityMeetingStatusCanceled, crmcontracts.ActivityMeetingStatusNoShow
+	past, ahead := now.AddDate(0, 0, -3), now.AddDate(0, 0, 3)
 	for name, tc := range map[string]struct {
 		status *crmcontracts.ActivityMeetingStatus
+		at     time.Time
 		want   bool
 	}{
-		"no status": {nil, false},
-		"booked":    {&booked, false},
-		"held":      {&held, true},
+		"no status":     {nil, past, true},
+		"booked":        {&booked, past, true},
+		"held":          {&held, past, true},
+		"still to come": {&booked, ahead, false},
+		"canceled":      {&canceled, past, false},
+		"a no-show":     {&noShow, past, false},
 	} {
 		meeting := crmcontracts.Activity{
 			Kind: crmcontracts.ActivityKindMeeting, MeetingStatus: tc.status,
-			OccurredAt: now.AddDate(0, 0, -3), OccurredPrecision: "instant",
+			OccurredAt: tc.at, OccurredPrecision: "instant",
 		}
 		if got := IsLoggedTouch(meeting, now, time.UTC); got != tc.want {
-			t.Errorf("%s: a meeting three days ago is a logged touch = %v, want %v", name, got, tc.want)
+			t.Errorf("%s: the meeting is a logged touch = %v, want %v", name, got, tc.want)
 		}
 		state := ClassifyWithLogged(now, time.UTC, time.Time{}, time.Time{}, []crmcontracts.Activity{meeting})
 		if met := state.Band != convstate.BandNone; met != tc.want {

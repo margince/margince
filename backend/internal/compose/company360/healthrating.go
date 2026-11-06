@@ -153,8 +153,8 @@ func (a *assembly) readableMeetings() (last, next *occurredday.Moment, err error
 // meetingsAround reads the account's last meeting already held and its next
 // one booked ahead, in one round trip of two LIMIT-1 arms.
 //
-// The past arm reads relstrength.MeetingHeldByNowSQL, so only a meeting
-// someone recorded held is the last one met. The future arm reads
+// The past arm reads relstrength.MeetingInTouchSQL, so a past meeting nobody
+// called off is the last one met, outcome recorded or not. The future arm reads
 // relstrength.MeetingAheadSQL, so a canceled meeting or a no-show is in
 // neither. Nil is "no meeting on record", a fact about the reading and not a
 // claim that none happened. The caller may hold no scope over the activity.
@@ -184,7 +184,7 @@ func (a *assembly) meetingsAround() (last, next *occurredday.Moment, err error) 
 		(SELECT 'next', a.occurred_at, a.occurred_precision FROM activity a
 		  WHERE %[1]s AND %[3]s
 		  ORDER BY %[4]s, a.id LIMIT 1)`,
-		where, relstrength.MeetingHeldByNowSQL("a", now), relstrength.MeetingAheadSQL("a", now), occurredday.StartSQL("a")), args...)
+		where, relstrength.MeetingInTouchSQL("a", now), relstrength.MeetingAheadSQL("a", now), occurredday.StartSQL("a")), args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read the account's meetings: %w", err)
 	}

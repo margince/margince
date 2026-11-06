@@ -61,7 +61,7 @@ var (
 // drop an unrecorded meeting. Keyed by the file and the line's own text, so a
 // waiver covers one reading and not every reading added to that file after it.
 var meetingStatusReadersAdmitted = gatekit.Waive(map[string]string{
-	"internal/shared/kernel/meetingoutcome/meetingoutcome.go: return \"(\" + alias + \".meeting_status = '\" + Held + \"')\"": "the shared rule for a held meeting, and its subject is what the record says: a meeting nobody reported stays awaiting its outcome. Its callers either ask whether we met (every contact fold through relstrength.HadContactSQL: strength, last-activity clocks, graph edges, the brief's last touch; the follow-up reminder and reconciliation, the conversion report, the account's last meeting, deal assurance's customer progress, a draft's prior contact), where a past meeting nobody reported is awaiting its outcome and must be dropped, or classify with it, where the next CASE arm names an unrecorded meeting booked",
+	"internal/shared/kernel/meetingoutcome/meetingoutcome.go: return \"(\" + alias + \".meeting_status = '\" + Held + \"')\"": "the shared rule for a meeting that took place, and its subject is what the record says: a meeting nobody reported stays awaiting its outcome. Its callers either count what took place (the weekly held count, the conversion report, metric meetings, Deal Scout, stage evidence, the meeting follow-up lane and reconciliation evidence), where a past meeting nobody reported must be dropped, or classify with it, where the next CASE arm names an unrecorded meeting booked. Being in touch is a different rule: relstrength.HadContactSQL admits a past meeting with no status",
 })
 
 func TestAMeetingWithNoStatusIsNotDroppedFromAPositiveTest(t *testing.T) {

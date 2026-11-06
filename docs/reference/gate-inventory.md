@@ -40,6 +40,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the same variable whether to publish a record, and both answer only to the same value. |
 | `bookinginvite_test.go` | H2 | A booking's attendee addresses reach the calendar invitation, and the contract says the booking queues one. |
 | `briefcachemirror_test.go` | H2 | The brief cache's upsert is spelled in two places and they must stay one statement. |
+| `capturedmeetingpast_test.go` | H2 | The mail permission check and consent count a captured meeting only once its time has passed and nobody called it off. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary is defined by the column's own constraint, and nowhere else. |
 | `cla_test.go` | H2 | An acceptance of the CLA covers the text it was shown, under the version that text carries. |
 | `coderabbitpathrules_test.go` | H3 | What .coderabbit.yaml tells the reviewer about backend Go, held against what is true. |
@@ -134,7 +135,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jsonsafeinteger_test.go` | H1 | A bigint that reaches a JSON client is bounded to what the client can hold. |
 | `labelinstructions_test.go` | H2 | Every label the docs put in front of a session is one `.github/labels.yml` declares. |
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
-| `lastactivitymeetingrule_test.go` | H2 | last\_activity\_at on deal, contact, company and project skips a task and a meeting nobody reported held, and counts only what has happened. |
+| `lastactivitymeetingrule_test.go` | H2 | last\_activity\_at on deal, contact, company and project skips a task and a canceled or no-show meeting, and counts only what has happened. |
 | `linkceilingparity_test.go` | H2 | The per-activity link ceiling is one number, wherever it is spelled. |
 | `listsortdeclared_test.go` | H2 | An operation that declares the shared `Sort` parameter has a handler that reads it. |
 | `listsortvocabulary_test.go` | H3 | A sort the list offers is a sort the server accepts. |
@@ -145,7 +146,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mailbodycompleteness_test.go` | H2 | TestAutomaticWorkReadsOnlyMailReadInFull holds the clauses that keep automatic work current to provenance.MailBodyCompleteSQL. |
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it, and outbound mail links to it before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly panel's labels. |
-| `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |
 | `mergedecidableauthority_test.go` | H2 | Who may settle a duplicate pair has one answer, and the card must ask the same thing the write asks. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale (100 for EUR, 1000 for KWD, 1 for VND) is one fact, and the table that holds it lives in shared/kernel/values. |
 | `mockproblemcodes_test.go` | H2 | Every Problem a frontend test, story or fixture answers carries a code the server can send. |

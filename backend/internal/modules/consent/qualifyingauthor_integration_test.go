@@ -30,7 +30,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // filedInbound plants an inbound message filed under the subject, naming them
@@ -145,6 +147,31 @@ func (e *qualifyingEnv) attendedMeeting(t *testing.T, offset time.Duration, capt
 	}
 }
 
+// attendedMeetingAt plants a captured meeting the subject was in at a stated
+// instant, read as a day entry when day is set. The time is the fixture's,
+// never the database's now(), so a test can read it on a clock of its own.
+func (e *qualifyingEnv) attendedMeetingAt(t *testing.T, at time.Time, day bool) {
+	t.Helper()
+	precision := "instant"
+	if day {
+		at, precision = occurredday.AnchorIn(at, time.UTC), "day"
+	}
+	id := ids.NewV7()
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, source, occurred_at, occurred_precision, captured_by)
+			VALUES ($1, 'meeting', 'gcal', $2, $3, $4)`, id, at, precision, capturedMeeting); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'attendee')`, id, e.contact)
+		return err
+	}); err != nil {
+		t.Fatalf("planting a meeting at %s: %v", at, err)
+	}
+}
+
 // The ordinary case, spelled out at the call sites: a calendar the mailbox owner
 // holds, synced by a connector, with no acceptance state recorded and no
 // counterparty — attendance is a LIST, so the mapper leaves the field unset, and
@@ -155,25 +182,23 @@ const (
 	namesNobody       = ""
 )
 
-// A meeting we are about to have makes correspondence lawful.
+// A captured meeting that already happened makes correspondence lawful.
 //
-// This is the case the whole arm exists for. A partner invited to a demo next
-// week was refused as somebody who "has never written to you" — and the
-// invitation made it worse, because the classifier read the machine-generated
-// calendar mail as transactional and judged the contact noise on it.
+// A meeting means both sides put time in a calendar, which nobody does by
+// accident. The invitation itself does not prove it: the classifier reads the
+// machine-generated calendar mail as transactional.
 //
 // Mutation: drop the meetingQualifyingEvent arm from latestQualifyingEvent and
 // this fails, the verdict still unknown.
-func TestAMeetingInTheDiaryMakesCorrespondenceLawful(t *testing.T) {
+func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
 	e := setupQualifying(t)
 
-	e.attendedMeeting(t, 4*24*time.Hour, capturedMeeting, noAcceptanceState, namesNobody)
+	e.attendedMeeting(t, -24*time.Hour, capturedMeeting, noAcceptanceState, namesNobody)
 
 	got := e.verdict(t)
 	if got.State != VerdictAllowed {
-		t.Fatalf("verdict %q (%s) for somebody we are meeting in four days, want allowed — "+
-			"a meeting means both sides put time in a calendar, which is stronger evidence of a "+
-			"relationship than an email anybody may send unsolicited", got.State, got.Reason)
+		t.Fatalf("verdict %q (%s) for somebody we met yesterday, want allowed — a meeting is "+
+			"stronger evidence of a relationship than an email anybody may send unsolicited", got.State, got.Reason)
 	}
 	if got.Qualifying == nil || got.Qualifying.Kind != KindMeeting {
 		t.Fatalf("qualifying event %+v, want a %s — the basis has to name the meeting it was read "+
@@ -181,14 +206,27 @@ func TestAMeetingInTheDiaryMakesCorrespondenceLawful(t *testing.T) {
 	}
 }
 
-// A meeting that already happened counts too, while it is inside the window.
-func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
-	e := setupQualifying(t)
+// A meeting still in the diary is not evidence yet, however soon it is. The
+// derived row is stamped and read back without revalidating its source, so a
+// booking would otherwise stand as ground even if it never happened.
+//
+// Mutation: drop the occurredday.MeetingTookPlaceSQL clause from
+// capturedMeetingSQL and this fails.
+func TestAMeetingStillInTheDiaryIsNotEvidence(t *testing.T) {
+	for name, offset := range map[string]time.Duration{
+		"in four days": 4 * 24 * time.Hour,
+		"a year out":   365 * 24 * time.Hour,
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupQualifying(t)
 
-	e.attendedMeeting(t, -24*time.Hour, capturedMeeting, noAcceptanceState, namesNobody)
+			e.attendedMeeting(t, offset, capturedMeeting, noAcceptanceState, namesNobody)
 
-	if got := e.verdict(t); got.State != VerdictAllowed {
-		t.Fatalf("verdict %q (%s) for somebody we met yesterday, want allowed", got.State, got.Reason)
+			if got := e.verdict(t); got.State == VerdictAllowed {
+				t.Fatalf("verdict %q (%s) on a meeting %s, want not allowed — a meeting counts "+
+					"only once its time has passed", got.State, got.Reason, name)
+			}
+		})
 	}
 }
 
@@ -204,7 +242,7 @@ func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
 func TestAHandLoggedMeetingIsNotEvidence(t *testing.T) {
 	e := setupQualifying(t)
 
-	e.attendedMeeting(t, 4*24*time.Hour, "human:"+e.user.String(), noAcceptanceState, namesNobody)
+	e.attendedMeeting(t, -24*time.Hour, "human:"+e.user.String(), noAcceptanceState, namesNobody)
 
 	if got := e.verdict(t); got.State == VerdictAllowed {
 		t.Fatalf("verdict %q (%s) on a meeting a seat logged by hand, want not allowed — "+
@@ -252,19 +290,37 @@ func TestARecordNamingASenderIsNotEvidenceWhateverItsKind(t *testing.T) {
 	}
 }
 
-// A meeting dated beyond the horizon is not evidence.
+// The meeting is read on the verdict's own clock, not the database's. A
+// meeting an hour after the database's now() is past for a clock two hours on.
 //
-// The derived row is stamped and read back afterwards without revalidating its
-// source, so a meeting dated far enough ahead would authorize sending forever.
-func TestAMeetingBeyondTheHorizonIsNotEvidence(t *testing.T) {
+// Mutation: render capturedMeetingSQL with now() and this fails.
+func TestAMeetingIsJudgedOnTheVerdictsClock(t *testing.T) {
 	e := setupQualifying(t)
+	meetsAt := clocktest.Now(t).Add(time.Hour)
+	e.attendedMeetingAt(t, meetsAt, false)
 
-	e.attendedMeeting(t, 365*24*time.Hour, capturedMeeting, noAcceptanceState, namesNobody)
+	after, before := meetsAt.Add(time.Hour), meetsAt.Add(-time.Hour)
+	if got := e.verdictAt(t, after.Add(-defaultReplyWindow), after); got.State != VerdictAllowed {
+		t.Fatalf("verdict %q (%s) on a clock past the meeting, want allowed", got.State, got.Reason)
+	}
+	if got := e.verdictAt(t, before.Add(-defaultReplyWindow), before); got.State == VerdictAllowed {
+		t.Fatalf("verdict %q (%s) on a clock before the meeting, want not allowed", got.State, got.Reason)
+	}
+}
 
-	if got := e.verdict(t); got.State == VerdictAllowed {
-		t.Fatalf("verdict %q (%s) on a meeting a year out, want not allowed — the stamped row "+
-			"outlives its source, so a far-future date would authorize sending indefinitely",
-			got.State, got.Reason)
+// A meeting known only by its date has not taken place until the date is over.
+// It is evidence from the next day on, and not before.
+func TestADayMeetingIsEvidenceOnceItsDateEnds(t *testing.T) {
+	e := setupQualifying(t)
+	today := clocktest.Now(t).UTC()
+	e.attendedMeetingAt(t, today, true)
+
+	tomorrow := today.Truncate(24 * time.Hour).Add(25 * time.Hour)
+	if got := e.verdictAt(t, today.Add(-defaultReplyWindow), today); got.State == VerdictAllowed {
+		t.Fatalf("verdict %q (%s) on the meeting's own date, want not allowed", got.State, got.Reason)
+	}
+	if got := e.verdictAt(t, tomorrow.Add(-defaultReplyWindow), tomorrow); got.State != VerdictAllowed {
+		t.Fatalf("verdict %q (%s) the day after, want allowed", got.State, got.Reason)
 	}
 }
 

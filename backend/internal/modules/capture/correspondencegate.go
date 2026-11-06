@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -357,8 +358,8 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 //
 //   - a CONNECTOR captured it, so a hand-logged "meeting" cannot mint a contact;
 //   - it was not declined or abandoned (no_show, canceled);
-//   - it is not dated past the horizon, so a far-future date cannot stand in for
-//     a relationship.
+//   - it took place by now, so a booking in the diary does not count until its
+//     time has passed. relstrength.MeetingInTouchSQL holds this bound and the one above.
 //
 // An ARCHIVED meeting is excluded too, which is not one of the three: a meeting
 // somebody removed is not evidence of anything, and the activity kind index is
@@ -387,15 +388,14 @@ func metInPersonTx(
 		return false, false, nil
 	}
 	if err := tx.QueryRow(ctx, `
-		SELECT count(*) > 0, count(*) FILTER (WHERE a.id <> $3) > 0
+		SELECT count(*) > 0, count(*) FILTER (WHERE a.id <> $2) > 0
 		    FROM activity a
 		    JOIN activity_participant p ON p.activity_id = a.id AND NOT p.past_party_cap
 		   WHERE a.kind = 'meeting'
  AND `+meetingPartyEligibleSQL("a", "p")+`
 		     AND a.archived_at IS NULL
 		     AND a.captured_by LIKE 'connector:%'
-		     AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
-		     AND a.occurred_at <= now() + $2::interval -- occurred_at raw: a 90-day diary horizon; a day entry near its far edge decides nothing
+		     AND `+relstrength.MeetingInTouchSQL("a", "now()")+`
 		     AND (
 		          -- The BARE invitation address, bounded by the address's own
 		          -- tenure. An activity_participant row records what the
@@ -418,14 +418,8 @@ func metInPersonTx(
 		               AND lower(pe.email) = $1
 		               AND pe.archived_at IS NULL))
 		     AND `+auth.ActivityExternalEvidenceClause("a"),
-		normalized, meetingHorizonInterval, capturing).Scan(&met, &elsewhere); err != nil {
+		normalized, capturing).Scan(&met, &elsewhere); err != nil {
 		return false, false, fmt.Errorf("capture: reading whether this workspace is meeting the sender: %w", err)
 	}
 	return met, elsewhere, nil
 }
-
-// meetingHorizonInterval bounds how far into the diary a meeting still says a
-// relationship is live. Spelled again here rather than imported because a module
-// never imports a sibling; what must not drift is the WINDOW, and the consent
-// arm holds the same one against the same rows.
-const meetingHorizonInterval = "90 days"

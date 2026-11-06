@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // latestQualifyingEvent finds the most recent thing on the record that makes
@@ -52,7 +53,7 @@ import (
 //
 // address names the recipient the event must cover (requestCoversSQL); nil asks
 // about the contact as a whole, which only the legacy verdict does.
-func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time, address *string) (QualifyingEvent, eventSource, error) {
+func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string) (QualifyingEvent, eventSource, error) {
 	event, found, err := recordedQualifyingEvent(ctx, tx, contactID, since, address)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
@@ -72,7 +73,7 @@ func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, sin
 	// order costs nothing: each arm answers about a different record, so at most
 	// one of them describes any given fact, and reaching this one means neither
 	// a human nor the mail timeline had already answered.
-	event, found, err = meetingQualifyingEvent(ctx, tx, contactID, since)
+	event, found, err = meetingQualifyingEvent(ctx, tx, contactID, since, asOf)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -314,27 +315,26 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 // admitted — the calendar mappers record no acceptance state, so most captured
 // meetings carry none, and refusing those would refuse the whole feature.
 //
-// And it must not be dated beyond the horizon. A future meeting is the case this
-// arm exists for, but "future" has to mean the diary rather than the next
-// century: the derived row is stamped and later read back without revalidating
-// its source, so a meeting dated 2099 would authorize sending forever.
+// And it must have taken place by the reading clock (relstrength.MeetingInTouchSQL). A
+// booking still in the diary is not ground yet: the derived row is stamped and
+// read back later without revalidating its source.
 //
 // No authorship test, unlike the inbound arm — that is a difference rather than
 // an omission. That arm needs role 'from' because a filing link says only that a
 // message belongs on somebody's record, and being copied on somebody else's mail
 // initiates nothing. Attendance carries no such ambiguity: every attendee of a
 // meeting a connector captured is a party to it.
-func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, bool, error) {
+func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var activityID string
 	err := tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
 		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
-		WHERE `+capturedMeetingSQL+`
+		WHERE `+capturedMeetingSQL("$3")+`
 		  AND `+occurredday.FromSQL("a", "$2")+`
 		ORDER BY a.occurred_at DESC
-		LIMIT 1`, contactID, since).Scan(&activityID, &event.OccurredAt)
+		LIMIT 1`, contactID, since, asOf).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -349,22 +349,12 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 
 // capturedMeetingSQL is "activity a is a meeting that counts as evidence". A
 // connector captured it and it names no counterparty string. It was not declined
-// or abandoned, and it lies inside the diary horizon. A meeting a rep typed by
-// hand is not evidence of anything the contact did. meetingQualifyingEvent and
-// requestedNegotiation both read this one constant.
-const capturedMeetingSQL = `a.kind = 'meeting' AND a.archived_at IS NULL
+// or abandoned, and it took place by asOf (relstrength.MeetingInTouchSQL). A
+// meeting a rep typed by hand is not evidence of anything the contact did.
+// meetingQualifyingEvent and requestedNegotiation both read this one rule.
+func capturedMeetingSQL(asOf string) string {
+	return `a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND a.counterparty_email IS NULL
 		  AND a.captured_by LIKE 'connector:%'
-		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
-		  AND now() + interval '` + meetingHorizonInterval + `' >= a.occurred_at -- occurred_at raw: a 90-day diary horizon; a day entry near its far edge decides nothing
-		  `
-
-// meetingHorizonInterval is how far into the diary a meeting still says a
-// relationship is live.
-//
-// A quarter, because that is the outer edge of a real booking — a demo, a
-// renewal review, a conference — and the derived row outlives its source: it is
-// stamped once and read back afterwards without revalidating the activity, so a
-// meeting dated far enough ahead would authorize sending indefinitely. The bound
-// is what keeps "a meeting in the diary" from meaning "a date somebody typed".
-const meetingHorizonInterval = "90 days"
+		  AND ` + relstrength.MeetingInTouchSQL("a", asOf)
+}

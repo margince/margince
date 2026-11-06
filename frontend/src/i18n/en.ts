@@ -4720,8 +4720,7 @@ export const en = {
   "internalMail.reauthorizeSource":
     "This mailbox authorization changed. Save to enroll it again. Internal capture remains stopped until then.",
   "internalMail.historyTitle": "Internal history authorization",
-  "internalMail.historyAfter":
-    "Authorized internal mail received after {date}",
+  "internalMail.historyAfter": "Authorized internal mail received after {date}",
   "internalMail.historyFolders": "Internal source folders",
   "internalMail.historyImportNote":
     "Starting with this option creates a new import. The provider estimate covers the whole mailbox window. Internal mail is added only within the approved source and date range, through the time the import starts. Ordinary exclusions and participant access remain in place.",

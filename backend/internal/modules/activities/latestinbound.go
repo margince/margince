@@ -96,11 +96,14 @@ func unansweredInbound(waiting, forms, newestAnswer []crmcontracts.Activity) []c
 	return items
 }
 
-// answersThemSQL keeps a row under alias a that answers them. That is anything
-// we sent, a call that reached somebody (relstrength.CallCountsSQL), or a
-// meeting that was not canceled or a no-show. A note answers nobody.
-var answersThemSQL = `((a.kind IN ('email', 'message') AND a.direction = 'outbound') OR (a.kind = 'call' AND ` + relstrength.CallCountsSQL("a") + `)
- OR (a.kind = 'meeting' AND a.meeting_status IS DISTINCT FROM 'canceled' AND a.meeting_status IS DISTINCT FROM 'no_show'))`
+// answersThemSQL keeps a row under alias a that answers them at now. That is
+// anything we sent, or a call or meeting that kept us in touch
+// (relstrength.HadContactSQL), so a meeting still to come answers nobody yet.
+// A note answers nobody.
+func answersThemSQL(now string) string {
+	return `((a.kind IN ('email', 'message') AND a.direction = 'outbound') OR (a.kind IN ('call', 'meeting') AND ` +
+		relstrength.HadContactSQL("a", now) + `))`
+}
 
 // markLatestInboundTasks drops an item a task already stands for, which
 // waiting_reply does for mail and a form needs here, and sets accepts_request.

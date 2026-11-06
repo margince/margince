@@ -44,15 +44,10 @@ func (b *backfillWireEnv) seedDigestProject(t *testing.T, name string, company i
 func (b *backfillWireEnv) fileOnProject(t *testing.T, kind string, project ids.ProjectID, when time.Time, due *time.Time) {
 	t.Helper()
 	subject := kind + " on the project"
-	in := activities.LogActivityInput{
+	if _, _, err := b.env.Activities.LogActivity(b.env.Admin(), activities.LogActivityInput{
 		Kind: kind, Subject: &subject, OccurredAt: &when, DueAt: due, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "project", EntityID: project.UUID}},
-	}
-	if kind == "meeting" {
-		// Only a meeting someone recorded held moves the project's clock.
-		in.MeetingStatus = new("held")
-	}
-	if _, _, err := b.env.Activities.LogActivity(b.env.Admin(), in); err != nil {
+	}); err != nil {
 		t.Fatalf("logging a %s on the project: %v", kind, err)
 	}
 }

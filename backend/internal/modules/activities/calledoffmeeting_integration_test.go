@@ -30,10 +30,10 @@ import (
 // Every later fixture time is an offset from it.
 var pinnedQuiet = time.Date(2026, 4, 12, 9, 0, 0, 0, time.UTC)
 
-// A held meeting answers a quiet reminder; called off, the reminder reopens.
+// A booked meeting answers a quiet reminder; called off, the reminder reopens.
 //
 // The path in the order it happens. A record goes quiet, a reminder reports
-// it, a meeting logged as held closes it, and the meeting is called off.
+// it, a meeting logged while booked closes it, and the meeting is called off.
 // Nobody was ever in touch.
 //
 // Reopening rather than re-raising, because the scan cannot raise a
@@ -45,15 +45,16 @@ func TestACalledOffMeetingReopensTheQuietReminderItAnswered(t *testing.T) {
 	deal := e.seedQuietDeal(t, quietSince)
 	reminder := e.seedQuietReminder(t, deal, quietSince)
 
-	// A meeting recorded held is contact, so it closes the reminder.
-	meeting := e.seedMeeting(t, deal, "held", pinnedQuiet.AddDate(0, 0, 89))
+	// A meeting logged while still booked is contact, so it closes the
+	// reminder. This is the behaviour the fix must keep.
+	meeting := e.seedMeeting(t, deal, "booked", pinnedQuiet.AddDate(0, 0, 89))
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	closed, err := store.CompleteQuietRemindersReachedBy(e.asResolver(), ids.From[ids.ActivityKind](meeting))
 	if err != nil {
-		t.Fatalf("completing the reminder a held meeting answered: %v", err)
+		t.Fatalf("completing the reminder a booked meeting answered: %v", err)
 	}
 	if closed != 1 {
-		t.Fatalf("a held meeting closed %d reminders, want 1 — the rest of this "+
+		t.Fatalf("a booked meeting closed %d reminders, want 1 — the rest of this "+
 			"test would then prove nothing about reopening", closed)
 	}
 	if !e.reminderIsDone(t, reminder) {
@@ -87,7 +88,7 @@ func TestACalledOffMeetingLeavesAReminderAnsweredSinceAlone(t *testing.T) {
 	deal := e.seedQuietDeal(t, quietSince)
 	reminder := e.seedQuietReminder(t, deal, quietSince)
 
-	meeting := e.seedMeeting(t, deal, "held", pinnedQuiet.AddDate(0, 0, 88))
+	meeting := e.seedMeeting(t, deal, "booked", pinnedQuiet.AddDate(0, 0, 88))
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	if _, err := store.CompleteQuietRemindersReachedBy(e.asResolver(), ids.From[ids.ActivityKind](meeting)); err != nil {
 		t.Fatalf("completing the reminder: %v", err)

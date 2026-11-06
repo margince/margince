@@ -37594,7 +37594,7 @@ type Company360 struct {
 	// be a claim about the account rather than about what was readable.
 	Health *Company360Health `json:"health,omitempty"`
 
-	// LastContact The newest exchange with the account in either direction, over the same walk: an email, a call that reached somebody, a chat message, or a meeting someone recorded as held. A past meeting with no recorded outcome is not contact, and nor is a note. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws.
+	// LastContact The newest exchange with the account in either direction, over the same walk: an email, a call that reached somebody, a chat message, or a meeting whose time has passed and that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws.
 	LastContact *Company360LastContact `json:"last_contact,omitempty"`
 
 	// LastInboundAt When one of the account's current contacts last wrote to us: the newest of their own last_inbound_at, over the activities the timeline walks. Mail a colleague sent, and activity filed on the account alone, does not move it. Null means none of them ever wrote, which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.

@@ -32,15 +32,6 @@ func act(kind crmcontracts.ActivityKind, at time.Time) crmcontracts.Activity {
 	}
 }
 
-// heldMeeting is a meeting someone recorded as held, the only past meeting
-// that is contact.
-func heldMeeting(at time.Time) crmcontracts.Activity {
-	a := act(crmcontracts.ActivityKindMeeting, at)
-	held := crmcontracts.ActivityMeetingStatusHeld
-	a.MeetingStatus = &held
-	return a
-}
-
 func inboundMail(at time.Time) crmcontracts.Activity {
 	a := act(crmcontracts.ActivityKindEmail, at)
 	dir := crmcontracts.ActivityDirectionInbound
@@ -325,7 +316,7 @@ func TestAQuietContactedDealNamesTheChampionToMeet(t *testing.T) {
 	champion := seat("champion", "Annabelle Malherbe")
 	f := facts{
 		deal: openDeal(), now: testNow, loc: time.UTC,
-		timeline: []crmcontracts.Activity{heldMeeting(testNow.AddDate(0, 0, -23))},
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
 		seats:    []Seat{{Role: "blocker", Name: "Nadine Pichelot"}, champion},
 	}
 
@@ -362,7 +353,7 @@ func TestTheMeetingRequestTakesTheBestAvailableRole(t *testing.T) {
 	// the influencer beside them is not.
 	f := facts{
 		deal: openDeal(), now: testNow, loc: time.UTC,
-		timeline: []crmcontracts.Activity{heldMeeting(testNow.AddDate(0, 0, -30))},
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -30))},
 		seats:    []Seat{seat("influencer", "Ines Eschbacher"), seat("economic_buyer", "Philipp Königs")},
 	}
 
@@ -378,7 +369,7 @@ func TestTheMeetingRequestNeverNamesTheBlocker(t *testing.T) {
 	// refuse the deal is not who to send a rep to meet.
 	f := facts{
 		deal: openDeal(), now: testNow, loc: time.UTC,
-		timeline: []crmcontracts.Activity{heldMeeting(testNow.AddDate(0, 0, -30))},
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -30))},
 		seats:    []Seat{seat("blocker", "Nadine Pichelot")},
 	}
 
@@ -410,7 +401,7 @@ func TestASeatTheReaderMayNotFileAgainstIsNamedByRoleOnly(t *testing.T) {
 	champion.Attachable = false
 	f := facts{
 		deal: openDeal(), now: testNow, loc: time.UTC,
-		timeline: []crmcontracts.Activity{heldMeeting(testNow.AddDate(0, 0, -23))},
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
 		seats:    []Seat{champion},
 	}
 
@@ -443,7 +434,7 @@ func TestAFreshMoveNamesItsContactToTheCacheAndTheAudience(t *testing.T) {
 	champion := seat("champion", "Annabelle Malherbe")
 	f := facts{
 		deal: openDeal(), now: testNow, loc: time.UTC,
-		timeline: []crmcontracts.Activity{heldMeeting(testNow.AddDate(0, 0, -23))},
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
 		seats:    []Seat{champion},
 	}
 
@@ -477,7 +468,7 @@ func TestTheCacheKeyMovesWhenTheContactDoes(t *testing.T) {
 		champion.ContactID = contactID
 		return facts{
 			deal: openDeal(), now: testNow, loc: time.UTC,
-			timeline: []crmcontracts.Activity{heldMeeting(testNow.AddDate(0, 0, -23))},
+			timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
 			seats:    []Seat{champion},
 		}
 	}
@@ -523,7 +514,7 @@ func TestAHousekeepingTaskDoesNotDecideTheMove(t *testing.T) {
 	// own reminder must still say what a colleague should do.
 	f := facts{
 		deal: openDeal(), now: testNow, loc: time.UTC,
-		timeline: []crmcontracts.Activity{heldMeeting(testNow.AddDate(0, 0, -23))},
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
 		seats:    []Seat{seat("champion", "Annabelle Malherbe")},
 	}
 

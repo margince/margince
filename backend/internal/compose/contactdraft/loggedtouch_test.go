@@ -72,15 +72,13 @@ func TestANotesTextReachesTheBuiltRequest(t *testing.T) {
 	}
 }
 
-// A held meeting's text reaches the model by the same rule as a note's. A
-// past meeting nobody reported held is awaiting its outcome and is left out.
+// A logged meeting's text reaches the model by the same rule as a note's.
 func TestALoggedMeetingsTextIsFolded(t *testing.T) {
-	held, unreported := crmcontracts.ActivityMeetingStatusHeld, logged(crmcontracts.ActivityKindMeeting, draftedAt.Add(-2*time.Hour), "Nobody said how it went.")
-	meeting := logged(crmcontracts.ActivityKindMeeting, draftedAt.Add(-time.Hour), "Agreed to send the pilot scope by Friday.")
-	meeting.MeetingStatus = &held
-	recent := FoldRecent([]crmcontracts.Activity{meeting, unreported}, draftedAt, time.UTC)
+	recent := FoldRecent([]crmcontracts.Activity{
+		logged(crmcontracts.ActivityKindMeeting, draftedAt.Add(-time.Hour), "Agreed to send the pilot scope by Friday."),
+	}, draftedAt, time.UTC)
 	if len(recent) != 1 || recent[0].Record != "Agreed to send the pilot scope by Friday." {
-		t.Errorf("the meetings' records = %+v, want only the held one", recent)
+		t.Errorf("the meeting's record = %+v", recent)
 	}
 }
 

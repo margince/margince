@@ -71,14 +71,14 @@ func logMail(t *testing.T, e *integration.Env, contact ids.UUID, direction strin
 	}
 }
 
-// loggedMeeting is a held meeting logged by hand with a direction.
+// loggedMeeting is a booked meeting logged by hand with a direction.
 type loggedMeeting struct{ id ids.ActivityID }
 
 func logMeeting(t *testing.T, e *integration.Env, link activities.ActivityLinkInput, direction string, at time.Time) loggedMeeting {
 	t.Helper()
-	subject, held := "Fold meeting", "held"
+	subject, booked := "Fold meeting", "booked"
 	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "meeting", Subject: &subject, Direction: &direction, MeetingStatus: &held,
+		Kind: "meeting", Subject: &subject, Direction: &direction, MeetingStatus: &booked,
 		OccurredAt: &at, Source: "manual", Links: []activities.ActivityLinkInput{link},
 	})
 	if err != nil {
@@ -118,7 +118,6 @@ func TestACanceledMeetingIsNoGraphEdgesLastInteraction(t *testing.T) {
 	held := integration.CalendarMeeting{Event: "evt-fold-held", At: now.AddDate(0, 0, -10), Links: contactLink(dana), Parties: parties}
 	called := integration.CalendarMeeting{Event: "evt-fold-called", At: now.AddDate(0, 0, -2), Links: contactLink(dana), Parties: parties}
 	touched := []ids.UUID{held.Capture(t, e), called.Capture(t, e)}
-	e.RecordHeld(t, touched[0])
 	called.Cancel(t, e)
 
 	assertLastAtHeld := func(path string) {
@@ -166,7 +165,7 @@ func TestACanceledMeetingIsNoDealEngagement(t *testing.T) {
 		return slices.Contains(found, contact)
 	}
 	if !engaged() {
-		t.Fatal("their reply and our held meeting do not engage the stakeholder — the case below proves nothing")
+		t.Fatal("their reply and our booked meeting do not engage the stakeholder — the case below proves nothing")
 	}
 	pitch.cancel(t, e)
 	if engaged() {
@@ -207,16 +206,8 @@ func TestACanceledMeetingIsNotTheAccountsNewestMessage(t *testing.T) {
 	acct := quietAccount{company: ids.From[ids.CompanyKind](company), now: time.Now().UTC()}
 	acct.contact = employedAt(t, e, company, "Rae Reply")
 	logMail(t, e, acct.contact, "outbound", acct.now.AddDate(0, 0, -10))
-	// A calendar cancel leaves a meeting someone recorded held alone, so the
-	// held meeting is called off by its member.
-	subject, held, at := "Fold chat", "held", acct.now.AddDate(0, 0, -2)
-	chat, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "meeting", Subject: &subject, MeetingStatus: &held, OccurredAt: &at, Source: "manual",
-		Links: []activities.ActivityLinkInput{onContact(acct.contact)},
-	})
-	if err != nil {
-		t.Fatalf("logging the held meeting: %v", err)
-	}
+	chat := integration.CalendarMeeting{Event: "evt-fold-chat", At: acct.now.AddDate(0, 0, -2), Links: contactLink(acct.contact)}
+	chat.Capture(t, e)
 
 	asksForAReply := func() bool {
 		page := pageOf(t, e, acct)
@@ -230,7 +221,7 @@ func TestACanceledMeetingIsNotTheAccountsNewestMessage(t *testing.T) {
 	if asksForAReply() {
 		t.Fatal("a meeting after our mail still reads as no reply — the case below proves nothing")
 	}
-	loggedMeeting{id: ids.From[ids.ActivityKind](ids.UUID(chat.Id))}.cancel(t, e)
+	chat.Cancel(t, e)
 	if !asksForAReply() {
 		t.Error("a canceled meeting still answers our mail, so the no-reply suggestion never fires")
 	}
