@@ -233,7 +233,6 @@ changes ──┬─> deterministic-gates
           ├─> integration  →  _lane-integration.yml ────────────────┐
           │                     integration-shards (×6) ──┐         │
           │                     integration-unit-coverage ┴─> fan-in│
-          ├─> extension-reference ──────────────────────────────┐   │
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
           ├─> frontend  →  _lane-frontend.yml                  │   │
@@ -243,15 +242,15 @@ changes ──┬─> deterministic-gates
           ├─> uat  (`frontend` scope, beside the lane)          │   │
           ├─> live-boot                                         │   │
           v                                                     v   v
- deterministic-gates + integration + extension-reference + frontend ──> sonarcloud
+ deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
   secret-scan    (every non-draft change, independent — + the image-pin gate)
 
   ci  ── the ONE required context. needs: deterministic-gates,
-         backend-lint, craftsmanship, craft-residue, secret-scan,
-         extension-reference, integration, frontend, uat, license-gate,
-         images   (eleven — vuln and live-boot stay advisory and are NOT
-         in the fan-in)
+         test-budget, backend-lint, craftsmanship, craft-residue,
+         secret-scan, integration, frontend, uat, license-gate, images
+         (eleven — vuln and live-boot stay advisory and are NOT in the
+         fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -364,8 +363,8 @@ loads that first snapshot forever.
 
 - On this repo, that blob is **about 25 MB**, while a warm Go build cache is **about 550 MB**. So the
   module cache was loaded, and the build cache was not.
-- 11 Go jobs per backend run each compiled the module from the start. Those are the shards, the merge
-  gate, the composed build lane, the coverage pass, `live-boot` and `govulncheck`.
+- Every Go job of a backend run compiled the module from the start: the shards, the merge gate, the
+  coverage pass, `live-boot` and `govulncheck`.
 - setup-go still owns the module cache; this action owns the build cache beside it.
 
 Two kinds exist. A build tag and coverage code change the package builds, and only the
@@ -373,7 +372,7 @@ dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
+| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `integration unit coverage`, `live-boot`, `vuln` |
 | `integration` | `cache-warm.yml` job `integration` | every shard |
 
 ### The writer lives in `cache-warm.yml`, on a schedule
@@ -481,8 +480,9 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 - **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
 - **`craftsmanship` starts beside `deterministic-gates`.** It reads source only, so a red build does
   not change its findings, and both reds show in one round.
-- **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
-  and the shard profiles cannot reach them.
+- **The `unit` leg writes the extension coverage.** Extension units are separate Go modules, and
+  `test-extensions` in that leg of `deterministic-gates` is their only test run. Every check builds the
+  core with the units under `extensions/`.
 - **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws
   the slow `e2e` tests work through its part without running minutes past its siblings.
 - **`integration unit coverage`** exists because the shards run just the packages tagged for
