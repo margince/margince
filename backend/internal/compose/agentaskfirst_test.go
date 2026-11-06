@@ -162,10 +162,12 @@ func TestTheLoopAgentIsNeverToldToAskItsUser(t *testing.T) {
 	if len(brain.requests) == 0 {
 		t.Fatal("the run made no model call, so nothing it was shown was checked")
 	}
-	shown := brain.requests[0].System + string(brain.requests[0].ResponseSchema)
+	var request strings.Builder
+	request.WriteString(brain.requests[0].System + string(brain.requests[0].ResponseSchema))
 	for _, m := range brain.requests[0].Messages {
-		shown += m.Content
+		request.WriteString(m.Content)
 	}
+	shown := request.String()
 	for _, tool := range tools {
 		if !strings.Contains(shown, "- "+tool+" — ") {
 			t.Errorf("%s is not in the run's listing, so its absent clause proves nothing", tool)
