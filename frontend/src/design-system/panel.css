@@ -362,8 +362,10 @@
   display: none;
 }
 /* Directly under the header there is no body above to be spaced off, so the
- * strip pays for its own top interval; so it does under a list's last row. */
+ * strip pays for its own top interval; so it does under a list's last row,
+ * and at the top of an untitled panel that holds nothing else. */
 .panel-head + .panel-actions,
+.panel > .panel-actions:first-child,
 .panel-row-record + .panel-actions,
 .panel > .settinglist-bleed + .panel-actions,
 .panel > .table-scroll-bleed + .panel-actions {
