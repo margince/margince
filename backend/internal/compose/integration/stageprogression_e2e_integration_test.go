@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -44,6 +45,14 @@ var stageProgressionClock = time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)
 // records the evidence that settles it, and runs the real proposer.
 //
 // Answers the deal and whether a card was staged.
+// e2eProposer is the real proposer on the fixed clock these tests read.
+func e2eProposer(e *Env) *compose.StageProgressionProposer {
+	return compose.NewStageProgressionProposer(e.Pool, e.Deals,
+		approvals.NewService(e.DB()),
+		func() time.Time { return stageProgressionClock },
+		slog.New(slog.DiscardHandler))
+}
+
 func proposeOnMetCriteria(t *testing.T, e *Env) (ids.DealID, bool) {
 	t.Helper()
 	admin := e.Admin()
@@ -84,11 +93,7 @@ func proposeOnMetCriteria(t *testing.T, e *Env) (ids.DealID, bool) {
 			"fixture reason rather than a product one and every assertion here is vacuous")
 	}
 
-	proposer := compose.NewStageProgressionProposer(e.Pool, e.Deals,
-		approvals.NewService(e.DB()),
-		func() time.Time { return stageProgressionClock },
-		slog.New(slog.DiscardHandler))
-	staged, err := proposer.Propose(admin, deal)
+	staged, err := e2eProposer(e).Propose(admin, deal)
 	if err != nil {
 		t.Fatalf("proposing the move: %v", err)
 	}
@@ -110,7 +115,8 @@ func busDrivenCtx(t *testing.T) context.Context {
 	return principal.WithCorrelationID(
 		principal.WithActor(t.Context(), principal.Principal{
 			Type: principal.PrincipalSystem, ID: "system:stage-evidence",
-		}), ids.NewV7())
+		}), ids.NewV7(),
+	)
 }
 
 func TestAProposalFromTheBusResolvesItsOwnWorkspace(t *testing.T) {
@@ -151,6 +157,72 @@ func TestAProposalFromTheBusResolvesItsOwnWorkspace(t *testing.T) {
 //
 // This is the test the three wiring defects each fail. It cannot pass while
 // the proposer stages through an entry point that refuses its input.
+// A deal whose stored evidence is judged again re-offers the move.
+//
+// Removing a mistaken own domain turns suppressed evidence back into buyer
+// evidence. That correction is the last thing to touch the deal: no job is
+// queued behind it, and the next claim may be months away. An event ignored
+// here is a card nobody ever sees.
+func TestJudgingADealsEvidenceAgainReOffersTheMove(t *testing.T) {
+	e := Setup(t)
+	deal, staged := proposeOnMetCriteria(t, e)
+	if !staged {
+		t.Fatal("the fixture staged no card, so this test cannot tell a re-offer from a first offer")
+	}
+	// Take the card away, leaving a deal whose criteria are met and whose
+	// inbox is empty: the state a correction leaves behind.
+	if _, err := e.Pool.Exec(t.Context(),
+		`DELETE FROM stage_progression_outcome WHERE approval_id IN
+		   (SELECT id FROM approval WHERE kind = $1 AND target_entity_id = $2)`,
+		deals.StageProgressionKind, deal); err != nil {
+		t.Fatalf("clearing the ledger: %v", err)
+	}
+	if _, err := e.Pool.Exec(t.Context(),
+		`DELETE FROM approval WHERE kind = $1 AND target_entity_id = $2`,
+		deals.StageProgressionKind, deal); err != nil {
+		t.Fatalf("clearing the card: %v", err)
+	}
+
+	// On the clock the envelope is stamped with. HandleEvent skips an event
+	// older than its backlog window, so a fixed stamp read against time.Now
+	// would look like replayed history.
+	trigger := compose.NewStageEvidenceTrigger(e.Pool, e.Deals, nil, nil, e2eProposer(e),
+		slog.New(slog.DiscardHandler)).
+		WithClock(func() time.Time { return stageProgressionClock })
+	if err := trigger.HandleEvent(busDrivenCtx(t), evidenceJudgedAgain(t, deal)); err != nil {
+		t.Fatalf("handling the deal whose evidence was judged again: %v", err)
+	}
+
+	var pending int
+	if err := e.Pool.QueryRow(t.Context(),
+		`SELECT count(*) FROM approval WHERE kind = $1 AND target_entity_id = $2 AND status = 'pending'`,
+		deals.StageProgressionKind, deal).Scan(&pending); err != nil {
+		t.Fatalf("reading the inbox: %v", err)
+	}
+	if pending != 1 {
+		t.Errorf("%d cards stand after the evidence was judged again, want 1", pending)
+	}
+}
+
+// evidenceJudgedAgain is what the authorship correction emits: deal.updated
+// naming the field the correction wrote.
+func evidenceJudgedAgain(t *testing.T, deal ids.DealID) kevents.Envelope {
+	t.Helper()
+	raw, err := json.Marshal(crmcontracts.PublicEventDealUpdated{
+		ChangedFields: map[string]any{deals.ChangedFieldStageEvidence: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return kevents.Envelope{
+		EventID: ids.NewV7(), Type: "deal.updated", Version: 1,
+		OccurredAt: stageProgressionClock,
+		Entity:     kevents.EntityRef{Type: "deal", ID: deal.UUID},
+		Payload:    raw,
+		Trace:      kevents.Trace{CorrelationID: ids.NewV7()},
+	}
+}
+
 func TestEvidenceLandingStagesACardAndOpensTheLedger(t *testing.T) {
 	e := Setup(t)
 	deal, staged := proposeOnMetCriteria(t, e)
@@ -453,7 +525,8 @@ func TestAnAcceptedCardDoesNotProtectTheDealAgainstTheNextOne(t *testing.T) {
 	}
 	// The REAL registry, so approving here runs the effect a rep's click runs.
 	if _, err := compose.StageProgressionDecisions(e.Pool).Decide(
-		admin, approvalID, true, nil); err != nil {
+		admin, approvalID, true, nil,
+	); err != nil {
 		t.Fatalf("approving the card: %v", err)
 	}
 
@@ -497,7 +570,8 @@ func deliverApprovalDecided(t *testing.T, e *Env, approvalID ids.ApprovalID) {
 		t.Fatalf("decoding the outbox envelope: %v", err)
 	}
 	consumer := compose.NewStageProgressionOutcome(
-		e.Pool, e.Deals, identity.NewService(e.Pool), slog.New(slog.DiscardHandler))
+		e.Pool, e.Deals, identity.NewService(e.Pool), slog.New(slog.DiscardHandler),
+	)
 	if err := consumer.HandleEvent(t.Context(), env); err != nil {
 		t.Fatalf("the outcome consumer refused the decision it was given: %v", err)
 	}

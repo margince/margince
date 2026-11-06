@@ -285,12 +285,17 @@ func announceEvidence(ctx context.Context, tx pgx.Tx,
 // payload names no evidence field: a subscriber that needs the ledger re-reads
 // it, and putting a snippet on the bus would publish quoted buyer text to
 // every consumer of a deal rename.
+// ChangedFieldStageEvidence is the deal.updated field a re-judged author
+// writes, and the field a reader keys on to re-offer that deal's stage move.
+// Named here because the emitter and that reader sit in different packages.
+const ChangedFieldStageEvidence = "stage_evidence"
+
 func emitEvidenceChanged(
 	ctx context.Context, tx pgx.Tx, auditID ids.UUID, dealID ids.DealID,
 ) error {
 	if err := storekit.EmitEvent(ctx, tx, auditID, dealID.UUID,
 		crmcontracts.PublicEventDealUpdated{
-			ChangedFields: map[string]any{"stage_evidence": true},
+			ChangedFields: map[string]any{ChangedFieldStageEvidence: true},
 		}); err != nil {
 		return fmt.Errorf("emit deal.updated for its stage evidence: %w", err)
 	}
