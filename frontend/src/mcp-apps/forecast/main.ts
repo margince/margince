@@ -119,16 +119,6 @@ function readingsCard(answer: Record<string, unknown>): HTMLElement {
       ),
     );
   }
-  const qualified = asRecord(answer.qualified);
-  if ("weighted_minor" in qualified) {
-    body.appendChild(
-      el(
-        "p",
-        "readings-floor",
-        `Counting only deals the customer still backs: ${compactMoney(qualified.weighted_minor, currency)} weighted.`,
-      ),
-    );
-  }
   body.appendChild(
     rowAction("What moved it", () =>
       askAssistant(

@@ -56,7 +56,6 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"meeting_follow_up": {"open", "reply"},
 	"lead_response":     {"open"},
 	"deal_at_risk":      {"open"},
-	"deal_review":       {"open"},
 	// `complete` settles the claim as done, through POST /claims/{id}/settle.
 	"conversation_claim": {"open", "complete"},
 	"meeting":            {"open"},
@@ -92,6 +91,7 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// on another screen, and a verb here would promise a repair this queue
 	// cannot make.
 	"capture_health": {"open"},
+	"booking_health": {"open"},
 	"ai_work_health": {"open"},
 	// `retry` reaches AutomationRetry; a failed firing carries it and a blocked
 	// one does not, because blocked is a refusal on purpose.
@@ -153,7 +153,6 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 		"lead_response":     "the same lane shape as customer_waiting, and unreachable for the same reason",
 		"awaiting_reply":    "read beside Assemble like the plan lane; awaitinglane_test exercises its rows",
 		"meeting_follow_up": "read beside Assemble with awaiting_reply; awaitinglane_test exercises its rows",
-		"deal_review":       "read beside Assemble like the plan lane and folded on the worklist; dealreviewlane_test exercises its rows",
 	}
 	reached := map[string]bool{}
 	for _, items := range lanes {
@@ -357,6 +356,7 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			Domain: "hosting.example", Reason: "The site reads as a mail or hosting vendor.",
 			ReasonCode: contacts.PendingVendorVerdict, AskedAt: readInstant,
 		}}}).
+		WithBookingHealth(&stubBookingHealth{rows: []BookingConcern{{PageID: ids.NewV7(), Blocker: "no_calendar"}}}).
 		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("proposal_sent")}}).
 		WithTagSuggestions(&stubTagSuggestions{rows: []crmcontracts.TagSuggestion{
 			tagSuggestionRow(crmcontracts.TagSuggestionEntityTypeContact),

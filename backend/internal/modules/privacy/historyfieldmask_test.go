@@ -54,10 +54,10 @@ func TestTheMaskAReaderReadsARecordsHistoryUnder(t *testing.T) {
 			want:       nil,
 		},
 		{
-			name:       "a mask on the amount takes its whole money group",
+			name:       "a mask on the amount takes its whole money group and the product split",
 			reader:     maskedReader(alwaysMask("deal", "amount_minor")),
 			entityType: "deal",
-			want:       []string{"amount_minor", "currency", "expected_arr_minor"},
+			want:       []string{"amount_minor", "currency", "expected_arr_minor", "line_after", "line_before", "products"},
 		},
 		{
 			name:       "a mask on another object says nothing about this one",

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { useT } from "../../i18n";
+import { currentEmployer } from "../../lib/employmentcurrency";
 import { navigate } from "../../lib/router";
 import { BoughtMark, BoughtText, boughtFields } from "./boughtmarks";
 import type { Contact360 } from "./contact360";
-import { currentEmployer } from "./employmentcurrency";
 
 // The lines under the name, one fact each: "{title} at" over the employer,
 // which is a link because it is a record of its own. A title a purchase filled

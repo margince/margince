@@ -1,0 +1,271 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package activities
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"slices"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+)
+
+// errDealFilingUnconfigured is a store built without its resolver.
+var errDealFilingUnconfigured = errors.New("activity deal filing resolver is not configured")
+
+// DealFilingResolver answers from the deals module which deal an activity's
+// records may file on, in the caller's transaction.
+type DealFilingResolver interface {
+	CompaniesOfRecords(ctx context.Context, tx pgx.Tx, records []ActivityLinkInput) ([]ids.UUID, error)
+	IsOpenDealOfRecords(ctx context.Context, tx pgx.Tx, records []ActivityLinkInput, deal ids.UUID) (bool, error)
+	Resolve(ctx context.Context, tx pgx.Tx, records []ActivityLinkInput) (crmcontracts.ActivityDealFilingOptions, error)
+}
+
+// WithDealFiling binds the resolver a logged call or meeting files through.
+func (s *Store) WithDealFiling(resolver DealFilingResolver) *Store {
+	s.dealFilingResolver = resolver
+	return s
+}
+
+// WithDealFiling binds the resolver on the handlers' store.
+func (h Handlers) WithDealFiling(resolver DealFilingResolver) Handlers {
+	h.store.WithDealFiling(resolver)
+	return h
+}
+
+// WithDealFiling binds the resolver on the provider's store.
+func (p *Provider) WithDealFiling(resolver DealFilingResolver) *Provider {
+	p.store.WithDealFiling(resolver)
+	return p
+}
+
+// DealFilingOptions answers which deal a call on the record would file on, and
+// whether the caller must choose. Filing needs the right to create an activity.
+func (s *Store) DealFilingOptions(ctx context.Context, ref crmcontracts.ActivityDealFiling) (crmcontracts.ActivityDealFilingOptions, error) {
+	out := crmcontracts.ActivityDealFilingOptions{}
+	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return out, err
+	}
+	if err := validateDealFiling(string(crmcontracts.ActivityKindCall), &ref); err != nil {
+		return out, err
+	}
+	if s.dealFilingResolver == nil {
+		return out, errDealFilingUnconfigured
+	}
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.dealFilingResolver.Resolve(ctx, tx, []ActivityLinkInput{{EntityType: string(ref.RecordType), EntityID: ids.UUID(ref.RecordId)}})
+		return err
+	})
+	return out, err
+}
+
+// GetActivityDealFiling serves DealFilingOptions.
+func (h Handlers) GetActivityDealFiling(w http.ResponseWriter, r *http.Request, params crmcontracts.GetActivityDealFilingParams) {
+	out, err := h.store.DealFilingOptions(r.Context(), crmcontracts.ActivityDealFiling{RecordType: params.RecordType, RecordId: params.RecordId})
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func validateDealFiling(kind string, filing *crmcontracts.ActivityDealFiling) error {
+	if filing == nil {
+		return nil
+	}
+	if kind != string(crmcontracts.ActivityKindCall) && kind != KindMeeting {
+		return httperr.Validation("deal_filing", "invalid_kind", "Deal filing applies only to calls and meetings.")
+	}
+	if !filing.RecordType.Valid() {
+		return httperr.Validation("deal_filing", "invalid_record_type", "Choose a contact or company for deal filing.")
+	}
+	if filing.DealId != nil {
+		if filing.Skip != nil && *filing.Skip {
+			return httperr.Validation("deal_filing", "conflicting_choice", "Choose a deal or no deal, not both.")
+		}
+		if err := httperr.RequireBodyID("deal_id", ids.UUID(*filing.DealId)); err != nil {
+			return err
+		}
+	}
+	return httperr.RequireBodyID("record_id", ids.UUID(filing.RecordId))
+}
+
+// applyLoggedDealFiling links a logged call or held meeting to the deal the
+// caller chose or the one open deal its records stand on. An import nobody
+// named a filing for, and an activity already on a deal, project or lead, stays
+// as it came. A filing named on a meeting not held is refused.
+func applyLoggedDealFiling(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
+	if err := validateDealFiling(in.Kind, in.DealFiling); err != nil {
+		return err
+	}
+	if in.DealFiling != nil && !meetingHeldOrUnset(in) {
+		return httperr.Validation("deal_filing", "meeting_not_held", "A meeting is filed on a deal once it is held. Link the deal directly until then.")
+	}
+	if !dealFilingApplies(ctx, in) {
+		return nil
+	}
+	if err := validateFilingContext(ctx, tx, in); err != nil {
+		return err
+	}
+	if linksFileTheActivity(in.Links) {
+		return nil
+	}
+	if in.DealFiling != nil && in.DealFiling.DealId != nil {
+		return fileOnChosenDeal(ctx, tx, in)
+	}
+	if in.DealFiling != nil && in.DealFiling.Skip != nil && *in.DealFiling.Skip {
+		return nil
+	}
+	return fileOnResolvedDeal(ctx, tx, in)
+}
+
+// dealFilingApplies is true for a call or held meeting a member logged here.
+func dealFilingApplies(ctx context.Context, in *LogActivityInput) bool {
+	if in.Kind != string(crmcontracts.ActivityKindCall) && in.Kind != KindMeeting {
+		return false
+	}
+	imported, _ := storekit.ImportMark(ctx)
+	if in.DealFiling == nil && ((imported != nil && *imported) || (in.SourceSystem != nil && strings.HasPrefix(*in.SourceSystem, provenance.ReservedSourceSystemPrefix))) {
+		return false
+	}
+	return meetingHeldOrUnset(in)
+}
+
+// meetingHeldOrUnset is false only for a meeting that states it was not held.
+func meetingHeldOrUnset(in *LogActivityInput) bool {
+	return in.Kind != KindMeeting || in.MeetingStatus == nil || *in.MeetingStatus == string(crmcontracts.ActivityMeetingStatusHeld)
+}
+
+// fileOnChosenDeal links the deal the caller chose, which must be an open deal
+// of the filing's record.
+func fileOnChosenDeal(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
+	if in.dealFilingResolver == nil {
+		return errDealFilingUnconfigured
+	}
+	chosen := ids.UUID(*in.DealFiling.DealId)
+	record := []ActivityLinkInput{{EntityType: string(in.DealFiling.RecordType), EntityID: ids.UUID(in.DealFiling.RecordId)}}
+	open, err := in.dealFilingResolver.IsOpenDealOfRecords(ctx, tx, record, chosen)
+	if err != nil {
+		return err
+	}
+	if !open {
+		return httperr.Validation("deal_filing", "unrelated_deal", "Choose an open deal of this record's company, or choose none.")
+	}
+	in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: linkEntityDeal, EntityID: chosen})
+	return nil
+}
+
+// linksFileTheActivity is true when a link already gives the activity a home.
+func linksFileTheActivity(links []ActivityLinkInput) bool {
+	return slices.ContainsFunc(links, func(link ActivityLinkInput) bool {
+		return link.EntityType == linkEntityDeal || link.EntityType == linkEntityProject || link.EntityType == linkEntityLead
+	})
+}
+
+// fileOnResolvedDeal links the one open deal the records stand on. An explicit
+// filing that needs a choice is refused, and an implicit one stays unfiled.
+func fileOnResolvedDeal(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
+	if in.dealFilingResolver == nil {
+		if in.DealFiling != nil {
+			return errDealFilingUnconfigured
+		}
+		return nil
+	}
+	records := in.Links
+	if in.DealFiling != nil {
+		records = []ActivityLinkInput{{EntityType: string(in.DealFiling.RecordType), EntityID: ids.UUID(in.DealFiling.RecordId)}}
+	}
+	options, err := in.dealFilingResolver.Resolve(ctx, tx, records)
+	if err != nil {
+		return err
+	}
+	if options.ChoiceRequired {
+		if in.DealFiling != nil {
+			return httperr.Validation("deal_filing", "choose_deal", "Choose an open deal or choose none.")
+		}
+		return nil
+	}
+	// An automatic link never spends the caller's link allowance: a request
+	// already at the ceiling stays unfiled rather than refused.
+	if options.SuggestedDealId != nil && len(in.Links) < maxActivityLinks {
+		in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: linkEntityDeal, EntityID: ids.UUID(*options.SuggestedDealId)})
+	}
+	return nil
+}
+
+func validateFilingContext(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
+	ref := in.DealFiling
+	if ref == nil {
+		return nil
+	}
+	for _, link := range in.Links {
+		if link.EntityType == string(ref.RecordType) && link.EntityID == ids.UUID(ref.RecordId) {
+			return nil
+		}
+	}
+	if ref.RecordType == linkEntityCompany && in.dealFilingResolver != nil {
+		companies, err := in.dealFilingResolver.CompaniesOfRecords(ctx, tx, in.Links)
+		if err != nil {
+			return err
+		}
+		if slices.Contains(companies, ids.UUID(ref.RecordId)) {
+			return nil
+		}
+	}
+	return httperr.Validation("deal_filing", "unrelated_record", "Choose the linked contact or its current company.")
+}
+
+func (s *Store) fileUpdatedActivity(ctx context.Context, tx pgx.Tx, current crmcontracts.Activity, in UpdateActivityInput) (crmcontracts.Activity, error) {
+	if in.DealFiling == nil && in.MeetingStatus == nil && in.CallOutcome == nil {
+		return current, nil
+	}
+	filing := LogActivityInput{
+		Kind: string(current.Kind), DealFiling: in.DealFiling,
+		SourceSystem: current.SourceSystem, dealFilingResolver: s.dealFilingResolver,
+	}
+	if current.MeetingStatus != nil {
+		filing.MeetingStatus = new(string(*current.MeetingStatus))
+	}
+	for _, kind := range []string{linkEntityDeal, linkEntityProject, linkEntityLead} {
+		if filed, err := hasLinkOfType(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(current.Id)), kind); err != nil || filed {
+			return current, err
+		}
+	}
+	var links []crmcontracts.ActivityLink
+	if current.Links != nil {
+		links = *current.Links
+	}
+	for _, link := range links {
+		filing.Links = append(filing.Links, ActivityLinkInput{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)})
+	}
+	if err := applyLoggedDealFiling(ctx, tx, &filing); err != nil {
+		return current, err
+	}
+	added := filing.Links[len(links):]
+	if len(added) == 0 {
+		return current, nil
+	}
+	if err := storekit.LockLastActivityTargets(ctx, tx, lastActivityTargets(added)); err != nil {
+		return current, err
+	}
+	for _, link := range added {
+		if _, err := RelinkActivityInTx(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(current.Id)), RelinkActivityInput{
+			EntityType: link.EntityType, EntityID: link.EntityID, unfiledOnly: true,
+		}); err != nil {
+			return current, err
+		}
+	}
+	return readActivityAt(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(current.Id)), storekit.LiveOnly, s.now())
+}
