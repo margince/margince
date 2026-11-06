@@ -65,8 +65,10 @@ func TestAThreadsSalarySheetReachesThePromptInsideTheFence(t *testing.T) {
 		// Stored as the sniffer stores every xlsx.
 		sheet: {contentType: "application/zip", raw: salarySheet(t)},
 	})
-	row := capture.PendingThread{ID: ids.NewV7(), Subject: "Invoice", Body: "please find attached the invoice",
-		Documents: []capture.ThreadDocument{{AttachmentID: sheet, Filename: "Cost+.xlsx", ByteSize: int64(len(salarySheet(t)))}}}
+	row := capture.PendingThread{
+		ID: ids.NewV7(), Subject: "Invoice", Body: "please find attached the invoice",
+		Documents: []capture.ThreadDocument{{AttachmentID: sheet, Filename: "Cost+.xlsx", ByteSize: int64(len(salarySheet(t)))}},
+	}
 
 	read, err := reader.read(context.Background(), row, newDocumentPass())
 	if err != nil {

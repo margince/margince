@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,6 +14,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/go-pdf/fpdf"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -64,9 +67,6 @@ func TestAnInvoiceMailCarryingASalarySheetStaysWithItsParticipants(t *testing.T)
 		t.Fatalf("confidentiality pass: %v", err)
 	}
 
-	if len(brain.prompts) != 1 {
-		t.Fatalf("the model was asked %d times, want once", len(brain.prompts))
-	}
 	if got := threadStatus(t, e, thread); got != capture.VerdictHeld {
 		t.Fatalf("thread status = %q, want held: the salary sheet never reached the verdict", got)
 	}
@@ -155,5 +155,122 @@ func TestAThreadWithDocumentsPastTheCapDoesNotOpen(t *testing.T) {
 	}
 	if got := activityAudience(t, e, mail); got != "participants" {
 		t.Fatalf("the mail is %q, want participants", got)
+	}
+}
+
+// alwaysOrdinaryBrain is the worst model there is for this check: it calls
+// every thread routine company business, with confidence.
+type alwaysOrdinaryBrain struct{ asked int }
+
+func (b *alwaysOrdinaryBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	b.asked++
+	asked := fencedIDs(req.System, req.Messages[0].Content, "id")
+	if len(asked) != 1 {
+		return model.Response{}, errors.New("the prompt fenced no thread, or more than one")
+	}
+	payload, err := json.Marshal(map[string]any{"results": []map[string]any{
+		{"id": asked[0], "verdict": confidentialityOrdinary, "confidence": 0.99},
+	}})
+	return model.Response{Text: string(payload)}, err
+}
+
+// staffInvoicePDF is an invoice shaped like one that bills a customer for one
+// named engineer at a monthly rate, which is what that engineer costs.
+func staffInvoicePDF(t *testing.T) []byte {
+	t.Helper()
+	pdf := fpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.MultiCell(0, 5, `Invoice
+BILL TO
+Northwind GmbH
+INVOICE 1043 SAP
+SERVICE PERIOD March 2026
+ACTIVITY QTY RATE AMOUNT
+Development Services Senior PHP Quang Le
+Van
+Northwind SAP ERP Support
+1 6,212.00 6,212.00
+BALANCE DUE USD 6,212.00`, "", "L", false)
+	var buf bytes.Buffer
+	if err := pdf.Output(&buf); err != nil {
+		t.Fatalf("rendering the invoice fixture: %v", err)
+	}
+	return buf.Bytes()
+}
+
+func TestAStaffInvoiceAndCostPlusSheetStayPrivateWhateverTheModelSays(t *testing.T) {
+	costPlus, err := os.ReadFile("../platform/doctext/testdata/costplus.xlsx")
+	if err != nil {
+		t.Fatalf("reading the cost-plus fixture: %v", err)
+	}
+	for name, files := range map[string]map[string][2]string{
+		"the invoice alone":         {"2026.03 Northwind INV 1043 SAP.pdf": {"application/pdf", string(staffInvoicePDF(t))}},
+		"the cost-plus sheet alone": {"2026 03 Northwind Cost+ VER 2.xlsx": {"application/zip", string(costPlus)}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := integration.Setup(t)
+			blob := blobstore.NewMemory()
+			mail := seedHeldThreadMail(t, e, "thread-staff-invoice", "finance@gradion.example", "[Northwind] Development Service - March 2026")
+			for filename, file := range files {
+				captureMailDocument(t, e, blob, mail, filename, file[0], []byte(file[1]))
+			}
+			thread := seedThreadQuestion(t, e, "thread-staff-invoice", mail)
+
+			brain := &alwaysOrdinaryBrain{}
+			engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
+			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+				t.Fatalf("confidentiality pass: %v", err)
+			}
+			if got := threadStatus(t, e, thread); got != capture.VerdictHeld {
+				t.Fatalf("thread status = %q, want held: a named engineer's rate opened to the workspace", got)
+			}
+			if got := activityAudienceReason(t, e, mail); got != confidentialityPersonnel {
+				t.Errorf("audience reason = %q, want personnel", got)
+			}
+			if brain.asked != 0 {
+				t.Errorf("the model was asked %d times; the rule decides this thread without it", brain.asked)
+			}
+		})
+	}
+}
+
+func TestAnEarlierReplyCarryingASalarySheetIsNotOpenedWithItsThread(t *testing.T) {
+	e := integration.Setup(t)
+	sheet, err := os.ReadFile("../platform/doctext/testdata/salaries.xlsx")
+	if err != nil {
+		t.Fatalf("reading the salary workbook fixture: %v", err)
+	}
+	blob := blobstore.NewMemory()
+	first := seedHeldThreadMail(t, e, "thread-reply-sheet", "billing@vendor.example", "Invoice 1042")
+	thread := seedThreadQuestion(t, e, "thread-reply-sheet", first)
+	reply := seedHeldThreadMail(t, e, "thread-reply-sheet", "billing@vendor.example", "Re: Invoice 1042")
+	captureMailDocument(t, e, blob, reply, "Cost+.xlsx", "application/zip", sheet)
+
+	brain := &salaryReadingBrain{}
+	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
+	ws := principal.WithWorkspaceID(context.Background(), e.WS)
+	if err := engine.RunWorkspace(ws, 0); err != nil {
+		t.Fatalf("first pass: %v", err)
+	}
+	if got := activityAudience(t, e, first); got != "workspace" {
+		t.Fatalf("the plain first message is %q, want workspace", got)
+	}
+	if got := activityAudience(t, e, reply); got != "participants" {
+		t.Fatalf("the reply with the sheet is %q, want participants: the verdict never read its file", got)
+	}
+	if got := threadStatus(t, e, thread); got != capture.VerdictPending {
+		t.Fatalf("thread status = %q, want pending at the reply", got)
+	}
+
+	e.WsExec(t, `UPDATE capture_thread_verdict SET next_attempt_at = now() WHERE id = $1`, thread)
+	if err := engine.RunWorkspace(ws, 0); err != nil {
+		t.Fatalf("second pass: %v", err)
+	}
+	if got := activityAudience(t, e, reply); got != "participants" {
+		t.Fatalf("after its own verdict the reply is %q, want participants", got)
+	}
+	if got := threadStatus(t, e, thread); got != capture.VerdictHeld {
+		t.Fatalf("thread status = %q, want held once the sheet is read", got)
 	}
 }

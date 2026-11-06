@@ -105,6 +105,21 @@ func (e *ConfidentialityVerdictEngine) WithObjectStore(blob blobstore.Store) *Co
 	return &out
 }
 
+// listsStaffCosts says whether the body or any document excerpt names staff
+// with an amount each. Such a thread is personnel without asking a model,
+// which would read an invoice billing engineers by name as ordinary trade.
+func listsStaffCosts(row capture.PendingThread) bool {
+	if capture.ListsStaffCosts(row.Body) {
+		return true
+	}
+	for _, doc := range row.Documents {
+		if capture.ListsStaffCosts(doc.Excerpt) {
+			return true
+		}
+	}
+	return false
+}
+
 // documentPass is what one verdict pass may still fetch.
 type documentPass struct {
 	bytesLeft int64

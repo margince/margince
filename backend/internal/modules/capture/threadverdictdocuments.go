@@ -4,8 +4,13 @@
 package capture
 
 import (
+	"context"
+	"fmt"
+	"path"
 	"slices"
-	"strconv"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/doctext"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -31,27 +36,72 @@ type ThreadDocument struct {
 	Unreadable   bool     `json:"-"`
 }
 
-// threadDocumentSQL is the condition that an attachment row is a stored
-// document on the first message of the claimed verdict v. The caller adds
-// that the message is not restricted.
+// IsThreadDocument says whether a file is a document a thread verdict must
+// read before it may open the thread. The claim, the earlier messages a
+// verdict stamps and an arriving reply all ask this one question.
 //
 // An office type or a zip is a document whatever its name says. The sender
 // chooses the name, and the sniffer stores every xlsx as a zip. A text type
 // counts only without an extension: a calendar invite sniffs as text/plain,
 // and its .ics extension keeps it out.
-func threadDocumentSQL(arg func(any) int) string {
-	ext := `lower(coalesce(substring(at.filename from '\.[^./]*$'), ''))`
-	bareType := `lower(btrim(split_part(coalesce(at.content_type, ''), ';', 1)))`
-	return `at.entity_type = 'activity' AND at.entity_id = v.first_activity_id
-	   AND at.archived_at IS NULL AND at.storage_key <> '' AND NOT at.bytes_withheld
-	   AND (` + ext + ` = ANY($` + strconv.Itoa(arg(documentExtensions())) + `)
-	        OR ` + bareType + ` = ANY($` + strconv.Itoa(arg(officeTypes())) + `)
-	        OR (` + ext + ` = '' AND ` + bareType + ` = ANY($` + strconv.Itoa(arg(doctext.TextTypes)) + `)))`
+func IsThreadDocument(filename, contentType string) bool {
+	ext := strings.ToLower(path.Ext(filename))
+	bare, _, _ := strings.Cut(contentType, ";")
+	bare = strings.ToLower(strings.TrimSpace(bare))
+	if slices.Contains(doctext.OfficeExtensions, ext) || slices.Contains(doctext.TextExtensions, ext) ||
+		bare == "application/zip" || slices.Contains(doctext.OfficeTypes, bare) {
+		return true
+	}
+	return ext == "" && slices.Contains(doctext.TextTypes, bare)
 }
 
-// officeTypes are the types that make a file a document by themselves.
-func officeTypes() []string { return append(slices.Clone(doctext.OfficeTypes), "application/zip") }
+// storedFilesSQL is a JSON list of the stored, live files on the message
+// whose id is activity. It lists at most limit of them; the caller asks for
+// one past its bound, so a longer list is known to be longer.
+func storedFilesSQL(activity, limit string) string {
+	return `coalesce((SELECT jsonb_agg(jsonb_build_object('id', f.id, 'filename', f.filename,
+	                     'content_type', coalesce(f.content_type, ''),
+	                     'byte_size', coalesce(f.byte_size, 0)) ORDER BY f.filename, f.id)
+	          FROM (SELECT at.id, at.filename, at.content_type, at.byte_size FROM attachment at
+	                 WHERE at.entity_type = 'activity' AND at.entity_id = ` + activity + `
+	                   AND at.archived_at IS NULL AND at.storage_key <> '' AND NOT at.bytes_withheld
+	                 ORDER BY at.filename, at.id LIMIT ` + limit + `) f), '[]')`
+}
 
-func documentExtensions() []string {
-	return slices.Concat(doctext.OfficeExtensions, doctext.TextExtensions)
+// maxStoredFiles bounds how many of one message's files a query lists.
+const maxStoredFiles = 200
+
+// threadDocuments keeps the documents among a message's files, the first
+// MaxThreadDocuments of them, and counts the rest. A list cut at its bound
+// counts one more, because a file past the bound is unknown.
+func threadDocuments(files []ThreadDocument) (kept []ThreadDocument, omitted int) {
+	if len(files) > maxStoredFiles {
+		files, omitted = files[:maxStoredFiles], 1
+	}
+	for _, f := range files {
+		if !IsThreadDocument(f.Filename, f.ContentType) {
+			continue
+		}
+		if len(kept) == MaxThreadDocuments {
+			omitted++
+			continue
+		}
+		kept = append(kept, f)
+	}
+	return kept, omitted
+}
+
+// activityCarriesDocumentTx says whether a stored message carries a document.
+func activityCarriesDocumentTx(ctx context.Context, tx pgx.Tx, activity ids.UUID) (bool, error) {
+	var files []ThreadDocument
+	if err := tx.QueryRow(ctx, `SELECT `+storedFilesSQL("$1", "$2"), activity, maxStoredFiles+1).Scan(&files); err != nil {
+		return false, fmt.Errorf("capture: reading a message's documents: %w", err)
+	}
+	return hasThreadDocument(files), nil
+}
+
+// hasThreadDocument says whether any of files is a document.
+func hasThreadDocument(files []ThreadDocument) bool {
+	kept, omitted := threadDocuments(files)
+	return len(kept) > 0 || omitted > 0
 }

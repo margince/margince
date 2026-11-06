@@ -161,8 +161,6 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	p := func(v any) string { return "$" + strconv.Itoa(arg(v)) }
-	isDocument := threadDocumentSQL(arg) + `
-	   AND EXISTS (SELECT 1 FROM activity a WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL)`
 	var out []PendingThread
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The pick is MATERIALIZED so it runs once. An IN over a LIMITed subquery can be
@@ -191,13 +189,9 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 			                      FROM attachment at
 			                     WHERE at.entity_type = 'activity' AND at.entity_id = v.first_activity_id
 			                       AND at.archived_at IS NULL), '{}'),
-			          coalesce((SELECT jsonb_agg(jsonb_build_object('id', d.id, 'filename', d.filename,
-			                                       'content_type', coalesce(d.content_type, ''),
-			                                       'byte_size', coalesce(d.byte_size, 0)) ORDER BY d.filename, d.id)
-			                      FROM (SELECT at.id, at.filename, at.content_type, at.byte_size
-			                              FROM attachment at WHERE `+isDocument+`
-			                             ORDER BY at.filename, at.id LIMIT `+p(MaxThreadDocuments)+`) d), '[]'),
-			          (SELECT count(*) FROM attachment at WHERE `+isDocument+`)`,
+			          coalesce((SELECT `+storedFilesSQL("v.first_activity_id", p(maxStoredFiles+1))+`
+			             WHERE EXISTS (SELECT 1 FROM activity a
+			                            WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL)), '[]')`,
 			args...)
 		if err != nil {
 			return err
@@ -206,15 +200,15 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 		for rows.Next() {
 			t := PendingThread{Claim: claim}
 			var activity *ids.UUID
-			var documents int
+			var files []ThreadDocument
 			if err := rows.Scan(&t.ID, &t.ThreadKey, &t.UserID, &activity,
-				&t.Subject, &t.Body, &t.Attachments, &t.Documents, &documents); err != nil {
+				&t.Subject, &t.Body, &t.Attachments, &files); err != nil {
 				return err
 			}
 			if activity != nil {
 				t.ActivityID = *activity
 			}
-			t.DocumentsOmitted = documents - len(t.Documents)
+			t.Documents, t.DocumentsOmitted = threadDocuments(files)
 			out = append(out, t)
 		}
 		return rows.Err()
