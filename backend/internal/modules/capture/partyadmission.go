@@ -131,8 +131,8 @@ func (s *Sink) admitPartiesAs(ctx context.Context, activity ids.ActivityID, sour
 func (s *Sink) admitOneParty(ctx context.Context, activity ids.ActivityID, source partySource, party admissionParty) error {
 	var rec connector.NormalizedRecord
 	var decision counterpartyDecision
-	// The live probe shares the activity row while a sibling admission's ensure
-	// asks to lock it, so two admissions of one message can deadlock here.
+	// A cycle Postgres breaks is a lost decision, not a refused party, so the whole
+	// transaction runs again from an empty decision.
 	err := storekit.RetryLockCycles(ctx, func() error {
 		rec, decision = connector.NormalizedRecord{}, counterpartyDecision{}
 		return s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -159,6 +159,12 @@ func (s *Sink) admitOneParty(ctx context.Context, activity ids.ActivityID, sourc
 // decidePartyTx reads what one party's admission turns on. A party it refuses
 // leaves decision empty, which admits nobody.
 func (s *Sink) decidePartyTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, source partySource, party admissionParty, rec *connector.NormalizedRecord, decision *counterpartyDecision) error {
+	// Authority before the row, the order the ensure takes. The live probe shares
+	// the activity, and a ledger row's owner key then waits for the seat. The
+	// ensure holds that seat while it waits for this activity.
+	if err := s.holdPartyAuthorityTx(ctx, tx, source.User); err != nil {
+		return err
+	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activity.UUID); err != nil {
 		return err
 	}
