@@ -406,6 +406,78 @@ describe("NotificationBell", () => {
     );
   });
 
+  it("offers each notice the move its target names, beside Mark read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "A lead is past its deadline", {
+          target: { type: "lead", id: "11111111-1111-4111-8111-111111111111" },
+        }),
+        notice("n2", "Is boris@customer.example a contact worth keeping?", {
+          kind: "approval_pending",
+          target: {
+            type: "approval",
+            id: "22222222-2222-4222-8222-222222222222",
+          },
+        }),
+        notice("n3", "Background correction stopped: Folding domains", {
+          kind: "data_task_failed",
+          target: {
+            type: "data_task",
+            id: "33333333-3333-4333-8333-333333333333",
+          },
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const rows = await screen.findAllByRole("listitem");
+    const verb = (row: number, name: string) =>
+      within(rows[row] as HTMLElement).getByRole("link", { name });
+    expect(verb(0, "Open lead").getAttribute("href")).toBe(
+      "/#/leads/11111111-1111-4111-8111-111111111111",
+    );
+    expect(verb(1, "Review request").getAttribute("href")).toBe(
+      "/#/home?approval=22222222-2222-4222-8222-222222222222",
+    );
+    expect(verb(2, "Open System health").getAttribute("href")).toBe(
+      "/#/settings/system-health/diagnostics?section=dataTasks.title",
+    );
+    for (const row of rows) {
+      expect(
+        within(row).getByRole("button", { name: "Mark read" }),
+      ).not.toBeNull();
+    }
+  });
+
+  it("keeps a read notice's move and drops only its Mark read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "A lead is past its deadline", {
+          read_at: "2026-09-15T10:00:00Z",
+          target: { type: "lead", id: "11111111-1111-4111-8111-111111111111" },
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /notifications/i }),
+    );
+
+    expect(
+      (await screen.findByRole("link", { name: "Open lead" })).getAttribute(
+        "href",
+      ),
+    ).toBe("/#/leads/11111111-1111-4111-8111-111111111111");
+    expect(screen.queryByRole("button", { name: "Mark read" })).toBeNull();
+  });
+
   // A record KIND this app has no page for is named and not linked. Offering a
   // link into nothing is worse than offering none.
   it("names a notice it cannot route to, without linking it", async () => {
