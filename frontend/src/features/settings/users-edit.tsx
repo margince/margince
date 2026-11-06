@@ -26,7 +26,7 @@ import { useCaptureStopWarning } from "./users-rolecell";
 import { MemberTeamsField } from "./users-teams";
 
 // Ids are compared as ids, in code-point order, so the set check does not depend on a locale.
-const byId = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+const byId = (a: string, b: string) => Number(a > b) - Number(a < b);
 
 export function EditMember({
   member,
