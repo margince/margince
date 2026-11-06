@@ -36,10 +36,13 @@ var (
 	verificationOff = regexp.MustCompile(`GOSUMDB=off|GONOSUMDB|GONOSUMCHECK|GOINSECURE|GOPRIVATE|GOFLAGS=\S*-insecure|COREPACK_INTEGRITY_KEYS`)
 )
 
-// The snapshot both URIs must name, at the one timestamp ARG Renovate moves.
+// The snapshot both archives must name on both hosts, at the one timestamp
+// ARG Renovate moves.
 var snapshotSources = []string{
 	"http://snapshot-cloudflare.debian.org/archive/debian/${DEBIAN_SNAPSHOT}",
+	"http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}",
 	"http://snapshot-cloudflare.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}",
+	"http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}",
 	`Acquire::Check-Valid-Until "false";`,
 	"/etc/apt/sources.list.d/debian.sources",
 }
@@ -79,6 +82,7 @@ func TestTheCIImagePinGateRefusesEachUnpinnedShape(t *testing.T) {
 		{"a COPY source with a tag and no digest", `COPY --from=go `, "COPY --from=golang:trixie "},
 		{"a download with no checksum", `sha256sum -c -`, "true"},
 		{"an apt source outside the snapshot", `http://snapshot-cloudflare\.debian\.org/archive/debian/\$\{DEBIAN_SNAPSHOT\}`, "http://deb.debian.org/debian"},
+		{"an update that lets a missing index pass", `apt-get update --error-on=any`, "apt-get update"},
 		{"Go's checksum database turned off", `ENV GOPATH=/go GOTOOLCHAIN=local`, "ENV GOPATH=/go GOTOOLCHAIN=local GOSUMDB=off"},
 	}
 	for _, mutation := range mutations {
@@ -270,6 +274,7 @@ func runFindings(instruction string, snapshotted bool, census *ciImageCensus) []
 			}
 			if word == "apt-get" || word == "apt" {
 				findings = append(findings, installedPackages(words[i+1:], census)...)
+				findings = append(findings, silentUpdate(words[i+1:])...)
 			}
 			if word == "curl" || word == "wget" {
 				census.downloads++
@@ -301,6 +306,15 @@ func installedPackages(args []string, census *ciImageCensus) []string {
 		return unversionedPackages(args[i+1:], census)
 	}
 	return nil
+}
+
+// silentUpdate refuses an `apt-get update` that may end with an index missing:
+// apt only warns, and every pin after it then reads as not found.
+func silentUpdate(args []string) []string {
+	if len(args) == 0 || args[0] != "update" || slices.Contains(args, "--error-on=any") {
+		return nil
+	}
+	return []string{"runs apt-get update without --error-on=any, so a missing index passes as a warning"}
 }
 
 func unversionedPackages(args []string, census *ciImageCensus) []string {

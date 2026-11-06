@@ -25,8 +25,13 @@ has a pin in this tree:
 
 The image reads Debian at one point in the history of the archive. So the same time and pins give
 the same packages on every build, and `apt-get upgrade` patches the base image the same way each
-time. The host is `snapshot-cloudflare.debian.org`, the same archive behind a CDN. `apt` checks each
-file against the signed index of the archive, and the origin host often times out.
+time.
+
+`apt` reads each archive from a mirror list of two hosts: `snapshot-cloudflare.debian.org`, the
+same archive behind a CDN, then `snapshot.debian.org`. It checks each file against the signed index
+of the archive, whichever host sent it. Both hosts answer 503 and 504 under load, so a fetch tries ten
+times with a growing wait. `apt-get update --error-on=any` fails on an index that never came. Without
+it, `apt` only warns, and every pin then fails as a package it cannot find.
 
 Renovate reads two sources from `snapshot.debian.org`: the list of times, and the versions of each
 package. The second lists every version the archive holds, so the rule

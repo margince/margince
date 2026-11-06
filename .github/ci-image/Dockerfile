@@ -21,23 +21,34 @@ FROM node:24.22.2-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a3698
 # The snapshot is one point in the archive's history, so the same timestamp
 # and pins resolve to the same packages on every build. Archived Release files
 # expire by design, and a snapshot never changes, hence Check-Valid-Until off.
-# snapshot-cloudflare.debian.org serves the same archive as snapshot.debian.org
-# through a CDN, and apt checks every file against Debian's signed Release
-# files either way; the origin host times out under load.
+# Each archive has two hosts at one timestamp: snapshot.debian.org and its CDN
+# front, snapshot-cloudflare.debian.org. Both serve the same signed Release
+# files, so apt's mirror list takes a file from the second when the first
+# times out, and checks it either way. Both answer 503 and 504 under load, so
+# a fetch retries ten times with a growing wait, and `--error-on=any` fails
+# the update on an index that never came, rather than every pin after it.
 # proposed-updates is listed at priority 100: Renovate's package datasource
 # lists every version the archive holds, a stable update waits there until the
 # point release, and a pin may name one. Nothing else is taken from it.
 FROM debian:13-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2 AS debian
 ARG DEBIAN_SNAPSHOT=20261105T143010Z
 RUN printf '%s\n' \
+      "http://snapshot-cloudflare.debian.org/archive/debian/${DEBIAN_SNAPSHOT}" \
+      "http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}" \
+      > /etc/apt/mirrors-debian.list \
+ && printf '%s\n' \
+      "http://snapshot-cloudflare.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}" \
+      "http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}" \
+      > /etc/apt/mirrors-debian-security.list \
+ && printf '%s\n' \
       'Types: deb' \
-      "URIs: http://snapshot-cloudflare.debian.org/archive/debian/${DEBIAN_SNAPSHOT}" \
+      'URIs: mirror+file:/etc/apt/mirrors-debian.list' \
       'Suites: trixie trixie-updates trixie-proposed-updates' \
       'Components: main' \
       'Signed-By: /usr/share/keyrings/debian-archive-keyring.pgp' \
       '' \
       'Types: deb' \
-      "URIs: http://snapshot-cloudflare.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}" \
+      'URIs: mirror+file:/etc/apt/mirrors-debian-security.list' \
       'Suites: trixie-security' \
       'Components: main' \
       'Signed-By: /usr/share/keyrings/debian-archive-keyring.pgp' \
@@ -49,9 +60,11 @@ RUN printf '%s\n' \
       > /etc/apt/preferences.d/proposed-updates \
  && printf '%s\n' \
       'Acquire::Check-Valid-Until "false";' \
-      'Acquire::Retries "5";' \
+      'Acquire::Retries "10";' \
+      'Acquire::Retries::Delay::Maximum "60";' \
+      'Acquire::http::Timeout "120";' \
       > /etc/apt/apt.conf.d/80snapshot \
- && apt-get update \
+ && apt-get update --error-on=any \
  && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates=20250419+deb13u1 \
