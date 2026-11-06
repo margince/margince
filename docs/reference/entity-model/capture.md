@@ -615,7 +615,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_sender_override
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -624,6 +624,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `decision` | `text` | yes | One of `business`, `keep_out`. |
 | `overruled_kind` | `text` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
+| `captured_by` | `text` |  | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 

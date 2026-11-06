@@ -33,7 +33,7 @@ const link = (label: string) => <Button variant="link">{label}</Button>;
 /** Tasks with a tick box and a tone on the right. */
 export const Tasks: Story = {
   render: () => (
-    <OverviewCard title="Also on your list" action={link("All tasks")}>
+    <OverviewCard title="Other open tasks" action={link("All tasks")}>
       <OverviewList>
         <OverviewRow
           lead={<Checkbox label={<span className="sr-only">Done</span>} />}

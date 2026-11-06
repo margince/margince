@@ -57,7 +57,7 @@ func writeRateErr(w http.ResponseWriter, r *http.Request, err error) {
 // ListAiModelRates returns the latest price per model, or (with both
 // provider and model_id) one model's effective-dated history. Admin/ops-gated.
 func (h Handlers) ListAiModelRates(w http.ResponseWriter, r *http.Request, params crmcontracts.ListAiModelRatesParams) {
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -105,12 +105,9 @@ func (h Handlers) ListAiModelRates(w http.ResponseWriter, r *http.Request, param
 }
 
 // SetAiModelRate appends (or same-day corrects) one effective-dated model
-// price. Human-admin/ops only; append-forward. Effective date defaults to today.
+// price. Admin/ops only, or their agent; append-forward. Effective date defaults to today.
 func (h Handlers) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
-	// Human-only at the handler too, not only via the agent gate (which skips
-	// GETs): the POST is x-agent-access: human-only, so an AGENT principal is
-	// refused here the same way the GET is — belt-and-suspenders enforcement.
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -155,7 +152,7 @@ func (h Handlers) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteAiModelRate removes one model's entry from the sheet, every effective
-// date of it. Human-only, like the write it undoes. 204 with no body: the
+// date of it. A signed-in user only, because history goes with it. 204 with no body: the
 // entry is gone, and there is nothing left to show.
 func (h Handlers) DeleteAiModelRate(w http.ResponseWriter, r *http.Request, params crmcontracts.DeleteAiModelRateParams) {
 	if err := auth.RequireHuman(r.Context()); err != nil {

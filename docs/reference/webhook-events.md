@@ -1489,12 +1489,12 @@ Payload for project.created, a body of work was opened on a company.
 
 Record: `project` · version 1
 
-Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user or the health job. The project row itself is not written, so no project.updated goes with it.
+Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user, their agent or the health job. The project row itself is not written, so no project.updated goes with it.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.assessment_id` | string (uuid) | yes | The appended reading. |
-| `data.source` | string | yes | human for a user, ai for the health job, undo for a user undoing an AI reading. |
+| `data.source` | string | yes | human for a user, agent for their agent, ai for the health job, undo for a user undoing an AI reading. |
 | `data.state` | string | yes | on_track, at_risk or off_track. On an undo row it is the reading the undo restored, or on_track when the project reads as not judged again. |
 
 ### `project.phase_changed`

@@ -31,6 +31,8 @@ import (
 const (
 	// sourceHuman is what somebody acting in the UI writes.
 	sourceHuman = "human"
+	// sourceAgent is what an agent acting for that user writes.
+	sourceAgent = "agent"
 	// sourceAI is what the health job writes, from the quiet and overdue rules.
 	sourceAI = "ai"
 	// sourceUndo is the row a user appends to withdraw an AI reading. It
@@ -38,6 +40,13 @@ const (
 	// reading from before the AI's stands again, or none does.
 	sourceUndo = "undo"
 )
+
+func healthSource(ctx context.Context) string {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return sourceAgent
+	}
+	return sourceHuman
+}
 
 // healthColumns is what a health read returns, shared by the list and the
 // single read.

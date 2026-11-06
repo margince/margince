@@ -5,23 +5,26 @@ import {
   fireEvent,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProblemError } from "../lib/problem";
 import {
+  emptyPage,
+  ListTableHarness,
+  openFilterValues,
+  type Row,
+  render,
+} from "../testing/listquery.testkit";
+import { openView, toggleArchived } from "../testing/listview.testkit";
+import {
   LIST_PAGE_SIZES,
   type ListPage,
   type ListQuery,
   type SavedViewTab,
 } from "./listquery";
-import {
-  emptyPage,
-  ListTableHarness,
-  type Row,
-  render,
-} from "./listquery.testkit";
 
 afterEach(() => {
   cleanup();
@@ -146,6 +149,8 @@ describe("ListTable: query vocabulary", () => {
     );
     render(<ListTableHarness fetchPage={fetchPage} />);
     const search = await screen.findByPlaceholderText("Search");
+    // Opened on real timers: the press below must land inside the debounce.
+    const panel = await openView(userEvent.setup());
 
     vi.useFakeTimers();
     try {
@@ -154,8 +159,9 @@ describe("ListTable: query vocabulary", () => {
       await act(async () => {
         vi.advanceTimersByTime(100);
       });
-      const archived = screen.getByLabelText("Show archived");
-      fireEvent.click(archived);
+      fireEvent.click(
+        within(panel).getByRole("button", { name: "Show archived" }),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(250);
@@ -171,6 +177,7 @@ describe("ListTable: query vocabulary", () => {
   });
 
   it("clicking a sortable column header requests that field from the server", async () => {
+    const user = userEvent.setup();
     const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
       emptyPage(),
     );
@@ -179,7 +186,7 @@ describe("ListTable: query vocabulary", () => {
     const sortButton = await screen.findByRole("button", {
       name: "Sort by contacts.name",
     });
-    await userEvent.click(sortButton);
+    await user.click(sortButton);
 
     expect(
       fetchPage.mock.calls.some(([query]) => query.sort === "full_name"),
@@ -187,13 +194,13 @@ describe("ListTable: query vocabulary", () => {
   });
 
   it("toggling Show archived requests archived rows", async () => {
+    const user = userEvent.setup();
     const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
       emptyPage(),
     );
     render(<ListTableHarness fetchPage={fetchPage} />);
 
-    const archived = await screen.findByLabelText("Show archived");
-    await userEvent.click(archived);
+    await toggleArchived(user);
 
     expect(
       fetchPage.mock.calls.some(([query]) => query.includeArchived === true),
@@ -201,6 +208,7 @@ describe("ListTable: query vocabulary", () => {
   });
 
   it("picking a filter chip narrows the query, and clearing it drops the key", async () => {
+    const user = userEvent.setup();
     const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
       emptyPage(),
     );
@@ -221,11 +229,8 @@ describe("ListTable: query vocabulary", () => {
       />,
     );
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Filter" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Status" }));
-    await userEvent.click(screen.getByRole("radio", { name: "New" }));
+    await openFilterValues(user, "Status");
+    await user.click(screen.getByRole("radio", { name: "New" }));
 
     expect(
       fetchPage.mock.calls.some(([query]) => query.filters.status === "new"),
@@ -239,8 +244,8 @@ describe("ListTable: query vocabulary", () => {
     if (!valueTrigger) {
       throw new Error("the applied filter's value trigger did not render");
     }
-    await userEvent.click(valueTrigger);
-    await userEvent.click(screen.getByRole("radio", { name: "All statuses" }));
+    await user.click(valueTrigger);
+    await user.click(screen.getByRole("radio", { name: "All statuses" }));
 
     const lastCall = fetchPage.mock.calls.at(-1);
     expect(lastCall?.[0].filters).not.toHaveProperty("status");
@@ -262,6 +267,7 @@ describe("ListTable: pending, error and empty states", () => {
   });
 
   it("shows the server's error detail and retries on demand", async () => {
+    const user = userEvent.setup();
     const fetchPage = vi
       .fn<(query: ListQuery, cursor: string | null) => Promise<ListPage<Row>>>()
       // A server problem, not a bare Error: the body reports the detail the
@@ -276,7 +282,7 @@ describe("ListTable: pending, error and empty states", () => {
     await screen.findByText("Could not load this view. Reload the page.");
     expect(screen.getByText("missing scope contacts:read")).toBeTruthy();
 
-    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await user.click(screen.getByRole("button", { name: "Retry" }));
 
     await screen.findByRole("cell", { name: "No Contacts yet." });
   });
@@ -293,6 +299,7 @@ describe("ListTable: pending, error and empty states", () => {
 
 describe("removing an applied filter", () => {
   it("drops the key from the query when the row's Delete filter is used", async () => {
+    const user = userEvent.setup();
     const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
       emptyPage(),
     );
@@ -310,25 +317,20 @@ describe("removing an applied filter", () => {
       />,
     );
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Filter" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Status" }));
-    await userEvent.click(screen.getByRole("radio", { name: "Contacted" }));
+    await openFilterValues(user, "Status");
+    await user.click(screen.getByRole("radio", { name: "Contacted" }));
     await waitFor(() =>
       expect(fetchPage.mock.calls.some(([query]) => query.filters.status)).toBe(
         true,
       ),
     );
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", {
         name: "More actions for the Status filter",
       }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Delete filter" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete filter" }));
 
     await waitFor(() =>
       expect(fetchPage.mock.calls.at(-1)?.[0].filters).not.toHaveProperty(

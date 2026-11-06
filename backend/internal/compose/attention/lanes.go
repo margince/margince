@@ -454,7 +454,7 @@ type DealFacts interface {
 type DealFigures struct {
 	Closed               bool
 	CloseDateProvisional *bool
-	ForecastCategory     *string
+	WinProbability       *int
 	StageID              ids.UUID
 	// StageWinProbability is the probability recorded on the deal's stage: a
 	// fact beside the deal's own money, never a weighting of it. A pointer

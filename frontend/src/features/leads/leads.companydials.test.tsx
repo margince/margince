@@ -4,6 +4,8 @@ import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { openFilterValues } from "../../testing/listquery.testkit";
+import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadsScreen } from "./leads";
 import {
@@ -64,12 +66,8 @@ function serve({
 
 async function pickFilter(attribute: string, value: string) {
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "Add filter" }));
-  const step = (name: string) => screen.getByRole("group", { name });
-  await user.click(
-    within(step("Filter")).getByRole("button", { name: attribute }),
-  );
-  await user.click(within(step(attribute)).getByRole("radio", { name: value }));
+  const values = await openFilterValues(user, attribute);
+  await user.click(within(values).getByRole("radio", { name: value }));
 }
 
 const leadListQueries = (urls: string[]) =>
@@ -95,10 +93,7 @@ describe("the lead list's company dials", () => {
   it("offers none of the three to a seat refused them", async () => {
     serve({ refused: COMPANY_DIALS });
     render(<LeadsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Add filter" }),
-    );
-    const menu = screen.getByRole("group", { name: "Filter" });
+    const menu = await openViewStep(userEvent.setup(), "Filters");
     expect(within(menu).getByRole("button", { name: "Status" })).toBeTruthy();
     for (const name of ["Industry", "Country", "Company size"]) {
       expect(within(menu).queryByRole("button", { name })).toBeNull();
@@ -106,6 +101,7 @@ describe("the lead list's company dials", () => {
   });
 
   it("names a refused dial an old link carries, and asks for no list until it is removed", async () => {
+    const user = userEvent.setup();
     window.location.hash = "#/leads?industry=software";
     const { urls } = serve({ refused: COMPANY_DIALS });
     render(<LeadsScreen />);
@@ -116,9 +112,7 @@ describe("the lead list's company dials", () => {
     ).toBeTruthy();
     expect(leadListQueries(urls)).toEqual([]);
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Remove Industry" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Remove Industry" }));
     expect(await screen.findByText("Jonas Petersen")).toBeTruthy();
     expect(leadListQueries(urls).some((query) => query.has("industry"))).toBe(
       false,

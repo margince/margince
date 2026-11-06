@@ -70,7 +70,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_contribution
 
-37 columns · primary key `(id)` · referenced by 0 foreign keys
+38 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -89,11 +89,12 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `fx_date` | `date` |  |  |
 | `fx_rate` | `numeric(20,10)` |  |  |
 | `in_best_case` | `boolean`, default `false` | yes |  |
-| `in_evidence` | `boolean`, default `false` | yes |  |
+| `in_evidence` | `boolean`, default `false` | yes | Whether the deal counts in the Likely reading. |
 | `in_lost` | `boolean`, default `false` | yes |  |
 | `in_open` | `boolean`, default `false` | yes |  |
 | `in_won` | `boolean`, default `false` | yes |  |
 | `owner_id` | `uuid` |  |  |
+| `probability_source` | `text` |  | Where the deal's probability came from. |
 | `qualification` | `text` |  | One of `eligible`, `excluded`, `unsupported`, `unknown`. |
 | `qualification_complete` | `boolean` |  |  |
 | `qualified_policy_version` | `text` |  |  |
@@ -103,7 +104,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `snapshot_id` | `uuid` | yes | Points at `forecast_snapshot.id`. |
 | `stage_id` | `uuid` |  |  |
 | `stage_probability` | `integer` |  |  |
-| `typed_probability` | `integer` |  | The chance typed on the deal's stage, in percent. |
+| `typed_probability` | `integer` |  | The deal's own probability where one is set, else the chance typed on its stage, in percent. |
 | `viability_assessed_at` | `timestamp with time zone` |  |  |
 | `viability_disposition` | `text` |  | One of `none`, `open_review`, `override`, `unsupported`. |
 | `weighted_minor` | `bigint` |  |  |
@@ -126,6 +127,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_contribution_evidence_n_is_a_tally`: `CHECK (((evidence_n IS NULL) OR (evidence_n >= 0)))`
 - `forecast_contribution_exclusion_reason_check`: `CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced', 'fx_missing', 'out_of_period', 'not_eligible']))))`
 - `forecast_contribution_probability_is_a_percent`: `CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))`
+- `forecast_contribution_probability_source_known`: `CHECK (((probability_source IS NULL) OR (probability_source = ANY (ARRAY['stage', 'human', 'margince']))))`
 - `forecast_contribution_qualification_check`: `CHECK (((qualification IS NULL) OR (qualification = ANY (ARRAY['eligible', 'excluded', 'unsupported', 'unknown']))))`
 - `forecast_contribution_rate_dated`: `CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))`
 - `forecast_contribution_rate_positive`: `CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))`
@@ -152,24 +154,25 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_snapshot
 
-39 columns · primary key `(id)` · referenced by 2 foreign keys
+40 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `base_currency` | `currency_code` | yes |  |
-| `best_case_minor` | `bigint` | yes |  |
+| `best_case_minor` | `bigint` |  |  |
 | `call_id` | `uuid` |  | Points at `forecast_call.id`. |
 | `confirmed_date_count` | `integer` | yes |  |
 | `definition_version` | `text` | yes |  |
 | `eligible_count` | `integer` | yes |  |
 | `evidence_cutoff` | `timestamp with time zone` |  |  |
 | `evidence_minor` | `bigint` | yes |  |
-| `forward_measure` | `text` |  | One of `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted`, `manager_call`. |
+| `forward_measure` | `text` |  | One of `likely`, `qualified_likely`, `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted` and 1 more. |
 | `fx_missing_count` | `integer` | yes |  |
 | `input_fingerprint` | `text` |  |  |
 | `landing_call_minor` | `bigint` |  |  |
-| `landing_measure` | `text` |  | One of `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted`, `manager_call`. |
+| `landing_measure` | `text` |  | One of `likely`, `qualified_likely`, `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted` and 1 more. |
+| `likely_threshold` | `smallint` |  |  |
 | `local_day` | `date` | yes |  |
 | `open_minor` | `bigint` | yes |  |
 | `period_end` | `date` | yes |  |
@@ -208,10 +211,11 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_snapshot_best_case_minor_js_safe`: `CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_counts_are_tallies`: `CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))`
 - `forecast_snapshot_evidence_minor_js_safe`: `CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))`
-- `forecast_snapshot_forward_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
+- `forecast_snapshot_forward_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['likely', 'qualified_likely', 'commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
 - `forecast_snapshot_landing_call_is_the_landing`: `CHECK (((landing_call_minor IS NOT NULL) = (NOT (landing_measure IS DISTINCT FROM 'manager_call'))))`
 - `forecast_snapshot_landing_call_minor_js_safe`: `CHECK (((landing_call_minor >= '-9007199254740991'::bigint) AND (landing_call_minor <= '9007199254740991'::bigint)))`
-- `forecast_snapshot_landing_measure_known`: `CHECK (((landing_measure IS NULL) OR (landing_measure = ANY (ARRAY['commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
+- `forecast_snapshot_landing_measure_known`: `CHECK (((landing_measure IS NULL) OR (landing_measure = ANY (ARRAY['likely', 'qualified_likely', 'commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
+- `forecast_snapshot_likely_threshold_range`: `CHECK (((likely_threshold IS NULL) OR ((likely_threshold >= 1) AND (likely_threshold <= 100))))`
 - `forecast_snapshot_open_minor_js_safe`: `CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_period_ordered`: `CHECK ((period_end >= period_start))`
 - `forecast_snapshot_qualified_policy_present`: `CHECK (((qualified_policy_version IS NULL) OR (btrim(qualified_policy_version) <> '')))`

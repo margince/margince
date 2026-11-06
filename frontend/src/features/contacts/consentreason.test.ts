@@ -31,6 +31,7 @@ const EVERY_CODE: Record<ReasonCode, true> = {
   consent_withdrawn: true,
   no_consent_exception_not_offered: true,
   no_consent: true,
+  existing_customer: true,
 };
 
 const tVi: Translator = (key, params) => translate("vi", key, params);

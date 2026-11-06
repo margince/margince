@@ -66,7 +66,7 @@ const helpItem = (name: string | RegExp) =>
 async function openHelpByKeyboard(user: UserEvent) {
   trigger().focus();
   await user.keyboard("{Enter}");
-  for (let at = 0; at < 3; at++) {
+  for (let at = 0; at < 4; at++) {
     await user.keyboard("{ArrowDown}");
   }
   expect(document.activeElement).toBe(row("Help and feedback"));

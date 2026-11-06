@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { EditableValue } from "./editablevalue";
 import { FieldGrid, FieldRow } from "./fieldgrid";
+import { RecordCard } from "./recordcard";
 
 const meta = {
   title: "Components/Forms and input/Editable value",
@@ -153,6 +154,40 @@ export const LongLinkValue: Story = {
     await expect(
       (pill?.getBoundingClientRect().right ?? 0) <=
         (column?.getBoundingClientRect().right ?? 0) + 1,
+    ).toBe(true);
+  },
+};
+
+// A record card fills its row, so the pill around it does not shrink it.
+export const BlockValue: Story = {
+  args: {
+    editLabel: "Change Employer",
+    link: true,
+    block: true,
+    children: (
+      <RecordCard
+        kind="company"
+        name="Sontana"
+        identity="o-1"
+        href="#"
+        position="Real Estate"
+      />
+    ),
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ inlineSize: "20rem" }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const card = canvasElement.querySelector(".record-card");
+    const column =
+      canvasElement.querySelector(".editable-value")?.parentElement;
+    await expect(
+      (card?.getBoundingClientRect().width ?? 0) >
+        (column?.getBoundingClientRect().width ?? 0) * 0.8,
     ).toBe(true);
   },
 };

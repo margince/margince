@@ -102,10 +102,9 @@ func purposeRowFor(ctx context.Context, tx pgx.Tx, purposeKey string) (PurposeRo
 // both already read a lead, because a lead's activity_participant row carries no
 // contact_id and matches the bare-address arm of authorIsTheSubject.
 //
-// When no evidence supports a category, the legacy grant still answers, through
-// grantedForLead rather than VerdictForContact: the two ask about different
-// columns, and legacyVerdictFor would compare a lead id against contact_id and
-// find nothing.
+// When no evidence supports a category, the legacy grant still answers through
+// grantedForLead rather than VerdictForRecipient. The two read different
+// columns, and legacyVerdictFor would find no contact for a lead id.
 //
 // A lead nothing resolves to stays `review` with no subject: that is the
 // honest answer, and it is the one shape here that must not become an allow,
@@ -174,7 +173,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	// The evidence arms, before any purpose key is consulted, through the same
 	// helper the contact arm uses so the basis is recorded the same way.
 	//
-	// NOT decideResolved: its unsupported fallthrough asks VerdictForContact,
+	// Not decideResolved: its unsupported fallthrough asks VerdictForRecipient,
 	// which would compare a lead id against contact_id. That is not merely a
 	// miss — ClassTransactional returns an unconditional allow without reading
 	// any grant, so a lead would take authority from a purpose row nobody
@@ -192,6 +191,9 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		d, denied = putClaimToEvidence(d, req.Context, res.Category)
 		if denied {
 			return d, nil, nil
+		}
+		if objectionBindsResolution(res, stops) {
+			return denyByObjection(d, res), nil, nil
 		}
 		// The same question the contact arm asks: the evidence arms never read
 		// contact_consent, so a lead who withdrew would be sent the very message

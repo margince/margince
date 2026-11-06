@@ -114,7 +114,8 @@ func (s *Store) RevertStageProgression(
 		if err != nil {
 			return err
 		}
-		out, err = s.advanceOnTx(ctx, tx, dealID, AdvanceDealInput{
+		var advanced AdvancedDeal
+		advanced, err = s.advanceOnTx(ctx, tx, dealID, AdvanceDealInput{
 			ToStageID:                move.FromStageID,
 			WonWithoutContractReason: wonReason,
 			WonWithoutContractDetail: wonDetail,
@@ -134,6 +135,12 @@ func (s *Store) RevertStageProgression(
 		}, active)
 		if err != nil {
 			return err
+		}
+		out = advanced.Deal
+		// The safety ceiling counts a user overruling the product. An agent's
+		// undo moves the deal back and leaves that count alone.
+		if !actedByAHuman(ctx) {
+			return nil
 		}
 		return markMoveReversed(ctx, tx, move, s.clock())
 	})
@@ -366,6 +373,13 @@ func markMoveReversed(
 	}, now)
 }
 
+// actedByAHuman reports a user acting for themselves: the only act the reversal ledger
+// counts, whichever door took the move back.
+func actedByAHuman(ctx context.Context) bool {
+	actor, ok := principal.Actor(ctx)
+	return ok && actor.Type == principal.PrincipalHuman
+}
+
 // reversalActor is the contact the undo is recorded against.
 //
 // Nil for a principal with no human behind it, matching the column's ON DELETE
@@ -407,17 +421,12 @@ func countAManualMoveBackAsAReversal(
 		// move the deal back again.
 		return nil
 	}
-	// A CONTACT's move, named positively rather than as "not through a card".
-	// An agent can advance a deal too, and its move carries no approval id
-	// either — read as a human's, it would record a reversal nobody made,
-	// attribute it to the agent's user, and let a machine reverse what another
-	// machine did with no contact in the loop. The undo verb is human-only for
-	// exactly that reason, and this door must not be the way around it.
+	// A CONTACT's move, named positively rather than as "not through a card". An
+	// agent's move carries no approval id either. Read as a human's, it would record
+	// a reversal nobody made, against the agent's user.
 	//
-	// readProtection names its human the same way, and its comment says why:
-	// an agent moving a deal is precisely what a human has not done.
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	// readProtection names its human the same way, and its comment says why.
+	if !actedByAHuman(ctx) {
 		return nil
 	}
 	var move reversibleMove

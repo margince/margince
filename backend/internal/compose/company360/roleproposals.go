@@ -181,6 +181,11 @@ func (s *Service) proposalInput(
 	if err := auth.EnsureWritableLive(ctx, tx, "deal", dealID.UUID); err != nil {
 		return "", nil, err
 	}
+	// The candidates are a company's contacts, so a deal with no company has nobody
+	// to read. That is the empty answer an account whose contacts wrote nothing gets.
+	if companyID.IsZero() {
+		return dealName, nil, nil
+	}
 	roster, err := companyContactStrengths(ctx, tx, companyID, now, nil)
 	if err != nil {
 		return "", nil, err
@@ -267,7 +272,7 @@ func (s *Service) visibleOpenDeal(
 	if err != nil {
 		return ids.CompanyID{}, "", err
 	}
-	var companyID ids.CompanyID
+	var companyID *ids.CompanyID
 	var name string
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT d.company_id, d.name FROM deal d
@@ -279,7 +284,10 @@ func (s *Service) visibleOpenDeal(
 	if err != nil {
 		return ids.CompanyID{}, "", fmt.Errorf("company360: reading the deal to propose roles for: %w", err)
 	}
-	return companyID, name, nil
+	if companyID == nil {
+		return ids.CompanyID{}, name, nil
+	}
+	return *companyID, name, nil
 }
 
 // heldSeats is who already has a role on this deal.

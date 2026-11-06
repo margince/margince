@@ -30,6 +30,9 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   if (!undo) {
     return null;
   }
+  if (receiptUndo.undone && receipt.kind === "deal_close_lost") {
+    return <span role="status">{t("worklist.handled.closeLostUndone")}</span>;
+  }
   if (undo.reversed || receiptUndo.undone) {
     return <span>{t("worklist.handled.putBackDone")}</span>;
   }

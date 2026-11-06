@@ -144,11 +144,11 @@ describe("one evidence interaction on Sales review", () => {
     const strip = await readings();
     const forecast = strip.getByRole("link", {
       name: "Forecast",
-      description: "Won + confirmed commit",
+      description: "Won + Likely deals",
     });
     expect(forecast.getAttribute("href")).toMatch(/^\/#\/analytics\/forecast/);
     expect(
-      strip.queryByRole("button", { description: "Won + confirmed commit" }),
+      strip.queryByRole("button", { description: "Won + Likely deals" }),
     ).toBeNull();
   });
 
@@ -254,7 +254,7 @@ describe("headline, actions and charts are ready on their own", () => {
     expect(
       within(
         screen.getByRole("region", { name: "Opening readings" }),
-      ).getByText("420,000 EUR"),
+      ).getByText("€420,000"),
     ).toBeVisible();
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
     expect(
