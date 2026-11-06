@@ -6,6 +6,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { BOOKING_HOST_IDS, BOOKING_ID_PREFIXES } from "../lib/bookingaddress";
+import { CONSENT_PATH } from "../lib/recordaddress";
 
 // What nginx.conf answers for a path, worked out from the file the image ships
 // by nginx's own location rules: an exact match first, then the longest
@@ -202,12 +203,39 @@ describe("every response the web tier sends carries the whole security set", () 
           expect(own.get(name), "the views' own CSP").toBeDefined();
           continue;
         }
+        if (
+          name === "Cross-Origin-Opener-Policy" &&
+          where.pattern === CONSENT_PATH
+        ) {
+          expect(own.get(name), "the consent screen's own COOP").toBe(
+            "unsafe-none",
+          );
+          continue;
+        }
         expect(own.get(name), `${name} in location ${where.pattern}`).toBe(
           value,
         );
       }
     }
   });
+});
+
+// The app's consent path is the one nginx serves with a popup's opener kept.
+it("serves the consent screen as the shell, leaving a popup its opener", () => {
+  const server = headers(conf.slice(0, conf.search(/^\s*location\s/m)));
+  const where = locate(CONSENT_PATH);
+  expect(where.modifier).toBe("=");
+  expect(where.body).toContain("try_files /index.html =404;");
+  expect(headers(where.body).get("Cross-Origin-Opener-Policy")).toBe(
+    "unsafe-none",
+  );
+  for (const path of ["/", "/consent/", "/consentx", "/index.html"]) {
+    expect(
+      headers(locate(path).body).get("Cross-Origin-Opener-Policy") ??
+        server.get("Cross-Origin-Opener-Policy"),
+      path,
+    ).toBe("same-origin");
+  }
 });
 
 it("routes a record card to the public metadata endpoint rather than the static shell", () => {

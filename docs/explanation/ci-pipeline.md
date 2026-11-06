@@ -468,8 +468,7 @@ matching digest.
 
 The `backend-lint` job runs the census on every ready PR into `main` that touches the backend, so the PR that adds such a read fails. `cache-warm`
 runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
-good one. The second kind is held by
-a gate: a cached test file that runs `git` or `go` must declare its inputs.
+good one. The second kind is held by a gate: a cached test file that runs `git` or `go` must declare its inputs.
 
 ## The jobs
 
@@ -477,7 +476,8 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 
 ### Why some jobs are shaped as they are
 
-- **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
+- **Merge-base readers check out with `filter: blob:none`.** `deterministic-gates`, the strict lint and
+  `craftsmanship` get every commit, and git fetches an older file only when a gate reads it.
 - **`craftsmanship` starts beside `deterministic-gates`.** It reads source only, so a red build does
   not change its findings, and both reds show in one round.
 - **`deterministic-gates (unit)` stages `crm-hello` last.** After the merge gate it copies the fixture
