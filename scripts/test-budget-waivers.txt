@@ -8,5 +8,4 @@
 # An entry is called stale only once a run comes in 2.5x under the budget, so
 # one fast runner result cannot remove a waiver from a package that still
 # varies enough to pass its ceiling on another run.
-560 github.com/margince/margince/backend/gates
 180 github.com/margince/margince/backend/internal/compose
