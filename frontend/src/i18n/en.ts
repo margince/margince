@@ -18529,7 +18529,7 @@ export const en = {
   "worklist.pane.noneAccessible": "None you can open",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
-  "worklist.pane.conversation": "Conversation",
+  "worklist.pane.conversation": "Thread",
   "worklist.pane.openEmail": "Open email",
   "worklist.pane.deal": "Deal",
   "worklist.why.title": "Why this needs attention",

@@ -104,6 +104,9 @@ function dealFacts(
         UTC_ZONE,
         now,
       ),
+      note: deal.close_date_provisional
+        ? t("deal.strip.close.provisional")
+        : undefined,
     });
   }
   return facts;
