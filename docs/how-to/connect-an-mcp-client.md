@@ -98,8 +98,10 @@ npx @modelcontextprotocol/inspector
 # then, in the UI: Transport = "Streamable HTTP", URL = http://localhost:8080/mcp
 ```
 
-`tools/list` shows only what the granted scopes of the connection can call. So the surface the Inspector
-reports is the surface that client has. The grant is what the human kept checked on the consent screen.
+`tools/list` shows only what the connection can call: its granted scopes, and the seat and role
+grants of the human it acts for. So the surface the Inspector reports is the surface that client has.
+The grant is what the human kept checked on the consent screen. A role change shows at the next
+`tools/list`.
 
 ## Register a client by hand
 

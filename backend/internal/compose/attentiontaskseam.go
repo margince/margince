@@ -343,9 +343,9 @@ func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Ta
 // (activities.PromiseFollowUpsTx), and the newest such mail asks. A Not yet the
 // reader gave to that mail, on either surface, keeps the plain row.
 func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
-	// Only a human answers the question, so an agent reading the queue sees
-	// the plain row.
-	if human := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHuman(ctx) == nil; t.db == nil || !human {
+	// A user or their agent answers the question, so automatic work reading the
+	// queue sees the plain row.
+	if answers := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHumanOrItsAgent(ctx) == nil; t.db == nil || !answers {
 		return tasks, nil
 	}
 	bases, byBasis, keys := promiseBases(tasks)

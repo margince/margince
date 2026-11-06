@@ -133,3 +133,24 @@ func TestTransmitProceedsOnACurrentTicket(t *testing.T) {
 		t.Errorf("the engine was asked %d time(s), want exactly 1 per attempt", consent.authzSeen)
 	}
 }
+
+// A stop committed after the first answer and before the wire reaches the
+// second look, and the message parks without reaching the provider.
+func TestAStopFoundAtTheWireParksTheDelivery(t *testing.T) {
+	sender := &fakeSender{}
+	store := &fakeStore{delivery: liveDelivery()}
+	refused := commsauthz.TransmitTicket{
+		DeliveryID: store.delivery.ID, Attempt: store.delivery.Attempts + 1, DecisionSetID: ids.NewV7(),
+		Reason: "1 of 1 recipients are not authorized for this message (marketing_objection)",
+	}
+	consent := &stubConsent{recheck: &refused}
+	d := newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{sendScope}}, consent)
+
+	got, err := dispatch(context.Background(), d, store.delivery.ID)
+	if err != nil {
+		t.Fatalf("Dispatch: %v", err)
+	}
+	if got != OutcomeParked || sender.calls != 0 {
+		t.Errorf("outcome=%v calls=%d, want parked/0 when the second look refuses", got, sender.calls)
+	}
+}

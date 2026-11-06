@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { derivationFixture, reportFixtures } from "./fixtures";
+import {
+  busyStageDeals,
+  derivationFixture,
+  reportFixtures,
+  stages,
+} from "./fixtures";
 import { type Handler, page } from "./server";
 
 // A contact found only through the company the word named, and only for a
@@ -112,13 +117,19 @@ export const forecast = {
   scope_kind: "workspace",
   won_minor: 4_000_000,
   evidence_minor: 12_000_000,
-  best_case_minor: 18_000_000,
   open_minor: 25_000_000,
   weighted_minor: 13_000_000,
+  likely_threshold: 90,
+  by_source: {
+    stage: { open_minor: 15_000_000, weighted_minor: 7_000_000 },
+    human: { open_minor: 7_000_000, weighted_minor: 4_500_000 },
+    margince: { open_minor: 3_000_000, weighted_minor: 1_500_000 },
+  },
   eligible_count: 12,
   priced_count: 12,
   confirmed_date_count: 10,
   fx_missing_count: 0,
+  qualification_mode: "off",
   as_of: "2026-07-13T00:00:00Z",
   timezone: "Europe/Berlin",
   base_currency: "EUR",
@@ -170,10 +181,33 @@ const dealsByStage = {
   ],
 };
 
+// The busy Qualify stage, counted and summed as the list pages hold it.
+function withBusyStage(report: typeof dealsByStage): typeof dealsByStage {
+  const raw = busyStageDeals.reduce((sum, deal) => sum + deal.amount_minor, 0);
+  const probability =
+    stages.find((stage) => stage.id === "s1")?.win_probability ?? 0;
+  return {
+    ...report,
+    rows: report.rows.map((row) =>
+      row.stage_id === "s1"
+        ? {
+            ...row,
+            deals: row.deals + busyStageDeals.length,
+            raw_minor: row.raw_minor + raw,
+            weighted_minor: row.weighted_minor + (raw * probability) / 100,
+          }
+        : row,
+    ),
+  };
+}
+
 // The report a caller asked for, so each Delivery section gets rows with the
 // fields it reads.
-export const report: Handler = ({ path, json }) =>
-  json(reportFixtures[path.slice("/reports/".length)] || dealsByStage);
+export const report: Handler = ({ path, json }, { options }) =>
+  json(
+    reportFixtures[path.slice("/reports/".length)] ||
+      (options.busyStage ? withBusyStage(dealsByStage) : dealsByStage),
+  );
 
 export const hierarchyRollup = {
   root_id: "o-brandt",

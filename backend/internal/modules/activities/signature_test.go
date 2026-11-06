@@ -22,6 +22,7 @@ type stubSignature struct {
 	template string
 	title    string
 	phone    string
+	imprint  string
 	logoKey  string
 	err      error
 	askedID  ids.UUID
@@ -29,7 +30,7 @@ type stubSignature struct {
 
 func (s *stubSignature) SignatureFor(_ context.Context, userID ids.UUID) (SenderSignature, error) {
 	s.askedID = userID
-	return SenderSignature{Body: s.body, HTML: s.html, Template: s.template, Title: s.title, Phone: s.phone, LogoKey: s.logoKey}, s.err
+	return SenderSignature{Body: s.body, HTML: s.html, Template: s.template, Title: s.title, Phone: s.phone, Imprint: s.imprint, LogoKey: s.logoKey}, s.err
 }
 
 func humanCtx(userID ids.UUID) context.Context {

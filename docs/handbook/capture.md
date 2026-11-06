@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
@@ -93,9 +93,12 @@ It creates a new contact for the sender, as it does for any sender.
 
 Margince then lists the two contacts as a possible duplicate, so a colleague can merge them. The pair is listed when the names match, also with "oe" for "ö" ("Bjoern" and "Björn").
 It is also listed when the names are close and the mail domain is the employer's or under it (`cloud.example.com`). Two addresses that differ only by a `+tag` are listed too.
+So are two Gmail addresses that differ only by dots or by `gmail.com` and `googlemail.com` (`a.b@gmail.com` and `ab@googlemail.com`).
 
 Nothing is merged by itself. The same check runs when an edit or a data provider adds an address.
 Colleagues see the pair only once the sender has been judged a business contact. A sender kept private, for example because the message is held, is not shown to them.
+
+A contact kept private because its conversation was held opens to colleagues once nothing holds it any more. That is when the conversation is judged ordinary, or when you share it. A contact you made private yourself stays private. A contact you only wrote to stays yours until the address replies.
 
 ### Mail with a lead on it
 
@@ -233,7 +236,7 @@ You see only the messages whose audience includes you; a held message stays with
 Also called: email history, correspondence, all mails with a customer.
 
 ### What counts as one email thread?
-A reply whose subject changes starts a new conversation. "Re:" and "AW:" do not count as a change, and neither do capital letters. A reply with no subject of its own stays in its parent's conversation. A conversation you kept private stays private under its new subject.
+A reply starts a new conversation only when its subject shares no word with the message it answers. Tags in brackets, reply prefixes, marks, capital letters and words such as "the" do not count. "Signature requested" and "Signature completed" stay together. A reply stays with its parent when either subject has no words left. A conversation you kept private stays private under its new subject.
 
 Margince splits a reply this way when the message it answers is already in Margince. Older mail from a mailbox you connect later can stay in one conversation. Ask whoever runs your Margince to split it.
 Also called: thread split, new subject, separate conversation.
@@ -364,19 +367,14 @@ member. "Applies from the next message. Messages already captured stay."
 company for. Each shows what decided it: an AI model, a fixed rule, or a human. Letting a domain
 back in asks the company question again.
 
-**Domain review** (Worklist → Review): domains waiting for a company match appear together. Open
-**Domain review** to see each question, the answering website, and the age of the evidence.
-**Set aside** hides your question until newer evidence arrives; it stays in Domain review, where
-**Return to Review** puts it back in your queue. A colleague's question stays as it was.
+**Company questions** (Worklist → Decisions): Margince asks which company a contact works for when
+it cannot tell. The row names the contact and says why. The website could not be read, named no
+company, sent you on to another website, or looks like a mail provider. Hidden contacts are counted,
+never named. Margince suggests a company only when one company you can see fits, and no second one. **Confirm
+company** makes it the company of the contacts on the domain; contacts at another company keep theirs.
 
-**Match company** links the domain to the company you choose. **Create company** adds one where the
-evidence allows it. If another domain answered the website read, you must choose an existing company
-yourself. **Retry site read** leaves the company question open and asks again. **Exclude domain**
-stops capture for your mailboxes. You can use **Set aside** without making these decisions.
-
-If the website reads like a mail or hosting vendor, Margince creates no company. It asks the
-colleague whose mail came from the domain, and shows the reason. **Create company** adds it and links
-the contacts who write from it. **Keep as vendor** creates nothing, and later mail does not ask again.
+**Choose another** opens the question with a company search and **Create company**. **Not now** puts
+it off until new mail arrives. **Stop capturing in your mailboxes** stops saving mail from the domain.
 
 **Senders** (Settings → Capture activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an

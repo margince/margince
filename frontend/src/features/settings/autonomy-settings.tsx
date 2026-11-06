@@ -146,6 +146,10 @@ const KIND_COPY: Readonly<
     label: "autonomy.kind.close_date_correction.label",
     help: "autonomy.kind.close_date_correction.help",
   },
+  deal_close_lost: {
+    label: "autonomy.kind.deal_close_lost.label",
+    help: "autonomy.kind.deal_close_lost.help",
+  },
   company_name_promotion: {
     label: "autonomy.kind.company_name_promotion.label",
     help: "autonomy.kind.company_name_promotion.help",

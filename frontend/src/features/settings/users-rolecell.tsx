@@ -5,7 +5,8 @@ import { CellStack } from "../../design-system/cellstack";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import type { QueryLike } from "../../design-system/querystates";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { holdsAdminRole } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import {
@@ -97,6 +98,28 @@ function soleActiveAdmin(member: User, roster: readonly User[]): boolean {
   );
 }
 
+/**
+ * What a role change stops, said before Save: under a role that cannot
+ * capture, the member's connected mailboxes and calendars stop capturing.
+ * Undefined for no change, no connection, or a role that captures.
+ */
+export function useCaptureStopWarning(
+  member: User,
+  roles: readonly AssignableRole[],
+) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const mailboxes = member.connected_mailboxes ?? 0;
+  return (picked: string, held: string): string | undefined =>
+    picked !== held &&
+    mailboxes > 0 &&
+    roles.find((role) => role.key === picked)?.captures_mail === false
+      ? plural("users.role.stopsCapture", mailboxes, {
+          count: formatNumber(mailboxes, locale),
+        })
+      : undefined;
+}
+
 export function MemberRole({
   member,
   roles,
@@ -111,6 +134,7 @@ export function MemberRole({
   const refresh = useMemberRefresh();
   const busy = useMemberBusy(member.id);
   const [choosing, setChoosing] = useState(false);
+  const stopsCapture = useCaptureStopWarning(member, roles);
   const setRole = useMutation({
     mutationKey: memberMutationKey(member.id, "role"),
     mutationFn: async ({ id, role }: Readonly<{ id: string; role: Role }>) => {
@@ -143,7 +167,7 @@ export function MemberRole({
     .join(", ");
   const value = held.join(" ");
   const several = held.length > 1;
-  // The held set is an option of its own, so the open chooser never shows a
+  // The held set is an option of its own, so the dialog's chooser never shows a
   // blank face, and picking it again is no change.
   const options = several
     ? [{ value, label: names }, ...roleOptions(t, roles)]
@@ -158,16 +182,17 @@ export function MemberRole({
           hideLabel
           value={value}
           options={options}
+          hint={(picked) => stopsCapture(picked, value)}
           // Another verb in flight on this member locks the role. This row's own
-          // save does not, or the chooser would close on its pick.
+          // save does not, or the dialog would lose the pill it returns focus to.
           canEdit={refusal === null && (!busy || setRole.isPending)}
           render={() => names}
           onSave={(role) => setRole.mutateAsync({ id: member.id, role })}
           onEditingChange={setChoosing}
         />
       </span>
-      {/* Shown at rest: the open list covers whatever stands under the
-          chooser. The status says it again as the chooser opens. */}
+      {/* Shown at rest, since the dialog covers the row; the status says it
+          again as the dialog opens. */}
       {replaces && (
         <>
           <span className="t-caption">{t("users.rolesReplace")}</span>

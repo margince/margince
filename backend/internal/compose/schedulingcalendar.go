@@ -93,12 +93,11 @@ func (c schedulingCalendar) Save(ctx context.Context, host ids.UserID, provider 
 			return connector.CalendarReceipt{}, apperrors.ErrPermissionDenied
 		}
 	}
-	for _, address := range in.Attendees {
-		if err := c.checkAppointmentRecipient(ctx, host, in, address); err != nil {
-			return connector.CalendarReceipt{}, err
-		}
+	gated, err := c.consentAddresses(ctx, host, in)
+	if err != nil {
+		return connector.CalendarReceipt{}, err
 	}
-	if err := consentGateFor(c.pool).RequireGrantedForEmails(ctx, in.Attendees, "transactional"); err != nil {
+	if err := consentGateFor(c.pool).RequireGrantedForEmails(ctx, gated, "transactional"); err != nil {
 		return connector.CalendarReceipt{}, err
 	}
 

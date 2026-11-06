@@ -41,7 +41,7 @@ func newSdrFixture(t *testing.T, template crmcontracts.ReportingFrameworkInputTe
 	actor, _ := principal.Actor(ctx)
 	actor.Permissions.Objects["lead"] = principal.ObjectGrant{Read: true, Create: true, Update: true}
 	f.ctx = principal.WithActor(ctx, actor)
-	f.handoffs = contacts.NewStore(InstallationDB(f.e.Pool)).WithClock(clock)
+	f.handoffs = contacts.NewStore(InstallationDB(f.e.Pool)).SetClock(clock)
 	f.ae = f.e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'ae@example.test', 'Account Executive')`)
 	framework := crmcontracts.ReportingFrameworkInput{Template: template, Reason: "SDR team setup", Qualification: []crmcontracts.ReportingQualification{}, CaptureContexts: []crmcontracts.ReportingCaptureContext{}}
 	if _, err := newReportingService(f.e.Pool, clock).PublishFramework(f.ctx, 0, framework); err != nil {

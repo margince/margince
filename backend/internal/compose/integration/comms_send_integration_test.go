@@ -66,7 +66,7 @@ type stubMailbox struct {
 var _ comms.ConnectionResolver = stubMailbox{}
 
 func (m stubMailbox) Resolve(context.Context, ids.UserID, string) (connector.EmailSender, connector.Auth, []string, error) {
-	return m.sender, m.auth, []string{gmailSendScope}, nil
+	return m.sender, m.auth, []string{apptest.GmailSendScope}, nil
 }
 
 // ResolveChannel is not this suite's transport: every delivery here is
@@ -151,6 +151,13 @@ func (p *preflightEnv) transmit(t *testing.T, deliveryID ids.UUID, stampAs strin
 // transmitted NOTHING rather than merely to have been recorded.
 func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs string) (comms.Outcome, sentMail, *gmail.Connector) {
 	t.Helper()
+	return p.dispatchOnceWith(t, deliveryID, stampAs, nil)
+}
+
+// dispatchOnceWith is dispatchOnce with a send policy chain. A case passes one
+// when something must happen between the consent gate and the wire.
+func (p *preflightEnv) dispatchOnceWith(t *testing.T, deliveryID ids.UUID, stampAs string, policies []comms.SendPolicy) (comms.Outcome, sentMail, *gmail.Connector) {
+	t.Helper()
 	var captured sentMail
 	stub := gmailSendStub(t, &captured, stampAs)
 
@@ -159,7 +166,7 @@ func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs s
 	// rather than a hand-written bundle.
 	oauth := gmail.NewOAuth(gmail.OAuthConfig{
 		ClientID: "cid", ClientSecret: "sec", TokenURL: stub.URL + "/token",
-		Scopes: []string{gmailReadonlyScope, gmailSendScope},
+		Scopes: []string{apptest.GmailReadonlyScope, apptest.GmailSendScope},
 	})
 	gmailConnector := gmail.New(oauth, gmail.NewAPI(stub.Client(), stub.URL))
 	authReq, err := gmail.AuthRequestFrom("the-code", "https://app.test/v1/connectors/gmail/callback")
@@ -188,7 +195,7 @@ func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs s
 		// byte read a message with attachments would reach.
 		compose.NewSendAttachmentAuthority(p.Pool, nil),
 		consent.NewGate(consent.NewStore(compose.InstallationDB(p.Pool))),
-		nil, time.Now, 24*time.Hour, 10,
+		policies, time.Now, 24*time.Hour, 10,
 	)
 	// A job carries no session. The scope comes from the composition rather
 	// than being rebuilt here: it binds the system actor and the correlation id
@@ -234,7 +241,7 @@ func (p *preflightEnv) connectorCtx(t *testing.T) context.Context {
 // ONE activity, and that activity must be the one the send wrote.
 func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
@@ -331,7 +338,7 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 // together.
 func TestAMarketingSendRendersBothOneClickUnsubscribeHeaders(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.grantMarketingConsent(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "marketing_email", "Spring pricing", "Here is what changed.")
@@ -388,7 +395,7 @@ func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 // off-boarded or compromised account keeps sending for the whole maximum age.
 func TestDeactivatingTheSenderParksAStagedDelivery(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
@@ -417,7 +424,7 @@ func TestDeactivatingTheSenderParksAStagedDelivery(t *testing.T) {
 // fact deactivated.
 func TestASenderDowngradedToAReadSeatParksAStagedDelivery(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")

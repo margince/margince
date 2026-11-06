@@ -78,11 +78,19 @@ func MessageOpening(body string, maxRunes int) string {
 	if maxRunes <= 0 {
 		return ""
 	}
-	text := strings.TrimSpace(authoredText(stripMailHeaders(cutAtQuote(body))))
+	text := OwnWords(body)
 	if cut := textcut.Runes(text, maxRunes); cut != text {
 		return strings.TrimSpace(cut)
 	}
 	return text
+}
+
+// OwnWords is everything the sender of a stored mail wrote in it. The
+// envelope block is dropped, and the quoted thread, forward, signature and
+// legal footer are cut. It is MessageOpening without the bound, for a reader
+// that keeps the whole text, such as a voice learning from sent mail.
+func OwnWords(body string) string {
+	return strings.TrimSpace(authoredText(stripMailHeaders(cutAtQuote(body))))
 }
 
 // cutAtQuote drops the quoted thread before the envelope is stripped.

@@ -18,6 +18,7 @@ package integration
 // be dodgeable by the route nobody instrumented.
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -426,16 +427,7 @@ func TestAnAgentMovingADealBackIsNotCountedAsAHumanReversal(t *testing.T) {
 	e := Setup(t)
 	deal, card, ref := autoAppliedMove(t, e)
 
-	agentCtx := principal.WithActor(e.Admin(), principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(),
-		UserID: e.Rep1, OnBehalfOf: e.Rep1,
-		Scopes: principal.ScopeSet{principal.ScopeWrite: struct{}{}},
-		Permissions: principal.Permissions{
-			RowScope: principal.RowScopeAll,
-			Objects:  map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
-		},
-	})
-	if _, err := e.Deals.AdvanceDeal(agentCtx, deal, deals.AdvanceDealInput{
+	if _, err := e.Deals.AdvanceDeal(dealAgent(t, e), deal, deals.AdvanceDealInput{
 		ToStageID: ref.FromStageID,
 	}); err != nil {
 		t.Fatalf("the agent could not move the deal back, so this test never "+
@@ -444,9 +436,33 @@ func TestAnAgentMovingADealBackIsNotCountedAsAHumanReversal(t *testing.T) {
 
 	outcome, reversed := ledgerOutcomeFor(t, e, card)
 	if reversed || outcome != deals.ProgressionAutoApplied {
-		t.Errorf("an AGENT's move back was counted as a human reversal (%q, %v): "+
-			"the undo verb is human-only and this is the way around it, with the "+
-			"reversal recorded against a contact who did nothing", outcome, reversed)
+		t.Errorf("an AGENT's move back was counted as a human reversal (%q, %v), "+
+			"recorded against a contact who did nothing", outcome, reversed)
+	}
+}
+
+// dealAgent is an agent on its user's real passport, holding what moving a deal takes.
+func dealAgent(t *testing.T, e *Env) context.Context {
+	t.Helper()
+	return e.AgentOnPassport(t, e.Rep1, nil, principal.Permissions{
+		RowScope: principal.RowScopeAll,
+		Objects:  map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
+	}, ids.From[ids.PassportKind](e.AgentPassport))
+}
+
+// An agent's undo moves the deal back and counts no human reversal. It does not name
+// its user on the ledger or weigh on the rule's safety record.
+func TestAnAgentsUndoMovesTheDealBackAndCountsNoReversal(t *testing.T) {
+	e := Setup(t)
+	deal, card, ref := autoAppliedMove(t, e)
+	if _, err := e.Deals.RevertStageProgression(dealAgent(t, e), deal, card.UUID); err != nil {
+		t.Fatalf("the agent's undo: %v", err)
+	}
+	if got := stageOf(t, e, deal); got != ref.FromStageID {
+		t.Errorf("the deal is at %s after the agent's undo, want %s", got, ref.FromStageID)
+	}
+	if outcome, reversed := ledgerOutcomeFor(t, e, card); reversed || outcome != deals.ProgressionAutoApplied {
+		t.Errorf("the ledger reads %q, reversed %v after an agent's undo", outcome, reversed)
 	}
 }
 

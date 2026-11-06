@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { bookingProfile } from "../../testing/book.testkit";
 import { jsonResponse, type RouteMap } from "../../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
@@ -163,7 +163,7 @@ export const PersonalDetails: Story = {
         start: "2026-10-05T09:00:00Z",
         end: "2026-10-05T09:30:00Z",
       }}
-      zone={viewerZone()}
+      zone={browserZone()}
       personal
       details={{ name: "", email: "", topic: "", consent: true }}
       onDetails={() => {}}

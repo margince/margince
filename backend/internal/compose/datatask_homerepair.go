@@ -13,8 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -48,11 +46,7 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 	if in.Activation == nil {
 		return datatask.BatchOut{}, apperrors.ErrPermissionDenied
 	}
-	human, ok := principal.HumanUserID(in.Activation.Operator)
-	if !ok {
-		return datatask.BatchOut{}, apperrors.ErrPermissionDenied
-	}
-	actor, err := (storedActor{authority: identity.NewService(pool)}).rebuild(ctx, migration.StoredActor{Type: principal.PrincipalHuman, UserID: human})
+	actor, err := activationActor(ctx, pool, *in.Activation)
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}

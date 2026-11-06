@@ -17,7 +17,6 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -27,23 +26,14 @@ import (
 // `Permissions`, and a Deal Room buyer is minted carrying none — so it would be
 // refused by the accident of an empty struct, and the first constructor to give
 // a buyer permissions would hand an external contact the seller's team roster.
-// RequireHuman also turns away an agent passport, matching the `human-only`
-// these endpoints declare in the contract.
+// The check admits a human, or their agent at their word, and turns away
+// automatic work with no passport.
 //
 // A background pass wanting these figures would need to say so here rather than
 // arriving by default on a system principal's row scope.
 func requireLeadTier(ctx context.Context) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return apperrors.ErrPermissionDenied
-	}
-	switch actor.Permissions.RowScope {
-	case principal.RowScopeTeam, principal.RowScopeAll:
-		return nil
-	default:
-		return apperrors.ErrPermissionDenied
-	}
+	return auth.RequireRowScope(ctx, principal.RowScopeTeam)
 }

@@ -30,6 +30,8 @@ package integration
 import (
 	"net/http"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // A passport minted WITHOUT the read scope is refused an agent-readable GET.
@@ -41,8 +43,8 @@ func TestAPassportWithoutTheReadScopeIsRefusedOnTheRestDoor(t *testing.T) {
 	e, _ := boundedApp(t, "read-scope-rest", 100)
 	seedContacts(t, e, 2)
 
-	reader, _ := passportWithID(t, e, "reading agent", "read")
-	writer, _ := passportWithID(t, e, "writing agent", "write")
+	reader, _ := apptest.PassportWithID(t, e, "reading agent", "read")
+	writer, _ := apptest.PassportWithID(t, e, "writing agent", "write")
 
 	// The route is open to an agent that holds the scope, so the refusal below
 	// is the scope ceiling rather than the route being closed to agents.

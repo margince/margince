@@ -189,6 +189,8 @@ var tableOwners = map[string]string{
 	"project_phase_history":     "internal/modules/projects",
 	"fx_rate":                   "internal/modules/deals",
 	"product":                   "internal/modules/deals",
+	"tax_rate":                  "internal/modules/deals",
+	"product_translation":       "internal/modules/deals",
 	"offer":                     "internal/modules/deals",
 	"offer_line_item":           "internal/modules/deals",
 	"deal_product":              "internal/modules/deals",
@@ -268,15 +270,16 @@ var tableOwners = map[string]string{
 	// its own key on the transaction writing its owning row, so the writes reach this
 	// table from all of them through platform's helper — which is why the helper, and
 	// the table with it, sit below every module rather than inside one.
-	"stored_object_intent":  "internal/platform/storedobjects",
-	"data_task_run_history": "internal/platform/datatask",
-	"data_task_review":      "internal/platform/datatask",
-	"data_task_run":         "internal/platform/datatask",
-	"deal_document_hide":    "internal/modules/activities",
-	"meeting_proposal":      "internal/modules/activities",
-	"meeting_invitation":    "internal/modules/activities",
-	"booking_page":          "internal/modules/activities",
-	"booking_alias":         "internal/modules/activities",
+	"stored_object_intent":     "internal/platform/storedobjects",
+	"data_task_run_history":    "internal/platform/datatask",
+	"data_task_review":         "internal/platform/datatask",
+	"data_task_run":            "internal/platform/datatask",
+	"deal_document_hide":       "internal/modules/activities",
+	"meeting_proposal":         "internal/modules/activities",
+	"meeting_invitation":       "internal/modules/activities",
+	"meeting_calendar_episode": "internal/modules/activities",
+	"booking_page":             "internal/modules/activities",
+	"booking_alias":            "internal/modules/activities",
 	// approvals. The autonomy policy is what each rep decided about a KIND of
 	// proposal, so it sits with the kinds and the decisions it counts.
 	"approval":                 "internal/modules/approvals",
@@ -291,20 +294,22 @@ var tableOwners = map[string]string{
 	// What made business correspondence lawful, and the §7(3) flag: both are
 	// the gate's own evidence (ADR-0098 D2/D4), written where the gate that
 	// relies on them lives.
-	"contact_acquisition_evidence": "internal/modules/contacts",
-	"privacy_notice_case":          "internal/modules/consent",
-	"lead_privacy_notice":          "internal/modules/consent",
-	"consent_text_version":         "internal/modules/consent",
-	"communication_decision":       "internal/modules/consent",
-	"communication_basis":          "internal/modules/consent",
-	"communication_review":         "internal/modules/consent",
-	"communication_instruction":    "internal/modules/consent",
-	"communication_override":       "internal/modules/consent",
-	"communication_suppression":    "internal/modules/consent",
-	"consent_qualifying_event":     "internal/modules/consent",
-	"data_subject_request":         "internal/modules/consent",
-	"privacy_request_proof":        "internal/modules/consent",
-	"preference_token":             "internal/modules/consent",
+	"contact_acquisition_evidence":     "internal/modules/contacts",
+	"privacy_notice_case":              "internal/modules/consent",
+	"lead_privacy_notice":              "internal/modules/consent",
+	"consent_text_version":             "internal/modules/consent",
+	"communication_decision":           "internal/modules/consent",
+	"communication_basis":              "internal/modules/consent",
+	"communication_review":             "internal/modules/consent",
+	"communication_instruction":        "internal/modules/consent",
+	"communication_override":           "internal/modules/consent",
+	"communication_suppression":        "internal/modules/consent",
+	"existing_customer_notice":         "internal/modules/consent",
+	"existing_customer_notice_purpose": "internal/modules/consent",
+	"consent_qualifying_event":         "internal/modules/consent",
+	"data_subject_request":             "internal/modules/consent",
+	"privacy_request_proof":            "internal/modules/consent",
+	"preference_token":                 "internal/modules/consent",
 	// The emailed link that shows a contact their own record and carries their
 	// marketing answer back, and what comes back through it. Consent's, because
 	// what the token authorises is a consent decision and the address it was

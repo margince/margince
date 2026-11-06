@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // The buckets a change can land in, in the order a waterfall draws them.
@@ -17,27 +18,36 @@ import (
 // then what the machinery did. Two installations drawing the same movement in
 // different orders would be telling two different stories about one quarter.
 const (
-	BucketNew         = "new"
-	BucketPulledIn    = "pulled_in"
-	BucketPushedOut   = "pushed_out"
-	BucketAmount      = "amount"
+	BucketNew       = "new"
+	BucketPulledIn  = "pulled_in"
+	BucketPushedOut = "pushed_out"
+	BucketAmount    = "amount"
+	// BucketCategory is a deal's own probability moving; the wire keeps "category" for frozen movements.
 	BucketCategory    = "category"
 	BucketStageWeight = "stage_weight"
 	// BucketRecordChanged is a deal whose weight moved while its stage did
 	// not: its stage chance or its risk effect moved with recorded outcomes.
 	BucketRecordChanged = "record_changed"
-	BucketWon           = "won"
-	BucketLost          = "lost"
-	BucketArchived      = "reopened_or_archived"
-	BucketFx            = "fx"
-	BucketDefinition    = "definition"
-	BucketModel         = "model"
+	// BucketExcluded and BucketReinstated are a deal leaving or rejoining a
+	// qualified reading because of its viability review, with its date and
+	// amount unchanged. BucketNotChecked is one that left because its review
+	// status became unknown, which is a gap in the check and not an exclusion.
+	BucketExcluded   = "excluded"
+	BucketReinstated = "reinstated"
+	BucketNotChecked = "not_checked"
+	BucketWon        = "won"
+	BucketLost       = "lost"
+	BucketArchived   = "reopened_or_archived"
+	BucketFx         = "fx"
+	BucketDefinition = "definition"
+	BucketModel      = "model"
 )
 
 // bucketOrder is the drawing order, and the ONE place it is stated.
 var bucketOrder = []string{
 	BucketNew, BucketPulledIn, BucketPushedOut, BucketAmount, BucketCategory,
-	BucketStageWeight, BucketRecordChanged, BucketWon, BucketLost, BucketArchived, BucketFx,
+	BucketStageWeight, BucketRecordChanged, BucketExcluded, BucketReinstated, BucketNotChecked,
+	BucketWon, BucketLost, BucketArchived, BucketFx,
 	BucketDefinition, BucketModel,
 }
 
@@ -49,7 +59,7 @@ var bucketOrder = []string{
 // stops a bucket added here from silently vanishing from a waterfall.
 //
 // Exported so a reader that must account for every one derives the set. The
-// weekly bridge folds these thirteen into seven bars. A hand-kept list there
+// weekly bridge folds these into its bars. A hand-kept list there
 // would drop a bucket added here, and its money with it.
 //
 // Returned as a fresh slice because a package-level array would let one caller
@@ -65,6 +75,9 @@ func MovementBuckets() []string {
 // approximation — and it is the whole point: a waterfall whose bars do not
 // reach the closing bar is a picture that has to be explained away.
 type Movement struct {
+	// BaseCurrency is what both snapshots converted every amount to. Store.Movement
+	// refuses two snapshots in different base currencies.
+	BaseCurrency string
 	OpeningMinor int64
 	ClosingMinor int64
 	Buckets      []Bucket
@@ -140,18 +153,34 @@ type snapshotSide struct {
 // not belong in the same total.
 type Reading string
 
-// The four money answers a movement can explain.
+// The money answers a movement can explain. The qualified three are the
+// baseline readings over the deals the customer still supports.
 const (
-	ReadingOpen     Reading = "open"
-	ReadingWeighted Reading = "weighted"
-	ReadingEvidence Reading = "evidence"
-	ReadingBestCase Reading = "best_case"
+	ReadingOpen              Reading = "open"
+	ReadingWeighted          Reading = "weighted"
+	ReadingEvidence          Reading = "evidence"
+	ReadingQualifiedEvidence Reading = "qualified_evidence"
+	ReadingQualifiedWeighted Reading = "qualified_weighted"
 )
 
-// everyReading lists the money answers. A call's drift is compared in each.
+// baselineOf is the reading a qualified one restricts, and the reading itself
+// for a baseline one.
+func baselineOf(reading Reading) (Reading, bool) {
+	switch reading {
+	case ReadingQualifiedEvidence:
+		return ReadingEvidence, true
+	case ReadingQualifiedWeighted:
+		return ReadingWeighted, true
+	default:
+		return reading, false
+	}
+}
+
+// everyReading lists the baseline money answers. A call's drift is compared in
+// each; a qualified reading's change reaches the call as QualificationChanges.
 //
 // Held by: TestEveryReadingIsComparedForACall (backend/internal/modules/forecasting/calldrift_test.go)
-var everyReading = []Reading{ReadingOpen, ReadingWeighted, ReadingEvidence, ReadingBestCase}
+var everyReading = []Reading{ReadingOpen, ReadingWeighted, ReadingEvidence}
 
 // Classify explains the difference between two snapshots of one reading.
 func Classify(reading Reading, from, to snapshotSide) Movement {
@@ -163,8 +192,16 @@ func Classify(reading Reading, from, to snapshotSide) Movement {
 	// buckets would report a rules change as sales activity — which is the one
 	// thing a manager reading a waterfall must never be told.
 	definitionChanged := from.DefinitionVersion != to.DefinitionVersion
+	// A qualified reading also means what its policy says. A side or a row
+	// frozen with no policy, or under another one, changes the definition and
+	// not the deals.
+	if _, qualified := baselineOf(reading); qualified {
+		definitionChanged = definitionChanged || from.QualifiedPolicy == "" ||
+			from.QualifiedPolicy != to.QualifiedPolicy || !basisAgrees(from, to)
+	}
 
 	out := Movement{
+		BaseCurrency: to.BaseCurrency,
 		OpeningMinor: totalOf(reading, from.Contributions),
 		ClosingMinor: totalOf(reading, to.Contributions),
 	}
@@ -252,6 +289,8 @@ func classifyOutcome(reading Reading, was Contribution, existed bool, now Contri
 		return BucketNew
 	case now.InLost && !was.InLost && inReading(reading, was):
 		return BucketLost
+	case qualificationMoved(reading, was, now) != "":
+		return qualificationMoved(reading, was, now)
 	case now.ExclusionReason == "" && was.ExclusionReason != "":
 		// It became countable again: a price arrived, or a rate did.
 		return BucketAmount
@@ -274,7 +313,7 @@ func classifyRepricing(was, now Contribution) string {
 	switch {
 	case amountChanged(was, now):
 		return BucketAmount
-	case was.Category != now.Category:
+	case probabilitySetMoved(was, now):
 		return BucketCategory
 	case stageMoved(was, now) && was.StageProbability != now.StageProbability:
 		return BucketStageWeight
@@ -291,59 +330,37 @@ func classifyRepricing(was, now Contribution) string {
 	}
 }
 
-// amountChanged answers whether the deal's own money moved, including a deal
-// that BECAME unpriced: its full prior value leaves through this bucket rather
-// than through an exclusion nobody drew.
-func amountChanged(was, now Contribution) bool {
+// qualificationMoved answers the bucket of a deal that stayed in a qualified
+// reading's baseline and crossed in or out of it on its review alone. Empty for
+// a baseline reading, or when the review is not what moved it.
+func qualificationMoved(reading Reading, was, now Contribution) string {
+	base, qualified := baselineOf(reading)
+	if !qualified || !inReading(base, was) || !inReading(base, now) {
+		return ""
+	}
+	wasIn := was.Qualification == viability.QualificationEligible
+	nowIn := now.Qualification == viability.QualificationEligible
 	switch {
-	case was.AmountMinor == nil && now.AmountMinor == nil:
-		return false
-	case was.AmountMinor == nil || now.AmountMinor == nil:
-		return true
+	case !wasIn && nowIn:
+		return BucketReinstated
+	case wasIn && now.Qualification == viability.QualificationUnknown:
+		return BucketNotChecked
+	case wasIn && !nowIn:
+		return BucketExcluded
 	default:
-		return *was.AmountMinor != *now.AmountMinor || was.Currency != now.Currency
+		return ""
 	}
 }
 
-// stageMoved answers whether the deal changed stage. A side frozen without its
-// stage counts as moved, because nothing says it stayed.
-func stageMoved(was, now Contribution) bool {
-	return was.StageID == "" || now.StageID == "" || was.StageID != now.StageID
-}
-
-// weightRecordChanged answers whether the chance or the risk effect moved on a
-// deal that stayed in its stage.
-func weightRecordChanged(was, now Contribution) bool {
-	if stageMoved(was, now) {
-		return false
-	}
-	return was.StageProbability != now.StageProbability || !sameEffect(was.Effect, now.Effect)
-}
-
-func sameEffect(a, b *float64) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
-	return *a == *b
-}
-
-// fxChanged answers whether only the conversion moved. Checked after the
-// amount, so a deal whose price AND rate both moved reads as a repricing —
-// which is what happened to it commercially.
-func fxChanged(was, now Contribution) bool {
-	if was.BaseMinor == nil || now.BaseMinor == nil {
-		return was.BaseMinor != now.BaseMinor
-	}
-	return *was.BaseMinor != *now.BaseMinor
-}
-
-// inReading answers whether a contribution is part of one reading.
+// inReading answers whether a contribution is part of one reading. A qualified
+// reading holds the baseline's deals the customer still supports.
 func inReading(reading Reading, c Contribution) bool {
+	if base, qualified := baselineOf(reading); qualified {
+		return inReading(base, c) && c.Qualification == viability.QualificationEligible
+	}
 	switch reading {
 	case ReadingEvidence:
 		return c.InEvidence
-	case ReadingBestCase:
-		return c.InBestCase
 	case ReadingWeighted, ReadingOpen:
 		return c.InOpen
 	default:
@@ -358,7 +375,7 @@ func contributionOf(reading Reading, c Contribution) int64 {
 	if !inReading(reading, c) {
 		return 0
 	}
-	if reading == ReadingWeighted {
+	if reading == ReadingWeighted || reading == ReadingQualifiedWeighted {
 		return c.WeightedMinor
 	}
 	// An unpriced or unconvertible deal is IN the reading and contributes
@@ -403,6 +420,14 @@ func dealDelta(
 	return out
 }
 
+// probabilitySetMoved reports a deal taking, leaving or moving its own probability.
+func probabilitySetMoved(was, now Contribution) bool {
+	if was.Source != now.Source {
+		return true
+	}
+	return now.Source != "" && now.Source != SourceStage && was.StageProbability != now.StageProbability
+}
+
 // causesOf lists every change between two contributions of one deal, whatever
 // reading is drawn. A new deal has one cause: it arrived.
 func causesOf(was Contribution, existed bool, now Contribution) []string {
@@ -417,7 +442,7 @@ func causesOf(was Contribution, existed bool, now Contribution) []string {
 		{BucketPulledIn, !was.InOpen && now.InOpen},
 		{BucketPushedOut, was.InOpen && !now.InOpen && !now.InWon && !now.InLost},
 		{BucketAmount, amountChanged(was, now)},
-		{BucketCategory, was.Category != now.Category},
+		{BucketCategory, probabilitySetMoved(was, now)},
 		{BucketStageWeight, stageMoved(was, now) && was.StageProbability != now.StageProbability},
 		{BucketRecordChanged, weightRecordChanged(was, now)},
 		{BucketWon, now.InWon && !was.InWon},

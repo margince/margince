@@ -138,6 +138,7 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 		{fieldCurrency, currency},
 		{fieldOptions, optionsArg},
 		{fieldShow, spec.ShowInCreate == nil || *spec.ShowInCreate},
+		{fieldKinds, storedKinds(spec.ActivityKinds)},
 		{"created_by", creator},
 	})
 	if storekit.IsUniqueViolation(err) {
@@ -161,6 +162,9 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 	}
 	if out.Options != nil {
 		after[fieldOptions] = *out.Options
+	}
+	if out.ActivityKinds != nil {
+		after[fieldKinds] = *out.ActivityKinds
 	}
 	// Audit-only by ratification: the closed event catalog (events.md §5)
 	// defines no custom_field.* type — the spec's custom-fields.md §Events

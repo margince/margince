@@ -80,7 +80,7 @@ To clear several rows, press **Select** and tick them. **Complete** finishes tic
 **Done** and **Not mine** clear your own list only. **Not mine** shows only on a row someone else
 owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run out. Also called: dismiss, delete from worklist, hide, not relevant, mark as done, handled.
 
-Captured mail needs a reply only when Margince finds a request or you keep it as work. Other mail stays on the record. Archiving a contact removes their waiting messages; restoring them brings those messages back. A message stays if another contact you can see is still live, or none of its contacts are visible.
+Captured mail needs a reply only when Margince finds a request or you keep it as work. A request nobody kept stops needing a reply once it is too old for your worklist, on the contact page too. Other mail stays on the record. Archiving a contact removes their waiting messages; restoring them brings those messages back. A message stays if another contact you can see is still live, or none of its contacts are visible.
 
 ### How do I undo a snooze or removal on my worklist?
 To undo a Worklist snooze or removal in Margince, press **Undo** in the note that appears right after you picked it.
@@ -253,9 +253,10 @@ Worklist items are in bands, shown in this order:
 | **Keep momentum** | "No agreed work is drifting." |
 | **Prospecting** | "No prospecting work waiting." |
 
-The views are **Today** (your work), **Decisions** (choices someone must make) and **System**
-(problems Margince reports). Each shows its own count and categories. **Upcoming and backlog**, at
+The views are **Today** (your work), **Decisions** (choices someone must make) and **System** (problems Margince reports). Each shows its own count and categories. **Upcoming and backlog**, at
 the end of **Today**, holds tasks due in the next 14 days; see [Where are tasks due later?](#where-are-tasks-due-later). Possible duplicate contacts share one card in **Decisions**, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
+
+A possible deal also waits in **Decisions**, in the Worklist of the company's owner. It sits below customer replies, promises and your planned tasks, and above routine work on records. A company with no owner shows its possible deal under **Unassigned**. If the company gets a new owner, the possible deal moves to them. See [How do I review a possible deal?](leads-deals-and-projects.md#how-do-i-review-a-possible-deal)
 
 A band you have cleared still shows its heading and says so, but only when the whole day is loaded.
 
@@ -386,7 +387,7 @@ You can also add a note to a teammate's Worklist with **Add note** ("A short not
 
 ### What is in the morning email?
 
-It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing.
+It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing. Each item opens its record's page when it has one. A task, a meeting or its outcome, or an item without a record opens **Home** with that item open.
 
 Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest.
 Mail follows your working days and local clock, with a three-hour window that can end on the next day.

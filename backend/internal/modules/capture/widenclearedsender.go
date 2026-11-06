@@ -153,7 +153,7 @@ func WidenClearedSenderTx(
 	if err := rows.Err(); err != nil {
 		return 0, fmt.Errorf("capture: claiming the import rows a cleared sender re-opens: %w", err)
 	}
-	// Sorted before recomputing, because the recompute takes FOR UPDATE on each
+	// Sorted before recomputing, because the recompute row-locks each
 	// activity in turn. Two passes claiming different seats' import rows for an
 	// overlapping set of activities would otherwise take those row locks in
 	// whatever order each UPDATE returned them, which is a deadlock the import

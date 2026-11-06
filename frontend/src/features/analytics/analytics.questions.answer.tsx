@@ -10,8 +10,8 @@ import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { SurfaceState } from "../../design-system/surfacestate";
 import {
-  formatMoneyOrAbsent,
-  formatNumber,
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
   MONEY_ABSENT,
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
@@ -72,8 +72,8 @@ function measureCell(
   return (
     <span className="t-num">
       {reading.kind === "money"
-        ? formatMoneyOrAbsent(value, reading.currency, locale)
-        : formatNumber(value, locale)}
+        ? formatAnalyticsMoneyOrAbsent(value, reading.currency, locale)
+        : formatAnalyticsNumber(value, locale)}
     </span>
   );
 }
@@ -128,7 +128,7 @@ function AnswerCell({
   if (isWithheldRow(row)) {
     return first
       ? plural("analytics.q.withheldGroups", withheldGroups, {
-          count: formatNumber(withheldGroups, locale),
+          count: formatAnalyticsNumber(withheldGroups, locale),
         })
       : null;
   }
@@ -240,7 +240,7 @@ export function AnswerTable({
       {answer.rows.length >= limit && (
         <p className="t-caption">
           {plural("analytics.q.limited", limit, {
-            count: formatNumber(limit, locale),
+            count: formatAnalyticsNumber(limit, locale),
           })}
         </p>
       )}
@@ -354,7 +354,7 @@ function ExplainRecords({
       {data?.truncated && (
         <p className="t-caption">
           {plural("analytics.q.explainTruncated", data.rows.length, {
-            count: formatNumber(data.rows.length, locale),
+            count: formatAnalyticsNumber(data.rows.length, locale),
           })}
         </p>
       )}
@@ -428,7 +428,7 @@ function recordCell(
   }
   const currency = moneyCurrency(column, row, frame.query, frame.baseCurrency);
   if (currency !== undefined && typeof value === "number") {
-    return formatMoneyOrAbsent(value, currency, frame.locale);
+    return formatAnalyticsMoneyOrAbsent(value, currency, frame.locale);
   }
   return frame.namer(column, value);
 }

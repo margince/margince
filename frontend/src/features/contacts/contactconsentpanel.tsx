@@ -11,10 +11,15 @@ import { type Translator, useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useProviderLabel } from "../../lib/channelproviders";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
 import { consentPurposeName, consentReason } from "./consentreason";
 import { consentWord } from "./contactreadings";
+import { ContactStops } from "./contactstops";
+import {
+  RetractAcquisitionRequest,
+  RetractRecordedRequest,
+} from "./retractrequest";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactConsentGuard = components["schemas"]["ContactConsentGuard"];
@@ -186,7 +191,7 @@ function VerdictWord({
 export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const guard = useConsentGuard(view.contact.id, !view.contact.archived_at);
   const [manage, setManage] = useState(false);
   // Opened once, mounted from then on. The section reads consent and the
@@ -225,8 +230,19 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
                     {consentReason(entry, t, locale, zone)}
                   </p>
                 )}
+                <RetractRecordedRequest
+                  contactId={view.contact.id}
+                  event={entry.qualifying_event}
+                  mayWrite={mayWrite}
+                />
               </div>
             ))}
+        <RetractAcquisitionRequest
+          contactId={view.contact.id}
+          request={view.contact.acquisition_request}
+          mayWrite={mayWrite}
+        />
+        <ContactStops contactId={view.contact.id} />
         <p>{t("consent.permissionScope")}</p>
         <Button
           variant="ghost"

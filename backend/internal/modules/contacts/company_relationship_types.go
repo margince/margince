@@ -231,17 +231,11 @@ func hasPartnerRow(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (boo
 }
 
 // reconcileCompanyRelationshipTypes applies the replace-set: insert what is new,
-// archive what is gone, leave the rest alone so an untouched type keeps its
-// original provenance and created_at. Returns the before image for the audit.
-//
-// It refuses to drop `partner` while the partner extension row lives. ADR-0032
-// bound partnerhood to a classification value and nothing enforced it; ADR-0079
-// moves the invariant here and this is where it is kept. Refusing is the honest
-// answer: the caller is asking for a state the partner APIs would contradict,
-// and silently keeping the row would make the request a lie in the other
-// direction.
-// With ext set it replaces the extension half, else core's half; the partner
-// rule applies to core's half only.
+// archive what is gone, and leave the rest so provenance and created_at stay.
+// It returns the before image for the audit. ADR-0079 keeps one invariant here:
+// `partner` is never dropped while the partner extension row lives. With ext set
+// it replaces the extension half, else core's half, and only core's half is held
+// to the partner rule.
 func reconcileCompanyRelationshipTypes(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string, desired []string, ext bool,
 ) ([]string, error) {

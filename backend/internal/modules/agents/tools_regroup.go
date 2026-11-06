@@ -110,10 +110,10 @@ type changeReports struct{ routed }
 
 func (changeReports) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "change_reports", Title: "Prepare saved reports", Version: toolVersionV1,
+		Name: "change_reports", Title: "Work saved reports and the forecast", Version: toolVersionV1,
 		Description: changeReportsCopy.render(), Instead: changeReportsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"description":"draft: save a report's next charts as a draft for a human to publish, or create a new report only they see"},
+			"action":{"description":"draft: save a report's next charts as a draft to publish later, or create a new report only its author sees"},
 			"selection":{"description":"The report's metrics, charts and sections; a pipeline_id comes from ` + pipelinesSource + `"}}}`),
 	}
 }
@@ -166,15 +166,15 @@ type scheduleMeeting struct{ routed }
 
 func (scheduleMeeting) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "schedule_meeting", Title: "Book or invite to a meeting", Version: toolVersionV1,
+		Name: "schedule_meeting", Title: "Invite to a meeting", Version: toolVersionV1,
 		Description: scheduleMeetingCopy.render(), Instead: scheduleMeetingCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"description":"book: put a meeting on the calendar; invite: send the invitation to the attendees"}}}`),
+			"action":{"description":"invite: put the meeting on the host's calendar and send the invitation to every attendee"}}}`),
 	}
 }
 
 func (scheduleMeeting) routeField() string { return actionArg }
 
 func (scheduleMeeting) routeTargets() map[string]string {
-	return map[string]string{"book": "book_meeting", "invite": "invite_meeting"}
+	return map[string]string{"invite": "invite_meeting"}
 }

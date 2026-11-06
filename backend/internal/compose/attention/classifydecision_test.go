@@ -23,3 +23,14 @@ func TestCommercialStageDecisionsAreNotRoutineCleanup(t *testing.T) {
 		t.Fatalf("contact cleanup lost its routine classification: %+v", cleanup)
 	}
 }
+
+func TestADealSuggestionIsAPossibleOpportunityNotCleanup(t *testing.T) {
+	ranked := classifyDecision(item("scout", sourceDealSuggestion, withKind("open_deal")), rankInstant)
+	row := ranked.item
+	if row.Level != levelBlocking || row.Consequence != "none" || len(row.Because) != 0 {
+		t.Fatalf("a deal suggestion was classified as cleanup: %+v", row)
+	}
+	if key, folds := batchKeyOf(ranked); folds {
+		t.Fatalf("a deal suggestion folds into the %q group", key)
+	}
+}

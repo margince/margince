@@ -38,7 +38,8 @@ const (
 // Service owns identity: the singleton company, users, opaque
 // server-side sessions.
 type Service struct {
-	memberWork MemberWork
+	memberWork  MemberWork
+	mailCapture MailCapture
 	// db binds the installation's workspace, resolved through this service's
 	// own InstallationWorkspace — which reads no tenant table, so a service
 	// holding a handle that resolves through it is not circular at runtime
@@ -89,7 +90,7 @@ type Service struct {
 	// check before they touch it. See mfa.go.
 	vault keyvault.Vault
 	// config answers the stored settings a boot source may set. Nil refuses an
-	// OAuth mint (settingsoauthtoken.go); nothing else here reads it.
+	// OAuth mint (settingsoauthtoken.go) and a client check read.
 	config *config.Config
 }
 
@@ -133,6 +134,11 @@ type Identity struct {
 	// (data-semantics §2.2). Both are stored; only this one is a property of
 	// the seat.
 	Timezone string
+	// TimezoneChosen is true when the member picked Timezone themselves, and
+	// false when it is the browser's guess or nothing is stored.
+	TimezoneChosen bool
+	// TimezoneSetBy names the agent that set Timezone, nil when none did.
+	TimezoneSetBy *string
 	// MustChangePassword is true while this account is still using a password
 	// somebody else chose — a configured bootstrap's operator-supplied
 	// credential. Every authenticated route is refused until it is replaced.
@@ -340,7 +346,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		var locale, timezone *string
 		err := tx.QueryRow(ctx,
 			`SELECT s.id, u.id, u.email, u.display_name, u.seat_type, u.must_change_password,
-			        u.locale, u.timezone, u.greeting_name,
+			        u.locale, u.timezone, u.timezone_chosen, u.timezone_set_by, u.greeting_name,
 			        coalesce((SELECT value #>> '{}' FROM setting WHERE key = $2), '')
 			 FROM session s
 			 JOIN app_user u ON u.id = s.user_id
@@ -349,7 +355,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			   AND now() < s.idle_expires_at
 			   AND now() < s.expires_at
 			   AND `+LiveMemberSQL("u")+``,
-			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.GreetingName, &id.WorkspaceName)
+			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.TimezoneChosen, &id.TimezoneSetBy, &id.GreetingName, &id.WorkspaceName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

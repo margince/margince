@@ -33,7 +33,6 @@ import (
 func clearableDealColumns(current crmcontracts.Deal) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
 		"expected_close_date": {Column: "expected_close_date", Current: current.ExpectedCloseDate},
-		"forecast_category":   {Column: "forecast_category", Current: current.ForecastCategory},
 		"wait_until":          {Column: "wait_until", Current: current.WaitUntil},
 		"owner_id":            {Column: ownerColumn, Current: current.OwnerId},
 		"company_id":          {Column: "company_id", Current: current.CompanyId},
@@ -99,7 +98,12 @@ func dealClearPairs(current crmcontracts.Deal) map[string][]storekit.Clearable {
 	// written as a constant — is invisible to it, and the census then reports
 	// fewer clearable fields than the store actually clears while still
 	// passing. That is the failure it exists to catch.
+	stored, storedBy := storedWinProbability(current)
 	return map[string][]storekit.Clearable{
+		"win_probability": {
+			{Column: "win_probability_override", Current: stored},
+			{Column: "win_probability_set_by", Current: storedBy},
+		},
 		"partner_company_id":  partner,
 		"partner_attribution": partner,
 		"expected_arr_minor":  clearArr,

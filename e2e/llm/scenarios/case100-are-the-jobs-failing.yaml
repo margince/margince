@@ -1,0 +1,23 @@
+# CASE 100 — The background job page is an operator read an admin's agent may make. It changes nothing.
+name: case100_are_the_jobs_failing
+criteria: [1]
+writes: true
+
+prompt: |
+  Are any of our background jobs failing right now?
+
+must_call:
+  - read_workspace
+
+must_call_with:
+  - read_workspace.topic=job_health|read_workspace.topic=system_health
+
+must_not_call_with:
+  - change_settings~.
+
+may_call:
+  - whoami
+  - read_details
+
+runs: 3
+pass_at: 2

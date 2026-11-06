@@ -23,8 +23,8 @@ import {
   formatActivityWhen,
   type OccurredPrecision,
 } from "../../format/activitywhen";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useContact360 } from "../contacts/contact360";
 import { NoticeDuty } from "../privacy/noticeduty";
 import type { WorklistItem } from "./worklist.queries";
@@ -142,7 +142,7 @@ function ContactFacts({
 }: Readonly<{ view: NonNullable<ReturnType<typeof useContact360>["data"]> }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   // Both come off `contact`, which is required on the wire — so an answer
   // without it is version skew, and the two facts it carries are simply
   // absent. Absent is already this list's ordinary case: a row is dropped

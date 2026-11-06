@@ -63,6 +63,14 @@ func (g *Gate) AuthorizeStagingWithDecisionTx(
 	return set, directed.instructionID, nil
 }
 
+// errAdvertisingDutiesMissing refuses a body composed as correspondence when a
+// recipient resolves to marketing at staging. The composer asked the same engine
+// first, so this fires only when the record changed in between. Composing
+// again adds the objection route and the unsubscribe link.
+var errAdvertisingDutiesMissing = fmt.Errorf(
+	"consent: a recipient of this message is now read as advertising, and the message was composed without "+
+		"the advertising disclosures and unsubscribe link; send it again so they are added: %w", apperrors.ErrConflict)
+
 func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, req commsauthz.Request, directed *directedExecution) (commsauthz.DecisionSet, error) {
 	for _, r := range req.Recipients {
 		if err := r.Validate(); err != nil {
@@ -82,19 +90,19 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
-	// WHICH RULES ARE ABOUT TO JUDGE THIS, read here for the same reason the
-	// posture above is: before any decision is taken, so the row records the
-	// ruleset that actually judged it rather than whichever one is live by the
-	// time the rows are written.
-	ruleset, err := g.rulesetStamp(ctx, tx)
+	if req, err = withSendingEntity(ctx, tx, req); err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
+	// Each recipient's country, resolved once: the decision and its recorded
+	// stamp read this one answer.
+	countries, err := recipientCountries(ctx, tx, req.Recipients)
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
-
 	setID := ids.NewV7()
 	set := commsauthz.DecisionSet{}
-	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, req, commsauthz.PhaseStaging)
+	for i, r := range req.Recipients {
+		d, err := g.decideOneIn(ctx, tx, r, req, commsauthz.PhaseStaging, countries[i])
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -105,6 +113,9 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 		d.Requested = req.Context
 		set.Decisions = append(set.Decisions, d)
 	}
+	if req.OmitsAdvertisingDuties && set.AdvertisesToASubject() {
+		return commsauthz.DecisionSet{}, errAdvertisingDutiesMissing
+	}
 	// THE AUTHORITY IS DECIDED BEFORE THE ROWS ARE WRITTEN, because it is part
 	// of what each row records and those rows are never updated afterwards.
 	//
@@ -113,13 +124,13 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	// would consume an instruction on a send that never needed one.
 	if directed != nil && directed.wanted && refusesAnyRecipient(set) {
 		instruction, err := g.AuthorizeDirectedExecutionTx(
-			ctx, tx, directed.intentID, deliveryID, directed.authored)
+			ctx, tx, directed.intentID, deliveryID, directed.authored, set)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
 		directed.instructionID = instruction
 	}
-	if err := g.recordStagingDecisions(ctx, tx, deliveryID, setID, req, set, directedAuthority(directed), ruleset); err != nil {
+	if err := g.recordStagingDecisions(ctx, tx, deliveryID, setID, req, set, directedAuthority(directed), countries); err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
 	return set, nil
@@ -162,13 +173,13 @@ func refusesAnyRecipient(set commsauthz.DecisionSet) bool {
 // up yet, and every transmit row that follows carries the attempt it belonged
 // to. The fingerprint is of the message as staged, so a later reader can tell
 // whether what went out is what was authorized.
-func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID, setID ids.UUID, req commsauthz.Request, set commsauthz.DecisionSet, instruction ids.UUID, ruleset rulesetStampValue) error {
+func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID, setID ids.UUID, req commsauthz.Request, set commsauthz.DecisionSet, instruction ids.UUID, countries []RecipientCountry) error {
 	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	for _, d := range set.Decisions {
+	for i, d := range set.Decisions {
 		// The ids THIS RECIPIENT'S decision was taken on, so the transmit phase
 		// can put the same questions to the same records.
 		//
@@ -188,6 +199,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			id := d.SubjectID
 			subjectID = &id
 		}
+		ruleset := rulesetStamp(countries[i])
 		// NOT COUNTED. See decisioncounter.go: this runs on a transaction this
 		// function does not own, and an enforced refusal is delivered by
 		// rolling that transaction back (compose/commsstager.go refuseAtStaging),
@@ -217,15 +229,17 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, mode, actor, evidence, execution_authority, instruction_id,
-			   ruleset_version, ruleset_codes)
-			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+			   ruleset_version, ruleset_codes, legal_entity_id, purpose_key,
+			   existing_customer_notice_id, existing_customer_offer_id, existing_customer_sold_at)
+			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
 			deliveryID, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested),
 			string(d.Resolved), string(d.Verdict), d.ReasonCode,
 			nullableBasis(d.Basis), nullableText(d.Suppression),
 			sum[:], string(d.Mode), by, evidence, authority, instructionID,
-			ruleset.Version, ruleset.Codes)
+			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
+			groundNotice(d), groundOffer(d), groundSoldAt(d))
 		if err != nil {
 			return fmt.Errorf("consent: record the staging decision: %w", err)
 		}

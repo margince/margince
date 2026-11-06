@@ -91,3 +91,13 @@ describe("a second press while the first save is not yet drawn pending", () => {
     }
   });
 });
+
+describe("a create dialog while its save is out", () => {
+  it("holds Cancel with the X, so no way out drops the write mid-flight", () => {
+    render(modal(true, vi.fn()));
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+});

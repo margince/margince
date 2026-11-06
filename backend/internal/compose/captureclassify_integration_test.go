@@ -369,15 +369,11 @@ func TestCaptureClassifyPass(t *testing.T) {
 	})
 }
 
-// The reply verdict reaches the column THROUGH THE PASS, not through a store
-// method a test called itself.
-//
-// This is the test the store-level ones could not be. Every one of those still
-// passes with recordReply deleted, because they drive the write door directly;
-// only a run of RunWorkspace over a real backlog proves the engine carries the
-// model's answer to the row. The direction assertion is here for the same
-// reason: it reads what the PROMPT said, so a sender writing "inbound: no" into
-// their own message body cannot move it.
+// The reply verdict reaches the column through the pass. A test that calls a
+// store method itself would still pass with the reply write deleted. Only a
+// run of RunWorkspace over a real backlog proves the engine carries the
+// model's answer to the row. It also shows what the prompt said about direction.
+
 func TestTheClassifyPassCarriesTheReplyVerdictToTheRow(t *testing.T) {
 	e := integration.Setup(t)
 
@@ -557,5 +553,46 @@ func TestAMessageWithNoDirectionStillGetsLabelled(t *testing.T) {
 	}
 	if v := replyVerdictOf(t, e, id); v != nil {
 		t.Errorf("a directionless row took reply verdict %q", *v)
+	}
+}
+
+// editingBrain changes the message while the model is thinking, as a restore
+// of the body would.
+type editingBrain struct {
+	*scriptedClassifyBrain
+	edit func()
+}
+
+func (b editingBrain) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	b.edit()
+	return b.scriptedClassifyBrain.Complete(ctx, req)
+}
+
+// A message edited during the model call is classified again, not labelled
+// with a verdict about the text the model read.
+func TestAVerdictAboutAnEditedMessageStoresNeitherLabelNorReply(t *testing.T) {
+	e := integration.Setup(t)
+	edited := seedInboundEmail(t, e, "yes please, send it over")
+	brain := editingBrain{
+		scriptedClassifyBrain: &scriptedClassifyBrain{
+			labels:     map[string]string{edited.String(): "commitment"},
+			replies:    map[string]string{edited.String(): "positive"},
+			sawInbound: map[string]string{},
+		},
+		edit: func() {
+			e.WsExec(t, `UPDATE activity SET body = 'the full restored text' WHERE id = $1`, edited)
+		},
+	}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if v := replyVerdictOf(t, e, edited); v != nil {
+		t.Errorf("reply verdict = %q on a message edited during the call, want none", *v)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND capture_label IS NULL`, edited); n != 1 {
+		t.Error("the edited message was labelled from the text the model read")
 	}
 }

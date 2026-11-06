@@ -23,6 +23,12 @@ func (e *scoutEnv) buyingEmail(t *testing.T, company ids.UUID, at time.Time, thr
 	if len(threads) > 0 {
 		thread = threads[0]
 	}
+	return e.buyerRequest(t, buyer, at, thread), buyer
+}
+
+// buyerRequest logs the buyer's inbound request for a proposal.
+func (e *scoutEnv) buyerRequest(t *testing.T, buyer ids.UUID, at time.Time, thread string) ids.UUID {
+	t.Helper()
 	subject, body, direction := "Platform request", "We need a platform migration. Please send a proposal.", "inbound"
 	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		ThreadKey: thread, Kind: "email", Subject: &subject, Body: &body, Direction: &direction, OccurredAt: &at, Source: "manual",
@@ -31,7 +37,7 @@ func (e *scoutEnv) buyingEmail(t *testing.T, company ids.UUID, at time.Time, thr
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ids.UUID(logged.Id), buyer
+	return ids.UUID(logged.Id)
 }
 
 func (e *scoutEnv) buyerPair(t *testing.T, company ids.UUID, at time.Time) {

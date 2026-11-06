@@ -8,7 +8,7 @@ import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { phaseMoverSentence } from "./projectphasemover";
 import { OverviewSection, type Project360, stateOf } from "./projectsections";
 import { phaseName } from "./projectstanding.words";
@@ -59,7 +59,7 @@ function VisitRow({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const from = formatDayMonth(visit.changed_at, locale, zone);
   const span = leftAt
     ? t("project.history.moved", {
