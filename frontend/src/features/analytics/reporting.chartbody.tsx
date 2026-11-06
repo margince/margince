@@ -29,6 +29,7 @@ import {
 } from "./reporting.model";
 import { movementLabel } from "./reporting.movement";
 import { useMetricNames } from "./reporting.queries";
+import { selectReading } from "./reporting.readingselect";
 import { SdrOutcomes } from "./reporting.sdroutcomes";
 import { TargetProgress } from "./reporting.summary";
 import "./reporting.css";
@@ -489,22 +490,4 @@ function StageChart({
       />
     </>
   );
-}
-
-// The records behind one reading. A waterfall's two ends open the stock it
-// starts and ends with, which no point carries.
-function selectReading(
-  chart: ReportingChart,
-  key: string,
-  onEvidence: EvidenceAction,
-) {
-  if (
-    chart.kind === "pipeline_movement" &&
-    (key === "opening" || key === "closing")
-  ) {
-    onEvidence({ metric: chart.metric, context_id: `movement_${key}` });
-    return;
-  }
-  const reference = chart.points.find((point) => point.key === key)?.evidence;
-  if (reference) onEvidence(reference);
 }

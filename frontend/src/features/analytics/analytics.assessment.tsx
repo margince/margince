@@ -13,7 +13,6 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { formatAnalyticsNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { isVersionSkewOf, problemFieldErrors, unwrap } from "../../lib/problem";
@@ -25,6 +24,7 @@ import {
 } from "./analytics.assessment.text";
 import { RecordDecisionDialog } from "./analytics.decisions";
 import { metricOf } from "./analytics.overview.readings";
+import { OverviewActions } from "./analytics.overviewactions";
 import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
@@ -368,52 +368,6 @@ function OutlookProse({
         </Disclosure>
       )}
     </div>
-  );
-}
-
-function OverviewActions({
-  evaluation,
-  order,
-  onEvidence,
-  framed = false,
-}: Readonly<{
-  evaluation: ReportingEvaluation;
-  order?: readonly string[];
-  onEvidence: (reference: ReportingEvidenceRef) => void;
-  // On a card of its own, when no outlook panel holds the doors.
-  framed?: boolean;
-}>) {
-  const { locale } = useLocale();
-  const candidates = evaluation.overview_actions ?? [];
-  const actions = order?.length
-    ? [...candidates].sort((a, b) => {
-        const rank = (id: string) => {
-          const at = order.indexOf(id);
-          return at < 0 ? order.length : at;
-        };
-        return rank(a.id) - rank(b.id);
-      })
-    : candidates;
-  if (!actions.length) return null;
-  const doors = (
-    <div className="actions">
-      {actions.map((action) => (
-        <Button
-          key={action.id}
-          variant="ghost"
-          onClick={() => onEvidence(action.evidence)}
-        >
-          {action.label} ({formatAnalyticsNumber(action.count, locale)})
-        </Button>
-      ))}
-    </div>
-  );
-  return framed ? (
-    <Panel>
-      <PanelBody>{doors}</PanelBody>
-    </Panel>
-  ) : (
-    doors
   );
 }
 

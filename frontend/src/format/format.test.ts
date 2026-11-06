@@ -14,7 +14,6 @@ import {
   formatHours,
   formatMoney,
   formatMoneyCompact,
-  formatMoneyCompactRange,
   formatMoneyOrAbsent,
   formatMoneyWhole,
   formatNumber,
@@ -27,6 +26,7 @@ import {
   ordinalNumber,
 } from "./format";
 import { formatDayFull, formatTimeRange } from "./meetingtime";
+import { formatMoneyCompactRange } from "./moneyrange";
 import { type DateFormat, setDateTimePreferences } from "./preferences";
 
 // B-EP09.17/18/19 acceptance: locale changes the RENDERING of the same stored
