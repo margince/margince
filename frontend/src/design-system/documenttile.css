@@ -177,7 +177,8 @@
 .board-doc-row .board-doc-body {
   flex: 1 1 0;
   min-width: 0;
-  gap: var(--space-1);
+  /* The column gap parts the facts from verbs a caller sets beside them. */
+  gap: var(--space-1) var(--space-4);
   padding: var(--space-3) var(--padCard);
 }
 

@@ -43,8 +43,6 @@
 .attachment-list .board-doc-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: var(--space-4);
-  row-gap: var(--space-1);
   align-items: center;
 }
 

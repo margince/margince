@@ -218,9 +218,10 @@
 .pn-hero-link {
   position: relative;
   margin: 0;
-  /* Centred on the 46px avatars. */
-  margin-top: calc(23px - 0.75em);
+  /* As tall as the large avatars, so the line runs through their centres. */
+  min-height: 46px;
   display: flex;
+  align-items: center;
   justify-content: center;
   text-align: center;
 }
@@ -229,13 +230,13 @@
   position: absolute;
   inset-inline: 0;
   top: 50%;
+  translate: 0 -50%;
   height: 2px;
   border-radius: var(--r-xs);
   background: var(--borderStrong);
 }
 .pn-hero[data-strength="strong"] .pn-hero-link::before {
   height: 4px;
-  margin-top: -1px;
   background: var(--accent);
 }
 .pn-hero[data-strength="moderate"] .pn-hero-link::before {
@@ -245,7 +246,7 @@
 /* The tie's words as a pill on the line, so the line passes behind them. */
 .pn-hero-link > span {
   position: relative;
-  padding: 2px var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-full);
   corner-shape: round;
