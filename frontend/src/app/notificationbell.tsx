@@ -20,6 +20,7 @@ import {
 import { worklistKey } from "../features/worklist/worklist.queries";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { opensElsewhere } from "../lib/linkclick";
 import { problemMessageOf } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import { noticeAction } from "./noticeaction";
@@ -323,7 +324,9 @@ function NoticeRow({
             <AppLink
               className="btn btn-ghost"
               href={action.href}
-              onClick={onActivate}
+              onClick={(event) => {
+                if (!opensElsewhere(event)) onActivate();
+              }}
             >
               {t(action.label)}
             </AppLink>

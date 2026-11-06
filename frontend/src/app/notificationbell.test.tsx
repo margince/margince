@@ -453,6 +453,31 @@ describe("NotificationBell", () => {
     }
   });
 
+  it("keeps a read notice's move and drops only its Mark read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "A lead is past its deadline", {
+          read_at: "2026-09-15T10:00:00Z",
+          target: { type: "lead", id: "11111111-1111-4111-8111-111111111111" },
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /notifications/i }),
+    );
+
+    expect(
+      (await screen.findByRole("link", { name: "Open lead" })).getAttribute(
+        "href",
+      ),
+    ).toBe("/#/leads/11111111-1111-4111-8111-111111111111");
+    expect(screen.queryByRole("button", { name: "Mark read" })).toBeNull();
+  });
+
   // A record KIND this app has no page for is named and not linked. Offering a
   // link into nothing is worse than offering none.
   it("names a notice it cannot route to, without linking it", async () => {
