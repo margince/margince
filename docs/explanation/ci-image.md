@@ -33,6 +33,16 @@ against the Ubuntu archive key either way. A fetch tries three times with a 30 s
 dead mirror fails the build in minutes. `apt-get update --error-on=any` fails on an index that never
 came. Without it, `apt` only warns, and every pin then fails as a package it cannot find.
 
+The snapshot limits how many files a GitHub runner may fetch, and a cold build fetched half its
+packages and then got 503. So `apt` reads one source through a mirror list,
+`/etc/apt/ubuntu-mirrors.list`. Its first entry is the live archive at `azure.archive.ubuntu.com`,
+marked `type:deb`, so it serves package files and no index. Its second entry is the snapshot, which
+serves every index and any file the live archive no longer holds.
+
+`apt` checks each file against the SHA256 in the snapshot index, whichever host sent it. A file
+with other bytes fails the build with "Hash Sum mismatch" and is not used. So the live archive
+changes where bytes come from, and not which bytes the image holds.
+
 Renovate reads two sources from Launchpad, which records what Ubuntu publishes. One is the newest
 time the 24.04 archive changed, which is the snapshot time. The other is the versions of each
 package published for 24.04, with their dates. The time and the versions move in one branch, because
@@ -46,7 +56,8 @@ image. The Go and Node builds the image copies in are the upstream ones, which r
 these rules:
 
 - every base image and every `COPY --from` image has a digest;
-- `apt` reads only the snapshot, and every package has a version;
+- `apt` reads every index from the snapshot, a live archive serves only files it checks, and every
+  package has a version;
 - every fetch over the network has a checksum that the build checks;
 - nothing turns off the checksum database of Go or the signature check of Corepack;
 - the managers in `renovate.json` find every pin.

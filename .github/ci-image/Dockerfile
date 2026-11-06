@@ -28,6 +28,13 @@ FROM node:24.22.2-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a3698
 # bump leaves this layer cached. apt checks every index against the Ubuntu
 # archive key either way.
 #
+# The snapshot throttles a GitHub runner's package fetches, so the .deb files
+# come from the live archive first. The mirror list marks that entry
+# `type:deb`, so every index still comes from the snapshot alone, and apt checks
+# each .deb against the snapshot index's SHA256: a byte that differs fails the
+# build, it never installs. A version the live archive has dropped comes from
+# the snapshot, the list's second entry.
+#
 # Three tries with a 30 s timeout: a dead mirror fails the build in minutes.
 # `--error-on=any` fails the update on an index that never came; without it apt
 # only warns, and every pin after it reads as not found.
@@ -38,9 +45,15 @@ FROM ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce
 ARG UBUNTU_SNAPSHOT=20261105T143010Z
 COPY --from=go /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 RUN rm /etc/apt/sources.list.d/ubuntu.sources \
+ && printf '%s\t%s\t%s\n' \
+      'http://azure.archive.ubuntu.com/ubuntu/' 'priority:1' 'type:deb' \
+      > /etc/apt/ubuntu-mirrors.list \
+ && printf '%s\t%s\n' \
+      "https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}/" 'priority:2' \
+      >> /etc/apt/ubuntu-mirrors.list \
  && printf '%s\n' \
       'Types: deb' \
-      "URIs: https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}" \
+      'URIs: mirror+file:/etc/apt/ubuntu-mirrors.list' \
       'Suites: noble noble-updates noble-security' \
       'Components: main universe' \
       'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' \

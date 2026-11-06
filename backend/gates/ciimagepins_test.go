@@ -36,16 +36,19 @@ var (
 	verificationOff = regexp.MustCompile(`GOSUMDB=off|GONOSUMDB|GONOSUMCHECK|GOINSECURE|GOPRIVATE|GOFLAGS=\S*-insecure|COREPACK_INTEGRITY_KEYS`)
 )
 
-// The rewrite a stage needs before apt: the image's live sources removed, and
-// the snapshot named at the one timestamp ARG Renovate moves.
+// The rewrite a stage needs before apt: the image's live sources go. One
+// source reads a mirror list that names the snapshot at the timestamp ARG.
 var snapshotSources = []string{
 	"rm /etc/apt/sources.list.d/ubuntu.sources",
-	"URIs: https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}",
+	"https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}/",
+	"> /etc/apt/ubuntu-mirrors.list",
+	"URIs: mirror+file:/etc/apt/ubuntu-mirrors.list",
 	"/etc/apt/sources.list.d/snapshot.sources",
 }
 
 // liveArchives are the hosts that serve today's packages rather than a pinned
-// timestamp's.
+// timestamp's. One may serve .deb files, checked against the snapshot index,
+// and never an index of its own.
 var liveArchives = []string{"archive.ubuntu.com", "security.ubuntu.com", "ports.ubuntu.com", "deb.debian.org", "security.debian.org"}
 
 // ciImageCensus counts what a reading found, so a parser that stopped
@@ -82,7 +85,9 @@ func TestTheCIImagePinGateRefusesEachUnpinnedShape(t *testing.T) {
 		{"a base image with a tag and no digest", `(FROM node:\S+)@sha256:[0-9a-f]{64}`, "$1"},
 		{"a COPY source with a tag and no digest", `COPY --from=go `, "COPY --from=golang:trixie "},
 		{"a download with no checksum", `sha256sum -c -`, "true"},
-		{"an apt source outside the snapshot", `https://snapshot\.ubuntu\.com/ubuntu/\$\{UBUNTU_SNAPSHOT\}`, "http://archive.ubuntu.com/ubuntu"},
+		{"an apt source outside the snapshot", `https://snapshot\.ubuntu\.com/ubuntu/\$\{UBUNTU_SNAPSHOT\}/`, "http://archive.ubuntu.com/ubuntu/"},
+		{"the live archive as a source with its own index", `'URIs: mirror\+file:/etc/apt/ubuntu-mirrors\.list'`, "'URIs: mirror+file:/etc/apt/ubuntu-mirrors.list http://archive.ubuntu.com/ubuntu/'"},
+		{"the live archive in the mirror list for indexes too", `'priority:1' 'type:deb'`, "'priority:1'"},
 		{"the live sources left in place", `rm /etc/apt/sources\.list\.d/ubuntu\.sources \\\n && `, ""},
 		{"an update that lets a missing index pass", `apt-get update --error-on=any`, "apt-get update"},
 		{"Go's checksum database turned off", `ENV GOPATH=/go GOTOOLCHAIN=local`, "ENV GOPATH=/go GOTOOLCHAIN=local GOSUMDB=off"},
@@ -107,7 +112,8 @@ func TestTheCIImagePinGateReadsAnInstallAfterItsFlags(t *testing.T) {
 	t.Parallel()
 	const stage = "FROM scratch AS base\n" +
 		"RUN rm /etc/apt/sources.list.d/ubuntu.sources && " +
-		"echo 'URIs: https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}' > /etc/apt/sources.list.d/snapshot.sources\n"
+		"echo 'https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}/' > /etc/apt/ubuntu-mirrors.list && " +
+		"echo 'URIs: mirror+file:/etc/apt/ubuntu-mirrors.list' > /etc/apt/sources.list.d/snapshot.sources\n"
 	findings, _ := ciImageFindings(stage + "RUN apt-get -y install --no-install-recommends make\n")
 	if !slices.ContainsFunc(findings, func(finding string) bool { return strings.Contains(finding, "installs make") }) {
 		t.Errorf("`apt-get -y install make` passed with no version; findings: %v", findings)
@@ -198,11 +204,7 @@ func ciImageFindings(body string) ([]string, ciImageCensus) {
 		if verificationOff.MatchString(instruction) {
 			findings = append(findings, "turns a download's verification off: "+instruction)
 		}
-		for _, host := range liveArchives {
-			if strings.Contains(instruction, host) {
-				findings = append(findings, "names "+host+", a live archive rather than the snapshot: "+instruction)
-			}
-		}
+		findings = append(findings, liveArchiveFindings(instruction)...)
 	}
 	return findings, census
 }
@@ -304,6 +306,26 @@ func runFindings(instruction string, snapshotted bool, census *ciImageCensus) []
 	}
 	if checks := strings.Count(instruction, "sha256sum -c"); fetches > checks {
 		findings = append(findings, fmt.Sprintf("downloads %d files and checks %d checksums: %s", fetches, checks, instruction))
+	}
+	return findings
+}
+
+// liveArchiveFindings admits a live archive only as a `type:deb` entry of the
+// mirror list. So apt reads every index from the snapshot, and checks each file
+// a live host sends against it. A `URIs:` line naming one is a source with an
+// index of its own, which would move the pinned versions.
+func liveArchiveFindings(instruction string) []string {
+	var findings []string
+	for _, command := range shellCommands(instruction) {
+		for _, host := range liveArchives {
+			switch {
+			case !strings.Contains(command, host):
+			case strings.Contains(command, "URIs:"):
+				findings = append(findings, "names "+host+" as an apt source with its own index: "+command)
+			case !strings.Contains(command, "'type:deb'") || !strings.Contains(command, "/etc/apt/ubuntu-mirrors.list"):
+				findings = append(findings, "names "+host+" outside a type:deb entry of the mirror list: "+command)
+			}
+		}
 	}
 	return findings
 }
