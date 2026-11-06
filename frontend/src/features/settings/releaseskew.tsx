@@ -1,9 +1,9 @@
 import { AuthCardTitle, AuthExperience } from "../../components/auth-core";
+import { usePageTitle, Wordmark } from "../../components/auth-identity";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { useAuthCapabilities } from "../../lib/capabilities";
 import { releaseSkew } from "../../lib/release";
-import { usePageTitle, Wordmark } from "../sign-in/auth";
 
 /**
  * The gate that stops this bundle rendering against an api from another release.

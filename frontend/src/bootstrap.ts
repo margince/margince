@@ -1,9 +1,9 @@
+import { prefetchAnalytics } from "./app/analytics-prefetch";
 import { queryClient } from "./app/queryclient.instance";
 import { loadEssentialLocale, loadLocale } from "./i18n/catalogs";
 import { preferredLocale } from "./i18n/locale";
 import { restoreReturnRoute } from "./lib/returnroute";
 import { parseHash } from "./lib/router";
-import { sessionOptions } from "./lib/session";
 import { reloadOnStaleBuild } from "./lib/stalebuild";
 
 for (const link of document.querySelectorAll<HTMLLinkElement>(
@@ -16,15 +16,12 @@ for (const link of document.querySelectorAll<HTMLLinkElement>(
 reloadOnStaleBuild();
 restoreReturnRoute();
 if (parseHash(location.hash).screen === "analytics") {
-  void queryClient.prefetchQuery(sessionOptions);
   void import("./App.analytics").catch((error: unknown) =>
     console.error("Analytics code could not be loaded", error),
   );
-  void import("./app/analytics-prefetch")
-    .then(({ prefetchAnalytics }) => prefetchAnalytics(queryClient))
-    .catch((error: unknown) =>
-      console.error("Analytics startup could not be prepared", error),
-    );
+  void prefetchAnalytics(queryClient).catch((error: unknown) =>
+    console.error("Analytics startup could not be prepared", error),
+  );
 }
 const load =
   parseHash(location.hash).screen === "analytics"

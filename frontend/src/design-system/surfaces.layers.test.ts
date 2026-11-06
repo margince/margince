@@ -170,7 +170,7 @@ describe("a layer under a pane stays under it", () => {
   });
 
   it("paints the ground of a pane on every host the tree stacks a layer in", () => {
-    // auth-* belongs to auth.css, and AmbientWaves on that surface hosts its panes.
+    // auth-* belongs to auth-core.css, and AmbientWaves on that surface hosts its panes.
     const elsewhere = new Map([[".auth-surface", ":has(> .ambient-waves)"]]);
     const derived = underlayHosts(allRules);
     expect(derived.filter((host) => !elsewhere.has(host))).toEqual(

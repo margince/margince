@@ -10,7 +10,7 @@ import { Heading } from "./heading";
 // prove: that it stays BEHIND a host's own content rather than painting over
 // it. Every story here reproduces the two declarations `.auth-surface`
 // carries for exactly this (`position: relative; isolation: isolate;`,
-// `auth.css`) so a reader sees the real contract, not a simplified one that
+// `auth-core.css`) so a reader sees the real contract, not a simplified one that
 // happens to work in Storybook and fails on the screen it is copied from.
 //
 // WATCH IT RATHER THAN READ THE CAPTURE. The field moves too slowly for a

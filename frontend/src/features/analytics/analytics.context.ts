@@ -45,28 +45,32 @@ export function useAnalyticsContext() {
  * The scope is part of every query key, so changing it refetches rather than
  * showing the previous population's numbers under the new label.
  */
-export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
-  const [params] = useUrlParams();
-  const named = params.get("scope");
+export function resolveAnalyticsSelection(
+  context: AnalyticsContext | undefined,
+  named: string | undefined,
+) {
   const chosen = context?.allowed_scopes.find(
     (scope) => scopeKey(scope) === named,
   );
-  // A link naming a population this reader may not choose is refused aloud.
-  // Answering it with their default would put other figures under its name.
   const refusedScope = !!context && !!named && !chosen;
+  const selection: AnalyticsSelection | null = context
+    ? { scope: chosen ?? context.default_scope }
+    : null;
+  return { selection, refusedScope };
+}
 
-  const selection = useMemo<AnalyticsSelection | null>(() => {
-    if (!context) {
-      return null;
-    }
-    return { scope: chosen ?? context.default_scope };
-  }, [context, chosen]);
-
-  const selectScope = useCallback((scope: AnalyticsScope) => {
-    replaceDial("scope", scopeKey(scope));
-  }, []);
-
-  return { selection, selectScope, refusedScope };
+export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
+  const [params] = useUrlParams();
+  const named = params.get("scope");
+  const answer = useMemo(
+    () => resolveAnalyticsSelection(context, named),
+    [context, named],
+  );
+  const selectScope = useCallback(
+    (scope: AnalyticsScope) => replaceDial("scope", scopeKey(scope)),
+    [],
+  );
+  return { ...answer, selectScope };
 }
 
 /**

@@ -192,7 +192,6 @@ reach features/contacts/contacttoday.tsx features/records/record360/record360.cs
 reach features/contacts/contacttoday.tsx features/worklist/worklist.return.tsx
 reach features/contacts/coverageexplorer.tsx app/attention.tsx
 reach features/contacts/coverageexplorer.tsx features/records/record360/index.ts
-reach features/deals/buyerroomframe.tsx features/sign-in/auth.tsx
 reach features/deals/deal360/dealactions.tsx features/records/recordemail.tsx
 reach features/deals/deal360/dealactions.tsx features/records/share.tsx
 reach features/deals/deal360/dealhistorytab.tsx features/records/history.tsx
@@ -259,7 +258,6 @@ reach features/mail/composefiling.ts features/projects/projectrecord.ts
 reach features/mail/composesaveddraft.tsx features/projects/projectrecord.ts
 reach features/mail/openemaildrawer.tsx features/capture/emailaccesseditor.tsx
 reach features/mail/signaturetemplate.test.tsx features/settings/settingssignaturerow.tsx
-reach features/onboarding/onboarding-build-scene.tsx features/sign-in/auth.tsx
 reach features/onboarding/onboarding-connect-panels.imap.tsx features/capture/imap-connect-form.tsx
 reach features/onboarding/onboarding-conversation/basis-act.tsx features/sign-in/installation-settings.tsx
 reach features/onboarding/onboarding-conversation/company-act.tsx features/sign-in/installation-setup.tsx
@@ -357,7 +355,6 @@ reach features/settings/preferences.tsx features/privacy/publicpage.tsx
 reach features/settings/rate-manual.tsx features/ai/ai-routing-fields.tsx
 reach features/settings/rates.stories.tsx features/ai/ai-price-sync.tsx
 reach features/settings/rates.test.tsx features/ai/ai-price-sync.tsx
-reach features/settings/releaseskew.tsx features/sign-in/auth.tsx
 reach features/settings/settings-audit.tsx app/nav.ts
 reach features/settings/settings-chrome.test.tsx app/shell.tsx
 reach features/settings/settings-passports.tsx features/automations/agentusage.tsx

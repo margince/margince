@@ -1,12 +1,32 @@
 import { type ComponentProps, type ReactNode, Suspense } from "react";
-import { CompanyDealPicker } from "./components/companydealpicker";
-import { DealSuggestionCard, suggestedName } from "./components/dealsuggestion";
 import {
+  suggestedName,
   useDealSuggestion,
   useDealSuggestions,
 } from "./components/dealsuggestions.queries";
 import { QueryGate } from "./design-system/querystates";
 import { lazy } from "./i18n/lazy";
+
+const SuggestionCard = lazy(async () => ({
+  default: (await import("./components/dealsuggestion")).DealSuggestionCard,
+}));
+function DealSuggestionCard(props: ComponentProps<typeof SuggestionCard>) {
+  return (
+    <Suspense fallback={null}>
+      <SuggestionCard {...props} />
+    </Suspense>
+  );
+}
+const DealPicker = lazy(async () => ({
+  default: (await import("./components/companydealpicker")).CompanyDealPicker,
+}));
+function CompanyDealPicker(props: ComponentProps<typeof DealPicker>) {
+  return (
+    <Suspense fallback={null}>
+      <DealPicker {...props} />
+    </Suspense>
+  );
+}
 
 const LazyApprovalDetailModal = lazy(async () => ({
   default: (await import("./features/automations/approvaleditor"))

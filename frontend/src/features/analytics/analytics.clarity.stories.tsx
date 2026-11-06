@@ -33,10 +33,8 @@ import { CallCheckSheet } from "./inputcheck.call";
 import { CheckFacts } from "./inputcheck.facts";
 import { CohortTable } from "./reporting.cohort";
 import { InitiativeDrawer } from "./reporting.initiativedrawer";
-import {
-  InitiativeReports,
-  type SalesInitiative,
-} from "./reporting.initiatives";
+import { InitiativeReports } from "./reporting.initiatives";
+import type { SalesInitiative } from "./reporting.initiatives.queries";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import { TargetComparison } from "./reporting.targetcomparison";
 

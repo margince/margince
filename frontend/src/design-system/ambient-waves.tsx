@@ -13,7 +13,7 @@ import { usePrefersReducedMotion } from "./motion";
  *
  * ONE KIND OF CALLER: a surface that is a PLACE a reader arrives in rather than
  * a screen they work on. Two of them today, and they are the same moment either
- * side of a password: the sign-in surface (`auth.css`) and the setup room
+ * side of a password: the sign-in surface (`auth-core.css`) and the setup room
  * (`OnboardingStage`). Neither has anything on it to get through, and a still
  * ground behind an orb that is itself alive reads as a screenshot of one.
  *

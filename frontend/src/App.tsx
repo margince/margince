@@ -15,6 +15,11 @@ import { ScreenView } from "./App.views";
 import { useWarmRouteChunks } from "./App.warmchunks";
 import { ApprovalHost } from "./app/approvalhost";
 import { AskFromAddress } from "./app/askfromaddress";
+import {
+  AuthScreen,
+  AvailabilityScreen,
+  SetupClaimScreen,
+} from "./app/authscreens";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { ConfinedAccountScreen, useProbeAnswer } from "./app/confinement";
@@ -35,16 +40,9 @@ import {
   useSkewedApiRelease,
 } from "./features/settings/releaseskew";
 import { WriteToHost } from "./features/settings/writetohost";
-import {
-  type AuthNotice,
-  AuthScreen,
-  AvailabilityScreen,
-  RESET_ROUTE,
-} from "./features/sign-in/auth";
-import {
-  fetchSetupStatus,
-  SetupClaimScreen,
-} from "./features/sign-in/setupclaim";
+import type { AuthNotice } from "./features/sign-in/auth";
+import { RESET_ROUTE } from "./features/sign-in/auth.route";
+import { fetchSetupStatus } from "./features/sign-in/setupclaim.queries";
 import { CompleteLocale, useLocale } from "./i18n";
 import {
   CompanyZoneProvider,

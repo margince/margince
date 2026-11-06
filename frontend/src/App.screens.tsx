@@ -1,4 +1,5 @@
 import { lazy } from "react";
+import { AuthScreen } from "./app/authscreens";
 import { findCustomScreen } from "./app/custom";
 import { opensReservedPage } from "./app/nav";
 import {
@@ -7,7 +8,6 @@ import {
   PendingBody,
   SectionHeader,
 } from "./design-system/atoms";
-import { AuthScreen } from "./features/sign-in/auth";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import { composedScreens, findExtension, unitTitle } from "./lib/extensions";

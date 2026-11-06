@@ -37,12 +37,8 @@ export function useReportingFramework(enabled = true) {
  * heading. The signal reaches the request, so a selection the reader has
  * already left stops on the server.
  */
-export function useReportingEvaluation(
-  selection: ReportingSelection,
-  enabled = true,
-) {
-  return useQuery({
-    enabled,
+export function reportingEvaluationOptions(selection: ReportingSelection) {
+  return queryOptions({
     queryKey: [...REPORTING_EVALUATION_KEY, selection],
     queryFn: async ({ signal }) =>
       unwrap(
@@ -52,6 +48,13 @@ export function useReportingEvaluation(
         }),
       ),
   });
+}
+
+export function useReportingEvaluation(
+  selection: ReportingSelection,
+  enabled = true,
+) {
+  return useQuery({ ...reportingEvaluationOptions(selection), enabled });
 }
 
 // The metric catalog this seat may read, under one query key so every surface
