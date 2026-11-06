@@ -87,7 +87,7 @@ func TestAnAdmissionTakesTheSeatBeforeItSharesTheActivity(t *testing.T) {
 	if err := ensure.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&ensurePID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ensure.Exec(ctx, `SELECT 1 FROM app_user WHERE id=$1 FOR UPDATE`, e.AdminUser); err != nil {
+	if _, err := ensure.Exec(ctx, `SELECT 1 FROM app_user WHERE id=$1 FOR NO KEY UPDATE`, e.AdminUser); err != nil {
 		t.Fatal(err)
 	}
 

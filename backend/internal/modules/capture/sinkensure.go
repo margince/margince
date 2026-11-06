@@ -106,7 +106,7 @@ func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedR
 	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{
 		HoldAuthority: func(ctx context.Context, tx pgx.Tx) error {
 			_, owner := capturePrincipal(ctx)
-			return s.holdPartyAuthorityTx(ctx, tx, owner, ids.From[ids.ActivityKind](ref.ID))
+			return s.holdEnsureLocksTx(ctx, tx, owner, ids.From[ids.ActivityKind](ref.ID))
 		},
 		Admission:       s.counterpartyAdmission(rec, ref, cp),
 		Email:           cp.Email,
