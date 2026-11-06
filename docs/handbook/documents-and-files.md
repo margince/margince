@@ -187,7 +187,7 @@ where it came from: "Attachment of a message from {who}, {when}". When the
 sender is unknown, it says "an unknown sender".
 
 ### How do I remove a file from a deal?
-To remove a file from a deal in Margince, open the deal's **Documents** tab. Open the file's **⋯** menu on its tile in the **Files** panel, and choose **Hide from this deal** or **Delete**.
+To remove a file from a deal in Margince, open the deal's **Documents** tab. Open the file's **⋯** menu on its tile or row in the **Files** panel, and choose **Hide from this deal** or **Delete**. The panel's **Grid** and **List** switch shows files as tiles or as rows, and your device keeps the choice.
 - **Hide from this deal**: the deal stops listing the file at once. The message and its attachment stay on the activity and in the company library. The toast "Hidden from this deal" offers **Undo**. Later, bring it back with **Show hidden files** and **Show on this deal again**.
 - **Delete**: asks first, "The file is removed from this deal, and from any Deal Room sharing it."
 Use hide when the file does not matter here; use delete when it should not be on the deal at all.
