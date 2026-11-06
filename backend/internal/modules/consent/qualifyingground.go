@@ -54,7 +54,7 @@ import (
 // address names the recipient the event must cover (requestCoversSQL); nil asks
 // about the contact as a whole, which only the legacy verdict does.
 func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string) (QualifyingEvent, eventSource, error) {
-	event, found, err := recordedQualifyingEvent(ctx, tx, contactID, since, address)
+	event, found, err := recordedQualifyingEvent(ctx, tx, contactID, since, asOf, address)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -189,18 +189,20 @@ func stampQualifyingEvent(
 	return err
 }
 
-// recordedQualifyingEvent reads a row a human or an integration wrote.
-func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time, address *string) (QualifyingEvent, bool, error) {
+// recordedQualifyingEvent reads a row a human or an integration wrote. A row
+// dated after asOf does not count yet: older derived stamps carry a booked
+// meeting's future start.
+func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var id string
 	var sourceType, sourceID, note *string
 	err := tx.QueryRow(ctx, `
 		SELECT id, kind, occurred_at, source_entity_type, source_entity_id, note
 		FROM consent_qualifying_event
-		WHERE contact_id = $1 AND occurred_at >= $2 AND retracted_at IS NULL
+		WHERE contact_id = $1 AND occurred_at >= $2 AND occurred_at <= $4 AND retracted_at IS NULL
 		  AND ($3::text IS NULL OR `+requestCoversSQL("recorded_for_addresses", "$3")+`)
 		ORDER BY occurred_at DESC
-		LIMIT 1`, contactID, since, address).Scan(&id, &event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
+		LIMIT 1`, contactID, since, address, asOf).Scan(&id, &event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}

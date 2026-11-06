@@ -308,6 +308,29 @@ func TestAMeetingIsJudgedOnTheVerdictsClock(t *testing.T) {
 	}
 }
 
+// A meeting stamped as evidence while it was still ahead, as the send path once
+// did, does not count until its time is reached.
+func TestAMeetingStampedBeforeItHappensCountsOnlyOnceItIsPast(t *testing.T) {
+	e := setupQualifying(t)
+	meetsAt := clocktest.Now(t).Add(time.Hour)
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		return stampQualifyingEvent(e.ctx, tx, e.contact.String(), QualifyingEvent{
+			Kind: KindMeeting, OccurredAt: meetsAt,
+			SourceEntityType: "activity", SourceEntityID: ids.NewV7().String(),
+		}, sourceKindDerived, "user:"+e.user.String())
+	}); err != nil {
+		t.Fatalf("stamping the meeting: %v", err)
+	}
+
+	after, before := meetsAt.Add(time.Hour), meetsAt.Add(-time.Hour)
+	if got := e.verdictAt(t, before.Add(-defaultReplyWindow), before); got.State == VerdictAllowed {
+		t.Fatalf("verdict %q (%s) on a clock before the stamped meeting, want not allowed", got.State, got.Reason)
+	}
+	if got := e.verdictAt(t, after.Add(-defaultReplyWindow), after); got.State != VerdictAllowed {
+		t.Fatalf("verdict %q (%s) on a clock past the stamped meeting, want allowed", got.State, got.Reason)
+	}
+}
+
 // A meeting known only by its date has not taken place until the date is over.
 // It is evidence from the next day on, and not before.
 func TestADayMeetingIsEvidenceOnceItsDateEnds(t *testing.T) {
