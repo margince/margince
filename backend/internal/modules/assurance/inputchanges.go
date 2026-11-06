@@ -112,6 +112,9 @@ var inputChanges = map[string]InputChange{
 	"activity.disposition_recorded": {
 		ScopeDealActivity, "a reply's verdict decides whether the customer refused",
 	},
+	"activity.link_suggestion_changed": {
+		ScopeNone, "a suggested link is not a rule input; accepting it relinks the message, which is its own activity event",
+	},
 	"activity.marked_handled":     {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
 	"activity.readiness_recorded": {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
 
