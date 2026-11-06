@@ -92,5 +92,4 @@ func TestFindingsFollowTheRequestedPopulation(t *testing.T) {
 	if _, err := read(assurance.Population{ProductID: &product}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("product without product read: %v", err)
 	}
-
 }

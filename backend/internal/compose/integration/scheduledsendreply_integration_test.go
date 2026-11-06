@@ -118,8 +118,10 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 			return inbound{dated: after, arrived: after, authenticated: true}
 		}, true},
 		{"an automatic reply", dealClaim, func(after time.Time) inbound {
-			return inbound{dated: after, arrived: after, authenticated: true,
-				extraHeaders: []string{"Auto-Submitted: auto-replied"}}
+			return inbound{
+				dated: after, arrived: after, authenticated: true,
+				extraHeaders: []string{"Auto-Submitted: auto-replied"},
+			}
 		}, false},
 		{"a reply to a quote", AnyMap{"communication_context": "precontract_quote"}, func(after time.Time) inbound {
 			return inbound{dated: after, arrived: after, authenticated: true}

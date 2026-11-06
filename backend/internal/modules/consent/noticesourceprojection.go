@@ -95,9 +95,11 @@ func prepareSourceProjectionTx(ctx context.Context, tx pgx.Tx, current NoticeCas
 		EvidenceStamp string
 		Projection    SourceProjection
 		Duty          NoticeDuty
-	}{Case: current.ID, Contact: current.ContactID, AcquisitionID: current.AcquisitionID, State: current.State,
+	}{
+		Case: current.ID, Contact: current.ContactID, AcquisitionID: current.AcquisitionID, State: current.State,
 		UpdatedAt: current.UpdatedAt, Owner: current.OwnerUserID, Acquisition: current.Acquisition, Kind: in.Kind, Note: in.Note, MetInPerson: in.MetInPerson,
-		ObtainedAt: in.ObtainedAt, Evidence: in.SelectedEvidence, EvidenceStamp: stamp, Projection: projection, Duty: projection.duty})
+		ObtainedAt: in.ObtainedAt, Evidence: in.SelectedEvidence, EvidenceStamp: stamp, Projection: projection, Duty: projection.duty,
+	})
 	if err != nil {
 		return SourceProjection{}, fmt.Errorf("encode the source preview: %w", err)
 	}

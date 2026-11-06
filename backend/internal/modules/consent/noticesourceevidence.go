@@ -77,8 +77,10 @@ type sourceEvidenceCursor struct {
 	ID ids.UUID  `json:"id"`
 }
 
-const sourceEvidencePageSize = 20
-const sourceEvidenceAcquisition = "acquisition"
+const (
+	sourceEvidencePageSize    = 20
+	sourceEvidenceAcquisition = "acquisition"
+)
 
 func sourceContactReadable(ctx context.Context, tx pgx.Tx, current NoticeCase) error {
 	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
@@ -100,8 +102,10 @@ func resolveSourceEvidenceTx(ctx context.Context, tx pgx.Tx, current NoticeCase,
 			return SourceEvidence{}, apperrors.ErrNotFound
 		}
 		a := current.Acquisition
-		return SourceEvidence{Reference: ref, Kind: sourceEvidenceAcquisition, OccurredAt: a.OccurredAt, OccurredPrecision: "instant", RecordedAt: a.CapturedAt,
-			CapturedBy: a.CapturedBy, CapturedByName: a.CapturedByName, RecordType: entityContact, RecordID: current.ContactID.UUID}, nil
+		return SourceEvidence{
+			Reference: ref, Kind: sourceEvidenceAcquisition, OccurredAt: a.OccurredAt, OccurredPrecision: "instant", RecordedAt: a.CapturedAt,
+			CapturedBy: a.CapturedBy, CapturedByName: a.CapturedByName, RecordType: entityContact, RecordID: current.ContactID.UUID,
+		}, nil
 	}
 	if ref.Kind != entityActivity || ref.ID.IsZero() {
 		return SourceEvidence{}, apperrors.ErrNotFound

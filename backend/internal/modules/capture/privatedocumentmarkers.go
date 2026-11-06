@@ -18,8 +18,8 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// cvTitlesAnywhere name a CV wherever they stand, since a PDF can merge the
-// title into the line of the name beside it.
+// cvTitlesAnywhere name a CV wherever they stand, spaced out or not, since a
+// PDF can merge the title into the line of the name beside it.
 var cvTitlesAnywhere = []string{"curriculum vitae", "lebenslauf"}
 
 // cvTitles is a line that names the document a CV. A numbered line is not
@@ -29,16 +29,22 @@ var cvTitles = []string{"cv", "resume", "résumé"}
 // cvSections are the headings a CV is built from, by the part of a career
 // each names. A heading counts once per group.
 var cvSections = []wordList{
-	{"work experience", "professional experience", "employment history", "work history", "career history",
-		"experience", "berufserfahrung", "beruflicher werdegang", "berufliche erfahrung"},
+	{
+		"work experience", "professional experience", "employment history", "work history", "career history",
+		"experience", "berufserfahrung", "beruflicher werdegang", "berufliche erfahrung",
+	},
 	{"education", "academic background", "ausbildung", "studium", "schulbildung"},
 	{"skills", "technical skills", "core competencies", "kenntnisse", "fähigkeiten", "it-kenntnisse"},
 	{"languages", "sprachen", "sprachkenntnisse"},
 	{"certifications", "certificates", "zertifikate", "zertifizierungen"},
-	{"date of birth", "geburtsdatum", "nationality", "staatsangehörigkeit", "personal details",
-		"persönliche daten"},
-	{"summary", "professional summary", "profile", "personal profile", "about me", "profil", "kurzprofil",
-		"über mich"},
+	{
+		"date of birth", "geburtsdatum", "nationality", "staatsangehörigkeit", "personal details",
+		"persönliche daten",
+	},
+	{
+		"summary", "professional summary", "profile", "personal profile", "about me", "profil", "kurzprofil",
+		"über mich",
+	},
 }
 
 // minCVSections is how many groups of headings make a CV. One alone is a
@@ -53,8 +59,10 @@ const maxHeadingRunes = 40
 // headings from two parts of a career. The verdict reads only the start of a
 // document, where a CV seldom has more than two headings.
 func DescribesACareer(text string) bool {
-	lower := strings.ToLower(text)
-	if slices.ContainsFunc(cvTitlesAnywhere, func(title string) bool { return strings.Contains(lower, title) }) {
+	compact := strings.ReplaceAll(strings.ToLower(text), " ", "")
+	if slices.ContainsFunc(cvTitlesAnywhere, func(title string) bool {
+		return strings.Contains(compact, strings.ReplaceAll(title, " ", ""))
+	}) {
 		return true
 	}
 	seen := map[int]bool{}

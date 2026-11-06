@@ -27,7 +27,8 @@ func TestPreviewReadingUsesTheCardLabelsAndValues(t *testing.T) {
 }
 
 func TestPreviewReadingCarriesAllAuthorizedSections(t *testing.T) {
-	preview := crmcontracts.ApprovalPreview{Version: 2, State: "ready",
+	preview := crmcontracts.ApprovalPreview{
+		Version: 2, State: "ready",
 		Conflicts:  new([]crmcontracts.ApprovalPreviewConflict{{Kind: "pending", Summary: "Another proposal remains separate"}}),
 		Files:      new([]crmcontracts.ApprovalPreviewFile{{Filename: "Offer.pdf", ByteSize: 120, ContentType: "application/pdf"}}),
 		ImportRows: new([]crmcontracts.ApprovalPreviewImportRow{{Line: 2, Object: "company", Outcome: "create", SourceKey: "company-1", Details: []crmcontracts.ApprovalPreviewDetail{{Field: "name", Value: crmcontracts.ApprovalPreviewValue{Kind: "text", Text: "Demo Company"}}}}}),

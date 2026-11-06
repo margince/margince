@@ -184,7 +184,6 @@ func TestAScanFindingNeverBuildsATaskForItsReader(t *testing.T) {
 	if action != nil {
 		t.Fatalf("model scan still creates a task: %+v", action)
 	}
-
 }
 
 // A quote is bounded on both sides: too short to check a claim against, or

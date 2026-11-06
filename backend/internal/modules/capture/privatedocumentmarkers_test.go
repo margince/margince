@@ -19,6 +19,7 @@ EDUCATION:
 		"skills and a date of birth":   "Skills\nGo, SQL\nDate of birth: 01.02.1990",
 		"a summary and experience":     "Jane Doe\nSummary\nTen years of PHP.\nExperience\nHead of Development",
 		"letter-spaced headings":       "ABOU T M E\nI build shops.\nEDU C ATIO N\nUniversity",
+		"a letter-spaced title":        "L E B E N S L A U F\nMax Mustermann",
 		"a bulleted title":             "• CV •\nJane Doe",
 		"a title merged into a line":   "Curriculum Vitae Anna Berger Work Experience Education Skills Languages",
 	} {
