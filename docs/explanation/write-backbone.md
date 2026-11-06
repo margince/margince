@@ -277,7 +277,7 @@ time reports it.
 | `cg:read-model` | (reserved) read models | declared, no subscriber |
 | `cg:audit-stream` | (reserved) the audit part of agent actions | declared, no subscriber |
 
-A forecast input event stays unread in the outbox until the freshness consumer or a complete check records it. Freshness is unknown during that wait. A scan records the events visible before it reads its sources. Events committed later stay unread.
+A forecast input event stays unread in the outbox until the consumer or a complete check records it. The reading cannot be called current during that wait. A scan records the events visible before it reads its sources. Events committed later stay unread.
 
 **The workflow seam** (`ports/workflow`) is how `cg:workflows` acts without a builder screen.
 A `Handler` declares a `Spec` (name + trigger + tier), a `Match` check with no side effects, and a

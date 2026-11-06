@@ -60,7 +60,7 @@ func TestAnUndeliveredEditDuringTheCheckCannotBeClearedByIt(t *testing.T) {
 
 func TestWorkCreatedAfterTheCheckLeavesItsInputsUnread(t *testing.T) {
 	e := setupFreshness(t)
-	if err := e.assuranceJobEnv.run(t); err != nil {
+	if err := e.run(t); err != nil {
 		t.Fatal(err)
 	}
 	if f := e.freshness(t); f.Known {

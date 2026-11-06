@@ -10,11 +10,9 @@
 1. Click **Analytics**, then **Forecast** under **Analytics sections**.
 2. Choose the **Period**: **Quarter**, **Month** or **Week**.
 3. Read the **Period forecast** and what it is made of: **Already won**, **Likely** and **Weighted**.
-   The forecast gap sets the manager’s total against won sales plus Likely deals.
-   Review **Checks before the call**; source details are under **Data and evidence checked**.
-If Margince cannot confirm that a check still matches the records, it says so and removes the healthy mark. Wait for an update or choose **Check again**.
+   The forecast gap sets the manager’s total against won sales plus Likely deals. Review **Checks before the call**; source details are under **Data and evidence checked**.
 
-A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
+If Margince cannot confirm that a check still matches the records, it says so. Wait for an update or choose **Check again**. A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
 
 ### How do I see my team's pipeline?
 To see your team's pipeline in Margince, open **Analytics** and pick the team in the **Record scope** picker above the numbers.
