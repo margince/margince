@@ -22,8 +22,13 @@ func viabilityFingerprintSQL(deal string) string {
 		(SELECT concat_ws('|', count(*), max(greatest(fa.updated_at, fl.created_at)),
 		        count(*) FILTER (WHERE fa.reply_verdict = '` + activities.ReplyVerdictNegative + `'),
 		        max(fa.reply_verdict_at),
-		        (SELECT count(*) FROM activity_participant fp
-		          WHERE fp.activity_id = ANY (array_agg(fa.id)) AND fp.response = 'accepted'))
+		        (SELECT md5(string_agg(concat_ws(':', fp.contact_id, fp.user_id, fp.role, fp.response),
+		                               ',' ORDER BY fp.id))
+		           FROM activity_participant fp WHERE fp.activity_id = ANY (array_agg(fa.id))),
+		        (SELECT concat_ws('|', count(*), max(ce.version)) FROM contact_email ce
+		          WHERE ce.contact_id IN (SELECT fpc.contact_id FROM activity_participant fpc
+		                                   WHERE fpc.activity_id = ANY (array_agg(fa.id))
+		                                     AND fpc.contact_id IS NOT NULL)))
 		   FROM activity_link fl JOIN activity fa ON fa.id = fl.activity_id
 		  WHERE fl.deal_id = ` + deal + `.id AND fa.archived_at IS NULL AND ` + visibleToAllSQL("fa") + ` AND ` +
 		relstrength.OriginIsEngagementSQL("fa") + `),
