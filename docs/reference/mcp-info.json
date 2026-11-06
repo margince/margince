@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 13,
-    "tool_catalog_bytes": 227499,
+    "tool_catalog_bytes": 227611,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 58189,
+    "approx_wire_tokens_total": 58217,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 54270,
-      "input_schema_bytes": 113687,
+      "input_schema_bytes": 113799,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 167957
+      "description_plus_input_schema_bytes": 168069
     }
   },
   "tools": {
@@ -10125,7 +10125,7 @@
               "type": "string"
             },
             "contact_id": {
-              "description": "confirm_submissions only",
+              "description": "confirm_submissions, held_threads only",
               "format": "uuid",
               "type": "string"
             },
@@ -10134,7 +10134,7 @@
               "type": "string"
             },
             "cursor": {
-              "description": "ai_calls, audit_log, automation_runs, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, import_runs, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
+              "description": "ai_calls, audit_log, automation_runs, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, held_threads, import_runs, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
               "type": "string"
             },
             "days": {
@@ -10223,7 +10223,7 @@
               "type": "array"
             },
             "limit": {
-              "description": "ai_calls, audit_log, automation_runs, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, import_runs, legacy_loss_reasons, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
+              "description": "ai_calls, audit_log, automation_runs, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, held_threads, import_runs, legacy_loss_reasons, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
               "type": "integer"
             },
             "locale": {
@@ -10284,7 +10284,7 @@
               "type": "string"
             },
             "q": {
-              "description": "ai_calls, colleagues, consumer_mail_baseline only",
+              "description": "ai_calls, colleagues, consumer_mail_baseline, held_threads only",
               "type": "string"
             },
             "readId": {
@@ -10380,12 +10380,16 @@
               "type": "array"
             },
             "status": {
-              "description": "data_subject_requests only",
+              "description": "data_subject_requests, held_threads only",
               "enum": [
-                "open",
-                "in_progress",
                 "fulfilled",
-                "rejected"
+                "held",
+                "held_by_owner",
+                "in_progress",
+                "open",
+                "pending",
+                "rejected",
+                "unsure"
               ],
               "type": "string"
             },
