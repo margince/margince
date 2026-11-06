@@ -12,7 +12,6 @@ package gates
 // the route's ceiling is an upload refused with a 413 the row did not foresee.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"strconv"
@@ -20,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendPictureLimits = "../frontend/src/features/settings/picturelimits.ts"
@@ -32,7 +32,7 @@ var (
 
 func TestTheFrontendPictureLimitsMatchTheServer(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(frontendPictureLimits)
+	raw, err := gatekit.ReadFile(frontendPictureLimits)
 	if err != nil {
 		t.Fatalf("reading the frontend picture limits: %v", err)
 	}
