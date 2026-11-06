@@ -192,6 +192,17 @@ export const FirstWeek: Story = {
   render: panel(weekly(() => jsonResponse(firstWeek), [WEEK_START])),
 };
 
+// A review whose activity lane answered with no days. The chart draws its key and
+// no columns, and names no busiest day; it used to fail to render at all.
+export const NoActivityDays: Story = {
+  render: panel(
+    weekly(
+      () => jsonResponse({ ...narratedWeek, daily_activity: [] }),
+      [WEEK_START, PRIOR_WEEK_START],
+    ),
+  ),
+};
+
 // A week whose wins cannot be priced. One deal in a currency with no usable
 // rate makes the whole sum unanswerable — an open deal freezes no rate, and
 // nothing is converted at an invented rate of 1 — so the slot falls back to the
