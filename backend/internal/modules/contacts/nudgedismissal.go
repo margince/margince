@@ -353,11 +353,10 @@ func NotDismissedClause(ctx context.Context, alias string, at time.Time, arg fun
 		   AND %s)`, alias, arg(reader), dismissalInForceSQL("d", arg(at))), nil
 }
 
-// dismissalInForceSQL is the one rule for when a dismissal still holds: it has
-// no end, or its end is after the moment asked about. The lane's clause above
-// and NudgeStatesOf both ask it, so the Worklist and an extension cannot
-// disagree about an expired or a permanent one. at is the position of the
-// moment's argument.
+// dismissalInForceSQL states when a dismissal still holds: it has no end, or
+// its end is after the moment asked about. The lane's clause above and
+// NudgeStatesOf both build on it, so the Worklist and an extension read the
+// same rule.
 func dismissalInForceSQL(alias string, at int) string {
 	return fmt.Sprintf("(%[1]s.dismissed_until IS NULL OR %[1]s.dismissed_until > $%[2]d)", alias, at)
 }
