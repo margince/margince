@@ -198,8 +198,8 @@ func TestTheDecisionListFollowsTheReviewSelection(t *testing.T) {
 	}
 }
 
-// A selection reads deals, so it needs the deal read grant, and a filter through
-// a company the role masks would name what the mask hid.
+// A selection reads deals, so it needs the deal read grant. A filter through a
+// company the role masks would name what the mask hid.
 func TestADecisionSelectionHonoursTheReadersGrants(t *testing.T) {
 	e := setupForecast(t)
 	seam := newSalesDecisions(InstallationDB(e.Pool))

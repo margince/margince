@@ -27,8 +27,8 @@ func reportingSelectionNarrows(selection crmcontracts.ReportingSelection) bool {
 }
 
 // reportingDealPopulationSQL is the one spelling of the deals a frame reads,
-// over the deal alias `t`: its scope, the reader's row scope and field masks,
-// its dimensions and its initiative. withheld reports deals a mask left out.
+// over the deal alias `t`. That is its scope, the reader's row scope and field
+// masks, its dimensions and its initiative. withheld reports deals a mask left out.
 func reportingDealPopulationSQL(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, owner string, fields []string, b *reportingBindings) (string, bool, error) {
 	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)
 	if err != nil {
