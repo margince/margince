@@ -112,9 +112,15 @@ GATES_GOMEMLIMIT ?= 4GiB
 # the census over the same packages the cached pass replays.
 TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
+# TEST_COVERDIR=<dir> instruments this module's cached pass and writes its binary
+# coverage pods there for SonarCloud. -coverpkg=./... links each test binary to
+# every package, so no result replays under it: one change reruns the module.
+TEST_COVER_FLAGS = $(if $(TEST_COVERDIR),-cover -coverpkg=./... -covermode=atomic)
+TEST_COVER_ARGS = $(if $(TEST_COVERDIR),-args -test.gocoverdir=$(abspath $(TEST_COVERDIR)))
+
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-uncached-covertest-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -264,7 +270,7 @@ test-cached: composition
 	    exit 1; \
 	  fi; \
 	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want uncached"; \
-	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $$cached
+	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_COVER_FLAGS) $$cached $(TEST_COVER_ARGS)
 	# The tool chain is its own module, so ./... above never reaches it —
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
@@ -287,6 +293,15 @@ test-uncached: composition
 	# near it spends the run collecting: 3GiB cost 1.4x the wall time of 4GiB
 	# for the same 4 GB peak. A CI job with a runner to itself passes 6GiB.
 	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
+
+# The coverage half of the uncached packages: only those with code of their own.
+# A test-only package (gates) covers code whose own tests already cover it, for
+# the longest package run of the module.
+test-uncached-cover: composition
+	@set -e; test -n "$(TEST_COVERDIR)" || { echo "test-uncached-cover: set TEST_COVERDIR" >&2; exit 1; }; \
+	  pkgs="$$($(GOWORK_COMPOSED) $(GO) list -f '{{if .GoFiles}}{{.ImportPath}}{{end}}' $(UNCACHED_TEST_PKGS))"; \
+	  echo "skipped as test-only: $$($(GOWORK_COMPOSED) $(GO) list -f '{{if not .GoFiles}}{{.ImportPath}}{{end}}' $(UNCACHED_TEST_PKGS) | xargs)"; \
+	  if [ -n "$$pkgs" ]; then $(GOWORK_COMPOSED) $(GO) test -count=1 $(TEST_COVER_FLAGS) $$pkgs $(TEST_COVER_ARGS); fi
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this

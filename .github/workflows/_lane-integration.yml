@@ -233,7 +233,7 @@ jobs:
   # Split across two scopes — this job on `backend`, the shards on `backend_db` —
   # a rulebook-only change ran this job and then discarded its output.
   integration-unit-coverage:
-    name: integration unit coverage
+    name: integration unit coverage + input census
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
@@ -255,18 +255,15 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: plain
-      # Only packages with code of their own. A test-only package (backend/gates
-      # today) covers code whose own tests already cover it: 307 of 254k
-      # statements, for the longest package run of the lane. It still runs,
-      # uncovered, in deterministic-gates.
-      - name: Unit tests with binary coverage
-        run: |
-          mkdir -p "$RUNNER_TEMP/covdata-unit"
-          pkgs=$(go list -f '{{if .GoFiles}}{{.ImportPath}}{{end}}' ./...)
-          [ -n "$pkgs" ] || { echo "go list found no package with code; refusing an empty coverage pass" >&2; exit 1; }
-          echo "skipped as test-only: $(go list -f '{{if not .GoFiles}}{{.ImportPath}}{{end}}' ./... | xargs)"
-          # shellcheck disable=SC2086 # one argument per package
-          go test $pkgs -cover -coverpkg=./... -covermode=atomic -args -test.gocoverdir="$RUNNER_TEMP/covdata-unit"
+      # One uncached run is both this coverage and the test input census, so
+      # the unit suite runs uncached once per CI run, not twice. Its verdict is
+      # the census; a failing unit test is deterministic-gates' verdict. A
+      # test-only package (backend/gates today) covers code whose own tests
+      # already cover it: 307 of 254k statements, for the longest package run
+      # of the lane. It still runs, uncovered, in deterministic-gates.
+      - name: Unit tests with binary coverage + the input census
+        working-directory: .
+        run: make test-input-census COVERDIR="$RUNNER_TEMP/covdata-unit"
       - name: Upload the unit coverage pods
         uses: ./.github/actions/upload-artifact-retried
         with:
@@ -309,7 +306,7 @@ jobs:
         run: |
           [ "$BUILD_RESULT" = "success" ] || { echo "integration build: $BUILD_RESULT"; exit 1; }
           [ "$SHARDS_RESULT" = "success" ] || { echo "integration shards: $SHARDS_RESULT"; exit 1; }
-          [ "$UNIT_RESULT" = "success" ] || { echo "unit coverage pass: $UNIT_RESULT"; exit 1; }
+          [ "$UNIT_RESULT" = "success" ] || { echo "unit coverage pass + input census: $UNIT_RESULT"; exit 1; }
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod

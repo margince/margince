@@ -1426,11 +1426,15 @@ test-budget:
 ## test-input-census — every cached unit-test package that reads a file outside
 ## its module also reads that file's tree digest, or a replayed pass outlives an
 ## edit to it. Judged on a real run, since such paths are mostly built at run
-## time; a failing test does not decide it. CI's backend-lint job and
-## cache-warm both run it.
+## time; a failing test does not decide it. The integration lane and cache-warm
+## both run it. COVERDIR=<dir> makes the same run the unit coverage for
+## SonarCloud: the backend module writes binary coverage pods there, and its
+## uncached packages with code run too, outside the census.
 test-input-census:
 	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
-	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	$(if $(COVERDIR),mkdir -p "$(abspath $(COVERDIR))";) \
+	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh" \
+	  $(if $(COVERDIR),test-uncached-cover TEST_COVERDIR="$(abspath $(COVERDIR))"); then \
 	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
 	fi; \
 	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
