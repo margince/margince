@@ -94,8 +94,8 @@ func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*acti
 }
 
 // createLead lands the lead without whatever the form names that has gone since
-// it was saved, so a visitor is never refused over the form's own setup. Each
-// retry clears one thing, and any of them can be the one refused first.
+// it was saved. A visitor is never refused over the form's own setup. Each retry
+// clears one thing, and any of them can be the one refused first.
 func (l webFormLeads) createLead(ctx context.Context, in contacts.CreateLeadInput) (crmcontracts.Lead, error) {
 	for {
 		lead, _, err := l.leads.CreateLead(ctx, in)
