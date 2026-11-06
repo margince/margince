@@ -113,35 +113,35 @@ the result:
 Leave out `SCENARIO=` for the full sweep, which section 4 counts. Add
 `E2E_LLM_KEEP=1` to leave the stack up after it ends.
 
-## 4. Know what a full sweep costs
+## 4. Plan a full sweep, and know its cost
 
-A full sweep runs all 70 use cases, each up to three times. A case stops at two runs when both agree, so a sweep makes 140 to 210 runs for each model.
-`E2E_LLM_ALL_RUNS=1` makes all three runs, and is only for when you add one case ([add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md)). The numbers below were
-measured on the test data over 21 cases, through the routes above. They leave out the calls of the judge (Haiku, through the claude CLI by default).
+A full sweep runs all 70 use cases. Each runs up to three times, and stops at two runs when both agree. `E2E_LLM_ALL_RUNS=1` makes all three runs, and is only for when you add one case ([add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md)).
+These numbers come from a full sweep of the test data on one machine, with no case red. They leave out the calls of the judge.
 
-| Model · route | Tokens for a sweep of 21 cases | Cost for a sweep of 21 cases | Time on the clock |
+| Model · route | Runs per case | Time per case (middle value) | Full sweep |
 |---|---|---|---|
-| `claude-sonnet-5-5` · `cli` | `~19M`, 95% of it cache reads | `~$8` at API prices, taken from a Claude subscription | `~1 h 10` |
-| `claude-opus-5` · `cli` | `~20M` | `~$22` at API prices | not measured |
-| `gpt-5.6-sol` · `cli` (codex) | `~19M`; the own prompt and tools of codex add `70–100k` input tokens to every run | `~$17` at API prices; codex reports no cost, and uses ChatGPT plan credits | `~4 h` |
-| `mistral-medium-3-5` · `openrouter` | not measured | `~$45–90`, worked out from one scenario at `~$4` for 3 runs: one tool call per turn makes chats long | not measured |
+| `claude-sonnet-5-5` · `cli` | about 2.0 | 5.1 minutes | about $15 at API prices, taken from a Claude subscription; about 6 hours |
+| `gpt-5.6-sol` · `cli` (codex) | about 2.2 | 7.3 minutes | codex reports no cost. One ChatGPT window of 5 hours covers 15 to 20 cases, so a sweep needs about 4 windows and 40–45% of the weekly limit |
+| `mistral-medium-3-5` · `openrouter` | not measured | not measured | not measured; one case cost about $4 for three runs |
 
-`usage:` under each scenario, and `sweep total:` at the end, print what a run
-used, and the committed verdict keeps the same totals.
+Most of the time of a case goes to the start and seed of its stack, not to the model. `usage:` under each scenario, and `sweep total:` at the end, print what a run used. The committed verdict keeps the same totals.
 
-**Run one scenario before a sweep** (section 3), and read its transcript. A
-harness problem that you see on one scenario costs only one scenario.
+1. **Run a few scenarios first** (section 3), and read their transcripts. A harness error then costs a few cases.
+2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case that names a tool in `must_call`.
+   Generate the coverage page again (section 8): its count of tools that no case requires must not grow.
+3. **Run a discovery pass.** Fix all that it finds ([improve-mcp-quality.md](improve-mcp-quality.md)).
+4. **Freeze the copy for the final pass.** After a copy change, run again only the cases that the change can move, on both models ([improve-mcp-quality.md](improve-mcp-quality.md#6-run-again-what-changed-plus-controls)).
+5. **Name the commit in the PR.** A verdict file does not say which copy it measured. So the PR body says which cases ran on which commit.
+
+**Run one model at a time.** Two stacks, each with the CLI of its model, ran out of RAM on one machine, and the system stopped both. The judge also uses your Claude subscription. To run two at once, give each its own worktree and its own `E2E_LLM_SLUG`.
 
 ### Sweeping through a subscription limit
 
-A CLI route uses a subscription with a limit for each time window. A full GPT sweep needs
-more than one ChatGPT window of 5 hours. When the limit runs out, the lane stops
-with exit 2 and scores nothing. Codex reports `Your workspace is out of credits`, and the claude CLI
-prints its own message about the limit. So a sweep run as one command ends at that scenario.
+A CLI route uses a subscription with a limit for each time window. When the limit runs out, the lane stops with exit 2 and scores nothing, so that run is no failure.
+Codex reports `Your workspace is out of credits`, and the claude CLI prints its own message about the limit. A sweep run as one command ends at that scenario.
 
-Run the scenarios one at a time instead. Skip the ones with a score, and wait
-when a stop names a limit. Save it as a script. It stops on a reason it does not
-know, so that you read that scenario, and do not skip it.
+Run the scenarios one at a time instead. Skip the ones with a score, and wait when a stop names a limit: more cases would only stop the same way.
+Save it as a script. It stops on a reason it does not know, so that you read that scenario, and do not skip it.
 
 ```bash
 mkdir -p .tmp/sweep
@@ -168,8 +168,7 @@ done
 
 `make` returns 2 for a scored failure, and also for a harness stop. So the
 `scenarios:` summary line of the lane, and not the exit code, says whether a scenario has
-a score. A seed refused with `answered HTTP 429` comes from the rate limit of the stack itself,
-after many starts in a row. It clears within minutes.
+a score.
 
 ## 5. Read the result
 
@@ -305,6 +304,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | Every run "called nothing" | The MCP server never connected: a server name turned off in the config of the claude CLI, or a codex run that could not reach its tools | Read the system line of the transcript; the lane stops on both |
 | `did not start clean: …` | The claude CLI loaded more than the server of the lane: a repository folder, `memory_paths`, a plugin, a skill or a hook | Read the `init` line of the transcript, and its `hook_started` lines for a hook. A new CLI version may load from a new place: turn it off in `e2e/llm/clean.py` |
 | `search_context` returns `semantic_ranking_degraded_to_lexical` | No embedding model serves the stack | section 2 |
+| `the stack refused the reindex (HTTP …)` | The `.env.local` of the checkout has no key for the provider of the preset, so no case is scored | section 2 |
 | `CERTIFICATE_VERIFY_FAILED` | A Python with no CA bundle | The bridge uses the system bundle instead; check that it exists |
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |

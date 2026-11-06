@@ -17,8 +17,8 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 63 of 70 | 🟢 Yes | Reliable on 63 of 63 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 58 of 70 | 🟡 Mostly | Reliable on 54 of 58 jobs tried; not yet: What the product tells a user about their agent stays theirs, so no tool changes it. The model says where it is and changes no workspace setting instead; Finish the import; Close the project out; Removing or deactivating a member runs at once. The action says to ask first unless the user asked for it, and this user names no such act. |
+| `claude-sonnet-5-5` | Claude Code CLI | 64 of 70 | 🟢 Yes | Reliable on 64 of 64 jobs tried. |
+| `gpt-5.6-sol` | Codex CLI | 59 of 70 | 🟡 Mostly | Reliable on 55 of 59 jobs tried; not yet: What the product tells a user about their agent stays theirs, so no tool changes it. The model says where it is and changes no workspace setting instead; Finish the import; Close the project out; Removing or deactivating a member runs at once. The action says to ask first unless the user asked for it, and this user names no such act. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -73,7 +73,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | A contract is recorded through change_offers. It is a write the user asked for by name | Record the contract the user named | ✅ | ✅ |
 | Attaching and reading a file back are two calls. Naming the id on list_documents answers the bytes | Read back the bytes that were stored | ✅ | ✅ |
 | Removing or deactivating a member runs at once. The action says to ask first unless the user asked for it, and this user names no such act | Ask before removing a member | ✅ | ❌ |
-| Recording consent has legal weight. The action says to ask first, so a user who only reports what happened gets no write | Record no consent on a report alone | ✅ | - |
+| Recording consent has legal weight. The action says to ask first, so a user who only reports what happened gets no write | Record no consent on a report alone | ✅ | ✅ |
 | A user who asks for it by name gets consent recorded through change_compliance, with the wording the contact agreed to | Record the consent the user confirmed | ✅ | ✅ |
 | A stop a contact asked for is a suppression, not a field edit and not a withdrawn consent | Record the stop | ✅ | ✅ |
 | A legal hold has its own action. Neither a tag nor a note holds a record | Place the legal hold | ✅ | ✅ |
@@ -101,7 +101,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Two outcomes of a sales review are two change_reports actions: a | Record the review decision<br>Record the forecast call | ✅ | - |
 | A team and a share are both change_access: create the team, add each | Create the team and add both colleagues<br>Share the record with the colleague named | - | - |
 | A user's own hours and own language are theirs alone, so both go to | Own hours go to the own-settings tool<br>A user's language is their own | - | - |
-| The FX sheet and the company logo are workspace setup, written | A rate goes on the sheet<br>A logo is setup, not an attachment | - | - |
+| The FX sheet and the company logo are workspace setup, written | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅ | - |
 
 ---
 
@@ -141,12 +141,12 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 63 of 70 | 63 | 0 | 127/128 | 99% |
-| `gpt-5.6-sol@codex-cli` | 58 of 70 | 54 | 4 | 119/131 | 91% |
+| `claude-sonnet-5-5@claude-cli` | 64 of 70 | 64 | 0 | 129/130 | 99% |
+| `gpt-5.6-sol@codex-cli` | 59 of 70 | 55 | 4 | 120/133 | 90% |
 
-> `claude-sonnet-5-5@claude-cli` has no committed run for 7 of 70 cases.
+> `claude-sonnet-5-5@claude-cli` has no committed run for 6 of 70 cases.
 
-> `gpt-5.6-sol@codex-cli` has no committed run for 12 of 70 cases.
+> `gpt-5.6-sol@codex-cli` has no committed run for 11 of 70 cases.
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case103_stop_telling_me, case10_finish_the_import, case41_close_the_project, case75_sofia_is_leaving
 
@@ -197,7 +197,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | Case | Model | Result | Passed | Bar | Criteria | Requires |
 |---|---|---|---:|---:|---|---|
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **8** Promises come back as suggestions | `change_activities`, `create_record` |
-| [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **8** Promises come back as suggestions | `change_activities`, `create_record` |
+| [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **8** Promises come back as suggestions | `change_activities`, `create_record` |
 | [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import` |
 | [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 0/2 | 2 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import` |
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The voice is the user's own | `change_my_settings` |
@@ -218,7 +218,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case113_after_the_sales_review](../../e2e/llm/scenarios/case113-after-the-sales-review.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record the review decision<br>**2** Record the forecast call | `change_reports` |
 | [case114_the_fleet_team](../../e2e/llm/scenarios/case114-the-fleet-team.yaml) | - | not run | - | - | **1** Create the team and add both colleagues<br>**2** Share the record with the colleague named | `change_access` |
 | [case115_my_hours_and_my_language](../../e2e/llm/scenarios/case115-my-hours-and-my-language.yaml) | - | not run | - | - | **1** Own hours go to the own-settings tool<br>**2** A user's language is their own | `change_my_settings` |
-| [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | - | not run | - | - | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
+| [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `read_analytics` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `read_analytics` |
 | [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `read_forecast` |
@@ -296,6 +296,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case75_sofia_is_leaving](../../e2e/llm/scenarios/case75-sofia-is-leaving.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Ask before removing a member | `read_workspace` or `whoami` |
 | [case75_sofia_is_leaving](../../e2e/llm/scenarios/case75-sofia-is-leaving.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 1/3 | 2 | **1** Ask before removing a member | `read_workspace` or `whoami` |
 | [case76_she_said_yes_at_the_fair](../../e2e/llm/scenarios/case76-she-said-yes-at-the-fair.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record no consent on a report alone | - |
+| [case76_she_said_yes_at_the_fair](../../e2e/llm/scenarios/case76-she-said-yes-at-the-fair.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Record no consent on a report alone | - |
 | [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record the consent the user confirmed | `change_compliance` |
 | [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Record the consent the user confirmed | `change_compliance` |
 | [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Record the stop | `change_compliance` |
@@ -464,7 +465,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_activities` | 1.00 | 14 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_state` | 1.00 | 10 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
-| `change_settings` | 1.00 | 2 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
+| `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
 | `send_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
@@ -500,7 +501,6 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_workspace` | 1.00 | 5 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
-| `change_activities` | 1.00 | 15 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `change_settings` | 1.00 | 2 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
@@ -540,10 +540,11 @@ Driven, and not every run passed. Open the case to see what was asked.
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
 | `read_details` | 0.67 | 2/3 | - | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
+| `change_activities` | 0.93 | 14/15 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `find_records` | 0.89 | 8/9 | - | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_state` | 0.73 | 8/11 | `case41_close_the_project` | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
 | `preview_import` | 0.50 | 2/4 | `case10_finish_the_import` | `case10_finish_the_import`, `case3_spreadsheet` |
-| `create_record` | 0.89 | 8/9 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `create_record` | 0.78 | 7/9 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
