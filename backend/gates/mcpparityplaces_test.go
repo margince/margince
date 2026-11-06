@@ -260,6 +260,7 @@ var parityPathAreas = map[string]string{
 	"/public/proposal":                    "booking_pages",
 	"/public/record-previews":             "public_links",
 	"/public/rooms":                       "buyer_rooms",
+	"/record-kinds":                       "extensions",
 	"/record-roles":                       "members",
 	"/records/{entity_type}/{id}/history": "audit",
 	"/records/{record_type}":              "sharing",
