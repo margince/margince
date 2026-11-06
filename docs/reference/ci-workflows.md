@@ -235,7 +235,7 @@ asks "is this diff good?", and runs because a diff exists.
 
 Notes on the jobs:
 
-- The backend gate on `main` is `main-health.yml`'s, not a daily job here. It runs the same
+- The backend gate on `main` runs in `main-health.yml`, not as a daily job here. It runs the same
   `make check-backend` on every health check, so a daily copy would only repeat it.
 - No rule a scan can apply finds the next test that needs the clock. "A fixed date in a file that never
   pins the clock" matches 129 files, and nearly all of them do no harm. So the gate is a second run.
