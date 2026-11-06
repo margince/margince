@@ -144,7 +144,7 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 | Scope | Paths | Gates |
 |---|---|---|
 | `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in: every lane that opens a database |
-| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, extension reference, craftsmanship, unit coverage, vuln |
+| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, the staged `crm-hello` walk, craftsmanship, unit coverage, vuln |
 | `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs) | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
@@ -539,9 +539,9 @@ exceptions above. `make check-backend` runs it too, so a laptop `make check` get
 
 ## Coverage → SonarCloud
 
-The `sonarcloud` job runs **last**, and does **not** run any suite again. It fetches the coverage
-artifacts that the `integration` fan-in and `frontend` jobs already made. Those are Go's `coverage.out`
-(merged from each shard and unit binary pod), and the frontend lcov. It then runs only the scanner. So
+The `sonarcloud` job runs **last**, and does **not** run any suite again. It fetches the coverage that
+`integration`, `deterministic-gates (unit)` and `frontend` already made. Those are `coverage.out` (from
+each shard and unit pod), `coverage-extensions.out` and the frontend lcov. It then runs only the scanner. So
 there is no second Postgres/Redis/MinIO stack, and no second test run.
 
 Those pod files are uploaded through
