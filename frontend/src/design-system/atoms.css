@@ -2055,6 +2055,12 @@ span.error-line {
 [data-density="plate"] .stat-card-label {
   flex-wrap: nowrap;
 }
+/* A plate's name breaks between words, and inside one only when it cannot
+   fit: a syllable cut reads as a typo in a label this short. */
+[data-density="plate"] .stat-card-label-text {
+  hyphens: manual;
+  overflow-wrap: break-word;
+}
 /* The plate's figure: body size at the medium weight, so four figures and
    their labels sit in one band at the foot of a card (statstrip.css). */
 [data-density="plate"] .stat-card-value {
@@ -2065,12 +2071,33 @@ span.error-line {
 /* A lead plate heads an Analytics card: its first figure is the one the view
    leads with, and the rest stand a step under it (statstrip.tsx `lead`). */
 .stat-strip[data-lead] .stat-card-value {
-  font: var(--fontHeadingMedium);
+  font: var(--fontPlateFigure);
   font-variant-numeric: tabular-nums;
 }
+/* The view's own figure fits its cell whole: it shrinks with the cell rather
+   than ending in an ellipsis, down to the size of the figures beside it. */
+.stat-strip[data-lead] > :first-child {
+  container-type: inline-size;
+}
 .stat-strip[data-lead] > :first-child .stat-card-value {
-  font: var(--fontDisplayFigure);
+  font: var(--fontPlateLeadFigure);
   font-variant-numeric: tabular-nums;
+}
+/* A reading that is a word, such as a status, is set as words: it is an
+   answer about the figure, not a figure. */
+.stat-strip[data-density="plate"] .stat-card-value[data-word] {
+  font: var(--fontBodyLarge);
+  font-weight: var(--fontWeightMedium);
+}
+/* A neutral word steps back; a toned one keeps the colour of its state. */
+.stat-strip[data-density="plate"]
+.stat-card-value[data-word]:not(
+  .stat-card-success,
+  .stat-card-info,
+  .stat-card-warning,
+  .stat-card-danger
+) {
+  color: var(--textSecondary);
 }
 .stat-strip[data-lead] .stat-card-basis::before {
   font: var(--fontHeadingXXSmall);
@@ -2103,6 +2130,12 @@ span.error-line {
    clamp's box lays inline children out on one line. Each fact keeps its own. */
 .stat-card-detail > * {
   display: block;
+}
+/* A control in the detail sits above the door's overlay, as the receipt does,
+   or the overlay takes its press. */
+.stat-card-detail :is(a, button) {
+  position: relative;
+  z-index: 1;
 }
 
 /* The label NAMES the reading; it does not announce it. It is sentence-case

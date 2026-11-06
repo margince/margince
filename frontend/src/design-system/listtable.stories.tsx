@@ -372,23 +372,25 @@ export const PinnedWhileScrolling: Story = {
   ),
 };
 
-// Row selection for a bulk action: the checkbox sits in the identity cell —
-// the one that stays put while the rest scrolls — and the bar above the grid
-// carries the count and the verbs. Two rows come pre-selected so the bar is
-// on screen; the screen owns what the verbs do.
+// Row selection for a bulk action. The checkbox sits in the identity cell,
+// which stays put while the rest scrolls. The bar above the grid carries the
+// count, the verbs, Select all and Clear selection. The header box ticks the
+// page. Two rows come pre-selected so the bar is on screen.
 function SelectableSurface() {
   const { locale } = useLocale();
   const rows = companies(8);
   const [selected, setSelected] = useState<ReadonlySet<string>>(
     new Set(["c2", "c5"]),
   );
-  const toggle = (row: Company) =>
+  const change = (changed: readonly Company[], on: boolean) =>
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(row.id)) {
-        next.delete(row.id);
-      } else {
-        next.add(row.id);
+      for (const row of changed) {
+        if (on) {
+          next.add(row.id);
+        } else {
+          next.delete(row.id);
+        }
       }
       return next;
     });
@@ -400,7 +402,7 @@ function SelectableSurface() {
       unit="companies"
       selection={{
         selected,
-        onToggle: toggle,
+        onChange: change,
         label: (row) => `Select ${row.name}`,
         bar: (
           <>
@@ -408,7 +410,6 @@ function SelectableSurface() {
               {formatNumber(selected.size, locale)} selected
             </span>
             <Button>Assign owner</Button>
-            <Button onClick={() => setSelected(new Set())}>Clear</Button>
           </>
         ),
       }}

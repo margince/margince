@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { EntityRef } from "../../components/entityref";
+import { LinkedInChip } from "../../components/linkedinchip";
 import { saveRecordEdit } from "../../components/recordedit";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
@@ -15,7 +16,6 @@ import {
 } from "../../design-system/contactlink";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
-import { OffsiteLink } from "../../design-system/offsitelink";
 import {
   type DetailRow,
   type DetailSection,
@@ -267,9 +267,7 @@ function useAboutRows(
       term: t("create.linkedinUrl"),
       empty: isBlank(lead.linkedin_url),
       value: lead.linkedin_url ? (
-        <OffsiteLink href={lead.linkedin_url}>
-          {t("record.openProfile")}
-        </OffsiteLink>
+        <LinkedInChip href={lead.linkedin_url} name={lead.full_name} />
       ) : (
         <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
       ),

@@ -213,15 +213,18 @@ export function Chip({
   children,
   href,
   appHref,
+  label,
   dense,
 }: Readonly<
   {
     children: ReactNode;
     // An external destination. Present → the chip is an anchor and opens in a
-    // new tab with `noreferrer`, since these point off our origin.
+    // new tab without an opener or referrer, since these point off our origin.
     href?: string;
     // A page of this app, followed in place: the record a fact names.
     appHref?: string;
+    // The link's name where the visible text alone does not say where it goes.
+    label?: string;
     // The chip at a `Badge`'s geometry, for a table row that shares a cell with
     // badges. A fact a rung larger than its status outweighs the row's name.
     // It is a size on the primitive, like `Meter`'s dense rung, so one author
@@ -229,7 +232,7 @@ export function Chip({
     dense?: boolean;
   } & (
     | { icon: LucideIcon; lead?: never }
-    // A record's own mark in the icon's place: a contact or an account's Avatar.
+    // A mark in the icon's place: a record's Avatar, or a company's logo.
     | { icon?: never; lead: ReactNode }
   )
 >) {
@@ -261,8 +264,9 @@ export function Chip({
       <a
         className={`${shape} chip-link`}
         href={destination}
+        aria-label={label}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
       >
         {body}
       </a>

@@ -104,7 +104,9 @@ describe("My prospecting's results", () => {
     open(ADDRESS, weekAnd(prospectingEvaluation()), { seat: "sdr" });
     const lead = await results();
     expect(lead.queryByText(/^Handoffs accepted into a deal, /)).toBeNull();
-    expect(lead.getByText(/^Monthly targets, 1 Sept/)).toBeVisible();
+    expect(
+      lead.getByText(/^Monthly targets, 1\s*[–-]\s*30 Sept/),
+    ).toBeVisible();
     // The month's own actual against the month's target, never the week's 4.
     expect(lead.getByText("Meetings held: 18 of 24")).toBeVisible();
     expect(screen.queryByText(/\b4 of 24\b/)).toBeNull();
