@@ -110,12 +110,17 @@ func newPairEnv(t *testing.T) *pairEnv {
 // guest seat and one outside contact. Each calendar numbers the event its own
 // way, and both state one iCal UID.
 func (p *pairEnv) book(start time.Time) {
+	p.bookOrganizedBy(start, captureOwner)
+}
+
+// bookOrganizedBy is book with the event's organizer named.
+func (p *pairEnv) bookOrganizedBy(start time.Time, organizer string) {
 	for label, self := range map[string]string{"a": captureOwner, "b": guestColleagueA} {
 		other := guestColleagueA
 		if label == "b" {
 			other = captureOwner
 		}
-		ev := lateGuestEvent("review-"+label, "confirmed", start, captureOwner,
+		ev := lateGuestEvent("review-"+label, "confirmed", start, organizer,
 			selfEntry(self, "accepted"), guestEntry(other, "accepted"), guestEntry(guestKnown, "accepted"))
 		ev["iCalUID"] = crossSeatUID
 		p.cals.set(label, ev)
