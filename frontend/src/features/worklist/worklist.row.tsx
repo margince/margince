@@ -61,8 +61,8 @@ function namedMembers(item: WorklistItem): string[] {
 }
 
 /**
- * Done for a row that is not a task, for a card that draws its own tick. It is
- * the row's own put-down, so the undo toast and the one-write guard come too.
+ * Done for a card that draws its own tick. It runs the row's own put-down, so
+ * the undo toast and the one-write guard come too.
  */
 export function useRowDone(item: WorklistItem) {
   const write = usePutDown(item);
