@@ -27,6 +27,42 @@ function Probe({ enabled }: Readonly<{ enabled: boolean }>) {
   return <output>{held?.state ?? "none"}</output>;
 }
 
+// Two consumers of one account in one cache, which is what a record page with
+// both the tasks panel and a scan-reading sibling is.
+function mountTwo() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <Probe enabled />
+      <Probe enabled />
+    </QueryClientProvider>,
+  );
+}
+
+// One consumer, then a second into the same cache once the first has settled,
+// which is a sibling panel opening after the scan came back.
+function mountThenMountAgain() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const first = render(
+    <QueryClientProvider client={client}>
+      <Probe enabled />
+    </QueryClientProvider>,
+  );
+  return {
+    second: () =>
+      first.rerender(
+        <QueryClientProvider client={client}>
+          <Probe enabled />
+          <Probe enabled />
+        </QueryClientProvider>,
+      ),
+  };
+}
+
 function mount(enabled: boolean) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -67,6 +103,21 @@ describe("useAccountScan", () => {
     expect(calls.filter((call) => call.startsWith("POST"))).toEqual([
       "POST /v1/companies/o-1/scan",
     ]);
+  });
+
+  it("asks no second time for a consumer that opens after the answer", async () => {
+    const calls = stubScan(["queued"]);
+    const { second } = mountThenMountAgain();
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("queued"),
+    );
+    expect(calls.filter((call) => call.startsWith("POST"))).toHaveLength(1);
+
+    // The first ensure has settled, so nothing is in flight to see. What
+    // holds the second consumer is the answer left in the cache.
+    second();
+    await waitFor(() => expect(screen.getAllByRole("status")).toHaveLength(2));
+    expect(calls.filter((call) => call.startsWith("POST"))).toHaveLength(1);
   });
 
   it("polls while the read runs and stops once it has settled", async () => {
@@ -127,5 +178,18 @@ describe("useAccountScan", () => {
     await act(async () => {});
     expect(calls).toEqual([]);
     expect(screen.getByRole("status").textContent).toBe("none");
+  });
+
+  it("asks the server once when two consumers read one account", async () => {
+    const calls = stubScan([]);
+    mountTwo();
+    await waitFor(() =>
+      expect(screen.getAllByRole("status")[0]?.textContent).toBe("queued"),
+    );
+    // The ensure is the expensive half: it is what can cost a model call. Two
+    // consumers of one account are one question about it.
+    expect(calls.filter((call) => call.startsWith("POST"))).toEqual([
+      "POST /v1/companies/o-1/scan",
+    ]);
   });
 });
