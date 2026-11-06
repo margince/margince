@@ -17843,7 +17843,6 @@ export const en = {
   "filters.field.classification": "Classification",
   "filters.field.company_country": "Company country",
   "filters.field.company_industry": "Company industry",
-  "filters.field.product_id": "Product",
   "filters.field.company_lifecycle": "Company lifecycle",
   "filters.field.company_size_band": "Employees",
   "filters.field.country": "Country code",

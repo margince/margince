@@ -17522,7 +17522,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.classification": "Phân loại",
   "filters.field.company_country": "Quốc gia của công ty",
   "filters.field.company_industry": "Ngành của công ty",
-  "filters.field.product_id": "Sản phẩm",
   "filters.field.company_lifecycle": "Vòng đời của công ty",
   "filters.field.company_size_band": "Số nhân viên",
   "filters.field.country": "Mã quốc gia",

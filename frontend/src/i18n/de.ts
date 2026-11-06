@@ -17992,7 +17992,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.classification": "Klassifizierung",
   "filters.field.company_country": "Land des Unternehmens",
   "filters.field.company_industry": "Branche des Unternehmens",
-  "filters.field.product_id": "Produkt",
   "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
   "filters.field.company_size_band": "Mitarbeitende",
   "filters.field.country": "Ländercode",
