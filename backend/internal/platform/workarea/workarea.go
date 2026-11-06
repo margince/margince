@@ -30,12 +30,15 @@ type File struct {
 	RecordCalls map[string]map[string]string `json:"record_calls"`
 }
 
-// Area is one area of work. Only a choosable area is offered to a user; the
-// rest are reached by a passport set to all areas alone.
+// Area is one area of work. Only a choosable area is offered to a user. A free
+// area is admitted on every passport, and one HeldAs another is on when that
+// one is.
 type Area struct {
 	Key       string `json:"key"`
 	Name      string `json:"name"`
 	Choosable bool   `json:"choosable"`
+	Free      bool   `json:"free,omitempty"`
+	HeldAs    string `json:"held_as,omitempty"`
 }
 
 var table = mustRead(tableJSON)
@@ -67,6 +70,25 @@ func Choosable() []Area {
 // IsChoosable reports whether key names an area a user may choose.
 func IsChoosable(key string) bool {
 	return slices.ContainsFunc(table.Areas, func(area Area) bool { return area.Key == key && area.Choosable })
+}
+
+// SwitchOf is the choosable area whose switch admits a call placed in area. free
+// reports an area every passport is admitted in; key is then empty.
+func SwitchOf(area string) (key string, free bool) {
+	for _, known := range table.Areas {
+		if known.Key != area {
+			continue
+		}
+		switch {
+		case known.Free:
+			return "", true
+		case known.HeldAs != "":
+			return known.HeldAs, false
+		default:
+			return known.Key, false
+		}
+	}
+	return area, false
 }
 
 // NameOf is the name a user knows an area by, or key itself for an unknown one.

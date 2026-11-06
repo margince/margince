@@ -73,7 +73,10 @@ func parseConsentedScopes(raw string) ([]string, error) {
 }
 
 // consentChoice is what the human posted: the scopes ticked and the areas chosen.
-type consentChoice struct{ scopes, areas string }
+type consentChoice struct {
+	scopes string
+	areas  principal.WorkAreas
+}
 
 // mintConsentedAuthorizationCode writes the single-use code the client will
 // redeem, and the audit row naming the code — all in ONE transaction, so a
@@ -93,10 +96,7 @@ func (s *Service) mintConsentedAuthorizationCode(
 	if err != nil {
 		return "", err
 	}
-	areas, err := parseConsentedAreas(choice.areas)
-	if err != nil {
-		return "", err
-	}
+	areas := choice.areas
 	code, err = randomToken()
 	if err != nil {
 		return "", err

@@ -90,7 +90,7 @@ func TestAPassportIsHeldToTheAreasItsUserChose(t *testing.T) {
 		Detail string `json:"detail"`
 	}
 	if status := e.Call(t, http.MethodGet, adminRoute, nil, bearer, &problem); status != http.StatusForbidden ||
-		problem.Code != "scope_exceeds_grantor" || !strings.Contains(problem.Detail, `"Admin settings"`) {
+		problem.Code != "scope_exceeds_grantor" || !strings.Contains(problem.Detail, "“Admin settings”") {
 		t.Fatalf("REST %s with admin settings off → %d %+v, want 403 naming the area", adminRoute, status, problem)
 	}
 	if status := e.Call(t, http.MethodGet, salesRoute, nil, bearer, nil); status != http.StatusOK {
@@ -102,7 +102,7 @@ func TestAPassportIsHeldToTheAreasItsUserChose(t *testing.T) {
 		t.Fatalf("read_workspace lists topics %v; want %s and not %s", topics, salesTopic, adminTopic)
 	}
 	refusal := client.CallRefused(t, "read_workspace", AnyMap{"topic": adminTopic})
-	if !strings.Contains(refusal, `"Admin settings"`) || !strings.Contains(refusal, "Settings, under Passports") {
+	if !strings.Contains(refusal, "“Admin settings”") || !strings.Contains(refusal, "Settings → AI access") {
 		t.Fatalf("MCP read_workspace %s refused with %q; want the area and where to turn it on", adminTopic, refusal)
 	}
 	client.CallOK(t, "read_workspace", AnyMap{"topic": salesTopic})
@@ -173,6 +173,7 @@ func TestAnAreaChoiceNoScreenOffersIsRefused(t *testing.T) {
 		"no area":          {"mode": "custom", "areas": []string{}},
 		"an operator area": {"mode": "custom", "areas": []string{"operator"}},
 		"an unknown mode":  {"mode": "some", "areas": []string{}},
+		"all with a list":  {"mode": "all", "areas": []string{"business"}},
 	} {
 		if status := e.Call(t, http.MethodPut, "/v1/passports/"+minted.ID+"/areas", body, nil, nil); status != http.StatusUnprocessableEntity {
 			t.Errorf("%s → %d, want 422", name, status)
@@ -186,5 +187,37 @@ func TestAnAreaChoiceNoScreenOffersIsRefused(t *testing.T) {
 	if status := e.Call(t, http.MethodPut, "/v1/passports/"+minted.ID+"/areas",
 		AnyMap{"mode": "all", "areas": []string{}}, bearer, nil); status != http.StatusForbidden {
 		t.Errorf("a passport widening its own areas → %d, want 403", status)
+	}
+}
+
+// A rep reaches every area but admin settings. A choice of an area the role
+// does not reach is refused on each door that takes one.
+func TestARepChoosesOnlyAmongTheAreasTheirRoleReaches(t *testing.T) {
+	e := areasApp(t)
+	demoteToRep(t, e)
+
+	var listed struct {
+		Reachable []string `json:"reachable_areas"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/passports", nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("list passports → %d", status)
+	}
+	want := []string{"business", "compliance", "capture", "workspace_settings", "own_account"}
+	if !slices.Equal(listed.Reachable, want) {
+		t.Fatalf("a rep reaches %v, want %v", listed.Reachable, want)
+	}
+
+	adminOnly := AnyMap{"mode": "custom", "areas": []string{"admin_settings"}}
+	status := e.Call(t, http.MethodPost, "/v1/passports", AnyMap{"label": "rep", "scopes": []string{"read"}, "areas": adminOnly}, nil, nil)
+	if status != http.StatusUnprocessableEntity {
+		t.Errorf("a rep minting a passport limited to admin settings → %d, want 422", status)
+	}
+	minted := mintWithAreas(t, e, nil)
+	if status := e.Call(t, http.MethodPut, "/v1/passports/"+minted.ID+"/areas", adminOnly, nil, nil); status != http.StatusUnprocessableEntity {
+		t.Errorf("a rep limiting a passport to admin settings → %d, want 422", status)
+	}
+	if status := e.Call(t, http.MethodPut, "/v1/passports/"+minted.ID+"/areas",
+		AnyMap{"mode": "custom", "areas": []string{"business"}}, nil, nil); status != http.StatusOK {
+		t.Errorf("a rep limiting a passport to sales work → %d, want 200", status)
 	}
 }

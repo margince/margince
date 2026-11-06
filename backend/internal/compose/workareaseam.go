@@ -32,23 +32,27 @@ func reachableAreasOf(reg *agents.Registry) identity.ReachableAreas {
 
 // operationAreaRefusal holds an agent to the one operation's area. Gate.Admit
 // admits a verb in several areas while any of them is on, and this is the
-// precise half.
+// precise half. An operation the table does not place is in no area, like an
+// unplaced tool. Only a passport set to all areas runs it.
 func operationAreaRefusal(ctx context.Context, tool, operationID string) error {
 	p, ok := principal.Actor(ctx)
-	area, placed := workarea.OfOperation(operationID)
-	if !ok || !placed {
+	if !ok {
 		return nil
 	}
-	return auth.AreaRefusal(p, mcp.ToolSpec{Name: tool, Areas: []string{area}})
+	spec := mcp.ToolSpec{Name: tool}
+	if area, placed := workarea.OfOperation(operationID); placed {
+		spec.Areas = []string{area}
+	}
+	return auth.AreaRefusal(p, spec)
 }
 
 // refusedOutsideAreas answers an agent's REST call on a route its passport's
-// areas leave off, and reports whether it did. A route no policy places is left
-// to the checks after it, which refuse an unknown one.
+// areas leave off, and reports whether it did. A route an agent may not call
+// at all is left to the checks after it, which refuse it with their own reason.
 func refusedOutsideAreas(w http.ResponseWriter, r *http.Request) bool {
 	pattern := chi.RouteContext(r.Context()).RoutePattern()
-	pol := agentPolicies[r.Method+" "+pattern]
-	if pol.Op == "" {
+	pol, admitted := routeAdmitsAgents(r.Method, pattern)
+	if !admitted {
 		return false
 	}
 	if err := operationAreaRefusal(r.Context(), "", pol.Op); err != nil {

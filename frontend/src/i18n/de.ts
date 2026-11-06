@@ -8800,7 +8800,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "passportAreas.refusalTitle":
     "Was ein Agent erfährt, wenn ein Bereich deaktiviert ist",
   "passportAreas.refusal":
-    "Dieser Passport darf im Bereich „{area}“ nicht arbeiten. Lass diesen Bereich für diesen Passport in den Einstellungen unter Passports aktivieren.",
+    "Dieser Passport darf im Bereich „{area}“ nicht arbeiten. Lass diesen Bereich für diesen Passport in Einstellungen → KI-Zugang aktivieren.",
   "passportAreas.cancel": "Abbrechen",
   "passportAreas.save": "Bereiche speichern",
   "passportAreas.saving": "Bereiche werden gespeichert…",

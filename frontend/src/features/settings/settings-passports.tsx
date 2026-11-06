@@ -40,7 +40,8 @@ import "./settings-agents.css";
 
 type PassportSummary = components["schemas"]["PassportSummary"];
 
-// Only a live passport takes a change of areas; the server refuses the rest.
+// Only a live passport is offered a change of areas. The server would take one
+// on a dead passport too, where it changes nothing anyone can use.
 function isLive(passport: PassportSummary, now: number): boolean {
   return (
     passport.revoked_at == null &&

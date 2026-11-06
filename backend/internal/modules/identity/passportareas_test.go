@@ -58,8 +58,14 @@ func TestTheWireCarriesTheModeAndTheChosenAreas(t *testing.T) {
 		t.Fatalf("all areas goes out as %+v, want mode all and an empty list", all)
 	}
 	wire := crmcontracts.PassportAreas{Mode: crmcontracts.PassportAreasModeCustom, Areas: []crmcontracts.WorkArea{"business"}}
-	if got := areasToWire(areasFromWire(wire)); got.Mode != wire.Mode || !slices.Equal(got.Areas, wire.Areas) {
-		t.Fatalf("a custom choice round-trips as %+v", got)
+	read, err := areasFromWire(wire)
+	if got := areasToWire(read); err != nil || got.Mode != wire.Mode || !slices.Equal(got.Areas, wire.Areas) {
+		t.Fatalf("a custom choice round-trips as %+v, %v", got, err)
+	}
+	var bad *InvalidPassportFieldError
+	allWithList := crmcontracts.PassportAreas{Mode: crmcontracts.PassportAreasModeAll, Areas: []crmcontracts.WorkArea{"business"}}
+	if _, err := areasFromWire(allWithList); !errors.As(err, &bad) || bad.Code != "areas_with_all" {
+		t.Errorf("all areas with a list → %v, want a 422 rather than the list dropped", err)
 	}
 }
 

@@ -8771,7 +8771,7 @@ export const en = {
   "passportAreas.unchanged": "Change an area first.",
   "passportAreas.refusalTitle": "What an agent is told when an area is off",
   "passportAreas.refusal":
-    "This passport may not work in the “{area}” area. Ask the user to turn that area on for this passport in Settings, under Passports.",
+    "This passport may not work in the “{area}” area. Ask the user to turn that area on for this passport in Settings → AI access, under Your passports or Your connections.",
   "passportAreas.cancel": "Cancel",
   "passportAreas.save": "Save areas",
   "passportAreas.saving": "Saving areas…",

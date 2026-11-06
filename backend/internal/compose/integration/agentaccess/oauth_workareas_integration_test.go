@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 const adminSettingsRoute = "/v1/roles"
@@ -103,6 +104,25 @@ func TestAConsentNamingAnAreaNoScreenOffersMintsNoCode(t *testing.T) {
 	status, location, _ := o.postConsent(t, form)
 	if granted, err := url.Parse(location); status != http.StatusFound || err != nil || granted.Query().Get("code") != "" {
 		t.Fatalf("a consent naming the operator area → %d %q, want a refusal with no code", status, location)
+	}
+	assertOwnerCount(t, o, 0, `SELECT count(*) FROM oauth_authorization_code`)
+}
+
+// A rep's screen never offers admin settings, so a consent naming it is refused
+// as a hand-built form is.
+func TestAConsentNamingAnAreaTheRoleDoesNotReachMintsNoCode(t *testing.T) {
+	o := setupOAuth(t)
+	var email string
+	if err := o.Owner.QueryRow(t.Context(), `SELECT email FROM app_user WHERE id = $1`, apptest.SessionUserID(t, o.AppEnv)).Scan(&email); err != nil {
+		t.Fatalf("reading the session's email: %v", err)
+	}
+	apptest.AssignRoleTo(t, o.AppEnv, email, "rep")
+	form := o.armConsent(t, url.Values{"scope": {"read"}})
+	form.Set("scopes", "read")
+	form.Set("areas", "admin_settings")
+	status, location, _ := o.postConsent(t, form)
+	if granted, err := url.Parse(location); status != http.StatusFound || err != nil || granted.Query().Get("code") != "" {
+		t.Fatalf("a rep consenting to admin settings → %d %q, want a refusal with no code", status, location)
 	}
 	assertOwnerCount(t, o, 0, `SELECT count(*) FROM oauth_authorization_code`)
 }

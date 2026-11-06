@@ -212,6 +212,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `webhookeventsdoc_test.go` | H3 | eventSchema is the part of a public-events.yaml schema the reference prints. |
 | `webtierheaders_test.go` | H2 | The app shell and the api send the same browser-facing headers. |
 | `wonreasondetailbound_test.go` | H2 | The paperless-win detail's length bound is one number, in three places that each need it. |
+| `workareacopy_test.go` | H2 | The passport page names each work area, and shows what an agent is told in one that is off, in the words the server uses. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are one id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings are the deal card's, and this derives them from the card rather than keeping a second list of them. |

@@ -36,11 +36,12 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 
 	in := IssuePassportInput{Label: req.Label}
 	if req.Areas != nil {
-		if !req.Areas.Mode.Valid() {
-			httperr.Write(w, r, httperr.Validation(fieldAreas, "unknown_mode", "say all or custom"))
+		areas, err := h.requestedAreas(r.Context(), *req.Areas)
+		if err != nil {
+			writePassportRefusal(w, r, err)
 			return
 		}
-		in.Areas = areasFromWire(*req.Areas)
+		in.Areas = areas
 	}
 	for _, sc := range req.Scopes {
 		in.Scopes = append(in.Scopes, string(sc))

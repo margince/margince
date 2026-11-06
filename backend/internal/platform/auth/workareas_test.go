@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -32,11 +34,8 @@ func TestAPassportIsRefusedACallInAnAreaItLeavesOff(t *testing.T) {
 	if !errors.As(err, &off) || off.Area != "admin_settings" || !errors.Is(err, apperrors.ErrScopeExceeded) {
 		t.Fatalf("a call in an area left off → %v, want an AreaOffError naming admin_settings on the 403 row", err)
 	}
-	if authority.reads != 0 {
-		t.Fatal("a call outside the passport's areas must not cost an authority read")
-	}
 	_, message := off.MessageFault()
-	if !strings.Contains(message, `"Admin settings"`) || !strings.Contains(message, "Settings, under Passports") {
+	if !strings.Contains(message, "“Admin settings”") || !strings.Contains(message, "Settings → AI access") {
 		t.Errorf("the refusal reads %q; it should name the area as the user knows it and where to turn it on", message)
 	}
 }
@@ -72,12 +71,54 @@ func TestTheCallerItselfIsInEveryArea(t *testing.T) {
 
 func TestAnAreaOutsideTheChoiceTellsTheUserToSetAllAreas(t *testing.T) {
 	for area, want := range map[string]string{
-		"operator": `"Operator and system" area, which only a passport set to all areas reaches`,
+		"operator": `“Operator and system” area, which only a passport set to all areas reaches`,
 		"":         "this call is in none of them",
 	} {
 		_, message := (&AreaOffError{Area: area}).MessageFault()
 		if !strings.Contains(message, want) || !strings.Contains(message, "all areas in Settings") {
 			t.Errorf("area %q reads %q; want it to say %q and how to set all areas", area, message, want)
 		}
+	}
+}
+
+// A run authenticates once and keeps its principal, so the areas a passport
+// holds now come from the gate's own read, not from that stamp.
+func TestAPassportsAreasAreReadAgainAtEveryCall(t *testing.T) {
+	authority := &stubAuthority{seat: principal.SeatFull, rbac: authz.RBAC{PassportAreas: salesOnly}}
+	ctx := agentCtxWithPassport(ids.NewV7(), principal.ScopeRead)
+	spec := mcp.ToolSpec{Name: "list_roles", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Areas: []string{"admin_settings"}}
+
+	if _, err := NewGate(authority).Admit(ctx, spec, noResolve); !errors.Is(err, apperrors.ErrScopeExceeded) {
+		t.Fatalf("a run stamped at all areas, whose passport is now sales work only → %v, want refused", err)
+	}
+	authority.rbac.PassportAreas = principal.WorkAreas{}
+	if _, err := NewGate(authority).Admit(ctx, spec, noResolve); err != nil {
+		t.Fatalf("the same run once its passport is back at all areas → %v, want admitted", err)
+	}
+}
+
+// Operator work is held as admin settings, and agent governance is admitted on
+// every passport, so no limited passport loses its own approvals.
+func TestAnAreaOutsideTheChoiceFollowsTheSwitchItIsHeldAs(t *testing.T) {
+	ctx := agentInAreas(principal.WorkAreas{Limited: true, Chosen: []string{"admin_settings"}}, principal.ScopeRead)
+	operator := mcp.ToolSpec{Name: "read_data_tasks", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Areas: []string{"operator"}}
+	if _, err := fullSeatGate().Admit(ctx, operator, noResolve); err != nil {
+		t.Errorf("operator work with admin settings on → %v, want admitted", err)
+	}
+	approvals := mcp.ToolSpec{Name: "list_approvals", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Areas: []string{"agent_governance"}}
+	if _, err := fullSeatGate().Admit(agentInAreas(salesOnly, principal.ScopeRead), approvals, noResolve); err != nil {
+		t.Errorf("the approval loop on a sales-only passport → %v, want admitted", err)
+	}
+	var off *AreaOffError
+	if _, err := fullSeatGate().Admit(agentInAreas(salesOnly, principal.ScopeRead), operator, noResolve); !errors.As(err, &off) || off.Area != "admin_settings" {
+		t.Errorf("operator work on a sales-only passport → %v, want refused naming admin settings", err)
+	}
+}
+
+// A tool about the protocol itself sits in no area of work.
+func TestAProtocolProbeIsInEveryArea(t *testing.T) {
+	spec := mcp.ToolSpec{Name: "check_client", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, ProtocolOnly: true}
+	if _, err := fullSeatGate().Admit(agentInAreas(salesOnly, principal.ScopeRead), spec, noResolve); err != nil {
+		t.Fatalf("a protocol probe on a limited passport → %v, want admitted", err)
 	}
 }

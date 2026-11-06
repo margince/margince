@@ -94,15 +94,56 @@ func areasFromColumn(column []string) principal.WorkAreas {
 	return principal.WorkAreas{Limited: true, Chosen: column}
 }
 
-func areasFromWire(wire crmcontracts.PassportAreas) principal.WorkAreas {
-	if wire.Mode != crmcontracts.PassportAreasModeCustom {
-		return principal.WorkAreas{}
+// areasFromWire reads a request's areas. A list beside all areas is refused
+// rather than dropped, since the caller meant something by it.
+func areasFromWire(wire crmcontracts.PassportAreas) (principal.WorkAreas, error) {
+	switch wire.Mode {
+	case crmcontracts.PassportAreasModeAll:
+		if len(wire.Areas) > 0 {
+			return principal.WorkAreas{}, &InvalidPassportFieldError{Field: fieldAreas, Code: "areas_with_all", Message: "all areas takes no list; send custom to choose areas"}
+		}
+		return principal.WorkAreas{}, nil
+	case crmcontracts.PassportAreasModeCustom:
+		chosen := make([]string, 0, len(wire.Areas))
+		for _, area := range wire.Areas {
+			chosen = append(chosen, string(area))
+		}
+		return principal.WorkAreas{Limited: true, Chosen: chosen}, nil
+	default:
+		return principal.WorkAreas{}, &InvalidPassportFieldError{Field: "mode", Code: "unknown_mode", Message: "say all or custom"}
 	}
-	chosen := make([]string, 0, len(wire.Areas))
-	for _, area := range wire.Areas {
-		chosen = append(chosen, string(area))
+}
+
+// admitReachable refuses an area the caller's role does not reach, which no
+// screen offers them. It reads the list the screens show.
+func (h Handlers) admitReachable(ctx context.Context, areas principal.WorkAreas) error {
+	if !areas.Limited {
+		return nil
 	}
-	return principal.WorkAreas{Limited: true, Chosen: chosen}
+	var reachable []string
+	if h.reachableAreas != nil {
+		reachable = h.reachableAreas(ctx)
+	}
+	for _, area := range areas.Chosen {
+		if !slices.Contains(reachable, area) {
+			return &InvalidPassportFieldError{Field: fieldAreas, Code: "area_not_reachable",
+				Message: fmt.Sprintf("your role reaches nothing in %q, so a passport cannot be limited to it", area)}
+		}
+	}
+	return nil
+}
+
+// requestedAreas is a request's areas once both the wire and the caller's role
+// admit them.
+func (h Handlers) requestedAreas(ctx context.Context, wire crmcontracts.PassportAreas) (principal.WorkAreas, error) {
+	areas, err := areasFromWire(wire)
+	if err != nil {
+		return areas, err
+	}
+	if err := admitAreas(areas); err != nil {
+		return areas, err
+	}
+	return areas, h.admitReachable(ctx, areas)
 }
 
 func areasToWire(areas principal.WorkAreas) crmcontracts.PassportAreas {
@@ -209,19 +250,23 @@ func (h Handlers) SetPassportAreas(w http.ResponseWriter, r *http.Request, id cr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if !req.Mode.Valid() {
-		httperr.Write(w, r, httperr.Validation("mode", "unknown_mode", "say all or custom"))
+	areas, err := h.requestedAreas(r.Context(), req)
+	if err == nil {
+		err = h.svc.SetPassportAreas(r.Context(), identity, ids.From[ids.PassportKind](ids.UUID(id)), areas)
+	}
+	if err != nil {
+		writePassportRefusal(w, r, err)
 		return
 	}
-	areas := areasFromWire(req)
-	err := h.svc.SetPassportAreas(r.Context(), identity, ids.From[ids.PassportKind](ids.UUID(id)), areas)
+	httperr.WriteJSON(w, http.StatusOK, areasToWire(areas))
+}
+
+// writePassportRefusal answers a field the request got wrong as a 422 naming
+// it, and anything else as itself.
+func writePassportRefusal(w http.ResponseWriter, r *http.Request, err error) {
 	if badField, ok := errors.AsType[*InvalidPassportFieldError](err); ok {
 		httperr.Write(w, r, httperr.Validation(badField.Field, badField.Code, badField.Message))
 		return
 	}
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, areasToWire(areas))
+	httperr.Write(w, r, err)
 }

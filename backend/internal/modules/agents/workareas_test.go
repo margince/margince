@@ -12,7 +12,9 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -75,23 +77,36 @@ func TestARouterKeepsOnlyTheActionsOfTheAreasOn(t *testing.T) {
 	}
 }
 
-// The areas ride the principal each call authenticates, so turning an area
-// back on admits the next call with no session to restart.
-func TestTurningAnAreaBackOnAdmitsTheNextCall(t *testing.T) {
-	r, admin := areaRegistry(false)
-	r.Register(fakeRouter{name: "mixed", targets: map[string]string{"offer": salesVerb, "automation": adminVerb}})
+// liveAreas answers the passport's areas as the gate reads them at each call.
+type liveAreas struct {
+	fullSeatAuthority
+	areas *principal.WorkAreas
+}
+
+func (l liveAreas) AdmittedAuthority(context.Context, ids.UUID, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authz.RBAC{PassportAreas: *l.areas}, principal.SeatFull, nil
+}
+
+// The gate reads the areas again at every call. A run that authenticated
+// before a change is held to it from the next call, either way.
+func TestAChangeOfAreasBindsARunningSessionAtItsNextCall(t *testing.T) {
+	current := salesOnly
+	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(liveAreas{areas: &current}))
+	admin := &argsTool{spec: targetSpec(adminVerb, principal.ScopeWrite, mcp.TierAutoExecute)}
+	r.Register(admin)
+	r.Register(fakeRouter{name: "mixed", targets: map[string]string{"automation": adminVerb}})
+	r.required = nil
+	stamped := grantedCtx(principal.SeatFull)
 	call := json.RawMessage(`{"action":"automation","x":1}`)
 
-	_, err := r.Invoke(inAreasCtx(salesOnly), "mixed", call)
+	_, err := r.Invoke(stamped, "mixed", call)
 	var off *auth.AreaOffError
 	if !errors.As(err, &off) || off.Area != "admin_settings" || admin.calls != 0 {
 		t.Fatalf("a routed call into admin settings, left off → %v (ran %d times), want the area refusal", err, admin.calls)
 	}
-	if _, err := r.Invoke(inAreasCtx(principal.WorkAreas{Limited: true, Chosen: []string{"business", "admin_settings"}}), "mixed", call); err != nil {
-		t.Fatalf("the same call once admin settings is on → %v, want admitted", err)
-	}
-	if admin.calls != 1 {
-		t.Errorf("the admitted call ran %d times, want once", admin.calls)
+	current = principal.WorkAreas{Limited: true, Chosen: []string{"business", "admin_settings"}}
+	if _, err := r.Invoke(stamped, "mixed", call); err != nil || admin.calls != 1 {
+		t.Fatalf("the same session once admin settings is on → %v (ran %d times), want it run once", err, admin.calls)
 	}
 }
 
@@ -101,7 +116,8 @@ type recordTyped struct{ *argsTool }
 func (r recordTyped) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }
 
 func TestARecordTypeHoldsACallToItsOwnArea(t *testing.T) {
-	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
+	areas := salesOnly
+	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(liveAreas{areas: &areas}))
 	create := recordTyped{&argsTool{spec: targetSpec("create_record", principal.ScopeWrite, mcp.TierAutoExecute)}}
 	create.spec.InputSchema = json.RawMessage(`{"type":"object","properties":{"record_type":{"type":"string"}}}`)
 	r.Register(create)
@@ -138,7 +154,7 @@ func TestTheAreasOfferedAreTheOnesTheGrantsReach(t *testing.T) {
 func TestTheAgentIsToldWhichAreaToAskFor(t *testing.T) {
 	srv := NewDispatcher(nil, nil, "t", "0")
 	got := srv.explain(adminVerb, &auth.AreaOffError{Tool: adminVerb, Area: "admin_settings"})
-	if !strings.Contains(got, `"Admin settings"`) || !strings.Contains(got, "Settings, under Passports") || strings.Contains(got, "scope") {
+	if !strings.Contains(got, "“Admin settings”") || !strings.Contains(got, "Settings → AI access") || strings.Contains(got, "scope") {
 		t.Fatalf("the agent reads %q", got)
 	}
 }

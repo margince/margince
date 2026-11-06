@@ -8573,7 +8573,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "passportAreas.unchanged": "Đổi một khu vực trước.",
   "passportAreas.refusalTitle": "Agent được báo gì khi một khu vực bị tắt",
   "passportAreas.refusal":
-    "Passport này không được làm việc ở khu vực “{area}”. Hãy đề nghị bật khu vực đó cho passport này trong Cài đặt, mục Passport.",
+    "Passport này không được làm việc ở khu vực “{area}”. Hãy đề nghị bật khu vực đó cho passport này trong Cài đặt → Quyền truy cập AI, mục Passport của bạn hoặc Kết nối của bạn.",
   "passportAreas.cancel": "Hủy",
   "passportAreas.save": "Lưu khu vực",
   "passportAreas.saving": "Đang lưu khu vực…",

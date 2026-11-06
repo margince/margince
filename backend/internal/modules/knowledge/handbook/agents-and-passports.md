@@ -89,9 +89,9 @@ When you name a record to your AI tool and more than one record matches that nam
 Also called: two contacts with the same name, name that matches twice, pick the right record, client check.
 
 ### How do I choose where an agent may work?
-Besides what an agent may do, a passport or connection says where it may work. Each place is an area, such as **Sales work**, **Compliance and privacy** or **Admin settings**. Choose under **Where it may work** on **Authorize access** or in **New passport**. **All areas**, the default for every passport, covers each area your role reaches and areas added later. **Choose areas** covers only the areas you tick, at least one, and an area added later starts off. The list shows only the areas your role reaches, and when it reaches one area the choice is not shown.
+A passport or connection also says where an agent may work, such as **Sales work** or **Admin settings**. You choose it under **Where it may work** on **Authorize access** or in **New passport**. **All areas**, the default, covers each area your role reaches and areas added later. **Choose areas** covers only the areas you tick, and an area added later starts off. You see only the areas your role reaches: a sales rep sees all but **Admin settings**, and a role with one area sees no choice. Running the installation counts as **Admin settings**, and approvals are in no area, so every passport keeps them.
 
-To change it later, open **Settings → AI access**, then the **…** menu on the row, and choose **Change areas**. The **Areas** column shows what each one has. Before you choose **Save areas**, the panel says what the agent gets or loses, and a change holds from its next call. An agent that calls into an area that is off is refused and told the area's name. It is told to ask you to turn it on in **Settings**, under **Passports**.
+To change it later, open **Settings → AI access**, then the **…** menu on the row, and choose **Change areas**. The **Areas** column shows what each one has. Before you choose **Save areas**, the panel says what the agent gets or loses, and a change holds from its next call. An agent that calls into an area that is off is refused and told the area's name. It is told to ask you to turn it on in **Settings → AI access**, under **Your passports** or **Your connections**.
 Also called: work areas, limit an agent to sales, keep an agent out of admin settings, restrict where Claude works.
 
 ### How do I revoke an agent's access?
@@ -298,7 +298,7 @@ A passport carries narrower permissions than the colleague has. Each one stands 
 - **Use AI and buy data**: AI work such as research and document questions, and the one action that gets data from an outside provider.
 
 A passport with only **Read records** can read your approvals but cannot decide
-them. A passport needs **Change records** to approve most things, and **Send
+them, whatever its areas. A passport needs **Change records** to approve most things, and **Send
 messages** too where approving sends a message.
 
 A passport lasts 30 days by default, at least an hour and at most 90 days. A passport created in Settings always gets the 30-day default.

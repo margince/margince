@@ -28,19 +28,25 @@ const (
 )
 
 // parityGroupInfo.Passport is the name a user chooses the group by on a
-// passport. A group without one is reached only by a passport set to all areas.
-type parityGroupInfo struct{ Key, Title, What, Passport string }
+// passport. A group without one is either Free, admitted on every passport, or
+// HeldAs the group whose switch also covers it.
+type parityGroupInfo struct {
+	Key, Title, What, Passport string
+	Free                       bool
+	HeldAs                     string
+}
 
 var parityGroupInfos = []parityGroupInfo{
-	{groupBusiness, "Business operations", "The daily sales work: records, deals, activities, offers, reports and lists.", "Sales work"},
-	{groupCompliance, "Compliance and privacy", "Consent, privacy requests, notices, retention and the audit trail.", "Compliance and privacy"},
-	{groupCapture, "Capture and connectors", "What comes in from mail and calendars, and the connections it comes through.", "Email and calendar capture"},
-	{groupWorkspace, "Workspace settings a non-admin can reach", "How the workspace is set up, where the seeded `rep` role passes the check. Most of these are reads.", "Company settings"},
-	{groupAdmin, "Admin settings", "How the workspace is set up, where the seeded `rep` role is refused.", "Admin settings"},
-	{groupOwnAccount, "The user's own account and security", "The user's profile, preferences, password, sessions and second factor.", "My account"},
-	{groupGovernance, "Agent governance", "What limits agents: passports, connected clients, approvals and autonomy.", ""},
-	{groupOperator, "Operator and system", "Running the installation: health, repair, license and the search index.", ""},
-	{groupPublic, "Public, with no signed-in user", "Sign-in steps and pages for visitors from outside the workspace. No agent acts here, because no signed-in user does.", ""},
+	{groupBusiness, "Business operations", "The daily sales work: records, deals, activities, offers, reports and lists.", "Sales work", false, ""},
+	{groupCompliance, "Compliance and privacy", "Consent, privacy requests, notices, retention and the audit trail.", "Compliance and privacy", false, ""},
+	{groupCapture, "Capture and connectors", "What comes in from mail and calendars, and the connections it comes through.", "Email and calendar capture", false, ""},
+	{groupWorkspace, "Workspace settings a non-admin can reach", "How the workspace is set up, where the seeded `rep` role passes the check. Most of these are reads.", "Company settings", false, ""},
+	{groupAdmin, "Admin settings", "How the workspace is set up, where the seeded `rep` role is refused.", "Admin settings", false, ""},
+	{groupOwnAccount, "The user's own account and security", "The user's profile, preferences, password, sessions and second factor.", "My account", false, ""},
+	// An agent reads and answers its own approvals here, so no passport may lose them.
+	{groupGovernance, "Agent governance", "What limits agents: passports, connected clients, approvals and autonomy.", "", true, ""},
+	{groupOperator, "Operator and system", "Running the installation: health, repair, license and the search index.", "", false, groupAdmin},
+	{groupPublic, "Public, with no signed-in user", "Sign-in steps and pages for visitors from outside the workspace. No agent acts here, because no signed-in user does.", "", false, ""},
 }
 
 type parityArea struct{ Key, Title, Group string }

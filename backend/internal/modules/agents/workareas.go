@@ -35,13 +35,17 @@ func (r *Registry) inAreas(p principal.Principal, verb string) bool {
 
 // ReachableAreas lists the choosable areas p's grants reach, in the table's
 // order. An area is reached when p holds the measured checks of a verb placed
-// there alone. A verb placed in several areas says nothing about any one.
+// there alone. A verb the sweep measured asking no grant check is held by every
+// member. A verb placed in several areas says nothing about any one.
 func (r *Registry) ReachableAreas(p principal.Principal) []string {
 	reached := map[string]bool{}
 	r.mu.RLock()
 	for name, spec := range r.specs {
-		if len(spec.Areas) == 1 && !spec.HumanOnly && !spec.Gated && r.holdsChecks(p, name) {
-			reached[spec.Areas[0]] = true
+		if len(spec.Areas) != 1 || spec.HumanOnly || spec.Gated || !r.holdsChecks(p, name) {
+			continue
+		}
+		if key, free := workarea.SwitchOf(spec.Areas[0]); !free {
+			reached[key] = true
 		}
 	}
 	r.mu.RUnlock()

@@ -34,12 +34,14 @@
     {
       "key": "agent_governance",
       "name": "Agent governance",
-      "choosable": false
+      "choosable": false,
+      "free": true
     },
     {
       "key": "operator",
       "name": "Operator and system",
-      "choosable": false
+      "choosable": false,
+      "held_as": "admin_settings"
     },
     {
       "key": "public",
@@ -2884,23 +2886,36 @@
   "record_calls": {
     "archive_record": {
       "activity": "business",
+      "commission": "business",
       "company": "business",
       "contact": "business",
       "deal": "business",
+      "deal_room": "business",
+      "deal_room_document": "business",
+      "deal_room_participant": "business",
+      "deal_room_thread": "business",
+      "lead": "business",
       "offer": "business",
       "offer_template": "admin_settings",
+      "partner": "business",
       "product": "admin_settings",
       "project": "business",
       "relationship": "business"
     },
     "create_record": {
+      "activity": "business",
+      "commission": "business",
       "company": "business",
       "contact": "business",
       "deal": "business",
       "deal_room": "business",
+      "deal_room_document": "business",
+      "deal_room_participant": "business",
+      "deal_room_thread": "business",
       "lead": "business",
       "offer": "business",
       "offer_template": "workspace_settings",
+      "partner": "business",
       "product": "workspace_settings",
       "project": "business",
       "relationship": "business"
@@ -2920,7 +2935,8 @@
       "offer_template": "workspace_settings",
       "partner": "business",
       "product": "workspace_settings",
-      "project": "business"
+      "project": "business",
+      "relationship": "business"
     },
     "read_record": {
       "activity": "business",
@@ -2929,21 +2945,31 @@
       "contact": "business",
       "deal": "business",
       "deal_room": "business",
+      "deal_room_document": "business",
+      "deal_room_participant": "business",
+      "deal_room_thread": "business",
       "lead": "business",
       "offer": "business",
       "offer_template": "workspace_settings",
       "partner": "business",
       "product": "workspace_settings",
-      "project": "business"
+      "project": "business",
+      "relationship": "business"
     },
     "update_record": {
       "activity": "business",
+      "commission": "business",
       "company": "business",
       "contact": "business",
       "deal": "business",
+      "deal_room": "business",
+      "deal_room_document": "business",
+      "deal_room_participant": "business",
+      "deal_room_thread": "business",
       "lead": "business",
       "offer": "business",
       "offer_template": "workspace_settings",
+      "partner": "business",
       "product": "workspace_settings",
       "project": "business",
       "relationship": "business"

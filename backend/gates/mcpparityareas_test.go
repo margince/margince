@@ -42,7 +42,9 @@ func workAreaFile(t *testing.T, contract parityContract, report parityReport) []
 		if name == "" {
 			name = info.Title
 		}
-		file.Areas = append(file.Areas, workarea.Area{Key: info.Key, Name: name, Choosable: info.Passport != ""})
+		file.Areas = append(file.Areas, workarea.Area{
+			Key: info.Key, Name: name, Choosable: info.Passport != "", Free: info.Free, HeldAs: info.HeldAs,
+		})
 	}
 	for _, op := range report.Operations {
 		tool := contract.routes[op.Path][op.Method].MCPTool
@@ -69,17 +71,40 @@ func workAreaFile(t *testing.T, contract parityContract, report parityReport) []
 		}
 		byType[tool.RecordType] = op.Group
 	}
-	// A verb in one area needs no record type to place a call.
-	for verb := range file.RecordCalls {
-		if len(file.Verbs[verb]) < 2 {
-			delete(file.RecordCalls, verb)
-		}
-	}
+	placeUnnamedRecordTypes(file)
 	payload, err := json.MarshalIndent(file, "", "  ")
 	if err != nil {
 		t.Fatalf("encoding the work-area table: %v", err)
 	}
 	return append(payload, '\n')
+}
+
+// placeUnnamedRecordTypes keeps record types for a verb in several areas only.
+// Such a verb also gets each type those verbs place in one area. It may take a
+// type no route of its own names, as create_record takes an activity. A
+// type placed in two areas stays unplaced, and compose's census fails a tool
+// that takes it.
+func placeUnnamedRecordTypes(file workarea.File) {
+	for verb := range file.RecordCalls {
+		if len(file.Verbs[verb]) < 2 {
+			delete(file.RecordCalls, verb)
+		}
+	}
+	typeAreas := map[string][]string{}
+	for _, byType := range file.RecordCalls {
+		for recordType, area := range byType {
+			if !slices.Contains(typeAreas[recordType], area) {
+				typeAreas[recordType] = append(typeAreas[recordType], area)
+			}
+		}
+	}
+	for _, byType := range file.RecordCalls {
+		for recordType, areas := range typeAreas {
+			if _, placed := byType[recordType]; !placed && len(areas) == 1 {
+				byType[recordType] = areas[0]
+			}
+		}
+	}
 }
 
 // The contract's WorkArea enum is what a client may send, so it must be the
@@ -123,27 +148,55 @@ func TestTheContractOffersTheChoosableWorkAreas(t *testing.T) {
 	}
 }
 
-// Every verb the table places names only groups the table declares.
-func TestTheWorkAreaTableNamesOnlyDeclaredAreas(t *testing.T) {
+// The table places the operations the contract lets an agent call and no
+// others, each in a group it declares.
+func TestTheWorkAreaTablePlacesEveryAgentOperation(t *testing.T) {
 	t.Parallel()
 	file := workarea.Embedded()
 	declared := map[string]bool{}
 	for _, area := range file.Areas {
 		declared[area.Key] = true
 	}
-	if len(file.Operations) < parityOperationFloor/2 {
-		t.Fatalf("the work-area table places %d operations, under half the parity floor; its walk lost them", len(file.Operations))
-	}
-	for _, verb := range slices.Sorted(maps.Keys(file.Verbs)) {
-		for _, area := range file.Verbs[verb] {
-			if !declared[area] {
-				t.Errorf("%s is placed in %q, which the table does not declare", verb, area)
+	agentOps := map[string]bool{}
+	for _, methods := range readParityContract(t).routes {
+		for _, op := range methods {
+			if op.MCPTool != nil {
+				agentOps[op.OperationID] = true
 			}
 		}
 	}
-	for op, area := range file.Operations {
-		if !declared[area] {
-			t.Errorf("%s is placed in %q, which the table does not declare", op, area)
+	if len(agentOps) == 0 {
+		t.Fatal("the contract names no agent operation; the walk lost them")
+	}
+	for op := range agentOps {
+		if area, placed := file.Operations[op]; !placed || !declared[area] {
+			t.Errorf("%s carries x-mcp-tool and is placed in %q. Regenerate with %s.", op, area, mcpParityCommand)
+		}
+	}
+	for op := range file.Operations {
+		if !agentOps[op] {
+			t.Errorf("the table places %s, which carries no x-mcp-tool. Regenerate with %s.", op, mcpParityCommand)
+		}
+	}
+}
+
+// Every verb an agent may call is reachable by some passport limited to chosen
+// areas. One of its groups is choosable, free, or held as a choosable one. A
+// verb only all areas reaches would vanish from every narrowed passport.
+func TestEveryAgentVerbIsReachableByALimitedPassport(t *testing.T) {
+	t.Parallel()
+	file := workarea.Embedded()
+	reachable := map[string]bool{}
+	for _, area := range file.Areas {
+		reachable[area.Key] = area.Choosable || area.Free || workarea.IsChoosable(area.HeldAs)
+	}
+	if len(file.Verbs) == 0 {
+		t.Fatal("the table places no verb")
+	}
+	for _, verb := range slices.Sorted(maps.Keys(file.Verbs)) {
+		if !slices.ContainsFunc(file.Verbs[verb], func(area string) bool { return reachable[area] }) {
+			t.Errorf("%s sits only in %v, which no limited passport reaches. Mark its group Free or HeldAs a "+
+				"choosable group in gates/mcpparityplaces_test.go.", verb, file.Verbs[verb])
 		}
 	}
 }
