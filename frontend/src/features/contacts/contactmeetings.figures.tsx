@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
+import { omitted } from "../../design-system/surfacestate";
 import { activityDay } from "../../format/activitywhen";
 import {
   formatDayMonthNearYear,
@@ -14,6 +15,7 @@ import { useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 
 type Activity = components["schemas"]["Activity"];
+type Contact360 = components["schemas"]["Contact360"];
 type NextMeeting = NonNullable<
   components["schemas"]["Contact360"]["next_meeting"]
 >;
@@ -74,4 +76,30 @@ export function MeetingFigures({
       <StatCard label={t("contact.meetings.lastHeld")} value={lastValue} />
     </StatStrip>
   );
+}
+
+// A cached page outlives a withheld section, so the gate is checked too.
+export function timelineRead(
+  view: Contact360 | undefined,
+  listed: Readonly<{ isSuccess: boolean; hasNextPage: boolean }>,
+) {
+  const withheld = view !== undefined && omitted(view, "activities");
+  return {
+    withheld,
+    isSuccess: !withheld && listed.isSuccess,
+    hasNextPage: listed.hasNextPage,
+  };
+}
+
+// A count only once it is the whole count. Until the list reaches the past,
+// meetings still ahead can sit on a page not read yet.
+export function bookedCount(
+  upcoming: string,
+  listed: Readonly<{ isSuccess: boolean; hasNextPage: boolean }>,
+  pastReached: boolean,
+  booked: readonly unknown[],
+): number | null {
+  const complete = listed.isSuccess && (pastReached || !listed.hasNextPage);
+  if ((upcoming !== "ready" && upcoming !== "empty") || !complete) return null;
+  return booked.filter(Boolean).length;
 }

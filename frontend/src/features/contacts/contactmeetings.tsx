@@ -28,7 +28,11 @@ import { useCopyBookingLink } from "../../lib/bookinglinkcopy";
 import { useCan } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
-import { MeetingFigures } from "./contactmeetings.figures";
+import {
+  bookedCount,
+  MeetingFigures,
+  timelineRead,
+} from "./contactmeetings.figures";
 import { HeldMeetingsList } from "./contactmeetings.held";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
@@ -182,32 +186,6 @@ function heldState(
   // the panel offers the next page rather than calling itself empty.
   if (listed.hasNextPage) return "ready";
   return listed.isPending ? "loading" : "empty";
-}
-
-// A cached page outlives a withheld section, so the gate is checked too.
-function timelineRead(
-  view: Contact360 | undefined,
-  listed: Readonly<{ isSuccess: boolean; hasNextPage: boolean }>,
-) {
-  const withheld = view !== undefined && omitted(view, "activities");
-  return {
-    withheld,
-    isSuccess: !withheld && listed.isSuccess,
-    hasNextPage: listed.hasNextPage,
-  };
-}
-
-// A count only once it is the whole count. Until the list reaches the past,
-// meetings still ahead can sit on a page not read yet.
-function bookedCount(
-  upcoming: string,
-  listed: Readonly<{ isSuccess: boolean; hasNextPage: boolean }>,
-  pastReached: boolean,
-  booked: readonly unknown[],
-): number | null {
-  const complete = listed.isSuccess && (pastReached || !listed.hasNextPage);
-  if ((upcoming !== "ready" && upcoming !== "empty") || !complete) return null;
-  return booked.filter(Boolean).length;
 }
 
 /**
