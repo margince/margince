@@ -203,7 +203,7 @@ func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcont
 		DisplayName:     name,
 		StrengthBucket:  crmcontracts.ContactNetworkColleagueStrengthBucket(score.Bucket),
 		Interactions90d: e.Count90d,
-		TwoWay:          new(twoWay(&e.InCount90d, ourSide(e))),
+		TwoWay:          new(twoWayExchange(e.InCount90d, e.SentCount90d, e.OutCount90d)),
 		// The direction split, from the same projection the score reads.
 		// Without it a surface can say "6 exchanges" but not "6 two-way
 		// exchanges" or "replied 2 days ago", and cannot tell a live
@@ -379,14 +379,4 @@ func UserNames(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]s
 		out[id] = name
 	}
 	return out, rows.Err()
-}
-
-// ourSide is what this colleague sent, not every outbound mail they were on:
-// a colleague copied both ways has written nothing. A row folded before the
-// sent count existed keeps the outbound reading until it is refolded.
-func ourSide(e search.InteractionEdge) *int {
-	if e.SentCount90d != nil {
-		return e.SentCount90d
-	}
-	return &e.OutCount90d
 }

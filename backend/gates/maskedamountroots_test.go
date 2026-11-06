@@ -34,6 +34,7 @@ package gates
 
 import (
 	"go/parser"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -65,7 +66,7 @@ func TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt(t *testing.T) {
 
 	var offenders []string
 	for _, root := range roots {
-		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		err := gatekit.WalkDir(root, func(path string, info fs.DirEntry, err error) error {
 			if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
@@ -167,7 +168,7 @@ func sweptLikeTheCensus(path string) bool {
 func moduleRootsBesideInternal(t *testing.T) []string {
 	t.Helper()
 	var roots []string
-	entries, err := os.ReadDir(".")
+	entries, err := gatekit.ReadDir(".")
 	if err != nil {
 		t.Fatalf("reading the backend module: %v", err)
 	}

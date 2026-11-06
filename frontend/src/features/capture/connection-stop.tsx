@@ -1,0 +1,168 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { api } from "../../api/client";
+import type { components } from "../../api/schema";
+import { ConfirmModal } from "../../design-system/confirmmodal";
+import type {
+  AccountVendor,
+  ConnectionAccount,
+} from "../../format/connectorprovider";
+import { type Translator, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import type { ConnectAccountInput } from "../../lib/connect-account";
+import type { Service } from "../../lib/connect-flow-draft";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
+
+// Disconnecting an account, or some of its services, behind one confirm.
+
+type Provider = components["schemas"]["CaptureConnection"]["provider"];
+
+// Disconnecting deletes OUR stored credential and does not revoke the grant at
+// the vendor, so the confirm names where a careful reader finishes that.
+const REVOKE_NOTE: Record<AccountVendor, MessageKey> = {
+  google: "connectors.disconnectBodyGoogleNote",
+  microsoft: "connectors.disconnectBodyMicrosoftNote",
+};
+
+export function vendorOfAccount(
+  account: ConnectionAccount,
+): AccountVendor | null {
+  return account.key === "google" || account.key === "microsoft"
+    ? account.key
+    : null;
+}
+
+function servicesLabel(services: readonly Service[], t: Translator): string {
+  if (services.length === 2) return t("connectors.servicesBoth");
+  return services[0] === "calendar"
+    ? t("connectors.bringsCalendar")
+    : t("connectors.bringsMail");
+}
+
+// What one disconnect stops: the services, and what may follow it once they
+// are gone (a service the same change ticked).
+export type PendingStop = Readonly<{
+  services: readonly Service[];
+  afterwards: ConnectAccountInput | null;
+}>;
+
+type StopTarget = Readonly<{ service: Service; provider: Provider }>;
+
+export function servicesOf(account: ConnectionAccount): Service[] {
+  const services: Service[] = [];
+  if (account.mail) services.push("mail");
+  if (account.calendar) services.push("calendar");
+  return services;
+}
+
+/** One confirm for every disconnect: the whole account from the overflow, or
+ *  the services "Change what it brings in" unticked. */
+export function StopConfirm({
+  account,
+  title,
+  stop,
+  onClose,
+  onStopped,
+}: Readonly<{
+  account: ConnectionAccount;
+  title: string;
+  stop: PendingStop | null;
+  onClose: () => void;
+  onStopped: (afterwards: ConnectAccountInput | null) => void;
+}>) {
+  const t = useT();
+  const disconnect = useDisconnectServices();
+  const vendor = vendorOfAccount(account);
+  const held = servicesOf(account);
+  const services = (stop?.services ?? []).filter((service) =>
+    held.includes(service),
+  );
+  const whole = services.length > 0 && services.length === held.length;
+  // A disconnect that has started names what the user confirmed, even once the
+  // account no longer holds some of it. A failed one can be tried again, so it
+  // names what is still held.
+  const confirmed =
+    disconnect.isPending || disconnect.isSuccess
+      ? disconnect.variables
+      : undefined;
+  const named = confirmed?.map((target) => target.service) ?? services;
+  // The account can lose a service while the confirm is open. With nothing left
+  // to stop, the stop is over, and a follow-up connect still has to run. A
+  // disconnect that is running or succeeded ends the stop itself, and only once.
+  const nothingLeft =
+    stop !== null &&
+    services.length === 0 &&
+    !disconnect.isPending &&
+    !disconnect.isSuccess;
+  useEffect(() => {
+    if (nothingLeft) {
+      onStopped(stop.afterwards);
+    }
+  }, [nothingLeft, stop, onStopped]);
+  // Each stop starts from an idle disconnect. The reset waits for the stop to
+  // end, so the stop that ran one cannot read as idle and end a second time.
+  const { reset } = disconnect;
+  useEffect(() => {
+    if (stop === null) {
+      reset();
+    }
+  }, [stop, reset]);
+  const targets = services.flatMap((service): StopTarget[] => {
+    const connection = service === "mail" ? account.mail : account.calendar;
+    return connection ? [{ service, provider: connection.provider }] : [];
+  });
+  return (
+    <ConfirmModal
+      open={stop !== null && !nothingLeft}
+      onClose={() => {
+        disconnect.reset();
+        onClose();
+      }}
+      title={
+        whole
+          ? t("connectors.disconnectAccountTitle", { account: title })
+          : t("connectors.stopServicesTitle", {
+              services: servicesLabel(named, t),
+            })
+      }
+      confirmLabel={t("connectors.disconnect")}
+      confirmVariant="danger"
+      pending={disconnect.isPending}
+      error={disconnect.isError ? problemMessageOf(disconnect.error, t) : null}
+      onConfirm={() =>
+        disconnect.mutate(targets, {
+          onSuccess: () => onStopped(stop?.afterwards ?? null),
+        })
+      }
+    >
+      <p>
+        {t("connectors.disconnectServicesBody", {
+          services: servicesLabel(named, t),
+        })}
+      </p>
+      {vendor && <p className="t-caption">{t(REVOKE_NOTE[vendor])}</p>}
+    </ConfirmModal>
+  );
+}
+
+/** Stops each named service in turn. One failure stops the rest, and the
+ *  roster read afterwards says which are still connected. */
+function useDisconnectServices() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (targets: readonly StopTarget[]) => {
+      for (const { provider } of targets) {
+        const { error } = await api.POST("/connectors/{provider}/disconnect", {
+          params: { path: { provider } },
+        });
+        if (error) {
+          throwProblem(error);
+        }
+      }
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["connectors"] }),
+  });
+}

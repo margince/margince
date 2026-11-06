@@ -53,7 +53,7 @@ type inboundManifest struct {
 
 func TestEveryInboundEndpointRefusesAReplay(t *testing.T) {
 	t.Parallel()
-	entries, err := os.ReadDir(extTierDir)
+	entries, err := gatekit.ReadDir(extTierDir)
 	if err != nil {
 		t.Fatalf("reading the extension tier: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestEveryInboundEndpointRefusesAReplay(t *testing.T) {
 			continue
 		}
 		allUnits = append(allUnits, e.Name())
-		raw, err := os.ReadFile(filepath.Join(extTierDir, e.Name(), "manifest.generated.json"))
+		raw, err := gatekit.ReadFile(filepath.Join(extTierDir, e.Name(), "manifest.generated.json"))
 		if os.IsNotExist(err) {
 			continue
 		}
@@ -111,7 +111,7 @@ func TestEveryInboundEndpointRefusesAReplay(t *testing.T) {
 func unitHoldsNoncePair(t *testing.T, unit string) bool {
 	t.Helper()
 	dir := filepath.Join(extTierDir, unit, "migrations")
-	files, err := os.ReadDir(dir)
+	files, err := gatekit.ReadDir(dir)
 	if err != nil {
 		return false
 	}
@@ -119,7 +119,7 @@ func unitHoldsNoncePair(t *testing.T, unit string) bool {
 		if !strings.HasSuffix(f.Name(), ".up.sql") {
 			continue
 		}
-		sql, err := os.ReadFile(filepath.Join(dir, f.Name()))
+		sql, err := gatekit.ReadFile(filepath.Join(dir, f.Name()))
 		if err != nil {
 			t.Fatalf("reading %s/%s: %v", unit, f.Name(), err)
 		}

@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { expect, within } from "storybook/test";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Panel } from "../../design-system/panel";
 import { useLocale, useT } from "../../i18n";
 import { openAnalyticsSection } from "../../lib/analytics.address";
 import {
@@ -421,12 +421,10 @@ export const LearningsNotRun: Story = {
 export const Workings: Story = {
   render: frozen(
     <InTheWeeksPanel>
-      <PanelBody>
-        <WeeklyWorkings
-          counts={narratedWeek.counts}
-          figures={weeklyNumericStatus(undefined).figures}
-        />
-      </PanelBody>
+      <WeeklyWorkings
+        counts={narratedWeek.counts}
+        figures={weeklyNumericStatus(undefined).figures}
+      />
     </InTheWeeksPanel>,
   ),
 };
@@ -435,20 +433,18 @@ export const Workings: Story = {
 export const WorkingsPartlyRecorded: Story = {
   render: frozen(
     <InTheWeeksPanel>
-      <PanelBody>
-        <WeeklyWorkings
-          counts={narratedWeek.counts}
-          figures={
-            weeklyNumericStatus({
-              ...partlyRecordedWeeklyNumbers,
-              figure_coverage: {
-                ...partlyRecordedWeeklyNumbers.figure_coverage,
-                tasks: beforeHistoryWeeklyNumbers.figure_coverage?.tasks,
-              },
-            }).figures
-          }
-        />
-      </PanelBody>
+      <WeeklyWorkings
+        counts={narratedWeek.counts}
+        figures={
+          weeklyNumericStatus({
+            ...partlyRecordedWeeklyNumbers,
+            figure_coverage: {
+              ...partlyRecordedWeeklyNumbers.figure_coverage,
+              tasks: beforeHistoryWeeklyNumbers.figure_coverage?.tasks,
+            },
+          }).figures
+        }
+      />
     </InTheWeeksPanel>,
   ),
 };

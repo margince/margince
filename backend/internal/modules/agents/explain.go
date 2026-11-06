@@ -46,6 +46,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		overQuota   *auth.VolumeExceededError
 		staged      *workflow.StagedApprovalError
 		skew        *apperrors.VersionSkewError
+		areaOff     *auth.AreaOffError
 	)
 	switch {
 	case errors.As(err, &steppedUp):
@@ -112,6 +113,11 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		return "This is a confirm-first (🟡) action: a contact answers it before it runs, and not the " +
 			"credential that proposed it. Nothing was changed. Tell the user it is waiting — list_approvals " +
 			"shows it, read_approval shows what it would do, and they release it in the CRM. (" + err.Error() + ")"
+	case errors.As(err, &areaOff):
+		// Its words name the area and where the user turns it on, for the agent to
+		// relay. The scope sentence below would send it elsewhere.
+		_, message := areaOff.MessageFault()
+		return "Refused: " + message + "."
 	case errors.Is(err, apperrors.ErrScopeExceeded):
 		return "The passport this session runs under does not grant the scope this tool needs. (" + err.Error() + ")"
 	case errors.Is(err, apperrors.ErrPermissionDenied):

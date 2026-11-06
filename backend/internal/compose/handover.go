@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -74,10 +75,11 @@ func newHandoverSeam(engine *bulkEngine) handoverSeam {
 }
 
 // admit is the gate the count and the move both pass, in their own transaction.
-// It admits a human whom the member verbs would let act on this member. Every
-// record moved after it is still gated by its own write check.
+// It admits a human whom the member verbs would let act on this member, or an
+// agent acting for one. Every record moved after it is still gated by its own
+// write check.
 func admit(ctx context.Context, tx pgx.Tx, member ids.UUID) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	return identity.AdmitMemberHandover(ctx, tx, ids.From[ids.UserKind](member))
@@ -101,6 +103,9 @@ func (s handoverSeam) countOwned(ctx context.Context, tx pgx.Tx, member ids.UUID
 	var counts crmcontracts.HandoverCounts
 	var err error
 	if counts.Task, err = s.tasks.OpenTasksAssignedTo(ctx, tx, ids.From[ids.UserKind](member)); err != nil {
+		return crmcontracts.HandoverCounts{}, err
+	}
+	if counts.Webhook, err = webhooks.OwnedLiveSubscriptionsTx(ctx, tx, ids.From[ids.UserKind](member)); err != nil {
 		return crmcontracts.HandoverCounts{}, err
 	}
 	for table, count := range handoverTally(&counts) {
@@ -156,6 +161,9 @@ func (s handoverSeam) HandOver(ctx context.Context, member, receiver ids.UUID) (
 		if member == receiver {
 			return &handoverSameUserError{}
 		}
+		if err := identity.RefuseAgentOwnReceiver(ctx, receiver); err != nil {
+			return err
+		}
 		if err := auth.EnsureAssignee(ctx, tx, receiver); err != nil {
 			if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
 				return &handoverReceiverError{}
@@ -196,6 +204,14 @@ func (s handoverSeam) handOverInTx(
 		return crmcontracts.UserHandoverResult{}, err
 	}
 	moved.Project = projectsMoved
+	// A webhook runs under its owner and stops when they leave; it moves with
+	// the rest of their work so the integration keeps delivering. A receiver
+	// the caller could not name as owner by an edit leaves it with the member.
+	webhooksMoved, err := webhooks.TransferSubscriptionOwnershipTx(ctx, tx, ids.From[ids.UserKind](member), receiver, identity.AdmitMemberHandover)
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return crmcontracts.UserHandoverResult{}, err
+	}
+	moved.Webhook = webhooksMoved
 	// Whoever now owns the contacts decides who may see them. A share request
 	// put to the member who handed them over is withdrawn with the handover.
 	if _, err := approvals.WithdrawSharesDecidedByInTx(ctx, tx, member); err != nil {

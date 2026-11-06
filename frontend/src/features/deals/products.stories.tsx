@@ -117,7 +117,7 @@ export const ShortWithArchivedSwitch: Story = {
     await canvas.findByRole("row", { name: /Support Plan/ });
     await waitFor(() => {
       const tools = canvas
-        .getByRole("checkbox", { name: "Show archived" })
+        .getByRole("button", { name: "Show archived" })
         .closest<HTMLElement>(".lt-tools");
       expect(tools && getComputedStyle(tools).paddingTop).toBe("0px");
     });

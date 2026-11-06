@@ -21,12 +21,13 @@ package gates
 // compile under the linter.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // renameStatements are the four verbs that move a name in this tree's SQL. Each
@@ -51,7 +52,7 @@ func buildRenames() map[string]string {
 
 	renames := map[string]string{}
 	for _, file := range files {
-		body, err := os.ReadFile(file) // #nosec G304 -- a *.up.sql name from the migrations tree, test-only
+		body, err := gatekit.ReadFile(file) // #nosec G304 -- a *.up.sql name from the migrations tree, test-only
 		if err != nil {
 			continue
 		}

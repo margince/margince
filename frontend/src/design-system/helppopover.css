@@ -1,0 +1,13 @@
+.help-popover {
+  color: var(--textSecondary);
+  vertical-align: middle;
+}
+
+.help-popover:hover {
+  color: var(--textPrimary);
+}
+
+.help-popover svg {
+  width: var(--controlIcon);
+  height: var(--controlIcon);
+}

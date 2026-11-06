@@ -311,11 +311,13 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 		var id ids.UUID
 		found := false
 		err := s.tx(ctx, func(tx pgx.Tx) error {
+			// Either spelling of the domain, the typed one first.
 			err := tx.QueryRow(ctx, `
 				SELECT p.id FROM contact p
 				JOIN contact_email e ON e.contact_id = p.id
-				WHERE lower(e.email) = lower($1) AND p.archived_at IS NULL
-				ORDER BY p.created_at LIMIT 1`, email).Scan(&id)
+				WHERE e.email = ANY($1) AND p.archived_at IS NULL
+				ORDER BY e.email = lower(btrim($2)) DESC, p.created_at LIMIT 1`,
+				storekit.EmailLookups(email), email).Scan(&id)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil
 			}

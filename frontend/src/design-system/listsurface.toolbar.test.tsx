@@ -12,14 +12,22 @@ import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { precedes } from "../testing/domorder";
+import {
+  openView,
+  openViewStep,
+  viewButton,
+} from "../testing/listview.testkit";
 import { Heading } from "./heading";
-import { type ListChip, ListSurface, type SortOption } from "./listsurface";
+import {
+  CountLine,
+  type ListChip,
+  ListSurface,
+  type SortOption,
+} from "./listsurface";
 import { Modal } from "./modal";
 
-// The toolbar as a reader meets it: what the sort dial SAYS without being
-// opened, which triggers promise a list behind them, the order the row is read
-// in, and the way back out of a filter's second step. listtable.test.tsx covers
-// the table's own dials on top of this surface.
+// The toolbar as a reader meets it: the search, View and its panel's rows and
+// steps, and the applied filters under the search.
 
 afterEach(cleanup);
 
@@ -52,11 +60,20 @@ const SORT_OPTIONS: readonly SortOption[] = [
 
 /** The surface with every dial it can carry, driving its own state. */
 function Surface({
+  chips = CHIPS,
   initialSort = "",
+  opensOn,
   initialFilters = {},
+  changed = false,
+  onChipChange,
 }: Readonly<{
+  chips?: readonly ListChip[];
   initialSort?: string;
+  /** The order the list opens on (`sort.initial`). */
+  opensOn?: string;
   initialFilters?: Readonly<Record<string, string>>;
+  changed?: boolean;
+  onChipChange?: (key: string, value: string) => void;
 }>) {
   const [sort, setSort] = useState(initialSort);
   const [chosen, setChosen] = useState(initialFilters);
@@ -65,165 +82,180 @@ function Surface({
   return (
     <ListSurface
       search={{ value: search, onChange: setSearch }}
-      sort={{ value: sort, onChange: setSort }}
+      sort={{ value: sort, onChange: setSort, initial: opensOn }}
       sortOptions={SORT_OPTIONS}
-      chips={CHIPS}
+      chips={chips}
       chosen={chosen}
-      onChipChange={(key, value) =>
-        setChosen((prev) => ({ ...prev, [key]: value }))
-      }
+      onChipChange={(key, value) => {
+        onChipChange?.(key, value);
+        setChosen((prev) => ({ ...prev, [key]: value }));
+      }}
       archived={{ checked: archived, onChange: setArchived }}
+      changed={changed}
+      saveView={<button type="button">Save view</button>}
     >
       <p>rows</p>
     </ListSurface>
   );
 }
 
-const SORT_DIAL = /^Sort(:|$)/;
+it("holds a search and one View button, and nothing else", () => {
+  render(<Surface />);
 
-function sortDial(): HTMLElement {
-  return screen.getByRole("button", { name: SORT_DIAL });
-}
+  const tools = screen
+    .getByRole("searchbox", { name: "Search" })
+    .closest(".lt-tools");
+  if (!(tools instanceof HTMLElement)) throw new Error("no toolbar");
+  expect(within(tools).getAllByRole("button")).toHaveLength(1);
+  expect(within(tools).queryByRole("checkbox")).toBeNull();
+  expect(within(tools).queryByRole("switch")).toBeNull();
+});
 
-function filterTrigger(): HTMLElement {
-  return screen.getByRole("button", { name: "Filter" });
-}
+it("names on View how many filters apply and that the list left its view", async () => {
+  render(<Surface initialFilters={{ status: "open", owner: "u1" }} changed />);
 
-// A sort arrives from three places a reader did not press — a saved view, a
-// column header, an address they pasted — so which way the list runs has to be
-// legible on the dial itself, and in both halves: the glyph for the reader who
-// sees it and a word for the reader who does not.
-it("says which way the list runs without being opened", async () => {
+  const view = await viewButton();
+  expect(view).toHaveAccessibleName("View, 2 filters, changed");
+  expect(view.querySelector(".optioncount")).toHaveTextContent("2");
+
+  cleanup();
+  render(<Surface />);
+  expect(await viewButton()).toHaveAccessibleName("View");
+});
+
+it("reads every dial's value on its row, in the order the panel holds them", async () => {
+  const user = userEvent.setup();
+  render(
+    <Surface initialSort="-created_at" initialFilters={{ status: "open" }} />,
+  );
+  const panel = await openView(user);
+
+  const rows = within(panel)
+    .getAllByRole("button")
+    .filter((row) => row.dataset.viewRow !== undefined)
+    .map((row) => row.getAttribute("aria-label"));
+  expect(rows).toEqual([
+    "Filters, Status, changed",
+    "Sort, Created, descending, changed",
+  ]);
+  const archived = within(panel).getByRole("button", { name: "Show archived" });
+  const save = within(panel).getByRole("button", { name: "Save view" });
+  expect(precedes(archived, save)).toBe(true);
+});
+
+it("flips the sort from its step and says so on the row", async () => {
   const user = userEvent.setup();
   render(<Surface initialSort="-created_at" />);
 
-  expect(sortDial()).toHaveAccessibleName("Sort: Created descending");
-  expect(sortDial().querySelector(".lucide-arrow-down")).toBeTruthy();
+  const step = await openViewStep(user, "Sort");
+  await user.click(within(step).getByRole("radio", { name: /^Created/ }));
+  await user.click(
+    within(step).getByRole("button", { name: "Sort, back to view options" }),
+  );
 
-  await user.click(sortDial());
-  await user.click(screen.getByRole("radio", { name: /^Created/ }));
-
-  expect(sortDial()).toHaveAccessibleName("Sort: Created ascending");
-  expect(sortDial().querySelector(".lucide-arrow-up")).toBeTruthy();
-  expect(sortDial().querySelector(".lucide-arrow-down")).toBeNull();
-});
-
-it("wears the neutral pair of arrows, and no pressed state, while unsorted", () => {
-  render(<Surface />);
-
-  expect(sortDial()).toHaveAccessibleName("Sort");
-  expect(sortDial().querySelector(".lucide-arrow-down-up")).toBeTruthy();
-  // The dial is not a toggle: a sort is a value it names, not a state it holds,
-  // and the accent an `aria-pressed` ghost draws said the opposite.
-  expect(sortDial()).toHaveClass("btn", "btn-ghost");
-  expect(sortDial()).not.toHaveAttribute("aria-pressed");
-});
-
-// The caret is the product's one promise that a control opens a list, so every
-// toolbar trigger that opens one wears it and the one that does not, does not.
-it("carets the triggers that open a list, and only those", async () => {
-  const user = userEvent.setup();
-  render(<Surface />);
-
-  expect(sortDial().querySelector(".lt-caret")).toBeTruthy();
-  expect(filterTrigger().querySelector(".lt-caret")).toBeTruthy();
-
-  await user.click(filterTrigger());
-  await user.click(screen.getByRole("button", { name: "Status" }));
-  await user.click(screen.getByRole("radio", { name: "Open" }));
-
-  const add = screen.getByRole("button", { name: "Add filter" });
-  expect(add.querySelector(".lucide-plus")).toBeTruthy();
-  expect(add.querySelector(".lt-caret")).toBeNull();
-});
-
-// Two halves, and the archived toggle belongs to the first: it changes WHICH
-// rows are in the list, not how they are drawn, and it sat past the spacer
-// among the presentation dials.
-it("reads left to right as narrow-the-list, then change-the-drawing", () => {
-  render(<Surface />);
-
-  const search = screen.getByRole("searchbox", { name: "Search" });
-  const archived = screen.getByLabelText("Show archived");
-
-  expect(precedes(search, filterTrigger())).toBe(true);
-  expect(precedes(filterTrigger(), archived)).toBe(true);
-  expect(precedes(archived, sortDial())).toBe(true);
-});
-
-it("stands an applied filter's row ahead of the button that adds another", async () => {
-  const user = userEvent.setup();
-  render(<Surface initialFilters={{ status: "open" }} />);
-
-  const row = screen.getByRole("group", { name: "Status: Open" });
   expect(
-    precedes(row, screen.getByRole("button", { name: "Add filter" })),
-  ).toBe(true);
-  await user.click(screen.getByRole("button", { name: "Add filter" }));
-  expect(screen.queryByRole("button", { name: "Status" })).toBeNull();
+    screen.getByRole("button", {
+      name: "Sort, Created, ascending, changed",
+    }),
+  ).toBeInTheDocument();
+});
+
+// It widens the list as a filter narrows it, so it is a pressed button and
+// never a switch.
+it("presses Show archived on and off from its row", async () => {
+  const user = userEvent.setup();
+  render(<Surface />);
+  const panel = await openView(user);
+  const archived = within(panel).getByRole("button", { name: "Show archived" });
+  expect(archived).toHaveAttribute("aria-pressed", "false");
+  expect(archived).toHaveTextContent("Off");
+
+  await user.click(archived);
+  expect(archived).toHaveAttribute("aria-pressed", "true");
+  expect(archived).toHaveTextContent("On");
+
+  await user.click(archived);
+  expect(archived).toHaveAttribute("aria-pressed", "false");
 });
 
 // A row that opens a subset says so, and the level it opens says how to leave.
-it("steps into an attribute and back out to the search it came from", async () => {
+it("steps into an attribute and back out to its row", async () => {
   const user = userEvent.setup();
   render(<Surface />);
 
-  await user.click(filterTrigger());
-  const menu = screen.getByRole("group", { name: "Filter" });
-  const row = within(menu).getByRole("button", { name: "Status" });
-  expect(row.querySelector(".lucide-chevron-right")).toBeTruthy();
-
-  await user.click(row);
+  const menu = await openViewStep(user, "Filters");
+  await user.click(within(menu).getByRole("button", { name: "Status" }));
   // The visible word first: a reader speaking what they see says "Status".
   const back = screen.getByRole("button", {
-    name: /^Status Back to all filters$/,
+    name: "Status, back to all filters",
   });
-  expect(back.querySelector(".lucide-chevron-left")).toBeTruthy();
-  expect(back).toHaveTextContent("Status");
+  expect(back).toHaveFocus();
   expect(screen.queryByPlaceholderText("Search attributes")).toBeNull();
 
   await user.click(back);
-  const search = screen.getByPlaceholderText("Search attributes");
-  expect(search).toHaveFocus();
-  expect(screen.getByRole("button", { name: "Owner" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Status" })).toHaveFocus();
+  expect(screen.getByPlaceholderText("Search attributes")).toBeInTheDocument();
 });
 
-// A step takes the control the reader is standing on with it. Each of the
-// three hands focus on rather than dropping it to the top of the document.
-it("hands focus to the way back when it steps into an attribute", async () => {
+// The step replaced the row the reader pressed, so Back hands focus to it.
+it("hands focus to the step's way back, and back to the row that opened it", async () => {
   const user = userEvent.setup();
   render(<Surface />);
 
-  await user.click(filterTrigger());
-  await user.click(screen.getByRole("button", { name: "Status" }));
+  await openViewStep(user, "Sort");
+  const back = screen.getByRole("button", {
+    name: "Sort, back to view options",
+  });
+  expect(back).toHaveFocus();
 
-  expect(
-    screen.getByRole("button", { name: /^Status Back to all filters$/ }),
-  ).toHaveFocus();
+  await user.click(back);
+  expect(screen.getByRole("button", { name: /^Sort,/ })).toHaveFocus();
 });
 
-it("hands focus back to the trigger when a value is picked", async () => {
+it("applies a picked value, returns to its row, and stands the filter under the search", async () => {
   const user = userEvent.setup();
   render(<Surface />);
 
-  await user.click(filterTrigger());
-  await user.click(screen.getByRole("button", { name: "Status" }));
+  const menu = await openViewStep(user, "Filters");
+  await user.click(within(menu).getByRole("button", { name: "Status" }));
   await user.click(screen.getByRole("radio", { name: "Open" }));
 
-  // The trigger the press LEFT behind: applying the first filter turns the
-  // labelled button into the bare "+".
-  expect(screen.getByRole("button", { name: "Add filter" })).toHaveFocus();
+  expect(
+    screen.getByRole("button", { name: "Status, Open, changed" }),
+  ).toHaveFocus();
+  const applied = screen.getByRole("group", { name: "Status: Open" });
+  expect(
+    precedes(screen.getByRole("searchbox", { name: "Search" }), applied),
+  ).toBe(true);
+  // Adding lives in the panel: the row of applied filters offers no "+".
+  expect(screen.queryByRole("button", { name: "Add filter" })).toBeNull();
 });
 
-// Last on the row is the surface's own promise now, not something each screen
-// remembers to put at the end of its `tools` fragment.
-it("stands a saved view after the body's own dials", () => {
+it("lists every attribute, an applied one with its value and a dot", async () => {
+  const user = userEvent.setup();
+  render(<Surface initialFilters={{ status: "open" }} />);
+
+  const menu = await openViewStep(user, "Filters");
+  expect(
+    within(menu).getByRole("button", { name: "Status, Open, changed" }),
+  ).toBeInTheDocument();
+  expect(
+    within(menu).getByRole("button", { name: "Owner" }),
+  ).toBeInTheDocument();
+});
+it("draws no applied-filter row while nothing applies", () => {
+  const { container } = render(<Surface />);
+  expect(container.querySelector(".lt-applied")).toBeNull();
+});
+
+// A non-dial verb stays on the row; it is not a dial and has no row to live in.
+it("stands a screen's own verb after View", async () => {
   render(
     <ListSurface
+      search={{ value: "", onChange: () => undefined }}
       sort={{ value: "", onChange: () => undefined }}
       sortOptions={SORT_OPTIONS}
-      tools={<button type="button">Pipeline</button>}
-      saveView={<button type="button">Save view</button>}
+      tools={<button type="button">Coverage</button>}
     >
       <p>rows</p>
     </ListSurface>,
@@ -231,27 +263,47 @@ it("stands a saved view after the body's own dials", () => {
 
   expect(
     precedes(
-      screen.getByRole("button", { name: "Pipeline" }),
-      screen.getByRole("button", { name: "Save view" }),
+      await viewButton(),
+      screen.getByRole("button", { name: "Coverage" }),
     ),
   ).toBe(true);
 });
 
-it("closes the whole menu on Escape, from either step", async () => {
+it("closes the whole panel on Escape, from any step, and hands focus to View", async () => {
   const user = userEvent.setup();
   render(<Surface />);
 
-  await user.click(filterTrigger());
-  await user.click(screen.getByRole("button", { name: "Status" }));
+  const menu = await openViewStep(user, "Filters");
+  await user.click(within(menu).getByRole("button", { name: "Status" }));
   await user.keyboard("{Escape}");
 
-  expect(filterTrigger()).toHaveAttribute("aria-expanded", "false");
-  expect(
-    screen.getByLabelText("Filter", { selector: "fieldset" }),
-  ).toHaveAttribute("inert");
+  const view = await viewButton();
+  expect(view).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(view).toHaveFocus();
 });
 
-it("leaves Escape to a dialog raised over the open menu", async () => {
+// One overlay at a time, whichever opened last.
+it("closes the panel when an applied filter's segment opens, and the other way about", async () => {
+  const user = userEvent.setup();
+  render(<Surface initialFilters={{ status: "open" }} />);
+  const value = () =>
+    within(screen.getByRole("group", { name: "Status: Open" })).getByRole(
+      "button",
+      { name: "Open" },
+    );
+
+  await openView(user);
+  await user.click(value());
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(value()).toHaveAttribute("aria-expanded", "true");
+
+  await user.click(await viewButton());
+  expect(await viewButton()).toHaveAttribute("aria-expanded", "true");
+  expect(value()).toHaveAttribute("aria-expanded", "false");
+});
+
+it("leaves Escape to a dialog raised over the open panel", async () => {
   const onDialogClose = vi.fn();
   const page = (dialogOpen: boolean) => (
     <LocaleProvider initial="en">
@@ -270,13 +322,13 @@ it("leaves Escape to a dialog raised over the open menu", async () => {
   );
   const user = userEvent.setup();
   const { rerender } = rtlRender(page(false));
-  await user.click(filterTrigger());
+  await openView(user);
   rerender(page(true));
 
   await user.keyboard("{Escape}");
 
   expect(onDialogClose).toHaveBeenCalledOnce();
-  expect(filterTrigger()).toHaveAttribute("aria-expanded", "true");
+  expect(await viewButton()).toHaveAttribute("aria-expanded", "true");
 });
 
 // The count gives way on screen, never in the text: however narrow the row, the
@@ -297,5 +349,315 @@ it("keeps the whole count sentence, read before the header's verbs", () => {
   );
   expect(
     precedes(count, screen.getByRole("button", { name: "New company" })),
+  ).toBe(true);
+});
+
+// Whether the line is drawn follows the count's state. Its height while
+// pending is measured in a browser (List surface, Count holds its line).
+it("keeps the count line, blank, while a count is pending", () => {
+  const surface = (count: ReactNode, pending: boolean) => (
+    <LocaleProvider initial="en">
+      <ListSurface views={[{ label: "All" }]} count={count} holdCount={pending}>
+        <p>rows</p>
+      </ListSurface>
+    </LocaleProvider>
+  );
+  const { container, rerender } = rtlRender(surface(undefined, true));
+  const line = () => container.querySelector(".lt-count");
+  expect(line()).toBeEmptyDOMElement();
+
+  rerender(surface("1 to 25 of 40 leads", false));
+  expect(line()).toHaveTextContent("1 to 25 of 40 leads");
+  rerender(surface(undefined, true));
+  expect(line()).toBeEmptyDOMElement();
+
+  rerender(surface(undefined, false));
+  expect(line()).toBeNull();
+  rerender(surface(undefined, true));
+  expect(line()).toBeNull();
+});
+
+it("says nothing for a settled list with no rows and no order", () => {
+  render(<CountLine unit="leads" first={1} last={0} total={0} />);
+  expect(document.body).toHaveTextContent(/^$/);
+  cleanup();
+  render(
+    <CountLine unit="leads" first={1} last={0} total={0} sortedBy="Name" />,
+  );
+  expect(document.body).toHaveTextContent("Sorted by Name");
+});
+
+it("names what the counted rows belong to, before the order", () => {
+  render(
+    <ListSurface
+      count={
+        <CountLine
+          unit="deals"
+          first={1}
+          last={2}
+          total={2}
+          scope="Sales"
+          sortedBy="Value"
+        />
+      }
+    >
+      <p>rows</p>
+    </ListSurface>,
+  );
+  expect(
+    screen.getByText("1 to 2 of 2 deals in Sales, sorted by Value"),
+  ).toBeInTheDocument();
+});
+
+it("changes an applied filter in place, under the same key and condition", async () => {
+  const user = userEvent.setup();
+  const writes: [string, string][] = [];
+  render(
+    <Surface
+      initialFilters={{ status: "open" }}
+      onChipChange={(key, value) => writes.push([key, value])}
+    />,
+  );
+
+  const menu = await openViewStep(user, "Filters");
+  await user.click(
+    within(menu).getByRole("button", { name: "Status, Open, changed" }),
+  );
+  const panel = within(await openView(user));
+  const step = within(panel.getByRole("group", { name: "Status" }));
+  expect(step.getByRole("radio", { name: "Open" })).toBeChecked();
+  await user.click(step.getByRole("radio", { name: "Won" }));
+
+  expect(writes).toEqual([["status", "won"]]);
+  expect(
+    screen.getByRole("button", { name: "Status, Won, changed" }),
+  ).toHaveFocus();
+  const applied = screen.getByRole("group", { name: "Status: Won" });
+  expect(
+    within(applied).getByRole("button", { name: "is" }),
+  ).toBeInTheDocument();
+});
+
+const CLOSE_DATE: ListChip = {
+  key: "close",
+  label: "Close date",
+  allLabel: "Any date",
+  options: [],
+  editor: () => <p>Pick a range</p>,
+  appliedName: "This month",
+};
+
+it.each([
+  ["its any option", "status", "Status, Open, changed", "Any status"],
+  ["Delete filter", "status", "Status, Open, changed", "Delete filter"],
+  [
+    "Delete filter, with no any option",
+    "close",
+    "Close date, This month, changed",
+    "Delete filter",
+  ],
+])(
+  "takes a filter off from its value step by %s",
+  async (_how, key, row, press) => {
+    const user = userEvent.setup();
+    const writes: [string, string][] = [];
+    render(
+      <Surface
+        chips={[...CHIPS, CLOSE_DATE]}
+        initialFilters={{ status: "open", close: "2026-11" }}
+        onChipChange={(changed, value) => writes.push([changed, value])}
+      />,
+    );
+
+    const menu = await openViewStep(user, "Filters");
+    await user.click(within(menu).getByRole("button", { name: row }));
+    const panel = within(await openView(user));
+    const step = panel.getByRole("group", { name: row.split(",")[0] });
+    await user.click(
+      within(step).getByRole(press === "Delete filter" ? "button" : "radio", {
+        name: press,
+      }),
+    );
+
+    expect(writes).toEqual([[key, ""]]);
+    const label = row.split(",")[0];
+    expect(screen.getByRole("button", { name: label })).toHaveFocus();
+    expect(
+      screen.queryByRole("group", { name: new RegExp(`^${label}:`) }),
+    ).toBeNull();
+  },
+);
+
+it("puts a value step's search above its options and its any option", async () => {
+  const user = userEvent.setup();
+  const team: ListChip = {
+    key: "team",
+    label: "Team",
+    allLabel: "Any team",
+    options: [{ value: "t1", label: "North" }],
+    filterable: true,
+  };
+  render(<Surface chips={[team]} />);
+
+  const menu = await openViewStep(user, "Filters");
+  await user.click(within(menu).getByRole("button", { name: "Team" }));
+  const step = within(await openView(user)).getByRole("group", {
+    name: "Team",
+  });
+
+  expect(
+    precedes(
+      within(step).getByRole("searchbox", { name: "Search Team values" }),
+      within(step).getByRole("radio", { name: "Any team" }),
+    ),
+  ).toBe(true);
+  // A filter that does not apply has nothing to delete.
+  expect(
+    within(step).queryByRole("button", { name: "Delete filter" }),
+  ).toBeNull();
+});
+
+// "Default order" is the server's own. A shared link with no sort arrives on
+// it, and a row that read "Default order, changed" would contradict itself.
+it.each([
+  ["the server's order", "", "Sort, Default order"],
+  ["the order it opens on", "-created_at", "Sort, Created, descending"],
+  ["another named order", "name", "Sort, Name, ascending, changed"],
+])(
+  "marks Sort changed only on a named order it did not open on: %s",
+  async (_case, value, name) => {
+    const user = userEvent.setup();
+    render(<Surface initialSort={value} opensOn="-created_at" />);
+    const panel = await openView(user);
+    expect(
+      within(panel).getByRole("button", { name: /^Sort,/ }),
+    ).toHaveAccessibleName(name);
+  },
+);
+
+// The menu that took the pick or the delete closes. Focus must not fall to the
+// page: it stays on the chip, goes to the next one, or goes to View.
+it("keeps focus on a chip's value after a pick from its menu", async () => {
+  const user = userEvent.setup();
+  render(<Surface initialFilters={{ status: "open" }} />);
+  const applied = screen.getByRole("group", { name: "Status: Open" });
+  await user.click(within(applied).getByRole("button", { name: "Open" }));
+  await user.click(screen.getByRole("radio", { name: "Won" }));
+
+  const changed = screen.getByRole("group", { name: "Status: Won" });
+  expect(within(changed).getByRole("button", { name: "Won" })).toHaveFocus();
+});
+
+it("hands focus to the next chip when a chip's any option takes it off", async () => {
+  const user = userEvent.setup();
+  render(<Surface initialFilters={{ status: "open", owner: "u1" }} />);
+  const applied = screen.getByRole("group", { name: "Status: Open" });
+  await user.click(within(applied).getByRole("button", { name: "Open" }));
+  await user.click(screen.getByRole("radio", { name: "Any status" }));
+
+  expect(screen.queryByRole("group", { name: /^Status:/ })).toBeNull();
+  const owner = screen.getByRole("group", { name: "Owner: Ada" });
+  expect(within(owner).getByRole("button", { name: "Ada" })).toHaveFocus();
+});
+
+it("hands focus to the next chip after a delete, and to View once none is left", async () => {
+  const user = userEvent.setup();
+  render(<Surface initialFilters={{ status: "open", owner: "u1" }} />);
+  const deleteFrom = async (filter: string) => {
+    await user.click(
+      screen.getByRole("button", {
+        name: `More actions for the ${filter} filter`,
+      }),
+    );
+    const menu = screen
+      .getAllByRole("group", { name: filter })
+      .find((group) => group.classList.contains("open"));
+    if (menu === undefined) throw new Error(`no open ${filter} menu`);
+    await user.click(
+      within(menu).getByRole("button", { name: "Delete filter" }),
+    );
+  };
+
+  await deleteFrom("Status");
+  const owner = screen.getByRole("group", { name: "Owner: Ada" });
+  expect(within(owner).getByRole("button", { name: "Ada" })).toHaveFocus();
+
+  await deleteFrom("Owner");
+  expect(await viewButton()).toHaveFocus();
+});
+
+// A list with no View panel draws Show archived as the panel does: one
+// pressed button, never a checkbox.
+it("draws a bare list's Show archived as a pressed button", async () => {
+  const user = userEvent.setup();
+  function Bare() {
+    const [checked, setChecked] = useState(false);
+    return (
+      <ListSurface bare archived={{ checked, onChange: setChecked }}>
+        <p>rows</p>
+      </ListSurface>
+    );
+  }
+  render(<Bare />);
+
+  expect(screen.queryByRole("checkbox")).toBeNull();
+  const archived = screen.getByRole("button", { name: "Show archived" });
+  expect(archived).toHaveAttribute("aria-pressed", "false");
+  await user.click(archived);
+  expect(archived).toHaveAttribute("aria-pressed", "true");
+});
+
+// A short list turns bare when Show archived goes off. The panel the reader
+// pressed it in stays until they close it, and focus then finds the switch.
+it("keeps the panel open while the list turns bare under it", async () => {
+  const user = userEvent.setup();
+  function ShortList() {
+    const [checked, setChecked] = useState(true);
+    return (
+      <ListSurface
+        bare={!checked}
+        search={{ value: "", onChange: () => undefined }}
+        archived={{ checked, onChange: setChecked }}
+      >
+        <p>rows</p>
+      </ListSurface>
+    );
+  }
+  render(<ShortList />);
+
+  const panel = await openView(user);
+  await user.click(
+    within(panel).getByRole("button", { name: "Show archived" }),
+  );
+  expect(screen.getByRole("dialog")).toBe(panel);
+  expect(
+    within(panel).getByRole("button", { name: "Show archived" }),
+  ).toHaveAttribute("aria-pressed", "false");
+
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.queryByRole("searchbox")).toBeNull();
+  expect(screen.getByRole("button", { name: "Show archived" })).toHaveFocus();
+});
+
+// A failed read the dials depend on is said on the toolbar, outside the
+// panel, so the reader sees it without opening View.
+it("stands a notice on its own line under the search, outside View", () => {
+  render(
+    <ListSurface
+      search={{ value: "", onChange: () => undefined }}
+      sort={{ value: "", onChange: () => undefined }}
+      sortOptions={SORT_OPTIONS}
+      notice={<p role="alert">Saved views did not load</p>}
+    >
+      <p>rows</p>
+    </ListSurface>,
+  );
+
+  const notice = screen.getByRole("alert");
+  expect(notice.closest(".lt-tools")).not.toBeNull();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(
+    precedes(screen.getByRole("searchbox", { name: "Search" }), notice),
   ).toBe(true);
 });

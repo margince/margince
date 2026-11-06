@@ -130,6 +130,17 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   one kind of money into another, no counting on calendar dates, and no locale
   going back into what is stored.
 
+  Every time a signed-in screen shows is read in the reader's own zone,
+  `useViewerZone()` from `lib/viewerzone.tsx`. That is the zone the user chose
+  under Settings → Account, or their browser's until they have one.
+  `useCompanyZone()` (`lib/companyzone.tsx`) is for reports
+  and for days the server counts on the company's clock. `browserZone()` is for
+  public screens, sign-in and a browser's own date-time input.
+  `src/format/timezone.ts` states the rule, and the census in
+  `src/format/zone-by-purpose.test.ts` lists every file that uses an exception,
+  each with its reason. A file that is not on that list reads the reader's
+  zone.
+
 ### Each feature stands alone
 
 Only the shell (`app/` and `App`) imports a feature. A feature imports no

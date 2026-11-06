@@ -29,6 +29,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The composites the company record page reads. Each is assembled by hand from
@@ -80,7 +82,7 @@ func TestEveryContractPropertyOnAPageCompositeHasAProducer(t *testing.T) {
 func generatedFieldsOf(t *testing.T, schema string) []string {
 	t.Helper()
 	const path = "internal/contracts/api_gen.go"
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read the generated contract: %v", err)
 	}
@@ -109,7 +111,7 @@ func generatedFieldsOf(t *testing.T, schema string) []string {
 func handWrittenGoUnderInternal(t *testing.T) string {
 	t.Helper()
 	var out strings.Builder
-	err := filepath.WalkDir("internal", func(path string, entry os.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -125,7 +127,7 @@ func handWrittenGoUnderInternal(t *testing.T) string {
 		if strings.HasPrefix(path, filepath.Join("internal", "contracts")) {
 			return nil
 		}
-		raw, readErr := os.ReadFile(path)
+		raw, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}

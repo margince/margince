@@ -22,7 +22,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"slices"
 	"sort"
 	"strconv"
@@ -50,6 +49,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	"Contact":                              {table: "contact", idPath: "id"},
 	"Company":                              {table: "company", idPath: "id"},
 	"Deal":                                 {table: "deal", idPath: "id"},
+	"DealAdvanced":                         {table: "deal", idPath: "id"},
 	"Lead":                                 {table: "lead", idPath: "id"},
 	"Project":                              {table: "project", idPath: "id"},
 	// A contract has no owner column; it is row-scoped through the deal it came
@@ -346,7 +346,7 @@ const noResponseBody = "no-response-body"
 // reading only one would let the other's row scope go unchecked.
 func successResponseSchemas(t *testing.T) map[string][]string {
 	t.Helper()
-	src, err := os.ReadFile("api/crm.yaml")
+	src, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading api/crm.yaml: %v", err)
 	}
@@ -625,7 +625,7 @@ func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 	if contractProperties != nil {
 		return contractProperties
 	}
-	src, err := os.ReadFile("api/crm.yaml")
+	src, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading api/crm.yaml: %v", err)
 	}

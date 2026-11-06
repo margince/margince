@@ -41,7 +41,7 @@ func TestSchedulingRequestSurvivesAcknowledgementAndCreatesOneTask(t *testing.T)
 	if count != 1 {
 		t.Fatalf("scheduling request produced %d reminders", count)
 	}
-	summaries, err := store.EmailSummariesByID(e.as(), []ids.UUID{id})
+	summaries, err := readingAtRequest(store).EmailSummariesByID(e.as(), []ids.UUID{id})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestAHistoricalRequestLeavesTheQueueAndStaysTakeableOnItsRecord(t *testing.
 			t.Fatal("explicit completion did not settle the request")
 		}
 	}
-	summaries, err := store.EmailSummariesByID(e.as(), []ids.UUID{id})
+	summaries, err := readingAtRequest(store).EmailSummariesByID(e.as(), []ids.UUID{id})
 	if err != nil {
 		t.Fatal(err)
 	}

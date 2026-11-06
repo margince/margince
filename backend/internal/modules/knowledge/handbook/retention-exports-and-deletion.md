@@ -11,16 +11,16 @@ What Margince keeps, for how long, what a delete destroys, and how you get data 
 ## Getting data out, getting data in, and removing records
 
 ### How do I export my data from Margince?
-To export or download records from Margince (for example all your contacts), open **Filters and views** in the sidebar. Build a filter, then choose **Export CSV** or **Export JSON** under **⋯** (**More for this filter**).
+To export or download records from Margince (for example all your contacts), open **Filters and views** in the sidebar. Build a filter, then press **Export CSV** or **Export JSON** beside the count of **Matching records**.
 1. Open **Filters and views**.
 2. Press **New filter** and pick the record type.
 3. Press **Add condition** and fill it.
-4. Press **⋯** (**More for this filter**) at the bottom, then **Export CSV** or **Export JSON**. The file downloads.
+4. Press **Export CSV** or **Export JSON** beside the count of **Matching records**. The file downloads.
 The export holds only records you can see, and every export is written to the audit log. Agents cannot export.
 Also called: download, get my data out, backup, extract to Excel or spreadsheet.
 
 ### How do I get all of my company's data out of Margince?
-Margince has an export of the whole company: a ZIP with one CSV for each record type, plus files that describe how records link. The app has no button for it yet. Ask whoever runs your Margince to download it for you. Only an admin or ops user can have it made, agents cannot, and it holds only what that user can see. Every download goes into the audit log. For daily exports use **Filters and views** → **New filter** → … → **⋯** (**More for this filter**) → **Export CSV**.
+Margince has an export of the whole company: a ZIP with one CSV for each record type, plus files that describe how records link. The app has no button for it yet. Ask whoever runs your Margince to download it for you. Only an admin or ops user can have it made, agents cannot, and it holds only what that user can see. Every download goes into the audit log. For daily exports use **Filters and views** → **New filter** → … → **Export CSV** beside the count.
 
 Also called: full export, data handover, migrate away, leave Margince.
 
@@ -51,7 +51,7 @@ Also called: remove a contact, hard delete, purge, wipe.
 To erase a contact on request, an admin opens **Settings → Privacy and retention**, chooses **Privacy** in the **Requests** panel and then **New request**.
 1. Set **Kind** to **Erasure** and pick the **Contact** (required).
 2. Set **Due**, then choose **Open request**.
-3. Choose the request in the list to open it and write the **Resolution**.
+3. Choose the request in the list to open it. Leave **Resolution** empty: the erasure records its own answer.
 4. Fill **How the identity was checked** and choose **Fulfill**.
 5. Type ERASE in **Type ERASE to confirm** and choose **Erase and suppress**.
 This cannot be undone. A contact that the law says you must still keep is refused with **Blocked by legal hold**.
@@ -64,6 +64,8 @@ Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
 ### How do I archive a record?
 To archive a contact or company, open it and choose **More actions → Archive**, then confirm "Archive this record? You can bring it back from its history." For a deal, choose **Archive deal**; for a project, **Archive project**. Leads are not archived: choose **Disqualify**. To see archived records on a list, choose **Show archived**.
+
+Team lead, Management, Ops and Admin may archive a contact, company or deal. So may its owner, if they created it or were given it.
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?
@@ -201,7 +203,7 @@ Only an **Admin** or **Ops** user can change retention. Everyone else cannot eve
 
 The list of privacy requests, **Settings → Privacy and retention → Requests → Privacy**, holds "Data subject requests with their statutory deadlines." Only admins can open it by default, because the list names whoever asked. An admin can give that access to someone else by itself, without letting them manage members.
 
-A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." To give a request back, set **Assignee** to **Unassigned**.
+A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." Fulfilling an erasure is the exception: it records its own answer. To give a request back, set **Assignee** to **Unassigned**.
 
 To close a request you also fill **How the identity was checked**. If it could not be checked, the request can only be rejected. Fill **Requester’s email address** when the request came from an address that the subject reference does not name.
 
@@ -250,6 +252,13 @@ Carrying one out is hard to do by mistake. You type **ERASE** to confirm, and th
 
 The confirm button reads **Erase and suppress**.
 
+An erasure is not answered in your own words. Typed words could name the contact the erasure removes. Fulfilling records one of two answers:
+
+- **Erased**: the erasure removed or anonymized the contact's data.
+- **Nothing held (already erased)**: there was nothing left to erase, for example after an earlier erasure.
+
+Use the **Resolution** box only when you choose **Reject**. If you typed something and then choose **Fulfill**, the dialog says that your text is not kept.
+
 ## When erasure does not win: the retention floor
 
 The law can say you must keep something that the contact has asked you to delete. Margince then shows the record as held, with the reason.
@@ -290,7 +299,7 @@ The default is **deny**. A purpose with no record for a contact is not consent.
 
 Every consent change is written to a **Proof log**. It records who made the change and how: a Human, an Agent, the System, or a Connector. Where Margince has no record of it, it says "actor not recorded" and "source not recorded". You may one day have to prove consent, so Margince keeps the proof, not only the current state.
 
-Agents cannot write consent at all; see [What the AI does](what-the-ai-does.md).
+An agent can record consent for its user, and it asks them first. It cannot record a purpose that needs double opt-in; only the contact can confirm that. The Proof log names it as an Agent, so the entry never reads as the user's own. See [What the AI does](what-the-ai-does.md).
 
 ## The audit trail
 
@@ -308,7 +317,7 @@ There are two exports, and they answer different questions.
 
 #### The list export
 
-On **Filters and views** you build a filter and choose **Export CSV** or **Export JSON** under **⋯** (**More for this filter**). Those are the only two file types. The screen offers **contacts, companies, deals and leads**. You export either a new filter or a saved view.
+On **Filters and views** you build a filter and press **Export CSV** or **Export JSON** beside the count of **Matching records**. Those are the only two file types. The screen offers **contacts, companies, deals and leads**. You export either a new filter or a saved view.
 
 **It exports only what you can see**, by the same rules as the list on your screen. Only a human can export; an agent cannot. **Every export goes into the audit log**, so someone can always find out who made a copy of what, and when.
 

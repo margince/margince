@@ -104,6 +104,7 @@ GOWORK_ROOT := GOWORK=$(abspath ../go.work)
 # them from the cached wildcard and re-runs them, from this one list, so the
 # two cannot drift apart.
 UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
+GATES_GOMEMLIMIT ?= 4GiB
 
 # TEST_EXEC=<wrapper> runs every cached test binary through a `go test -exec`
 # wrapper, uncached. `make test-input-census` sets it to scripts/testlog-exec.sh, which logs
@@ -113,7 +114,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -130,11 +131,16 @@ help: ## List targets with their descriptions (the default goal)
 # internal/contracts/ and build/composition/ in place — a
 # write-under-reader race for any pass still compiling them.
 #
+# Under CHECK_WRITERS_RAN, which the root `make check` sets for its lanes,
+# drift is left out: that run did drift before its lanes, and here it would
+# rewrite files that the frontend lane reads at the same time.
+#
 # Each phase reports how long it took (scripts/phase-timer.sh). The ledger has
-# ONE owner per run: the root `check-backend` exports PHASE_TIMER_OWNED and
-# prints the table itself, covering its gate fan-out and these four phases
-# together; run on its own (`make check-go`, or here directly) this target is
-# the owner instead and prints its own four. Without that, a standalone run
+# ONE owner per run: the root `check-backend` or `check` exports
+# PHASE_TIMER_OWNED and prints the table itself, covering its other phases and
+# these together (three under CHECK_WRITERS_RAN, four otherwise); run on its own
+# (`make check-go`, or here directly) this target is the owner instead and prints
+# its own four. Without that, a standalone run
 # would leave its rows to be counted inside somebody else's table, and a
 # standalone run that FAILED would leave its open phase to abort the next one.
 #
@@ -145,8 +151,8 @@ help: ## List targets with their descriptions (the default goal)
 # lint and the unit tests each get a whole runner: `deterministic-gates` passes
 # CHECK_LEGS="$(TEST_LEGS)", and `backend-lint` runs `check-static`.
 # gates/checklegsplit_test.go fails if the two stop covering every leg.
-TEST_LEGS   := test test-extensions
-STATIC_LEGS := lint vet arch-lint
+TEST_LEGS   := test-uncached test-cached test-extensions
+STATIC_LEGS := lint-base lint-strict vet arch-lint
 CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
 
 check: ## The merge gate: everything a PR must pass
@@ -157,22 +163,33 @@ check: ## The merge gate: everything a PR must pass
 	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
 	$(MAKE) -j4 $(CHECK_LEGS)
 	@bash ../scripts/phase-timer.sh stop
+ifndef CHECK_WRITERS_RAN
 	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
 	@bash ../scripts/phase-timer.sh stop
+endif
 	@bash ../scripts/phase-timer.sh start "backend: composition reproducibility"
 	$(MAKE) check-composition
 	@bash ../scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh report
 
 check-static: composition ## The static half of check (STATIC_LEGS), which CI runs as its own job
-	$(MAKE) -j3 $(STATIC_LEGS)
+	$(MAKE) -j4 $(STATIC_LEGS)
 
 # gen-composition runs pinned to the ROOT workspace: the tool lives in
 # the separate backend/tools module, so a caller-exported GOWORK (off, or
 # an unrelated workspace) would break resolution before anything builds.
-composition: ## Materialize build/composition/ from the enabled set under extensions/ (every build lane depends on this)
+#
+# Under CHECK_WRITERS_RAN it writes nothing. gen-composition removes
+# build/composition/ before it writes it again, so a run in one `make check`
+# lane would take the tree away from the other lanes that read it.
+# `make check` composes once, before the lanes start.
+composition: ## Materialize build/composition/ from the extensions instance/go.mod requires (every build lane depends on this)
+ifdef CHECK_WRITERS_RAN
+	@echo "composition: written by make check's writers phase, so this lane only reads it"
+else
 	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
+endif
 
 check-composition: composition ## Reproducibility gate: a clean regeneration must reproduce composition.json byte-for-byte
 	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition -verify
@@ -184,9 +201,14 @@ check-composition: composition ## Reproducibility gate: a clean regeneration mus
 test-extensions: composition ## Every enabled extension's own test lane (each unit is its own module — ./... never reaches them), on the composed workspace [EXT_COVER_OUT=<file> merges a coverage profile]
 	@set -e; found=0; out="$(if $(EXT_COVER_OUT),$(abspath $(EXT_COVER_OUT)))"; \
 	[ -z "$$out" ] || { rm -f "$$out"; tmp=$$(mktemp); trap 'rm -f "$$tmp"' EXIT; }; \
-	for mod in ../extensions/*/go.mod; do \
-		[ -e "$$mod" ] || continue; found=1; \
-		dir=$$(dirname "$$mod"); \
+	members=../build/test-extensions.members; \
+	work=$$($(GO) work edit -json ../build/composition/go.work); \
+	printf '%s\n' "$$work" \
+	  | sed -n 's/^[[:space:]]*"DiskPath": "\(.*\)",\{0,1\}$$/\1/p' \
+	  | awk '$$0 !~ /^(\.\/backend|\.\.\/\.\.|\.\.\/\.\.\/backend(\/tools)?)$$/' > "$$members"; \
+	while IFS= read -r member; do \
+		dir="../build/composition/$$member"; \
+		[ -e "$$dir/go.mod" ] || { echo "test-extensions: $$dir has no go.mod"; exit 1; }; found=1; \
 		echo "== $$dir"; \
 		if [ -n "$$out" ]; then \
 			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test -coverprofile="$$tmp" -coverpkg=./... ./...); \
@@ -194,7 +216,7 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 		else \
 			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./...); \
 		fi; \
-	done; \
+	done < "$$members"; \
 	[ "$$found" = "1" ] || echo "test-extensions: no enabled Go extensions"
 
 build: composition ## Compile every package (composed workspace)
@@ -260,10 +282,11 @@ test-uncached: composition
 	# which fails a pull request for the lane's own size rather than for
 	# anything in the diff. The perf lanes below name theirs for the same
 	# reason.
-	# GOMEMLIMIT, because the gates binary peaked near 5 GB with no limit and
-	# check runs beside other legs. At 3GiB it peaked at 3.4 GB in the same
-	# wall time; 2GiB doubled its CPU, since the parse cache alone holds ~1.9 GB.
-	GOMEMLIMIT=3GiB $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
+	# GOMEMLIMIT, because the gates binary reaches 9 GB with no limit and check
+	# runs beside other legs. The parse cache alone holds ~1.9 GB, so a limit
+	# near it spends the run collecting: 3GiB cost 1.4x the wall time of 4GiB
+	# for the same 4 GB peak. A CI job with a runner to itself passes 6GiB.
+	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this
@@ -441,6 +464,18 @@ test-db-up: composition ## (Re)build the migrated margince_test template the par
 test-it: composition ## Run ONE integration package (optionally RUN=Regex) on a throwaway clone: make test-it DIR=backend/internal/modules/contacts [RUN=TestName]
 	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh "$(DIR)" "$(RUN)"
 
+# The MCP role sweep: every tool and action as every seeded role. Its test
+# carries `integration && rolesweep`, so no merge gate runs it; scheduled.yml
+# runs it weekly. The extension verbs are measured first, because the sweep
+# reads their measured.json. UPDATE_MCP_TOOL_ROLES=1 writes all three files.
+test-roles: composition ## The MCP role sweep, weekly in CI: make test-roles [UPDATE_MCP_TOOL_ROLES=1] (needs db-up)
+	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh backend/internal/compose/integration/extensionrole
+	@$(GOWORK_COMPOSED) IT_TAGS=integration,rolesweep INTEGRATION_TIMEOUT=$(ROLE_SWEEP_TIMEOUT) \
+	  bash ../scripts/test-integration-one.sh backend/internal/compose/integration/toolrole
+
+# A whole sweep takes minutes on a laptop and several times that on a runner.
+ROLE_SWEEP_TIMEOUT ?= 2700s
+
 # The lane's connection ceiling and budget, for a lane that runs ONE package at a
 # time. Declared in scripts/lib-testdb.sh like every other lane's, and evaluated
 # lazily (`=`, not `:=`) so a make invocation that never runs the serial lane
@@ -562,8 +597,8 @@ bench-dispatch: composition ## AC-W2 workflow trigger->dispatch p95, 200ms over 
 # Leaves its database behind: the corpus and its plans are what you debug a slow
 # row with, and bench-daily-clean is the only thing that drops it. A failed run
 # has still written its record but stops before perfdoc; `make perfdoc` renders it.
-# cache_statement is pgx's default, which the API's pool keeps and the test pool
-# overrides: without it no generic plan can appear. `|| exit` stops a failed bench_db.
+# cache_statement is pgx's default, which the API and test pools both keep; named
+# here because without it no generic plan can appear. `|| exit` stops a failed bench_db.
 bench-daily: composition ## Daily-use screens for a rep and a manager over HTTP, mid-market tier; records and re-renders the budget pages (needs db-up; leaves margince_bench_daily, see bench-daily-clean; after a failed run, make perfdoc)
 	@$(GOWORK_COMPOSED) bash -c '$(GO) test -tags "integration bench" -list "^$(BENCH_DAILY_TEST)$$" ./internal/compose/integration | grep -Fx "$(BENCH_DAILY_TEST)" >/dev/null || { echo "Unknown benchmark test: $(BENCH_DAILY_TEST)" >&2; exit 1; }; cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DAILY_DB_NAME) && cd backend || exit; \
 	  sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
@@ -613,6 +648,8 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # baseline (the depguard DAG lives there and must never be diff-scoped);
 # .golangci.strict.yml is the expanded strict set, gated to new
 # code via new-from-merge-base so the pre-existing backlog is not a burn-down.
+# CI sets CHECK_BASE_REF to the branch a pull request merges into, so a pull
+# request into develop is judged on its own lines, not on all of develop's.
 #
 # Both go through ../scripts/run-golangci.sh, the wrapper `make lint-modules`
 # also uses: golangci's analysis cache is machine-wide and content-keyed, so in
@@ -620,17 +657,30 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # issues — with that checkout's path, and therefore without the //nolint: and
 # path-anchored waivers that path carried. This lane is exposed to it exactly
 # as the module lane is, so it is guarded in the same place rather than twice.
-lint: composition ## golangci-lint: repo-wide baseline + new-code strict set
+CHECK_BASE_REF ?= origin/main
+
+lint: lint-base lint-strict ## golangci-lint: repo-wide baseline + new-code strict set
+
+# Two targets so CI can run the passes on two runners; each loads the whole tree.
+lint-base: composition lint-tool
+	$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run ./...
+
+# One golangci pass peaks near 10 GB on a cold cache, so when one make runs
+# both, the strict pass waits for the baseline. CI's strict leg runs it alone.
+lint-strict: composition lint-tool $(if $(filter lint lint-base,$(MAKECMDGOALS)),lint-base)
+	@if git rev-parse --verify -q "$(CHECK_BASE_REF)" >/dev/null; then \
+		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" GOLANGCI_CACHE_PASS=strict ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base="$(CHECK_BASE_REF)" ./...; \
+	elif [ "$(origin CHECK_BASE_REF)" = "file" ]; then \
+		echo "SKIP strict lint: $(CHECK_BASE_REF) not found — fetch it to arm the new-code gate"; \
+	else \
+		echo "lint-strict: CHECK_BASE_REF=$(CHECK_BASE_REF) does not resolve — fetch it" >&2; exit 1; \
+	fi
+
+lint-tool:
 	@test -n "$(GOLANGCI_LINT)" || { \
 		echo "lint: golangci-lint not found — run 'make tools' (installs $(GOLANGCI_LINT_VERSION) to $$($(GO) env GOPATH)/bin)"; \
 		exit 1; \
 	}
-	$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run ./...
-	@if git rev-parse --verify -q origin/main >/dev/null; then \
-		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run --config .golangci.strict.yml ./...; \
-	else \
-		echo "SKIP strict lint: origin/main not found — fetch it to arm the new-code gate"; \
-	fi
 
 # Gate-tool resolution: prefer the install from `make tools` (CI restores
 # it from cache), but only when its embedded module version (`go version
@@ -692,7 +742,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) generate ./internal/contracts
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-stubs
-	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentpolicy -in api/crm.yaml -out internal/compose/agentpolicy_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentpolicy -in api/crm.yaml -out internal/compose/agentpolicy_gen.go -agents internal/modules/agents
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-queryenums -in api/crm.yaml -out internal/compose/queryenums_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentcontract -in api/crm.yaml -catalog migrations/testdata/head_catalog.txt \
 		-out internal/compose/agentbundle/agentcontract_gen.yaml -index internal/compose/agentbundle/agentindex_gen.txt
@@ -711,7 +761,12 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 config-gen: ## Regenerate the configuration docs, templates and schema from the settings registry
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-config
 
-drift: gen perfdoc ## Fail when a committed generated file drifted from what its generator produces
+drift: ## Fail when a committed generated file drifted from what its generator produces
+	@# The generators rewrite every output, and Go replays a cached test result
+	@# only while the files it read keep their mtime; an unchanged output keeps it.
+	@../scripts/keep-unchanged-mtimes.sh save ../.tmp/drift-mtimes
+	$(MAKE) gen perfdoc
+	@../scripts/keep-unchanged-mtimes.sh restore ../.tmp/drift-mtimes
 	# gen regenerates the committed per-unit manifests too (via composition);
 	# without them here a stale or hand-edited extensions/<name>/manifest.generated.json
 	# would be silently healed by the mutating gen step instead of failing.

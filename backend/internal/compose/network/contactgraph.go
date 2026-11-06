@@ -404,6 +404,7 @@ func wireEdge(e search.InteractionEdge, from, to string, now time.Time) crmcontr
 		Interactions90d: e.Count90d,
 		Inbound90d:      &in,
 		Outbound90d:     &outCount,
+		Sent90d:         e.SentCount90d,
 		LastAt:          &last,
 	}
 }
