@@ -38,7 +38,7 @@ export const ALIAS = /^var\((--[\w-]+)\)$/;
 export const OPAQUE = /^#[0-9a-f]{6}$/i;
 export const TYPE = /^(?:[a-zA-Z][\w-]*|\*)/;
 export const PSEUDO_ELEMENT = /::[\w-]+|:(?:before|after)\b/;
-export const STATE = /:(?:hover|focus|focus-visible|focus-within|active)\b/g;
+export const STATE = /:(?:hover|focus-visible|focus-within|focus|active)\b/g;
 
 export type Declaration = { property: string; value: string };
 

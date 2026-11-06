@@ -163,8 +163,10 @@ describe("a layer under a pane stays under it", () => {
         probe(".k:hover", "background: radial-gradient(red, blue)"),
         probe(".flat", "background: linear-gradient(red, red)"),
         probe(".up::before", "z-index: calc(2 - 1)"),
+        probe(".m::after:focus-visible", "z-index: -1"),
+        probe(".n:focus-within", "background: radial-gradient(red, blue)"),
       ]),
-    ).toEqual([".f", ".h", ".k", ":has(> .g)"]);
+    ).toEqual([".f", ".h", ".k", ".m", ".n", ":has(> .g)"]);
   });
 
   it("paints the ground of a pane on every host the tree stacks a layer in", () => {
