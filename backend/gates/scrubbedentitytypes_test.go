@@ -34,7 +34,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -145,7 +144,7 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 	var opaque []string
 	dir := filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "privacy")
 	fset := gatekit.SourceFileSet()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the privacy module: %v", err)
 	}

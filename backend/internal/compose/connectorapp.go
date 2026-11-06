@@ -48,7 +48,7 @@ func writeConnectorAppFailure(w http.ResponseWriter, r *http.Request, err error)
 // exchange, so the flow itself stays provider-agnostic.
 type oauthApp struct {
 	authCodeURL  func(state, redirectURI string) string
-	authenticate func(ctx context.Context, code, redirectURI string) (connector.Auth, error)
+	authenticate func(ctx context.Context, consent *consentCode) (connector.Auth, error)
 }
 
 // providerWired reports whether this deployment serves a provider's OAuth flow
@@ -156,6 +156,9 @@ const (
 	connectAppUnusable connectResult = "app_unusable"
 	// connectUnsupported: this deployment does not serve the provider at all.
 	connectUnsupported connectResult = "unsupported"
+	// connectRoleCannotCapture: the caller's role or seat cannot record what
+	// capture writes, whichever provider they pick.
+	connectRoleCannotCapture connectResult = "role_cannot_capture"
 )
 
 // connectAvailability is what connectability reports for one provider.
@@ -180,6 +183,9 @@ type connectAvailability struct {
 // rather than each carrying its own copy of the decision, so a refusal a
 // click gives can never surprise a screen that just reported readiness.
 func (h connectorHandlers) connectability(ctx context.Context, provider string) connectAvailability {
+	if callerCaptureRefusal(ctx) != nil {
+		return connectAvailability{reason: connectRoleCannotCapture}
+	}
 	if provider == providerIMAP {
 		// IMAP never needs an OAuth app: its credentials are per-connection,
 		// vault-sealed, so the registry alone decides.
@@ -282,12 +288,12 @@ func (h connectorHandlers) gmailApp(ctx context.Context) (oauthApp, bool, error)
 	}
 	return oauthApp{
 		authCodeURL: oauth.AuthCodeURL,
-		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-			req, err := gmail.AuthRequestFrom(code, redirectURI)
+		authenticate: func(ctx context.Context, consent *consentCode) (connector.Auth, error) {
+			req, err := gmail.AuthRequestFrom(consent.code, consent.redirectURI)
 			if err != nil {
 				return nil, err
 			}
-			return gmail.New(oauth, h.gmailAPI).Authenticate(ctx, req)
+			return gmail.New(consent.googleAuthorizer(oauth), h.gmailAPI).Authenticate(ctx, req)
 		},
 	}, true, nil
 }
@@ -321,12 +327,12 @@ func (h connectorHandlers) gcalApp(ctx context.Context) (oauthApp, bool, error) 
 	}
 	return oauthApp{
 		authCodeURL: oauth.AuthCodeURL,
-		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-			req, err := gcal.AuthRequestFrom(code, redirectURI)
+		authenticate: func(ctx context.Context, consent *consentCode) (connector.Auth, error) {
+			req, err := gcal.AuthRequestFrom(consent.code, consent.redirectURI)
 			if err != nil {
 				return nil, err
 			}
-			return gcal.New(oauth, h.gcalAPI).Authenticate(ctx, req)
+			return gcal.New(consent.googleAuthorizer(oauth), h.gcalAPI).Authenticate(ctx, req)
 		},
 	}, true, nil
 }
@@ -356,8 +362,8 @@ func (h connectorHandlers) graphApp(ctx context.Context) (oauthApp, bool, error)
 	}
 	return oauthApp{
 		authCodeURL: oauth.AuthCodeURL,
-		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-			req, err := graph.AuthRequestFrom(code, redirectURI)
+		authenticate: func(ctx context.Context, consent *consentCode) (connector.Auth, error) {
+			req, err := graph.AuthRequestFrom(consent.code, consent.redirectURI)
 			if err != nil {
 				return nil, err
 			}
@@ -387,8 +393,8 @@ func (h connectorHandlers) graphCalApp(ctx context.Context) (oauthApp, bool, err
 	}
 	return oauthApp{
 		authCodeURL: oauth.AuthCodeURL,
-		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-			req, err := graphcal.AuthRequestFrom(code, redirectURI)
+		authenticate: func(ctx context.Context, consent *consentCode) (connector.Auth, error) {
+			req, err := graphcal.AuthRequestFrom(consent.code, consent.redirectURI)
 			if err != nil {
 				return nil, err
 			}

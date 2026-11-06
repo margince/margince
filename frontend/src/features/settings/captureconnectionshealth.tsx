@@ -4,7 +4,7 @@ import { PanelGroupHead } from "../../design-system/panel";
 import { providerName } from "../../format/connectorprovider";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { CAPTURE_CONCERNS } from "../../lib/captureconcern";
+import { CAPTURE_CONCERNS, concernKey } from "../../lib/captureconcern";
 
 type Concern = components["schemas"]["CaptureConnectionConcern"];
 
@@ -36,7 +36,7 @@ export function CaptureConnectionsHealth({
       header: t("captureConcern.condition"),
       render: (row) =>
         Object.hasOwn(CAPTURE_CONCERNS, row.concern)
-          ? t(CAPTURE_CONCERNS[row.concern])
+          ? t(concernKey(row.concern, row.error_class))
           : row.concern,
     },
     {

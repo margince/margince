@@ -30,7 +30,6 @@ package gates
 // written there next.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -73,7 +72,7 @@ func TestEveryReaderOfTheAuditTrailSaysWhatItDoesAboutAHeldActivity(t *testing.T
 	t.Parallel()
 	defer auditTrailReaders.AssertAllMatched(t)
 
-	entries, err := os.ReadDir(trailReaderDir)
+	entries, err := gatekit.ReadDir(trailReaderDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", trailReaderDir, err)
 	}
@@ -83,7 +82,7 @@ func TestEveryReaderOfTheAuditTrailSaysWhatItDoesAboutAHeldActivity(t *testing.T
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		source, err := os.ReadFile(filepath.Join(trailReaderDir, name))
+		source, err := gatekit.ReadFile(filepath.Join(trailReaderDir, name))
 		if err != nil {
 			t.Fatalf("reading %s: %v", name, err)
 		}

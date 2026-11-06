@@ -84,6 +84,7 @@ func setupConfigEnv(t *testing.T) *configEnv {
 	// the real rule is proven through installseam in compose/integration.
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
 		ContractVisible: func(context.Context, string, func(any) int) (string, error) { return "FALSE", nil },
+		AuthorEntity:    defaultEntityAuthor, IssuerEntity: defaultEntityIssuer,
 	})
 	return e
 }
@@ -251,4 +252,42 @@ func (e *configEnv) seedStage(ctx context.Context, t *testing.T, name string, pr
 		t.Fatalf("seeding the stage: %v", err)
 	}
 	return ids.From[ids.StageKind](ids.UUID(stage.Id))
+}
+
+// twoStagePipeline seeds a pipeline with two open stages and a deal on the
+// first, and answers the deal plus both stage ids.
+func twoStagePipeline(t *testing.T, e *configEnv) (ids.DealID, ids.StageID, ids.StageID) {
+	t.Helper()
+	ctx := e.as()
+	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + ids.NewV7().String()})
+	if err != nil {
+		t.Fatalf("seeding a pipeline: %v", err)
+	}
+	pipelineID := ids.From[ids.PipelineKind](ids.UUID(pipeline.Id))
+	open := 0
+	first, err := e.store.CreateStage(ctx, CreateStageInput{
+		PipelineID: pipelineID, Name: "Discovery", Position: 0,
+		Semantic: string(SemanticOpen), WinProbability: &open,
+	})
+	if err != nil {
+		t.Fatalf("seeding the first stage: %v", err)
+	}
+	second, err := e.store.CreateStage(ctx, CreateStageInput{
+		PipelineID: pipelineID, Name: "Negotiation", Position: 1,
+		Semantic: string(SemanticOpen), WinProbability: &open,
+	})
+	if err != nil {
+		t.Fatalf("seeding the second stage: %v", err)
+	}
+	fromID := ids.From[ids.StageKind](ids.UUID(first.Id))
+	owner := ids.From[ids.UserKind](e.admin)
+	deal, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
+		Name: "Warehouse rollout", PipelineID: pipelineID, StageID: fromID,
+		OwnerID: &owner, OwnerExact: true,
+	})
+	if err != nil {
+		t.Fatalf("seeding a deal: %v", err)
+	}
+	return ids.From[ids.DealKind](ids.UUID(deal.Id)), fromID,
+		ids.From[ids.StageKind](ids.UUID(second.Id))
 }

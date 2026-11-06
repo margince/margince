@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -92,7 +93,7 @@ func TestFulfillErasureHTTPRefusesASyntacticallyValidButNonexistentSubject(t *te
 	e := Setup(t)
 	h, store, id := setupErasureDSR(t, e, ids.NewV7().String())
 
-	w := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","resolution":"verified by phone","identity_check":"id_document"}`)
+	w := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","identity_check":"id_document"}`)
 
 	if w.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("a well-formed but nonexistent subject must be refused 422, got %d: %s", w.Code, w.Body)
@@ -121,9 +122,9 @@ func TestFulfillErasureHTTPRefusesASyntacticallyValidButNonexistentSubject(t *te
 func TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments(t *testing.T) {
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Erasure Subject", nil)
-	h, _, id := setupErasureDSR(t, e, contactID.String())
+	h, store, id := setupErasureDSR(t, e, contactID.String())
 
-	first := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","resolution":"verified in person","identity_check":"in_person"}`)
+	first := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","identity_check":"in_person"}`)
 	if first.Code != http.StatusOK {
 		t.Fatalf("first fulfilment of a real contact must succeed, got %d: %s", first.Code, first.Body)
 	}
@@ -135,6 +136,49 @@ func TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments(t *testing.T) {
 	if second.Code != http.StatusOK {
 		t.Fatalf("re-fulfilling an already-erased contact must still succeed (idempotent), got %d: %s",
 			second.Code, second.Body)
+	}
+	// The answer is the first erasure's, from the fixed list: the replay found
+	// nothing left, and that does not rewrite what the first one did.
+	if got := erasureAnswerOf(t, e, store, id); got != "erased" {
+		t.Fatalf("the fulfilled erasure answers %q, want erased", got)
+	}
+}
+
+func erasureAnswerOf(t *testing.T, e *Env, store *consent.Store, id ids.UUID) string {
+	t.Helper()
+	read, err := store.GetDSR(e.Admin(), id)
+	if err != nil {
+		t.Fatalf("reading the request: %v", err)
+	}
+	if read.Resolution == nil {
+		return ""
+	}
+	return *read.Resolution
+}
+
+// A contact an earlier erasure already anonymised holds nothing more. An
+// erasure request on it, fulfilled through the real eraser, answers
+// nothing_held instead of claiming an erasure that removed nothing.
+//
+// Mutation: report a wired object store as uncounted whatever it destroyed,
+// or let the contact update run on an anonymised row, and this answers erased.
+func TestAnErasureOfAnAlreadyErasedContactAnswersNothingHeld(t *testing.T) {
+	e := Setup(t)
+	contactID := e.SeedContact(t, "Already Erased", nil)
+	// Wired as production wires it: an object store and nothing in it for this
+	// contact. A store that holds nothing for the subject destroys nothing.
+	eraser := privacy.NewEraser(e.DB()).WithBlobstore(blobstore.NewMemory())
+	if _, err := eraser.EraseContactCounted(e.Admin(), contactID, "test:earlier erasure"); err != nil {
+		t.Fatalf("the earlier erasure: %v", err)
+	}
+	_, store, id := setupErasureDSR(t, e, contactID.String())
+	h := consent.NewHandlers(e.DB()).WithEraser(eraser)
+
+	if w := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","identity_check":"id_document"}`); w.Code != http.StatusOK {
+		t.Fatalf("fulfilling the erasure → %d: %s", w.Code, w.Body)
+	}
+	if got := erasureAnswerOf(t, e, store, id); got != "nothing_held" {
+		t.Fatalf("the erasure of an already-erased contact answers %q, want nothing_held", got)
 	}
 }
 
@@ -219,7 +263,7 @@ func TestFulfillErasureHoldsTheRequestLockedAcrossTheErase(t *testing.T) {
 
 	done := make(chan *httptest.ResponseRecorder, 1)
 	go func() {
-		done <- fulfilErasureDSR(t, e, h, created.ID, `{"status":"fulfilled","resolution":"verified","identity_check":"id_document"}`)
+		done <- fulfilErasureDSR(t, e, h, created.ID, `{"status":"fulfilled","identity_check":"id_document"}`)
 	}()
 
 	<-gate.entered // the scrub is running ⇒ the request lock must be held now

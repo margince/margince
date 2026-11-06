@@ -26,6 +26,8 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // coldContact is somebody this workspace has no evidence about: no inbound, no
@@ -250,6 +252,55 @@ func TestAnExchangeTooOldToCountIsRefusedNotAccepted(t *testing.T) {
 	}
 	if events != 0 {
 		t.Errorf("%d qualifying event(s) written for a statement that was refused", events)
+	}
+}
+
+// sendColdAs is sendCold claiming what the message is, the way the composer
+// sends a follow-up or a quote.
+func sendColdAs(t *testing.T, c *consentEnv, who coldContact, claim string) (int, string) {
+	t.Helper()
+	var problem struct {
+		Code string `json:"code"`
+	}
+	status := c.Call(t, "POST", "/v1/emails", AnyMap{
+		"subject":               "Following up as agreed",
+		"body":                  "You asked me to write again now.",
+		"to":                    []string{who.address},
+		"links":                 []AnyMap{{"entity_type": "contact", "entity_id": who.contactID}},
+		"communication_context": claim,
+	}, nil, &problem)
+	return status, problem.Code
+}
+
+// A request the contact made long ago is taken through the review form at any
+// age, for a follow-up or a quote they asked for. The same send then goes. The
+// engine reads such a request with no age limit, so the form does too.
+//
+// Mutation: drop the requestAnswersClaim guard in RecordContext and the form
+// refuses the old request with 422.
+func TestAnOldRequestEnteredThroughTheReviewFormAuthorizesItsFollowUp(t *testing.T) {
+	for _, claim := range []string{"requested_followup", "precontract_quote"} {
+		t.Run(claim, func(t *testing.T) {
+			c := setupConsent(t)
+			who := aColdContact(t, c, "asked.long.ago."+claim+"@cold.test")
+
+			if status, code := sendColdAs(t, c, who, claim); status != http.StatusConflict {
+				t.Fatalf("a %s with nothing on record → %d %q, want 409", claim, status, code)
+			}
+			review := liveReviewFor(t, c)
+			longAgo := clocktest.Now(t).Add(-400 * 24 * time.Hour).UTC().Format(time.RFC3339)
+			if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/context", AnyMap{
+				"subject_id":  who.contactID,
+				"kind":        "requested_by_subject",
+				"note":        "Asked me on the phone to write again when the budget was set.",
+				"occurred_at": longAgo,
+			}, nil, nil); status != http.StatusOK {
+				t.Fatalf("recording the old request → %d, want 200", status)
+			}
+			if status, code := sendColdAs(t, c, who, claim); status != http.StatusAccepted {
+				t.Fatalf("the same %s after the request → %d %q, want 202", claim, status, code)
+			}
+		})
 	}
 }
 

@@ -33,7 +33,8 @@ var dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_
 	company_id, project_id, owner_id, partner_company_id, partner_attribution, status, lost_reason,
 	lost_reason_code, lost_reason_basis, won_without_contract_reason, won_without_contract_detail,
 	description, commercial_motion, priority, acquisition_source,
-	expected_close_date, close_date_provisional, closed_at, forecast_category, wait_until, last_activity_at,
+	expected_close_date, close_date_provisional, closed_at, win_probability_override, win_probability_set_by,
+	` + StageWinProbabilitySQL("") + `, wait_until, last_activity_at,
 	` + MeetingAheadSQL("") + `,
 	source, captured_by,
 	source_system, source_author_id, source_author_name,
@@ -63,7 +64,9 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var id, pipelineID, stageID ids.UUID
 	var companyID, projectID, ownerID, partnerID, arrSource *ids.UUID
 	var status string
-	var forecastCat *string
+	var override *int
+	var overrideBy *string
+	var stageProbability int
 	var expectedClose, waitUntil *time.Time
 	var closeDateProvisional, meetingAhead bool
 	var version int64
@@ -76,7 +79,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 		&companyID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
 		&d.LostReasonCode, &lossBasis, &wonReason, &d.WonWithoutContractDetail,
 		&d.Description, &motion, &priority, &d.AcquisitionSource,
-		&expectedClose, &closeDateProvisional, &d.ClosedAt, &forecastCat, &waitUntil, &d.LastActivityAt,
+		&expectedClose, &closeDateProvisional, &d.ClosedAt, &override, &overrideBy, &stageProbability, &waitUntil, &d.LastActivityAt,
 		&meetingAhead,
 		&d.Source, &d.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
@@ -89,10 +92,9 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	if values := storekit.ExtractValues(active, cf); len(values) > 0 {
 		d.AdditionalProperties = values
 	}
-	if forecastCat != nil {
-		cat := crmcontracts.DealForecastCategory(*forecastCat)
-		d.ForecastCategory = &cat
-	}
+	probability, source := EffectiveWinProbability(override, overrideBy, stageProbability)
+	wireSource := crmcontracts.DealWinProbabilitySource(source)
+	d.WinProbability, d.WinProbabilitySource, d.StageWinProbability = &probability, &wireSource, &stageProbability
 	if wonReason != nil {
 		reason := crmcontracts.DealWonWithoutContractReason(*wonReason)
 		d.WonWithoutContractReason = &reason

@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import candidates  # noqa: E402
 import check  # noqa: E402  — its path containment, shared rather than spelled twice
+import clean  # noqa: E402
 import mcpclient  # noqa: E402
 import providers  # noqa: E402
 import transcript  # noqa: E402
@@ -109,7 +110,7 @@ def _loop(model, session, out):
 _CODEX_OFF = (
     "shell_tool", "unified_exec", "view_image", "multi_agent", "apps", "browser_use",
     "browser_use_external", "computer_use", "sleep_tool", "tool_suggest", "skill_search",
-    "image_generation", "goals",
+    "image_generation", "goals", "plugins", "hooks", "memories",
 )
 # codex has no turn cap, so a wall clock stands in for one.
 CODEX_TIMEOUT = 900
@@ -135,8 +136,9 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
     """Drive one prompt through `codex exec` and write it as a transcript.
 
     Run from an empty directory under a read-only sandbox, so nothing of the
-    repository is within reach of a tool that slips through. The passport
-    reaches codex by the name of its variable, never on the command line.
+    repository is within reach of a tool that slips through, and from a home
+    of its own (clean.codex_home). The passport reaches codex by the name of
+    its variable, never on the command line.
 
     `rest` is (skill directory, REST base) on the REST door: the server codex
     attaches is then the stdio shim, which holds the skill to read and one HTTP
@@ -151,7 +153,7 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
             out.finish(True, f"HARNESS: {fault}", 0)
         print(fault, file=sys.stderr)
         return HARNESS
-    with tempfile.TemporaryDirectory(prefix="e2e-llm-codex.") as empty:
+    with tempfile.TemporaryDirectory(prefix="e2e-llm-codex.") as empty, clean.codex_home() as home:
         argv = [
             "codex", "exec", "--json", "--strict-config", "--ignore-user-config", "--skip-git-repo-check",
             "-C", empty, "--sandbox", "read-only", "-m", route.model,
@@ -166,7 +168,7 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
         argv.append(prompt)
         try:
             done = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                                  timeout=timeout, check=False)
+                                  timeout=timeout, check=False, env=clean.codex_env(home))
             lines, stderr, exited = done.stdout.splitlines(), done.stderr, done.returncode
         except subprocess.TimeoutExpired as expired:
             # The partial stream is converted anyway: it ends without a completed

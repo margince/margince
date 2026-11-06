@@ -66,6 +66,16 @@ func TestLeadLifecycleWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 		t.Errorf("the demoted lead is still %q", demoted.Status)
 	}
 	d.sameEffect(t, "demote", restWon, toolWon)
+
+	var again json.RawMessage
+	if status := d.e.Call(t, "POST", "/v1/leads/"+restWon+"/demote", AnyMap{"reason": "Twice"}, d.bearer, &again); status != http.StatusConflict ||
+		!strings.Contains(string(again), "not_promoted") {
+		t.Errorf("demoting a lead the route already demoted → %d %s, want 409 not_promoted", status, again)
+	}
+	if got := d.mcp.Call(t, "demote_lead", map[string]any{"lead_id": toolWon, "reason": "Twice"}); !got.IsError ||
+		!strings.Contains(got.Text, "not_promoted") {
+		t.Errorf("demoting a lead the tool already demoted answered %q, want the not_promoted conflict", got.Text)
+	}
 }
 
 type sharedStage struct {

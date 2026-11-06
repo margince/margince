@@ -4,7 +4,7 @@
 import type { ComponentProps } from "react";
 import { TaskDetailDialog } from "../../components/taskactions";
 import { useSourceOpener } from "../../lib/opensource";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistWhy } from "./worklist.why";
@@ -34,7 +34,7 @@ export function MeetingDetailModal({
   item,
   onClose,
 }: Readonly<{ item: WorklistItem; onClose: () => void }>) {
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return (
     <OpenActivityDrawer
       activityId={item.id}

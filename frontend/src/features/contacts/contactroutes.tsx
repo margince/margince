@@ -11,7 +11,8 @@
 import { useCallback } from "react";
 
 import type { components } from "../../api/schema";
-import { Avatar, Badge, Button } from "../../design-system/atoms";
+import { SeatAvatar } from "../../components/seatavatar";
+import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { StrengthMeter } from "../../design-system/strengthmeter";
 import { formatNumber } from "../../format/format";
@@ -179,7 +180,7 @@ function RouteRow({
       <span className="pn-route-rank" aria-hidden="true">
         {formatNumber(rank, locale)}
       </span>
-      <Avatar name={route.via_display_name} identity={route.via_user_id} />
+      <SeatAvatar id={route.via_user_id} name={route.via_display_name} />
       <div className="pn-route-who">
         <p className="pn-route">
           <RouteLine route={route} />{" "}

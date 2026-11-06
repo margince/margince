@@ -328,6 +328,14 @@ it("offers a reader no verbs on a row", async () => {
   ).toBeNull();
 });
 
+// The logo slot's drop target, named by the slot it sits in.
+function logoPicker(dialog: HTMLElement) {
+  const slot = within(dialog).getByRole("region", {
+    name: en["legalEntities.sectionLogo"],
+  });
+  return within(slot).getByLabelText(en["legalEntities.sectionLogo"]);
+}
+
 it("stores a chosen logo at once, and saves the next edit on the version it left", async () => {
   const user = userEvent.setup();
   const calls: Call[] = [];
@@ -336,12 +344,14 @@ it("stores a chosen logo at once, and saves the next edit on the version it left
   await rowVerb(user, "Acme Wien", en["legalEntities.edit"]);
   const dialog = await screen.findByRole("dialog");
   await user.upload(
-    within(dialog).getByLabelText(en["legalEntities.logoAdd"]),
+    logoPicker(dialog),
     new File(["png"], "logo.png", { type: "image/png" }),
   );
-  await within(dialog).findByRole("button", {
-    name: en["legalEntities.logoRemove"],
-  });
+  await user.click(
+    within(dialog).getByRole("button", { name: en["legalEntities.logoEdit"] }),
+  );
+  await screen.findByRole("button", { name: en["legalEntities.logoRemove"] });
+  await user.keyboard("{Escape}");
   const upload = calls.find(
     (call) =>
       call.method === "POST" &&
@@ -378,7 +388,7 @@ it("holds Save and the close while a logo write is out", async () => {
     "BKAUATWW",
   );
   await user.upload(
-    within(dialog).getByLabelText(en["legalEntities.logoAdd"]),
+    logoPicker(dialog),
     new File(["png"], "logo.png", { type: "image/png" }),
   );
   const save = within(dialog).getByRole("button", {

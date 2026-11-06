@@ -153,7 +153,7 @@ func maskedFieldsDrawnUnder(root string) (map[string][]maskDrawing, error) {
 		if err != nil || entry.IsDir() || !isMaskDrawingSource(entry.Name()) {
 			return err
 		}
-		source, readErr := os.ReadFile(filepath.Join(root, path)) // #nosec G304 -- a path from walking the source tree
+		source, readErr := gatekit.ReadFile(filepath.Join(root, path)) // #nosec G304 -- a path from walking the source tree
 		if readErr != nil {
 			return readErr
 		}

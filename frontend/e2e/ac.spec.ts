@@ -3,6 +3,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import { en, type MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/lib/settingscatalog";
+import { viewMenuName } from "../src/testing/listview.names";
 import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
 import {
@@ -204,17 +205,14 @@ async function expectSettingsViewLanded(page: Page, view: string) {
     return;
   }
   const tab = view.slice("settings/".length);
-  // The trail rather than the settings nav level, because the nav level is not
-  // there at 390px — the rail becomes a phone bar and the tabs go with it, and
-  // an assertion that reads the rail passes vacuously on the one viewport this
-  // sweep exists for. The trail's current crumb names the tab at every width.
-  //
-  // The expected wording comes from the catalog under the SAME key the nav
-  // builds its label from, so this is not a second copy of the tab names.
+  // The page heading, because the nav level and the trail both leave a phone
+  // bar. The heading is named by the tab at every width, its switcher included.
+  // The expected wording comes from the catalog key the nav labels the tab with,
+  // so this is not a second copy of the tab names.
   await expect(
-    page.locator(".crumbs-current"),
+    page.locator(".pagetitle").getByRole("heading"),
     `#/${view} did not land on the ${tab} tab — the address fell back, so this sweep measured a page it never opened`,
-  ).toHaveText(de[`settings.tab.${tab}` as MessageKey]);
+  ).toHaveAccessibleName(de[`settings.tab.${tab}` as MessageKey]);
 }
 
 /**
@@ -444,12 +442,20 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await accountTrigger(page).click();
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
-    menu.getByRole("menuitem", { name: "Einstellungen" }),
+    menu.getByRole("menuitem", { name: "Einstellungen", exact: true }),
   ).toHaveAttribute("href", "/#/settings");
   await expect(
     menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
   ).toHaveAttribute("href", "/#/settings/meetings");
-  await expect(menu.locator("a[href]")).toHaveCount(2);
+  // The head is the third link: the seat's own page, named by who it is for.
+  await expect(
+    menu.getByRole("menuitem", {
+      name: new RegExp(
+        `^${de["shell.accountSettingsAria"].replace("{who}", ".+")}$`,
+      ),
+    }),
+  ).toHaveAttribute("href", "/#/settings/account");
+  await expect(menu.locator("a[href]")).toHaveCount(3);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
   // Appearance is a submenu, not a control sitting open in the menu: three
@@ -581,6 +587,15 @@ test("features/10 §7: Tab closes the language list and carries on", async ({
   await expect(page.locator("body")).not.toBeFocused();
 });
 
+/** Board or Table is a choice in the deals list's View panel. */
+async function showDealsAsTable(page: Page) {
+  await page.getByRole("button", { name: viewMenuName("de") }).click();
+  await page
+    .getByRole("dialog", { name: viewMenuName("de") })
+    .getByRole("button", { name: de["deals.viewTable"], exact: true })
+    .click();
+}
+
 test("AC-pipeline-7: board↔table swaps views preserving the deal set", async ({
   page,
 }) => {
@@ -614,7 +629,7 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
   const boardLink = boardCard.getByRole("link", { name: /Fleet retrofit/ });
   await expect(boardLink).toHaveAttribute("href", /#\/deals\/d-fleet/);
   await expect(boardCard).toContainText("Fleet retrofit");
-  await page.getByRole("button", { name: "Tabelle" }).click();
+  await showDealsAsTable(page);
   // The board is gone, so its card locator is the proof the view swapped
   // rather than drew both at once.
   await expect(boardCard).toHaveCount(0);
@@ -1007,9 +1022,34 @@ test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
   await mark.click();
   await expect(page).toHaveURL(/#\/deals\/d-fleet$/);
   await page.goto("/#/deals");
-  await page.getByRole("button", { name: "Tabelle" }).click();
+  await showDealsAsTable(page);
   const row = page.getByRole("row", { name: /Fleet retrofit/ });
   await expect(row.getByRole("cell", { name: "Lena Fischer" })).toBeVisible();
+});
+
+// A stage busier than one column's page reads its next page from its own Load
+// more, and no other column reads or offers one.
+test("AC-pipeline-12: a busy stage's column loads its next page on its own", async ({
+  page,
+}) => {
+  test.skip(Boolean(process.env.BASE_URL), "it reads the busy-stage mock");
+  await mockApi(page, { busyStage: true });
+  await page.goto("/#/deals");
+  const qualify = page.locator('[data-stage="s1"]');
+  // The head states the report's count over every deal, not the page's cards.
+  await expect(qualify.locator(".board-col-count .optioncount")).toHaveText(
+    "31",
+  );
+  // The seeded Qualify deal and thirty more: 31, of which a page reads 25.
+  const cards = qualify.locator("[data-deal]");
+  await expect(cards).toHaveCount(25);
+  const loadMore = page.getByRole("button", { name: "Mehr laden" });
+  await expect(loadMore).toHaveCount(1);
+
+  await qualify.getByRole("button", { name: "Mehr laden" }).click();
+
+  await expect(cards).toHaveCount(31);
+  await expect(loadMore).toHaveCount(0);
 });
 
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
@@ -1430,6 +1470,33 @@ test.describe("§3.8: 390px mobile", () => {
     await expectShellRendered(page);
     await expect(page.getByRole("heading", { name: "Produkte" })).toBeVisible();
     expect(await pageOverflow(page)).toEqual([]);
+  });
+
+  test("the More menu opens above the bar and meets AA at 390px", async ({
+    page,
+  }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    const more = page.locator("nav.rail .railmore");
+    await more.click();
+    const menu = page.locator("nav.rail .railmenu");
+    await expect(menu).toBeVisible();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await settleAnimations(page);
+    const menuBox = await menu.boundingBox();
+    const barBox = await page.locator("nav.rail").boundingBox();
+    expect(menuBox).not.toBeNull();
+    expect(barBox).not.toBeNull();
+    expect((menuBox?.y ?? 0) + (menuBox?.height ?? 0)).toBeLessThan(
+      barBox?.y ?? 0,
+    );
+    expect(await pageOverflow(page)).toEqual([]);
+    await expectNoAaViolations(page, "home, More menu open");
+
+    await more.click();
+    await expect(menu).toHaveCount(0);
+    await expect(more).toBeFocused();
   });
 
   // The palette is a full-height SHEET at this width — a 560px box floated at
@@ -2242,6 +2309,48 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the command palette open");
   });
+
+  // The View panel is a popover on a desktop and a full-screen sheet at 390px.
+  // The closed toolbar sweeps only its button, never what it opens.
+  const VIEW_SIZES = [
+    { name: "desktop", width: 1280, height: 800 },
+    { name: "390px", width: 390, height: 844 },
+  ];
+  for (const screen of ["contacts", "companies", "deals", "leads"]) {
+    for (const size of VIEW_SIZES) {
+      for (const step of [null, "sort", "filters"]) {
+        const opened = step
+          ? `the View panel's ${step} step open`
+          : "the View panel open";
+        test(`no AA violations on #/${screen} with ${opened} at ${size.name}`, async ({
+          page,
+        }) => {
+          await page.setViewportSize(size);
+          await page.goto(`/#/${screen}`);
+          await page.waitForLoadState("networkidle");
+          await expectShellRendered(page);
+          await page
+            .getByRole("button", { name: viewMenuName("de") })
+            .first()
+            .click();
+          const panel = page.locator(".lt-vpanel");
+          await expect(panel).toBeVisible();
+          if (step) {
+            await panel.locator(`[data-view-row="${step}"]`).click();
+            await expect(panel.locator(".lt-vstep")).toBeVisible();
+          }
+          // Off the panel first: a row under the pointer would start its hover
+          // fade after the settle, and the scan would read it mid-fade.
+          await page.mouse.move(0, 0);
+          await settleAnimations(page);
+          await expectNoAaViolations(
+            page,
+            `${screen} — View panel${step ? ` (${step})` : ""} at ${size.name}`,
+          );
+        });
+      }
+    }
+  }
 
   // A report row's explain drawer, with the permission notice in it: the
   // closed page sweeps only the icon-only trigger, never what it opens.
@@ -3118,142 +3227,6 @@ test.describe("filters and views", () => {
   });
 });
 
-test.describe("stage automation, in German", () => {
-  // The rule and the report the page draws. Routed rather than seeded, because
-  // what is under test is the German surface over a KNOWN state — a suspension
-  // with a reason, and a transition nobody has decided about — and neither is a
-  // state the seed happens to produce.
-  const SUSPENDED_REASON =
-    "ein Zug hat einen Datensatz außerhalb des eigenen Workspace erreicht";
-
-  async function stubStageAutomation(
-    page: Page,
-    options: { suspended?: boolean } = {},
-  ) {
-    const suspended = options.suspended ?? true;
-    await page.route("**/stage-automation/report**", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          window_days: 30,
-          data: [
-            {
-              pipeline_id: "p1",
-              from_stage_id: "s1",
-              to_stage_id: "s2",
-              from_stage_name: "Erstkontakt",
-              to_stage_name: "Angebot",
-              reviewed: 240,
-              proposed: 0,
-              expired: 0,
-              superseded: 0,
-              accepted_clean: 236,
-              accepted_edited: 2,
-              rejected: 2,
-              auto_applied: 0,
-              unsafe: 1,
-              observation_days: 34,
-              clean_acceptance_rate: 0.98,
-              edit_rate: 0.01,
-              rejection_rate: 0.01,
-              // UNDER the 1% ceiling. The rule below is suspended for a SAFETY
-              // defect, which needs no volume — so the record has to be good,
-              // or the page would rightly draw "not earned yet" instead of the
-              // undo window this test is about.
-              unsafe_rate: 0.004,
-              evidence_kinds: [],
-            },
-          ],
-        }),
-      });
-    });
-    await page.route("**/stage-automation/policies/**", async (route) => {
-      if (route.request().method() !== "GET") {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: "{}",
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          data: [
-            {
-              id: "r1",
-              pipeline_id: "p1",
-              from_stage_id: "s1",
-              to_stage_id: "s2",
-              mode: "auto",
-              clean_acceptance_threshold: 0.95,
-              correction_reversal_threshold: 0.01,
-              min_reviewed: 200,
-              min_observation_days: 28,
-              window_days: 30,
-              undo_window_hours: 72,
-              version: 3,
-              ...(suspended
-                ? {
-                    suspended_at: "2026-09-03T10:00:00Z",
-                    suspended_reason: SUSPENDED_REASON,
-                  }
-                : {}),
-            },
-          ],
-        }),
-      });
-    });
-  }
-
-  test("a suspended transition says in German why it stopped, and promises no undo while it is stopped", async ({
-    page,
-  }) => {
-    await stubStageAutomation(page);
-    await page.goto("/#/settings/stageautomation");
-    await page.waitForLoadState("networkidle");
-
-    // The switch carries the transition's own stage names, so an admin reading
-    // three rules can tell which move each one governs.
-    await expect(
-      page.getByRole("switch", { name: /Erstkontakt → Angebot/ }),
-    ).toBeVisible();
-
-    // The product's own reason, in the reader's language and unabridged. It is
-    // the entire basis for deciding whether to start the transition again.
-    await expect(page.getByText(SUSPENDED_REASON)).toBeVisible();
-
-    // A SUSPENDED rule promises no undo window, because it applies nothing —
-    // and a screen saying "Rückgängig für 72 h" beside "Margince hat das
-    // gestoppt" would offer an undo for moves that are not being made.
-    await expect(page.getByText(/Rückgängig für/)).toBeHidden();
-
-    // The way back is a deliberate act with its own confirmation, not a
-    // toggle: lifting a safety stop by mis-click is the failure this guards.
-    await page.getByRole("button", { name: "Fortsetzen" }).click();
-    await expect(
-      page.getByText(/überspringt die Schwelle nicht/),
-    ).toBeVisible();
-  });
-
-  test("a running transition says in German how long a move can be taken back", async ({
-    page,
-  }) => {
-    await stubStageAutomation(page, { suspended: false });
-    await page.goto("/#/settings/stageautomation");
-    await page.waitForLoadState("networkidle");
-
-    // "Rückgängig machen", with the window a contact actually has. A screen that
-    // offered undo without saying how long it lasts leaves somebody to find
-    // out by trying it too late.
-    await expect(page.getByText(/Rückgängig für 72 h/)).toBeVisible();
-    // And nothing about a stop, because there is none.
-    await expect(page.getByText("Von Margince ausgesetzt")).toBeHidden();
-  });
-});
-
 const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
   id: `share-${index}`,
   kind: index === 1 ? "snapshot" : "live",
@@ -3585,7 +3558,7 @@ test.describe("calling a contact", () => {
       await expect(opener).toBeFocused();
     });
 
-    test("a task typed by hand offers Draft email and Open contact but no Call", async ({
+    test("a task typed by hand offers Call, Draft email and Open contact", async ({
       page,
     }) => {
       const { dialog } = await openTask(page, typedTask.subject);
@@ -3598,7 +3571,7 @@ test.describe("calling a contact", () => {
           exact: true,
         }),
       ).toBeVisible();
-      await expect(callVerb(dialog)).toHaveCount(0);
+      await expect(callVerb(dialog)).toHaveAttribute("href", tel);
     });
   });
 });

@@ -3,7 +3,15 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { unwrap } from "./problem";
+
+/** The pipeline a reader is on when nothing names one. */
+export function defaultPipelineOf(
+  pipelines: readonly components["schemas"]["Pipeline"][],
+): components["schemas"]["Pipeline"] | undefined {
+  return pipelines.find((each) => each.is_default) ?? pipelines[0];
+}
 
 /**
  * Every pipeline, stages included, in the server's order.

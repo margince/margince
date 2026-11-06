@@ -68,7 +68,8 @@ type ActivityRelinker interface {
 // applied is a guarantee the approvals surface advertises and the write does
 // not keep.
 type LeadDisqualifier interface {
-	DisqualifyLead(ctx context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error)
+	DisqualifyReasons
+	DisqualifyLead(ctx context.Context, id ids.UUID, why LeadDisqualification, ifVersion *int64) (json.RawMessage, error)
 }
 
 // LeadDemoter reverses a promotion: the lead returns to the open ladder and
@@ -234,8 +235,16 @@ func (t relinkActivity) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 
 // --- disqualify_lead (🟡 write) ---
 
+// LeadDisqualification is why a lead closes, as the app's dialog records it.
+type LeadDisqualification struct {
+	ReasonID *ids.UUID
+	Note     *string
+}
+
 type disqualifyLeadArgs struct {
-	LeadID ids.UUID `json:"lead_id"`
+	LeadID   ids.UUID  `json:"lead_id"`
+	ReasonID *ids.UUID `json:"reason_id"`
+	Note     *string   `json:"note"`
 }
 
 type disqualifyLead struct {
@@ -254,6 +263,8 @@ func (t disqualifyLead) Spec() mcp.ToolSpec {
 		OpenAPIOp: "disqualifyLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id"],"properties":{
 			"lead_id":{"type":"string","format":"uuid","description":"The lead to disqualify"},
+			"reason_id":{"type":"string","format":"uuid","description":"Optional: an active reason's id from read_view lead_disqualify_reasons"},
+			"note":{"type":"string","description":"Optional: why, in words"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[PassthroughEntityResult](),
@@ -269,7 +280,7 @@ func (t disqualifyLead) StageInfo(ctx context.Context, in json.RawMessage) (Stag
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewDisqualifyLeadCall(t.p, t.language, DisqualifyLeadCommand(args)))
+	return StageSubject(ctx, NewDisqualifyLeadCall(t.p, t.language, t.disqualifier, DisqualifyLeadCommand{LeadID: args.LeadID, ReasonID: args.ReasonID}))
 }
 
 func (t disqualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -285,7 +296,7 @@ func (t disqualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 		return nil, err
 	}
 	noteEvidence(ctx, datasource.EntityLead, args.LeadID)
-	return t.disqualifier.DisqualifyLead(ctx, args.LeadID, pin)
+	return t.disqualifier.DisqualifyLead(ctx, args.LeadID, LeadDisqualification{ReasonID: args.ReasonID, Note: args.Note}, pin)
 }
 
 // --- demote_lead (🟡 write — reverses a promotion) ---

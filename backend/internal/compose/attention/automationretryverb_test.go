@@ -61,3 +61,16 @@ func TestTheRetryVerbNamesTheFiringAndNotTheRule(t *testing.T) {
 			"broken rule into one row", item.CauseRef)
 	}
 }
+
+// The row carries the reason's code to the worklist. A reader in any language
+// is then told why the rule stopped, not given the engine's English.
+func TestAFailedFiringCarriesItsReasonCodeToTheWorklist(t *testing.T) {
+	item := automationItem(TroubledAutomationRun{
+		ID: ids.NewV7(), AutomationID: ids.New[ids.AutomationKind](), Name: "Notify sales",
+		Outcome: "failed", Reason: "the target record could not be found", ReasonCode: "target_missing",
+	})
+	row := base(item, 1, crmcontracts.WorklistItemCategory("work"), crmcontracts.WorklistItemConsequence("none"))
+	if row.RunReasonCode == nil || *row.RunReasonCode != "target_missing" {
+		t.Fatalf("the worklist row's run_reason_code = %v, want target_missing", row.RunReasonCode)
+	}
+}

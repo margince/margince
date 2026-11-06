@@ -13,7 +13,7 @@ import { PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -65,7 +65,7 @@ export function MagicPanel({
   const plural = usePlural();
   // The READER's own zone. A receipt says when something happened to them, and
   // an instant rendered in UTC asks them to do the arithmetic.
-  const zone = viewerZone();
+  const zone = browserZone();
   const magic = useMagic();
   const titleId = useId();
   const receipt = magic.data;

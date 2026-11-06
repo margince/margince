@@ -55,23 +55,23 @@ func setupChannelSendNoGmail(t *testing.T) *channelSendEnv {
 	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(vault))
 	apptest.BootstrapWorkspaceSession(t, e, "Channel Send No-Gmail E2E", "rep@fable.test", "Admin")
 
-	c := &channelSendEnv{AppEnv: e}
+	c := &channelSendEnv{ChannelConversation: &apptest.ChannelConversation{AppEnv: e}}
 	var contact struct {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Telegram Buyer"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
-	c.contactID = contact.ID
+	c.ContactID = contact.ID
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT id FROM app_user WHERE email = $1`, "rep@fable.test").Scan(&c.user)
+			`SELECT id FROM app_user WHERE email = $1`, "rep@fable.test").Scan(&c.User)
 	}); err != nil {
 		t.Fatalf("resolving the acting human: %v", err)
 	}
-	c.bindIdentity(t)
-	c.seedInboundMessage(t)
-	c.grantConsent(t, "transactional")
+	c.BindIdentity(t)
+	c.SeedInboundMessage(t)
+	c.GrantConsent(t, "transactional")
 	return c
 }
 
@@ -103,7 +103,7 @@ func TestSendMessageRefusesWithNoGoogleAppConfiguredAndNoBotBound(t *testing.T) 
 // Google app configured, not the pre-flight correctly answering "no bot".
 func TestSendMessageAcceptsWithNoGoogleAppConfiguredButABotBound(t *testing.T) {
 	c := setupChannelSendNoGmail(t)
-	c.connectBot(t)
+	c.ConnectBot(t)
 
 	status, code, detail := c.sendReply(t, "transactional", "Yes — shipping Monday.", nil)
 

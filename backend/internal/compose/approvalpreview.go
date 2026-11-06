@@ -392,11 +392,6 @@ func (r approvalPreviewReader) stageChanges(ctx context.Context, approval crmcon
 	if !stagePreviewKind(approval.Kind) {
 		return nil
 	}
-	if approval.Kind == deals.StageProgressionKind {
-		if err := validateProgressionPreview(approval, current); err != nil {
-			return err
-		}
-	}
 	raw, err := json.Marshal(changes)
 	if err != nil {
 		return err
@@ -458,4 +453,8 @@ func markExecutionValues(kind string, changes []crmcontracts.ApprovalPreviewChan
 			changes[i].After = crmcontracts.ApprovalPreviewValue{Kind: "execution", Text: ""}
 		}
 	}
+}
+
+func stagePreviewKind(kind string) bool {
+	return kind == previewAdvanceDeal || kind == previewProgressDeal
 }

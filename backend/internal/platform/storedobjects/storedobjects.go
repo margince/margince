@@ -12,7 +12,7 @@
 // the owning row, so a key is provisional exactly while the pair is incomplete. A key
 // still recorded after the grace period is an object whose row never arrived.
 //
-// In platform rather than in one module because five modules put bytes, and a module
+// In platform rather than in one module because six modules put bytes, and a module
 // never imports a sibling to borrow a ledger.
 package storedobjects
 
@@ -48,12 +48,13 @@ const (
 	KindLogo       Kind = "logo"
 	KindOffer      Kind = "offer"
 	KindImport     Kind = "import"
+	KindAvatar     Kind = "avatar"
 )
 
 // AllKinds is the vocabulary itself, so a reader of the ledger can be held to
 // covering all of it rather than to a list somebody keeps in step by hand.
 func AllKinds() []Kind {
-	return []Kind{KindAttachment, KindKnowledge, KindLogo, KindOffer, KindImport}
+	return []Kind{KindAttachment, KindKnowledge, KindLogo, KindOffer, KindImport, KindAvatar}
 }
 
 // declared reports whether a writer may record this kind.

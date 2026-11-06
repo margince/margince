@@ -1,0 +1,23 @@
+# CASE 104 — The user asks for this call themselves, on one named company, so the model makes it.
+name: case104_mark_it_seen
+criteria: [1]
+writes: true
+
+prompt: |
+  I have looked at Reply Deutschland already. Mark the company as seen for me.
+
+must_call:
+  - change_attention
+
+must_call_with:
+  - change_attention.action=acknowledge_company_view
+
+may_call:
+  - find_records
+  - search_records
+  - read_record
+  - read_workspace
+  - whoami
+
+runs: 3
+pass_at: 2

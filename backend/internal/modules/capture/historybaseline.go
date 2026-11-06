@@ -40,12 +40,12 @@ func (b HistoryBaseline) Excludes(at time.Time) (bool, error) {
 	return storekit.WorkspaceDay(at, zone).Before(b.Date), nil
 }
 
-// SetHistoryBaseline sets or, with a nil date, clears the calling human's own
+// SetHistoryBaseline sets or, with a nil date, clears the calling user's own
 // baseline for one mailbox. It completes, deletes and rewrites nothing else.
 func (r *Registry) SetHistoryBaseline(ctx context.Context, name string, date *time.Time, timezone string) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return ConnectionView{}, fmt.Errorf("capture: only a human sets a mailbox's history baseline: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent sets a mailbox's history baseline: %w", apperrors.ErrPermissionDenied)
 	}
 	if _, ok := r.connectors[name]; !ok {
 		return ConnectionView{}, ErrNoConnection

@@ -19,10 +19,11 @@ package gates
 // longer exists.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestTheUnknownAcquisitionIsSpelledTheSameOnBothSides holds the claim in
@@ -46,7 +47,7 @@ func TestTheUnknownAcquisitionIsSpelledTheSameOnBothSides(t *testing.T) {
 // stringConstantIn reads one string constant out of a file by pattern.
 func stringConstantIn(t *testing.T, path, pattern string) string {
 	t.Helper()
-	src, err := os.ReadFile(path)
+	src, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

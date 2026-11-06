@@ -65,10 +65,18 @@ const (
 	ExtractionReadFailed  = "failed"
 )
 
+// The questions a reading answers. A chat capture reads only an image, the
+// screenshot a user pasted; the deal facts read any document.
+const (
+	ExtractionQuestionDealFacts   = "deal_facts"
+	ExtractionQuestionChatCapture = "chat_capture"
+)
+
 // ExtractionRead is one reading of one attached document.
 type ExtractionRead struct {
 	ID           ids.UUID
 	AttachmentID ids.UUID
+	Question     string
 	Status       string
 	StatusDetail *string
 	// Fields is what the reading grounded and what it honestly omitted. It is
@@ -120,13 +128,13 @@ func (r ExtractionRead) Abandoned(now time.Time) bool {
 	return r.Live() && now.Sub(r.liveSince()) > ExtractionReadLease
 }
 
-const extractionReadColumns = `id, attachment_id, status, status_detail, fields,
+const extractionReadColumns = `id, attachment_id, question, status, status_detail, fields,
 	requested_by, started_at, finished_at, created_at, attempt, attempt_at`
 
 func scanExtractionRead(r pgx.Row) (ExtractionRead, error) {
 	var read ExtractionRead
 	var raw []byte
-	err := r.Scan(&read.ID, &read.AttachmentID, &read.Status, &read.StatusDetail, &raw,
+	err := r.Scan(&read.ID, &read.AttachmentID, &read.Question, &read.Status, &read.StatusDetail, &raw,
 		&read.RequestedBy, &read.StartedAt, &read.FinishedAt, &read.CreatedAt, &read.Attempt, &read.AttemptAt)
 	if err != nil {
 		return read, err
@@ -154,6 +162,15 @@ type ExtractionReadEnqueue func(ctx context.Context, tx pgx.Tx, read ExtractionR
 func (s *Store) StartExtractionReadQueued(
 	ctx context.Context, attachmentID ids.UUID, requestedBy string, enqueue ExtractionReadEnqueue,
 ) (ExtractionRead, bool, error) {
+	return s.StartExtractionReadFor(ctx, attachmentID, ExtractionQuestionDealFacts, requestedBy, enqueue)
+}
+
+// StartExtractionReadFor is StartExtractionReadQueued for a named question.
+// A join answers only a reading in flight for the same question. One in flight
+// for another question is a conflict: its result answers what was not asked.
+func (s *Store) StartExtractionReadFor(
+	ctx context.Context, attachmentID ids.UUID, question, requestedBy string, enqueue ExtractionReadEnqueue,
+) (ExtractionRead, bool, error) {
 	var out ExtractionRead
 	var joined bool
 	err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -166,17 +183,20 @@ func (s *Store) StartExtractionReadQueued(
 		if err := refuseWithheldBytes(ctx, tx, attachmentID); err != nil {
 			return err
 		}
+		if err := refuseUnaskableQuestion(ctx, tx, attachmentID, question); err != nil {
+			return err
+		}
 		readID := ids.NewV7()
 		// In-flight uniqueness is arbitrated by uq_attachment_extraction_inflight
 		// itself: DO NOTHING rather than catching the violation keeps the
 		// transaction alive, so the join SELECT below sees the winning row in the
 		// same tx, with no second-transaction gap for it to finish in.
 		inserted := tx.QueryRow(ctx, `
-			INSERT INTO attachment_extraction (id, attachment_id, requested_by)
-			VALUES ($1, $2, $3)
+			INSERT INTO attachment_extraction (id, attachment_id, question, requested_by)
+			VALUES ($1, $2, $3, $4)
 			ON CONFLICT DO NOTHING
 			RETURNING `+extractionReadColumns,
-			readID, attachmentID, requestedBy)
+			readID, attachmentID, question, requestedBy)
 		// `out` is the closure's, not this block's, so the pair is assigned
 		// rather than declared — `:=` here would shadow it and the caller would
 		// receive a zero reading.
@@ -216,6 +236,10 @@ func (s *Store) StartExtractionReadQueued(
 		}
 		if err != nil {
 			return fmt.Errorf("join in-flight extraction reading: %w", err)
+		}
+		if out.Question != question {
+			return fmt.Errorf("%w: this file is already being read for another question; ask again when it finishes",
+				apperrors.ErrConflict)
 		}
 		return s.rearmIfAbandonedExtraction(ctx, tx, &out, enqueue)
 	})
@@ -304,14 +328,16 @@ func (s *Store) GetExtractionRead(ctx context.Context, attachmentID, readID ids.
 	return out, err
 }
 
-// LatestExtractionRead answers "has this document been read, and how did it go".
-// ErrNotFound means never read, which the client renders as the offer to read
-// it — the honest difference between nobody asking and a reading that got
-// nothing.
+// LatestExtractionRead answers "has this document been read for this question,
+// and how did it go". ErrNotFound means never read for it. The client renders
+// that as the offer to read it, which differs from a reading that got nothing.
 //
 // A read of a record, so it carries the row-scope gate like every other one: a
 // reading of a document the caller cannot see does not exist.
-func (s *Store) LatestExtractionRead(ctx context.Context, attachmentID ids.UUID) (ExtractionRead, error) {
+func (s *Store) LatestExtractionRead(ctx context.Context, attachmentID ids.UUID, question string) (ExtractionRead, error) {
+	if err := refuseAgentChatReading(ctx, question); err != nil {
+		return ExtractionRead{}, err
+	}
 	var out ExtractionRead
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		if _, err := resolveAttachmentParent(ctx, tx, attachmentID, principal.ActionRead); err != nil {
@@ -321,11 +347,11 @@ func (s *Store) LatestExtractionRead(ctx context.Context, attachmentID ids.UUID)
 		out, err = scanExtractionRead(tx.QueryRow(ctx, `
 			SELECT `+extractionReadColumns+`
 			  FROM attachment_extraction
-			 WHERE attachment_id = $1
+			 WHERE attachment_id = $1 AND question = $2
 			 ORDER BY created_at DESC
-			 LIMIT 1`, attachmentID))
+			 LIMIT 1`, attachmentID, question))
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("%w: no extraction reading for attachment %s", apperrors.ErrNotFound, attachmentID)
+			return fmt.Errorf("%w: no %s reading for attachment %s", apperrors.ErrNotFound, question, attachmentID)
 		}
 		if err != nil {
 			return fmt.Errorf("read latest extraction reading: %w", err)
@@ -333,4 +359,18 @@ func (s *Store) LatestExtractionRead(ctx context.Context, attachmentID ids.UUID)
 		return nil
 	})
 	return out, err
+}
+
+// refuseAgentChatReading keeps a chat reading from an agent. It is the model's
+// transcript of an image nobody checked, so an agent reading it would take a
+// suggestion for evidence. The filed message is what an agent may read.
+func refuseAgentChatReading(ctx context.Context, question string) error {
+	if question != ExtractionQuestionChatCapture {
+		return nil
+	}
+	if p, ok := principal.Actor(ctx); ok && p.Type == principal.PrincipalAgent {
+		return fmt.Errorf("%w: a chat reading is unconfirmed until someone files it, so an agent cannot read it",
+			apperrors.ErrPermissionDenied)
+	}
+	return nil
 }
