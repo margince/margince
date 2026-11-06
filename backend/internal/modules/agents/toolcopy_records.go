@@ -22,13 +22,12 @@ var searchRecordsCopy = toolCopy{
 }
 
 var listRecordsCopy = toolCopy{
-	Purpose: "List the records of one record_type that meet exact conditions: every deal in one " +
-		"pipeline, a rep's leads, a contact's timeline.",
+	Purpose: "List the records of one record_type that meet exact conditions, such as every deal in one pipeline.",
 	Limits: "It narrows only by the filters listed for that record_type, and answers ONE page: " +
 		"the set continues past it.",
 	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +
 		"or a total.",
-	Retain: "Pass next_cursor back to read the next page; a call without it re-reads the first. " +
+	Retain: "Pass next_cursor back to read the next page. " +
 		"A result's `owner` says who holds it. " + sayWhoseItIs,
 }
 
