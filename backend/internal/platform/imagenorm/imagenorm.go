@@ -16,6 +16,8 @@
 //   - Declared dimensions are checked before pixels are allocated, so a
 //     kilobyte-sized header claiming 30000x30000 is refused rather than
 //     turned into gigabytes of image buffer.
+//   - Decode work is bounded: a JPEG with more scans than any encoder writes
+//     is refused, and decodes share a fixed number of cores.
 package imagenorm
 
 import (
@@ -30,6 +32,7 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
+	"runtime"
 
 	xdraw "golang.org/x/image/draw"
 	// WebP is the one modern image format the stdlib carries no decoder for,
@@ -72,12 +75,22 @@ const maxSourcePixels = 8 << 20
 // not a fault — callers treat it as "this candidate is unusable" and move on.
 var ErrUnsupported = errors.New("imagenorm: unsupported or undecodable image")
 
+// decodeSlots leaves one core free of decoding, so a burst of uploads cannot
+// take the cores that serve requests.
+var decodeSlots = make(chan struct{}, max(1, runtime.GOMAXPROCS(0)-1))
+
 // Decode decodes an untrusted image. Beyond the stdlib's PNG/JPEG/GIF it
 // handles WebP, and it unwraps the ICO container by extracting the largest
-// PNG frame inside it — a legacy ICO carrying only bitmap frames is
-// ErrUnsupported, because those frames' stride and transparency-mask rules
-// are a decoder this package deliberately does not own.
+// PNG frame inside it. A legacy ICO carrying only bitmap frames is
+// ErrUnsupported: this package owns no decoder for their stride and
+// transparency-mask rules. A call waits for a free decode slot first.
 func Decode(src []byte) (image.Image, error) {
+	decodeSlots <- struct{}{}
+	defer func() { <-decodeSlots }()
+	return decode(src)
+}
+
+func decode(src []byte) (image.Image, error) {
 	if looksLikeSVG(src) {
 		// A vector mark has no pixels of its own, so it is drawn here rather
 		// than decoded — and never kept as the document it arrived as.
@@ -99,6 +112,11 @@ func Decode(src []byte) (image.Image, error) {
 	if int64(config.Width)*int64(config.Height) > maxSourcePixels {
 		return nil, fmt.Errorf("%w: %dx%d exceeds the %d-pixel decode cap",
 			ErrUnsupported, config.Width, config.Height, maxSourcePixels)
+	}
+	if bytes.HasPrefix(src, jpegMagic) {
+		if err := checkJPEGScans(src); err != nil {
+			return nil, err
+		}
 	}
 	img, _, err := image.Decode(bytes.NewReader(src))
 	if err != nil {
