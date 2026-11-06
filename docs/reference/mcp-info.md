@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 13 |
-| Tool catalog | 222.6 KB |
+| Tool catalog | 222.7 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 58301 |
+| Approx. wire tokens | 58322 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -101,7 +101,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 307 |
 | [`read_record`](#read_record) | Read a record | yes |  | 324 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2671 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2692 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 984 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2630 |
@@ -10164,6 +10164,11 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
         "this_month",
         "last_month"
       ],
+      "type": "string"
+    },
+    "pipeline_id": {
+      "description": "sales_decisions only",
+      "format": "uuid",
       "type": "string"
     },
     "product_id": {

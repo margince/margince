@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 13,
-    "tool_catalog_bytes": 227947,
+    "tool_catalog_bytes": 228032,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 58301,
+    "approx_wire_tokens_total": 58322,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 54270,
-      "input_schema_bytes": 114135,
+      "input_schema_bytes": 114220,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 168405
+      "description_plus_input_schema_bytes": 168490
     }
   },
   "tools": {
@@ -9314,6 +9314,11 @@
                 "this_month",
                 "last_month"
               ],
+              "type": "string"
+            },
+            "pipeline_id": {
+              "description": "sales_decisions only",
+              "format": "uuid",
               "type": "string"
             },
             "product_id": {
