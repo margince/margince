@@ -696,6 +696,7 @@ describe("onboarding gate", () => {
               client_name: "Acme Client",
               offline: false,
               scopes: ["read"],
+              areas: ["business"],
             }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );

@@ -249,7 +249,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_authorization_code
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -264,6 +264,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `resource` | `text` |  |  |
 | `scopes` | `text[]` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
+| `work_areas` | `text[]` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -315,7 +316,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_grant
 
-9 columns · primary key `(id)` · referenced by 3 foreign keys
+10 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -327,6 +328,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `scopes` | `text[]` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
+| `work_areas` | `text[]` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -420,7 +422,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## passport
 
-11 columns · primary key `(id)` · referenced by 9 foreign keys
+12 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -434,6 +436,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `scopes` | `text[]` | yes |  |
 | `token_hash` | `text` | yes |  |
+| `work_areas` | `text[]` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**

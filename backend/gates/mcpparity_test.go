@@ -30,7 +30,7 @@ import (
 )
 
 var updateMCPParity = flag.Bool("update-mcp-parity", false,
-	"rewrite docs/reference/mcp-parity.{json,md} from the contract, the web app and the seeded grants")
+	"rewrite docs/reference/mcp-parity.{json,md} and the work-area table from the contract, the web app and the seeded grants")
 
 const (
 	mcpParityCommand = "go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity"
@@ -202,12 +202,13 @@ type parityContractOp struct {
 	OperationID string   `yaml:"operationId"` //nolint:tagliatelle // OpenAPI's key, read as written.
 	Tags        []string `yaml:"tags"`
 	MCPTool     *struct {
-		Verb     string `yaml:"verb"`
-		Tier     string `yaml:"tier"`
-		Scope    string `yaml:"scope"`
-		Router   string `yaml:"router"`
-		Action   string `yaml:"action"`
-		AskFirst bool   `yaml:"ask_user_first"`
+		Verb       string `yaml:"verb"`
+		Tier       string `yaml:"tier"`
+		Scope      string `yaml:"scope"`
+		Router     string `yaml:"router"`
+		Action     string `yaml:"action"`
+		AskFirst   bool   `yaml:"ask_user_first"`
+		RecordType string `yaml:"record_type"`
 	} `yaml:"x-mcp-tool"` //nolint:tagliatelle // the contract's own extension key.
 	AgentAccess string                 `yaml:"x-agent-access"`      //nolint:tagliatelle // the contract's own extension key.
 	Reason      string                 `yaml:"x-human-only-reason"` //nolint:tagliatelle // the contract's own extension key.
@@ -536,6 +537,7 @@ func TestTheMCPParityCatalogIsPublished(t *testing.T) {
 	}
 	syncMCPParity(t, mcpParityJSON, append(payload, '\n'))
 	syncMCPParity(t, mcpParityPage, renderMCPParityPage(report))
+	syncMCPParity(t, workAreaTable, workAreaFile(t, contract, report))
 	syncToolRolesPage(t, report)
 }
 

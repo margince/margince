@@ -108,6 +108,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// reach. The rebuild each option performs keeps a half-configured Server
 	// coherent while the loop runs; this one is what the surface ends up with.
 	srv.rebuildToolRegistry(pool)
+	srv.authHandlers = srv.WithReachableAreas(reachableAreasOf(srv.toolRegistry))
 	// Bound here for the same reason, and on the same Server: deactivation has
 	// to be able to destroy the provider secrets it withdrew.
 	installCaptureCredentialReaper(&srv, log)

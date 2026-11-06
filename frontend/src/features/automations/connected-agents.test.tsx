@@ -122,6 +122,7 @@ function backend(opts: {
   connectorEnabled?: boolean;
   onDelete?: (id: string) => void;
   keepRevoked?: boolean;
+  reachable?: string[];
 }) {
   const passports = [...(opts.passports ?? [MINTED, CONNECTED])];
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -159,6 +160,7 @@ function backend(opts: {
     if (url.includes("/passports")) {
       return jsonResponse({
         data: passports,
+        reachable_areas: opts.reachable ?? ["business"],
         page: { next_cursor: null, has_more: false },
       });
     }
@@ -207,10 +209,10 @@ async function openActions(client: string) {
 describe("ConnectedAgentsCard", () => {
   it("names each scope the way the consent screen named it", async () => {
     renderConnectedAgents({ scopes: ["read", "enrich"] });
-    // A human who ticked "Buy contact data" cannot map a raw "enrich" chip
+    // A human who ticked "Use AI and buy data" cannot map a raw "enrich" chip
     // back to the decision they made.
     expect(await screen.findByText("Read records")).toBeTruthy();
-    expect(screen.getByText("Buy contact data")).toBeTruthy();
+    expect(screen.getByText("Use AI and buy data")).toBeTruthy();
     expect(screen.queryByText("enrich")).toBeNull();
   });
 
@@ -476,5 +478,57 @@ describe("ConnectedAgentsCard focus after a disconnect", () => {
       document.querySelector('[data-connection="pp-second"]'),
     );
     expect(screen.getByText("Disconnected")).toBeTruthy();
+  });
+});
+
+describe("ConnectedAgentsCard: work areas", () => {
+  const AREAS = ["business", "admin_settings", "own_account"];
+
+  it("lists each connection's areas and offers to change them until it ends", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend({
+        passports: [
+          { ...RENEWING, areas: { mode: "custom", areas: ["business"] } },
+          { ...LAPSED, areas: { mode: "all", areas: [] } },
+        ],
+        reachable: AREAS,
+      }),
+    );
+    render(<ConnectedAgentsCard />);
+    const [renewing, lapsed] = await screen.findAllByRole("button", {
+      name: "Actions for Claude Code",
+    });
+    if (!(renewing && lapsed)) {
+      throw new Error("each connection has its own menu");
+    }
+    const renewingRow = renewing.closest("tr");
+    const lapsedRow = lapsed.closest("tr");
+    if (!(renewingRow && lapsedRow)) {
+      throw new Error("each menu sits in its connection's row");
+    }
+    expect(within(renewingRow).getByText("Sales work")).toBeTruthy();
+    expect(within(lapsedRow).getByText("All areas")).toBeTruthy();
+
+    await userEvent.click(lapsed);
+    expect(
+      screen.queryByRole("button", { name: "Change areas for Claude Code" }),
+    ).toBeNull();
+    await userEvent.click(renewing);
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Change areas for Claude Code",
+      }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Change areas" }),
+    ).toBeTruthy();
+  });
+
+  it("has no Areas column for a role that reaches one area", async () => {
+    vi.stubGlobal("fetch", backend({ passports: [CONNECTED] }));
+    render(<ConnectedAgentsCard />);
+    await screen.findByText("Claude Code");
+    expect(screen.queryByRole("columnheader", { name: "Areas" })).toBeNull();
   });
 });

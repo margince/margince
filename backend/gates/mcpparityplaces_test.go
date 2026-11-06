@@ -4,7 +4,7 @@
 package gates
 
 // Where each operation lands in the MCP parity catalog: the one hand-kept table
-// the page has. The contract's tags are close to what a user would turn on or off.
+// the page and the running server's work areas (internal/platform/workarea) have. The contract's tags are close to what a user would turn on or off.
 // Yet Identity alone holds a user's own password, the member list and the health
 // pages. So a path rule can overrule a tag. A tag in parityMixedTags has no default,
 // and a new route under it fails until someone places it.
@@ -27,18 +27,20 @@ const (
 	groupSettingsByGrant = "settings_by_grant"
 )
 
-type parityGroupInfo struct{ Key, Title, What string }
+// parityGroupInfo.Passport is the name a user chooses the group by on a
+// passport. A group without one is reached only by a passport set to all areas.
+type parityGroupInfo struct{ Key, Title, What, Passport string }
 
 var parityGroupInfos = []parityGroupInfo{
-	{groupBusiness, "Business operations", "The daily sales work: records, deals, activities, offers, reports and lists."},
-	{groupCompliance, "Compliance and privacy", "Consent, privacy requests, notices, retention and the audit trail."},
-	{groupCapture, "Capture and connectors", "What comes in from mail and calendars, and the connections it comes through."},
-	{groupWorkspace, "Workspace settings a non-admin can reach", "How the workspace is set up, where the seeded `rep` role passes the check. Most of these are reads."},
-	{groupAdmin, "Admin settings", "How the workspace is set up, where the seeded `rep` role is refused."},
-	{groupOwnAccount, "The user's own account and security", "The user's profile, preferences, password, sessions and second factor."},
-	{groupGovernance, "Agent governance", "What limits agents: passports, connected clients, approvals and autonomy."},
-	{groupOperator, "Operator and system", "Running the installation: health, repair, license and the search index."},
-	{groupPublic, "Public, with no signed-in user", "Sign-in steps and pages for visitors from outside the workspace. No agent acts here, because no signed-in user does."},
+	{groupBusiness, "Business operations", "The daily sales work: records, deals, activities, offers, reports and lists.", "Sales work"},
+	{groupCompliance, "Compliance and privacy", "Consent, privacy requests, notices, retention and the audit trail.", "Compliance and privacy"},
+	{groupCapture, "Capture and connectors", "What comes in from mail and calendars, and the connections it comes through.", "Email and calendar capture"},
+	{groupWorkspace, "Workspace settings a non-admin can reach", "How the workspace is set up, where the seeded `rep` role passes the check. Most of these are reads.", "Company settings"},
+	{groupAdmin, "Admin settings", "How the workspace is set up, where the seeded `rep` role is refused.", "Admin settings"},
+	{groupOwnAccount, "The user's own account and security", "The user's profile, preferences, password, sessions and second factor.", "My account"},
+	{groupGovernance, "Agent governance", "What limits agents: passports, connected clients, approvals and autonomy.", ""},
+	{groupOperator, "Operator and system", "Running the installation: health, repair, license and the search index.", ""},
+	{groupPublic, "Public, with no signed-in user", "Sign-in steps and pages for visitors from outside the workspace. No agent acts here, because no signed-in user does.", ""},
 }
 
 type parityArea struct{ Key, Title, Group string }

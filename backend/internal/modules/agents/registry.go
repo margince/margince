@@ -240,6 +240,7 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 	// names, and only the call can say which type that is (tierfloor.go).
 	// Applied before Admit, because the tier is what Admit decides on.
 	spec = r.tightened(t, spec, args)
+	spec = placedCall(t, spec, args)
 
 	admitted, err := r.gate.Admit(ctx, spec, r.tierResolverFor(ctx, t, name, args))
 	// Static-tier tools, whose resolver Admit never runs. After authority and

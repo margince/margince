@@ -5,7 +5,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { PassportAreasDrawer } from "../../components/passport-areas";
 import { usePassportRevoke } from "../../components/passport-revoke";
+import {
+  ALL_AREAS,
+  areasComplete,
+  offersWorkAreas,
+  type PassportAreas,
+  type WorkArea,
+  WorkAreasCell,
+  WorkAreasChoice,
+} from "../../components/workareas";
 import {
   Badge,
   Button,
@@ -51,6 +61,14 @@ function scopeLabelKey(scope: PassportScope): MessageKey {
   return `passport.scope.${scope}`;
 }
 
+// Only a live passport takes a change of areas; the server refuses the rest.
+function isLive(passport: PassportSummary, now: number): boolean {
+  return (
+    passport.revoked_at == null &&
+    (passport.expires_at == null || Date.parse(passport.expires_at) > now)
+  );
+}
+
 // The revoke confirm hands focus back to the passport's name. The row stays
 // listed as revoked, but the menu item it was opened from is gone.
 function passportAnchor(id: string): HTMLElement | null {
@@ -69,6 +87,10 @@ export function PassportCard() {
   // ConnectedAgentsCard; the `oauth:` label prefix decides nothing.
   const minted = (list.data?.data ?? []).filter(
     (passport) => passport.connection == null,
+  );
+  const reachable = list.data?.reachable_areas ?? [];
+  const [changingAreas, setChangingAreas] = useState<PassportSummary | null>(
+    null,
   );
   // A revoked passport can do nothing more, so it waits behind a toggle. One
   // revoked from this view stays, struck, so focus has its row to land on.
@@ -108,7 +130,12 @@ export function PassportCard() {
       </PanelBody>
       <PanelGroupHead title={t("settings.passportsYours")} level="h3" />
       {list.isSuccess && shown.length > 0 ? (
-        <PassportTable passports={shown} onRevoke={askRevoke} />
+        <PassportTable
+          passports={shown}
+          reachable={reachable}
+          onRevoke={askRevoke}
+          onChangeAreas={setChangingAreas}
+        />
       ) : list.isSuccess && hidden.length > 0 ? null : (
         <PanelBody>
           <QueryStates query={list} pendingLabel={t("settings.passports")}>
@@ -134,8 +161,21 @@ export function PassportCard() {
         open={minting}
         onClose={() => setMinting(false)}
         apiBaseUrl={list.data?.api_base_url}
+        reachable={reachable}
         onMinted={() => list.refetch()}
       />
+      {changingAreas && (
+        <PassportAreasDrawer
+          key={changingAreas.id}
+          subject={{
+            id: changingAreas.id,
+            name: changingAreas.label,
+            areas: changingAreas.areas,
+          }}
+          reachable={reachable}
+          onClose={() => setChangingAreas(null)}
+        />
+      )}
       {revoke.confirm}
     </Panel>
   );
@@ -143,13 +183,21 @@ export function PassportCard() {
 
 function PassportTable({
   passports,
+  reachable,
   onRevoke,
+  onChangeAreas,
 }: Readonly<{
   passports: readonly PassportSummary[];
+  reachable: readonly WorkArea[];
   onRevoke: (id: string) => void;
+  onChangeAreas: (passport: PassportSummary) => void;
 }>) {
   const t = useT();
   const dates = usePassportDates();
+  // Read once: a passport that expires while the page is open is refused by
+  // the server, and the drawer says so.
+  const [now] = useState(() => Date.now());
+  const areas = offersWorkAreas(reachable);
   const usageDetail = usePassportUsageDetail<PassportSummary>(
     (passport) => passport.label,
   );
@@ -177,6 +225,19 @@ function PassportTable({
         </span>
       ),
     },
+    ...(areas
+      ? [
+          {
+            key: "areas",
+            header: t("settings.passportColAreas"),
+            render: (passport: PassportSummary) => (
+              <span className="agents-scopes">
+                <WorkAreasCell areas={passport.areas} />
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       key: "used",
       header: t("settings.passportColLastUsed"),
@@ -201,6 +262,17 @@ function PassportTable({
             <OverflowMenu
               label={t("table.rowActions", { name: passport.label })}
             >
+              {areas && isLive(passport, now) && (
+                <Button
+                  aria-label={t("passportAreas.openNamed", {
+                    name: passport.label,
+                  })}
+                  aria-haspopup="dialog"
+                  onClick={() => onChangeAreas(passport)}
+                >
+                  {t("passportAreas.open")}
+                </Button>
+              )}
               <Button
                 variant="danger"
                 aria-label={t("settings.revokeNamed", { name: passport.label })}
@@ -282,15 +354,29 @@ function usePassportDates() {
   return { lastUsed, expires, caption };
 }
 
+// Why New passport cannot be pressed yet, or undefined when it can.
+function mintRefusal(
+  t: ReturnType<typeof useT>,
+  scopeCount: number,
+  areas: PassportAreas,
+  pending: boolean,
+): string | undefined {
+  if (pending) return undefined;
+  if (scopeCount === 0) return t("settings.passportScopesRequired");
+  return areasComplete(areas) ? undefined : t("workArea.pickOne");
+}
+
 function MintDialog({
   open,
   onClose,
   apiBaseUrl,
+  reachable,
   onMinted,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   apiBaseUrl: string | undefined;
+  reachable: readonly WorkArea[];
   onMinted: () => unknown;
 }>) {
   const t = useT();
@@ -299,15 +385,24 @@ function MintDialog({
   const [scopes, setScopes] = useState<Set<PassportScope>>(
     new Set(["read", "draft"]),
   );
+  const [areas, setAreas] = useState<PassportAreas>(ALL_AREAS);
   const tokenRegion = useRef<HTMLDivElement | null>(null);
   const titleId = useId();
   const formId = useId();
   const scopeHintId = useId();
 
   const mint = useMutation({
-    mutationFn: async (request: { label: string; scopes: PassportScope[] }) => {
+    mutationFn: async (request: {
+      label: string;
+      scopes: PassportScope[];
+      areas: PassportAreas;
+    }) => {
       const { data, error, response } = await api.POST("/passports", {
-        body: { label: request.label.trim() || null, scopes: request.scopes },
+        body: {
+          label: request.label.trim() || null,
+          scopes: request.scopes,
+          areas: request.areas,
+        },
       });
       // An expired session must not read as a mint that did nothing. Drop every
       // cached answer before the probe re-asks, so the next sign-in sees none.
@@ -341,6 +436,7 @@ function MintDialog({
     onClose();
     setLabel("");
     setScopes(new Set(["read", "draft"]));
+    setAreas(ALL_AREAS);
     mint.reset();
   };
   // Refused mid-flight, as `mint.reset()` does not cancel the POST. Once the
@@ -378,8 +474,8 @@ function MintDialog({
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
-            if (scopes.size > 0 && !mint.isPending) {
-              mint.mutate({ label, scopes: [...scopes] });
+            if (scopes.size > 0 && areasComplete(areas) && !mint.isPending) {
+              mint.mutate({ label, scopes: [...scopes], areas });
             }
           }}
         >
@@ -417,6 +513,11 @@ function MintDialog({
               />
             ))}
           </fieldset>
+          <WorkAreasChoice
+            reachable={reachable}
+            value={areas}
+            onChange={setAreas}
+          />
           <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
         </form>
       )}
@@ -435,11 +536,7 @@ function MintDialog({
               type="submit"
               form={formId}
               variant="primary"
-              reason={
-                scopes.size === 0 && !mint.isPending
-                  ? t("settings.passportScopesRequired")
-                  : undefined
-              }
+              reason={mintRefusal(t, scopes.size, areas, mint.isPending)}
               pending={mint.isPending}
               busyLabel={t("settings.minting")}
             >

@@ -49,6 +49,7 @@ const everyScope = {
   client_name: "Fleet Copilot",
   offline: false,
   scopes: ["read", "draft", "write", "send", "enrich"],
+  areas: ["business"],
 };
 
 // A client asking to keep working when the human is not present. The extra line
@@ -84,6 +85,19 @@ const meta: Meta<typeof OAuthConsent> = {
 export default meta;
 type Story = StoryObj<typeof OAuthConsent>;
 
+// An admin's role reaches every area, so the prompt adds where it may work.
+const adminClient = {
+  ...everyScope,
+  areas: [
+    "business",
+    "compliance",
+    "capture",
+    "workspace_settings",
+    "admin_settings",
+    "own_account",
+  ],
+};
+
 // The consent prompt: who is asking, where the authorization is sent, and every
 // scope the client could hold — each one ticked, so the human narrows rather
 // than builds up. Authorize and Deny are two separate forms, so neither can be
@@ -99,6 +113,11 @@ export const ConsentPrompt: Story = {
 export const ConsentPromptDark: Story = {
   globals: { theme: "dark" },
   render: story(consentHash({ consent: NONCE }), everyScope),
+};
+
+// For an admin, the second section: all areas, or the ones they tick.
+export const ConsentPromptWithAreas: Story = {
+  render: story(consentHash({ consent: NONCE }), adminClient),
 };
 
 // Same prompt, offline access requested — the client wants to act while the

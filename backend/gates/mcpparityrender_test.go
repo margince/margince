@@ -61,6 +61,10 @@ The answer for ` + "`rep`" + ` comes from these places, in this order:
 
 Each operation's group, area, state and how it was decided are in [mcp-parity.json](mcp-parity.json).
 
+The same test writes ` + "`backend/internal/platform/workarea/workareas.json`" + `, which the server reads to hold a passport to the
+areas its user chose. Each of the first six groups is one area a user can turn on or off. The other three are reached only
+by a passport set to all areas.
+
 `
 
 const mcpParityMisses = `## What a scan of the web app can miss

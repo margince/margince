@@ -1,10 +1,8 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/components/connect-ai-tool.tsx frontend/src/lib/aiconnect.ts frontend/src/features/onboarding/onboarding-conversation/connect-also.tsx frontend/src/lib/setup-checklist.ts frontend/src/features/automations/agent-client-experiments.tsx backend/internal/modules/agents/tools_clientcheck.go backend/internal/compose/mcpclientcheck.go backend/internal/modules/identity/oauth_registrationsettings.go frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant frontend/src/features/automations/oauthconsent.tsx backend/internal/modules/agents/prompts.go backend/internal/modules/agents/recordlinks.go backend/internal/modules/agents/bulkconfirm.go backend/internal/modules/agents/anchorpick.go -->
+<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/components/connect-ai-tool.tsx frontend/src/lib/aiconnect.ts frontend/src/features/onboarding/onboarding-conversation/connect-also.tsx frontend/src/lib/setup-checklist.ts frontend/src/features/automations/agent-client-experiments.tsx backend/internal/modules/agents/tools_clientcheck.go backend/internal/compose/mcpclientcheck.go backend/internal/modules/identity/oauth_registrationsettings.go frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant frontend/src/features/automations/oauthconsent.tsx frontend/src/components/workareas.tsx frontend/src/components/passport-areas.tsx backend/internal/modules/agents/prompts.go backend/internal/modules/agents/recordlinks.go backend/internal/modules/agents/bulkconfirm.go backend/internal/modules/agents/anchorpick.go -->
 # Agents, passports and what they may do
 
-Margince is made to be worked in by AI agents as much as by humans. Here you
-find what an agent is allowed to do, and what waits for you. You also find what
-it is refused outright, and how a passport is created and revoked.
+Margince is made to be worked in by AI agents as much as by humans. Here you find what an agent is allowed to do, and what waits for you. You also find what it is refused outright, and how a passport is created and revoked.
 
 For what the AI makes (drafts, document reads, briefs), see
 [What the AI does, and what it does not](what-the-ai-does.md).
@@ -31,7 +29,7 @@ Also called: connect Claude, let Claude access my CRM, connect ChatGPT, Copilot,
 
 ### What is an agent passport?
 An agent passport in Margince is your personal access token: whatever uses it, an AI tool or your own code, acts as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
-Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Buy contact data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → AI access**, under **For developers**.
+Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Use AI and buy data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → AI access**, under **For developers**.
 Also called: API key, token, agent credential, access token.
 
 ### How do I give an agent access to Margince?
@@ -89,6 +87,12 @@ Also called: confirm a bulk change, undo a bulk update, can I undo what the assi
 ### What happens when I name a record and several match?
 When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one. An admin can test whether their own AI tool shows forms: turn on **Tool support check** on **Settings → MCP**.
 Also called: two contacts with the same name, name that matches twice, pick the right record, client check.
+
+### How do I choose where an agent may work?
+Besides what an agent may do, a passport or connection says where it may work. Each place is an area, such as **Sales work**, **Compliance and privacy** or **Admin settings**. Choose under **Where it may work** on **Authorize access** or in **New passport**. **All areas**, the default for every passport, covers each area your role reaches and areas added later. **Choose areas** covers only the areas you tick, at least one, and an area added later starts off. The list shows only the areas your role reaches, and when it reaches one area the choice is not shown.
+
+To change it later, open **Settings → AI access**, then the **…** menu on the row, and choose **Change areas**. The **Areas** column shows what each one has. Before you choose **Save areas**, the panel says what the agent gets or loses, and a change holds from its next call. An agent that calls into an area that is off is refused and told the area's name. It is told to ask you to turn it on in **Settings**, under **Passports**.
+Also called: work areas, limit an agent to sales, keep an agent out of admin settings, restrict where Claude works.
 
 ### How do I revoke an agent's access?
 To stop an agent, open **Settings → AI access**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
@@ -282,9 +286,7 @@ can revoke it yourself. Revoking cuts off that one agent. The **Passports** card
 says: "A passport is your personal credential for scripts and your own code.
 Whatever uses it acts as you, with the permissions you tick, and never more."
 
-A passport carries narrower permissions than the colleague has. Each one stands
-alone: ticking one never includes another. The app names them **Agent
-permissions**:
+A passport carries narrower permissions than the colleague has. Each one stands alone: ticking one never includes another. The app names them **Agent permissions**:
 
 - **Read records**: reads only. The only permission a read-only seat may use at
   all.
@@ -293,17 +295,15 @@ permissions**:
 - **Change records**: every change that stays inside your company.
 - **Send messages**: the actions that send something out of Margince, booking a meeting included.
   It also covers changing what a buyer reads in a deal room at once.
-- **Buy contact data**: the one action that gets data from an outside provider.
+- **Use AI and buy data**: AI work such as research and document questions, and the one action that gets data from an outside provider.
 
 A passport with only **Read records** can read your approvals but cannot decide
 them. A passport needs **Change records** to approve most things, and **Send
 messages** too where approving sends a message.
 
-A passport lasts 30 days by default, at least an hour and at most 90 days. A
-passport created in Settings always gets the 30-day default. The credential is
-shown once and never again: "Passport created. It is shown only once, so copy it now."
-Margince keeps no copy it can read, so nobody, including an administrator, can
-get it back for you.
+A passport lasts 30 days by default, at least an hour and at most 90 days. A passport created in Settings always gets the 30-day default.
+The credential is shown once and never again: "Passport created. It is shown only once, so copy it now."
+Margince keeps no copy it can read, so nobody, including an administrator, can get it back for you.
 
 A passport does the same through the REST API as through MCP. It sees the same
 records, filters, permissions and approvals; an MCP page holds 50 rows. Some

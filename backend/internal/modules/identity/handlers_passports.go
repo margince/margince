@@ -35,6 +35,13 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	in := IssuePassportInput{Label: req.Label}
+	if req.Areas != nil {
+		if !req.Areas.Mode.Valid() {
+			httperr.Write(w, r, httperr.Validation("areas", "unknown_mode", "say all or custom"))
+			return
+		}
+		in.Areas = areasFromWire(*req.Areas)
+	}
 	for _, sc := range req.Scopes {
 		in.Scopes = append(in.Scopes, string(sc))
 	}
@@ -104,9 +111,10 @@ func (h Handlers) ListPassports(w http.ResponseWriter, r *http.Request) {
 	// api_base_url may be this request's own Host, which a shared cache must not replay.
 	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusOK, struct {
-		Data       []crmcontracts.PassportSummary `json:"data"`
-		APIBaseURL string                         `json:"api_base_url"`
-	}{Data: data, APIBaseURL: apiBase})
+		Data           []crmcontracts.PassportSummary `json:"data"`
+		APIBaseURL     string                         `json:"api_base_url"`
+		ReachableAreas []crmcontracts.WorkArea        `json:"reachable_areas"`
+	}{Data: data, APIBaseURL: apiBase, ReachableAreas: h.reachable(r.Context())})
 }
 
 // passportSummary is the store row as the wire carries it. A function rather
@@ -119,6 +127,7 @@ func passportSummary(p PassportRow) crmcontracts.PassportSummary {
 	summary := crmcontracts.PassportSummary{
 		Id:         openapi_types.UUID(p.ID.UUID),
 		Scopes:     p.Scopes,
+		Areas:      areasToWire(p.Areas),
 		CreatedAt:  p.CreatedAt,
 		ExpiresAt:  &p.ExpiresAt,
 		RevokedAt:  p.RevokedAt,

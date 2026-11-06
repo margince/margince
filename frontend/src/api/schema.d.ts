@@ -659,6 +659,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/passports/{id}/areas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose the work areas one of the caller's own passports may act in.
+         * @description Sets where the passport may act: `all` admits every area, those added later included, and
+         *     `custom` admits only the areas listed. The change holds from the passport's next call, in an
+         *     MCP session that is already connected too. On a connection's passport it also holds for the
+         *     credentials its renewals mint. Only the passport's own user changes it; another user's
+         *     passport answers 404. Audited. Human-only: an agent that could widen its own areas would be
+         *     self-granted authority.
+         */
+        put: operations["setPassportAreas"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agent-bundle": {
         parameters: {
             query?: never;
@@ -52878,6 +52906,8 @@ export interface components {
             scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
             /** @description Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time. */
             ttl_hours?: number | null;
+            /** @description Where the passport may act. Absent means all areas. */
+            areas?: components["schemas"]["PassportAreas"];
         };
         IssuePassportResponse: {
             /** Format: uuid */
@@ -52974,6 +53004,31 @@ export interface components {
             /** @description The client asked to stay connected without asking again (offline_access). */
             offline: boolean;
             scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
+            /**
+             * @description The work areas the human's role reaches, which the screen offers to choose from. The
+             *     screen posts the choice back as `areas`: `all`, or the chosen areas separated by spaces.
+             *     The screen shows no choice when this holds one area or none, and posts `all`.
+             */
+            areas: components["schemas"]["WorkArea"][];
+        };
+        /**
+         * @description One area of work a passport may be limited to: sales work, compliance and privacy, mail and
+         *     calendar capture, workspace settings a non-admin reaches, admin settings, and the user's own
+         *     account. Each operation an agent can call sits in one area, as `docs/reference/mcp-parity.md`
+         *     places it. Agent governance and running the installation are in no area a user can choose,
+         *     so only a passport set to all areas reaches them.
+         * @enum {string}
+         */
+        WorkArea: "business" | "compliance" | "capture" | "workspace_settings" | "admin_settings" | "own_account";
+        PassportAreas: {
+            /**
+             * @description `all` admits every area, those added later included. `custom` admits only `areas`, so an
+             *     area added later starts off.
+             * @enum {string}
+             */
+            mode: "all" | "custom";
+            /** @description The chosen areas, at least one, when `mode` is `custom`. Empty when it is `all`. */
+            areas: components["schemas"]["WorkArea"][];
         };
         /** @description Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token. */
         PassportSummary: {
@@ -52983,6 +53038,7 @@ export interface components {
             label: string;
             /** @description The granted MCP scopes (intersected with the minting human's role at bind time). */
             scopes: string[];
+            areas: components["schemas"]["PassportAreas"];
             /** @description The agent this passport is bound to, if any. */
             agent_id?: string | null;
             /**
@@ -58885,6 +58941,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PassportSummary"][];
+                        /** @description The work areas the caller's role reaches, which a passport's areas are chosen from. Settings shows no choice of areas when this holds one area or none. */
+                        reachable_areas: components["schemas"]["WorkArea"][];
                         /**
                          * Format: uri
                          * @description The address a passport calls this API at, `/v1` included: the configured API base URL, else the public base URL, else the origin this request arrived on. The skill bundle's `openapi.yaml` names the same address.
@@ -58949,6 +59007,36 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setPassportAreas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PassportAreas"];
+            };
+        };
+        responses: {
+            /** @description The passport's areas as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PassportAreas"];
+                };
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];

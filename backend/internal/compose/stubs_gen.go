@@ -3043,6 +3043,10 @@ func (stubs) RevokePassport(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "RevokePassport")
 }
 
+func (stubs) SetPassportAreas(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SetPassportAreas")
+}
+
 func (stubs) ListPipelines(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPipelinesParams) {
 	httperr.NotImplemented(w, r, "ListPipelines")
 }

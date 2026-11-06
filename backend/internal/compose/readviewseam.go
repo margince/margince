@@ -127,6 +127,11 @@ func readViewThrough(door *viewDoor) agents.ViewReader {
 		if door == nil || door.api == nil {
 			return nil, fmt.Errorf("read_view: views are served by the API process: %w", apperrors.ErrUnsupportedBySoR)
 		}
+		// Here as well as at the route, because the route's 403 reaches the tool
+		// as a bare refusal and this one names the area.
+		if err := operationAreaRefusal(ctx, agents.ReadViewTool, view.Op); err != nil {
+			return nil, err
+		}
 		rec := door.serveInProcess(ctx, inProcessCall{Method: http.MethodGet, Pattern: view.Pattern, Path: path, Query: query})
 		if rec.overflowed {
 			return nil, httperr.Validation("view", "view_too_large", fmt.Sprintf(
