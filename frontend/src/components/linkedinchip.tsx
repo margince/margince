@@ -25,7 +25,7 @@ export function LinkedInChip({
   const named = name?.trim();
   return (
     <Chip
-      mark={<ProviderMark providerKey="linkedin" />}
+      lead={<ProviderMark providerKey="linkedin" />}
       href={href}
       label={named ? t("record.linkedinProfile", { name: named }) : undefined}
       dense

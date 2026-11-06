@@ -53249,6 +53249,28 @@ export interface components {
         WeeklyReviewIndex: {
             /** @description The Monday of each week with a review, newest first. */
             weeks: string[];
+            /**
+             * @description The same weeks in the same order, each with what it won, so the index can draw the
+             *     weeks beside each other. Frozen with each review, like every figure in it. Absent
+             *     from an older server.
+             */
+            entries?: components["schemas"]["WeeklyReviewIndexEntry"][];
+        };
+        WeeklyReviewIndexEntry: {
+            /**
+             * Format: date
+             * @description The Monday of the week.
+             */
+            week: string;
+            /** @description Deals the week won. */
+            deals_won: number;
+            /**
+             * Format: int64
+             * @description What they were worth, in minor units of `currency`. Zero when the week won nothing. Absent when the value is unknown: a deal could not be converted, or the installation names no base currency.
+             */
+            won_minor?: number;
+            /** @description The currency `won_minor` is in. Present exactly when `won_minor` is. */
+            currency?: string;
         };
         /** @description One team's week, as it was measured when the week closed. */
         TeamWeeklyReview: {
@@ -53689,6 +53711,17 @@ export interface components {
             won_minor?: number;
             figure_coverage?: components["schemas"]["WeeklyFigureCoverageSet"];
         };
+        /** @description One local day of a rep's own activity, in the installation reporting timezone. */
+        WeeklyDayActivity: {
+            /** Format: date */
+            day: string;
+            /** @description Outbound emails the rep wrote or their mailbox sent. */
+            emails_sent: number;
+            /** @description Calls the rep logged, by their own hand or an agent acting for them. */
+            calls_logged: number;
+            /** @description Meetings credited to the rep that took place that day. */
+            meetings_held: number;
+        };
         /**
          * @description Whether each figure family on the review was measured over the week, by the source
          *     that feeds it. Absent on a review frozen before figures carried their coverage; such a
@@ -53774,6 +53807,13 @@ export interface components {
             narrated_at?: string | null;
             numeric_summary?: components["schemas"]["WeeklyNumericSummary"];
             counts: components["schemas"]["WeeklyReviewCounts"];
+            /**
+             * @description What the rep did on each day of the week, Monday first, frozen with the review.
+             *     Only their own work counts: emails they sent, calls they logged, meetings they were
+             *     credited with. A received email is not work they did. Absent on a review frozen
+             *     before this was measured, and for a reader who may not read activities.
+             */
+            daily_activity?: components["schemas"]["WeeklyDayActivity"][];
             /**
              * @description The deals the week is about, won and lost first. Capped for reading — the counts stay
              *     complete, so a busy week reads "12 moved" beside the most recent of them rather than
@@ -57316,9 +57356,8 @@ export interface components {
             label?: string;
             touch?: components["schemas"]["WorklistContactTouch"];
             /**
-             * @description Where the contact works today, so a meeting row says which account the
-             *     meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
-             *     other row's title already names its record.
+             * @description Where the contact works today, so every row that names a contact can also
+             *     name the account, and a meeting row says which account the meeting was with.
              *
              *     Absent where the contact has no current employer, or where this caller may
              *     not read the employment or the company. Absent never means "works nowhere".
@@ -57434,7 +57473,7 @@ export interface components {
             reason: "withheld" | "failed";
             /**
              * @description False for a side read that puts no row on the queue — `calendar`,
-             *     `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
+             *     `next_meeting`, `deal_advice` and `contact_employers` — so its failure cannot hide a row, and a figure counted over
              *     the queue stays exact. True for a lane whose rows may be missing. Absent from
              *     an older server and from a surface that names only lanes, and a client reads
              *     absent as true.

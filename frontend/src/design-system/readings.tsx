@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import "./readings.css";
 import { webUrl } from "../format/weburl";
+import { AppLink } from "./applink";
 import { Button } from "./atoms";
 
 // Three ways to draw a reading that is not a number in a box: a proportion as
@@ -208,32 +209,55 @@ const SPARK_INSET = 3;
 // and it is a link when the fact has somewhere to go.
 export function Chip({
   icon: Icon,
-  mark,
+  lead,
   children,
   href,
+  appHref,
   label,
   dense,
 }: Readonly<
-  ChipFace & {
+  {
     children: ReactNode;
     // An external destination. Present → the chip is an anchor and opens in a
     // new tab without an opener or referrer, since these point off our origin.
     href?: string;
+    // A page of this app, followed in place: the record a fact names.
+    appHref?: string;
     // The link's name where the visible text alone does not say where it goes.
     label?: string;
-    // The chip at a `Badge`'s geometry, for a table row. A larger fact beside
-    // the status would outweigh the row's name. The size lives here, so a
-    // geometry never has two authors.
+    // The chip at a `Badge`'s geometry, for a table row that shares a cell with
+    // badges. A fact a rung larger than its status outweighs the row's name.
+    // It is a size on the primitive, like `Meter`'s dense rung, so one author
+    // owns the geometry.
     dense?: boolean;
-  }
+  } & (
+    | { icon: LucideIcon; lead?: never }
+    // A mark in the icon's place: a record's Avatar, or a company's logo.
+    | { icon?: never; lead: ReactNode }
+  )
 >) {
-  const shape = dense ? "chip chip-dense" : "chip";
+  const shape = ["chip", dense ? "chip-dense" : "", Icon ? "" : "chip-lead"]
+    .filter(Boolean)
+    .join(" ");
   const body = (
     <>
-      {Icon ? <Icon size={dense ? 12 : 14} aria-hidden="true" /> : mark}
+      {Icon ? (
+        <Icon size={dense ? 12 : 14} aria-hidden="true" />
+      ) : (
+        <span className="chip-mark" aria-hidden="true">
+          {lead}
+        </span>
+      )}
       <span>{children}</span>
     </>
   );
+  if (appHref) {
+    return (
+      <AppLink className={`${shape} chip-link`} href={appHref}>
+        {body}
+      </AppLink>
+    );
+  }
   const destination = href && webUrl(href) ? href : undefined;
   if (destination) {
     return (
@@ -252,11 +276,6 @@ export function Chip({
   // link, not the value.
   return <span className={shape}>{body}</span>;
 }
-
-// A glyph names the fact's kind; a mark is another company's own logo.
-type ChipFace =
-  | { icon: LucideIcon; mark?: never }
-  | { mark: ReactNode; icon?: never };
 
 // A ranked set of one-dimensional readings: label, bar, formatted amount, one
 // row each. `Meter` draws one such bar; this is what a caller reaches for when
