@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -33,6 +34,12 @@ import (
 func RecordMailReferencesTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, referenced []string) error {
 	if len(referenced) == 0 {
 		return nil
+	}
+	if _, err := storekit.LockActivityThreadTx(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, referenced...); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_mail_reference (activity_id, referenced_id)
@@ -134,6 +141,9 @@ func EarliestThreadKeyTx(ctx context.Context, tx pgx.Tx, keys []string) (string,
 func ThreadMergeTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 	if from == "" || to == "" || from == to {
 		return nil
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, from, to); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity SET thread_key = $2

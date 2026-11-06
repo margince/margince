@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { loadLocale } from "../src/i18n/catalogs";
 import { de } from "../src/i18n/de";
 import { en, type MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/lib/settingscatalog";
@@ -16,6 +17,10 @@ import {
 } from "./mockapi/calls";
 import { anna, mockApi } from "./seed";
 import { listClipping, openedAt, pageOverflow, textsOf } from "./waits";
+
+test.beforeAll(async () => {
+  await loadLocale("de");
+});
 
 /**
  * Settle the page's motion before measuring the colours it paints.

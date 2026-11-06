@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -243,7 +244,11 @@ func (e *ConfidentialityVerdictEngine) apply(
 	ctx context.Context, row capture.PendingThread, status, kind string, confidence float64,
 ) error {
 	won := false
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := withRetryingWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		won = false
+		if err := storekit.WaitThreadKeysTx(ctx, tx, []string{row.ThreadKey}); err != nil {
+			return err
+		}
 		if err := capture.LockThreadHoldTx(ctx, tx, row.ThreadKey); err != nil {
 			return err
 		}

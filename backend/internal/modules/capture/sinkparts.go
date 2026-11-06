@@ -22,7 +22,9 @@ package capture
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -279,4 +281,40 @@ func (s *Sink) logPartDrops(ctx context.Context, tx pgx.Tx, rec connector.Normal
 		}
 	}
 	return nil
+}
+
+type capturedFileFingerprint struct {
+	partID, filename, contentType, declaredType string
+	body                                        [sha256.Size]byte
+}
+
+type retryFileKeeper struct {
+	FileKeeper
+	fingerprints []capturedFileFingerprint
+	staged       []StagedFile
+}
+
+func (k *retryFileKeeper) Stage(ctx context.Context, files []CapturedFile) ([]StagedFile, error) {
+	fingerprints := make([]capturedFileFingerprint, len(files))
+	for i, file := range files {
+		fingerprints[i] = capturedFileFingerprint{file.PartID, file.Filename, file.ContentType, file.DeclaredType, sha256.Sum256(file.Body)}
+	}
+	if k.fingerprints != nil && slices.Equal(fingerprints, k.fingerprints) {
+		return k.staged, nil
+	}
+	staged, err := k.FileKeeper.Stage(ctx, files)
+	if err != nil {
+		return nil, err
+	}
+	k.fingerprints, k.staged = fingerprints, staged
+	return staged, nil
+}
+
+func (s *Sink) withRetryFileStage() *Sink {
+	if s.files == nil {
+		return s
+	}
+	clone := *s
+	clone.files = &retryFileKeeper{FileKeeper: s.files}
+	return &clone
 }

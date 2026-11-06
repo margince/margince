@@ -36,7 +36,8 @@ func (s *Store) SendEmail(ctx context.Context, origin SendOrigin, in SendEmailIn
 		return crmcontracts.Activity{}, err
 	}
 	var sent crmcontracts.Activity
-	if err := s.tx(ctx, func(tx pgx.Tx) error {
+	if err := s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
+		sent = crmcontracts.Activity{}
 		sent, err = s.SendPreparedTx(ctx, tx, origin, prepared, stager)
 		return err
 	}); err != nil {

@@ -498,6 +498,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `relaywiring_test.go` | H2 | Every option that wires the mail relay is wired by a role binary. |
 | `replayscope_test.go` | H2 | A replay is a read, so every operation the idempotency middleware can replay must either re-probe the row scope of the record its recorded body carries, or say in writing that the body carries no such record. |
 | `resetflushscope_test.go` | H2 | The reset's cache flush has two entry points by design, and the split is a security boundary rather than a style choice. |
+| `threadcomponentwriters_test.go` | H2 | The ownership census supplies packages; its SQL parser supplies columns. |
 | `versionguard_test.go` | H2 | A version pin is only real if the pinned table's version actually moves. |
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
 | `writeshape_test.go` | H2 | Every mutation that writes an audit row commits a paired outbox event on the same static call path, through storekit, across modules and the composition layer. |
@@ -657,7 +658,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `langcopyonecensus_test.go` | H2 | One census reads every langcopy.Phrase table, and no owner walks its own. |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and two functions in two packages each called themselves the one spelling of it while the tree held about twenty copies. |
 | `marketingquestion_test.go` | H2 | The question a grant is bound to is the question the screen asks. |
-| `mergelockordering_test.go` | H2 | A capture that may merge threads takes the merge lock before it touches an activity. |
+| `mergelockordering_test.go` | H2 | Capture locks component identities before rows; later writers use the same coordinator without waiting while they own rows. |
 | `noisejudgedspelling_test.go` | H2 | "An already-settled answer disowns this contact" is spelled once. |
 | `onedraftwriter_test.go` | H1 | One writer produces every grounded draft, or the surfaces drift. |
 | `overridewarning_test.go` | H2 | The words behind a recorded acknowledgement cannot change without the version changing. |
@@ -698,6 +699,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `subjectlockorderwalk_test.go` | H2 | The lock-order walk judged on planted bodies. |
 | `tableownershipexpressions_test.go` | H2 | Complete concatenations keep one statement identity. |
 | `taskcensuscoverage_test.go` | H2 | The task census rejects unsupported source stamps and unresolved task kinds. |
+| `threadcomponentmutations_test.go` | H2 | _(no doc comment)_ |
 | `triggerwrittencolumncases_test.go` | H2 | The trigger-written-column reader driven with synthetic statements, for the reason retainedcolumncases\_test.go gives for its own: the tree is supposed to pass, so a reader proven only by "nothing in the tree trips it" is one that keeps passing after it stops working. |
 | `txseamreach_test.go` | H2 | Following a call one hop further than the name it is spelled with. |
 | `updateguardcases_test.go` | H2 | What the concurrency-guard census judges a function on, driven with synthetic source rather than the tree, for the reason retainedcolumncases\_test.go gives for its own cases. |

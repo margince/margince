@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -103,10 +104,17 @@ func (s *ThreadVerdictStore) EnsureTx(
 		// no conversation for a verdict to be about.
 		return nil
 	}
+	current, err := storekit.LockActivityThreadTx(ctx, tx, firstActivity)
+	if err != nil {
+		return err
+	}
+	if current != "" {
+		threadKey = current
+	}
 	if err := LockThreadHoldTx(ctx, tx, threadKey); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx, `
+	_, err = tx.Exec(ctx, `
 		INSERT INTO capture_thread_verdict (thread_key, user_id, first_activity_id, status, next_attempt_at)
 		VALUES ($1, $2, $3, 'pending', $4)
 		ON CONFLICT (thread_key, user_id) DO UPDATE

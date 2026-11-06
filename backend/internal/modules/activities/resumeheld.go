@@ -83,7 +83,8 @@ func (s *Store) ResumeHeldSend(
 	}
 
 	var sent crmcontracts.Activity
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
+		sent = crmcontracts.Activity{}
 		// CLAIMED AGAIN, INSIDE THE TRANSACTION THAT WRITES. The read above was
 		// unlocked, so the row may have been cancelled or resumed by somebody
 		// else since — and this is where that is decided, under the row's own
