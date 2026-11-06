@@ -2321,6 +2321,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trust.relayForColleague": "Von Margince für ein Teammitglied gesendet",
   "trust.relaySent": "Von Margince gesendet",
   "trust.relayFrom": "Absendeadresse: {address}",
+  "systemJob.provider_picture": "Google-Profilbild",
   "systemJob.public_record_preview": "Öffentliche Datensatzvorschau",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
@@ -5954,8 +5955,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.valueProposition": "Nutzenversprechen",
   "legalEntities.usp": "Was ihn abhebt",
   "legalEntities.sectionLogo": "Logo",
-  "legalEntities.logoAdd": "Logo hinzufügen",
-  "legalEntities.logoReplace": "Logo ersetzen",
+  "legalEntities.logoAdd": "Logo hochladen",
+  "legalEntities.logoEdit": "Logo bearbeiten",
   "legalEntities.logoHint":
     "PNG, JPEG, GIF, WebP, ICO oder SVG. Es wird gespeichert, sobald du es auswählst.",
   "legalEntities.logoEmpty": "Bild hier ablegen oder auswählen",
@@ -14462,9 +14463,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur bestätigte Angaben. Website-Text wird nie zu Anweisungen.",
   "settings.companyMarkWide": "Breites Logo",
   "settings.companyMarkIcon": "Quadratisches Symbol",
-  "settings.companyMarkAdd": "Hinzufügen",
-  "settings.companyMarkReplace": "Ersetzen",
-  "settings.companyMarkRemove": "Entfernen",
   "settings.companyMarkUploadFailedWide": "Breites Logo nicht hochgeladen",
   "settings.companyMarkRemoveFailedWide": "Breites Logo nicht entfernt",
   "settings.companyMarkUploadFailedIcon":
@@ -14477,12 +14475,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese SVG-Datei enthält Teile, die sich hier nicht darstellen lassen, oder sie zeigt nichts. Exportiere das Logo in deinem Grafikprogramm als PNG-Datei.",
   "settings.companyMarkSvgText":
     "Diese SVG-Datei enthält Text, der sich nicht darstellen lässt. Wandle den Text in deinem Grafikprogramm in Pfade um, oder lade eine PNG-Datei hoch.",
-  "settings.companyMarkAddWide": "Breites Logo hinzufügen",
-  "settings.companyMarkReplaceWide": "Breites Logo ersetzen",
+  "settings.companyMarkUploadWide": "Breites Logo hochladen",
   "settings.companyMarkRemoveWide": "Breites Logo entfernen",
-  "settings.companyMarkAddIcon": "Quadratisches Symbol hinzufügen",
-  "settings.companyMarkReplaceIcon": "Quadratisches Symbol ersetzen",
+  "settings.companyMarkEditWide": "Breites Logo bearbeiten",
+  "settings.companyMarkUploadIcon": "Quadratisches Symbol hochladen",
   "settings.companyMarkRemoveIcon": "Quadratisches Symbol entfernen",
+  "settings.companyMarkEditIcon": "Quadratisches Symbol bearbeiten",
+  "settings.imageEdit": "Bearbeiten",
   "settings.companyMarkEmpty": "Logo hier ablegen oder Datei auswählen",
   "settings.companyMarkIconEmpty": "Symbol hier ablegen oder Datei auswählen",
   "settings.companyWebsite": "Öffentliche Unternehmenswebsite",
@@ -15459,6 +15458,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.reminder.progress": "Fortschritt der Einrichtung",
   // end polish: setup-popover
   "account.profileCard": "Profil",
+  "account.pictureLabel": "Profilbild",
+  "account.pictureHelp":
+    "PNG, JPEG oder WebP bis 5 MB, für Teammitglieder neben deinem Namen sichtbar.",
+  "account.pictureEmpty": "Bild hier ablegen oder Datei auswählen",
+  "account.pictureAdd": "Bild hochladen",
+  "account.pictureRemove": "Bild entfernen",
+  "account.pictureEdit": "Profilbild bearbeiten",
+  "account.pictureSaved": "Bild gespeichert",
+  "account.pictureRemoved": "Bild entfernt",
+  "account.pictureWrongType":
+    "Bild nicht hochgeladen. Nimm eine PNG-, JPEG- oder WebP-Datei.",
+  "account.pictureTooLarge":
+    "Bild nicht hochgeladen. Nimm eine Datei bis 5 MB.",
+  "account.pictureNoStorage":
+    "Diese Installation hat keinen Dateispeicher für Bilder. Bitte wende dich an die Systemadministration.",
+  "account.pictureUploadFailed":
+    "Bild nicht hochgeladen. Bitte versuche es erneut oder lade die Seite neu.",
+  "account.pictureRemoveFailed":
+    "Bild nicht entfernt. Bitte versuche es erneut oder lade die Seite neu.",
   "account.signInCard": "Anmeldung",
   "account.timezoneLabel": "Zeitzone",
   "account.timezoneHelp":
@@ -19597,7 +19615,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "firstRun.google.helpStep1":
     "Öffne in der Google Cloud Console ein Projekt und gehe zu „APIs und Dienste“, dann „Anmeldedaten“. Wähle „Anmeldedaten erstellen“, dann „OAuth-Client-ID“, und wähle „Webanwendung“.",
   "firstRun.google.helpStep2":
-    "Aktiviere die Gmail API und füge dem Zustimmungsbildschirm die Bereiche gmail.readonly und gmail.send hinzu. Beide Bereiche werden gemeinsam angefragt, da Google einem bereits ausgestellten Refresh-Token keinen Bereich hinzufügt. Wird das Senden später angefordert, muss das Postfach erneut verbunden werden.",
+    "Aktiviere die Gmail API und füge dem Zustimmungsbildschirm die Bereiche gmail.readonly, gmail.send und userinfo.profile hinzu (userinfo.profile liefert das Profilbild des Google-Kontos). Die Bereiche werden gemeinsam angefragt, da Google einem bereits ausgestellten Refresh-Token keinen Bereich hinzufügt. Wird ein Bereich später angefordert, muss das Postfach erneut verbunden werden.",
   "firstRun.google.helpStep3":
     "Füge unter „Autorisierte Weiterleitungs-URIs“ die oben aufgeführten URIs hinzu. „Postfach“ ist für E-Mails erforderlich. „Kalender“ und „Anmeldung“ aktivieren die jeweilige Funktion.",
   "firstRun.google.helpStep4":

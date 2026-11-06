@@ -11,7 +11,7 @@ import { INTRO_STATUS_LABELS } from "../../../format/introstatus";
 
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
-import { Avatar } from "../../../design-system/atoms";
+import { SeatAvatar } from "../../../components/seatavatar";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { formatDate, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
@@ -76,7 +76,7 @@ export function RelayPanel({
           answer window and belongs only to the step that has one. */}
         {ask && owner ? (
           <p className="pn-relay-owner">
-            <Avatar name={owner} identity={ownerIdOf(ask) ?? owner} size="sm" />
+            <SeatAvatar id={ownerIdOf(ask)} name={owner} size="sm" />
             <span>{t("contact.intro.handoffOwner", { name: owner })}</span>
             {ask.status === "requested" && ask.due_at ? (
               <span className="pn-relay-due t-caption">

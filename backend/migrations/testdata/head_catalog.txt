@@ -1169,6 +1169,8 @@ public.analytics_share_pkey CREATE UNIQUE INDEX analytics_share_pkey ON public.a
 public.app_user acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.app_user.app_user_agent_is_full CHECK (((NOT is_agent) OR (seat_type = 'full'::text)))
 public.app_user.app_user_agent_never_forced CHECK ((NOT (is_agent AND must_change_password)))
+public.app_user.app_user_avatar_names_its_origin CHECK (((avatar_object_key IS NULL) = (avatar_origin IS NULL)))
+public.app_user.app_user_avatar_origin_check CHECK ((avatar_origin = ANY (ARRAY['upload'::text, 'google'::text])))
 public.app_user.app_user_delivery_hour_check CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))
 public.app_user.app_user_does_not_merge_into_itself CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))
 public.app_user.app_user_failed_login_count_check CHECK ((failed_login_count >= 0))
@@ -1195,6 +1197,9 @@ public.app_user.app_user_work_end_minute_of_day CHECK (((work_end_minute IS NULL
 public.app_user.app_user_work_range_is_a_range CHECK ((((work_start_minute IS NULL) = (work_end_minute IS NULL)) AND ((work_start_minute IS NULL) OR (work_start_minute < work_end_minute))))
 public.app_user.app_user_work_start_minute_of_day CHECK (((work_start_minute IS NULL) OR ((work_start_minute >= 0) AND (work_start_minute <= 1439))))
 public.app_user.archived_at timestamp with time zone gen=- def=-
+public.app_user.avatar_object_key text gen=- def=-
+public.app_user.avatar_origin text gen=- def=-
+public.app_user.avatar_removed_at timestamp with time zone gen=- def=-
 public.app_user.combine_routine_email boolean gen=- def=-
 public.app_user.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.delivery_hour_local integer gen=- def=-

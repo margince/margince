@@ -216,7 +216,11 @@ export function TeamMembersModal({
           >
             {members.map((member, index) => (
               <li key={member.id} className="users-team-member">
-                <Avatar name={member.display_name} identity={member.id} />
+                <Avatar
+                  name={member.display_name}
+                  identity={member.id}
+                  photo={member.avatar_url}
+                />
                 <span className="users-team-member-name">
                   <span>{member.display_name}</span>
                   <span className="t-caption">{member.email}</span>

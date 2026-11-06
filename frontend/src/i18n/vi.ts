@@ -2259,6 +2259,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trust.relayForColleague": "Margince đã gửi thay đồng nghiệp",
   "trust.relaySent": "Margince đã gửi",
   "trust.relayFrom": "Địa chỉ gửi: {address}",
+  "systemJob.provider_picture": "Ảnh hồ sơ Google",
   "systemJob.public_record_preview": "Xem trước bản ghi công khai",
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
@@ -5807,8 +5808,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.valueProposition": "Giá trị mang lại",
   "legalEntities.usp": "Điểm khác biệt",
   "legalEntities.sectionLogo": "Logo công ty",
-  "legalEntities.logoAdd": "Thêm logo",
-  "legalEntities.logoReplace": "Thay logo",
+  "legalEntities.logoAdd": "Tải logo lên",
+  "legalEntities.logoEdit": "Sửa logo",
   "legalEntities.logoHint":
     "PNG, JPEG, GIF, WebP, ICO hoặc SVG. Logo được lưu ngay khi bạn chọn.",
   "legalEntities.logoEmpty": "Thả ảnh vào đây hoặc chọn ảnh",
@@ -14087,9 +14088,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ dùng mục đã xác nhận. Văn bản trên trang web không bao giờ trở thành chỉ dẫn.",
   "settings.companyMarkWide": "Logo rộng",
   "settings.companyMarkIcon": "Biểu tượng vuông",
-  "settings.companyMarkAdd": "Thêm",
-  "settings.companyMarkReplace": "Thay thế",
-  "settings.companyMarkRemove": "Gỡ",
   "settings.companyMarkUploadFailedWide": "Không thể tải lên logo rộng",
   "settings.companyMarkRemoveFailedWide": "Không thể gỡ logo rộng",
   "settings.companyMarkUploadFailedIcon": "Không thể tải lên biểu tượng vuông",
@@ -14101,12 +14099,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tệp SVG này có phần không thể hiển thị ở đây, hoặc không hiển thị gì. Xuất logo dưới dạng tệp PNG từ công cụ thiết kế.",
   "settings.companyMarkSvgText":
     "Tệp SVG này chứa chữ chưa chuyển thành đường nét nên không thể hiển thị. Chuyển chữ thành đường nét (outline) trong công cụ thiết kế, hoặc tải lên tệp PNG.",
-  "settings.companyMarkAddWide": "Thêm logo rộng",
-  "settings.companyMarkReplaceWide": "Thay logo rộng",
+  "settings.companyMarkUploadWide": "Tải logo rộng lên",
   "settings.companyMarkRemoveWide": "Gỡ logo rộng",
-  "settings.companyMarkAddIcon": "Thêm biểu tượng vuông",
-  "settings.companyMarkReplaceIcon": "Thay biểu tượng vuông",
+  "settings.companyMarkEditWide": "Sửa logo rộng",
+  "settings.companyMarkUploadIcon": "Tải biểu tượng vuông lên",
   "settings.companyMarkRemoveIcon": "Gỡ biểu tượng vuông",
+  "settings.companyMarkEditIcon": "Sửa biểu tượng vuông",
+  "settings.imageEdit": "Sửa",
   "settings.companyMarkEmpty": "Thả logo vào đây, hoặc chọn tệp",
   "settings.companyMarkIconEmpty": "Thả biểu tượng vào đây, hoặc chọn tệp",
   "settings.companyWebsite": "Trang web công khai của công ty",
@@ -15063,6 +15062,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.reminder.progress": "Tiến độ thiết lập",
   // end polish: setup-popover
   "account.profileCard": "Hồ sơ",
+  "account.pictureLabel": "Ảnh hồ sơ",
+  "account.pictureHelp":
+    "PNG, JPEG hoặc WebP tối đa 5 MB, đồng nghiệp thấy bên cạnh tên bạn.",
+  "account.pictureEmpty": "Thả ảnh vào đây, hoặc chọn tệp",
+  "account.pictureAdd": "Tải ảnh lên",
+  "account.pictureRemove": "Gỡ ảnh",
+  "account.pictureEdit": "Sửa ảnh hồ sơ",
+  "account.pictureSaved": "Đã lưu ảnh",
+  "account.pictureRemoved": "Đã gỡ ảnh",
+  "account.pictureWrongType":
+    "Không thể tải ảnh lên. Hãy dùng tệp PNG, JPEG hoặc WebP.",
+  "account.pictureTooLarge": "Không thể tải ảnh lên. Hãy dùng tệp tối đa 5 MB.",
+  "account.pictureNoStorage":
+    "Bản cài đặt này chưa có nơi lưu ảnh. Liên hệ quản trị viên.",
+  "account.pictureUploadFailed":
+    "Không thể tải ảnh lên. Thử lại hoặc tải lại trang.",
+  "account.pictureRemoveFailed":
+    "Không thể gỡ ảnh. Thử lại hoặc tải lại trang.",
   "account.signInCard": "Đăng nhập",
   "account.timezoneLabel": "Múi giờ",
   "account.timezoneHelp":
@@ -19098,7 +19115,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.google.helpStep1":
     "Trong Google Cloud console, mở một project rồi vào “APIs & Services”, sau đó “Credentials”. Chọn “Create credentials”, rồi “OAuth client ID”, và chọn “Web application”.",
   "firstRun.google.helpStep2":
-    "Bật Gmail API và thêm cả hai scope gmail.readonly và gmail.send vào màn hình đồng ý. Hai scope dùng chung một lần đồng ý vì Google không thêm scope vào refresh token đã cấp; muốn xin quyền gửi sau này thì phải kết nối lại hộp thư.",
+    "Bật Gmail API và thêm các scope gmail.readonly, gmail.send và userinfo.profile vào màn hình đồng ý (userinfo.profile cung cấp ảnh của tài khoản Google). Các scope dùng chung một lần đồng ý vì Google không thêm scope vào refresh token đã cấp; muốn xin thêm scope sau này thì phải kết nối lại hộp thư.",
   "firstRun.google.helpStep3":
     "Trong Authorized redirect URIs, thêm các URI liệt kê ở trên. Hộp thư là bắt buộc để nhận thư; Lịch và Đăng nhập bật các tính năng tương ứng.",
   "firstRun.google.helpStep4":

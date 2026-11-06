@@ -68,6 +68,7 @@ export function toBoardDeal(
   deal: Deal,
   naming: CompanyNaming,
   owners?: OwnerNaming,
+  ownerPhotos?: ReadonlyMap<string, string>,
 ): BoardDeal {
   const since = idleSince(deal);
   const measuredAt = Date.now();
@@ -89,7 +90,11 @@ export function toBoardDeal(
     closeDateProvisional: deal.close_date_provisional ?? false,
     owner:
       ownerName && deal.owner_id
-        ? { id: deal.owner_id, name: ownerName }
+        ? {
+            id: deal.owner_id,
+            name: ownerName,
+            photo: ownerPhotos?.get(deal.owner_id),
+          }
         : null,
     lastEmail: boardMail(deal.last_email, measuredAt),
   };

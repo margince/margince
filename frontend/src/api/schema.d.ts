@@ -18169,6 +18169,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Stream a colleague's profile picture.
+         * @description The bytes behind `User.avatar_url` and `SeatName.avatar_url`: always `image/png`,
+         *     this server's own re-encode, whatever the source was. Any member may read any
+         *     colleague's picture, as any member may read the roster.
+         *
+         *     404 when the seat has no picture, is archived, or does not exist; a client draws
+         *     initials for all three alike. 501 when the deployment has no object store configured.
+         *
+         *     When `v` names the revision served, the answer may be cached for a day without
+         *     asking again. Any other `v`, or none, is answered with the current picture under
+         *     `no-cache`, so a stale URL never pins the new bytes. `If-None-Match` with the
+         *     `ETag` answers 304.
+         */
+        get: operations["getUserAvatar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/role": {
         parameters: {
             query?: never;
@@ -22851,6 +22884,48 @@ export interface paths {
         put: operations["saveMyGreetingName"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload your own profile picture.
+         * @description Always the CALLER's own picture, never anybody else's: there is no id to pass.
+         *     Colleagues see it beside your name wherever the app draws you.
+         *
+         *     Multipart upload with one `file` part of at most 5,000,000 bytes. The request may
+         *     be 16 KiB larger, for the form's own boundary lines and part headers; a larger
+         *     request is refused as 413. PNG, JPEG and WebP are accepted; anything else, SVG and
+         *     GIF included, is refused as 415. The image is cropped to a centred square and
+         *     re-encoded as this server's own PNG of at most 512px, so what `avatar_url` serves
+         *     is never the uploaded bytes. 503 with `Retry-After` when the server is reading too
+         *     many pictures at once; the same file may be sent again.
+         *
+         *     Which picture a seat shows: an uploaded one, else the picture of the Google
+         *     account the member signs in with, else no picture and the client draws initials.
+         *     An upload replaces either, and is the only way back to a picture after a delete.
+         */
+        post: operations["uploadMyAvatar"];
+        /**
+         * Take your own profile picture off for good.
+         * @description The seat shows initials from now on, whether the picture was uploaded or came from
+         *     the Google account. A later Google sign-in does not bring the Google picture back;
+         *     only a new upload does.
+         *
+         *     Removing a picture the seat does not have is not an error: the seat still shows
+         *     initials from then on.
+         */
+        delete: operations["deleteMyAvatar"];
         options?: never;
         head?: never;
         patch?: never;
@@ -44872,6 +44947,8 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
+            /** @description Where the client fetches this seat's profile picture, absent when the seat has none and the client draws initials. The URL changes whenever the picture does. */
+            avatar_url?: string;
             /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
             greeting_name?: string | null;
             /** @description The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
@@ -44941,6 +45018,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             display_name: string;
+            /** @description Where the client fetches this colleague's profile picture, absent when they have none. As `User.avatar_url`. */
+            avatar_url?: string;
             /** @description True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so a screen that names them through this read can say they left. Any member could already tell, because the roster leaves a departed colleague out. */
             departed: boolean;
         };
@@ -77219,6 +77298,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     deleteAnchorCompanyLogo: {
@@ -77301,6 +77389,15 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -77554,6 +77651,15 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -85890,6 +85996,60 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getUserAvatar: {
+        parameters: {
+            query?: {
+                /** @description The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day. */
+                v?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The picture's bytes. */
+            200: {
+                headers: {
+                    /** @description The revision served, the same token `avatar_url` carries, quoted. */
+                    ETag?: string;
+                    /** @description `private, max-age=86400, immutable` when `v` names this revision, else `private, no-cache`. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            /** @description The client already holds this revision. */
+            304: {
+                headers: {
+                    /** @description The revision the client holds, quoted. */
+                    ETag?: string;
+                    /** @description The freshness a 200 for the same request would carry. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The deployment has no object store configured, so no picture can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     changeUserRole: {
         parameters: {
             query?: never;
@@ -92810,6 +92970,88 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    uploadMyAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The caller's seat, carrying the `avatar_url` the upload now answers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
+            /** @description The upload is not a PNG, JPEG or WebP image this server can read. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The deployment has no object store configured, so no picture can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteMyAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's seat, with no `avatar_url`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getMyAiActivity: {

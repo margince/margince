@@ -259,6 +259,7 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/features/settings/users-admin.stories.tsx":         "a page under the seats settings group",
 	"frontend/src/features/settings/users-invite-form.stories.tsx":   "a page under the seats settings group",
 	"frontend/src/features/settings/users-memberverbs.stories.tsx":   "a page under the seats settings group",
+	"frontend/src/features/settings/users-membercells.stories.tsx":   "a page under the seats settings group",
 	"frontend/src/features/settings/users-password-link.stories.tsx": "a page under the seats settings group",
 	"frontend/src/features/settings/users-rolecell.stories.tsx":      "a page under the seats settings group",
 	"frontend/src/components/share.parts.tsx": "the share target kind: a colleague with a seat, or a team " +

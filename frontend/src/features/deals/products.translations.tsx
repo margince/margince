@@ -15,7 +15,7 @@ import {
 import { ErrorLine } from "../../design-system/errorline";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { useT } from "../../i18n";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { unwrap } from "../../lib/problem";
 
 type Product = components["schemas"]["Product"];
 type Translation = components["schemas"]["ProductTranslation"];
@@ -154,12 +154,7 @@ export function ProductTranslationsDialog({
               />
             )}
           </Field>
-          <ErrorLine
-            error={
-              (save.isError && problemMessageOf(save.error, t)) ||
-              (remove.isError && problemMessageOf(remove.error, t))
-            }
-          />
+          <ErrorLine error={save.error ?? remove.error} />
         </form>
       }
       actions={

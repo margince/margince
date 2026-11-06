@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
+import { PORTRAIT, WHITE_PORTRAIT } from "../testing/seatphotos";
 import { Avatar } from "./atoms";
 import { CellStack } from "./cellstack";
 import { Heading } from "./heading";
@@ -181,4 +182,38 @@ export const KeyedOnTheRecord: Story = {
       <Avatar identity="company_7f3" name="Voltaq Systems GmbH" size="md" />
     </div>
   ),
+};
+
+// The white picture is the case for the control-edge ring: without it the chip has no edge.
+export const SeatPhoto: Story = {
+  render: () => (
+    <div style={column}>
+      {[PORTRAIT, WHITE_PORTRAIT].map((photo) => (
+        <div key={photo} style={wall}>
+          {SIZES.map((size) => (
+            <Avatar
+              key={size}
+              name="Lena Hoffmann"
+              identity={photo === PORTRAIT ? "seat-lena" : "seat-lena-white"}
+              photo={photo}
+              size={size}
+            />
+          ))}
+        </div>
+      ))}
+      <div style={wall}>
+        <Avatar
+          name="Lena Hoffmann"
+          identity="seat-broken"
+          photo="data:image/png;base64,AAAA"
+          size="xl"
+        />
+      </div>
+    </div>
+  ),
+};
+
+export const SeatPhotoDark: Story = {
+  ...SeatPhoto,
+  globals: { theme: "dark" },
 };
