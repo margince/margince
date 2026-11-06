@@ -56,6 +56,9 @@ func reportingSelectionDeals(ctx context.Context, tx pgx.Tx, store *initiatives.
 	if err := auth.Require(ctx, string(recordTypeDeal), principal.ActionRead); err != nil {
 		return nil, err
 	}
+	if err := reportingPipeline(ctx, tx, selection.PipelineId); err != nil {
+		return nil, err
+	}
 	var frame crmcontracts.ReportingContext
 	scope, err := (reportingAuthority{}).Scope(ctx, tx, selection.Scope, false)
 	if err != nil {

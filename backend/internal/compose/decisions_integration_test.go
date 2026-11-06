@@ -166,12 +166,12 @@ func TestTheDecisionListFollowsTheReviewSelection(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `SELECT pipeline_id FROM deal WHERE id = $1`, open["Tern portal"]).Scan(&pipeline); err != nil {
 		t.Fatalf("reading the deal's pipeline: %v", err)
 	}
-	other := openapi_types.UUID(ids.NewV7())
+	unknown := openapi_types.UUID(ids.NewV7())
 	if got := decided(crmcontracts.ReportingSelection{PipelineId: &pipeline}); len(got) != 2 {
 		t.Errorf("the deals' own pipeline lists decisions on %v, want both", got)
 	}
-	if got := decided(crmcontracts.ReportingSelection{PipelineId: &other}); len(got) != 0 {
-		t.Errorf("another pipeline lists decisions on %v, want none", got)
+	if _, err := seam.List(ctx, decisionFilter{selection: crmcontracts.ReportingSelection{PipelineId: &unknown}}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("an unknown pipeline answered %v, want not found", err)
 	}
 
 	// A named deal stays only if the review holds it.
@@ -208,6 +208,11 @@ func TestADecisionSelectionHonoursTheReadersGrants(t *testing.T) {
 
 	if _, err := seam.List(initiativeEditor(e, "deal"), narrowed); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a role with no deal read answered %v, want permission denied", err)
+	}
+	pipeline := openapi_types.UUID(ids.NewV7())
+	piped := decisionFilter{selection: crmcontracts.ReportingSelection{PipelineId: &pipeline}}
+	if _, err := seam.List(initiativeEditor(e, "pipeline"), piped); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a role with no pipeline read answered %v, want permission denied", err)
 	}
 
 	masked := initiativeManager(e)
