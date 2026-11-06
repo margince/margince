@@ -289,11 +289,8 @@ func memberRead(ctx context.Context, recordType, alias string, wanted []ids.UUID
 
 func leadRows(ctx context.Context, tx pgx.Tx, membership Membership, companies map[ids.UUID]bool) ([]crmcontracts.SalesInitiativeMember, error) {
 	wanted := append(slices.Clone(membership.Leads), excludedOf(membership, recordLead)...)
-	if len(wanted) == 0 {
+	if len(wanted) == 0 || !auth.ReadGranted(ctx, recordLead) {
 		return nil, nil
-	}
-	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
-		return nil, err
 	}
 	where, companyLabel, args, err := memberRead(ctx, recordLead, "l", wanted)
 	if err != nil {
@@ -323,11 +320,8 @@ func leadRows(ctx context.Context, tx pgx.Tx, membership Membership, companies m
 
 func dealRows(ctx context.Context, tx pgx.Tx, membership Membership, companies map[ids.UUID]bool) ([]crmcontracts.SalesInitiativeMember, error) {
 	wanted := append(slices.Clone(membership.Deals), excludedOf(membership, recordDeal)...)
-	if len(wanted) == 0 {
+	if len(wanted) == 0 || !auth.ReadGranted(ctx, recordDeal) {
 		return nil, nil
-	}
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return nil, err
 	}
 	where, companyLabel, args, err := memberRead(ctx, recordDeal, "d", wanted)
 	if err != nil {

@@ -150,6 +150,44 @@ func TestAnInitiativeIsDefinedByItsRulesPicksAndExclusions(t *testing.T) {
 // A save replaces the picks its editor can read and no others. A pick the
 // editor cannot read was never shown to them. Leaving it out of what they send
 // back does not remove it.
+// An exclusion on a type the editor cannot read stays out of their reading as a
+// pick does. Their save lands, and it does not fail on the read it returns.
+func TestAnExclusionTheEditorCannotReadDoesNotFailTheirSave(t *testing.T) {
+	e := setupForecast(t)
+	start := clocktest.Now(t).UTC().Truncate(time.Second)
+	_, _, open := seedInitiativeDeals(t, e, start)
+	manager := initiativeManager(e)
+	store := newInitiativeStore(e.Pool)
+	draft, err := store.Create(manager, initiatives.Definition{Name: "Portal push", Objective: reportingQualifiedOpportunitiesCreated, Deadline: start.AddDate(0, 3, 0)})
+	if err != nil {
+		t.Fatalf("defining the initiative: %v", err)
+	}
+	id := ids.UUID(draft.Id)
+	excluded := []crmcontracts.SalesInitiativeMemberRef{{RecordType: "deal", RecordId: openapi_types.UUID(open["Tern portal"])}}
+	if _, err := store.ReplaceMembers(manager, id, nil, excluded); err != nil {
+		t.Fatalf("excluding a deal: %v", err)
+	}
+
+	editor := initiativeEditor(e, "deal")
+	if _, err := store.ReplaceMembers(editor, id, nil, nil); err != nil {
+		t.Fatalf("saving as an editor who reads no deals: %v", err)
+	}
+	read, err := store.Members(editor, id, nil)
+	if err != nil {
+		t.Fatalf("reading the members as that editor: %v", err)
+	}
+	if len(read.Data) != 0 {
+		t.Errorf("that editor read %+v, want no deal", read.Data)
+	}
+	kept, err := store.Members(manager, id, nil)
+	if err != nil {
+		t.Fatalf("reading the members: %v", err)
+	}
+	if len(kept.Data) != 1 || kept.Data[0].Reason != "excluded" {
+		t.Errorf("the members are %+v, want the exclusion kept", kept.Data)
+	}
+}
+
 func TestSavingMembersKeepsThePicksTheEditorCannotRead(t *testing.T) {
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
