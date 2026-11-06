@@ -34,6 +34,7 @@ type historyQueryCost struct {
 type historySQLProfile struct {
 	mu      sync.Mutex
 	queries map[string]historyQueryCost
+	report  func(historyQueryCost)
 }
 
 type historyQuerySpan struct {
@@ -65,11 +66,29 @@ func (p *historySQLProfile) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, _ pg
 	}
 	cost.query, cost.calls, cost.elapsed = span.query, cost.calls+1, cost.elapsed+elapsed
 	p.queries[span.query] = cost
+	if p.report != nil {
+		p.report(cost)
+	}
+}
+
+func logHistoryQueryCost(t *testing.T, cost historyQueryCost) {
+	t.Helper()
+	query := strings.Join(strings.Fields(cost.query), " ")
+	if len(query) > 180 {
+		query = query[:180]
+	}
+	t.Logf("sql_profile calls=%d elapsed=%s query=%q", cost.calls, cost.elapsed, query)
 }
 
 func profileHistoryPool(ctx context.Context, t *testing.T, pool *pgxpool.Pool) *pgxpool.Pool {
 	t.Helper()
 	profile := &historySQLProfile{queries: map[string]historyQueryCost{}}
+	// A package timeout bypasses cleanup, so long runs also report their completed work.
+	profile.report = func(cost historyQueryCost) {
+		if cost.calls%1000 == 0 || cost.calls&(cost.calls-1) == 0 {
+			logHistoryQueryCost(t, cost)
+		}
+	}
 	config := pool.Config()
 	if os.Getenv("MARGINCE_IMPORT_BENCH_PREPARED") != "" {
 		config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
@@ -116,11 +135,7 @@ func profileHistoryPool(ctx context.Context, t *testing.T, pool *pgxpool.Pool) *
 			}
 		}
 		for _, cost := range costs[:min(20, len(costs))] {
-			query := strings.Join(strings.Fields(cost.query), " ")
-			if len(query) > 180 {
-				query = query[:180]
-			}
-			t.Logf("sql_profile calls=%d elapsed=%s query=%q", cost.calls, cost.elapsed, query)
+			logHistoryQueryCost(t, cost)
 		}
 	})
 	return measured

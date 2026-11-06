@@ -313,6 +313,7 @@ the environment the container gets:
 | `MARGINCE_ANTHROPIC_KEY` | — | `ai` package smoke test | BYOK Anthropic key for the live Anthropic smoke test. It is separate from `ANTHROPIC_API_KEY`, which the **runtime** reads for an `anthropic` provider in a binding. |
 | `MARGINCE_VERTEX_SA_FILE` | — | `ai` package smoke test (`-tags livesmoke`) | path to a Google service account key file for the live Vertex smoke test; the run fails, and does not skip, without it. It is separate from `GEMINI_VERTEX_SA_JSON`, which the **runtime** reads, and which holds what is in the file, not a path. |
 | `MARGINCE_SURFE_LIVE_KEY` | — | `make vendor-live` (`-tags vendorlive`) | a Surfe API key for the live `GET /v1/credits` check; the run fails, and does not skip, without it. The scheduled job fills it from the repository secret `SURFE_LIVE_KEY`. |
+| `MARGINCE_IMPORT_BENCH_CONTACTS` | message count | mail import test | Number of addresses, from one to the message count. |
 | `MARGINCE_IMPORT_BENCH_SQL` | — | mail import test | Set any value to report time and call counts by SQL statement. |
 | `MARGINCE_IMPORT_BENCH_PREPARED` | — | mail import test | With the SQL report, use a separate pool with the worker statement cache settings. |
 | `MARGINCE_IMPORT_BENCH_PLAN_DIR` | — | mail import test | With the SQL report, write plans for the slowest supported read queries to this directory. |
