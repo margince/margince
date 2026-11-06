@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { usePageName } from "../../app/pagemeta";
+import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { searchCompanyTargets } from "../../components/companyform";
 import { CreateAction } from "../../components/create";
 import {
@@ -18,6 +19,7 @@ import { mineEmptyNote, standardViews } from "../../components/recordlist";
 import { useOwnerPicker } from "../../components/recordowners";
 import { RefusedFiltersNote } from "../../components/refusedfiltersnote";
 import { ErrorLine } from "../../design-system/errorline";
+import { useRowSelection } from "../../design-system/listselection";
 import { currencyOptions } from "../../format/currencychoices";
 import { useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
@@ -303,9 +305,6 @@ export function DealsScreen({
   // from `pending`, which is the question before the close; this is the offer
   // after one landed, and the close dialog is already gone by then.
   const [closed, setClosed] = useState<ClosedDeal | null>(null);
-  // Bulk selection, by deal id. Cleared after any bulk run except for the rows
-  // that refused, since every other row's version has moved.
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
 
   const advance = useAdvanceDeal();
 
@@ -313,11 +312,13 @@ export function DealsScreen({
   const loadedDeals = (dealsQuery.data?.pages ?? []).flatMap(
     (page) => page.data,
   );
-  // Only ids the list holds now count as selected. A row that left the result
-  // set (refetched away, filtered out, archived by this run) must not linger
-  // as an invisible selection nobody can clear.
-  const selectedRows = loadedDeals.filter((deal) => selected.has(deal.id));
-  const liveSelection = new Set(selectedRows.map((deal) => deal.id));
+  // Cleared after any bulk run except for the rows that refused, since every
+  // other row's version has moved.
+  const chosen = useRowSelection({
+    rows: loadedDeals,
+    keyOf: (deal) => deal.id,
+    limit: BULK_MAX_ITEMS,
+  });
 
   const dealsListState: ListState<Deal> = {
     rows: loadedDeals,
@@ -391,10 +392,8 @@ export function DealsScreen({
   const tagChips = useTagChips();
   const rowSelection = dealRowSelection({
     view,
-    liveSelection,
-    selectedRows,
+    chosen,
     stages,
-    setSelected,
     t,
   });
 
