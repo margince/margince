@@ -406,6 +406,13 @@
    company's name elides before the mark does, so the mark stays in the same
    place on every card in the column. The size and ink are `.t-caption`'s, worn
    on the element; the weight is the one text beside a mark takes. */
+.deal-card .deal-standing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin-block-start: var(--space-1);
+}
 .deal-card .deal-head {
   display: flex;
   align-items: center;

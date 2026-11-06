@@ -468,6 +468,9 @@ jobs:
           # declaration and the gate enforces again — it goes inert on its own
           # rather than waiting for somebody to remember to delete this line.
           MIGRATION_VERSIONS_BASELINE_RESET: "1"
+          # The gates leg has this runner to itself, so collection need not
+          # hold the package to the limit a laptop running every leg wants.
+          GATES_GOMEMLIMIT: 6GiB
         # pipefail, because the default shell lacks it and tee would turn a red
         # gate green.
         # TEST_LEGS only: backend-lint runs the static legs on its own runner,
