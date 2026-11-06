@@ -1464,6 +1464,7 @@ public.assurance_run.digest text gen=- def=-
 public.assurance_run.eligible_deals integer NOT NULL gen=- def=0
 public.assurance_run.eligible_signals integer NOT NULL gen=- def=0
 public.assurance_run.id uuid NOT NULL gen=- def=uuidv7()
+public.assurance_run.outbox_inputs_tracked boolean NOT NULL gen=- def=false
 public.assurance_run.read_through_generation bigint gen=- def=-
 public.assurance_run.readiness text gen=- def=-
 public.assurance_run.requested_by text gen=- def=-
@@ -4667,6 +4668,7 @@ public.erasure_suppression.kind text NOT NULL gen=- def=-
 public.erasure_suppression.value_hash text NOT NULL gen=- def=-
 public.erasure_suppression_pkey CREATE UNIQUE INDEX erasure_suppression_pkey ON public.erasure_suppression USING btree (kind, value_hash)
 public.event_outbox acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.event_outbox.assurance_inputs_read boolean NOT NULL gen=- def=false
 public.event_outbox.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.event_outbox.envelope jsonb NOT NULL gen=- def=-
 public.event_outbox.event_outbox_pkey PRIMARY KEY (id)
@@ -4674,6 +4676,8 @@ public.event_outbox.id uuid NOT NULL gen=- def=uuidv7()
 public.event_outbox.published_at timestamp with time zone gen=- def=-
 public.event_outbox.seq bigint NOT NULL gen=- def=-
 public.event_outbox.stream text NOT NULL gen=- def=-
+public.event_outbox_assurance_unread CREATE INDEX event_outbox_assurance_unread ON public.event_outbox USING btree (((envelope ->> 'type'::text))) WHERE (NOT assurance_inputs_read)
+public.event_outbox_event_id CREATE INDEX event_outbox_event_id ON public.event_outbox USING btree (((envelope ->> 'event_id'::text)))
 public.event_outbox_pkey CREATE UNIQUE INDEX event_outbox_pkey ON public.event_outbox USING btree (id)
 public.event_outbox_seq_seq acl=- rls=false force=false
 public.existing_customer_notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

@@ -8521,7 +8521,7 @@ export const en = {
   "review.outOfDateRefresh":
     "Choose Check again to read the changes now, or wait for the next nightly run.",
   "review.freshnessUnknown":
-    "It is not known whether the records changed since this check: no check that read every source has run since Margince started tracking changes. Choose Check again to run one.",
+    "Margince has not yet confirmed whether the records changed since this check. Wait for an update, or choose Check again to read them now.",
   "review.allSourcesRead": "All sources checked.",
   // The sources a run reads, named for the reader rather than by the server's
   // own vocabulary. The unread line printed the wire keys verbatim, so a German

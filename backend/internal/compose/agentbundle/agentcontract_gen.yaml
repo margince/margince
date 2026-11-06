@@ -44699,7 +44699,7 @@ components:
           type: string
           enum: [current, out_of_date, unknown]
           description: >-
-            `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+            `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no complete check recorded its inputs, or when a committed input change is still waiting to be read. A complete check can read these changes before the background consumer catches up.
         changed_deals:
           type: integer
           minimum: 0

@@ -157,11 +157,12 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 ## event_outbox
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+7 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `assurance_inputs_read` | `boolean`, default `false` | yes |  |
 | `envelope` | `jsonb` | yes |  |
 | `published_at` | `timestamp with time zone` |  |  |
 | `seq` | `bigint` | yes |  |
@@ -170,6 +171,8 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `event_outbox_assurance_unread`: `btree (((envelope ->> 'type'))) WHERE (NOT assurance_inputs_read)`
+- `event_outbox_event_id`: `btree (((envelope ->> 'event_id')))`
 - `event_outbox_pkey`: `unique, btree (id)`
 - `idx_event_outbox_unpublished`: `btree (seq) WHERE (published_at IS NULL)`
 

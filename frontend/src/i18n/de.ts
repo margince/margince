@@ -8549,7 +8549,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateRefresh":
     "Wähle „Erneut prüfen“, um die Änderungen jetzt zu lesen, oder warte auf den nächsten nächtlichen Lauf.",
   "review.freshnessUnknown":
-    "Ob sich die Daten seit dieser Prüfung geändert haben, ist nicht bekannt: Seit Margince Änderungen verfolgt, lief keine Prüfung, die jede Quelle gelesen hat. Wähle „Erneut prüfen“, um eine zu starten.",
+    "Margince hat noch nicht bestätigt, ob sich die Daten seit dieser Prüfung geändert haben. Warte auf eine Aktualisierung oder wähle „Erneut prüfen“, um sie jetzt zu lesen.",
   "review.allSourcesRead": "Alle Quellen geprüft.",
   "review.source.mail": "Postfach",
   "review.source.calendar": "Kalender",
