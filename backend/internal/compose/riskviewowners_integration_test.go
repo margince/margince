@@ -24,13 +24,13 @@ func TestRiskViewsNarrowToTheNamedOwnerBeforeTheirScanCaps(t *testing.T) {
 	var pipeline ids.PipelineID
 	var stage ids.StageID
 	if err := f.e.DB().Tx(f.e.Admin(), func(tx pgx.Tx) error {
-		return tx.QueryRow(f.e.Admin(), `SELECT pipeline_id, stage_id FROM deal WHERE id = $1`, f.owned[f.e.Rep1]).Scan(&pipeline, &stage)
+		return tx.QueryRow(f.e.Admin(), `SELECT pipeline_id, stage_id FROM deal WHERE id = @deal`, pgx.NamedArgs{"deal": f.owned[f.e.Rep1]}).Scan(&pipeline, &stage)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	for range slippingScanLimit + 1 {
 		deal := f.e.SeedDeal(t, "Other owner's newer deal", pipeline, stage, &f.e.Rep2)
-		f.e.WsExec(t, `UPDATE deal SET created_at = $2, last_activity_at = $2 WHERE id = $1`, deal, clocktest.Now(t).AddDate(0, 0, -80))
+		f.e.WsExec(t, `UPDATE deal SET created_at = @quiet, last_activity_at = @quiet WHERE id = @deal`, pgx.NamedArgs{"deal": deal, "quiet": clocktest.Now(t).AddDate(0, 0, -80)})
 	}
 	owner := f.e.Rep1
 	listed, err := slippingLister(f.e.Pool)(f.e.Admin(), runner.SweepQuietDays, &owner)
