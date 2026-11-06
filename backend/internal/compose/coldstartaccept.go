@@ -38,7 +38,7 @@ import (
 //
 // volume is the meter an approved step-up widens, and it is installed HERE
 // and nowhere else: this is the service the HTTP decision path runs on. The
-// other services built from approvalsServiceWithEffects are staging-only — a
+// other services built from NewApprovalsServiceWithEffects are staging-only — a
 // nightly proposer, a rematch sweep — and none of them ever decides, so having
 // no releaser is the shape of what they do rather than a copy-paste omission.
 //
@@ -54,15 +54,13 @@ func approvalsHandlersWithEffects(
 	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)), notices
 }
 
-// approvalsServiceWithEffects is the registration list itself, split from the
-// handler wiring so a fitness test can enumerate what is stageable without
-// standing up an HTTP surface. Every kind registered here must carry a
-// decision-grant mapping (TestEveryRegisteredEffectKindHasADecisionGrantMapping).
-func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
+// NewApprovalsServiceWithEffects wires the decision effects used by automatic
+// approval runs. Website-lead decisions need the HTTP notice lane instead.
+func NewApprovalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	return approvalsServiceTelling(pool, &siteLeadNoticeLane{})
 }
 
-// approvalsServiceTelling is approvalsServiceWithEffects with the lane a website
+// approvalsServiceTelling is NewApprovalsServiceWithEffects with the lane a website
 // lead is told through. An empty lane refuses every site lead, which is right
 // for the services that only stage.
 func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {

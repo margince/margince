@@ -266,7 +266,7 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 // to the caller by outcome alone, so the cause has nowhere to go but the log —
 // and this is the door where the wire carries the least.
 func decidingApprovalsService(pool *pgxpool.Pool, send SendPath, log *slog.Logger) *approvals.Service {
-	svc := approvalsServiceWithEffects(pool)
+	svc := NewApprovalsServiceWithEffects(pool)
 	registerLateApprovalEffects(svc, pool, send)
 	if log != nil {
 		svc = svc.WithLogger(log)

@@ -63,7 +63,7 @@ func newSlippingDoors(t *testing.T) *slippingDoors {
 	d.registry = agents.NewRegistry(nil, gate, agents.WithVolumeCharger(d.charges))
 	idle := time.Date(2026, time.March, 2, 0, 0, 0, 0, time.UTC)
 	deal := ids.NewV7()
-	agents.RegisterSlippingTools(d.registry, func(_ context.Context, quietDays int) ([]agents.SlippingDeal, error) {
+	agents.RegisterSlippingTools(d.registry, func(_ context.Context, quietDays int, _ *ids.UUID) ([]agents.SlippingDeal, error) {
 		d.asked = append(d.asked, quietDays)
 		return []agents.SlippingDeal{{
 			DealID: deal, Name: "Quiet renewal", Stalled: true, LastActivityAt: &idle, CreatedAt: idle,

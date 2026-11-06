@@ -64585,6 +64585,8 @@ export interface operations {
     listSlippingDeals: {
         parameters: {
             query?: {
+                /** @description Narrow to deals owned by this member within the caller's read scope. */
+                owner_id?: string;
                 /** @description Days without recorded activity after which an open deal counts as gone quiet. */
                 quiet_days?: number;
                 /** @description Cap the ranked list. Omit it for every evidenced deal. */
@@ -64612,7 +64614,10 @@ export interface operations {
     };
     listAtRiskRelationships: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Narrow to deals owned by this member within the caller's read scope. */
+                owner_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -64630,6 +64635,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     draftDealFollowUps: {

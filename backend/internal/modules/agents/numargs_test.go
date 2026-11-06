@@ -188,7 +188,7 @@ func TestTheAdvertisedLimitsBindTheToolsThatAdvertiseThem(t *testing.T) {
 		return RecordSearchPage{}, nil
 	})
 	RegisterSlippingTools(registry,
-		func(context.Context, int) ([]SlippingDeal, error) {
+		func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 			t.Error("the deal lister ran for a limit the schema forbids")
 			return nil, nil
 		},
@@ -223,7 +223,7 @@ func TestTheAdvertisedLimitsBindTheToolsThatAdvertiseThem(t *testing.T) {
 func TestACapInsideItsDeclaredRangeReachesTheTool(t *testing.T) {
 	reads := 0
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterSlippingTools(registry, func(context.Context, int) ([]SlippingDeal, error) {
+	RegisterSlippingTools(registry, func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 		reads++
 		return nil, nil
 	}, nil, testStalledDays, testStalledDays)
@@ -249,7 +249,7 @@ func TestABoundCheckNeverAnswersAQuestionAboutShape(t *testing.T) {
 	// handler's own decode, each of which names what it wanted. A second, vaguer
 	// answer to the same question is worse than none.
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterSlippingTools(registry, func(context.Context, int) ([]SlippingDeal, error) {
+	RegisterSlippingTools(registry, func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 		t.Error("the deal lister ran for arguments that are not an object")
 		return nil, nil
 	}, nil, testStalledDays, testStalledDays)

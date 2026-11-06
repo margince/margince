@@ -36,14 +36,14 @@ func TestTwoMembersSweepsLeaveOneNoteOnEachOfTheirDeals(t *testing.T) {
 		owned[owner] = deal
 	}
 	lister := slippingLister(e.Pool)
-	if every, err := lister(e.Admin(), runner.SweepQuietDays); err != nil || len(every) != 3 {
+	if every, err := lister(e.Admin(), runner.SweepQuietDays, nil); err != nil || len(every) != 3 {
 		t.Fatalf("outside a run the list holds %d deals (err %v), want all 3", len(every), err)
 	}
 
 	// Rep3 never granted the sweep, so no run acts for them.
 	for _, member := range []ids.UUID{e.Rep1, e.Rep2} {
 		run := principal.WithAgentRunID(e.AgentFor(t, member, nil, integration.AdminPerms), ids.NewV7())
-		listed, err := lister(run, runner.SweepQuietDays)
+		listed, err := lister(run, runner.SweepQuietDays, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -131,7 +131,7 @@ func TestAScheduledRunMayNotFileUnderADealItsMemberDoesNotOwn(t *testing.T) {
 	if _, refused := errors.AsType[*activities.ScheduledRunForeignDealError](riskNote(run, t, f.e, colleagues)); !refused {
 		t.Errorf("a run filed under a colleague's deal, want ScheduledRunForeignDealError")
 	}
-	listed, err := slippingLister(f.e.Pool)(run, runner.SweepQuietDays)
+	listed, err := slippingLister(f.e.Pool)(run, runner.SweepQuietDays, nil)
 	if err != nil || len(listed) != 1 {
 		t.Fatalf("the run lists %d deals (err %v), want its own one", len(listed), err)
 	}
@@ -178,7 +178,7 @@ func TestTheNoteLimitIsPerDealAndPerMember(t *testing.T) {
 // days is on the run's list either way.
 func TestADealQuietForThirtyDaysIsOnTheRunsList(t *testing.T) {
 	f := newSweepFixture(t, 30)
-	listed, err := slippingLister(f.e.Pool)(f.run(t, f.e.Rep1), runner.SweepQuietDays)
+	listed, err := slippingLister(f.e.Pool)(f.run(t, f.e.Rep1), runner.SweepQuietDays, nil)
 	if err != nil || len(listed) != 1 || listed[0].DealID != f.owned[f.e.Rep1] {
 		t.Fatalf("the run lists %+v (err %v), want the deal quiet for 30 days", listed, err)
 	}

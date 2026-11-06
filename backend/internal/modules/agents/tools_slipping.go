@@ -62,7 +62,7 @@ type SlippingDeal struct {
 // than quietDays, plus open deals past their expected close date. Compose
 // implements it over the deals module's list path so RBAC and row scope apply
 // unchanged.
-type SlippingLister func(ctx context.Context, quietDays int) ([]SlippingDeal, error)
+type SlippingLister func(ctx context.Context, quietDays int, owner *ids.UUID) ([]SlippingDeal, error)
 
 // FollowUpDrafter drafts one follow-up for a slipping deal and persists
 // it as a draft activity on the deal's timeline — a proposal, never a
@@ -120,6 +120,7 @@ func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 		Unlisted:  true,
 		OpenAPIOp: "listSlippingDeals",
 		InputSchema: schema(fmt.Sprintf(`{"type":"object","properties":{
+			"owner_id":{"type":"string","format":"uuid","description":"Narrow to deals owned by this member; existing read scope still applies"},
 			"quiet_days":{"type":"integer","minimum":1,"maximum":%d,"default":%d,"description":"Days without recorded activity after which a deal counts as gone quiet; omit it for the product-wide stalled threshold"},
 			"limit":{"type":"integer","minimum":1,"maximum":50,"description":"Cap the ranked set; omit for the full evidenced set"}},
 			"additionalProperties":false}`, maxQuietDays, t.stalledDays)),
@@ -129,8 +130,9 @@ func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 
 func (t whatsSlippingThisWeek) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		QuietDays int `json:"quiet_days"`
-		Limit     int `json:"limit"`
+		QuietDays int       `json:"quiet_days"`
+		Owner     *ids.UUID `json:"owner_id"`
+		Limit     int       `json:"limit"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
@@ -141,7 +143,7 @@ func (t whatsSlippingThisWeek) Handle(ctx context.Context, in json.RawMessage) (
 	if quietDays == 0 {
 		quietDays = t.defaultQuietDays(ctx)
 	}
-	candidates, err := t.list(ctx, quietDays)
+	candidates, err := t.list(ctx, quietDays, args.Owner)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +225,7 @@ func (t draftFollowUpsFor) Handle(ctx context.Context, in json.RawMessage) (json
 			Guidance: fmt.Sprintf("omit it, or ask for 1..%d", maxFollowUpDrafts),
 		}
 	}
-	candidates, err := t.list(ctx, t.stalledDays)
+	candidates, err := t.list(ctx, t.stalledDays, nil)
 	if err != nil {
 		return nil, err
 	}

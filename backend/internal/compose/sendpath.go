@@ -245,7 +245,7 @@ type lateApprovalEffect struct {
 // lateApprovalEffects are the approve-side pairs that cannot be registered with
 // the others, because they send.
 //
-// The list beside the rest (approvalsServiceWithEffects) runs when the approvals
+// The list beside the rest (NewApprovalsServiceWithEffects) runs when the approvals
 // surface is built, which is BEFORE server options assemble the send path — so
 // an executor registered there would send through a store with no signature, no
 // unsubscribe linker and no send authority. It would work, and put out mail

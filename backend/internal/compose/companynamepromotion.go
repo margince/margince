@@ -128,7 +128,7 @@ type CompanyNamePromoter struct {
 
 // NewCompanyNamePromoter builds the sweep over the pool. Its approvals service is
 // the staging half only: the accept EFFECT is registered on the service the
-// HTTP surface decides through (approvalsServiceWithEffects), which is where a
+// HTTP surface decides through (NewApprovalsServiceWithEffects), which is where a
 // human's decision arrives.
 func NewCompanyNamePromoter(pool *pgxpool.Pool, log *slog.Logger) *CompanyNamePromoter {
 	return &CompanyNamePromoter{

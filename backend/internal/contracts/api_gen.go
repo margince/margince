@@ -71485,6 +71485,12 @@ type CreateDealParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ListAtRiskRelationshipsParams defines parameters for ListAtRiskRelationships.
+type ListAtRiskRelationshipsParams struct {
+	// OwnerId Narrow to deals owned by this member within the caller's read scope.
+	OwnerId *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
+}
+
 // DraftDealFollowUpsParams defines parameters for DraftDealFollowUps.
 type DraftDealFollowUpsParams struct {
 	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
@@ -71503,6 +71509,9 @@ type DraftDealFollowUpsParams struct {
 
 // ListSlippingDealsParams defines parameters for ListSlippingDeals.
 type ListSlippingDealsParams struct {
+	// OwnerId Narrow to deals owned by this member within the caller's read scope.
+	OwnerId *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
+
 	// QuietDays Days without recorded activity after which an open deal counts as gone quiet.
 	QuietDays *int `form:"quiet_days,omitempty" json:"quiet_days,omitempty" maximum:"365" minimum:"1"`
 
@@ -91114,7 +91123,7 @@ type ServerInterface interface {
 	CreateDeal(w http.ResponseWriter, r *http.Request, params CreateDealParams)
 	// The open deals whose relationships are going cold, and why.
 	// (GET /deals/at-risk)
-	ListAtRiskRelationships(w http.ResponseWriter, r *http.Request)
+	ListAtRiskRelationships(w http.ResponseWriter, r *http.Request, params ListAtRiskRelationshipsParams)
 	// Draft a follow-up on each slipping deal, worst first. Nothing is sent.
 	// (POST /deals/follow-up-drafts)
 	DraftDealFollowUps(w http.ResponseWriter, r *http.Request, params DraftDealFollowUpsParams)
@@ -95623,7 +95632,7 @@ func (_ Unimplemented) CreateDeal(w http.ResponseWriter, r *http.Request, params
 
 // The open deals whose relationships are going cold, and why.
 // (GET /deals/at-risk)
-func (_ Unimplemented) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request, params ListAtRiskRelationshipsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -120242,6 +120251,9 @@ func (siw *ServerInterfaceWrapper) CreateDeal(w http.ResponseWriter, r *http.Req
 // ListAtRiskRelationships operation middleware
 func (siw *ServerInterfaceWrapper) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -120250,8 +120262,24 @@ func (siw *ServerInterfaceWrapper) ListAtRiskRelationships(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAtRiskRelationshipsParams
+
+	// ------------- Optional query parameter "owner_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_id", r.URL.Query(), &params.OwnerId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListAtRiskRelationships(w, r)
+		siw.Handler.ListAtRiskRelationships(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -120345,6 +120373,19 @@ func (siw *ServerInterfaceWrapper) ListSlippingDeals(w http.ResponseWriter, r *h
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListSlippingDealsParams
+
+	// ------------- Optional query parameter "owner_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_id", r.URL.Query(), &params.OwnerId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		}
+		return
+	}
 
 	// ------------- Optional query parameter "quiet_days" -------------
 

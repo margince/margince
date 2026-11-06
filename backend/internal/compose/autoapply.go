@@ -392,7 +392,7 @@ func refusesThisRow(err error) bool {
 func SweepAutoApply(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 	return autoApplier{
 		pool:  pool,
-		svc:   approvalsServiceWithEffects(pool),
+		svc:   NewApprovalsServiceWithEffects(pool),
 		users: identity.NewService(pool),
 	}.Sweep(ctx)
 }

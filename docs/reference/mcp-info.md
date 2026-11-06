@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 13 |
-| Tool catalog | 227.2 KB |
+| Tool catalog | 227.4 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 59479 |
+| Approx. wire tokens | 59518 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.0 KB | 23% | Yes, every step |
-| Input schemas | 111.7 KB | 49% | Yes, every step |
+| Input schemas | 111.9 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **164.8 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **164.9 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -92,7 +92,7 @@ descriptions and input schemas are what each step pays for.
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
 | [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 927 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
-| [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
+| [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
 | [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2167 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
@@ -7351,6 +7351,11 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
       "maximum": 50,
       "minimum": 1,
       "type": "integer"
+    },
+    "owner_id": {
+      "description": "at_risk, slipping only: Narrow to deals owned by this member; existing read scope still applies",
+      "format": "uuid",
+      "type": "string"
     },
     "project_id": {
       "description": "commitments only: Keep only promises filed under this project or under none",

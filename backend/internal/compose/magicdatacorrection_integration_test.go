@@ -44,7 +44,7 @@ func TestEachCorrectionRunIsOneMaintenanceLineOnTheReceipt(t *testing.T) {
 	seed(task, &second, 2, "Second run")
 	seed("link-reconcile", nil, 1, "Ordinary filing")
 
-	receipt, err := newMagicService(e.Pool, approvalsServiceWithEffects(e.Pool), func() time.Time { return now }).
+	receipt, err := newMagicService(e.Pool, NewApprovalsServiceWithEffects(e.Pool), func() time.Time { return now }).
 		Read(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms), &since, 20)
 	if err != nil {
 		t.Fatalf("reading the receipt: %v", err)
