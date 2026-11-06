@@ -218,3 +218,16 @@ var ErrNothingFreeToBuy = errors.New("integrations: this connection buys nothing
 // says WHICH of the three it was, and the handler passes that through. Stating
 // one of the three here would contradict the other two in the same sentence.
 var ErrCategoryNotPermitted = errors.New("integrations: that is not a purchase this run can make")
+
+// agentRunCategories is runCategories for a run an agent asks for. An agent names
+// a priced detail to buy it, and leaving the argument out buys only what is free.
+func agentRunCategories(desc provider.Descriptor, conn admittedConnection, in provider.QueueInput) ([]provider.Category, error) {
+	if len(in.Categories) > 0 {
+		return runCategories(desc, conn, in)
+	}
+	free := intersect(categoriesFrom(conn.categories), desc.Free())
+	if len(free) == 0 {
+		return nil, ErrNothingFreeToBuy
+	}
+	return free, nil
+}

@@ -141,7 +141,7 @@ func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
 	id := seedRenewalReminder(t, owner, col, false)
 
 	automationStore := automation.NewAutomationStore(e.DB()).
-		WithClock(func() time.Time { return previewNow }).
+		SetClock(func() time.Time { return previewNow }).
 		WithFieldCatalog(svc)
 	// automation:Read authorizes reading the instance being previewed;
 	// contact:Read is the target-table read gate Preview applies on top

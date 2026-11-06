@@ -5,10 +5,11 @@
 package gates
 
 import (
-	"os"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // A touch trigger may only sit on a table that has every column it writes.
@@ -21,7 +22,7 @@ import (
 // CI's empty one.
 func TestEveryTouchTriggerTableHasTheColumnsItsTriggerWrites(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

@@ -30,7 +30,6 @@ import (
 	"encoding/json"
 	"go/ast"
 	"go/token"
-	"os"
 	"strconv"
 	"testing"
 
@@ -63,7 +62,7 @@ func TestTheWonReasonDetailBoundIsOneNumber(t *testing.T) {
 // is the only place it survives.
 func publishedWonReasonDetailBound(t *testing.T) int {
 	t.Helper()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

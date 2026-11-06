@@ -74,7 +74,7 @@ func replyLangPrompt(t *testing.T, e *integration.Env, anchor ids.UUID) (string,
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
 	drafter.envelope = draftfloor.NewResolver().
-		WithClock(func() time.Time { return replyLangStart.Add(30 * 24 * time.Hour) }).
+		SetClock(func() time.Time { return replyLangStart.Add(30 * 24 * time.Hour) }).
 		WithUserLanguage(func(context.Context) string { return "vi" })
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	if _, err := drafter.DraftEmailWithProvenance(reader, anchor, draftfloor.Steering{}); err != nil {

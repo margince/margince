@@ -1,0 +1,22 @@
+name: reader_rendering_keeps_a_commitment_whole
+task: reader_rendering
+site: activity_text
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  kind: "meeting"
+  subject: "Abstimmung Pilotphase"
+  body: "Wir haben zugesagt, bis Freitag eine überarbeitete Zeitplanung zu schicken. Herr Albers sagt die Freigabe des Budgets zu, sobald der Vorstand am 3. Dezember zugestimmt hat."
+  source: "de"
+  target: "en"
+expect:
+  outcome: accepted
+  answer:
+    already_in_target: false
+    keeps: ["Albers", "3"]
+    omits: ["might", "maybe", "perhaps"]
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "Both commitments survive at the same strength: we send a revised schedule by Friday, and Mr Albers releases the budget once the board agrees on 3 December. A rendering that softens either one (might, maybe, perhaps) or drops the condition fails."

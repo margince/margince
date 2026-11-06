@@ -118,7 +118,13 @@ const dialTimeout = 30 * time.Second
 // the pool is per-transport and a shared pool would let one vendor's stalled
 // connections crowd out another's.
 func newOutboundClient(provider string) *http.Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone() //nolint:forcetypeassert // net/http's own DefaultTransport is a *http.Transport by construction
+	base, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		// A process that wrapped the default (a test's recorder, a tracing
+		// shim) still gets net/http's own settings, never the wrapper.
+		base = netHTTPDefault
+	}
+	transport := base.Clone()
 	transport.DialContext = (&net.Dialer{
 		Timeout:   dialTimeout,
 		KeepAlive: dialTimeout,
@@ -202,4 +208,23 @@ func effectivePort(u *url.URL) string {
 		return "443"
 	}
 	return "80"
+}
+
+// netHTTPDefault is net/http's DefaultTransport as this package found it. An
+// imported package's init may already have wrapped it, so that case restates
+// net/http's own defaults rather than refusing to start.
+var netHTTPDefault = startingDefaultTransport()
+
+func startingDefaultTransport() *http.Transport {
+	if transport, ok := http.DefaultTransport.(*http.Transport); ok {
+		return transport.Clone()
+	}
+	return &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
 }

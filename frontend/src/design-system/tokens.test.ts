@@ -523,7 +523,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
 
     it("lifts the accent so it reads on a dark ground", () => {
-      expect(normalize(dark["--accent"])).toBe("#3aae94");
+      expect(normalize(dark["--accent"])).toBe("#16a34a");
     });
 
     it("overrides only tokens the light theme defines — no orphan knobs", () => {

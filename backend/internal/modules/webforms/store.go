@@ -162,6 +162,8 @@ func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, e
 }
 
 // checkReferences refuses a lead origin or owner the lead writer would refuse.
+// The writer is the installation, so any colleague who may own a new record
+// qualifies, not only those inside the configurer's own scope.
 // A misconfigured form then fails when it is saved, not on a visitor's post.
 func checkReferences(ctx context.Context, tx pgx.Tx, origin *string, owner *ids.UUID) error {
 	if origin != nil {
@@ -186,7 +188,8 @@ func auditImage(f Form) map[string]any {
 		"name": f.Name, "sender": f.Sender, "allowed_origins": f.AllowedOrigins,
 		colLeadOrigin: f.LeadOrigin, colOwnerID: f.OwnerID, "field_map": f.FieldMap,
 		"consent_required": f.ConsentRequired, colConsentPolicyVersion: f.ConsentPolicyVersion,
-		colPrivacyNotice: f.PrivacyNotice, colPrivacyNoticeURL: f.PrivacyNoticeURL,
+		colConsentWording: f.ConsentWording,
+		colPrivacyNotice:  f.PrivacyNotice, colPrivacyNoticeURL: f.PrivacyNoticeURL,
 		colRedirectURL: f.RedirectURL, "state": f.State,
 	}
 }

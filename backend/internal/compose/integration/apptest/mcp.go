@@ -47,6 +47,12 @@ func NewMCPClient(e *AppEnv, bearer string) *MCPClient {
 	return &MCPClient{env: e, bearer: bearer}
 }
 
+// Bearer is the client's credential as a REST header. A test uses it for a
+// record only this agent's own act makes, such as one it alone may restore.
+func (c *MCPClient) Bearer() map[string]string {
+	return map[string]string{"Authorization": "Bearer " + c.bearer}
+}
+
 // MCPResult is one tools/call outcome, with the refusal kept separate from the
 // text so neither can be read as the other.
 type MCPResult struct {
@@ -109,12 +115,31 @@ func (c *MCPClient) Initialize(t *testing.T, protocolVersion string) string {
 // returns them.
 func (c *MCPClient) ListTools(t *testing.T) []string {
 	t.Helper()
+	listed := c.ListedTools(t)
+	names := make([]string, len(listed))
+	for i, tool := range listed {
+		names[i] = tool.Name
+	}
+	return names
+}
+
+// ListedTool is one tools/list entry as a client reads it.
+type ListedTool struct {
+	Name        string
+	Description string
+	InputSchema json.RawMessage
+}
+
+// ListedTools lists the tools this credential is served, with what it is told
+// about each, in the order the server returns them.
+func (c *MCPClient) ListedTools(t *testing.T) []ListedTool {
+	t.Helper()
 	result := c.rpc(t, "tools/list", nil)
 	raw, ok := result["tools"].([]any)
 	if !ok {
 		t.Fatalf("tools/list carries no tools array: %v", result)
 	}
-	names := make([]string, 0, len(raw))
+	tools := make([]ListedTool, 0, len(raw))
 	for _, entry := range raw {
 		tool, ok := entry.(map[string]any)
 		if !ok {
@@ -124,9 +149,17 @@ func (c *MCPClient) ListTools(t *testing.T) []string {
 		if !ok || name == "" {
 			t.Fatalf("tools/list entry carries no name: %v", tool)
 		}
-		names = append(names, name)
+		description, ok := tool["description"].(string)
+		if !ok {
+			t.Fatalf("%s's description is not a string: %v", name, tool["description"])
+		}
+		schema, err := json.Marshal(tool["inputSchema"])
+		if err != nil {
+			t.Fatalf("%s's input schema does not encode: %v", name, err)
+		}
+		tools = append(tools, ListedTool{Name: name, Description: description, InputSchema: schema})
 	}
-	return names
+	return tools
 }
 
 // Call invokes one tool and returns what came back, refusal included. It is the

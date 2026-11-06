@@ -1,0 +1,187 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package auth
+
+import (
+	"context"
+	"errors"
+	"maps"
+	"slices"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+func TestACheckReadsBackAsItIsWritten(t *testing.T) {
+	for _, name := range []string{"deal.update", "deal.create|update", "*.create", "admin", "scope:team", "scope-narrower-than:all", "data_task.read,job_health.read"} {
+		c, err := ParseCheck(name)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if c.String() != name {
+			t.Errorf("%s reads back as %s", name, c)
+		}
+	}
+	for _, bad := range []string{"", "deal", "deal.", ".read", "deal.archive", "scope:everyone", "scope-narrower-than:everyone", "row:approval", "deal.read,", "deal.read,row:approval"} {
+		if _, err := ParseCheck(bad); err == nil {
+			t.Errorf("%q reads as a check", bad)
+		}
+	}
+}
+
+func TestHeldByIsTheGatesDecision(t *testing.T) {
+	rep := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:rep", Permissions: principal.Permissions{
+		RoleKeys: []string{"rep"}, Objects: map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
+	}}
+	admin := rep
+	admin.Permissions.RoleKeys = []string{"rep", roleAdmin}
+	admin.Permissions.RowScope = principal.RowScopeAll
+	// A lead's own agent leads; an agent on no passport of a human does not.
+	unlentLead := rep
+	unlentLead.Permissions.Objects = map[string]principal.ObjectGrant{objTeamLead: {Create: true}}
+	lentLead := unlentLead
+	lentLead.PassportID, lentLead.OnBehalfOf = ids.NewV7(), ids.NewV7()
+	for _, tc := range []struct {
+		check string
+		who   principal.Principal
+		want  bool
+	}{
+		{"deal.update", rep, true},
+		{"deal.delete", rep, false},
+		{"deal.delete|update", rep, true},
+		{"*.update", rep, true},
+		{"*.create", rep, false},
+		{"admin", rep, false},
+		{"admin", admin, true},
+		{"scope:team", rep, false},
+		{"scope:team", admin, true},
+		{"scope-narrower-than:all", rep, true},
+		{"scope-narrower-than:all", admin, false},
+		{"deal.read", principal.Principal{Type: principal.PrincipalBuyer}, false},
+		{"admin", principal.Principal{Type: principal.PrincipalSystem}, true},
+		{"deal.update,admin", rep, true},
+		{"deal.delete,admin", rep, false},
+		{"deal.delete,admin", admin, true},
+		{"team_lead.create", lentLead, true},
+		{"team_lead.create", unlentLead, false},
+		{"team_lead.create", principal.Principal{Type: principal.PrincipalSystem}, false},
+	} {
+		c, err := ParseCheck(tc.check)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := principal.WithActor(context.Background(), tc.who)
+		if got := c.HeldBy(tc.who); got != tc.want {
+			t.Errorf("%s held by %s = %v, want %v", tc.check, tc.who.ID, got, tc.want)
+		}
+		if gate := gateAdmits(ctx, c); gate != tc.want {
+			t.Errorf("%s: the gate admits %s = %v, and HeldBy says %v", tc.check, tc.who.ID, gate, tc.want)
+		}
+	}
+}
+
+// gateAdmits asks the gate that decides c.
+func gateAdmits(ctx context.Context, c Check) bool {
+	switch {
+	case len(c.OneOf) > 0:
+		return RequireOneOf(ctx, c.OneOf...) == nil
+	case c.Admin:
+		return RequireAdmin(ctx) == nil
+	case c.RowScope != "":
+		return RequireRowScope(ctx, c.RowScope) == nil
+	case c.NarrowerThan != "":
+		return RequireRowScopeNarrowerThan(ctx, c.NarrowerThan, apperrors.ErrConflict) == nil
+	case c.Object == anyObject:
+		return RequireAnyObject(ctx, c.Actions[0]) == nil
+	case c.Object == objTeamLead:
+		return RequireCoach(ctx) == nil
+	}
+	return RequireAny(ctx, c.Object, c.Actions...) == nil
+}
+
+// A gate records the checks it asks of the caller; a branch, and a check asked
+// of another principal, record nothing.
+func TestOnlyARequirementOfTheCallerIsRecorded(t *testing.T) {
+	caller := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:caller", Permissions: principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{"deal": {Read: true}},
+	}}
+	rec := &checkRecorder{actor: caller.ID, checks: map[string]bool{}, refused: map[string]bool{}}
+	ctx := context.WithValue(principal.WithActor(context.Background(), caller), checkRecorderKey{}, rec)
+
+	if err := Require(ctx, "deal", principal.ActionRead); err != nil {
+		t.Fatal(err)
+	}
+	if RequireAny(ctx, "contact", principal.ActionCreate, principal.ActionUpdate) == nil || RequireAdmin(ctx) == nil {
+		t.Fatal("the caller holds no contact grant and no admin role, and was admitted")
+	}
+	if Allows(ctx, "deal", principal.ActionDelete) || AdminGranted(ctx) {
+		t.Fatal("a branch answered yes to a grant the caller lacks")
+	}
+	// The caller holds neither delete nor update, so the archive is refused
+	// before it reads a row.
+	if EnsureArchivable(ctx, pgx.Tx(nil), DealArchive, ids.NewV7()) == nil {
+		t.Fatal("the archive was admitted without delete or update")
+	}
+	colleague := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "user:colleague"})
+	if Require(colleague, "lead", principal.ActionRead) == nil {
+		t.Fatal("a colleague with no grant was admitted")
+	}
+
+	got := make([]string, 0, len(rec.checks))
+	for name := range rec.checks {
+		got = append(got, name)
+	}
+	slices.Sort(got)
+	want := []string{"admin", "contact.create|update", "deal.read"}
+	if !slices.Equal(got, want) {
+		t.Errorf("recorded %v, want %v", got, want)
+	}
+}
+
+// A refusal that does not answer 403 is recorded as one, so a sweep can tell a
+// hidden row from a row that is not there.
+func TestARefusalThatIsNotA403IsRecorded(t *testing.T) {
+	everyRow := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:all", Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+	rec := &checkRecorder{actor: everyRow.ID, checks: map[string]bool{}, refused: map[string]bool{}}
+	ctx := context.WithValue(principal.WithActor(context.Background(), everyRow), checkRecorderKey{}, rec)
+
+	if err := RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, apperrors.ErrConflict); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("an all-scope caller was answered %v, want the refusal it was handed", err)
+	}
+	if err := HideRow(ctx, "approval"); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a hidden row was answered %v, want not found", err)
+	}
+	got := slices.Sorted(maps.Keys(rec.refused))
+	if want := []string{"row:approval", "scope-narrower-than:all"}; !slices.Equal(got, want) {
+		t.Errorf("recorded refusals %v, want %v", got, want)
+	}
+}
+
+// A read the call degrades over is asked as Require asks it. Neither it nor the
+// gates under it are recorded as the call's requirement.
+func TestAnUnrecordedReadIsNoRequirement(t *testing.T) {
+	reader := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:reader", Permissions: principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{"installation_settings": {Read: true}},
+	}}
+	rec := &checkRecorder{actor: reader.ID, checks: map[string]bool{}, refused: map[string]bool{}}
+	ctx := context.WithValue(principal.WithActor(context.Background(), reader), checkRecorderKey{}, rec)
+
+	readCtx, err := Unrecorded(ctx, "installation_settings", principal.ActionRead)
+	if err != nil {
+		t.Fatalf("a reader holding the grant was refused: %v", err)
+	}
+	if err := Require(readCtx, "installation_settings", principal.ActionRead); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Unrecorded(ctx, "deal", principal.ActionRead); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a reader without deal.read was answered %v, want Require's refusal", err)
+	}
+	if got := slices.Sorted(maps.Keys(rec.checks)); len(got) != 0 {
+		t.Errorf("an unrecorded read recorded %v", got)
+	}
+}

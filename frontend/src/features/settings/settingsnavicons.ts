@@ -42,7 +42,6 @@ import {
   UserCog,
   UsersRound,
   Webhook,
-  Workflow,
   Zap,
 } from "lucide-react";
 import type { SettingsPageId } from "../../lib/settingscatalog";
@@ -70,7 +69,6 @@ export const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
   roles: UserCog,
   seats: BadgeCheck,
   pipelines: SquareKanban,
-  stageautomation: Workflow,
   leads: Target,
   acquisition: Megaphone,
   lossreasons: CircleSlash,

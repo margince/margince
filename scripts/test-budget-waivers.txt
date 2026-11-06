@@ -5,8 +5,8 @@
 # Each ceiling is about 1.2x the slowest of four green CI runs, so runner noise
 # does not fail a PR that left the package alone.
 #
-# An entry is called stale only once a run comes in with that same 1.2x to
-# spare. A package measured just under the budget is one noisy run from being
-# over it, and dropping its ceiling there fails the next run.
+# An entry is called stale only once a run comes in 2.5x under the budget, so
+# one fast runner result cannot remove a waiver from a package that still
+# varies enough to pass its ceiling on another run.
 560 github.com/margince/margince/backend/gates
-360 github.com/margince/margince/backend/internal/compose
+180 github.com/margince/margince/backend/internal/compose

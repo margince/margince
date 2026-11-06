@@ -11,9 +11,11 @@ package projects
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -78,6 +80,9 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 		}
 		// A stale version answers 409 before a refused custom field answers 422.
 		if err := storekit.EnsureIfMatch(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
+			return err
+		}
+		if err := refuseMovedTargetEnd(current, in); err != nil {
 			return err
 		}
 		if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
@@ -176,4 +181,44 @@ func clearableProjectColumns(current crmcontracts.Project) map[string]storekit.C
 		"target_end_date": {Column: targetEndDateColumn, Current: current.TargetEndDate},
 		"ended_at":        {Column: endedAtColumn, Current: current.EndedAt},
 	}
+}
+
+// refuseMovedTargetEnd holds the pair a patch leaves on the row when it moves
+// either date: the sent one against the stored other. A patch that moves
+// neither is let through, so an old project with the pair reversed can still
+// be renamed.
+func refuseMovedTargetEnd(current crmcontracts.Project, in UpdateProjectInput) error {
+	if in.StartedAt == nil && in.TargetEndDate == nil {
+		return nil
+	}
+	started := patchedDate(current.StartedAt, in.StartedAt, in.Clear, startedAtColumn)
+	targetEnd := patchedDate(current.TargetEndDate, in.TargetEndDate, in.Clear, targetEndDateColumn)
+	moved := startedAtColumn
+	if in.TargetEndDate != nil {
+		moved = targetEndDateColumn
+	}
+	return refuseTargetEndBeforeStart(started, targetEnd, moved)
+}
+
+// patchedDate is the date a patch leaves in one column.
+func patchedDate(stored *openapi_types.Date, sent *time.Time, cleared []string, column string) *time.Time {
+	switch {
+	case sent != nil:
+		return sent
+	case slices.Contains(cleared, column) || stored == nil:
+		return nil
+	}
+	return &stored.Time
+}
+
+// refuseTargetEndBeforeStart refuses a target end date before the start date,
+// naming the date the caller sent. A missing date has no order to break.
+func refuseTargetEndBeforeStart(startedAt, targetEnd *time.Time, field string) error {
+	if startedAt == nil || targetEnd == nil {
+		return nil
+	}
+	if targetEnd.Format(time.DateOnly) < startedAt.Format(time.DateOnly) {
+		return &ProjectDateRangeError{Field: field}
+	}
+	return nil
 }

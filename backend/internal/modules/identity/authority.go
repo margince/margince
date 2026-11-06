@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -129,9 +128,9 @@ func (s *Service) AdmittedAuthority(ctx context.Context, workspaceID, humanID, p
 		// rather than from a token somebody can revoke. There is nothing to
 		// re-ask about, and asking anyway would refuse every such call.
 		// platform/auth's Admit names the two paths that mint one.
+		var areas []string
 		if !passportID.IsZero() {
-			var live int
-			err := tx.QueryRow(ctx, passportStillLiveQuery, passportID, humanID).Scan(&live)
+			err := tx.QueryRow(ctx, passportStillLiveQuery, passportID, humanID).Scan(&areas)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}
@@ -143,7 +142,7 @@ func (s *Service) AdmittedAuthority(ctx context.Context, workspaceID, humanID, p
 		if err != nil {
 			return err
 		}
-		rbac = authz.RBAC{Permissions: perms, TeamIDs: rawTeamIDs(teams)}
+		rbac = authz.RBAC{Permissions: perms, TeamIDs: rawTeamIDs(teams), PassportAreas: areasFromColumn(areas)}
 		seat = principal.SeatType(seatType)
 		return nil
 	})
@@ -211,9 +210,17 @@ func liveSeatType(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (string, err
 	return seatType, err
 }
 
-// EffectiveAuthorityTx resolves live authority inside a composed mutation's transaction.
+// EffectiveAuthorityTx resolves live authority inside a composed mutation's
+// transaction. It holds that authority until the transaction ends, so no role,
+// assignment, team or seat change commits in between. Call it before the write
+// locks any row of its own.
 func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	if _, err := storekit.LockRow(ctx, tx, "app_user", humanID, storekit.LiveOnly); err != nil {
+	// The order every authorization change takes too: the authorization lock,
+	// then app_user, then records. A change that moves deals cannot deadlock it.
+	if err := lockAuthorizationShared(ctx, tx); err != nil {
+		return authz.RBAC{}, "", err
+	}
+	if err := holdMemberRow(ctx, tx, humanID); err != nil {
 		return authz.RBAC{}, "", err
 	}
 	return EffectiveAuthorityTx(ctx, tx, humanID)

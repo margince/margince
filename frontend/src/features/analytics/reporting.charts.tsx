@@ -4,6 +4,7 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
+import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { AssessmentCard } from "./reporting.assessmentcard";
 import { ChartBody, chartTitle } from "./reporting.chartbody";
 import { ChartContext, ChartDetails } from "./reporting.chartcontext";
@@ -41,6 +42,7 @@ export function ReportingCharts({
   onEvidence,
   onApplySelection,
   rolePreview,
+  board = false,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   // The saved report and revision this evaluation reads, which a bound
@@ -57,6 +59,10 @@ export function ReportingCharts({
   onApplySelection?: (selection: ReportingSelection) => void;
   // Set while the page shows the report as a role reads it.
   rolePreview?: boolean;
+  // An Analytics tab: figures on one sheet, progress to target in the rail
+  // beside it. "sheet" draws the sheet's sections alone, for a sheet the page
+  // already holds. A saved layout keeps its own sections.
+  board?: boolean | "sheet";
 }>) {
   const t = useT();
   // Every card names its metric from the catalog, so the page waits for it
@@ -77,34 +83,146 @@ export function ReportingCharts({
   return (
     <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
       {() => (
-        <div className="reporting-results">
+        <div
+          className={
+            board === "sheet" ? "reporting-results-part" : "reporting-results"
+          }
+        >
           {!placesAssessment && <WrittenSummary evaluation={evaluation} />}
-          <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
-          <TargetComparison
-            evaluation={evaluation}
-            onApply={onApplySelection}
-          />
-          {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
-          {afterSummary}
-          {sections.map((section) => (
-            <ChartSection
-              // A card is placed once, so a section's first item names it.
-              key={section.items[0] ? itemKey(section.items[0]) : "empty"}
-              section={section}
+          {board && !evaluation.selection.layout ? (
+            <BoardResults
+              inSheet={board === "sheet"}
               evaluation={evaluation}
-              report={report}
-              editionId={editionId}
+              charts={charts}
+              withheld={withheld}
+              afterSummary={afterSummary}
               onEvidence={onEvidence}
-              questions={questionMode(editionId, rolePreview)}
-              kept={kept}
+              onApplySelection={onApplySelection}
             />
-          ))}
-          <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
+          ) : (
+            <>
+              <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
+              <TargetComparison
+                evaluation={evaluation}
+                onApply={onApplySelection}
+              />
+              {withheld && (
+                <p className="t-caption">{t("reporting.withheld")}</p>
+              )}
+              {afterSummary}
+              {sections.map((section) => (
+                <ChartSection
+                  // A card is placed once, so a section's first item names it.
+                  key={section.items[0] ? itemKey(section.items[0]) : "empty"}
+                  section={section}
+                  evaluation={evaluation}
+                  report={report}
+                  editionId={editionId}
+                  onEvidence={onEvidence}
+                  questions={questionMode(editionId, rolePreview)}
+                  kept={kept}
+                />
+              ))}
+              <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
+            </>
+          )}
         </div>
       )}
     </QueryGate>
   );
 }
+
+// The board form of one evaluation. Readings, charts and the metrics table make
+// one sheet; progress to target sits in the rail with anything to act on first.
+function BoardResults({
+  inSheet,
+  evaluation,
+  charts,
+  withheld,
+  afterSummary,
+  onEvidence,
+  onApplySelection,
+}: Readonly<{
+  // Drawn into a sheet the page holds: no rail, so every chart stays here.
+  inSheet: boolean;
+  evaluation: ReportingEvaluation;
+  charts: readonly ReportingChart[];
+  withheld: boolean;
+  afterSummary?: ReactNode;
+  onEvidence: EvidenceAction;
+  onApplySelection?: (selection: ReportingSelection) => void;
+}>) {
+  const t = useT();
+  const railed = inSheet
+    ? []
+    : charts.filter((chart) => RAIL_KINDS.has(chart.kind));
+  const sheet = charts.filter((chart) => !railed.includes(chart));
+  // A split by group pairs with the next one; every other chart takes the row.
+  const wide = wideCharts(
+    sheet,
+    sheet.map((chart) => chart.kind !== "breakdown"),
+  );
+  const rail =
+    (afterSummary != null && afterSummary !== false) || railed.length > 0 ? (
+      <>
+        {afterSummary}
+        {railed.map((chart) => (
+          <ChartPanel
+            key={`${chart.kind}:${chart.metric}`}
+            chart={chart}
+            wide
+            section
+            evaluation={evaluation}
+            onEvidence={onEvidence}
+          />
+        ))}
+      </>
+    ) : undefined;
+  const sections = (
+    <>
+      <ResultsSummary
+        evaluation={evaluation}
+        density="plate"
+        lead={!inSheet}
+        onEvidence={onEvidence}
+      />
+      <TargetComparison evaluation={evaluation} onApply={onApplySelection} />
+      {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
+      {/* On a sheet with no rail, what follows the summary stays on the sheet. */}
+      {inSheet && afterSummary}
+      {sheet.length > 0 && (
+        <div className="reporting-grid reporting-sheet-grid">
+          {sheet.map((chart, index) => (
+            <ChartPanel
+              key={`${chart.kind}:${chart.metric}`}
+              chart={chart}
+              wide={wide[index] === true}
+              section
+              evaluation={evaluation}
+              onEvidence={onEvidence}
+            />
+          ))}
+        </div>
+      )}
+      <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
+    </>
+  );
+  if (inSheet) return sections;
+  return (
+    <AnalyticsBoard
+      railLabel={t("analytics.board.rail")}
+      rail={rail}
+      main={<AnalyticsSheet>{sections}</AnalyticsSheet>}
+    />
+  );
+}
+
+// Charts read against a target per member or per figure: narrow lists that
+// read beside the figures rather than across the sheet.
+const RAIL_KINDS: ReadonlySet<ReportingChart["kind"]> = new Set([
+  "owner_attainment",
+  "target_progress",
+]);
 
 /**
  * The charts the page draws from an evaluation. A target chart with no target
@@ -219,12 +337,21 @@ export function ChartPanel({
   wide,
   evaluation,
   editionId,
+  section = false,
+  meta,
+  note,
   onEvidence,
 }: Readonly<{
   chart: ReportingChart;
   wide: boolean;
   evaluation: ReportingEvaluation;
   editionId?: string;
+  // A section of a larger sheet: its title sits flat over the chart.
+  section?: boolean;
+  // The chart's total, said beside its title in place of a headline above it.
+  meta?: ReactNode;
+  // What that total leaves out, said above the bars.
+  note?: ReactNode;
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
@@ -232,11 +359,17 @@ export function ChartPanel({
   const drawn = chart.points.length > 0 && chart.coverage.status !== "no_data";
   return (
     <Panel
+      flatHead={section}
       className={
         wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
       }
       title={chartTitle(chart, evaluation, t, metricName)}
-      titleAction={<ChartDetails chart={chart} evaluation={evaluation} />}
+      titleAction={
+        <>
+          {meta}
+          <ChartDetails chart={chart} evaluation={evaluation} />
+        </>
+      }
       footer={
         <>
           <ChartContext
@@ -261,11 +394,18 @@ export function ChartPanel({
       }
     >
       <PanelBody>
+        {/* A chart drawn from the reader's own figures alone says so above its
+            bars: one bar on a team chart otherwise reads as a team of one. */}
+        {drawn && chart.coverage.withheld && chart.coverage.reason && (
+          <p className="t-caption">{chart.coverage.reason}</p>
+        )}
+        {drawn && note}
         {drawn ? (
           <ChartBody
             chart={chart}
             evaluation={evaluation}
             onEvidence={onEvidence}
+            headline={meta == null}
           />
         ) : (
           <EmptyState>{chart.coverage.reason ?? t("common.empty")}</EmptyState>

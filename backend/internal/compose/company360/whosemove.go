@@ -31,7 +31,7 @@ func companyContactStrengths(
 			heard = append(heard, c.Strength.LastInboundActivity.UUID)
 		}
 	}
-	moves, err := activities.MailMovesFor(ctx, tx, heard)
+	moves, err := activities.MailMovesFor(ctx, tx, heard, now)
 	if err != nil {
 		return nil, err
 	}

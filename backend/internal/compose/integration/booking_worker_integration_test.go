@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -19,7 +20,7 @@ import (
 func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T) {
 	e, provider := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	monday := nextMonday()
 	body := AnyMap{"start": monday.Add(time.Hour), "end": monday.Add(90 * time.Minute), "booker": AnyMap{"name": "Worker Guest", "email": "worker@visitor.example"}, "consent": AnyMap{"policy_version": "2026-01", "wording": "Contact me about this meeting."}}
 	var result struct {
@@ -47,9 +48,7 @@ func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T
 	if status := publicCall(t, e, "GET", path, nil, nil, &state); status != 200 || state.Status != "confirmed" {
 		t.Fatalf("worker did not confirm provider receipt: %d %+v", status, state)
 	}
-	provider.mu.Lock()
-	provider.calendar = "different-account@example.com"
-	provider.mu.Unlock()
+	provider.SetCalendar("different-account@example.com")
 	if _, err := e.Owner.Exec(ctx, `UPDATE meeting_invitation SET next_attempt_at='2000-01-01'`); err != nil {
 		t.Fatal(err)
 	}
@@ -62,9 +61,7 @@ func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T
 	if status := publicCall(t, e, "GET", path, nil, nil, &state); status != 200 || state.Status != "needs_attention" {
 		t.Fatalf("account switch misreported as cancellation: %d %+v", status, state)
 	}
-	provider.mu.Lock()
-	provider.calendar = "ada@example.com"
-	provider.mu.Unlock()
+	provider.SetCalendar("ada@example.com")
 	if status := publicCall(t, e, "PATCH", path, AnyMap{"action": "cancel", "version": state.Version}, nil, &state); status != 202 {
 		t.Fatal(status)
 	}
@@ -82,7 +79,7 @@ func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T
 func TestALeadBookingSurvivesReplayPromotionDeliveryAndCancellation(t *testing.T) {
 	e, _ := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	const address = "booker@lead.example"
 	var lead struct {
 		ID string `json:"id"`

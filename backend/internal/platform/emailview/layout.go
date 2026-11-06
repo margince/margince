@@ -78,7 +78,7 @@ func renderBlock(block Block, placeholder string, primary bool) string {
 }
 
 // itemRow is one record in a panel: its monogram, title, plain lines, toned
-// lines as badges, and the verb as its link.
+// lines as badges, and the verb as its link. A linked title opens it too.
 func itemRow(item Item, target, label string, first bool) string {
 	var meta, badges []string
 	for _, line := range item.Lines {
@@ -100,7 +100,11 @@ func itemRow(item Item, target, label string, first bool) string {
 	} else if verb != "" {
 		meta = append(meta, html.EscapeString(verb))
 	}
-	text := `<div` + look{ink: textPrimary}.attrs("font:"+body.medium()) + `>` + html.EscapeString(item.Title) + `</div>`
+	title := html.EscapeString(item.Title)
+	if target != "" {
+		title = `<a href="` + html.EscapeString(target) + `"` + look{ink: textPrimary}.attrs("text-decoration:none") + `>` + title + `</a>`
+	}
+	text := `<div` + look{ink: textPrimary}.attrs("font:"+body.medium()) + `>` + title + `</div>`
 	if len(meta) > 0 {
 		text += `<div` + look{ink: textSecondary}.attrs("margin-top:2px;font:"+bodySmall.font()) + `>` + strings.Join(meta, " · ") + `</div>`
 	}
@@ -108,8 +112,19 @@ func itemRow(item Item, target, label string, first bool) string {
 		text += `<div style="margin-top:8px">` + strings.Join(badges, "") + `</div>`
 	}
 	return `<tr><td` + look{edge: borderSubtle}.attrs(hairline(first)+"padding:14px 16px") + `><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>` +
-		`<td width="40" valign="top">` + monogram(item.Title) + `</td><td valign="top">` + text + `</td>` +
-		`<td valign="top" align="right" style="padding-left:12px">` + link + `</td></tr></table></td></tr>`
+		`<td width="40" valign="top" style="width:40px;min-width:40px">` + monogram(item.Title) + `</td><td valign="top">` + itemBody(text, link) + `</td></tr></table></td></tr>`
+}
+
+// itemBody puts the record's link beside its text on a wide screen. On a
+// phone both cells become blocks, so the link drops under the text and the
+// title keeps the row's width.
+func itemBody(text, link string) string {
+	if link == "" {
+		return text
+	}
+	return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>` +
+		`<td valign="top" class="itemtext">` + text + `</td>` +
+		`<td valign="top" align="right" class="itemlink" style="padding-left:12px">` + link + `</td></tr></table>`
 }
 
 func footnote(block Block, placeholder string) string {

@@ -56,6 +56,7 @@ type issueGrantInput struct {
 	Scopes         []string
 	RefreshAllowed bool
 	Resource       *string
+	Areas          []string
 }
 
 // errConsentingUserInactive refuses a consent whose human is no longer live.
@@ -154,10 +155,10 @@ func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids
 	// them and nothing reads them: a connection's authority is the scopes its
 	// human ticked, and there is no second passport standing behind it.
 	err = tx.QueryRow(ctx, `
-		INSERT INTO oauth_grant (client_id, user_id, scopes, refresh_allowed, resource)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO oauth_grant (client_id, user_id, scopes, refresh_allowed, resource, work_areas)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id`,
-		in.ClientID, in.UserID, in.Scopes, in.RefreshAllowed, in.Resource).Scan(&grantID)
+		in.ClientID, in.UserID, in.Scopes, in.RefreshAllowed, in.Resource, in.Areas).Scan(&grantID)
 	if err != nil {
 		return ids.Nil, "", err
 	}
@@ -183,6 +184,7 @@ func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids
 			auditFieldScopes:         in.Scopes,
 			auditFieldRefreshAllowed: in.RefreshAllowed,
 			auditFieldResource:       in.Resource,
+			auditFieldAreas:          in.Areas,
 		}); err != nil {
 		return ids.Nil, "", err
 	}

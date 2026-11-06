@@ -41,8 +41,8 @@ func (e *resolveEnv) seedOverride(t *testing.T, category string, revoked bool) i
 	}
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_override
-		    (id, contact_id, category, reason, decided_by_level, captured_by, revoked_at)
-		VALUES ($1, $2, $3, 'the rep called them last week', 'user', 'human:x', $4)`,
+		    (id, contact_id, category, reason, decided_by_level, captured_by, revoked_at, legal_entity_id)
+		VALUES ($1, $2, $3, 'the rep called them last week', 'user', 'human:x', $4, (SELECT id FROM legal_entity WHERE is_default))`,
 		id, e.contact, category, revokedAt); err != nil {
 		t.Fatalf("seeding the override: %v", err)
 	}
@@ -59,8 +59,8 @@ func (e *resolveEnv) seedMarketingOverrideAt(t *testing.T, level string, recorde
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_override
-		    (id, contact_id, category, reason, decided_by_level, captured_by, recorded_at)
-		VALUES ($1, $2, 'marketing', 'seeded for the ordering test', $3, 'human:x', $4)`,
+		    (id, contact_id, category, reason, decided_by_level, captured_by, recorded_at, legal_entity_id)
+		VALUES ($1, $2, 'marketing', 'seeded for the ordering test', $3, 'human:x', $4, (SELECT id FROM legal_entity WHERE is_default))`,
 		id, e.contact, level, recordedAt); err != nil {
 		t.Fatalf("seeding a %s-level override: %v", level, err)
 	}

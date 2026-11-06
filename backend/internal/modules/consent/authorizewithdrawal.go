@@ -75,7 +75,7 @@ func classesCovering(category commsauthz.Category) []string {
 	}
 	switch category {
 	case commsauthz.CategoryMarketing:
-		return []string{string(ClassMarketing), string(ClassPhoneOutreach)}
+		return commsauthz.MarketingPurposeClasses()
 	case commsauthz.CategoryAccountNotice, commsauthz.CategoryContractNotice,
 		commsauthz.CategoryInvoiceOrPayment:
 		// Transactional messages rest on the contract, not on consent, so a

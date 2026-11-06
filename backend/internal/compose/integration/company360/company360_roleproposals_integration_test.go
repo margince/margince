@@ -26,6 +26,7 @@ import (
 
 	company360svc "github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -52,6 +53,23 @@ func seedRoleDeal(t *testing.T, e *integration.Env) (company, deal ids.UUID) {
 	deal = e.SeedDeal(t, "Retrofit 2026", pipeline, openStage, nil)
 	e.WsExec(t, `UPDATE deal SET company_id = $1 WHERE id = $2`, company, deal)
 	return company, deal
+}
+
+// A deal with no company has no contacts to read, so no model is asked and the answer
+// is the empty one.
+func TestADealWithNoCompanyHasNobodyToPropose(t *testing.T) {
+	e := integration.Setup(t)
+	pipeline, openStage, _ := integration.DealFixture(t, e)
+	deal := e.SeedDeal(t, "No account yet", pipeline, openStage, nil)
+	lane := &scriptedLane{reply: `{"proposals":[]}`}
+
+	got, err := company360Service(e).ProposeRoles(e.Admin(), lane, ids.DealID{UUID: deal})
+	if err != nil {
+		t.Fatalf("proposing roles on a deal with no company: %v", err)
+	}
+	if len(got.Written) != 0 || got.Skipped != 0 || got.GeneratedBy != crmcontracts.WrittenByDeterministic || len(lane.asked) != 0 {
+		t.Errorf("the answer reads %+v, want the empty one no model wrote", got)
+	}
 }
 
 // wrote records that a contact AUTHORED a message to this account.

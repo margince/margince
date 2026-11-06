@@ -1,4 +1,10 @@
-import { type Dispatch, type SetStateAction, useMemo } from "react";
+import {
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+  useId,
+  useMemo,
+} from "react";
 import {
   admittedDealFilters,
   useAppliedCompanyName,
@@ -6,6 +12,7 @@ import {
 import { searchCompanies } from "../../components/filterreference";
 import {
   type FilterSpec,
+  isNarrowed,
   LIST_PAGE_SIZES,
   type ListQuery,
   listPageOf,
@@ -15,10 +22,10 @@ import {
   withListPage,
   withoutScreenDials,
 } from "../../components/listquery";
-import { SegmentedControl } from "../../design-system/atoms";
-import type { ListChip } from "../../design-system/listsurface";
+import { Radio, SegmentedControl } from "../../design-system/atoms";
+import type { RowSelection } from "../../design-system/listselection";
+import type { ListChip, ViewRow } from "../../design-system/listsurface";
 import type { ListSelection } from "../../design-system/listtable";
-import { Select } from "../../design-system/select";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { AcquisitionSource } from "../../lib/acquisitionsources.queries";
 import { useCan } from "../../lib/capability";
@@ -34,11 +41,12 @@ import {
   VIEW_PARAM,
 } from "../../lib/deals.queries";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
-import { useRecordZone } from "../../lib/recordzone";
+import { defaultPipelineOf } from "../../lib/pipelines.queries";
 import { heldRefusedDials } from "../../lib/refusedfilters";
 import { useMe } from "../../lib/session";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealBulkBar } from "./dealbulk";
 import type { Deal, Pipeline, Stage } from "./deals";
@@ -63,21 +71,6 @@ function setOrClearFilter(
     }
     return { ...q, filters: next };
   });
-}
-
-// Whether the reader has narrowed this list themselves.
-//
-// The question `SaveViewAction` asks before it offers to save. It is asked here
-// because the pipeline is folded into the saved query without making the query
-// look narrowed. A pipeline is always selected, so counting it would offer to
-// save the default list.
-function narrowsTheDealList(query: ListQuery): boolean {
-  return (
-    Boolean(query.q) ||
-    Boolean(query.sort) ||
-    query.includeArchived ||
-    Object.values(query.filters).some(Boolean)
-  );
 }
 
 // The stage and company filters. The stage list is loaded whole already (a
@@ -108,16 +101,16 @@ export function dealFilterChips(
   ];
 }
 
-// How the deals are shown rather than which ones: the board/table switch and
-// the pipeline being looked at. Both sit on the right with the table's own
-// display controls.
-export function DealViewTools({
+// One pipeline is no choice, so it gets no row. The count line names it while
+// rows show.
+export function dealViewDials({
   view,
   setView,
   pipelines,
   pipelineId,
   setPipelineId,
   setQuery,
+  t,
 }: Readonly<{
   view: "board" | "table";
   setView: (v: "board" | "table") => void;
@@ -125,57 +118,70 @@ export function DealViewTools({
   pipelineId: string;
   setPipelineId: (id: string) => void;
   setQuery: Dispatch<SetStateAction<ListQuery>>;
+  t: Translator;
+}>): { layout: ReactNode; viewRows: ViewRow[] } {
+  const layout = (
+    <SegmentedControl
+      options={["board", "table"] as const}
+      value={view}
+      onChange={setView}
+      labels={{
+        board: t("deals.viewBoard"),
+        table: t("deals.viewTable"),
+      }}
+    />
+  );
+  if (pipelines.length < 2) {
+    return { layout, viewRows: [] };
+  }
+  const pick = (next: string) => {
+    // A stage belongs to one pipeline, so switching pipeline strands any
+    // stage_id filter, which would then match no deal at all.
+    setPipelineId(next);
+    setOrClearFilter(setQuery, "stage_id", "");
+  };
+  return {
+    layout,
+    viewRows: [
+      {
+        key: "pipeline",
+        label: t("deals.pipeline"),
+        value: pipelines.find((each) => each.id === pipelineId)?.name ?? "",
+        changed: pipelineId !== defaultPipelineOf(pipelines)?.id,
+        step: () => (
+          <PipelineStep
+            pipelines={pipelines}
+            pipelineId={pipelineId}
+            onPick={pick}
+          />
+        ),
+      },
+    ],
+  };
+}
+
+function PipelineStep({
+  pipelines,
+  pipelineId,
+  onPick,
+}: Readonly<{
+  pipelines: Pipeline[];
+  pipelineId: string;
+  onPick: (id: string) => void;
 }>) {
-  const t = useT();
+  const group = useId();
   return (
     <>
-      <SegmentedControl
-        options={["board", "table"] as const}
-        value={view}
-        onChange={setView}
-        labels={{
-          board: t("deals.viewBoard"),
-          table: t("deals.viewTable"),
-        }}
-      />
-      {/* Both views read one pipeline: the table binds the same query the
-          board does, and its stage chip offers that pipeline's stages. So the
-          picker stands in both — hidden on the table it locked the reader to a
-          pipeline they could neither see nor change.
-          A CHOICE OF ONE IS NOT A CHOICE. An installation with a single
-          pipeline was offered a menu whose only entry was the pipeline already
-          showing, which is a dial that refuses every press. The NAME still
-          stands, as text: the reader keeps the fact and loses only the control,
-          which is what they lost nothing by. */}
-      {pipelines.length > 1 ? (
-        <Select
-          className="input"
-          aria-label={t("deals.pipeline")}
-          placeholder={t("deals.pipeline")}
-          value={pipelineId}
-          onChange={(next) => {
-            // A stage belongs to one pipeline, so switching pipeline strands any
-            // stage_id filter. The chip blanks out, but useDeals would still
-            // forward the old id and filter a foreign stage (0 rows).
-            setPipelineId(next);
-            setOrClearFilter(setQuery, "stage_id", "");
-          }}
-          options={pipelines.map((pipeline) => ({
-            value: pipeline.id,
-            label: pipeline.name,
-          }))}
+      {pipelines.map((pipeline) => (
+        <Radio
+          key={pipeline.id}
+          className="lt-mi"
+          name={group}
+          checked={pipeline.id === pipelineId}
+          onChange={() => onPick(pipeline.id)}
+          label={pipeline.name}
         />
-      ) : (
-        pipelines.length === 1 && (
-          <span className="lt-scope">
-            {/* The reader SEES a name where the dial was and infers what it
-                names from the place; a screen reader gets no place, so the
-                field says its own name to it. */}
-            <span className="sr-only">{`${t("deals.pipeline")}: `}</span>
-            {pipelines[0]?.name}
-          </span>
-        )
-      )}
+      ))}
     </>
   );
 }
@@ -268,8 +274,7 @@ export function useDealScreenDials({
   const setPipelineId = (next: string) => replaceDial(PIPELINE_PARAM, next);
   const effectivePipeline: Pipeline | undefined =
     pipelines?.find((p) => p.id === pipelineId) ??
-    pipelines?.find((p) => p.is_default) ??
-    pipelines?.[0];
+    defaultPipelineOf(pipelines ?? []);
   const dealFilters: DealFilters = {
     pipelineId: effectivePipeline?.id ?? "",
     q: query.q,
@@ -305,53 +310,39 @@ export function useDealScreenDials({
 // name rows the reader can neither see nor deselect.
 export function dealRowSelection({
   view,
-  liveSelection,
-  selectedRows,
+  chosen,
   stages,
-  setSelected,
   t,
 }: Readonly<{
   view: "board" | "table";
-  liveSelection: ReadonlySet<string>;
-  selectedRows: Deal[];
+  chosen: RowSelection<Deal>;
   stages: Stage[];
-  setSelected: Dispatch<SetStateAction<ReadonlySet<string>>>;
   t: ReturnType<typeof useT>;
 }>): ListSelection<Deal> | undefined {
   return view === "board"
     ? undefined
     : {
-        selected: liveSelection,
+        selected: chosen.selected,
+        limit: chosen.limit,
         // A closed or archived deal takes no bulk write. Archiving it is done
         // or meaningless. Moving it between open stages would be the unannounced
         // reopen the stepper already refuses.
         selectable: (deal) =>
           deal.archived_at == null && deal.status === "open",
-        onToggle: (deal) =>
-          setSelected((prev) => {
-            const next = new Set(prev);
-            if (next.has(deal.id)) {
-              next.delete(deal.id);
-            } else {
-              next.add(deal.id);
-            }
-            return next;
-          }),
+        onChange: chosen.onChange,
         label: (deal) => t("bulk.selectRow", { name: deal.name }),
         bar: (
           <DealBulkBar
-            deals={selectedRows}
+            deals={chosen.selectedRows}
             stages={stages}
             // The rows that went through leave the selection. The ones that
             // refused stay in it, named, so the reader can retry them once
             // the list has refetched their versions.
             onDone={(outcomes) =>
-              setSelected(
-                new Set(
-                  outcomes
-                    .filter((outcome) => outcome.error)
-                    .map((outcome) => outcome.id),
-                ),
+              chosen.replace(
+                outcomes
+                  .filter((outcome) => outcome.error)
+                  .map((outcome) => outcome.id),
               )
             }
           />
@@ -373,7 +364,7 @@ export function savableDealQuery(
   query: ListQuery,
   pipelineId: string,
 ): ListQuery {
-  return narrowsTheDealList(query)
+  return isNarrowed(query)
     ? { ...query, filters: { ...query.filters, pipeline_id: pipelineId } }
     : query;
 }
@@ -426,7 +417,7 @@ export function useDealChips({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   // A company this reader may not search for is not looked up either.
   const companyName = useAppliedCompanyName(
     withheld.has("company_id") ? undefined : query.filters.company_id,
