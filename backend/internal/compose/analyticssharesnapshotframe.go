@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // snapshotFrame reads the period, zone and currency a frozen state was computed
@@ -34,8 +35,8 @@ type shareFrame struct {
 	ForwardMeasure   *string
 	LandingMeasure   *string
 	LandingCallMinor *int64
-	// QualifiedPolicy is the viability policy enforced when the snapshot was
-	// taken, nil while enforcement was off.
+	// QualifiedPolicy is the viability policy the retired qualified forecast
+	// enforced when the snapshot was taken, nil while it was off.
 	QualifiedPolicy *string
 }
 
@@ -73,11 +74,21 @@ func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, err
 // may see it. A reader who may not falls back as GET /forecast does. The
 // caller passes only a frame that kept its landing.
 func frozenShareLanding(
-	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, readings forecasting.Readings, frame shareFrame,
+	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, shared SharedSnapshot, frame shareFrame,
 ) (crmcontracts.ForecastLanding, error) {
-	measure := forecasting.ForwardMeasure(*frame.LandingMeasure)
+	stored := frame.LandingMeasure
 	if frame.ForwardMeasure != nil {
-		measure = forecasting.ForwardMeasure(*frame.ForwardMeasure)
+		stored = frame.ForwardMeasure
+	}
+	measure, err := values.ParseForwardMeasure(stored, "forward_measure")
+	if err != nil {
+		return crmcontracts.ForecastLanding{}, err
+	}
+	readings := shared.Readings
+	retired, qualified := frozenQualifiedMeasure(stored, frame)
+	if qualified {
+		readings.EvidenceMinor = shared.Supported.LikelyMinor
+		readings.WeightedMinor = shared.Supported.WeightedMinor
 	}
 	var call *int64
 	if frame.LandingCallMinor != nil {
@@ -93,40 +104,19 @@ func frozenShareLanding(
 	if err != nil {
 		return crmcontracts.ForecastLanding{}, err
 	}
-	return forecasting.LandingToWire(landing), nil
+	out := forecasting.LandingToWire(landing)
+	if qualified {
+		out.Measure = crmcontracts.ForecastLandingMeasure(retired)
+	}
+	return out, nil
 }
 
-// applySharedQualified rebuilds the qualified readings a snapshot froze, over
-// the rows this recipient may read, through forecasting.QualifiedOf: the rule
-// the live forecast applies. A snapshot frozen with enforcement off keeps none.
-func applySharedQualified(
-	ctx context.Context, tx pgx.Tx, snapshotID ids.UUID, frame shareFrame, readings *forecasting.Readings,
-) error {
-	if frame.QualifiedPolicy == nil || *frame.QualifiedPolicy == "" {
-		return nil
+// frozenQualifiedMeasure names the retired qualified measure a snapshot's
+// landing was built from. A snapshot frozen with the policy off landed on the
+// baseline reading, so only one with a policy lands on the supported money.
+func frozenQualifiedMeasure(stored *string, frame shareFrame) (string, bool) {
+	if stored == nil || frame.QualifiedPolicy == nil || *frame.QualifiedPolicy == "" {
+		return "", false
 	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	args = append(args, snapshotID)
-	visible, err := sharedVisibilityClause(ctx, tx, arg)
-	if err != nil {
-		return err
-	}
-	rows, err := tx.Query(ctx, forecasting.ContributionSelect+`
-		JOIN deal d ON d.id = c.deal_id
-		WHERE c.snapshot_id = $1 AND `+visible, args...)
-	if err != nil {
-		return fmt.Errorf("compose: reading a shared snapshot's qualified rows: %w", err)
-	}
-	frozen, err := pgx.CollectRows(rows, forecasting.CollectContribution)
-	if err != nil {
-		return fmt.Errorf("compose: collecting a shared snapshot's qualified rows: %w", err)
-	}
-	qualified, err := forecasting.QualifiedOf(frozen)
-	if err != nil {
-		return err
-	}
-	readings.Qualified = &qualified
-	readings.ApplyQualifiedPolicy(*frame.QualifiedPolicy)
-	return nil
+	return values.RetiredForwardMeasure(*stored)
 }

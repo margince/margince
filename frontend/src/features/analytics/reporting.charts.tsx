@@ -338,6 +338,8 @@ export function ChartPanel({
   evaluation,
   editionId,
   section = false,
+  meta,
+  note,
   onEvidence,
 }: Readonly<{
   chart: ReportingChart;
@@ -346,6 +348,10 @@ export function ChartPanel({
   editionId?: string;
   // A section of a larger sheet: its title sits flat over the chart.
   section?: boolean;
+  // The chart's total, said beside its title in place of a headline above it.
+  meta?: ReactNode;
+  // What that total leaves out, said above the bars.
+  note?: ReactNode;
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
@@ -358,7 +364,12 @@ export function ChartPanel({
         wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
       }
       title={chartTitle(chart, evaluation, t, metricName)}
-      titleAction={<ChartDetails chart={chart} evaluation={evaluation} />}
+      titleAction={
+        <>
+          {meta}
+          <ChartDetails chart={chart} evaluation={evaluation} />
+        </>
+      }
       footer={
         <>
           <ChartContext
@@ -388,11 +399,13 @@ export function ChartPanel({
         {drawn && chart.coverage.withheld && chart.coverage.reason && (
           <p className="t-caption">{chart.coverage.reason}</p>
         )}
+        {drawn && note}
         {drawn ? (
           <ChartBody
             chart={chart}
             evaluation={evaluation}
             onEvidence={onEvidence}
+            headline={meta == null}
           />
         ) : (
           <EmptyState>{chart.coverage.reason ?? t("common.empty")}</EmptyState>

@@ -1,6 +1,5 @@
 import { type FormEvent, useState } from "react";
 import type { components } from "../../../api/schema";
-import { LostReasonFields } from "../../../components/lostreasonfields";
 import { Field, Textarea } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { Select } from "../../../design-system/select";
@@ -16,6 +15,7 @@ import {
   WON_REASONS,
   type WonReason,
 } from "../../../lib/winreason";
+import { LostReasonFields } from "../lostreasonfields";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
 import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
 import { useWinQuestion } from "./winevidence";

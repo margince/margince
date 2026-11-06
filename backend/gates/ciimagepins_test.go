@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -92,6 +93,19 @@ func TestTheCIImagePinGateRefusesEachUnpinnedShape(t *testing.T) {
 				t.Errorf("%s passed the gate", mutation.name)
 			}
 		})
+	}
+}
+
+// A flag before the subcommand must not hide the packages behind it.
+func TestTheCIImagePinGateReadsAnInstallAfterItsFlags(t *testing.T) {
+	t.Parallel()
+	const stage = "FROM scratch AS base\n" +
+		"RUN echo 'URIs: http://snapshot-cloudflare.debian.org/archive/debian/${DEBIAN_SNAPSHOT}' " +
+		"'URIs: http://snapshot-cloudflare.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}' " +
+		"'Acquire::Check-Valid-Until \"false\";' > /etc/apt/sources.list.d/debian.sources\n"
+	findings, _ := ciImageFindings(stage + "RUN apt-get -y install --no-install-recommends make\n")
+	if !slices.ContainsFunc(findings, func(finding string) bool { return strings.Contains(finding, "installs make") }) {
+		t.Errorf("`apt-get -y install make` passed with no version; findings: %v", findings)
 	}
 }
 
@@ -254,8 +268,8 @@ func runFindings(instruction string, snapshotted bool, census *ciImageCensus) []
 			if (word == "apt-get" || word == "apt") && !snapshotted {
 				findings = append(findings, "runs apt in a stage whose sources are not the snapshot: "+command)
 			}
-			if (word == "apt-get" || word == "apt") && i+1 < len(words) && words[i+1] == "install" {
-				findings = append(findings, unversionedPackages(words[i+2:], census)...)
+			if word == "apt-get" || word == "apt" {
+				findings = append(findings, installedPackages(words[i+1:], census)...)
 			}
 			if word == "curl" || word == "wget" {
 				census.downloads++
@@ -272,6 +286,21 @@ func runFindings(instruction string, snapshotted bool, census *ciImageCensus) []
 // argument list ends where the next command starts.
 func shellCommands(instruction string) []string {
 	return regexp.MustCompile(`&&|\|\||;|\|`).Split(instruction, -1)
+}
+
+// installedPackages finds the subcommand past any leading flags, so
+// `apt-get -y install` is read like `apt-get install -y`.
+func installedPackages(args []string, census *ciImageCensus) []string {
+	for i, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+		if arg != "install" {
+			return nil
+		}
+		return unversionedPackages(args[i+1:], census)
+	}
+	return nil
 }
 
 func unversionedPackages(args []string, census *ciImageCensus) []string {
@@ -297,6 +326,9 @@ func TestRenovateReachesEveryCIImagePin(t *testing.T) {
 	t.Parallel()
 	body := readCIImageDockerfile(t)
 	_, census := ciImageFindings(body)
+	if len(census.packages) == 0 {
+		t.Fatalf("%s: the package census is empty, so this check would assert nothing", ciImageDockerfile)
+	}
 	found := map[string]int{}
 	for _, manager := range readRenovateConfig(t).CustomManagers {
 		if !anyMatches(t, manager.ManagerFilePatterns, ciImageDockerfile) {

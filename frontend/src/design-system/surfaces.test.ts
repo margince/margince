@@ -38,7 +38,7 @@ import { blocks, resolve, themes } from "./tokens-testing";
 const LEDGER_CEILING = { spellings: 76, states: 6 };
 
 // Joining or leaving the ladder is a decision, so it moves these numbers too.
-const LADDER_SIZE = { surfaces: 80, overlays: 18 };
+const LADDER_SIZE = { surfaces: 81, overlays: 18 };
 
 const here = dirname(fileURLToPath(import.meta.url));
 const frontendRoot = join(here, "..", "..");
@@ -465,7 +465,10 @@ describe("the nesting ladder has one painter", () => {
     ).toEqual(new Set([...RUNGS, "--cardGround", "--darkStep", "--stepAlias"]));
   });
 
-  it("names a rung only in surfaces.css, apart from the ledger", () => {
+  // Parses every source file, so it takes the tree-walk timeout the other scans use.
+  it("names a rung only in surfaces.css, apart from the ledger", {
+    timeout: 60_000,
+  }, () => {
     const found = [
       ...cssSpellings(allRules),
       ...scripts.flatMap((path) =>

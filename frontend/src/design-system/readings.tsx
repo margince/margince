@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import "./readings.css";
 import { webUrl } from "../format/weburl";
+import { AppLink } from "./applink";
 import { Button } from "./atoms";
 
 // Three ways to draw a reading that is not a number in a box: a proportion as
@@ -208,39 +209,64 @@ const SPARK_INSET = 3;
 // and it is a link when the fact has somewhere to go.
 export function Chip({
   icon: Icon,
+  lead,
   children,
   href,
+  appHref,
+  label,
   dense,
-}: Readonly<{
-  icon: LucideIcon;
-  children: ReactNode;
-  // An external destination. Present → the chip is an anchor and opens in a
-  // new tab with `noreferrer`, since these point off our origin.
-  href?: string;
-  // The chip at a `Badge`'s geometry, for a chip inside a table row: it shares
-  // a cell with badges there, and a fact drawn a rung larger than the status
-  // beside it outweighs the name the row is actually about.
-  //
-  // A size on the primitive rather than a height each caller sets, for the
-  // reason `Meter`'s dense rung is one: a geometry with two authors drifts the
-  // first time either moves.
-  dense?: boolean;
-}>) {
-  const shape = dense ? "chip chip-dense" : "chip";
+}: Readonly<
+  {
+    children: ReactNode;
+    // An external destination. Present → the chip is an anchor and opens in a
+    // new tab without an opener or referrer, since these point off our origin.
+    href?: string;
+    // A page of this app, followed in place: the record a fact names.
+    appHref?: string;
+    // The link's name where the visible text alone does not say where it goes.
+    label?: string;
+    // The chip at a `Badge`'s geometry, for a table row that shares a cell with
+    // badges. A fact a rung larger than its status outweighs the row's name.
+    // It is a size on the primitive, like `Meter`'s dense rung, so one author
+    // owns the geometry.
+    dense?: boolean;
+  } & (
+    | { icon: LucideIcon; lead?: never }
+    // A mark in the icon's place: a record's Avatar, or a company's logo.
+    | { icon?: never; lead: ReactNode }
+  )
+>) {
+  const shape = ["chip", dense ? "chip-dense" : "", Icon ? "" : "chip-lead"]
+    .filter(Boolean)
+    .join(" ");
   const body = (
     <>
-      <Icon size={dense ? 12 : 14} aria-hidden="true" />
+      {Icon ? (
+        <Icon size={dense ? 12 : 14} aria-hidden="true" />
+      ) : (
+        <span className="chip-mark" aria-hidden="true">
+          {lead}
+        </span>
+      )}
       <span>{children}</span>
     </>
   );
+  if (appHref) {
+    return (
+      <AppLink className={`${shape} chip-link`} href={appHref}>
+        {body}
+      </AppLink>
+    );
+  }
   const destination = href && webUrl(href) ? href : undefined;
   if (destination) {
     return (
       <a
         className={`${shape} chip-link`}
         href={destination}
+        aria-label={label}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
       >
         {body}
       </a>

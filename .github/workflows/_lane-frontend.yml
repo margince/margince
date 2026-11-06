@@ -40,10 +40,12 @@ on:
   workflow_call:
     inputs:
       # The caller's `ci-image` job output: a digest-pinned image, or empty when
-      # the run cannot pull one and every job sets up on the runner.
+      # the run cannot pull one and every job sets up on the runner. A caller
+      # that passes nothing, as main-health.yml does, runs on the runner.
       ci-image:
         type: string
-        required: true
+        required: false
+        default: ''
 
 permissions:
   contents: read

@@ -195,6 +195,9 @@ func TestTheNoticePageShowsTheSourceAndTheRightsAndNoFile(t *testing.T) {
 		VALUES ($1, 'purchased_or_imported', $2, 'test')`, e.contact, acquired); err != nil {
 		t.Fatalf("seeding the acquisition: %v", err)
 	}
+	e.store = e.store.WithNoticeHeldReader(&fixedHeld{held: NoticeHeld{
+		Uses: []NoticeUse{{PurposeKey: "newsletter", Basis: "consent"}, {PurposeKey: "doi_newsletter", Basis: "consent"}},
+	}})
 
 	info, err := e.store.PrivacyInformationFor(e.ctx, ConfirmRef{
 		Kind: LinkPrivacyNotice, ContactID: e.contact,
@@ -212,7 +215,7 @@ func TestTheNoticePageShowsTheSourceAndTheRightsAndNoFile(t *testing.T) {
 	if len(info.Rights) == 0 {
 		t.Error("the notice names no rights: Art. 14(2)(c)-(e) requires naming them")
 	}
-	// The purposes this installation publishes, which the fixture seeds two of.
+	// The uses on record, which the reader states two of.
 	if len(info.Purposes) == 0 {
 		t.Error("the notice names no purposes: what the data is used for is the disclosure")
 	}

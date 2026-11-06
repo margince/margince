@@ -1,13 +1,8 @@
 import { expect, it } from "vitest";
 import { translate } from "../../i18n";
-import { whenText } from "../../lib/worklistcopy";
+import { readerTask, sentenceTitled, whenText } from "../../lib/worklistcopy";
 import { taskRow } from "../../testing/brief.fixtures";
-import {
-  noticeDetail,
-  readerTask,
-  sentenceTitled,
-  sharedResponsibility,
-} from "./worklist.reader";
+import { noticeDetail, sharedResponsibility } from "./worklist.reader";
 
 const t = (
   key: Parameters<typeof translate>[1],

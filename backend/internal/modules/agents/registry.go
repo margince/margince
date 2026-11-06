@@ -57,6 +57,8 @@ type Registry struct {
 	// typedArgs[tool] is the JSON type its schema declares for each top-level
 	// argument, read off the schema once at registration.
 	typedArgs map[string][]typedArg
+	// uniqueArgs[tool] names its list arguments whose schema declares uniqueItems.
+	uniqueArgs map[string][]string
 	// unitOwned[tool] is true when an extension unit shipped that tool's
 	// handler, read off the registered tool once (mcp.UnitScopedTool). It is
 	// remembered rather than re-asserted because two decisions depend on it and
@@ -81,6 +83,8 @@ type Registry struct {
 	// tierFloor carries the contract's per-record-type tier declarations, which
 	// a verb's own tier cannot express (tierfloor.go, #982).
 	tierFloor TierFloor
+	// toolGate decides which callers a Gated tool exists for. Nil offers it to no one.
+	toolGate ToolGate
 	// volume budget is the MCP-SESS-* meter this surface CHARGES. The gate holds the
 	// same meter and does the refusing; the split is deliberate — a bound is
 	// enforced where admission is decided and paid where records and effects
@@ -129,6 +133,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
 		typedArgs:    map[string][]typedArg{},
+		uniqueArgs:   map[string][]string{},
 		unitOwned:    map[string]bool{},
 		routeServed:  map[string]bool{},
 		routeActions: map[string]map[string]string{},
@@ -202,6 +207,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 	spec := r.specs[name]
 	r.mu.RUnlock()
 	if !ok {
+		return nil, 0, &UnknownToolError{Name: name}
+	}
+
+	if spec.Gated && !r.offersGated(ctx) {
 		return nil, 0, &UnknownToolError{Name: name}
 	}
 

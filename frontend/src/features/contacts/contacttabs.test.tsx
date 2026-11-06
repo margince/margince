@@ -614,6 +614,71 @@ describe("the deals tab", () => {
     expect(searched).not.toContain("companies");
   });
 
+  it("counts a floor, never a total, when the deal list is cut", async () => {
+    stubWithSession(
+      {
+        "GET /deals/d-1": () =>
+          jsonResponse({
+            ...DEAL_D1,
+            amount_minor: 42_000_000,
+            currency: "EUR",
+          } satisfies Deal),
+      },
+      {},
+    );
+    const cut: Contact360 = {
+      ...view,
+      deal_roles: {
+        data: view.deal_roles?.data ?? [],
+        page: { has_more: true },
+      },
+    };
+    withProviders(<ContactDealsTab view={cut} />);
+    const open = await screen.findByText("1+");
+    expect(open.closest(".stat-card")?.textContent).toContain(
+      "of 1+ on record",
+    );
+    expect(
+      screen.queryByText(/€420k/i, { selector: ".stat-card *" }),
+    ).toBeNull();
+  });
+
+  it("withholds the next close when a deal on the list cannot be read", async () => {
+    stubWithSession(
+      {
+        "GET /deals/d-1": () =>
+          jsonResponse({
+            ...DEAL_D1,
+            expected_close_date: "2026-12-31",
+          } satisfies Deal),
+        "GET /deals/d-2": () =>
+          jsonResponse({ title: "Forbidden", status: 403 }, 403),
+      },
+      {},
+    );
+    const twoDeals: Contact360 = {
+      ...view,
+      deal_roles: {
+        data: [
+          ...(view.deal_roles?.data ?? []),
+          {
+            relationship_id: "r-2",
+            deal_id: "d-2",
+            deal_title: "Depot expansion",
+            deal_stage: "Qualified",
+            role: "champion",
+          },
+        ],
+        page: { has_more: false },
+      },
+    };
+    withProviders(<ContactDealsTab view={twoDeals} />);
+    await screen.findByText("1+");
+    const nextClose = screen.getByText("Next close").closest(".stat-card");
+    expect(nextClose?.textContent).toContain("—");
+    expect(nextClose?.textContent).not.toMatch(/Dec/);
+  });
+
   // Withheld rather than disabled: a grant the role does not hold is not a fact
   // about this contact, so there is nothing for a disabled button to explain.
   it("withholds the verb from a reader who may not write an edge", async () => {

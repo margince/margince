@@ -25,13 +25,15 @@ describe("reasonText — champion unknown", () => {
     ["de", "Champion unbekannt"],
     ["vi", "chưa rõ người ủng hộ"],
   ] as const)("says the champion is unknown in %s", (locale, phrase) => {
-    expect(reasonText(unknown, inLocale(locale), locale, zone)).toBe(phrase);
+    expect(reasonText(unknown, inLocale(locale), locale, zone, undefined)).toBe(
+      phrase,
+    );
   });
 
   it("never reads as the finding that nobody is the champion", () => {
     const t = inLocale("en");
-    expect(reasonText(unknown, t, "en", zone)).not.toBe(
-      reasonText(uncovered, t, "en", zone),
+    expect(reasonText(unknown, t, "en", zone, undefined)).not.toBe(
+      reasonText(uncovered, t, "en", zone, undefined),
     );
   });
 });

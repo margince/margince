@@ -286,10 +286,14 @@ func wireAutomationRun(automationID crmcontracts.Id, rec AutomationRunRecord) cr
 		Tier:         crmcontracts.AutomationRunTier(rec.Tier),
 	}
 	switch rec.Status {
-	case "failed", "blocked", "skipped":
+	case runStatusFailed, runBlocked:
+		run.Reason = rec.Detail
+		code := runReasonCode(rec.Outcome(), rec.Detail)
+		run.ReasonCode = &code
+	case runSkipped:
 		run.Reason = rec.Detail
 	}
-	if rec.Status == "requires_approval" || rec.Status == "blocked" {
+	if rec.Status == runStatusRequiresApproval || rec.Status == runBlocked {
 		approvalRequired := true
 		run.ApprovalRequired = &approvalRequired
 	}
@@ -315,7 +319,7 @@ func runActionResult(rec AutomationRunRecord) string {
 			return "applied"
 		}
 		return "applied " + strings.Join(kinds, ", ")
-	case "requires_approval":
+	case runStatusRequiresApproval:
 		return "queued to approval inbox"
 	default:
 		return ""
@@ -367,6 +371,14 @@ func writeAutomationErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
+func wireSetter(setter *ids.UUID) *openapi_types.UUID {
+	if setter == nil {
+		return nil
+	}
+	id := openapi_types.UUID(*setter)
+	return &id
+}
+
 func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 	status := crmcontracts.AutomationStatus("paused")
 	if a.Enabled {
@@ -385,16 +397,17 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		paused = &reason
 	}
 	wire := crmcontracts.Automation{
-		PausedReason: paused,
-		Id:           openapi_types.UUID(a.ID.UUID),
-		Key:          a.Key,
-		Name:         a.Name,
-		Status:       status,
-		Params:       params,
-		OwnerId:      wireOwner(a.OwnerID),
-		Version:      &version,
-		CreatedAt:    a.CreatedAt,
-		UpdatedAt:    a.UpdatedAt,
+		PausedReason:     paused,
+		SetterPassportId: wireSetter(a.SetterPassportID),
+		Id:               openapi_types.UUID(a.ID.UUID),
+		Key:              a.Key,
+		Name:             a.Name,
+		Status:           status,
+		Params:           params,
+		OwnerId:          wireOwner(a.OwnerID),
+		Version:          &version,
+		CreatedAt:        a.CreatedAt,
+		UpdatedAt:        a.UpdatedAt,
 	}
 	if a.Runs != nil {
 		wire.LastRunAt = a.Runs.LastRunAt

@@ -155,7 +155,9 @@ RUN git config --system --add safe.directory '*' \
  && pnpm --version \
  && go version \
  && node --version \
- && missing="$(ldd /ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell | grep 'not found' || true)" \
- && { [ -z "$missing" ] || { echo "Chromium is missing libraries: $missing" >&2; exit 1; }; }
+ && shell="$(echo /ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell)" \
+ && test -x "$shell" \
+ && libraries="$(ldd "$shell")" \
+ && if echo "$libraries" | grep 'not found'; then echo "Chromium is missing the libraries above" >&2; exit 1; fi
 
 ENV COREPACK_ENABLE_NETWORK=0

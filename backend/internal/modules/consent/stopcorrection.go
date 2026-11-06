@@ -8,16 +8,19 @@ package consent
 //
 // The ladder in commsauthz answers most of it. A marketing objection is stamped
 // at the subject's level whoever typed it (levelFor). An admin may correct one
-// a colleague typed by mistake. One the contact pressed on a mailed link stays
+// a colleague or their agent recorded by mistake. One the contact pressed on a mailed link stays
 // theirs: the product, not a seat, wrote its first row.
 
 import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
+
+const passportAgentPrefix = "agent:"
 
 // kindProcessingRestriction is the Art. 18 stop. Lifting one owes the contact
 // notice before it happens, and Margince has no such notice, so no seat lifts
@@ -74,14 +77,29 @@ func judgeLift(caller lifter, stop stopFacts) liftVerdict {
 	return liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedByLevel}
 }
 
-// typedObjection reports a subject-level objection a seat typed through
-// Suppress. It is an allow-list. An agent, a connector, an import, the product
-// and a copy whose original is gone all count as the contact's own act.
+// typedObjection reports a subject-level objection a seat recorded through
+// Suppress, by hand or through its passport agent. It is an allow-list. Automated
+// work with no passport, a connector, an import, the product and a copy whose
+// original is gone all count as the contact's own act.
 func typedObjection(stop stopFacts) bool {
 	return stop.kind == commsauthz.ReasonObjection &&
 		stop.decided == commsauthz.LevelSubject &&
-		strings.HasPrefix(stop.origin, principal.HumanIDPrefix) &&
+		recordedForASeat(stop.origin) &&
 		recordedThroughSuppress(stop.originSource)
+}
+
+// recordedForASeat reports a stamp that acts for one seat: the seat's own, or the
+// agent:<passport id> an agent on that seat's passport writes.
+func recordedForASeat(origin string) bool {
+	if strings.HasPrefix(origin, principal.HumanIDPrefix) {
+		return true
+	}
+	passport, isAgent := strings.CutPrefix(origin, passportAgentPrefix)
+	if !isAgent {
+		return false
+	}
+	_, err := ids.Parse(passport)
+	return err == nil
 }
 
 // recordedThroughSuppress reports a source suppressionSource wrote. A carried

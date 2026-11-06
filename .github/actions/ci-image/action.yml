@@ -58,8 +58,9 @@ runs:
         ACTOR: ${{ github.actor }}
       run: echo "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
 
-    # No layer cache: every build starts from the pins alone, and a rebuild
-    # happens only when an input moved.
+    # No layer cache: every build starts from the pins alone. A build runs when
+    # an input moved, and on every run that may push while the package can be
+    # pulled only with a login.
     - name: Build and push the image
       if: steps.lookup.outputs.digest == '' && inputs.push == 'true'
       shell: bash
@@ -98,7 +99,7 @@ runs:
           if [ "$PUSH" = true ]; then
             echo "::warning::$REPO was pushed but cannot be pulled without logging in; make the package public, and until then the jobs set up on the runner"
           else
-            echo "::warning::this run changes the CI image's inputs and cannot push the image, so the jobs set up on the runner"
+            echo "::warning::$REPO has no image for this tree that can be pulled without a login, and this run cannot push one, so the jobs set up on the runner"
           fi
           echo "pinned-image=" >> "$GITHUB_OUTPUT"
           exit 0

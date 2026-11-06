@@ -246,8 +246,8 @@ func criterionUpdatePatch(
 // create and archive, which have no column-level patch to derive one from.
 func criterionAfter(c crmcontracts.StageExitCriterion) map[string]any {
 	return map[string]any{
-		"stage_id": c.StageId.String(), "key": c.Key, "label": c.Label,
-		"kind": string(c.Kind), criterionRequiredColumn: c.Required,
+		stageIDColumn: c.StageId.String(), "key": c.Key, "label": c.Label,
+		criterionKindField: string(c.Kind), criterionRequiredColumn: c.Required,
 		criterionPositionColumn: c.Position, "hint": c.Hint,
 	}
 }

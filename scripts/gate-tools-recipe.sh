@@ -10,9 +10,17 @@
 set -euo pipefail
 cd "$(dirname "$0")/../backend"
 
-# stderr is dropped because the Makefile's parse-time `go env` calls complain
-# on a machine without Go, and none of them reaches this recipe.
-recipe="$(make -s -n tools 2>/dev/null | grep -v '^[[:space:]]*#')"
+# stderr is held back because the Makefile's parse-time `go env` calls complain
+# on a machine without Go, and none of them reaches this recipe. It is shown
+# when make itself fails, so a broken Makefile names its own error.
+errors="$(mktemp)"
+trap 'rm -f "$errors"' EXIT
+if ! printed="$(make -s -n tools 2>"$errors")"; then
+	cat "$errors" >&2
+	echo "gate-tools-recipe: 'make -n tools' failed" >&2
+	exit 1
+fi
+recipe="$(grep -v '^[[:space:]]*#' <<<"$printed" || true)"
 if ! grep -q 'go install ' <<<"$recipe"; then
 	echo "gate-tools-recipe: 'make -n tools' shows no go install, so nothing can follow its pins" >&2
 	exit 1

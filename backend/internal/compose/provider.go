@@ -62,7 +62,7 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithInstallationRenamer(installationRenamer(pool)),
 		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:    projects.ProviderOver(ProjectsStoreOver(db)),
-		activities:  activities.NewProvider(InstallationDB(pool)).WithTaskRecommendation(taskRecommendationReader(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx),
+		activities:  activities.NewProvider(InstallationDB(pool)).WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).WithTaskRecommendation(taskRecommendationReader(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx),
 		commissions: commissions.NewProvider(db),
 		dealRooms:   dealrooms.NewProvider(db),
 		reports:     newReportEngine(pool),
@@ -212,7 +212,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return p.contacts.Create(ctx, in)
 	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.Create(ctx, in)
-	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment:
+	case datasource.EntityDealRoom:
 		return p.dealRooms.Create(ctx, in)
 	case datasource.EntityProject:
 		return p.projects.Create(ctx, in)

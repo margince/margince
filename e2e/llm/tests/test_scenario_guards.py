@@ -262,6 +262,13 @@ class OneNewContactTest(ToolGuardCase):
 class StopTellingMeTest(GuardCase):
     scenario = "case103-stop-telling-me.yaml"
 
+    def test_saying_the_stored_setting_is_already_off(self):
+        self.assertGreen("They are already off in your settings: approval email delivery is disabled.")
+
+    def test_saying_they_have_been_switched_off_still_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "They have been switched off in settings.")
+        self.assertTrue(fired, "a false claim of switching them off passed")
+
     def test_saying_it_was_switched_off_still_fails(self):
         _, fired, _, _ = probe.judge(guards(self.scenario), "I switched them off in settings.")
         self.assertTrue(fired, "a false claim of switching them off passed")

@@ -74,7 +74,7 @@ func upcomingMeetingSQL(ctx context.Context, tx pgx.Tx, requested RequestedScope
 	if err != nil {
 		return "", err
 	}
-	return `a.kind='meeting' AND ` + upcoming + ` AND ` + occurredday.BeforeSQL("a", b.add(window.EndAt)) + `
+	return `a.kind='meeting' AND a.created_at<=` + b.add(window.StartAt) + ` AND ` + upcoming + ` AND ` + occurredday.BeforeSQL("a", b.add(window.EndAt)) + `
  AND ` + population + ` AND ` + orUnnarrowed(visible) + ` AND ` + fieldScope, nil
 }
 

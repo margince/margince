@@ -17,6 +17,12 @@ The `changes` job sets `full_lane` to false when the base is `develop`. These jo
 - `images`;
 - `sonarcloud`.
 
+`backend-lint` also skips the test-input census, which guards the cache warm-up on `main`.
+
+CI sets `CHECK_BASE_REF` to the base branch. So strict lint, `comment-budget`, the citation check, the contract check and
+the migration check judge only what the pull request adds to `develop`. Into `main` they judge what it adds
+to `main`, so the nightly pull request judges all of `develop`'s new code.
+
 Everything else runs as it does for `main`: the Go build and gates, lint, craftsmanship, the license and
 secret scans, the extension lane and the frontend lane. `ci` stays the required check.
 
@@ -40,10 +46,17 @@ nightly session fixes it, so it does not need a `claim: main-red` pull request.
 ## The nightly sync
 
 1. On a branch off `origin/develop`, run `git merge origin/main` and resolve every conflict.
-2. Run `make db-up` and `make check-all`, and fix every red on the same branch.
+   Keep the migration stamps `main` has, and give anything only `develop` has a stamp above them.
+2. Run `make db-up` and `make check-all CHECK_BASE_REF=origin/develop`, and fix every red on the same
+   branch. With the default base, the run never asks whether the branch kept what `develop` has.
 3. Open a pull request into `develop` and merge it with `gh pr merge <n> --merge`.
 4. Open or update the pull request from `develop` into `main`. Merge it with `gh pr merge <n> --merge`
    once `ci` and `cla` are green and every review thread is resolved.
+
+A branch that carries `main` commits `develop` lacks is judged by the migration check against the `main`
+it merged, since `main` sets the order an installation applies. It must also keep every migration on
+`develop`, once, under any stamp. After a sync that re-stamps a migration, a database that ran `develop`
+needs `make dev-fresh`.
 
 The pull request into `main` runs every lane under the usual path filters, and CodeRabbit reviews it.
 Answer its findings with a fix on `develop`, through a pull request of its own.

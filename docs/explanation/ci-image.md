@@ -1,9 +1,9 @@
 <!-- prose:plain -->
-<!-- describes: .github/ci-image .github/actions/ci-image scripts/ci-image-context.sh scripts/ci-image-digest.sh scripts/gate-tools-recipe.sh scripts/check-image-pins.sh -->
+<!-- describes: .github/ci-image .github/actions/ci-image .github/workflows/lint-cache.yml scripts/ci-image-context.sh scripts/ci-image-digest.sh scripts/gate-tools-recipe.sh scripts/check-image-pins.sh -->
 # The CI image
 
-`deterministic-gates`, `backend-lint`, the jobs of the frontend lane and `uat` run in one container
-image, `ghcr.io/margince/ci`. It holds Go, the gate binaries, Node with pnpm, the Chromium build
+Both parts of `deterministic-gates` and of `backend-lint`, the jobs of the frontend lane and `uat` run
+in one container image, `ghcr.io/margince/ci`. It holds Go, the gate binaries, Node with pnpm, the Chromium build
 Playwright starts, and the Debian packages Chromium needs. So these jobs install no toolchain, and
 `uat` does not reach a package mirror. A mirror that stopped answering during a font fetch has
 stopped a UAT shard before a test ran.
@@ -67,13 +67,16 @@ The `ci-image` job runs beside `changes`.
 that tag, with no login. The `container:` of a job pulls with no login too, so the job asks the same
 way.
 
-- The image is there: the job hands on `ghcr.io/margince/ci@sha256:<digest>`, and each job above
-  sets that as its `container:`.
-- It is not there, and the run can push: that is a pull request from a branch of this repository. The
-  job builds the image, pushes it under the tag, and hands on its digest. So a Renovate pull request
-  runs on the image it brings.
-- It is not there, and the run cannot push: a pull request from a fork gets a token that can only
-  read. The job hands on an empty name, with a warning.
+- **Found.** The job hands on `ghcr.io/margince/ci@sha256:<digest>`, and each job above sets that as
+  its `container:`.
+- **Missing, and the run can push.** The job builds the image, pushes it under the tag, and hands on
+  its digest. So a Renovate pull request runs on the image it brings.
+- **Missing, and the run cannot push.** A pull request from a fork gets a token that can only read.
+  The job hands on an empty name, with a warning.
+
+These runs can push: a pull request from a branch of this repository, a merge queue run, and a run
+started by hand. The `ci-image` jobs of `cache-warm.yml` and `lint-cache.yml` push on `main`.
+While the package needs a login to pull, every such run builds again.
 
 An empty name runs each job on the runner. The steps marked
 `if: needs.ci-image.outputs.pinned-image == ''` then install what the image would hold: Go, the gate
@@ -82,10 +85,13 @@ the image, and only restore their caches. An image that needs a login to pull gi
 name. So `ci` is correct with or without the image, and only slower without it.
 
 `scripts/check-image-pins.sh` admits that one job output as a `container:`, read as it is or behind a
-condition that falls back to the empty string. The action refuses to hand on a name that does not end
-in a digest. The script also scans `.github/actions/`. Its `./path` allowance lets a local action
-through, because the repo versions its own code. That holds for the action's own ref, but not for the
-outside actions it calls, which would come in with nobody reading them.
+condition that falls back to the empty string. A lane may take it as a `ci-image` input. That input is
+declared for `workflow_call` with no default but the empty one, and every caller passes the job output.
+The action refuses to hand on a name that does not end in a digest.
+
+The script also scans `.github/actions/`. Its `./path` allowance lets a local action through, because
+the repo versions its own code. That holds for the action's own ref, but not for the outside actions
+it calls, which would come in with nobody reading them.
 
 ## Its own caches
 
@@ -93,12 +99,14 @@ Go keys a build on the folder it read, and golangci keys its cache on the path o
 the image both differ from a bare runner, so an entry from one misses in the other. The image sets
 `MARGINCE_CI_IMAGE`, and `go-build-cache` and `golangci-cache-key` add `in-image-` to their keys when
 it is set. `cache-warm.yml` warms both: its `plain` job runs on the runner and, when the image can be
-pulled, again in it.
+pulled, again in it. `lint-cache.yml` lints in the image when it can, so its golangci entry is the one
+`backend-lint` reads.
 
 ## Which jobs stay on the runner
 
 - The integration shards and `live-boot` start Docker Compose, which needs the Docker of the runner.
 - `craftsmanship`, `craft-residue`, `secret-scan`, `license gate` and `sonarcloud` install no
   toolchain, or only Go for one small module. A pull would cost more than they save.
-- `extension-reference` and `vuln` read the `plain` cache of the runner, with the integration unit
-  coverage pass, which stays on the runner.
+- `vuln` reads the `plain` cache of the runner. So do the integration build and unit coverage jobs,
+  which stay on the runner with the rest of their lane.
+- `test-budget` only reads two logs, so a pull would cost more than the job.

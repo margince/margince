@@ -93,9 +93,11 @@ fi
 
 # --- a job container written as a scalar ------------------------------------
 #
-# `container: <image>` never reaches the `image:` scan, so it has its own. The
-# CI image's job output is the one expression it admits; every other way of
-# naming a container must carry a digest.
+# `container: <image>` never reaches the `image:` scan, so it has its own. It
+# admits the `ci-image` job output, read straight, through a lane's
+# `ci-image` input, or behind a condition that falls back to ''. Every other
+# way of naming a container must carry a digest. Each case below must name
+# its own verdict, so a gate that crashed cannot pass it.
 
 plant_workflow() {
   plant "FROM scratch"
@@ -103,35 +105,78 @@ plant_workflow() {
   ( cd "$TMP/repo" && git add -A )
 }
 
+# reported_as <verdict> answers whether the gate failed with that verdict.
+reported_as() {
+  local out
+  out="$( cd "$TMP/repo" && ./scripts/check-image-pins.sh 2>&1 )" && return 1
+  grep -qF "$1" <<<"$out"
+}
+
 plant_workflow "    container: redis:7"
-if ! reported; then
+if ! reported_as "UNPINNED CONTAINER"; then
   fail "a tag-only scalar container passed; it is a pull like any service image"
 fi
 
 plant_workflow "    container: \${{ matrix.image }}"
-if ! reported; then
+if ! reported_as "UNPINNED CONTAINER"; then
   fail "a container read from a matrix passed; nothing holds a matrix value to a digest"
 fi
 
 plant_workflow "    container: \${{ github.event_name == 'pull_request' && needs.ci-image.outputs.pinned-image || 'redis:7' }}"
-if ! reported; then
+if ! reported_as "UNPINNED CONTAINER"; then
   fail "a fallback to a tag passed; only an empty fallback is admitted beside the CI image"
 fi
 
 plant_workflow "      ci-image: \${{ matrix.image }}"
-if ! reported; then
+if ! reported_as "CI IMAGE INPUT NOT FROM THE ci-image JOB"; then
   fail "a lane's ci-image input fed from somewhere other than the ci-image job passed"
 fi
 
-plant_workflow "    container: redis:7@$DIGEST
+plant_workflow "on:
+  workflow_call:
+    inputs:
+      ci-image:
+        type: string
+        default: redis:7
+jobs:
+  a:
+    container: \${{ inputs.ci-image }}"
+if ! reported_as "CI IMAGE INPUT DECLARED OUTSIDE workflow_call OR WITH A DEFAULT"; then
+  fail "a ci-image input with a tag for its default passed; no caller is needed to reach container:"
+fi
+
+plant_workflow "on:
+  workflow_dispatch:
+    inputs:
+      ci-image:
+        type: string
+jobs:
+  a:
+    container: \${{ inputs.ci-image }}"
+if ! reported_as "CI IMAGE INPUT DECLARED OUTSIDE workflow_call OR WITH A DEFAULT"; then
+  fail "a ci-image input a manual run can fill passed; no scan sees what is typed into a dispatch"
+fi
+
+plant_workflow "on:
+  workflow_call:
+    inputs:
+      ci-image: # the caller's ci-image job output
+        type: string
+        default: ''
+jobs:
+  ci-image:
+    runs-on: x
+  b:
+    container: redis:7@$DIGEST
     container: \${{ needs.ci-image.outputs.pinned-image }}
     container: \${{ inputs.ci-image }}
     container: \${{ matrix.where == 'image' && needs.ci-image.outputs.pinned-image || '' }}
-      ci-image: \${{ needs.ci-image.outputs.pinned-image }}
-    container:
-      image: redis:7@$DIGEST"
+    container: # the mapping form follows
+      image: redis:7@$DIGEST
+    with:
+      ci-image: \${{ needs.ci-image.outputs.pinned-image }}"
 if reported; then
-  fail "a digest-pinned container, the CI image's output or a mapping was reported"
+  fail "a digest-pinned container, the CI image's output, its lane input or a mapping was reported"
 fi
 
 # --- and the gate must actually be reading this repository ------------------

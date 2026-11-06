@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -14,6 +15,8 @@ import { pickOption } from "../../design-system/select-testing";
 import { formatMoneyCompact } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { showLayout } from "../../testing/listquery.testkit";
+import { openView } from "../../testing/listview.testkit";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import { DealsScreen } from "./deals";
 import { deal, render, stubBackend } from "./deals.testkit";
@@ -75,7 +78,7 @@ describe("DealsScreen", () => {
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
     const boardReads = listReads().length;
 
-    await user.click(screen.getByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
     await waitFor(() => expect(listReads().length).toBeGreaterThan(boardReads));
     const tableReads = listReads().slice(boardReads);
@@ -83,6 +86,17 @@ describe("DealsScreen", () => {
       tableReads.map(() => null),
     );
     expect(tableReads[0]?.searchParams.get("limit")).toBe("100");
+  });
+
+  // With one pipeline there is no Pipeline row, so the count is where the
+  // table names the pipeline it reads, as the board's count does.
+  it("names the pipeline in the table's count line", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    render(<DealsScreen />);
+    await showLayout(userEvent.setup(), "Table");
+    expect(
+      await screen.findByText(/^1 to 1 of 1 deals in Sales/),
+    ).toBeInTheDocument();
   });
 
   // A view saved on the deals list is a server row, and the tab rail has to
@@ -108,7 +122,7 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
     expect(
       await screen.findByRole("button", { name: "Slipping this quarter" }),
@@ -138,7 +152,7 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
     await user.click(
       await screen.findByRole("button", { name: "My stalled deals" }),
     );
@@ -164,11 +178,13 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
     // The save action appears only once something narrows the list; a sort is
     // the cheapest such narrowing to reach from here.
     await user.click(screen.getByRole("button", { name: "Sort by Value" }));
-    await user.click(await screen.findByRole("button", { name: "Save view" }));
+    await user.click(
+      within(await openView(user)).getByRole("button", { name: "Save view" }),
+    );
     await user.type(
       await screen.findByRole("textbox", { name: "Name" }),
       "Pipeline view",
@@ -190,9 +206,11 @@ describe("DealsScreen", () => {
     vi.stubGlobal("fetch", stubBackend([deal({})]));
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
-    expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
+    expect(
+      within(await openView(user)).queryByRole("button", { name: "Save view" }),
+    ).toBeNull();
   });
 
   // Owner and archive run as one preview and one change on the server. Each
@@ -211,7 +229,7 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
     await user.click(
       await screen.findByRole("checkbox", { name: "Select First" }),
@@ -261,7 +279,7 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
     await user.click(
       await screen.findByRole("checkbox", { name: "Select Already there" }),
@@ -293,7 +311,7 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
     expect(
       await screen.findByRole("checkbox", { name: "Select Open one" }),
@@ -563,6 +581,7 @@ describe("DealsScreen", () => {
   });
 
   it("a terminal-stage advance opens the 🟡 confirm and posts only after confirming", async () => {
+    const user = userEvent.setup();
     const advances: [unknown, string | null][] = [];
     vi.stubGlobal(
       "fetch",
@@ -586,7 +605,7 @@ describe("DealsScreen", () => {
 
     await askedToClose("Won");
     expect(advances).toHaveLength(0); // nothing posted yet: confirm-first
-    await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
     await waitFor(() => expect(advances).toHaveLength(1));
     expect(advances[0]).toEqual([{ to_stage_id: "s3", status: "won" }, "4"]);
   });

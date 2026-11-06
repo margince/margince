@@ -88,7 +88,7 @@ while IFS= read -r line; do
   case "$(echo "$content" | sed 's/^[[:space:]]*//')" in
     \#*) continue ;;
   esac
-  value=$(echo "$content" | sed 's/.*container:[[:space:]]*//' | sed 's/[[:space:]]#.*//' | sed 's/[[:space:]]*$//')
+  value=$(echo "$content" | sed 's/.*container:[[:space:]]*//' | sed 's/[[:space:]]*#.*//' | sed 's/[[:space:]]*$//')
   [[ -z "$value" ]] && continue                     # mapping form: its image: line is checked above
   admits_ci_image "$value" && continue
   if ! grep -qE '@sha256:[0-9a-f]{64}$' <<<"$(tr -d '"'"'" <<<"$value")"; then
@@ -109,6 +109,29 @@ while IFS= read -r line; do
   fi
 done < <(grep -rnE --include='*.yml' --include='*.yaml' \
   '^[[:space:]]*ci-image:' "${scan_dirs[@]}" 2>/dev/null || true)
+
+# And only as pinned as its declaration: a `ci-image` input may be declared for
+# `workflow_call` alone, where the scan above sees every caller, and with no
+# default but the empty one. A `workflow_dispatch` input or a default would
+# hand a tag to `container:` past both scans.
+while IFS= read -r finding; do
+  echo "CI IMAGE INPUT DECLARED OUTSIDE workflow_call OR WITH A DEFAULT: $finding" >&2
+  fail=1
+done < <(find "${scan_dirs[@]}" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 2>/dev/null |
+  xargs -0 awk '
+    FNR == 1 { trigger = ""; inside = 0 }
+    /^[[:space:]]*#/ { next }
+    match($0, /^  [a-z_]+:/) && !match($0, /^   /) { trigger = $1 }
+    inside && match($0, /[^ ]/) <= depth { inside = 0 }
+    inside && /^[[:space:]]+default:/ {
+      value = $0; sub(/^[^:]*:[[:space:]]*/, "", value); sub(/[[:space:]]*(#.*)?$/, "", value)
+      if (value != "\x27\x27" && value != "\"\"") print FILENAME ":" FNR ": " $0
+    }
+    /^[[:space:]]+ci-image:[[:space:]]*(#.*)?$/ && match($0, /[^ ]/) > 3 {
+      inside = 1; depth = match($0, /[^ ]/)
+      if (trigger != "workflow_call:") print FILENAME ":" FNR ": declared under " trigger
+    }
+  ')
 
 # --- Dockerfile base images: pinned by digest, same rule ---
 # A `FROM` is the same supply-chain edge as a service container: the bytes a

@@ -52,3 +52,29 @@ func TestAnAgentsCardFillsAPhoneOnlyWhereNoLiveOneIsHeld(t *testing.T) {
 		})
 	}
 }
+
+// An agent's card fills an empty address and leaves a held one, even one a card
+// wrote, which a user's next card may still move.
+func TestAnAgentsCardFillsAnAddressOnlyWhereNoneIsHeld(t *testing.T) {
+	e := setupDedupe(t)
+	const blankEmail, heldEmail = "blank.address@split.example.test", "held.address@split.example.test"
+	blank := importCard(t, e, "BEGIN:VCARD\nFN:Bea Blank\nEMAIL:"+blankEmail+"\nEND:VCARD\n")
+	importCards(e.asUsersAgent(t), t, e, cardWithAddress(blankEmail, "Filled Street 1", "Filled Town", "33333"))
+	if got := contactAddressParts(t, e, *blank.ContactID); got[0] != "Filled Street 1" {
+		t.Errorf("the agent's card left the empty address as %q", got)
+	}
+
+	held := importCard(t, e, cardWithAddress(heldEmail, "Held Street 1", "Held Town", "11111"))
+	before := contactAddressParts(t, e, *held.ContactID)
+	results := importCards(e.asUsersAgent(t), t, e, cardWithAddress(heldEmail, "Agent Street 2", "Agent Town", "22222"))
+	if got := contactAddressParts(t, e, *held.ContactID); got != before {
+		t.Errorf("the agent's card moved the address to %q, want %q", got, before)
+	}
+	if !slices.ContainsFunc(results[0].Fields, func(f VCardField) bool { return f.Field == fieldAddress && f.Action == VCardFieldKept }) {
+		t.Errorf("the agent's report reads %+v, want the address kept", results[0].Fields)
+	}
+	importCard(t, e, cardWithAddress(heldEmail, "User Street 3", "User Town", "44444"))
+	if got := contactAddressParts(t, e, *held.ContactID); got[0] != "User Street 3" {
+		t.Errorf("the user's card left the address as %q", got)
+	}
+}

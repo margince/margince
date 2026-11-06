@@ -29,7 +29,8 @@ name: cache-warm
 on:
   schedule:
     # Every three hours. Ten-ish merges of drift against a content-addressed
-    # cache, which is still a warm restore.
+    # cache, which is still a warm restore. pace.yml starts a run from a push once
+    # the newest is three hours old, because GitHub drops some of these.
     - cron: "0 */3 * * *"
   workflow_dispatch:
 
@@ -80,8 +81,9 @@ jobs:
   # The untagged compile every non-integration Go job reads, once on the runner
   # and once in the CI image: the two put the checkout and the module cache at
   # different paths, so neither can read the other's entry. The image leg runs
-  # only when the image can be pulled, and the runner leg does not wait on the
-  # image being built.
+  # only when the image can be pulled. Both legs wait on `ci-image`, which is a
+  # lookup unless no run has pushed main's image yet; a failed build still
+  # leaves the runner leg to run.
   plain:
     name: warm plain (${{ matrix.where }})
     timeout-minutes: 45
@@ -226,9 +228,10 @@ jobs:
           path: ~/.cache/go-build
           key: ${{ steps.go-cache.outputs.key }}
 
-  # The `-tags=integration -cover -coverpkg=./...` compile the eight shards
-  # read. ONE shard is enough: every shard compiles substantially the same set,
-  # which is why the lane it mirrors also elects a single writer.
+  # What the integration lane reads: the `-tags=integration -cover
+  # -coverpkg=./...` compile of its build job, and the `go run` tools its shards
+  # use. It does what the lane does, the build and then one shard from its
+  # binaries, so the entry holds both.
   integration:
     name: warm integration
     timeout-minutes: 45
@@ -268,9 +271,14 @@ jobs:
           restore: "false"
       - name: Start the dev infra stack (compose + app role)
         run: make db-up
-      - name: Compile and run one shard
+      - name: Compile every integration test binary
+        env:
+          INTEGRATION_BUILD_OUT: ${{ runner.temp }}/integration-bin
+        run: make test-integration
+      - name: Run one shard from the binaries
         env:
           INTEGRATION_SHARD: 1/8
+          INTEGRATION_BIN_DIR: ${{ runner.temp }}/integration-bin
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
           # The value of the shard it mirrors, in _lane-integration.yml, for its
           # reason: sixteen ran the 16GB runner out of memory and got it signalled.

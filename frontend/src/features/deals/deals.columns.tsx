@@ -1,3 +1,4 @@
+import { toBoardDeal } from "../../components/boarddeal";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
 import { EntityRef, type OwnerNaming } from "../../components/entityref";
 import { ownerColumn, tagsColumn } from "../../components/recordlist";
@@ -14,7 +15,6 @@ import {
 import type { Locale, useT } from "../../i18n";
 import { closeDayOf } from "../../lib/closeday";
 import type { StageTotals } from "../../lib/deals.queries";
-import { toBoardDeal } from "./boarddeal";
 import type { CompanyNaming } from "./dealcompanymarks";
 import { lastMailColumn } from "./dealmailaside";
 import type { Deal, Stage } from "./deals";

@@ -9,14 +9,14 @@ workflow is outside the gate:
 | Workflow | What starts it | Blocks a merge? |
 |---|---|---|
 | `cla.yml` | `pull_request_target` (`opened`, `reopened`, `synchronize`, `closed`); a PR comment that contains `recheck` or `Contributor License Agreement` | Yes, for an author outside the Margince team |
-| `cache-warm.yml` | `main` every three hours, manual dispatch | No |
+| `cache-warm.yml` | `pace.yml`, `main` every three hours, manual dispatch | No |
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
 | `closing-declaration.yml` | pull request events | No |
 | `docs-describing.yml` | pull request events | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
-| `main-health.yml` | `main-health-pace.yml`, `main` every six hours, manual dispatch | No |
-| `main-health-pace.yml` | every push to `main` | No (runs after the merge) |
+| `main-health.yml` | `pace.yml`, `main` every six hours, manual dispatch | No |
+| `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
 | `release.yml` | manual dispatch only | No |
@@ -40,12 +40,15 @@ The only writer of the Go build cache and of the golangci analysis cache, and on
 the gate binaries. A red or cancelled run makes the next lane slower, and costs nothing else. It is a
 separate workflow because a merge queue build cannot fill the cache. `actions/cache` scopes a write
 to the branch that writes plus the default branch, and a queue ref does not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
-for why it runs on a schedule and not on each push. Why `ci.yml` saves neither lint cache: [The lint
+for why it does not run on each push.
+
+GitHub drops some of the cron runs. So `pace.yml` starts it from a push to `main` once the newest run is
+three hours old, as it does for `main-health.yml`. Why `ci.yml` saves neither lint cache: [The lint
 caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-only).
 
 Its `ci-image` job builds the [CI image](../explanation/ci-image.md) for `main` when no pull request
 pushed it. Its `plain` job warms the caches of the runner, and those of the image when the image can
-be pulled.
+be pulled. `lint-cache.yml` lints in the image for the same reason.
 
 ## `merge-attest.yml`
 
@@ -168,9 +171,9 @@ and holds only `issues: write`.
 Runs on `main` while commits are landing, with at least two hours between two runs.
 
 The GitHub scheduler can start a cron run hours behind its time, or not at all. It keeps no record
-of a run it did not start. So `main-health-pace.yml` runs on every push to `main` and starts this
+of a run it did not start. So `pace.yml` runs on every push to `main` and starts this
 workflow when the newest run is at least two hours old
-([`scripts/main-health-pace.sh`](../../scripts/main-health-pace.sh), `make test-main-health-pace`).
+([`scripts/pace-workflow.sh`](../../scripts/pace-workflow.sh), `make test-pace-workflow`).
 A cron line every six hours remains for a quiet `main`, when no push comes.
 
 Each run covers these lanes:

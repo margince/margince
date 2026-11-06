@@ -21,7 +21,7 @@ import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { AssessmentPanel } from "./analytics.assessment";
 import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
-import type { HandoffScope } from "./analytics.outcomes.sdr";
+import type { HandoffScope } from "./analytics.outcomes.handoffpages";
 import { TEAM_PERIODS } from "./analytics.overview.context";
 import { useOverviewNavigation } from "./analytics.overview.navigation";
 import { QualificationNote } from "./analytics.overview.prospecting";

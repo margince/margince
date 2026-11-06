@@ -25,6 +25,8 @@ func MayReadMeetings(ctx context.Context) bool {
 func withholdReviewMeetings(review *Review) {
 	review.MeetingsWithheld = true
 	review.Counts.MeetingsHeld, review.Counts.MeetingsWithNextStep = 0, 0
+	// Every day's figure is counted from activities, so none of it is shown.
+	review.DailyActivity = nil
 	if review.Scorecard != nil && review.Scorecard.Lead != nil {
 		lead := *review.Scorecard.Lead
 		lead.Booked, lead.Held, lead.NoShow, lead.PartialHistory = 0, 0, 0, 0

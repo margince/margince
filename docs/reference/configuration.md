@@ -291,12 +291,6 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `analytics.performance_enabled` | `MARGINCE_ANALYTICS_PERFORMANCE_ENABLED` | — | `bool` | `false` | api, worker | Ignored; kept so existing files load. |
 
-### `assurance`
-
-| Key | Env | Flag | Type | Default | Programs | Doc |
-|---|---|---|---|---|---|---|
-| `assurance.qualified_forecast_enforced` | `MARGINCE_ASSURANCE_QUALIFIED_FORECAST_ENFORCED` | — | `bool`, stored | `false` | api, worker | Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories. |
-
 ### `auth`
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
@@ -361,7 +355,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `deals.legal_review_enabled` | `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | — | `bool`, stored | `true` | api, worker | Let a deal be sent to legal for review, and let a `legal_reviewed` criterion hold a deal at its stage. |
 | `deals.maintenance_writes_enabled` | `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | — | `bool`, stored | `true` | api, worker | Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes. |
 | `deals.silent_close_days` | `MARGINCE_DEALS_SILENT_CLOSE_DAYS` | — | `int`, 60 to 730, stored | `120` | api, worker | Days without word from the customer after which Margince closes an open deal as lost. |
-| `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `false` | api, worker | Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move. |
+| `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `true` | api, worker | Let Margince move a deal to a later stage when the evidence on the deal shows it reached that stage; off stops every automatic move. |
 
 ### `email`
 
@@ -380,6 +374,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `identity.enabled_oidc_providers` | `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — | `list<string>`, stored, kept by a reset | — | api, worker | The sign-in providers offered, as a list of provider keys; unset offers every provider the deployment set up. |
+| `identity.mcp_client_check` | `MARGINCE_IDENTITY_MCP_CLIENT_CHECK` | — | `bool`, stored, kept by a reset | `false` | api, worker | Admins may run the `check_client` tool from an AI tool to test whether it can answer a form. |
 | `identity.oauth_dynamic_registration` | `MARGINCE_IDENTITY_OAUTH_DYNAMIC_REGISTRATION` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may register their own OAuth client (DCR) for new sign-ins. |
 | `identity.oauth_metadata_documents` | `MARGINCE_IDENTITY_OAUTH_METADATA_DOCUMENTS` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may sign in with a client ID that is the URL of their metadata document (CIMD). |
 | `identity.oidc_group_role_map` | `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `map<string,string>`, stored, kept by a reset | — | api, worker | The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role. |
@@ -523,7 +518,7 @@ reset from taking over.
 Some bounds are checked in code and not shown in the Type column.
 `installation.dead_work_banner_hours` takes 1 to 168. `installation.geocode_backfill_interval_seconds`
 and `installation.technical_backfill_interval_seconds` take 300 to 604800, or `0` for off.
-`installation.forecast_forward_measure` takes `likely`, `qualified_likely`, `weighted`, `qualified_weighted` or `manager_call`. `installation.forecast_likely_threshold` takes 1 to 100.
+`installation.forecast_forward_measure` takes `likely`, `weighted` or `manager_call`. `installation.forecast_likely_threshold` takes 1 to 100.
 
 `consent.authorization_modes` names every category or none; a value that leaves one out fails the
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,

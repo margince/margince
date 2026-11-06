@@ -62,6 +62,7 @@ var parallelExempt = gatekit.Waive(map[string]string{
 	// process-wide, so Go refuses the combination rather than letting one
 	// test's variable leak into another's.
 	"TestTheSchemaAndTheParserAgreeOnEveryInputDeclaration": "calls t.Setenv, which Go forbids in a parallel test",
+	"TestAnExportedGitDirDoesNotSteerTheCensus":             "calls t.Setenv, which Go forbids in a parallel test",
 	// Rewrites ../docs/reference/gate-inventory.md under -update-gate-inventory.
 	// The gates that walk ../docs — link targets, rulebook direction, page
 	// length — read that file.

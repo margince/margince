@@ -130,7 +130,7 @@ func recomputeEach(
 	if recompute == nil {
 		return nil
 	}
-	// IN ORDER, because the recompute takes `FOR UPDATE` on each activity and
+	// IN ORDER, because the recompute row-locks each activity and
 	// this module is not the only writer that locks several of them at once.
 	// Two callers looping in whatever order their own query returned can each
 	// hold the other's next row, and Postgres ends that by aborting one.

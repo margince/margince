@@ -19,7 +19,7 @@ Read this page for the whole tier first and then each part. To *build* a unit, g
 ## The whole tier in one map
 
 ```text
-extensions/<name>/                 one Go module per unit — its PRESENCE is the enablement
+extensions/<name>/                 one Go module per unit, on when instance/go.mod requires it
    │  New() extension.Extension     an inert declaration: plain data, no handle into the core
    ▼
 make composition ─▶ build/composition/     generated wiring (ignored); an empty extensions/
@@ -67,9 +67,9 @@ fails.
 
 Four rules hold the tier together:
 
-1. **Being there is what turns it on.** A unit is enabled because its folder exists under `extensions/`.
-   There is no flag, no config list and no registry file to add a line to. The set that is turned on is a
-   fact about the tree, so it cannot fall out of date.
+1. **A `require` is what turns it on.** A unit is enabled because the instance's `go.mod` requires it:
+   `instance/go.mod` here, or a client's own. There is no flag and no second list, and the set is the
+   module graph Go resolves and checks.
 2. **A declaration is plain data that does nothing.** `New()` returns a plain value with no handle into
    the running server, and it registers nothing itself. Only the check and apply step at boot does
    anything, after the whole set has passed its checks. Nothing is wired through the declaration, so a

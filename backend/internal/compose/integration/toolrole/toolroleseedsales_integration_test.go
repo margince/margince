@@ -87,16 +87,16 @@ func salesSeeders(s sweepSeed) map[string]func() string {
 			s.t.Fatal("the seeded pipeline has one open stage, so no deal can move between two")
 			return ""
 		},
-		// Only an automatic move can be reverted or accepted, and only a pass
-		// over a deal's exit criteria makes one; the seed records its outcome.
+		// Only a change Margince applied can be accepted, and only a correction
+		// row makes one; the seed records it against the move's audit row.
 		"auto_moved_deal": func() string {
-			id, stages := s.create["deal"](), apptest.DefaultPipeline(s.t, s.e)
-			next := s.create["open_stage"]()
-			s.call("POST", "/v1/deals/"+id+"/advance", integration.AnyMap{"to_stage_id": next}, nil, nil)
-			move := ids.NewV7().String()
-			s.ownerExec(`INSERT INTO stage_progression_outcome (approval_id, deal_id, pipeline_id, from_stage_id, to_stage_id,
-				evidence_kinds, outcome, decided_by_system) VALUES ($1, $2, $3, $4, $5, '{}', 'auto_applied', true)`,
-				move, id, stages.PipelineID, stages.Open, next)
+			id := s.create["deal"]()
+			s.call("POST", "/v1/deals/"+id+"/advance", integration.AnyMap{"to_stage_id": s.create["open_stage"]()}, nil, nil)
+			move := s.ownerScalar(`SELECT id::text FROM audit_log
+				WHERE entity_type = 'deal' AND entity_id = $1 AND after ? 'stage_id' ORDER BY occurred_at DESC LIMIT 1`, id)
+			s.ownerExec(`INSERT INTO deal_correction (deal_id, audit_log_id, correction, fields,
+				remaining_open_stages, asking, standing_close_date, captured_by)
+				VALUES ($1, $2, 'stage_move', '{stage_id}', '', '', '', 'role-sweep')`, id, move)
 			var deal struct {
 				Version int `json:"version"`
 			}
@@ -104,6 +104,41 @@ func salesSeeders(s sweepSeed) map[string]func() string {
 			s.pool.note(id, "move", move)
 			s.pool.note(id, "version", strconv.Itoa(deal.Version))
 			return id
+		},
+		// A deal priced from one line, at the revision that line left it on.
+		"priced_deal": func() string {
+			id := s.create["deal"]()
+			var state struct {
+				CommercialRevision int64 `json:"commercial_revision"`
+				Lines              []struct {
+					ID string `json:"id"`
+				} `json:"lines"`
+			}
+			s.call("POST", "/v1/deals/"+id+"/lines", integration.AnyMap{
+				"expected_revision": 0, "replace_estimate": true, "description": "Role Sweep",
+				"quantity": 1, "unit_price_minor": 1000,
+			}, nil, &state)
+			s.pool.note(id, "line", state.Lines[0].ID)
+			s.pool.note(id, "revision", strconv.FormatInt(state.CommercialRevision, 10))
+			return id
+		},
+		"offer_from_lines": func() string {
+			deal := s.create["priced_deal"]()
+			revision := s.pool.fact(deal, "revision")
+			from, err := strconv.ParseInt(revision, 10, 64)
+			if err != nil {
+				s.t.Fatalf("reading the seeded revision: %v", err)
+			}
+			var offer struct {
+				ID      string `json:"id"`
+				Version int    `json:"version"`
+			}
+			s.call("POST", "/v1/deals/"+deal+"/offers", integration.AnyMap{
+				"currency": "EUR", "source": "manual", "from_deal_revision": from,
+			}, nil, &offer)
+			s.pool.note(offer.ID, "revision", revision)
+			s.pool.note(offer.ID, "version", strconv.Itoa(offer.Version))
+			return offer.ID
 		},
 		"legal_review": func() string {
 			return s.post("/v1/deals/"+s.create["deal"]()+"/legal-reviews", integration.AnyMap{})
@@ -144,6 +179,12 @@ func leadSeeders(s sweepSeed) map[string]func() string {
 			id := lead(integration.AnyMap{})
 			s.call("DELETE", "/v1/leads/"+id, integration.AnyMap{}, pinned(versionOfLead(id)), nil)
 			return id
+		},
+		// An agent changes the terms of a live partner and makes no new one.
+		"live_partner": func() string {
+			partner := s.create["company"]()
+			s.call("PUT", "/v1/companies/"+partner+"/partner", integration.AnyMap{"partner_role": "hosting"}, nil, nil)
+			return partner
 		},
 		"partner_lead": func() string {
 			partner := s.create["company"]()

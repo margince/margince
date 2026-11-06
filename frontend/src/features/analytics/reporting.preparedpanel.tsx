@@ -7,7 +7,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { Panel, PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
@@ -43,52 +43,50 @@ export function PreparedReports({
   const [open, setOpen] = useState<string | null>(null);
 
   return (
-    <Panel title={t("reporting.prepared.title")}>
-      <PanelBody>
-        <QueryGate query={catalog} pendingLabel={t("reporting.prepared.title")}>
-          {(metrics) => (
-            // The default pipeline is part of a saved copy's question, so
-            // nothing is offered before it is known.
-            <QueryGate
-              query={pipelines}
-              pendingLabel={t("reporting.prepared.title")}
-            >
-              {(loaded) => (
-                <>
-                  {PREPARED_REPORTS.filter(
-                    (report) =>
-                      report.kind === "question" ||
-                      !report.ownLensOnly ||
-                      ownLens,
-                  ).map((report) => (
-                    <PreparedRow
-                      key={report.id}
-                      report={report}
-                      selection={
-                        report.kind === "question"
-                          ? preparedSelection(
-                              report,
-                              metrics,
-                              scope,
-                              loaded.find((pipeline) => pipeline.is_default)
-                                ?.id,
-                            )
-                          : null
-                      }
-                      previewing={open === report.id}
-                      onPreview={() =>
-                        setOpen((current) =>
-                          current === report.id ? null : report.id,
-                        )
-                      }
-                    />
-                  ))}
-                </>
-              )}
-            </QueryGate>
-          )}
-        </QueryGate>
-      </PanelBody>
+    <Panel title={t("reporting.prepared.title")} flatHead>
+      {/* Rows sit on the panel itself, so they keep its inset, not twice it. */}
+      <QueryGate query={catalog} pendingLabel={t("reporting.prepared.title")}>
+        {(metrics) => (
+          // The default pipeline is part of a saved copy's question, so
+          // nothing is offered before it is known.
+          <QueryGate
+            query={pipelines}
+            pendingLabel={t("reporting.prepared.title")}
+          >
+            {(loaded) => (
+              <>
+                {PREPARED_REPORTS.filter(
+                  (report) =>
+                    report.kind === "question" ||
+                    !report.ownLensOnly ||
+                    ownLens,
+                ).map((report) => (
+                  <PreparedRow
+                    key={report.id}
+                    report={report}
+                    selection={
+                      report.kind === "question"
+                        ? preparedSelection(
+                            report,
+                            metrics,
+                            scope,
+                            loaded.find((pipeline) => pipeline.is_default)?.id,
+                          )
+                        : null
+                    }
+                    previewing={open === report.id}
+                    onPreview={() =>
+                      setOpen((current) =>
+                        current === report.id ? null : report.id,
+                      )
+                    }
+                  />
+                ))}
+              </>
+            )}
+          </QueryGate>
+        )}
+      </QueryGate>
     </Panel>
   );
 }
@@ -119,25 +117,32 @@ function PreparedRow({
           <p className="analytics-attention-title">{t(report.title)}</p>
           <p className="t-caption">{t(report.purpose)}</p>
         </div>
-        {report.kind === "section" ? (
-          <AppLink
-            className="btn btn-ghost"
-            href={analyticsSectionHref(report.section, params)}
-          >
-            {t("reporting.prepared.open")}
-          </AppLink>
-        ) : (
-          <>
-            <Button onClick={onPreview} aria-expanded={previewing}>
-              {t("reporting.prepared.preview")}
-            </Button>
-            {canCreate && (
-              <Button onClick={() => setSaving(true)}>
-                {t("reporting.prepared.saveCopy")}
+        {/* One cell, so the row's grid keeps every verb on the title's line. */}
+        <span className="reporting-prepared-verbs">
+          {report.kind === "section" ? (
+            <AppLink
+              className="btn btn-link"
+              href={analyticsSectionHref(report.section, params)}
+            >
+              {t("reporting.prepared.open")}
+            </AppLink>
+          ) : (
+            <>
+              <Button
+                variant="link"
+                onClick={onPreview}
+                aria-expanded={previewing}
+              >
+                {t("reporting.prepared.preview")}
               </Button>
-            )}
-          </>
-        )}
+              {canCreate && (
+                <Button variant="link" onClick={() => setSaving(true)}>
+                  {t("reporting.prepared.saveCopy")}
+                </Button>
+              )}
+            </>
+          )}
+        </span>
       </PanelRow>
       {previewing && selection && <PreparedPreview selection={selection} />}
       {saving && selection && (
