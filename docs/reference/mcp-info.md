@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 13 |
-| Tool catalog | 222.3 KB |
+| Tool catalog | 222.6 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 58217 |
+| Approx. wire tokens | 58301 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 46.3 KB | 20% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.0 KB | 23% | Yes, every step |
-| Input schemas | 111.1 KB | 49% | Yes, every step |
+| Input schemas | 111.5 KB | 50% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **164.1 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **164.5 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -101,7 +101,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 307 |
 | [`read_record`](#read_record) | Read a record | yes |  | 324 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2587 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2671 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 984 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2630 |
@@ -10055,6 +10055,10 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
       "items": {},
       "type": "array"
     },
+    "country": {
+      "description": "sales_decisions only",
+      "type": "string"
+    },
     "cursor": {
       "description": "report_runs, sdr_handoffs, sdr_meetings, standard only",
       "type": "string"
@@ -10094,6 +10098,15 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "id": {
       "description": "question_card_answer, question_card_records, report_revisions, sales_initiative, sales_initiative_members, standard only",
+      "type": "string"
+    },
+    "industry": {
+      "description": "sales_decisions only",
+      "type": "string"
+    },
+    "initiative_id": {
+      "description": "sales_decisions only",
+      "format": "uuid",
       "type": "string"
     },
     "kind": {
@@ -10151,6 +10164,11 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
         "this_month",
         "last_month"
       ],
+      "type": "string"
+    },
+    "product_id": {
+      "description": "sales_decisions only",
+      "format": "uuid",
       "type": "string"
     },
     "query": {
@@ -10246,12 +10264,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
       "type": "object"
     },
     "scope_id": {
-      "description": "company_coverage, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
+      "description": "company_coverage, sales_decisions, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
       "format": "uuid",
       "type": "string"
     },
     "scope_kind": {
-      "description": "company_coverage, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
+      "description": "company_coverage, sales_decisions, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
       "enum": [
         "managed_teams",
         "owner",
