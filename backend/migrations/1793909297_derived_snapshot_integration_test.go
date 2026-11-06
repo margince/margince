@@ -20,7 +20,7 @@ func TestDerivedSnapshotsKeepAuditStorageAndTopLevelTransactionIdentity(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	through := namespaceThroughVersion(t, core, "1793958488")
+	through := namespaceThroughVersion(t, core, "1793983523")
 	migration := through.Migrations[len(through.Migrations)-1]
 	ctx := context.Background()
 	tx, err := conn.Begin(ctx)

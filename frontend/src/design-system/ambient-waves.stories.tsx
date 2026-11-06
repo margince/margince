@@ -8,10 +8,9 @@ import { Heading } from "./heading";
 // The ground behind the first-run welcome, never on its own. A canvas with
 // nothing over it says nothing about the one thing this component exists to
 // prove: that it stays BEHIND a host's own content rather than painting over
-// it. Every story here reproduces the two declarations `.auth-surface`
-// carries for exactly this (`position: relative; isolation: isolate;`,
-// `auth-core.css`) so a reader sees the real contract, not a simplified one that
-// happens to work in Storybook and fails on the screen it is copied from.
+// it. Every story here reproduces the two declarations `.auth-surface` carries
+// for this (`position: relative; isolation: isolate;`, `auth-core.css`). A
+// simpler copy would work in Storybook and fail on the screen it came from.
 //
 // WATCH IT RATHER THAN READ THE CAPTURE. The field moves too slowly for a
 // still frame to show it moving at all: that slowness is deliberate (see

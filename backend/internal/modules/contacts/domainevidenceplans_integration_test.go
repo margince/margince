@@ -7,6 +7,7 @@ package contacts
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -37,7 +38,7 @@ func TestDomainEvidenceSeeksPastAnEntireMatchingHistory(t *testing.T) {
 						return err
 					}
 					if !ready {
-						return fmt.Errorf("complete fixture is not ready")
+						return errors.New("complete fixture is not ready")
 					}
 					if err := assertDomainEvidencePlan(t, tx, trace, 64); err != nil {
 						return err
@@ -64,7 +65,7 @@ func TestDomainEvidenceSeeksPastAnEntireMatchingHistory(t *testing.T) {
 func assertDomainEvidencePlan(t *testing.T, tx pgx.Tx, trace *historyPlanTrace, limit int) error {
 	t.Helper()
 	if trace.query == "" {
-		return fmt.Errorf("production query was not recorded")
+		return errors.New("production query was not recorded")
 	}
 	raw, err := testdb.ExplainCachedStatement(t.Context(), tx, trace.query, trace.args)
 	if err != nil {

@@ -29,7 +29,7 @@ func TestAKeptStopLosesItsPlaintextAddress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1793958479")); err != nil {
+	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1793983514")); err != nil {
 		t.Fatalf("up to the release before stops held a hash: %v", err)
 	}
 	contact := scalar(t, conn, `INSERT INTO contact (full_name, source, captured_by)
@@ -48,7 +48,7 @@ func TestAKeptStopLosesItsPlaintextAddress(t *testing.T) {
 		stop(&contact, "own@old.test", "marketing_objection", "recorded by a contact"): "own@old.test",
 	}
 
-	through := namespaceThroughVersion(t, core, "1793958495")
+	through := namespaceThroughVersion(t, core, "1793983530")
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatalf("up: %v", err)
 	}
