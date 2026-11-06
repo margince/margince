@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -210,7 +210,8 @@ What follows from this:
   - Neither workflow proves itself on a schedule, since both only run by hand. The next user to start
     one finds a change that made it fail. So a PR that touches either is worth starting from its own branch
     before merging.
-- A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`. The
+- A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`, plus the
+  census in `backend-lint`. The
   `full_lane` output of `changes` is false only there. The `develop` into `main` pull request runs
   them under the usual path filters:
   [land-through-develop.md](../how-to/land-through-develop.md).
@@ -303,13 +304,10 @@ time of a PR. And `deterministic-gates` itself still catches a broken build.
   Splitting per package could go no faster than the largest package, `compose/integration`.
 - The `integration` fan-in puts them together again, into the single result the `ci` aggregate reads.
 
-The lane **compiles once**. A part picked per test reaches nearly every package, so a shard that
-compiled its own part would compile nearly the whole lane. The `integration build` job links each
-package's test binary with the shards' flags. Each shard runs its part from them in the package
-directory, as `go test` does. A compile error fails the build job, and no shard starts.
-
-Each shard pays a fixed cost: start-up, the fetch and its own migrated template. A wider matrix gives a
-smaller part of the tests for one more copy of that cost. Size it from `scripts/integration-test-timing.txt`.
+The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`
+job links each package's test binary with the shards' flags, and each shard runs its part from them in
+the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
+start-up, the fetch and its own template, so size the matrix from `scripts/integration-test-timing.txt`.
 
 
 
@@ -343,8 +341,7 @@ These jobs are not in `needs`:
 
 - `changes`: the classifier gives no verdict.
 - `fe-quality`, `fe-unit`, `fe-bundle`: taken in by the `frontend` fan-in.
-- `integration-build`, `integration-shards`, `integration-unit-coverage`: taken in by the `integration`
-  fan-in, which already checks their results.
+- `integration-build`, `integration-shards`, `integration-unit-coverage`: the `integration` fan-in checks them.
 - `sonarcloud`: not blocking, by decision. Listing it here would make it required in a hidden way.
 - `vuln`, `live-boot`: advisory. They are the plain next ones to add, since each runs on every change
   that counts, and a red one does not stop a merge.
@@ -416,7 +413,7 @@ output can be used again as well as a green run's.
 local action through, because the repo versions its own code. That holds for the action's own ref, but
 not for the outside actions it calls. Those would come in with nobody reading them.
 
-### The lint caches are saved on `main` only
+### The lint caches are saved on `main`, and the golangci one on `develop` too
 
 Two smaller caches follow the same rule: `ci.yml` loads them and never saves them. An entry that a PR
 saves can be read by that PR alone. It still counts against the 10 GB cache quota of the repository,
@@ -425,7 +422,7 @@ and there it pushes out the `main` entries that every PR loads.
 | Cache | Key | Saved by |
 |---|---|---|
 | Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss on `main` |
-| golangci analysis, `~/.cache/golangci-lint` | [`golangci-cache-key`](../../.github/actions/golangci-cache-key/action.yml): `go.mod`, `go.sum`, both lint configs, then the commit | `cache-warm.yml` job `plain` |
+| golangci analysis, `~/.cache/golangci-lint` | [`golangci-cache-key`](../../.github/actions/golangci-cache-key/action.yml): `go.mod`, `go.sum`, both lint configs, then the commit | `cache-warm.yml` job `plain`, and [`lint-cache.yml`](../../.github/workflows/lint-cache.yml) after each push to `main` or `develop` |
 
 - **The gate binaries key reads the recipe.** An edit elsewhere in `backend/Makefile` keeps the
   key, and a new tool or pin in `make tools` changes it.
@@ -433,6 +430,10 @@ and there it pushes out the `main` entries that every PR loads.
   restore. The save runs under `!cancelled()`, and only if a cache file is newer than the stamp. A
   red lint run still saves, because it read the whole tree. A run that stopped before lint saves
   nothing. The census does not hold this entry back, because golangci replays no test result.
+- `lint-cache.yml` also saves the golangci entry, after each push to `main` or `develop` that changes Go
+  files. A cold pass costs about 39 minutes of CPU, and `internal/compose` imports every module, so an old
+  entry lints close to cold. The job runs `make lint` on the pushed tree from the entry of the push before.
+  Lint keeps the result of each package whose inputs did not change; the job then deletes older entries.
 - **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
   entry until `cache-warm` runs after the merge.
 
@@ -467,7 +468,7 @@ The first kind is held by a census, not a scan, because such paths are mostly bu
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-The `backend-lint` job runs the census on every PR, so the PR that adds such a read fails. `cache-warm`
+The `backend-lint` job runs the census on every ready PR into `main` that touches the backend, so the PR that adds such a read fails. `cache-warm`
 runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
 good one. The second kind is held by
 a gate: a cached test file that runs `git` or `go` must declare its inputs.
@@ -483,8 +484,7 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   not change its findings, and both reds show in one round.
 - **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
   and the shard profiles cannot reach them.
-- **`INTEGRATION_JOBS=8`** is twice the cores of a runner, because the tests wait on Postgres. At 16, a
-  test process and a Postgres backend for each package ran the runner out of memory.
+- **`INTEGRATION_JOBS=8`**, twice the cores of a runner: the tests wait on Postgres, and 16 ran out of memory.
 - **`integration unit coverage`** exists because the shards run just the packages tagged for
   integration. Without it, SonarCloud would see the packages with only unit tests at a false coverage
   of about 0% for new code.

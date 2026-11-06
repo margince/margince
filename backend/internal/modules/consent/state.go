@@ -4,9 +4,8 @@
 package consent
 
 import (
-	"strings"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // State is the per-purpose consent vocabulary — the Go spelling of the
@@ -50,5 +49,5 @@ func ParseRecordableState(raw string) (ConsentState, error) {
 // Held by: TestThePurposeKeyIsNormalizedInExactlyOnePlace
 // (backend/internal/modules/consent/purposekey_test.go)
 func normalizedPurposeKey(key string) string {
-	return strings.TrimSpace(strings.ToLower(key))
+	return commsauthz.NormalizedPurposeKey(key)
 }

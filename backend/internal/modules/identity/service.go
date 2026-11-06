@@ -90,7 +90,7 @@ type Service struct {
 	// check before they touch it. See mfa.go.
 	vault keyvault.Vault
 	// config answers the stored settings a boot source may set. Nil refuses an
-	// OAuth mint (settingsoauthtoken.go); nothing else here reads it.
+	// OAuth mint (settingsoauthtoken.go) and a client check read.
 	config *config.Config
 }
 

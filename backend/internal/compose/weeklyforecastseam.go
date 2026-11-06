@@ -171,10 +171,6 @@ func movementReadingFor(measure forecasting.ForwardMeasure) forecasting.Reading 
 	switch measure {
 	case forecasting.MeasureWeighted:
 		return forecasting.ReadingWeighted
-	case forecasting.MeasureQualifiedWeighted:
-		return forecasting.ReadingQualifiedWeighted
-	case forecasting.MeasureQualifiedLikely:
-		return forecasting.ReadingQualifiedEvidence
 	default:
 		return forecasting.ReadingEvidence
 	}

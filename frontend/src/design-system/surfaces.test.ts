@@ -465,7 +465,10 @@ describe("the nesting ladder has one painter", () => {
     ).toEqual(new Set([...RUNGS, "--cardGround", "--darkStep", "--stepAlias"]));
   });
 
-  it("names a rung only in surfaces.css, apart from the ledger", () => {
+  // Parses every source file, so it takes the tree-walk timeout the other scans use.
+  it("names a rung only in surfaces.css, apart from the ledger", {
+    timeout: 60_000,
+  }, () => {
     const found = [
       ...cssSpellings(allRules),
       ...scripts.flatMap((path) =>

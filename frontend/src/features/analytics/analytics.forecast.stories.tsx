@@ -45,9 +45,9 @@ const SELECTION: AnalyticsSelection = {
 function readings(over: Partial<Readings> = {}): Readings {
   return {
     period_start: "2026-07-01",
+    qualification_mode: "off",
     period_end: "2026-09-30",
     scope_kind: "workspace",
-    qualification_mode: "off",
     won_minor: 92_000_00,
     evidence_minor: 148_000_00,
     likely_threshold: 90,

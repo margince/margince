@@ -450,7 +450,7 @@ func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
 	envelope.OccurredAt = captureNow
 	queue := &readingQueue{}
 	trigger := compose.NewStageEvidenceTrigger(e.Pool, compose.StageEvidenceDeals(e.Pool), compose.StageEvidenceDomains(e.Pool),
-		queue, nil, slog.Default()).WithClock(func() time.Time { return captureNow })
+		queue, slog.Default()).WithClock(func() time.Time { return captureNow })
 	for range 2 {
 		if err := trigger.HandleEvent(context.Background(), envelope); err != nil {
 			t.Fatalf("delivering the relink event: %v", err)

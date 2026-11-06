@@ -108,6 +108,10 @@ func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, t
 	if !ok {
 		return row{}, errors.New("crmapprovals: no actor bound to context")
 	}
+	owner, ownerP, underPolicy, err := bindForRedemption(ctx, tx, id)
+	if err != nil {
+		return row{}, err
+	}
 	a, err := get(ctx, tx, id)
 	if err != nil {
 		// An unknown approval id reads as an invalid token, not a 404:
@@ -120,6 +124,11 @@ func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, t
 
 	if err := s.validateRedemptionTarget(ctx, tx, a); err != nil {
 		return row{}, err
+	}
+	if underPolicy {
+		if err := stillUnderPolicy(owner, tx, ownerP, a); err != nil {
+			return row{}, err
+		}
 	}
 
 	tag, err := tx.Exec(ctx,

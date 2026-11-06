@@ -113,7 +113,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -130,11 +130,16 @@ help: ## List targets with their descriptions (the default goal)
 # internal/contracts/ and build/composition/ in place — a
 # write-under-reader race for any pass still compiling them.
 #
+# Under CHECK_WRITERS_RAN, which the root `make check` sets for its lanes,
+# drift is left out: that run did drift before its lanes, and here it would
+# rewrite files that the frontend lane reads at the same time.
+#
 # Each phase reports how long it took (scripts/phase-timer.sh). The ledger has
-# ONE owner per run: the root `check-backend` exports PHASE_TIMER_OWNED and
-# prints the table itself, covering its gate fan-out and these four phases
-# together; run on its own (`make check-go`, or here directly) this target is
-# the owner instead and prints its own four. Without that, a standalone run
+# ONE owner per run: the root `check-backend` or `check` exports
+# PHASE_TIMER_OWNED and prints the table itself, covering its other phases and
+# these together (three under CHECK_WRITERS_RAN, four otherwise); run on its own
+# (`make check-go`, or here directly) this target is the owner instead and prints
+# its own four. Without that, a standalone run
 # would leave its rows to be counted inside somebody else's table, and a
 # standalone run that FAILED would leave its open phase to abort the next one.
 #
@@ -145,8 +150,8 @@ help: ## List targets with their descriptions (the default goal)
 # lint and the unit tests each get a whole runner: `deterministic-gates` passes
 # CHECK_LEGS="$(TEST_LEGS)", and `backend-lint` runs `check-static`.
 # gates/checklegsplit_test.go fails if the two stop covering every leg.
-TEST_LEGS   := test test-extensions
-STATIC_LEGS := lint vet arch-lint
+TEST_LEGS   := test-uncached test-cached test-extensions
+STATIC_LEGS := lint-base lint-strict vet arch-lint
 CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
 
 check: ## The merge gate: everything a PR must pass
@@ -157,22 +162,33 @@ check: ## The merge gate: everything a PR must pass
 	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
 	$(MAKE) -j4 $(CHECK_LEGS)
 	@bash ../scripts/phase-timer.sh stop
+ifndef CHECK_WRITERS_RAN
 	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
 	@bash ../scripts/phase-timer.sh stop
+endif
 	@bash ../scripts/phase-timer.sh start "backend: composition reproducibility"
 	$(MAKE) check-composition
 	@bash ../scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh report
 
 check-static: composition ## The static half of check (STATIC_LEGS), which CI runs as its own job
-	$(MAKE) -j3 $(STATIC_LEGS)
+	$(MAKE) -j4 $(STATIC_LEGS)
 
 # gen-composition runs pinned to the ROOT workspace: the tool lives in
 # the separate backend/tools module, so a caller-exported GOWORK (off, or
 # an unrelated workspace) would break resolution before anything builds.
+#
+# Under CHECK_WRITERS_RAN it writes nothing. gen-composition removes
+# build/composition/ before it writes it again, so a run in one `make check`
+# lane would take the tree away from the other lanes that read it.
+# `make check` composes once, before the lanes start.
 composition: ## Materialize build/composition/ from the enabled set under extensions/ (every build lane depends on this)
+ifdef CHECK_WRITERS_RAN
+	@echo "composition: written by make check's writers phase, so this lane only reads it"
+else
 	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
+endif
 
 check-composition: composition ## Reproducibility gate: a clean regeneration must reproduce composition.json byte-for-byte
 	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition -verify
@@ -625,6 +641,8 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # baseline (the depguard DAG lives there and must never be diff-scoped);
 # .golangci.strict.yml is the expanded strict set, gated to new
 # code via new-from-merge-base so the pre-existing backlog is not a burn-down.
+# CI sets CHECK_BASE_REF to the branch a pull request merges into, so a pull
+# request into develop is judged on its own lines, not on all of develop's.
 #
 # Both go through ../scripts/run-golangci.sh, the wrapper `make lint-modules`
 # also uses: golangci's analysis cache is machine-wide and content-keyed, so in
@@ -632,17 +650,30 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # issues — with that checkout's path, and therefore without the //nolint: and
 # path-anchored waivers that path carried. This lane is exposed to it exactly
 # as the module lane is, so it is guarded in the same place rather than twice.
-lint: composition ## golangci-lint: repo-wide baseline + new-code strict set
+CHECK_BASE_REF ?= origin/main
+
+lint: lint-base lint-strict ## golangci-lint: repo-wide baseline + new-code strict set
+
+# Two targets so CI can run the passes on two runners; each loads the whole tree.
+lint-base: composition lint-tool
+	$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run ./...
+
+# One golangci pass peaks near 10 GB on a cold cache, so when one make runs
+# both, the strict pass waits for the baseline. CI's strict leg runs it alone.
+lint-strict: composition lint-tool $(if $(filter lint lint-base,$(MAKECMDGOALS)),lint-base)
+	@if git rev-parse --verify -q "$(CHECK_BASE_REF)" >/dev/null; then \
+		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" GOLANGCI_CACHE_PASS=strict ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base="$(CHECK_BASE_REF)" ./...; \
+	elif [ "$(origin CHECK_BASE_REF)" = "file" ]; then \
+		echo "SKIP strict lint: $(CHECK_BASE_REF) not found — fetch it to arm the new-code gate"; \
+	else \
+		echo "lint-strict: CHECK_BASE_REF=$(CHECK_BASE_REF) does not resolve — fetch it" >&2; exit 1; \
+	fi
+
+lint-tool:
 	@test -n "$(GOLANGCI_LINT)" || { \
 		echo "lint: golangci-lint not found — run 'make tools' (installs $(GOLANGCI_LINT_VERSION) to $$($(GO) env GOPATH)/bin)"; \
 		exit 1; \
 	}
-	$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run ./...
-	@if git rev-parse --verify -q origin/main >/dev/null; then \
-		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run --config .golangci.strict.yml ./...; \
-	else \
-		echo "SKIP strict lint: origin/main not found — fetch it to arm the new-code gate"; \
-	fi
 
 # Gate-tool resolution: prefer the install from `make tools` (CI restores
 # it from cache), but only when its embedded module version (`go version

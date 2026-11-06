@@ -227,23 +227,6 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         as: "text",
       },
     ],
-    // A proposed stage move. `because` leads, because a rep deciding needs
-    // the reason before the checklist: the criteria say WHAT is settled and
-    // the sentence says why that adds up to a move.
-    stage_progression: [
-      {
-        field: "because",
-        label: "approval.field.because",
-        as: "prose",
-        lead: true,
-      },
-      {
-        field: "from_stage_name",
-        label: "approval.field.from_stage",
-        as: "text",
-      },
-      { field: "to_stage_name", label: "approval.field.to_stage", as: "text" },
-    ],
     // Retired: nothing stages it, but cards already decided under it read
     // with the layout they were decided in.
     transcript_proposal: [
