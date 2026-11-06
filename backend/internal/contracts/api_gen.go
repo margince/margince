@@ -135533,7 +135533,7 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 
 	// ------------- Optional query parameter "exclude_ids" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", false, false, "exclude_ids", r.URL.Query(), &params.ExcludeIds, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "exclude_ids", r.URL.Query(), &params.ExcludeIds, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
