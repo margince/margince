@@ -108,6 +108,10 @@ does not. The rest: [docs/how-to/work-on-an-issue.md](docs/how-to/work-on-an-iss
    you stopped. Closing an issue removes the label (`issue-closed.yml`), so a `Closes #N` merge needs
    no release.
 
+**Close completed issues on `develop`.** Close an issue once its agreed scope is complete and the
+required checks pass on `develop`. Link the landed commit or merged PR in the closing comment.
+Do not wait for the sync to `main`. Keep issues open until required work, review and approval are complete.
+
 **A security hole is never a public issue.** [SECURITY.md](SECURITY.md) sends a hole an attacker can
 use to a private advisory. The test: if you can write the steps to show it, it goes in an advisory,
 not here.
