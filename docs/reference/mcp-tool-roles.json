@@ -5107,11 +5107,11 @@
         "admin",
         "management",
         "manager",
-        "ops"
+        "ops",
+        "rep"
       ],
       "refused_for": [
-        "read_only",
-        "rep"
+        "read_only"
       ]
     },
     {
