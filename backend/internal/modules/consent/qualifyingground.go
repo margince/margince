@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -196,13 +197,16 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, s
 	var event QualifyingEvent
 	var id string
 	var sourceType, sourceID, note *string
+	var args []any
+	arg := func(value any) string { args = append(args, value); return storekit.SQLf("$%d", len(args)) }
+	contact, from, until, addr := arg(contactID), arg(since), arg(asOf), arg(address)
 	err := tx.QueryRow(ctx, `
 		SELECT id, kind, occurred_at, source_entity_type, source_entity_id, note
 		FROM consent_qualifying_event
-		WHERE contact_id = $1 AND occurred_at >= $2 AND occurred_at <= $4 AND retracted_at IS NULL
-		  AND ($3::text IS NULL OR `+requestCoversSQL("recorded_for_addresses", "$3")+`)
+		WHERE contact_id = `+contact+` AND occurred_at >= `+from+` AND occurred_at <= `+until+` AND retracted_at IS NULL
+		  AND (`+addr+`::text IS NULL OR `+requestCoversSQL("recorded_for_addresses", addr)+`)
 		ORDER BY occurred_at DESC
-		LIMIT 1`, contactID, since, address, asOf).Scan(&id, &event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
+		LIMIT 1`, args...).Scan(&id, &event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
