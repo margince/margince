@@ -336,7 +336,7 @@ it("opens a follow-up on the conversation it waits on", async () => {
       preview: "Attached is the quote for both phases.",
       direction: "outbound",
       display_status: "team",
-      move: "awaiting_their_reply",
+      move: "waiting_for_them",
       attachment_count: 0,
     },
   } satisfies components["schemas"]["WorklistItem"];
