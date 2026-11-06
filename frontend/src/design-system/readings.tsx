@@ -221,13 +221,9 @@ export function Chip({
     href?: string;
     // The link's name where the visible text alone does not say where it goes.
     label?: string;
-    // The chip at a `Badge`'s geometry, for a chip inside a table row: it shares
-    // a cell with badges there, and a fact drawn a rung larger than the status
-    // beside it outweighs the name the row is actually about.
-    //
-    // A size on the primitive rather than a height each caller sets, for the
-    // reason `Meter`'s dense rung is one: a geometry with two authors drifts the
-    // first time either moves.
+    // The chip at a `Badge`'s geometry, for a table row. A larger fact beside
+    // the status would outweigh the row's name. The size lives here, so a
+    // geometry never has two authors.
     dense?: boolean;
   }
 >) {
