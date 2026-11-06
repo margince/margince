@@ -82,6 +82,9 @@ func (s *Service) SaveMyDisplayName(ctx context.Context, name string) (Seat, err
 			}
 			return err
 		}
+		if err := readSeatZone(ctx, tx, &seat); err != nil {
+			return err
+		}
 		if before == name {
 			// Re-saving the name already stored writes nothing and publishes
 			// nothing. A settings form that saves on every render would

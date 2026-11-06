@@ -7,6 +7,8 @@ import (
 	"mime"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/webforms"
@@ -30,8 +32,8 @@ import (
 // function decides which route gets which one. Nobody chooses the list at run
 // time, which is what keeps the paragraph above true.
 //
-// Paths are as the generated router mounts them, under the /v1 prefix the
-// chassis sees. TestEveryUploadRouteIsDeclared derives the expected set from
+// Keys are route patterns as the generated router mounts them, under /v1. A path
+// that carries an id resolves to its pattern, so it finds its route's ceiling. TestEveryUploadRouteIsDeclared derives the expected set from
 // the contract, so a new upload route cannot be added without appearing here.
 func uploadCeilings(limits UploadLimits) map[string]int64 {
 	return map[string]int64{
@@ -90,11 +92,11 @@ func jsonCeilings() map[string]int64 {
 // route handed multipart does too. A request failing any of them gets the
 // JSON ceiling.
 //
-// The path is matched exactly as the router mounts it, with no normalization of
-// our own. A trailing slash or an un-cleaned segment is a path the router does
-// not serve, and guessing at how it would resolve one is how a grant ends up
-// wider than the route list it was written from.
-func bodyCeilingFor(uploads map[string]int64) httpserver.BodyCeiling {
+// The route is the pattern the contract router itself resolves the path to, with
+// no normalization of our own. A trailing slash or an un-cleaned segment is a path
+// the router does not serve. Guessing how it would resolve one is how a grant
+// ends up wider than the route list it was written from.
+func bodyCeilingFor(uploads map[string]int64, routes chi.Routes) httpserver.BodyCeiling {
 	byMediaType := map[string]map[string]int64{
 		"multipart/form-data": uploads,
 		"application/json":    jsonCeilings(),
@@ -111,9 +113,23 @@ func bodyCeilingFor(uploads map[string]int64) httpserver.BodyCeiling {
 		if err != nil {
 			return httperr.MaxBodyBytes
 		}
-		if ceiling, declared := byMediaType[mediaType][r.URL.Path]; declared {
+		if ceiling, declared := byMediaType[mediaType][servedRoute(routes, r)]; declared {
 			return ceiling
 		}
 		return httperr.MaxBodyBytes
 	}
+}
+
+// servedRoute names a request by the contract route that serves it. A path outside the
+// contract, such as /mcp, is named as it stands.
+func servedRoute(routes chi.Routes, r *http.Request) string {
+	// The path chi itself routes on, so the two cannot read one request differently.
+	path := r.URL.RawPath
+	if path == "" {
+		path = r.URL.Path
+	}
+	if pattern := routes.Find(chi.NewRouteContext(), r.Method, path); pattern != "" {
+		return pattern
+	}
+	return r.URL.Path
 }

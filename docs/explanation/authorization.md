@@ -150,8 +150,8 @@ checks and no other:
   grant check.
 - `AdmitChangers`, the batch check for several principals, lets it pass for the acting principal
   only. A colleague in the same batch still needs their own write authority.
-- `EnsureAssignee` accepts one of the named owners as the new owner, if that owner is a live
-  human with a full seat. Anyone else is still refused.
+- `EnsureRunAsOwner` accepts one of the named owners without the caller's write scope, if that
+  owner is a live human with a full seat. `EnsureAssignee` asks no write scope of anyone.
 
 It opens up no other table, no other contact and no read. Object RBAC, the visibility check and the
 seat limit still run, so a `read` seat still cannot write.

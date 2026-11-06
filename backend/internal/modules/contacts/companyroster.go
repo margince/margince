@@ -9,8 +9,42 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// LockCompanyRosterTx holds the starting roster's employments and live contacts until commit.
+func LockCompanyRosterTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]ids.ContactID, error) {
+	if _, err := LockCompanyTx(ctx, tx, companyID); err != nil {
+		return nil, err
+	}
+	initial, err := CompanyRosterTx(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
+	held := make(map[ids.ContactID]bool, len(initial))
+	for _, contact := range initial {
+		if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contact.String()); err != nil {
+			return nil, err
+		}
+		if err := auth.EnsureLinkTarget(ctx, tx, contactEntity, contact.UUID); err != nil {
+			return nil, err
+		}
+		held[contact] = true
+	}
+	current, err := CompanyRosterTx(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
+	retained := current[:0]
+	for _, contact := range current {
+		if held[contact] {
+			retained = append(retained, contact)
+		}
+	}
+	return retained, nil
+}
 
 // CompanyRosterSQL selects, as contact_id, the account's current employees
 // this caller may read: the edge gate and the contact row scope both hold.

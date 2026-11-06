@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/assetrev"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // AvatarOrigin is who put a seat's picture there, as app_user.avatar_origin holds it.
@@ -215,7 +216,7 @@ func (s *Service) SeatAvatarKey(ctx context.Context, user ids.UserID) (string, e
 	var key *string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT avatar_object_key FROM app_user WHERE id = $1 AND archived_at IS NULL`, user).Scan(&key)
+			`SELECT avatar_object_key FROM app_user WHERE id = $1 AND `+workforce.NamedSeatSQL(""), user).Scan(&key)
 	})
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (key == nil || *key == "")) {
 		return "", apperrors.ErrNotFound

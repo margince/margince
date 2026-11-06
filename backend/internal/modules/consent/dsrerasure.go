@@ -70,7 +70,17 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 		if err != nil {
 			return err
 		}
-		if verr := validateDSRUpdate(current, withoutReplayedAnswer(current, in)); verr != nil {
+		in = withoutReplayedAnswer(current, in)
+		// Any answer is refused before anything is erased, never dropped after:
+		// text, an empty or blank string, and an explicit null alike. The only
+		// answer an erasure takes is its own.
+		if in.Resolution != nil || in.ClearResolution {
+			return &ValidationError{
+				Field:  fieldResolution,
+				Reason: "an erasure is answered by the erasure itself; leave the answer empty",
+			}
+		}
+		if verr := validateDSRUpdate(current, withErasureAnswer(current, in)); verr != nil {
 			return verr
 		}
 		// THE LINK FIRST, then the reference.
@@ -101,7 +111,7 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 			}
 			return err
 		}
-		out, err = finalizeErasureFulfil(ctx, tx, id, in, current)
+		out, err = finalizeErasureFulfil(ctx, tx, id, in, current, answerFor(current, erased))
 		if err != nil {
 			return err
 		}
@@ -114,21 +124,44 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 // answers its own account of what it removed or anonymised.
 type EraseFunc func(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error)
 
-// withoutReplayedAnswer drops the officer's text from a repeated fulfilment.
-// The erasure already replaced that text, so the retry is a no-op and not a
-// rewrite of a closed request's answer.
+// withoutReplayedAnswer drops a resent answer from a repeated fulfilment. The
+// first fulfilment recorded the erasure's own answer. So a retry that echoes it
+// is a no-op, not a rewrite of a closed request's answer.
 func withoutReplayedAnswer(current dsrRow, in UpdateDSRInput) UpdateDSRInput {
-	if closedDSRStatus(current.Status) && current.Resolution != nil && *current.Resolution == erasedResolution {
+	if closedDSRStatus(current.Status) && isErasureAnswer(current.Resolution) &&
+		sameAnswer(current.Resolution, in.Resolution) {
 		in.Resolution = nil
 	}
 	return in
+}
+
+// withErasureAnswer is the update validateDSRUpdate judges for a first
+// fulfilment. The erasure supplies the answer a close needs, so an empty
+// answer from the officer is not a missing one.
+func withErasureAnswer(current dsrRow, in UpdateDSRInput) UpdateDSRInput {
+	if closedDSRStatus(current.Status) {
+		return in
+	}
+	placeholder := erasedResolution
+	in.Resolution = &placeholder
+	return in
+}
+
+// answerFor is the answer this fulfilment records. A replay keeps the one the
+// first fulfilment recorded. Its erase finds nothing left, and nothing_held
+// over a contact the first one erased would rewrite the record.
+func answerFor(current dsrRow, erased erasureaccount.Account) string {
+	if closedDSRStatus(current.Status) && isErasureAnswer(current.Resolution) {
+		return *current.Resolution
+	}
+	return erasureAnswerFor(erased)
 }
 
 // finalizeErasureFulfil flips the locked request to fulfilled and appends the
 // audit row, inside the caller's held-lock transaction. The `AND status` guard
 // can only match under that lock. A miss still answers as an illegal
 // transition, never a silent no-op.
-func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateDSRInput, current dsrRow) (dsrRow, error) {
+func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateDSRInput, current dsrRow, answer string) (dsrRow, error) {
 	// THE RESOLUTION COMES OUT, and subject_ref deliberately does NOT.
 	//
 	// The erasure has just run and took the subject out of every other case
@@ -136,12 +169,12 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 	// holds the row FOR UPDATE across that call, so the engine's retirement
 	// skips it rather than blocking on a lock its caller holds.
 	//
-	// The prose goes, because an officer typed it and it can name or quote the
-	// subject. The reference stays, because THIS ROW is how a replayed
-	// fulfilment finds the contact to erase — the status is already
-	// 'fulfilled', which validateDSRUpdate treats as a legal no-op, and
-	// tombstoning the reference makes that retry fail to resolve a subject it
-	// is supposed to be idempotent about.
+	// The answer is the erasure's own (answerFor), from a fixed list: no prose
+	// an officer typed can name or quote the subject. The reference stays: this
+	// row is how a replayed fulfilment finds the contact to erase. Its status is
+	// already 'fulfilled', which validateDSRUpdate treats as a legal no-op.
+	// Tombstoning the reference would make that retry fail to resolve a
+	// subject it is supposed to be idempotent about.
 	//
 	// SO THE ERASURE REQUEST KEEPS THE IDENTITY IT WAS MADE WITH, alone among
 	// the subject's cases. That is a real gap and it is bounded: one row, one
@@ -157,11 +190,10 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 			UPDATE data_subject_request SET
 			  status = 'fulfilled',
 			  %s,
-			  resolution = CASE
-			    WHEN coalesce($%d, resolution) IS NULL THEN NULL ELSE '`+erasedResolution+`' END,
+			  resolution = $%d,
 			  contact_id = NULL
 			WHERE id = $%d AND status = $%d
-			RETURNING `+dsrColumns, held, arg(in.Resolution), arg(id), arg(current.Status))
+			RETURNING `+dsrColumns, held, arg(answer), arg(id), arg(current.Status))
 	row := tx.QueryRow(ctx, query, args...)
 	out, err := scanDSR(row)
 	if err != nil {

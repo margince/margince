@@ -648,25 +648,22 @@ test.each([
   ["typed by hand", null],
   ["read out of a note", { kind: "note", content_state: "available" }],
   ["read out of a withheld call", { kind: "call", content_state: "withheld" }],
-])(
-  "a task %s offers Email and Open contact, and no Call",
-  async (_, source) => {
-    stubNextSteps({ source });
-    openTaskWith();
+])("a task %s offers Call, Email and Open contact", async (_, source) => {
+  stubNextSteps({ source });
+  openTaskWith();
 
-    await waitFor(() => expect(openContact()).not.toBeNull());
-    // The source has answered, so a missing Call is the decision and not a wait.
-    if (source?.content_state === "withheld") {
-      await screen.findByText(en["email.detail.withheldReason"]);
-    } else if (source) {
-      await screen.findByRole("button", { name: "Open original" });
-    }
-    expect(
-      screen.getByRole("link", { name: en["record.verb.email"] }),
-    ).toBeTruthy();
-    expect(call()).toBeNull();
-  },
-);
+  await waitFor(() => expect(openContact()).not.toBeNull());
+  // Source visibility does not change the contact's callable number.
+  if (source?.content_state === "withheld") {
+    await screen.findByText(en["email.detail.withheldReason"]);
+  } else if (source) {
+    await screen.findByRole("button", { name: "Open original" });
+  }
+  expect(
+    screen.getByRole("link", { name: en["record.verb.email"] }),
+  ).toBeTruthy();
+  expect(call()?.getAttribute("href")).toBe("tel:+49301234567");
+});
 
 test("a contact with no phone gets no Call", async () => {
   stubNextSteps({ contact: { ...ALICE, phones: [] } });

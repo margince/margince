@@ -29,7 +29,8 @@ name: cache-warm
 on:
   schedule:
     # Every three hours. Ten-ish merges of drift against a content-addressed
-    # cache, which is still a warm restore.
+    # cache, which is still a warm restore. pace.yml starts a run from a push once
+    # the newest is three hours old, because GitHub drops some of these.
     - cron: "0 */3 * * *"
   workflow_dispatch:
 
@@ -191,7 +192,7 @@ jobs:
           path: ~/.cache/go-build
           key: ${{ steps.go-cache.outputs.key }}
 
-  # The `-tags=integration -cover -coverpkg=./...` compile the twelve shards
+  # The `-tags=integration -cover -coverpkg=./...` compile the eight shards
   # read. ONE shard is enough: every shard compiles substantially the same set,
   # which is why the lane it mirrors also elects a single writer.
   integration:
@@ -235,7 +236,7 @@ jobs:
         run: make db-up
       - name: Compile and run one shard
         env:
-          INTEGRATION_SHARD: 1/12
+          INTEGRATION_SHARD: 1/8
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
           # The value of the shard it mirrors, in _lane-integration.yml, for its
           # reason: sixteen ran the 16GB runner out of memory and got it signalled.

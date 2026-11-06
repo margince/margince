@@ -20,12 +20,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -193,25 +196,42 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 	})
 }
 
-// refuseAgentOverAUsersDecisionTx keeps a decision the user made from their agent.
-// A row with no captured_by predates agents, so a user made it. The caller holds
-// the sender's write lock.
+// refuseAgentOverAUsersDecisionTx keeps a decision the user made about a sender
+// from their agent. The caller holds the sender's write lock.
 func refuseAgentOverAUsersDecisionTx(ctx context.Context, tx pgx.Tx, actor principal.Principal, folded string) error {
 	if actor.Type != principal.PrincipalAgent {
 		return nil
 	}
-	var byAgent bool
-	err := tx.QueryRow(ctx, `
-		SELECT coalesce(captured_by LIKE 'agent:%', false) FROM capture_sender_override
-		 WHERE user_id = $1 AND address = $2`, actor.UserID, folded).Scan(&byAgent)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && byAgent) {
+	var decidedBy *string
+	err := tx.QueryRow(ctx, `SELECT captured_by FROM capture_sender_override
+		 WHERE user_id = $1 AND address = $2`, actor.UserID, folded).Scan(&decidedBy)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("capture: reading who decided about a sender: %w", err)
 	}
-	return fmt.Errorf("the user already decided about this sender, so the user changes it: %w", apperrors.ErrConflict)
+	return refuseAgentOverAUsersDecision(actor, decidedBy, "this sender")
 }
+
+// refuseAgentOverAUsersDecision is the one answer to whether an agent may change a
+// capture decision, from the stamp of whoever made it. A row with no stamp
+// predates agents, so a user made it.
+func refuseAgentOverAUsersDecision(actor principal.Principal, decidedBy *string, what string) error {
+	if actor.Type != principal.PrincipalAgent || (decidedBy != nil && strings.HasPrefix(*decidedBy, agentStampPrefix)) {
+		return nil
+	}
+	return &httperr.DetailedError{
+		Status: http.StatusConflict, Code: "user_decided",
+		Detail: "the user already decided about " + what + ", so the user changes it",
+	}
+}
+
+// agentDecisionTakeoverSQL keeps a rule's stamp on a repeat add, unless an agent
+// made it: a user adding it again makes the decision theirs. %[1]s is the table.
+const agentDecisionTakeoverSQL = `CASE WHEN %[1]s.created_by LIKE 'agent:%%' THEN EXCLUDED.created_by ELSE %[1]s.created_by END`
+
+const agentStampPrefix = "agent:"
 
 // OverrideForTx answers what this seat decided about a sender, or "" when they
 // have not.

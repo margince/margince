@@ -407,23 +407,6 @@
         "null"
       ]
     },
-    "assurance": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "qualified_forecast_enforced": {
-          "description": "Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories.",
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "default": false
-        }
-      }
-    },
     "auth": {
       "type": [
         "object",
@@ -881,12 +864,12 @@
           "default": 120
         },
         "stage_autopilot_enabled": {
-          "description": "Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move.",
+          "description": "Let Margince move a deal to a later stage when the evidence on the deal shows it reached that stage; off stops every automatic move.",
           "type": [
             "boolean",
             "null"
           ],
-          "default": false
+          "default": true
         }
       }
     },
@@ -1109,6 +1092,14 @@
           "items": {
             "type": "string"
           }
+        },
+        "mcp_client_check": {
+          "description": "Admins may run the check_client tool from an AI tool to test whether it can answer a form.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
         },
         "oauth_dynamic_registration": {
           "description": "AI tools may register their own OAuth client (DCR) for new sign-ins.",

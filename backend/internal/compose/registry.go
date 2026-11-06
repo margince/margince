@@ -9,6 +9,7 @@ package compose
 // imports a sibling module (ADR-0054 §9).
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -86,10 +87,11 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, 
 // every path that can lose the vector lane says so on the wire rather than
 // serving a lexically-ranked page under a semantic label.
 func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.EmailDrafter, send SendPath, enricher agents.CompanyEnricher, embedder search.Embedder, transcriptOnLanding activities.TranscriptReadEnqueue, imports agents.Imports, meetingBrief agents.MeetingBriefReader, log *slog.Logger, features registryFeatures, opts ...agents.RegistryOption) *agents.Registry {
+	log = cmp.Or(log, slog.Default())
 	pool, provider := db.Pool(), providerWithTranscripts(db, transcriptOnLanding)
 	provider = withServerSeams(provider, pool, features)
 	// Every mutating tool shares retry claims and replay authorization on every host role.
-	opts = append(opts, withContractTierFloor(),
+	opts = append(opts, withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
 		agents.WithBaseLanguage(installationLanguage(pool)),
 		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))),
@@ -110,11 +112,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterEnrichTool(registry, provider, enricher)
 	agents.RegisterPipelineTool(registry, pipelineLister(pool))
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
-	agents.RegisterReportTool(registry,
-		reportToolRunner(newReportEngine(pool)),
-		reportToolCatalog(), reportPlanVocabulary())
-	agents.RegisterReportVocabularyTool(registry,
-		agents.NewReportVocabularyResource(reportToolCatalog()))
+	agents.RegisterReportTool(registry, reportToolRunner(newReportEngine(pool)), reportToolCatalog(), reportPlanVocabulary())
+	agents.RegisterReportVocabularyTool(registry, agents.NewReportVocabularyResource(reportToolCatalog()))
 	agents.RegisterReportingTool(registry, reportingReader(pool))
 	agents.RegisterReportDraftTool(registry, reportDrafter(pool))
 	agents.RegisterAnalyticsReportTool(registry,
@@ -168,6 +167,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	comms.firstDrafts = features.firstDrafts
 	agents.RegisterCommsTools(registry, comms, provider)
 	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
+	agents.RegisterClientCheckTool(registry, log)
 	agents.RegisterRouters(registry)
 	registerComposedTools(registry)
 	return registry

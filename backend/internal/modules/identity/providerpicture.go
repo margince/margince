@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -44,7 +45,7 @@ func OfferProviderPicture(ctx context.Context, user ids.UserID, source PictureSo
 		return
 	}
 	go func() {
-		defer recoverDetached("filling a seat's picture from its provider")
+		defer httpserver.RecoverDetached("filling a seat's picture from its provider")
 		fillCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), providerPictureTimeout)
 		defer cancel()
 		pictureURL, err := source(fillCtx)

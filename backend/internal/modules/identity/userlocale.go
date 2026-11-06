@@ -65,6 +65,9 @@ func (s *Service) SaveMyLocale(ctx context.Context, locale string) (Seat, error)
 			}
 			return err
 		}
+		if err := readSeatZone(ctx, tx, &seat); err != nil {
+			return err
+		}
 		if before != nil && *before == locale {
 			// Re-choosing the language already stored writes nothing and
 			// publishes nothing. A settings page that saves on every render
@@ -108,6 +111,7 @@ type Seat struct {
 	// whether the user picked it themselves.
 	Timezone       string
 	TimezoneChosen bool
+	TimezoneSetBy  *string
 	// AvatarKey is where the seat's picture bytes live, nil when it has none.
 	AvatarKey *string
 }

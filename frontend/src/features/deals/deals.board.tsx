@@ -206,10 +206,12 @@ export function BoardHeadCount({
       last={count}
       total={count}
       more
+      scope={pipeline.name}
     />
   ) : (
-    translatePlural(locale, "board.count", count, {
+    translatePlural(locale, "deals.countInPipeline", count, {
       count: formatNumber(count, locale),
+      pipeline: pipeline.name,
     })
   );
 }

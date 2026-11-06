@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { useRecordOwnerOptions } from "../../components/assigneepicker";
+import { useRunAsOwnerOptions } from "../../components/assigneepicker";
 import { RosterFailedLine } from "../../components/entityref";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
@@ -23,7 +23,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
-import { RulePausedReason } from "./automations.lists";
+import { RulePausedReason, RuleSetByAgent } from "./automations.lists";
 import { recipeSentence } from "./automations.recipe";
 import "./automations.css";
 
@@ -354,7 +354,7 @@ function AutomationOwner({
 }: Readonly<{ automation: Automation; canEdit: boolean }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const { options: owners, roster } = useRecordOwnerOptions(canEdit);
+  const { options: owners, roster } = useRunAsOwnerOptions(canEdit);
   const hand = useMutation({
     mutationFn: patchAutomation,
     onSettled: () =>
@@ -420,6 +420,7 @@ function AutomationStatus({
           {enabled ? t("auto.statusEnabled") : t("auto.statusPaused")}
         </Badge>
       )}
+      <RuleSetByAgent automation={automation} />
       <RulePausedReason automation={automation} />
       {/* A refused flip moves nothing on screen, so this line is its only report. */}
       {flip.isError && <ErrorLine>{problemMessageOf(flip.error, t)}</ErrorLine>}

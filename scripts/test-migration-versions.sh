@@ -16,6 +16,10 @@
 set -uo pipefail
 SELF="$(CDPATH= cd -P -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")"
 cd "$(dirname "$0")/.."
+# A fixture repository must not land in the surrounding one, or run the
+# developer's hooks or signing.
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$(pwd)/scripts/lib-git-fixture.sh"
 
 GATE_SRC="$(pwd)/scripts/check-migration-versions.sh"
 fails=0
@@ -72,7 +76,7 @@ fixture() {
 # the variables it disarms are listed, and `fixture` verifies the OUTCOME on the
 # repository it builds rather than trusting that the list is complete.
 #
-# The gate's own switch, first. ci.yml sets MIGRATION_VERSIONS_BASELINE_RESET=1
+# The gate's own switch. ci.yml sets MIGRATION_VERSIONS_BASELINE_RESET=1
 # on the `make check-backend` STEP, which is where this target runs, so every
 # case below that expects the gate to ENFORCE inherited the declaration, ran in
 # REPORTING mode, and saw exit 0 where it wanted exit 1. It failed in CI and
@@ -81,11 +85,6 @@ fixture() {
 # variable, so removing the unset goes red on the next push.
 unset MIGRATION_VERSIONS_BASELINE_RESET
 unset MIGRATION_VERSIONS_REQUIRE_BASE
-
-# git's environment and the caller's git config, second: a fixture repository
-# must not land in the surrounding one, or run the developer's hooks or signing.
-# shellcheck source=scripts/lib-git-fixture.sh
-source "$(pwd)/scripts/lib-git-fixture.sh"
 
 # expect <name> <want-exit> <declared-reset> <mutation-fn> <want-diagnostic>
 #

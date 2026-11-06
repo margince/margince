@@ -17,13 +17,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -69,8 +66,7 @@ func offerHandover(t *testing.T, e *integration.Env, recordType string, id, to i
 }
 
 // The colleague accepts. The company, its open deal and the owner's open task
-// on it move to them, each with its own audit row. The colleague is outside the
-// owner's own scope, which a direct reassignment would refuse.
+// on it move to them, each with its own audit row.
 func TestAnAcceptedOfferMovesTheRecordAndTheOwnersOpenWorkToTheColleague(t *testing.T) {
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep1, e.Rep3)
@@ -78,12 +74,6 @@ func TestAnAcceptedOfferMovesTheRecordAndTheOwnersOpenWorkToTheColleague(t *test
 	stages := newHandoverPipeline(t, e)
 	openDeal := dealOn(t, e, stages, "Offered renewal", e.Rep1, company)
 	openTask := taskOn(t, e, "Call Offered back", e.Rep1, linkTo("company", company))
-	if err := database.WithWorkspaceTx(giver(e), e.Pool, func(tx pgx.Tx) error {
-		return auth.EnsureAssignee(giver(e), tx, e.Rep3)
-	}); err == nil {
-		t.Fatalf("the owner may assign to the colleague directly, so this case proves nothing about the scope bound")
-	}
-
 	offer, created := offerHandover(t, e, "company", company, e.Rep3)
 	if !created || offer.Transfer.DeciderID != e.Rep3 || offer.Transfer.RequestedBy != e.Rep1 {
 		t.Fatalf("offer = %+v (created %v), want a new offer put to the colleague", offer, created)

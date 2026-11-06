@@ -22,7 +22,7 @@ func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, l
 		in.Readings.WeightedMinor, in.Readings.EligibleCount, in.Readings.PricedCount,
 		in.Readings.ConfirmedDateCount, in.Readings.FxMissingCount, in.CallID, capturedBy,
 		in.PipelineID, in.PopulationFingerprint,
-		nullIfEmpty(string(in.ForwardMeasure)), nullIfEmpty(in.QualifiedPolicyVersion),
+		nullIfEmpty(string(in.ForwardMeasure)),
 		InputFingerprint(in.Readings.Contributions),
 		in.SelfCorrecting, in.EvidenceCutoff, nullIfEmpty(in.RiskSignalsVersion), likelyThresholdColumn(in.Readings.LikelyThreshold),
 	}
@@ -32,7 +32,7 @@ func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, l
         (period_start,period_end,scope_kind,scope_id,taken_at,local_day,trigger,definition_version,
         base_currency,won_minor,evidence_minor,open_minor,weighted_minor,
         eligible_count,priced_count,confirmed_date_count,fx_missing_count,call_id,captured_by,
-        pipeline_id,population_fingerprint,forward_measure,qualified_policy_version,input_fingerprint,
+        pipeline_id,population_fingerprint,forward_measure,input_fingerprint,
         self_correcting,evidence_cutoff,risk_signals_version,likely_threshold,
         range_low_minor,range_high_minor,range_runs,range_quantiles,range_version,
         landing_measure,landing_call_minor) VALUES (` + storekit.Placeholders(arguments) + `) RETURNING id`

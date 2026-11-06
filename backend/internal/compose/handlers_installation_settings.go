@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type installationSettingsHandlers struct {
@@ -145,7 +146,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		// the floor carry in the same transaction.
 		Country:      req.Country,
 		CallWhatsApp: req.CallWhatsapp, CallTelegram: req.CallTelegram, CallZalo: req.CallZalo, IndividualPerformance: req.IndividualPerformance, ForecastSelfCorrecting: req.ForecastSelfCorrecting,
-		ForecastLikelyThreshold: req.ForecastLikelyThreshold,
+		ForecastLikelyThreshold: req.ForecastLikelyThreshold, McpClientCheck: req.McpClientCheck,
 	}
 	patch.DateFormat = enumText(req.DateFormat)
 	patch.TimeFormat = enumText(req.TimeFormat)
@@ -174,11 +175,10 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	patch.DeadWorkBannerHours = req.DeadWorkBannerHours
 	patch.OAuthAccessTokenTTLMinutes = req.OauthAccessTokenTtlMinutes
 	// Same reasoning as the month above: the entry validates against the shared
-	// kernel's set, so an unknown measure comes back naming this field and
-	// quoting the value. Converted to a plain string because the patch carries
-	// what was ASKED for, and the generated enum type would claim it had already
-	// been checked against the vocabulary the projection enforces.
-	patch.ForecastForwardMeasure = enumText(req.ForecastForwardMeasure)
+	// kernel's set. An unknown measure comes back naming this field and quoting
+	// the value. The two qualified spellings map to their base measures. It is a
+	// plain string because the generated enum type would claim a check not yet run.
+	patch.ForecastForwardMeasure = savedForwardMeasure(req.ForecastForwardMeasure)
 	// Passed through unvalidated against the deployment's list on purpose. A key
 	// this deployment holds no credentials for enables nothing — the effective
 	// answer is the intersection — so refusing it would be refusing a request
@@ -249,7 +249,8 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		FiscalYearStartMonth: s.FiscalYearStartMonth,
 		DeadWorkBannerHours:  s.DeadWorkBannerHours,
 		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
-			s.ForecastForwardMeasure),
+			s.ForecastForwardMeasure,
+		),
 		OauthAccessTokenTtlMinutes: s.OAuthAccessTokenTTLMinutes,
 		BaseCurrencyLocked:         s.BaseCurrencyLocked,
 		CallWhatsapp:               s.CallWhatsApp,
@@ -328,6 +329,17 @@ func (h installationSettingsHandlers) clock() time.Time {
 		return h.now()
 	}
 	return time.Now()
+}
+
+// savedForwardMeasure keeps the two deprecated qualified measures sendable. The
+// qualified forecast is retired, so each saves as the measure it was built on.
+// Any other value stays as sent, for the entry's validator to judge.
+func savedForwardMeasure[T ~string](value *T) *string {
+	text := enumText(value)
+	if text != nil {
+		*text = values.SavedForwardMeasure(*text)
+	}
+	return text
 }
 
 func enumText[T ~string](value *T) *string {

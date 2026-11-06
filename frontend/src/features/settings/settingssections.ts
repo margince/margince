@@ -142,7 +142,6 @@ export const SETTINGS_SECTIONS = {
     "legalReview.settingsTitle",
     "legalReview.settingsSwitch",
   ],
-  stageautomation: ["stageAutomation.record"],
   leads: [
     "leadOrigins.title",
     "leadReasons.title",
@@ -214,6 +213,8 @@ export const SETTINGS_SECTIONS = {
     "agentClients.methods.published",
     "agentClients.methods.dynamic",
     "agentClients.methods.admin",
+    "agentClients.experiments.title",
+    "agentClients.experiments.clientCheck",
     "agentConnections.ttl.label",
   ],
   "model-calls": [],

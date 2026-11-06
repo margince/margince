@@ -9,7 +9,7 @@ import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
-import { usePipelines } from "../../lib/pipelines.queries";
+import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
@@ -114,10 +114,7 @@ export function useOverviewFilters(
     REPORTING_PERIODS.find((value) => value === params.get("period")) ??
     defaultPeriod;
   const setPeriod = (value: string) => replaceDial("period", value);
-  const defaultPipeline =
-    pipelines.find((pipeline) => pipeline.is_default)?.id ??
-    pipelines[0]?.id ??
-    "";
+  const defaultPipeline = defaultPipelineOf(pipelines)?.id ?? "";
   const pipelineId =
     params.get("pipeline") === "all"
       ? ""

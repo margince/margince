@@ -70,6 +70,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			// margince/margince#26.
 			Timezone:       optionalString(id.Timezone),
 			TimezoneChosen: timezoneChosenFlag(id.Timezone, id.TimezoneChosen),
+			TimezoneSetBy:  id.TimezoneSetBy,
 		},
 		Roles:                   roles,
 		Teams:                   teams,

@@ -98,6 +98,9 @@ func (s *Service) SaveMyGreetingName(ctx context.Context, raw *string) (Seat, er
 			}
 			return err
 		}
+		if err := readSeatZone(ctx, tx, &seat); err != nil {
+			return err
+		}
 		if sameGreetingName(before, name) {
 			return nil
 		}

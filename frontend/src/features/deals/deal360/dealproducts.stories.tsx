@@ -59,8 +59,70 @@ const BY_HAND: DealProduct[] = [
   },
 ];
 
-function card(rows: DealProduct[] | "denied") {
+type DealCommercial = components["schemas"]["DealCommercial"];
+
+const PRICED_BY_LINES: DealCommercial = {
+  deal_id: "d-1",
+  mode: "lines",
+  amount_basis: "lines_net_committed",
+  commercial_revision: 2,
+  currency: "EUR",
+  complete: false,
+  missing: ["unit_price"],
+  money_withheld: false,
+  writable: true,
+  known_committed_net_minor: 20_000,
+  lines: [
+    {
+      id: "l-1",
+      position: 1,
+      product_id: "p-banana",
+      catalog_name: "Bananas",
+      description: "Bananas",
+      unit: "piece",
+      quantity: 100,
+      unit_price_minor: 200,
+      currency: "EUR",
+      discount_pct: 0,
+      billing_model: "one_time",
+      line_net_minor: 20_000,
+      committed_net_minor: 20_000,
+      missing: [],
+      created_at: AT,
+      version: 1,
+      updated_at: AT,
+    },
+    {
+      id: "l-2",
+      position: 2,
+      description: "Ripening service",
+      unit: "piece",
+      quantity: 1,
+      currency: "EUR",
+      discount_pct: 0,
+      billing_model: "one_time",
+      missing: ["unit_price"],
+      created_at: AT,
+      version: 1,
+      updated_at: AT,
+    },
+  ],
+};
+
+function card(
+  rows: DealProduct[] | "denied",
+  lines: DealCommercial | null = null,
+) {
   installFetchStub({
+    "GET /deals/d-1/lines": () =>
+      jsonResponse(
+        lines ?? {
+          ...PRICED_BY_LINES,
+          mode: "estimate",
+          commercial_revision: 0,
+          lines: [],
+        },
+      ),
     "GET /deals/d-1/products": () =>
       rows === "denied" ? permissionDenied() : jsonResponse({ data: rows }),
     "GET /products": () =>
@@ -73,7 +135,11 @@ function card(rows: DealProduct[] | "denied") {
   });
   return (
     <StoryProviders>
-      <DealProductsCard dealId="d-1" currency="EUR" />
+      <DealProductsCard
+        dealId="d-1"
+        currency="EUR"
+        typedAmount={lines ? null : "€16,500.00"}
+      />
     </StoryProviders>
   );
 }
@@ -130,5 +196,33 @@ export const EditingAnEmptyList: Story = {
   play: async ({ canvasElement }) => {
     const editor = await openEditor(canvasElement, userEvent.setup());
     await expect(within(editor).getByText(/Saving an empty list/)).toBeTruthy();
+  },
+};
+
+/** Priced from its own lines, one of them still without a price. */
+export const PricedByLines: Story = {
+  render: () => card([], PRICED_BY_LINES),
+};
+
+export const PricedByLinesDark: Story = {
+  globals: { theme: "dark" },
+  render: () => card([], PRICED_BY_LINES),
+};
+
+/** The line editor, with its fields stacked on a phone. */
+export const EditingTheLines: Story = {
+  parameters: { viewport: { defaultViewport: "mobile1" } },
+  render: () => card([], PRICED_BY_LINES),
+  play: async ({ canvasElement }) => {
+    await userEvent.setup().click(
+      await within(canvasElement).findByRole("button", {
+        name: "Edit products",
+      }),
+    );
+    await expect(
+      await within(canvasElement.ownerDocument.body).findByRole("dialog", {
+        name: "Products and services",
+      }),
+    ).toBeTruthy();
   },
 };

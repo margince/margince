@@ -852,7 +852,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## attachment_extraction
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -863,6 +863,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `attempt_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `fields` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `finished_at` | `timestamp with time zone` |  |  |
+| `question` | `text`, default `'deal_facts'::text` | yes | What the file was read for. |
 | `requested_by` | `text` | yes |  |
 | `started_at` | `timestamp with time zone` |  |  |
 | `status` | `text`, default `'queued'::text` | yes | queued/running are live; done and failed are terminal. |
@@ -879,6 +880,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `attachment_extraction_attempt_check`: `CHECK ((attempt >= 1))`
 - `attachment_extraction_fields_shape`: `CHECK ((jsonb_typeof(fields) = 'array'))`
+- `attachment_extraction_question_check`: `CHECK ((question = ANY (ARRAY['deal_facts', 'chat_capture'])))`
 - `attachment_extraction_started_shape`: `CHECK ((((status = 'queued') AND (started_at IS NULL)) OR ((status <> 'queued') AND (started_at IS NOT NULL))))`
 - `attachment_extraction_status`: `CHECK ((status = ANY (ARRAY['queued', 'running', 'done', 'failed'])))`
 - `attachment_extraction_terminal_shape`: `CHECK ((((status = ANY (ARRAY['done', 'failed'])) AND (finished_at IS NOT NULL)) OR ((status = ANY (ARRAY['queued', 'running'])) AND (finished_at IS NULL))))`
@@ -925,11 +927,12 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## booking_page
 
-6 columns · primary key `(id)` · referenced by 1 foreign key
+7 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `first_used_at` | `timestamp with time zone` |  |  |
 | `host_user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `scheduling_policy` | `jsonb` |  |  |

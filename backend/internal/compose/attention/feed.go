@@ -127,8 +127,9 @@ type Service struct {
 	// the seam refuses a principal with no human behind it, and the lane
 	// renders that as withheld.
 	captureHealth CaptureHealth
-	// aiWork is OPTIONAL and per-user exactly as captureHealth is.
-	aiWork AIWork
+	// aiWork and bookingHealth are optional and per-user, as captureHealth is.
+	aiWork        AIWork
+	bookingHealth BookingHealth
 	// pins is OPTIONAL like the lanes above it: nil means this feed applies no
 	// reader override, and the day ranks as it did before pinning existed.
 	pins Pins
@@ -221,7 +222,6 @@ type Service struct {
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
-	reviews     reviewRead
 	followUps   followUpRead
 	// planCoverage is whose plans a team read looked at; nil under every other scope.
 	planCoverage *crmcontracts.WorklistPlanCoverage
