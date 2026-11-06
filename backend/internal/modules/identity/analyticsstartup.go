@@ -10,8 +10,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
+// AnalyticsStartup prepares the data Analytics opens with, for the session answer.
 type AnalyticsStartup func(context.Context) (*crmcontracts.AnalyticsStartup, error)
 
+// WithAnalyticsStartup sets the reader of Analytics' opening data.
 func (h Handlers) WithAnalyticsStartup(read AnalyticsStartup) Handlers {
 	h.analyticsStartup = read
 	return h

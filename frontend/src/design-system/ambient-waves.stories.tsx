@@ -5,10 +5,9 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AmbientWaves } from "./ambient-waves";
 import { Heading } from "./heading";
 
-// The ground behind the first-run welcome, never on its own. A canvas with
-// nothing over it says nothing about the one thing this component exists to
-// prove: that it stays BEHIND a host's own content rather than painting over
-// it. Every story here reproduces the two declarations `.auth-surface` carries
+// The ground behind the first-run welcome, never on its own. It must stay
+// BEHIND a host's own content and never paint over it. A canvas with nothing
+// over it cannot show that. Every story here reproduces the two declarations `.auth-surface` carries
 // for this (`position: relative; isolation: isolate;`, `auth-core.css`). A
 // simpler copy would work in Storybook and fail on the screen it came from.
 //
