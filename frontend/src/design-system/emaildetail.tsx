@@ -142,7 +142,7 @@ export function EmailDetail({
 }
 
 // The drawer's body: the thread once it is read, or the state of the read.
-function ThreadState({
+export function ThreadState({
   read,
   formatWhen,
   viewerUserId,

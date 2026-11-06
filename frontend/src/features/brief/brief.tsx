@@ -386,14 +386,15 @@ function FocusDetails({
     );
   }
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer" fit>
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2">
           {t("brief.focus.context")}
         </Heading>
       </DrawerHead>
-      <DrawerBody>
-        <WorklistPane item={item} />
+      <DrawerBody className="form-stack">
+        {/* The drawer covers the card, so it answers the row in place. */}
+        <WorklistPane item={item} answer />
       </DrawerBody>
     </Modal>
   );
