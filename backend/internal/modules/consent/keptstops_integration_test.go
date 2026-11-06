@@ -233,3 +233,39 @@ func TestAMergeBindsASubjectWideStopToItsOwnRecordsAddresses(t *testing.T) {
 		})
 	}
 }
+
+// A replayed press on a bare address whose stop is kept as a hash finds that
+// stop. It writes nothing, so the address never comes back in plaintext.
+//
+// Mutation: put back the plain-address arm alone in StopForCredentialTx's
+// dedup and the replay writes a second, plaintext stop.
+func TestAReplayedPressFindsTheStopKeptAsAHash(t *testing.T) {
+	e := setupChannelConsent(t)
+	const address = "pressed@bare.test"
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression (address_hash, kind, source, captured_by, decided_by_level)
+		VALUES ($1, $2, 'public_link', 'system', 'machine')`,
+		storekit.SuppressionHash(address), commsauthz.ReasonObjection); err != nil {
+		t.Fatalf("planting the kept stop: %v", err)
+	}
+	var stopped bool
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		stopped, err = e.store.StopForCredentialTx(e.ctx, tx,
+			WithdrawalRef{Address: address, Scope: WithdrawalScopeAllMarketing})
+		return err
+	}); err != nil {
+		t.Fatalf("replaying the press: %v", err)
+	}
+	if stopped {
+		t.Error("the replay recorded a stop, want it to find the kept one")
+	}
+	var plaintext int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM communication_suppression WHERE lower(address) = $1`, address).Scan(&plaintext); err != nil {
+		t.Fatal(err)
+	}
+	if plaintext != 0 {
+		t.Errorf("%d stop(s) hold the address in plaintext after the replay, want 0", plaintext)
+	}
+}

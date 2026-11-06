@@ -364,9 +364,9 @@ into consent's handlers.
   destroys a contact's data. `backend/gates/retentionseedcoverage_test.go` records why each scope
   with no row has none.
 
-  No retention action deletes a stop. `anonymize` pins each stop and withdrawal to its addresses and
-  their hashes (`address_hash`, `privacy/retentionstops.go`). A merge binds it to its own record's
-  addresses first. A later stop lands on the kept hashes (`contact.anonymized_address_hashes`).
+  No retention action deletes a stop. `anonymize` pins each stop and withdrawal to the hashes of its
+  addresses (`address_hash`, `privacy/retentionstops.go`) and keeps none of the addresses themselves. A
+  merge binds it to its own record's addresses first. A later stop lands on the kept hashes (`contact.anonymized_address_hashes`).
 
 ## The single-transaction cross-store exception
 

@@ -91,3 +91,5 @@
 1793927374_internal_mail_restriction_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793927375_internal_history_needs_its_own_authorization.down.sql | * | the procedural body checks for one authorized run and refuses rollback; it rewrites no data
 1793927376_internal_history_authorization_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793928609_a_kept_stop_holds_only_its_hash.up.sql | communication_suppression | communication_suppression holds one row per stop a colleague, a subject or a bounce recorded, a handful per stopped contact; the UPDATE clears one column on the stops that name no record, a handful per anonymized contact or pressed link
+1793928609_a_kept_stop_holds_only_its_hash.down.sql | * | the down migration is a single SELECT 1 that changes nothing

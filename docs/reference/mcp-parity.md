@@ -49,8 +49,8 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 | [Business operations](#business-operations) | 561 | 508 | 23 | 30 | 10 | 13 | 475 | 91.5% | 90.5% |
 | [Compliance and privacy](#compliance-and-privacy) | 62 | 45 | 15 | 1 | 16 | 0 | 47 | 72.3% | 72.5% |
 | [Capture and connectors](#capture-and-connectors) | 49 | 35 | 6 | 7 | 7 | 0 | 48 | 70.8% | 71.4% |
-| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 79 | 59 | 4 | 8 | 12 | 0 | 66 | 74.2% | 74.6% |
-| [Admin settings](#admin-settings) | 158 | 72 | 11 | 52 | 34 | 0 | 146 | 47.2% | 45.5% |
+| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 78 | 59 | 4 | 8 | 11 | 0 | 65 | 75.3% | 75.6% |
+| [Admin settings](#admin-settings) | 159 | 72 | 11 | 52 | 35 | 0 | 147 | 46.9% | 45.2% |
 | [The user's own account and security](#the-users-own-account-and-security) | 29 | 8 | 1 | 11 | 8 | 1 | 26 | 26.9% | 27.5% |
 | [Agent governance](#agent-governance) | 26 | 8 | 0 | 1 | 16 | 1 | 26 | 30.7% | 30.7% |
 | [Operator and system](#operator-and-system) | 23 | 4 | 0 | 13 | 6 | 0 | 20 | 15.0% | 17.3% |
@@ -129,7 +129,7 @@ How the workspace is set up, where the seeded `rep` role passes the check. Most 
 | Exchange, tax and model rates | 2 | 0 | 0 | 1 | 1 | 0 | 1 | 0.0% | 0.0% |
 | Automations | 5 | 4 | 0 | 1 | 0 | 0 | 4 | 75.0% | 80.0% |
 | Members, teams and roles | 4 | 4 | 0 | 0 | 0 | 0 | 4 | 100.0% | 100.0% |
-| Capture and integration rules | 15 | 13 | 4 | 0 | 2 | 0 | 15 | 86.6% | 86.6% |
+| Capture and integration rules | 14 | 13 | 4 | 0 | 1 | 0 | 14 | 92.8% | 92.8% |
 | Web forms | 2 | 2 | 0 | 0 | 0 | 0 | 1 | 100.0% | 100.0% |
 | Webhooks | 4 | 0 | 0 | 0 | 4 | 0 | 3 | 0.0% | 0.0% |
 | Installation settings | 5 | 0 | 0 | 1 | 4 | 0 | 5 | 0.0% | 0.0% |
@@ -150,7 +150,7 @@ How the workspace is set up, where the seeded `rep` role is refused.
 | Automations | 4 | 0 | 0 | 4 | 0 | 0 | 4 | 0.0% | 0.0% |
 | Members, teams and roles | 34 | 19 | 6 | 4 | 11 | 0 | 28 | 67.8% | 55.8% |
 | AI models and budget | 29 | 13 | 0 | 9 | 7 | 0 | 28 | 46.4% | 44.8% |
-| Capture and integration rules | 7 | 4 | 3 | 1 | 2 | 0 | 7 | 57.1% | 57.1% |
+| Capture and integration rules | 8 | 4 | 3 | 1 | 3 | 0 | 8 | 50.0% | 50.0% |
 | Web forms | 4 | 0 | 0 | 2 | 2 | 0 | 4 | 0.0% | 0.0% |
 | Webhooks | 5 | 0 | 0 | 0 | 5 | 0 | 5 | 0.0% | 0.0% |
 | Extensions | 4 | 2 | 0 | 1 | 1 | 0 | 3 | 66.6% | 50.0% |

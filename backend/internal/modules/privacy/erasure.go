@@ -302,12 +302,16 @@ func anonymizeSubjectRows(
 	// The hashes an earlier anonymize kept go onto the erasure list before the
 	// redaction clears them. They are the same hash (storekit.SuppressionHash),
 	// so the anonymized subject's addresses stay refused once the row forgets
-	// them.
+	// them. The stops kept on them are deleted with the subject's other stops.
+	var keptHashes []string
+	if err := tx.QueryRow(ctx,
+		`SELECT anonymized_address_hashes FROM contact WHERE id = $1`, contactID).Scan(&keptHashes); err != nil {
+		return nil, fmt.Errorf("privacy: reading the anonymized address hashes: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO erasure_suppression (kind, value_hash)
-		SELECT 'email', kept FROM contact, unnest(anonymized_address_hashes) AS kept
-		 WHERE contact.id = $1
-		ON CONFLICT DO NOTHING`, contactID); err != nil {
+		SELECT 'email', kept FROM unnest($1::text[]) AS kept
+		ON CONFLICT DO NOTHING`, keptHashes); err != nil {
 		return nil, fmt.Errorf("privacy: keeping the anonymized addresses on the erasure list: %w", err)
 	}
 	// Only a row that still holds something is written. An already-anonymised
@@ -347,7 +351,7 @@ func anonymizeSubjectRows(
 	if err := scrubSubjectFromGraph(ctx, tx, contactID, emails, identities, subjectName, linkedInHandles); err != nil {
 		return nil, err
 	}
-	if err := deleteConsentCapabilities(ctx, tx, contactID, emails, reason); err != nil {
+	if err := deleteConsentCapabilities(ctx, tx, contactID, emails, keptHashes, reason); err != nil {
 		return nil, err
 	}
 	// Why this contact existed. It names one contact, records what they did or

@@ -15,8 +15,8 @@ import (
 )
 
 // A stop an older anonymize pinned to a plaintext address gains its hash, the
-// one the send check computes (storekit.SuppressionHash). It keeps the address,
-// so an older worker still blocks. A hard bounce gains no hash. Each stop learns how it was recorded from the
+// one the send check computes (storekit.SuppressionHash). This migration keeps
+// the address and the next one clears it. A hard bounce gains no hash. Each stop learns how it was recorded from the
 // first row of its carry chain, and a chain whose first row is gone reads
 // unknown.
 func TestTheKeptStopBackfillHashesTheAddressAndReadsTheChain(t *testing.T) {
@@ -61,7 +61,7 @@ func TestTheKeptStopBackfillHashesTheAddressAndReadsTheChain(t *testing.T) {
 		t.Fatal(err)
 	}
 	if address == nil || *address != keptAddress || hash == nil || *hash != storekit.SuppressionHash(keptAddress) {
-		t.Errorf("the kept stop holds address %v and hash %v, want the address kept beside the send check's hash", address, hash)
+		t.Errorf("the kept stop holds address %v and hash %v, want the address and the send check's hash", address, hash)
 	}
 	if err := conn.QueryRow(ctx, `SELECT address, address_hash FROM communication_suppression WHERE id = $1`,
 		bounce).Scan(&address, &hash); err != nil {

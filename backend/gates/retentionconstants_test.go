@@ -14,6 +14,7 @@ import (
 )
 
 func TestRetentionReadsSharedConstantsAndRefusesUnknownAssignments(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, assignment, fragment                string
 		unreadable, bodyErased, retainedDestroyed bool

@@ -11,12 +11,10 @@ package privacy
 // arrives as a new record. So every stop the subject holds, and every marketing
 // withdrawal, ends up pinned to the addresses it covered. None is deleted.
 //
-// A pinned stop holds the hash of its address (storekit.SuppressionHash), which
-// the send check matches, and still the address itself. The address stays so a
-// worker that predates the hash keeps blocking during a rolling deploy. A merge
-// binds a stop or
-// withdrawal to its own record's addresses (recorded_for_addresses), and it is
-// pinned to those alone. After a wrong merge the stop of one contact never
+// A pinned stop holds only the hash of its address (storekit.SuppressionHash),
+// which the send check matches; the plaintext address leaves with the record.
+// A merge binds a stop or withdrawal to its own record's addresses
+// (recorded_for_addresses), and it is pinned to those alone. After a wrong merge the stop of one contact never
 // lands on the addresses of the other.
 //
 // The contact and the lead arm share these statements; only the column that
@@ -90,8 +88,8 @@ func (s liveStopToPin) pinnedTo(addresses []string) []string {
 
 // keepStopsOnAddresses detaches every stop of one subject onto its addresses.
 //
-// Only an active stop is pinned. A stop that names its own address keeps it,
-// and gains its hash. A stop for the whole subject gets one row per address it covers. A
+// Only an active stop is pinned. A stop that names its own address is pinned to
+// its hash. A stop for the whole subject gets one row per address it covers. A
 // stop with no address to pin to stays on the anonymized record, which still
 // exists, so its evidence is kept. A lifted stop stays on the record too: it
 // stops nothing, and a copy would only spread the address.
@@ -133,10 +131,12 @@ func addressHashes(addresses []string) []string {
 	return hashes
 }
 
-// pinStop moves one stop off its subject onto its first address, and copies it
-// onto each further one. A stop with no address to pin to is left where it is.
-// ON CONFLICT: one live bounce per address is unique, and an address that
-// already has one is already stopped.
+// pinStop moves one stop off its subject onto the hash of its first address,
+// and copies it onto each further one. A stop with no address to pin to is
+// left where it is. A hard bounce keeps its address as well, because lifting
+// one finds it by address (consent's LiftAddressStop). ON CONFLICT: one live
+// bounce per address is unique, and an address that already has one is
+// already stopped.
 func pinStop(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, stop ids.UUID, addresses []string) error {
 	if len(addresses) == 0 {
 		return nil
@@ -146,18 +146,20 @@ func pinStop(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, stop ids.
 		INSERT INTO communication_suppression
 		    (address, address_hash, kind, source, captured_by, decided_by_level, purpose_id, recorded_at,
 		     carried_from, recorded_through)
-		SELECT u.address, u.hash, s.kind, s.source, s.captured_by, s.decided_by_level, s.purpose_id,
-		       s.recorded_at, s.id, s.recorded_through
+		SELECT CASE WHEN s.kind = $4 THEN u.address END, u.hash, s.kind, s.source, s.captured_by,
+		       s.decided_by_level, s.purpose_id, s.recorded_at, s.id, s.recorded_through
 		  FROM communication_suppression s
 		 CROSS JOIN unnest($2::text[], $3::text[]) AS u(address, hash)
 		 WHERE s.id = $1
-		ON CONFLICT DO NOTHING`, stop, addresses[1:], hashes[1:]); err != nil {
+		ON CONFLICT DO NOTHING`, stop, addresses[1:], hashes[1:], commsauthz.ReasonHardBounce); err != nil {
 		return fmt.Errorf("copy the subject's stop onto each address it covers: %w", err)
 	}
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE communication_suppression
-		   SET %s = NULL, address = $2, address_hash = $3, recorded_for_addresses = NULL
-		 WHERE id = $1 AND revoked_at IS NULL`, column), stop, addresses[0], hashes[0]); err != nil {
+		   SET %s = NULL, address = CASE WHEN kind = $4 THEN $2::text END, address_hash = $3,
+		       recorded_for_addresses = NULL
+		 WHERE id = $1 AND revoked_at IS NULL`, column),
+		stop, addresses[0], hashes[0], commsauthz.ReasonHardBounce); err != nil {
 		return fmt.Errorf("detach the subject's stop onto its address: %w", err)
 	}
 	return nil
@@ -219,8 +221,8 @@ func pinWithdrawals(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, id
 	return clearWithdrawalAddresses(ctx, tx, column, id)
 }
 
-// keepWithdrawalOn writes the marketing objection a withdrawal leaves on each
-// address it covered, with the address's hash.
+// keepWithdrawalOn writes the marketing objection a withdrawal leaves on the
+// hash of each address it covered.
 func keepWithdrawalOn(ctx context.Context, tx pgx.Tx, addresses []string, withdrawnAt time.Time) error {
 	if len(addresses) == 0 {
 		return nil
@@ -231,9 +233,9 @@ func keepWithdrawalOn(ctx context.Context, tx pgx.Tx, addresses []string, withdr
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
-		    (address, address_hash, kind, source, captured_by, decided_by_level, recorded_at, recorded_through)
-		SELECT u.address, u.hash, $3, $4, $5, $6, $7, $8 FROM unnest($1::text[], $2::text[]) AS u(address, hash)`,
-		addresses, addressHashes(addresses), commsauthz.ReasonObjection, sourceKeptFromWithdrawal, by,
+		    (address_hash, kind, source, captured_by, decided_by_level, recorded_at, recorded_through)
+		SELECT u.hash, $2, $3, $4, $5, $6, $7 FROM unnest($1::text[]) AS u(hash)`,
+		addressHashes(addresses), commsauthz.ReasonObjection, sourceKeptFromWithdrawal, by,
 		string(commsauthz.LevelSubject), withdrawnAt, string(commsauthz.RecordedByMachine)); err != nil {
 		return fmt.Errorf("keep the subject's marketing withdrawal on their addresses: %w", err)
 	}

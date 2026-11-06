@@ -688,6 +688,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `piisqlreader_test.go` | H2 | Reading the SQL the PII census judges: where one statement ends and the next begins, which table a write lands on, which columns its SET clause names, and which of those the reader could not read at all. |
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |
 | `retainedcolumncases_test.go` | H1 | The retention sweep's two SQL claims, driven with synthetic statements rather than the tree, for the reason extensionsqlscopecases\_test.go gives for its own cases. |
+| `retentionconstants_test.go` | H2 | _(no doc comment)_ |
 | `rowscopeplanted_test.go` | H2 | The defect this census is for, planted and run. |
 | `subjectlockorderwalk_test.go` | H2 | The lock-order walk judged on planted bodies. |
 | `tableownershipexpressions_test.go` | H2 | Complete concatenations keep one statement identity. |

@@ -5,8 +5,8 @@
 
 package privacy
 
-// What an anonymize keeps of a subject's stops, against real rows. It keeps the
-// hash of each address, and only the addresses a merge bound a stop to.
+// What an anonymize keeps of a subject's stops, against real rows. It keeps only
+// the hash of each address, and only the addresses a merge bound a stop to.
 
 import (
 	"context"
@@ -40,41 +40,49 @@ func keptStopSubject(ctx context.Context, t *testing.T, tx pgx.Tx) ids.ContactID
 
 // keptHashes reads the hashes the live stops nobody owns hold. It fails on a
 // merge binding that still lists the subject's addresses, and on a kept stop
-// whose address and hash disagree.
+// that still holds a plaintext address.
 func keptHashes(ctx context.Context, t *testing.T, tx pgx.Tx) map[string]int {
 	t.Helper()
 	var plaintext int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM communication_suppression
-		 WHERE EXISTS (SELECT 1 FROM unnest(recorded_for_addresses) a WHERE a ILIKE 'ines%@anon.test')`).Scan(&plaintext); err != nil {
+		 WHERE EXISTS (SELECT 1 FROM unnest(recorded_for_addresses) a WHERE a ILIKE 'ines%@anon.test')
+		    OR address ILIKE 'ines%@anon.test'`).Scan(&plaintext); err != nil {
 		t.Fatalf("reading the stop table for the subject's addresses: %v", err)
 	}
 	if plaintext != 0 {
-		t.Errorf("%d stop row(s) still list the subject's addresses in their merge binding", plaintext)
+		t.Errorf("%d stop row(s) still hold the subject's addresses in plaintext", plaintext)
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT address, address_hash FROM communication_suppression
+		SELECT address_hash FROM communication_suppression
 		 WHERE contact_id IS NULL AND lead_id IS NULL AND address_hash IS NOT NULL AND revoked_at IS NULL`)
 	if err != nil {
 		t.Fatalf("reading the kept stops: %v", err)
 	}
-	type keptRow struct{ address, hash string }
-	kept, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (keptRow, error) {
-		var k keptRow
-		err := row.Scan(&k.address, &k.hash)
-		return k, err
-	})
+	kept, err := pgx.CollectRows(rows, pgx.RowTo[string])
 	if err != nil {
 		t.Fatalf("reading the kept stops: %v", err)
 	}
 	counted := map[string]int{}
-	for _, k := range kept {
-		if storekit.SuppressionHash(k.address) != k.hash {
-			t.Errorf("a kept stop holds %q beside the hash of another address", k.address)
-		}
-		counted[k.hash]++
+	for _, hash := range kept {
+		counted[hash]++
 	}
 	return counted
+}
+
+// stopsOnAddress counts the live stops nobody owns that the send check's
+// address match (storekit.StopOnAddressesSQL) finds for one address.
+func stopsOnAddress(ctx context.Context, t *testing.T, tx pgx.Tx, address string) int {
+	t.Helper()
+	lowered, hashes := storekit.StopAddressArgs(address)
+	var n int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FROM communication_suppression s
+		 WHERE s.contact_id IS NULL AND s.lead_id IS NULL AND s.revoked_at IS NULL
+		   AND `+storekit.StopOnAddressesSQL("s", "$1", "$2"), lowered, hashes).Scan(&n); err != nil {
+		t.Fatalf("matching the stops on %s: %v", address, err)
+	}
+	return n
 }
 
 func TestAnAnonymizeKeepsAStopAsTheHashOfEachAddress(t *testing.T) {
@@ -95,6 +103,9 @@ func TestAnAnonymizeKeepsAStopAsTheHashOfEachAddress(t *testing.T) {
 			t.Errorf("the stop is kept %d time(s) on the hash of %s, want once (kept: %v)",
 				kept[storekit.SuppressionHash(address)], address, kept)
 		}
+	}
+	if n := stopsOnAddress(ctx, t, tx, " Ines@Anon.test "); n != 1 {
+		t.Errorf("the send check finds %d stop(s) for the returning address, want the kept one", n)
 	}
 }
 
@@ -141,7 +152,8 @@ func TestAnAnonymizePinsABoundStopAndWithdrawalOnlyToTheirOwnAddresses(t *testin
 
 // Erasing a contact an anonymize already emptied moves its kept hashes onto the
 // erasure list and clears them from the row. The returning address stays
-// refused, and a stop recorded later on the record lands on no address.
+// refused, the stops kept on those hashes are deleted, and a stop recorded
+// later on the record lands on no address.
 //
 // Mutation: drop the erasure_suppression insert from anonymizeSubjectRows and
 // the address is accepted again.
@@ -149,6 +161,9 @@ func TestErasingAnAnonymizedContactKeepsItsAddressesRefused(t *testing.T) {
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	contact := keptStopSubject(ctx, t, tx)
+	mustExec(ctx, t, tx, `
+		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, 'subject_request', 'operator_ui', 'human:x', 'user')`, contact)
 	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
@@ -163,6 +178,9 @@ func TestErasingAnAnonymizedContactKeepsItsAddressesRefused(t *testing.T) {
 		}
 		if !refused {
 			t.Errorf("%s is accepted again after the erasure", address)
+		}
+		if n := stopsOnAddress(ctx, t, tx, address); n != 0 {
+			t.Errorf("%d stop(s) kept on the hash of %s outlive the erasure", n, address)
 		}
 	}
 	var kept []string
