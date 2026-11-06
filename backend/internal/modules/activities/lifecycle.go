@@ -22,7 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-const archiveReasonKey = "reason"
+const evidenceReasonKey = "reason"
 
 // updateActivityInTx is UpdateActivity's transactional body, shared with the
 // capture replay in activity.go.
@@ -363,7 +363,7 @@ func archiveActivityInTx(
 	}
 	var evidence map[string]any
 	if o.reason != "" {
-		evidence = map[string]any{archiveReasonKey: o.reason, ruleVersionEvidenceKey: o.ruleVersion}
+		evidence = map[string]any{evidenceReasonKey: o.reason, ruleVersionEvidenceKey: o.ruleVersion}
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
