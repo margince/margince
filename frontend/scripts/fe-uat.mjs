@@ -29,6 +29,7 @@ import {
   readStoryIndex,
   serveStaticStorybook,
 } from "./lib/storybook-harness.mjs";
+import { startupModules } from "./lib/uat-entry.mjs";
 import {
   EXPECTED_ERROR_TAG,
   PAINTED,
@@ -57,7 +58,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const staticDir = join(repoRoot, "frontend/storybook-static");
 const outDir = join(repoRoot, ".tmp/fe-uat");
 const allowMissing = process.argv.includes("--allow-missing");
-const scope = scopeFor(process.argv);
+let scope = scopeFor(process.argv);
 
 let requested;
 try {
@@ -140,6 +141,10 @@ const head = git("rev-parse HEAD");
 // gate reporting its own bookkeeping as a defect. The sibling spacing gate
 // filters the same way.
 const changed = base === null ? [] : changesSince(git, base);
+scope = scopeFor(
+  process.argv,
+  base === null ? [] : changesSince(git, base, { includeDeleted: true }),
+);
 
 // 2. Story-coverage map: for every source file, the story files that import it.
 //    A component is covered by ANY story that renders it — coverage is not tied
@@ -178,6 +183,12 @@ function resolveSpecifier(fromFile, specifier) {
   return null;
 }
 
+const startup = startupModules(
+  documentEntry,
+  (file) => readFileSync(join(repoRoot, file), "utf8"),
+  resolveSpecifier,
+);
+
 const coveringStories = new Map();
 for (const abs of census.files.filter(isStoryFile)) {
   const story = relative(repoRoot, abs);
@@ -201,7 +212,7 @@ for (const f of changed) {
   // API types (src/api/schema.d.ts) regenerate on any contract change, so
   // requiring a story for them is a false gate. Skip them.
   if (f.endsWith(".d.ts")) continue;
-  if (f === documentEntry) continue;
+  if (startup.has(f)) continue;
   if (isStoryFile(f)) {
     storyFiles.add(f);
     fanOut.set(f, [f]);

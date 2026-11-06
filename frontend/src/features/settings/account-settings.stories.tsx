@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
+import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -62,7 +63,11 @@ export const LanguageRefused: Story = {
   render: story(["rep"], {
     "PUT /me/locale": () =>
       new Response(
-        JSON.stringify({ status: 503, code: "service_unavailable" }),
+        JSON.stringify({
+          status: 503,
+          code: "service_unavailable",
+          detail: "The language could not be saved.",
+        }),
         {
           status: 503,
           headers: { "content-type": "application/problem+json" },
@@ -76,7 +81,12 @@ export const LanguageRefused: Story = {
     );
     await userEvent.click(await page.findByRole("option", { name: "Deutsch" }));
     await userEvent.click(await page.findByRole("button", { name: "Save" }));
-    await page.findByRole("alert");
+    const bar = await page.findByRole("region", {
+      name: en["saveBar.unsaved"],
+    });
+    await expect(await within(bar).findByRole("alert")).toHaveTextContent(
+      "The language could not be saved.",
+    );
   },
 };
 

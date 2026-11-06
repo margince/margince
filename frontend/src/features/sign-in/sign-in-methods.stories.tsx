@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
@@ -117,9 +118,9 @@ export const ProviderWithoutApp: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText(/not on the sign-in screen yet/i);
+    await canvas.findByText(en["signInMethods.offScreen"]);
     await expect(
-      canvas.getAllByText(/not on the sign-in screen yet/i),
+      canvas.getAllByText(en["signInMethods.offScreen"]),
     ).toHaveLength(1);
   },
 };
@@ -159,8 +160,8 @@ export const GroupDraft: Story = {
     const add = await canvas.findByRole("button", { name: /add group/i });
     await waitFor(() => expect(add).toBeEnabled());
     await userEvent.click(add);
-    await canvas.findByText(/grants the mapped roles and never removes any/i);
-    await canvas.findByRole("button", { name: /save group grants/i });
+    await canvas.findByText(en["groupRoles.grantOnly"]);
+    await canvas.findByRole("button", { name: en["groupRoles.save"] });
   },
 };
 

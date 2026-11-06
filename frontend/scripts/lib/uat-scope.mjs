@@ -38,8 +38,11 @@ export function baseRefFor(env) {
   return ref;
 }
 
-export function scopeFor(argv) {
-  return argv.includes(ALL_STORIES_FLAG) ? "all" : "diff";
+export function scopeFor(argv, changed = []) {
+  return argv.includes(ALL_STORIES_FLAG) ||
+    changed.some((file) => file.startsWith("frontend/.storybook/"))
+    ? "all"
+    : "diff";
 }
 
 export function storiesInScope(entries, scope, importPaths) {
@@ -71,10 +74,11 @@ export function uatVerdict({
   return { pass, emptyCensus };
 }
 
-export function changesSince(git, base) {
+export function changesSince(git, base, { includeDeleted = false } = {}) {
+  const filter = includeDeleted ? " --no-renames" : " --diff-filter=d";
   return [
     ...new Set([
-      ...git(`diff --name-only --diff-filter=d ${base}`).split("\n"),
+      ...git(`diff --name-only${filter} ${base}`).split("\n"),
       ...git("ls-files --others --exclude-standard").split("\n"),
     ]),
   ].filter(Boolean);
