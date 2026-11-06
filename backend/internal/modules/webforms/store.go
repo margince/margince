@@ -140,9 +140,11 @@ func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, e
 		if in.FieldMap == nil {
 			in.FieldMap = map[string]string{}
 		}
-		args := []any{in.Name, key, in.Sender, in.AllowedOrigins, ref, in.LeadOrigin, in.OwnerID, in.ProductID,
+		args := []any{
+			in.Name, key, in.Sender, in.AllowedOrigins, ref, in.LeadOrigin, in.OwnerID, in.ProductID,
 			in.FieldMap, in.ConsentRequired, in.ConsentPolicyVersion, in.ConsentWording, in.PrivacyNotice,
-			in.PrivacyNoticeURL, in.RedirectURL, in.SuccessMessage, by}
+			in.PrivacyNoticeURL, in.RedirectURL, in.SuccessMessage, by,
+		}
 		row := tx.QueryRow(ctx, `
 			INSERT INTO web_form (name, form_key, sender, allowed_origins, secret_ref, lead_origin, owner_id,
 			  product_id, field_map, consent_required, consent_policy_version, consent_wording, privacy_notice,
