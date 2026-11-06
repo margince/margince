@@ -94,11 +94,13 @@
   z-index: 1;
   justify-content: flex-end;
   margin: 0;
+  /* ds:ignore centres Select on the day's head band it overlays */
   padding: calc((var(--panel-head-h) - var(--controlHeight)) / 2) 0;
   border: 0;
   background: transparent;
 }
 .worklist-embedded .lt-bulkbar:has(> :only-child) + .panel {
+  /* ds:ignore lifts the panel under the Select it shares a line with */
   margin-top: calc(-1 * var(--panel-head-h));
 }
 .worklist-embedded .worklist-band {
