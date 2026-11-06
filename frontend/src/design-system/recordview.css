@@ -301,7 +301,7 @@
 .record-split-tabs .recordtabs-tab[aria-pressed="true"] .optioncount,
 .record-split-tabs .recordtabs-tab[aria-current="page"] .optioncount {
   background: var(--textPrimary);
-  color: var(--pane);
+  color: var(--bgPage);
 }
 /* On a laptop the sheet is too narrow for eight tabs and their counts, and a
    strip that scrolls hides its last tabs. The details card gives up 40px, the

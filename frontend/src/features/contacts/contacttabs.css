@@ -105,8 +105,3 @@
   border: 1px dashed var(--borderStrong);
   border-radius: var(--r-control);
 }
-
-/* Cards stand on the pane's own ground, a step up from the sheet. */
-.ct-deal-grid .deal-card {
-  background: var(--pane);
-}

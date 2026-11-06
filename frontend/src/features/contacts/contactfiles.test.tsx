@@ -260,7 +260,7 @@ describe("the contact's files tab", () => {
 
     await screen.findByRole("link", { name: "contract.pdf" });
     expect(
-      within(screen.getByRole("table")).getByText("SOW/Contract"),
+      within(screen.getByRole("list")).getByText(/^SOW\/Contract ·/),
     ).toBeTruthy();
   });
 
@@ -335,12 +335,12 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" />);
 
     await screen.findByRole("link", { name: "deck.png" });
-    const table = within(screen.getByRole("table"));
-    expect(table.getByText("Message attachment")).toBeTruthy();
+    const table = within(screen.getByRole("list"));
+    expect(table.getByText(/^Message attachment ·/)).toBeTruthy();
     // The negative is the point. A missing label falls back to the raw key or
     // the neighbouring one, and a photo from a chat reported as mail is the
     // wrong record this category exists to stop.
-    expect(table.queryByText("Email attachment")).toBeNull();
+    expect(table.queryByText(/Email attachment/)).toBeNull();
   });
 
   it("says nothing about a category the file was never filed under", async () => {
@@ -353,7 +353,7 @@ describe("the contact's files tab", () => {
     await screen.findByRole("link", { name: "scan.pdf" });
     // No category was set: the row leaves the cell empty rather than printing
     // an "uncategorised" placeholder for a fact the record never asserted.
-    const table = within(screen.getByRole("table"));
+    const table = within(screen.getByRole("list"));
     expect(table.queryByText("SOW/Contract")).toBeNull();
     expect(table.queryByText("Other")).toBeNull();
   });
@@ -572,6 +572,9 @@ describe("a file a mail carried, on the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" onOpenEmail={vi.fn()} />);
 
     const name = await screen.findByRole("link", { name: "cv.pdf" });
-    expect(name.closest(".contact-file")?.textContent).toBe("cv.pdf");
+    expect(name.textContent).toBe("cv.pdf");
+    expect(
+      name.closest(".board-doc")?.querySelector(".file-origin"),
+    ).toBeNull();
   });
 });

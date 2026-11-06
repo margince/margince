@@ -35,7 +35,6 @@ const STANDALONE: readonly string[] = [
   "co.contacts.map.more",
   "co.contacts.map.scope",
   "co.contacts.map.scopePartial",
-  "co.deals.lostCount",
   "co.facts.showAll",
   "co.recent.minutes",
   "co.strip.convertedAsOf",

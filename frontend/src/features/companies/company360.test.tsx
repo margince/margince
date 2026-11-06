@@ -427,6 +427,8 @@ describe("company view — figures that outlive the list they sit under", () => 
       await screen.findByText("No open deals for this company."),
     ).toBeTruthy();
     expect(screen.getByText(/120,000/)).toBeTruthy();
-    expect(screen.getByText("3 lost")).toBeTruthy();
+    const lost = screen.getByText("Lost").closest(".stat-card");
+    expect(lost?.textContent).toContain("3");
+    expect(lost?.querySelector("a[href]")).not.toBeNull();
   });
 });

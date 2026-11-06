@@ -59,26 +59,11 @@ function StoredFileChip({
   filename,
   size,
 }: Readonly<{ href: string; filename: string; size?: string }>) {
-  const preview = useFilePreview();
   const kind = fileKind(filename);
-  const { glyph: Glyph, preview: mediaType } = factsFor(kind);
+  const { glyph: Glyph } = factsFor(kind);
+  const onClick = useStoredFileClick(href, filename);
   return (
-    <a
-      className="file-chip"
-      href={href}
-      download={filename}
-      onClick={(event) => {
-        // Three ways this stays a download, and each is a reader getting what
-        // they asked for: nothing here can draw the file, no preview is
-        // mounted (a story, a unit test), or a modifier says they want a new
-        // tab or a saved copy rather than a dialog over the page.
-        if (preview === null || mediaType === null || opensElsewhere(event)) {
-          return;
-        }
-        event.preventDefault();
-        preview.open({ href, filename, mediaType });
-      }}
-    >
+    <a className="file-chip" href={href} download={filename} onClick={onClick}>
       <Glyph size={14} aria-hidden="true" />
       {kind && (
         <span className="file-chip-kind" aria-hidden="true">
@@ -89,6 +74,29 @@ function StoredFileChip({
       {size && <span className="file-chip-size">{size}</span>}
     </a>
   );
+}
+
+/**
+ * The press on a link to a stored file: the preview where the browser can
+ * draw the kind, the download otherwise. Every card that links a stored file
+ * opens it this one way.
+ */
+export function useStoredFileClick(
+  href: string,
+  filename: string,
+): (event: React.MouseEvent<HTMLAnchorElement>) => void {
+  const preview = useFilePreview();
+  const mediaType = factsFor(fileKind(filename)).preview;
+  return (event) => {
+    // Three ways this stays a download, and each is a reader getting what
+    // they asked for: nothing here can draw the file, no preview is mounted
+    // (a story, a unit test), or a modifier asks for a new tab or a saved copy.
+    if (preview === null || mediaType === null || opensElsewhere(event)) {
+      return;
+    }
+    event.preventDefault();
+    preview.open({ href, filename, mediaType });
+  };
 }
 
 function WithheldFileChip({

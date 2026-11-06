@@ -1,0 +1,28 @@
+/* A record's files as a gallery of tiles, as many to a row as fit. */
+.attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--gapCards);
+  align-items: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A tile opened onto its reading takes the whole row: the reading is a form,
+   and a form a quarter of the row wide is a column of wrapped words. */
+.attachment-grid > li:has(.attachment-tile-after) {
+  grid-column: 1 / -1;
+}
+
+.attachment-tile-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+.attachment-tile-after {
+  padding: var(--space-3) var(--padCard) var(--padCard);
+  border-block-start: 1px solid var(--borderSubtle);
+}
