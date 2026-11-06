@@ -53,7 +53,54 @@ export const PictureUploadedDark: Story = {
   globals: { theme: "dark" },
 };
 
-// The upload is still out: the tile takes nothing and its verb is pending.
+async function openEdit({ canvasElement }: { canvasElement: HTMLElement }) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", {
+      name: "Edit profile picture",
+    }),
+  );
+}
+
+// The Edit menu over a stored picture: upload another, or remove it.
+export const PictureMenuOpen: Story = {
+  ...PictureUploaded,
+  play: async (context) => {
+    await openEdit(context);
+    await within(context.canvasElement.ownerDocument.body).findByRole(
+      "button",
+      {
+        name: "Remove picture",
+      },
+    );
+  },
+};
+
+export const PictureMenuOpenDark: Story = {
+  ...PictureMenuOpen,
+  globals: { theme: "dark" },
+};
+
+export const PictureMenuOpenPhone: Story = {
+  ...PictureMenuOpen,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// No picture yet: the initials, and a menu that only uploads.
+export const PictureEmptyMenuOpen: Story = {
+  render: accountStory(["rep"]),
+  play: async (context) => {
+    await openEdit(context);
+    await within(context.canvasElement.ownerDocument.body).findByRole(
+      "button",
+      {
+        name: "Upload picture",
+      },
+    );
+  },
+};
+
+// The upload is still out: nothing takes a file and the Edit pill waits.
 export const PictureUploading: Story = {
   render: accountStory(["rep"], {
     "POST /me/avatar": () => new Promise<Response>(() => undefined),
@@ -62,7 +109,7 @@ export const PictureUploading: Story = {
     await pickPicture(PICTURE)(context);
     await expect(
       await within(context.canvasElement).findByRole("button", {
-        name: "Upload picture",
+        name: "Edit profile picture",
       }),
     ).toHaveAttribute("aria-busy", "true");
   },

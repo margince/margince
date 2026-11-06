@@ -4,8 +4,8 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import {
@@ -43,7 +43,7 @@ afterEach(() => {
 });
 
 // The server answers each write with `answer`, and every request is kept.
-function serve(answer: (method: string) => Response) {
+function serve(answer: (method: string) => Response | Promise<Response>) {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const request = input instanceof Request ? input : null;
     const method = request?.method ?? init?.method ?? "GET";
@@ -78,6 +78,27 @@ function show(user: User = ME) {
 }
 
 const picker = () => screen.getByLabelText("Profile picture");
+
+const openEdit = (user: UserEvent) =>
+  user.click(screen.getByRole("button", { name: "Edit profile picture" }));
+
+it("opens the file chooser from the Edit menu's Upload", async () => {
+  serve(() => json(ME));
+  const user = userEvent.setup();
+  show({ ...ME, avatar_url: PICTURE });
+  const opened: HTMLInputElement[] = [];
+  const click = vi
+    .spyOn(HTMLInputElement.prototype, "click")
+    .mockImplementation(function (this: HTMLInputElement) {
+      opened.push(this);
+    });
+
+  await openEdit(user);
+  await user.click(screen.getByRole("button", { name: "Upload picture" }));
+
+  expect(opened).toEqual([picker()]);
+  click.mockRestore();
+});
 
 it("refuses a file that is not PNG, JPEG or WebP before it is sent", async () => {
   serve(() => json(ME));
@@ -130,6 +151,7 @@ it("removes the picture on one press, with no question first", async () => {
   serve(() => json(ME));
   const user = userEvent.setup();
   show({ ...ME, avatar_url: PICTURE });
+  await openEdit(user);
   await user.click(screen.getByRole("button", { name: "Remove picture" }));
 
   expect(await screen.findByText("Picture removed")).toBeInTheDocument();
@@ -140,13 +162,27 @@ it("removes the picture on one press, with no question first", async () => {
   expect(client.getQueryState(["me"])?.isInvalidated).toBe(true);
 });
 
-it("offers no removal while the seat shows initials", () => {
+it("offers no removal while the seat shows initials", async () => {
   serve(() => json(ME));
+  const user = userEvent.setup();
   show();
-  expect(
-    screen.getByRole("button", { name: "Upload picture" }),
-  ).toBeInTheDocument();
+  await openEdit(user);
+  expect(screen.getByRole("button", { name: "Upload picture" })).toBeVisible();
   expect(screen.queryByRole("button", { name: "Remove picture" })).toBeNull();
+});
+
+it("holds the Edit pill busy while an upload is out", async () => {
+  serve(() => new Promise<Response>(() => undefined));
+  const user = userEvent.setup();
+  show();
+  await user.upload(
+    picker(),
+    new File(["png"], "me.png", { type: "image/png" }),
+  );
+
+  const pill = screen.getByRole("button", { name: "Edit profile picture" });
+  await waitFor(() => expect(pill).toHaveAttribute("aria-busy", "true"));
+  expect(picker()).toBeDisabled();
 });
 
 it("says in words that the installation cannot store pictures", async () => {

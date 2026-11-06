@@ -1789,6 +1789,22 @@ span.error-line {
   block-size: 1lh;
   vertical-align: top;
 }
+/* `text`: a small pill that prints its verb after the glyph. Its ground is an
+   overlay's, solid, and its edge a control's, so it reads over a picture. */
+.overflow-menu .overflow-menu-labelled {
+  --ghostEdge: var(--borderControl);
+  min-inline-size: 0;
+  min-block-size: 0;
+  block-size: calc(var(--controlHeight) - var(--space-1));
+  padding-inline: var(--space-2) var(--space-3);
+  gap: var(--space-1);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--ground);
+}
+.overflow-menu-labelled[aria-busy="true"] > svg:not(.busy-mark) {
+  display: none;
+}
 /* Fixed and portalled to its layer: the dialog's overlay, or the body. It is
    positioned against the trigger's viewport rectangle, so a card that hides
    its own overflow cannot clip it. */

@@ -106,9 +106,10 @@ export function ProfilePictureRow({
             refusalId={refusal ? `${control.id}-refusal` : undefined}
             emptyLabel={t("account.pictureEmpty")}
             accept={PICTURE_TYPES.join(",")}
-            words={{
-              add: t("account.pictureAdd"),
-              replace: t("account.pictureReplace"),
+            verbs={{
+              edit: t("settings.imageEdit"),
+              editLabel: t("account.pictureEdit"),
+              upload: t("account.pictureAdd"),
               remove: t("account.pictureRemove"),
             }}
             uploading={write.isPending && verb === "upload"}

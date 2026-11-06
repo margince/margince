@@ -1,23 +1,26 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Pencil } from "lucide-react";
 import { type ReactNode, useId, useRef } from "react";
 import { Button } from "./button";
 import { describedByIds } from "./describedby";
 import { FileDropzoneControl } from "./filedropzone";
+import { OverflowMenu } from "./overflowmenu";
 import "./imageslot.css";
 
-/** The three verbs of a slot, each as its printed word or its full name. */
+/** The words of a slot's Edit menu: the pill's verb, its full name, and the two items. */
 export type ImageSlotVerbs = Readonly<{
-  add: string;
-  replace: string;
+  edit: string;
+  editLabel: string;
+  upload: string;
   remove: string;
 }>;
 
 /**
- * One stored picture in a tile cut to its shape, with the verbs that change it.
- * The tile takes nothing while a write is out: a drop racing a removal lands in
- * whichever order the two answer.
+ * One stored picture as the hero of its row, in its own shape, with an Edit
+ * pill on its edge whose menu uploads or removes it. Nothing takes a file while
+ * a write is out: a drop racing a removal lands in whichever order they answer.
  */
 export function ImageSlot({
   shape,
@@ -30,8 +33,7 @@ export function ImageSlot({
   refusalId,
   emptyLabel,
   accept,
-  words,
-  names = words,
+  verbs,
   uploading,
   removing,
   onPick,
@@ -46,14 +48,11 @@ export function ImageSlot({
   name?: string;
   labelledBy?: string;
   describedBy?: string;
-  // The caller's refusal, which every verb points at while it stands.
+  // The caller's refusal, which the Edit pill points at while it stands.
   refusalId?: string;
   emptyLabel: string;
   accept: string;
-  words: ImageSlotVerbs;
-  // Each verb's accessible name, where two slots on one page would otherwise
-  // offer two controls with one name.
-  names?: ImageSlotVerbs;
+  verbs: ImageSlotVerbs;
   uploading: boolean;
   removing: boolean;
   onPick: (file: File) => void;
@@ -62,13 +61,14 @@ export function ImageSlot({
   const nameId = useId();
   const inputId = useId();
   const tile = useRef<HTMLDivElement>(null);
-  const labelId = name === undefined ? labelledBy : nameId;
   const busy = uploading || removing;
+  // Out of the tab order: the menu's Upload is the keyboard's way to it, and
+  // the zone stays only so a file dropped on the picture lands.
   const control = {
     id: inputId,
-    "aria-labelledby": labelId,
+    "aria-labelledby": name === undefined ? labelledBy : nameId,
     "aria-describedby": describedByIds(describedBy, refusalId),
-    disabled: busy,
+    tabIndex: -1,
   };
   const choose = () => {
     tile.current?.querySelector<HTMLInputElement>("input[type=file]")?.click();
@@ -79,54 +79,42 @@ export function ImageSlot({
       className={`image-slot image-slot-${shape}`}
       aria-labelledby={name === undefined ? undefined : nameId}
     >
-      <div
-        ref={tile}
-        className={filled ? "image-slot-tile is-filled" : "image-slot-tile"}
-        aria-busy={busy || undefined}
-      >
+      <div ref={tile} className="image-slot-tile" aria-busy={busy || undefined}>
         {editable && (
           <FileDropzoneControl
             control={control}
             emptyLabel={emptyLabel}
             accept={accept}
+            disabled={busy}
             onPick={onPick}
           />
         )}
         <div className="image-slot-mark">{preview}</div>
+        {editable && (
+          <div className="image-slot-edit">
+            <OverflowMenu
+              label={verbs.editLabel}
+              text={verbs.edit}
+              align="start"
+              icon={<Pencil aria-hidden="true" />}
+              pending={busy}
+            >
+              <Button onClick={choose} aria-describedby={refusalId}>
+                {verbs.upload}
+              </Button>
+              {filled && (
+                <Button onClick={onRemove} aria-describedby={refusalId}>
+                  {verbs.remove}
+                </Button>
+              )}
+            </OverflowMenu>
+          </div>
+        )}
       </div>
       {name !== undefined && (
         <span className="t-name" id={nameId}>
           {name}
         </span>
-      )}
-      {editable && (
-        <div className="image-slot-verbs">
-          {/* Each verb is disabled by the other one's flight and pending on its
-              own, so focus stays on a pressed verb and a repeat press is
-              swallowed rather than racing the first request. */}
-          <Button
-            variant="ghost"
-            aria-label={filled ? names.replace : names.add}
-            onClick={choose}
-            aria-describedby={refusalId}
-            disabled={removing}
-            pending={uploading}
-          >
-            {filled ? words.replace : words.add}
-          </Button>
-          {filled && (
-            <Button
-              variant="ghost"
-              aria-label={names.remove}
-              onClick={onRemove}
-              aria-describedby={refusalId}
-              disabled={uploading}
-              pending={removing}
-            >
-              {words.remove}
-            </Button>
-          )}
-        </div>
       )}
     </section>
   );

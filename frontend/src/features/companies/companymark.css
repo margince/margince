@@ -7,14 +7,6 @@
   margin-bottom: var(--space-3);
 }
 
-/* On a phone the wide tile gives up width, so the pair stays one row. */
-@media (max-width: 640px) {
-  .brand-slots {
-    flex-wrap: nowrap;
-    gap: var(--space-4);
-  }
-}
-
 /* Under the tiles, full width of the panel body, so a refusal never changes
    how wide a slot is. */
 .brand-refusals {

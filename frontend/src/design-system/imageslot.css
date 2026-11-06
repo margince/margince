@@ -1,78 +1,56 @@
-/* ImageSlot: a stored picture in a tile cut to its own shape, so a file in the
-   wrong slot looks wrong before anywhere else shows it. */
+/* ImageSlot: a stored picture as the hero of its row, cut to its own shape so
+   a file in the wrong slot looks wrong before anywhere else shows it. */
 .image-slot {
+  --imageSlotSize: calc(var(--space-12) * 2.5);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-2);
-  flex: 0 1 auto;
+  gap: var(--space-4);
+  flex: none;
   min-width: 0;
+  max-width: 100%;
 }
 
 .image-slot-tile {
   position: relative;
-  height: 6rem;
   box-sizing: border-box;
-  border: 1px solid var(--borderSubtle);
+  inline-size: var(--imageSlotSize);
+  block-size: var(--imageSlotSize);
+  max-inline-size: 100%;
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-md);
-  background: var(--bgInset);
+  background: var(--ground);
 }
 
 .image-slot-wide .image-slot-tile {
-  width: 15rem;
-  max-width: 100%;
+  inline-size: calc(var(--imageSlotSize) * 3);
 }
 
-.image-slot-square,
-.image-slot-round {
-  flex-shrink: 0;
-}
-
-.image-slot-square .image-slot-tile {
-  width: 6rem;
-}
-
-/* A round picture is a face beside its verbs, not a tile over them. */
-.image-slot-round {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.image-slot-round .image-slot-verbs {
-  min-width: 0;
-}
-
+/* A face draws its own ring, so the round tile adds none. */
 .image-slot-round .image-slot-tile {
-  flex: none;
-  width: 4.5rem;
-  height: 4.5rem;
+  border: 0;
   border-radius: var(--r-full);
   corner-shape: round;
 }
 
-/* An editable tile is the dropzone: its border and hover come from the zone,
-   which covers the whole tile, so a press or a drop anywhere on it lands. */
-.image-slot-tile:has(.fdz) {
-  border: 0;
-}
-
+/* The zone covers the picture and draws nothing until a file is dragged over
+   it: dropping is a shortcut, and the Edit pill is the way in. */
 .image-slot-tile > .fdz {
   position: absolute;
   inset: 0;
   min-height: 0;
   padding: 0;
   border-radius: inherit;
-  background: var(--bgInset);
+}
+
+.image-slot-tile > .fdz:not(.dragover) {
+  border-color: transparent;
+  background: none;
+  outline: none;
 }
 
 .image-slot-round .image-slot-tile > .fdz {
   corner-shape: round;
-}
-
-.image-slot-tile.is-filled > .fdz:not(:hover, .dragover) {
-  border-style: solid;
-  border-color: var(--borderSubtle);
 }
 
 .image-slot-tile > .fdz > .fdz-label {
@@ -84,8 +62,8 @@
   white-space: nowrap;
 }
 
-/* Above the zone and deaf to the pointer, so the zone's input still takes the
-   press and the drop that land on the picture. */
+/* Above the zone and deaf to the pointer, so a drop on the picture still
+   reaches the zone's input. */
 .image-slot-mark {
   position: absolute;
   inset: var(--space-3);
@@ -95,24 +73,36 @@
   pointer-events: none;
 }
 
-.image-slot-mark > .company-logo,
-.image-slot-round .image-slot-mark > .avatar {
+.image-slot-mark > .company-logo {
   width: 100%;
   height: 100%;
 }
 
-/* A stored picture fills its circle to the edge; only the empty zone keeps
-   its inset around the initials. */
-.image-slot-round .image-slot-tile.is-filled .image-slot-mark {
+.image-slot-round .image-slot-mark {
   inset: 0;
+}
+
+/* Initials stand in at the slot's own scale, not a list chip's. */
+.image-slot-mark .avatar {
+  box-sizing: border-box;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 1;
+  font: var(--fontHeadingXXLarge);
+}
+
+.image-slot-round .image-slot-mark > .avatar {
+  border: 1px solid var(--borderControl);
 }
 
 .image-slot-tile[aria-busy="true"] .image-slot-mark {
   opacity: 0.5;
 }
 
-.image-slot-verbs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gapActions);
+/* The Edit pill sits on the picture's lower left edge, at one place for every
+   shape, so a logo and a face read as the same control. */
+.image-slot-edit {
+  position: absolute;
+  inset-block-end: var(--space-1);
+  inset-inline-start: calc(-1 * var(--space-1));
 }

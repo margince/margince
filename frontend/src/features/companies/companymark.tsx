@@ -82,8 +82,9 @@ export function CompanyMark({
             hintId={hintId}
             emptyLabel={t("settings.companyMarkEmpty")}
             verbs={{
-              add: t("settings.companyMarkAddWide"),
-              replace: t("settings.companyMarkReplaceWide"),
+              edit: t("settings.imageEdit"),
+              editLabel: t("settings.companyMarkEditWide"),
+              upload: t("settings.companyMarkUploadWide"),
               remove: t("settings.companyMarkRemoveWide"),
             }}
             writes={wide}
@@ -98,8 +99,9 @@ export function CompanyMark({
             hintId={hintId}
             emptyLabel={t("settings.companyMarkIconEmpty")}
             verbs={{
-              add: t("settings.companyMarkAddIcon"),
-              replace: t("settings.companyMarkReplaceIcon"),
+              edit: t("settings.imageEdit"),
+              editLabel: t("settings.companyMarkEditIcon"),
+              upload: t("settings.companyMarkUploadIcon"),
               remove: t("settings.companyMarkRemoveIcon"),
             }}
             writes={icon}
@@ -219,8 +221,7 @@ function MarkRefusal({
   );
 }
 
-// `verbs` holds each button's accessible name, so two slots never offer two
-// controls both called "Replace".
+// Each slot names its own verbs, so two Edit pills are never one name twice.
 function MarkSlot({
   profile,
   canEdit,
@@ -244,7 +245,6 @@ function MarkSlot({
   writes: MarkWrites;
   refusalId?: string;
 }>) {
-  const t = useT();
   return (
     <ImageSlot
       shape={shape}
@@ -256,12 +256,7 @@ function MarkSlot({
       refusalId={refusalId}
       emptyLabel={emptyLabel}
       accept={ACCEPTED_IMAGES}
-      words={{
-        add: t("settings.companyMarkAdd"),
-        replace: t("settings.companyMarkReplace"),
-        remove: t("settings.companyMarkRemove"),
-      }}
-      names={verbs}
+      verbs={verbs}
       uploading={writes.uploading}
       removing={writes.removing}
       onPick={writes.send}
