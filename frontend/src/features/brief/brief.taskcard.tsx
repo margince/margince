@@ -95,9 +95,8 @@ export function taskLine(
   locale: Locale,
   zone: string,
 ): string | null {
-  // The reader's own pin is the queue's reason, not the day's.
-  const reason = phrasedReasons(item, false)
-    .filter((entry) => entry.kind !== "pinned")
+  // The meta row's badges carry the clock, so the line leaves it out.
+  const reason = phrasedReasons(item, true)
     .map((entry) => reasonText(entry, t, locale, zone, partyName(item)))
     .find((text) => text !== null);
   return briefContextTitle(item) ?? reason ?? (item.detail || null);

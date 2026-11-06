@@ -65330,7 +65330,7 @@ type WeeklyReviewIndexEntry struct {
 	// Week The Monday of the week.
 	Week openapi_types.Date `json:"week"`
 
-	// WonMinor What they were worth, in minor units of `currency`. Absent when the week priced nothing.
+	// WonMinor What they were worth, in minor units of `currency`. Zero when the week won nothing. Absent when the value is unknown: a deal could not be converted, or the installation names no base currency.
 	WonMinor *int64 `json:"won_minor,omitempty" minimum:"0"`
 }
 

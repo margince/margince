@@ -53259,7 +53259,7 @@ export interface components {
             deals_won: number;
             /**
              * Format: int64
-             * @description What they were worth, in minor units of `currency`. Absent when the week priced nothing.
+             * @description What they were worth, in minor units of `currency`. Zero when the week won nothing. Absent when the value is unknown: a deal could not be converted, or the installation names no base currency.
              */
             won_minor?: number;
             /** @description The currency `won_minor` is in. Present exactly when `won_minor` is. */
