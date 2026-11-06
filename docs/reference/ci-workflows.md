@@ -100,6 +100,10 @@ and runs a script from it. So the job only runs for branches of this repository 
 report on a sent review. `backend/gates/forkheadcheckout_test.go` holds that across the workflow
 tree.
 
+A review the author of the pull request sends does not start it, and does not count as a record. A
+reply to a review thread is saved as a review by whoever replied, so a batch of replies would
+otherwise start one run each.
+
 It says nothing about a pull request nobody has reviewed yet. That is every pull request for most
 of the time it is open, and `merge-attest.yml` says nothing about a missing result for the same reason.
 

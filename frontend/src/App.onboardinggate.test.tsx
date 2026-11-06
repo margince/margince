@@ -9,6 +9,13 @@ import { LocaleProvider } from "./i18n";
 import { parseHash, routeHash } from "./lib/router";
 import { memoryStorage, teardownApp, wizardRow } from "./testing/appharness";
 import { type GrantSpec, meFixture } from "./testing/mefixture";
+// The screens these cases open, loaded while the file is collected. A screen's
+// first import costs seconds; inside a case it races the case's own waiters.
+import "./features/brief/brief";
+import "./features/automations/oauthconsent";
+import "./features/contacts/contacts";
+import "./App.settings";
+import "./features/settings/settings";
 
 // Two places decide, on their own, where a session belongs when the
 // installation has not described itself, and each rewrites the hash to say so.
@@ -509,8 +516,6 @@ describe("onboarding gate", () => {
   // Sign out lives on Settings > Account, so a reader stuck mid-journey can
   // still leave; the rest of settings waits for the journey to finish.
   it("lets a non-admin mid-journey reach Settings > Account and Sign out", async () => {
-    // Routing is under test; wait for the real lazy module before timing UI queries.
-    await import("./features/settings/settings");
     window.location.hash = "#/settings/account";
     stubCompany(
       403,
