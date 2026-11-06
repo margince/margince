@@ -5,7 +5,7 @@ import { App } from "./App";
 import { AttentionProvider } from "./app/attention";
 import { AppErrorBoundary } from "./app/errorboundary";
 import { queryClient } from "./app/queryclient.instance";
-import { BulkUndoProvider } from "./components/bulkchange";
+import { BulkUndoProvider } from "./components/bulkundo";
 import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";

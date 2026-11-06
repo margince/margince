@@ -8,6 +8,7 @@ import {
 import {
   AuthScreen,
   AvailabilityScreen,
+  ReleaseSkewScreen,
   SetupClaimScreen,
 } from "./authscreens";
 
@@ -72,3 +73,14 @@ export const Setup: Story = {
   },
 };
 export const SetupDark: Story = { ...Setup, globals: { theme: "dark" } };
+
+export const ReleaseSkew: Story = {
+  render: () => <ReleaseSkewScreen app="2026.1" server="2026.2" />,
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", { name: /Reload/ });
+  },
+};
+export const ReleaseSkewDark: Story = {
+  ...ReleaseSkew,
+  globals: { theme: "dark" },
+};

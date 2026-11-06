@@ -113,8 +113,10 @@ export function useMe(enabled = true) {
 }
 
 // The boundary's one reading of /me; the connection screen's check shares it.
-export async function readSession(signal?: AbortSignal) {
-  const result = await api.GET("/me", { signal }).catch(() => null);
+export async function readSession(signal?: AbortSignal, prepare?: "analytics") {
+  const result = await api
+    .GET("/me", { signal, params: { query: { prepare } } })
+    .catch(() => null);
   if (!result) {
     throw new AuthProbeError("connection", "the API could not be reached");
   }

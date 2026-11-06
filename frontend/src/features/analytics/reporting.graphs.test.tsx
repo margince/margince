@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
@@ -32,6 +32,9 @@ it("keeps meeting and accepted-handoff evidence distinct in the paired graph", a
       <ReportingCharts evaluation={sdrEvaluation} onEvidence={evidence} />
     </StoryProviders>,
   );
+  await waitFor(() =>
+    expect(container.querySelectorAll(".report-chart-column")).toHaveLength(8),
+  );
   const bars = container.querySelectorAll<HTMLButtonElement>(
     ".report-chart-column",
   );
@@ -62,7 +65,7 @@ it("renders forecast support and reconciled movement with boundary evidence", as
       <ReportingCharts evaluation={forecastEvaluation} onEvidence={evidence} />
     </StoryProviders>,
   );
-  await user.click(screen.getByRole("button", { name: /Opening.*760/ }));
+  await user.click(await screen.findByRole("button", { name: /Opening.*760/ }));
   expect(evidence).toHaveBeenLastCalledWith({
     metric: "open_pipeline",
     context_id: "movement_opening",
@@ -134,7 +137,7 @@ it("shows missing capture history as unavailable instead of drawing a fabricated
   ).not.toBeInTheDocument();
 });
 
-it("names every movement bar in words, never by the server's bucket key", () => {
+it("names every movement bar in words, never by the server's bucket key", async () => {
   const keys = ["new", "reopened_or_archived", "stage_weight", "fx"];
   const evaluation = {
     ...forecastEvaluation,
@@ -161,7 +164,7 @@ it("names every movement bar in words, never by the server's bucket key", () => 
     "Stage weight changes",
     "Exchange rate changes",
   ]) {
-    expect(screen.getAllByText(word).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(word)).length).toBeGreaterThan(0);
   }
   for (const key of keys) {
     expect(screen.queryByText(key)).not.toBeInTheDocument();

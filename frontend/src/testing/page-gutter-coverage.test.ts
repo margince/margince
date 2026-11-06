@@ -881,16 +881,13 @@ describe("page gutter", () => {
   });
 
   it("finds railless screens below a provider without exempting HTML tags", () => {
-    const source = ts.createSourceFile(
+    const source = parseSource(
       "App.tsx",
       `
       const view = <RaillessFrame><CompleteLocale><ResetRoute />
         <div><AuthScreen /></div>
       </CompleteLocale></RaillessFrame>;
     `,
-      ts.ScriptTarget.Latest,
-      true,
-      ts.ScriptKind.TSX,
     );
     expect([...raillessComponents(source)].sort()).toEqual([
       "AuthScreen",

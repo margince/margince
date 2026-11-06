@@ -29401,6 +29401,21 @@ func (e ListListsParamsSharing) Valid() bool {
 	}
 }
 
+// Defines values for GetCurrentPrincipalParamsPrepare.
+const (
+	GetCurrentPrincipalParamsPrepareAnalytics GetCurrentPrincipalParamsPrepare = "analytics"
+)
+
+// Valid indicates whether the value is a known member of the GetCurrentPrincipalParamsPrepare enum.
+func (e GetCurrentPrincipalParamsPrepare) Valid() bool {
+	switch e {
+	case GetCurrentPrincipalParamsPrepareAnalytics:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrepForMeetingParamsRecordType.
 const (
 	PrepForMeetingParamsRecordTypeActivity PrepForMeetingParamsRecordType = "activity"
@@ -33172,6 +33187,21 @@ type AnalyticsScope struct {
 
 // AnalyticsScopeKind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
 type AnalyticsScopeKind string
+
+// AnalyticsStartup Optional data for opening Analytics, read through the same authorization and readers as the individual routes.
+type AnalyticsStartup struct {
+	Catalog        ReportingCatalog           `json:"catalog"`
+	CompanyContext CompanyContextCapabilities `json:"company_context"`
+
+	// Context The frame every analytics answer for this caller is placed in.
+	Context   AnalyticsContext   `json:"context"`
+	Framework ReportingFramework `json:"framework"`
+
+	// InstallationSettings The installation's identity and reporting basis (ADR-0090). Read by every role,
+	// changed only by admin/ops.
+	InstallationSettings InstallationSettings `json:"installation_settings"`
+	Pipelines            *[]Pipeline          `json:"pipelines,omitempty"`
+}
 
 // AnalyticsVocabulary What `describe_analytics_vocabulary` answers.
 type AnalyticsVocabulary struct {
@@ -52698,6 +52728,9 @@ type MarginceChangeSummary struct {
 type MeResponse struct {
 	// AdminPasswordLink Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail (ADR-0061 Amendment 1).
 	AdminPasswordLink bool `json:"admin_password_link"`
+
+	// AnalyticsStartup Optional data for opening Analytics, read through the same authorization and readers as the individual routes.
+	AnalyticsStartup *AnalyticsStartup `json:"analytics_startup,omitempty"`
 
 	// Authorization What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
 	// Two independent axes, both of which must permit an action: the licensing seat ceiling (ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
@@ -73029,6 +73062,15 @@ type SaveMailDraftParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// GetCurrentPrincipalParams defines parameters for GetCurrentPrincipal.
+type GetCurrentPrincipalParams struct {
+	// Prepare Include optional caller-filtered data for opening Analytics. Other reads remain available when preparation is unavailable.
+	Prepare *GetCurrentPrincipalParamsPrepare `form:"prepare,omitempty" json:"prepare,omitempty"`
+}
+
+// GetCurrentPrincipalParamsPrepare defines parameters for GetCurrentPrincipal.
+type GetCurrentPrincipalParamsPrepare string
+
 // GetMyAiActivityParams defines parameters for GetMyAiActivity.
 type GetMyAiActivityParams struct {
 	// Kinds Restrict the arrays to these kinds of AI work, applied BEFORE the bounds.
@@ -91982,7 +92024,7 @@ type ServerInterface interface {
 	DiscardMailDraft(w http.ResponseWriter, r *http.Request, id Id)
 	// Get the signed-in human's own profile, roles and settings.
 	// (GET /me)
-	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
+	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request, params GetCurrentPrincipalParams)
 	// The calling rep's own standing answers, one per scheduled agent.
 	// (GET /me/agent-grants)
 	ListMyAgentGrants(w http.ResponseWriter, r *http.Request)
@@ -97187,7 +97229,7 @@ func (_ Unimplemented) DiscardMailDraft(w http.ResponseWriter, r *http.Request, 
 
 // Get the signed-in human's own profile, roles and settings.
 // (GET /me)
-func (_ Unimplemented) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request, params GetCurrentPrincipalParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -129701,14 +129743,33 @@ func (siw *ServerInterfaceWrapper) DiscardMailDraft(w http.ResponseWriter, r *ht
 // GetCurrentPrincipal operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCurrentPrincipalParams
+
+	// ------------- Optional query parameter "prepare" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "prepare", r.URL.Query(), &params.Prepare, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "prepare"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "prepare", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCurrentPrincipal(w, r)
+		siw.Handler.GetCurrentPrincipal(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

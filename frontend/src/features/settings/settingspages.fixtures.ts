@@ -59,7 +59,7 @@ const CAPTURE_SETTINGS: Schemas["CaptureSettings"] = {
   confidentiality_pass_cap: 40,
 };
 
-const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
+export const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   name: "Acme Inc",
   base_language: "en",
   fiscal_year_start_month: 1,
