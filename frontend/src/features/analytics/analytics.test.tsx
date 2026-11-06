@@ -2,7 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatMoney } from "../../format/format";
+import { formatAnalyticsMoney } from "../../format/format";
 import { en } from "../../i18n/en";
 import { SECTIONS, sectionFromAddress } from "../../lib/analytics.address";
 import { AnalyticsScreen } from "./analytics";
@@ -30,6 +30,7 @@ it("draws the tabs in the row's own order, whatever order the sections are liste
     "conversion",
     "forecast",
     "pipeline",
+    "accounts",
     "outcomes",
     "delivery",
   ]);
@@ -71,7 +72,7 @@ describe("the delivery section", () => {
       .click(await screen.findByRole("button", { name: "Delivery" }));
 
     expect(
-      await screen.findByText(formatMoney(400000, "EUR", "en")),
+      await screen.findByText(formatAnalyticsMoney(400000, "EUR", "en")),
     ).toBeTruthy();
     const link = await screen.findByRole("link", { name: "Rollout Nord" });
     expect(link.getAttribute("href")).toBe("/#/projects/p1");
@@ -151,7 +152,7 @@ describe("the data coverage section", () => {
     expect(screen.getByText("—")).toBeTruthy();
   });
 
-  it("says a fresh installation was never looked at, in words", async () => {
+  it("points to the input check when source coverage has no result", async () => {
     vi.stubGlobal("fetch", reportsStub({ coverage: { status: 404 } }));
     render(<AnalyticsScreen />);
     await userEvent
@@ -162,7 +163,7 @@ describe("the data coverage section", () => {
       .click(await screen.findByRole("button", { name: "Data coverage" }));
     expect(
       await screen.findByText(
-        "No check has run yet. An unchecked installation is not the same as a healthy one.",
+        "Start the input check in Forecast to see source coverage.",
       ),
     ).toBeTruthy();
   });
@@ -312,7 +313,7 @@ describe("AnalyticsScreen", () => {
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
   });
 
-  it("switching to Forecast groups by forecast_category and renders category tiles", async () => {
+  it("switching to Forecast groups by probability band and renders band tiles", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -320,7 +321,7 @@ describe("AnalyticsScreen", () => {
         onRun: (key, body) => bodies.push({ key, body }),
         forecastRows: [
           {
-            forecast_category: "commit",
+            win_probability_band: "60_89",
             raw_minor: 500000,
             weighted_minor: 300000,
             deal_count: 3,
@@ -333,13 +334,13 @@ describe("AnalyticsScreen", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Pipeline" }),
     );
-    await waitFor(() => expect(screen.getByText("Commit")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("60 to 89%")).toBeTruthy());
     expect(
       bodies.some(
         (b) =>
           b.key === "forecast" &&
           Array.isArray(b.body.group_by) &&
-          b.body.group_by.includes("forecast_category"),
+          b.body.group_by.includes("win_probability_band"),
       ),
     ).toBe(true);
     // AC-F1: the weighted forecast is the server's own figure —
@@ -361,15 +362,15 @@ describe("AnalyticsScreen", () => {
     ).toBe(true);
   });
 
-  it("renders the slipped bucket in the Forecast tiles", async () => {
+  it("renders the deals at no probability in their own tile", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
         forecastRows: [
           {
-            forecast_category: "slipped",
+            win_probability_band: "zero",
             raw_minor: 90000,
-            weighted_minor: 45000,
+            weighted_minor: 0,
             deal_count: 1,
             currency: "EUR",
           },
@@ -380,7 +381,7 @@ describe("AnalyticsScreen", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Pipeline" }),
     );
-    await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("0%")).toBeTruthy());
   });
 
   it("renders the server's weighted figure, never a client re-derivation", async () => {
@@ -389,13 +390,13 @@ describe("AnalyticsScreen", () => {
       "fetch",
       reportsStub({
         onRun: (key, body) => bodies.push({ key, body }),
-        // 12343 × 20% per deal (2469 × 2 = 4938) — a figure a client can only
-        // reproduce by rounding round(24686 × 20%) = 4937, the wrong way.
+        // Per-deal rounding puts this reading above the whole-unit boundary;
+        // rounding the aggregate first would put it below.
         stageRows: [
           {
             stage_id: "pl-s1",
-            raw_minor: 24686,
-            weighted_minor: 4938,
+            raw_minor: 24746,
+            weighted_minor: 4950,
             deal_count: 2,
           },
         ],
@@ -414,8 +415,8 @@ describe("AnalyticsScreen", () => {
           ),
       ),
     ).toBe(true);
-    expect((await stageTable()).getByText("€49.38")).toBeTruthy();
-    expect(screen.queryByText("€49.37")).toBeNull();
+    expect((await stageTable()).getByText("≈€50")).toBeTruthy();
+    expect(screen.queryByText("≈€49")).toBeNull();
   });
 
   it("switching to Open deals per company groups by company_id and renders a table", async () => {

@@ -134,10 +134,8 @@ func (w *transcriptProposeWorker) declineUnread(ctx context.Context, args Transc
 		return err
 	}
 	return w.activities.FinishTranscriptRead(ctx, args.TranscriptReadID,
-		activities.TranscriptReadOutcome{
-			Status: activities.TranscriptReadFailed,
-			Detail: transcriptWords.NoModel.In(transcriptCopyFor(string(w.language.Resolve(ctx))).Lang()),
-		})
+		transcriptCopyFor(string(w.language.Resolve(ctx))).failedOutcome(
+			activities.TranscriptFailure{Code: activities.TranscriptFailureNoModel}))
 }
 
 // newTranscriptProposeWorker assembles the worker-role reading. brain may be

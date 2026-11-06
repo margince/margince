@@ -26,8 +26,8 @@ import { Select } from "../../design-system/select";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 
 export type SalesDecision = components["schemas"]["SalesDecision"];
 type DecisionInput = components["schemas"]["SalesDecisionInput"];
@@ -56,12 +56,20 @@ export function useSalesDecisions(dealId?: string) {
 export function DecisionsPanel() {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const decisions = useSalesDecisions();
   const canRecord = useCanWrite("activity", "create");
   const canClose = useCanWrite("activity", "update");
   const [recording, setRecording] = useState(false);
   const [closing, setClosing] = useState<SalesDecision | null>(null);
+  if (!decisions.isError && !decisions.data?.length && !recording)
+    return canRecord ? (
+      <div className="actions">
+        <Button variant="ghost" onClick={() => setRecording(true)}>
+          {t("analytics.decisions.record")}
+        </Button>
+      </div>
+    ) : null;
   return (
     <Panel
       title={t("analytics.decisions.title")}
@@ -211,7 +219,14 @@ type Draft = Readonly<{
  * a retry under the same key, or the same open decision on the same deal,
  * answers that task again.
  */
-function RecordDecisionDialog({ onClose }: Readonly<{ onClose: () => void }>) {
+export function RecordDecisionDialog({
+  initial,
+  onClose,
+}: Readonly<{
+  // What the assessment proposed, for the reader to confirm or change.
+  initial?: Partial<Draft>;
+  onClose: () => void;
+}>) {
   const t = useT();
   const titleId = useId();
   const formId = useId();
@@ -223,6 +238,7 @@ function RecordDecisionDialog({ onClose }: Readonly<{ onClose: () => void }>) {
     ownerId: "",
     reviewOn: "",
     expected: "",
+    ...initial,
   });
   const owners = useAssignableUserOptions();
   const deals = useQuery({

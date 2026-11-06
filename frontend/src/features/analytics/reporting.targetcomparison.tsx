@@ -3,7 +3,7 @@ import { Button } from "../../design-system/button";
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatDecimal } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import {
   type ReportingEvaluation,
@@ -153,7 +153,7 @@ function coverageValue(
 ): string {
   if (reached || coverage == null) return t("reporting.compare.reached");
   return t("reporting.compare.ratio", {
-    ratio: formatDecimal(coverage, locale, 1),
+    ratio: formatNumber(Math.round(coverage * 10) / 10, locale),
   });
 }
 

@@ -9,7 +9,10 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
+import {
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
+} from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
   analyticsSectionHref,
@@ -135,7 +138,7 @@ function findingDetail(
     check.affected_minor == null
       ? undefined
       : t("analytics.attentionAtStake", {
-          amount: formatMoneyOrAbsent(
+          amount: formatAnalyticsMoneyOrAbsent(
             check.affected_minor,
             check.currency,
             locale,
@@ -196,7 +199,7 @@ export function useAttentionList(
     items.push({
       key: "checks",
       title: plural("analytics.attentionChecks", findings.length, {
-        count: formatNumber(findings.length, locale),
+        count: formatAnalyticsNumber(findings.length, locale),
       }),
       detail: t("analytics.attentionChecksDetail"),
       action: t("analytics.attentionChecksAction"),
@@ -208,8 +211,8 @@ export function useAttentionList(
     items.push({
       key: "unpriced",
       title: t("analytics.attentionUnpriced", {
-        priced: formatNumber(forecast.priced_count, locale),
-        eligible: formatNumber(forecast.eligible_count, locale),
+        priced: formatAnalyticsNumber(forecast.priced_count, locale),
+        eligible: formatAnalyticsNumber(forecast.eligible_count, locale),
       }),
       detail: t("analytics.attentionUnpricedDetail"),
       action: t("analytics.attentionUnpricedAction"),
@@ -224,7 +227,7 @@ export function useAttentionList(
     items.push({
       key: "coverage",
       title: plural("analytics.attentionCoverage", unread.length, {
-        count: formatNumber(unread.length, locale),
+        count: formatAnalyticsNumber(unread.length, locale),
       }),
       detail: t("reporting.coverageAction"),
       action: t("analytics.attentionCoverageAction"),

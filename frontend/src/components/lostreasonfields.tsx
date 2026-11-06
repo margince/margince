@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Field, TextInput } from "../design-system/atoms";
+import { Field, Textarea } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { LossReason } from "../lib/lossreasons.queries";
@@ -45,8 +45,9 @@ export function LostReasonFields({
       {onNote && (
         <Field label={t("deals.lostReasonNote")}>
           {(control) => (
-            <TextInput
+            <Textarea
               {...control}
+              grow
               value={note ?? ""}
               onChange={(event) => onNote(event.target.value)}
             />

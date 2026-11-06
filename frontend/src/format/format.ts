@@ -6,7 +6,7 @@ import { calendarDaysBetween } from "./format.dates";
 // locale never flows back into storage. format.test.ts pins each rule.
 import { INTL_LOCALE } from "./intllocale";
 import { minorUnitDigits, toMajorUnits } from "./minorunits";
-import { formatMoneyOrWord } from "./moneyword";
+import { formatMoneyOrWord, MONEY_ABSENT } from "./moneyword";
 
 export {
   assertIanaZone,
@@ -19,6 +19,8 @@ export {
   formatDayMonth,
   formatDayMonthNearYear,
   formatDayRange,
+  formatDue,
+  formatDueCompact,
   formatTimeOfDay,
   fullDayName,
   hourInZone,
@@ -78,7 +80,7 @@ export function formatMoneyWhole(
 // What the product shows for a money figure it does not have. Not a zero and
 // not a guessed currency: "€0 open" and "we do not know" are different claims,
 // and a euro sign on a figure that might be dong is worse than no figure.
-export const MONEY_ABSENT = "—";
+export { MONEY_ABSENT } from "./moneyword";
 
 /**
  * A money reading, or nothing. BOTH halves are required.
@@ -154,6 +156,10 @@ export function formatMoneyCompact(
     // digits, so a maximum of 1 alone always prints one digit ("€420.0k").
     minimumFractionDigits: 0,
     maximumFractionDigits: abbreviated ? 1 : 0,
+    // One decimal alone cuts €1,062,548 and €1,094,000 both to "€1m". Three
+    // significant digits keep them apart, and the more precise rule wins.
+    maximumSignificantDigits: 3,
+    roundingPriority: "morePrecision",
     // Half-up turns CHF 999,999.99 into "CHF 1M", a figure the record does
     // not reach; truncating drops digits but never adds any.
     roundingMode: "trunc",
@@ -481,3 +487,11 @@ export function formatAge(
     unitDisplay: "narrow",
   }).format(days > 0 ? days : hours);
 }
+
+export {
+  formatAnalyticsHours,
+  formatAnalyticsMoney,
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
+  formatAnalyticsPercent,
+} from "./format.analytics";

@@ -6,11 +6,12 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 ## custom_field
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `activity_kinds` | `text[]` |  | The activity kinds an activity field applies to; null means every kind, and every other object's field is null. |
 | `column_name` | `text` | yes | Server-derived, `cf_`-prefixed, slug-derived physical column identifier: never client-supplied, immutable once live, stable across rename. |
 | `created_by` | `uuid` | yes | Points at `app_user.id`. |
 | `currency` | `currency_code` |  | ISO-4217 currency code; present when `type=currency`, null otherwise. |
@@ -35,6 +36,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `custom_field_activity_kinds_check`: `CHECK (((activity_kinds IS NULL) OR ((object = 'activity') AND (cardinality(activity_kinds) > 0))))`
 - `custom_field_object_check`: `CHECK ((object = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'contract'])))`
 - `custom_field_reportable_type_check`: `CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal', 'company'])) AND (type = ANY (ARRAY['picklist', 'boolean'])))))`
 - `custom_field_status_check`: `CHECK ((status = ANY (ARRAY['active', 'retired'])))`

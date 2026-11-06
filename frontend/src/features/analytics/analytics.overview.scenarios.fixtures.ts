@@ -6,7 +6,8 @@
 // nothing. Stories and tests read this one map, so they describe one server.
 
 import type { ReportingFixtureFrame } from "../../testing/reporting.fixtures";
-import { installFetchStub, jsonResponse } from "../../testing/story-utils";
+import { jsonResponse } from "../../testing/story-utils";
+import { outlookFor } from "./analytics.assessment.fixtures";
 import {
   ADMIN_GRANTS,
   COVERAGE_GRANTS,
@@ -14,11 +15,8 @@ import {
   isMovement,
   landingBasis,
   metric,
-  overviewRoutes,
   teamHandoffs,
   teamReview,
-  twoPipelines,
-  upcomingWindow,
 } from "./analytics.overview.fixtures";
 import {
   isWeeks,
@@ -26,6 +24,12 @@ import {
   returnedHandoffs,
   upcomingMeetings,
 } from "./analytics.overview.prospectingdata";
+import { quarterChecks } from "./analytics.overview.quarterchecks.fixtures";
+import {
+  type overviewRoutes,
+  twoPipelines,
+  upcomingWindow,
+} from "./analytics.overview.routes.fixtures";
 import {
   backlogList,
   boardCharts,
@@ -149,7 +153,7 @@ function prospecting(
   routes: Routes = {},
   weeks: ReportingEvaluation = prospectingWeeks(
     week,
-    routes.template === "sales" ? "leads_promoted" : "accepted_opportunities",
+    routes.template === "sales" ? "leads_qualified" : "accepted_opportunities",
     routes.template === "sales" ? [1, 2, 0, 4, 2, 3] : [2, 0, 3, 1, 2, 2],
   ),
 ): Pair {
@@ -181,8 +185,8 @@ function team(evaluation: ReportingEvaluation, routes: Routes = {}): Pair {
 const qualificationReview = teamReviewOn(dstWeek, {
   workflow: "qualification",
   handoffs: undefined,
-  member_targets: {
-    metric: "leads_promoted",
+  member_event_targets: {
+    metric: "leads_qualified",
     window: {
       start_at: "2026-09-30T22:00:00Z",
       end_at: "2026-10-31T23:00:00Z",
@@ -196,7 +200,7 @@ const qualificationReview = teamReviewOn(dstWeek, {
     recycled: 0,
     waiting: 0,
     oldest_waiting_since: undefined,
-    ...(index === 0 ? { target: { value: 8, actual: 5 } } : {}),
+    ...(index === 0 ? { event_target: { value: 8, actual: 5 } } : {}),
   })),
 });
 
@@ -250,14 +254,19 @@ export const OVERVIEW_SCENARIOS = {
   populated: {
     about: "Ordinary data: a quarter with a trend, a week of SDR work.",
     views: {
-      sales: sales(quarterSales()),
+      sales: sales(quarterSales(), {
+        checks: json(quarterChecks(frames.quarterCutoff.clock)),
+        assessment: json(outlookFor("sales", quarterSales())),
+      }),
       prospecting: prospecting(prospectingOn(week), {
         worklist: day(),
         summary: summary("handoff"),
         handoffs: handoffRows,
+        assessment: json(outlookFor("prospecting", prospectingOn(week))),
       }),
       team: team(teamOn(dstWeek), {
         team: json(teamReviewOn(dstWeek)),
+        assessment: json(outlookFor("team", teamOn(dstWeek))),
       }),
     },
   },
@@ -335,7 +344,7 @@ export const OVERVIEW_SCENARIOS = {
         prospectingOn(week, [
           metric("meetings_held", 3),
           metric("accepted_opportunities", 1),
-          metric("leads_promoted", 2, { denominator: 9 }),
+          metric("leads_qualified", 2, { denominator: 9 }),
           metric("lead_first_response", 2.4),
           metric("leads_awaiting_response", 4),
         ]),
@@ -487,7 +496,7 @@ export const OVERVIEW_SCENARIOS = {
         prospectingOn(week, [
           metric("meetings_held", 3),
           metric("accepted_opportunities", 1),
-          metric("leads_promoted", 2, { denominator: 9 }),
+          metric("leads_qualified", 2, { denominator: 9 }),
           metric("lead_first_response", null, {
             coverage: { status: "failed", withheld: false },
           }),
@@ -528,7 +537,7 @@ export const OVERVIEW_SCENARIOS = {
         prospectingOn(week, [
           metric("meetings_held", 0),
           metric("accepted_opportunities", 0),
-          metric("leads_promoted", 0, { denominator: 3 }),
+          metric("leads_qualified", 0, { denominator: 3 }),
           metric("lead_first_response", null, {
             coverage: { status: "insufficient_sample", withheld: false },
           }),
@@ -793,7 +802,7 @@ export const OVERVIEW_SCENARIOS = {
           comparison: {
             status: "target_reached",
             target_metric: "bookings_won",
-            basis: "commit_evidence",
+            basis: "likely",
             target: 80_000_000,
             landing: 96_000_000,
             won: 88_000_000,
@@ -808,7 +817,7 @@ export const OVERVIEW_SCENARIOS = {
     },
   },
   landingBases: {
-    about: "100 won, 40 confirmed commit and a call of 190 that is not added.",
+    about: "100 won, 40 Likely and a call of 190 that is not added.",
     views: {
       sales: sales(
         quarterSales({
@@ -912,7 +921,7 @@ export const OVERVIEW_SCENARIOS = {
             coverage: { status: "ok", withheld: true },
           }),
           metric("accepted_opportunities", 2),
-          metric("leads_promoted", 3, { denominator: 11 }),
+          metric("leads_qualified", 3, { denominator: 11 }),
           metric("lead_first_response", 1.7),
           metric("leads_awaiting_response", null, {
             coverage: { status: "ok", withheld: true },
@@ -925,7 +934,7 @@ export const OVERVIEW_SCENARIOS = {
             coverage: { status: "ok", withheld: true },
           }),
           metric("accepted_opportunities", 3),
-          metric("leads_promoted", 5),
+          metric("leads_qualified", 5),
           metric("leads_awaiting_response", null, {
             coverage: { status: "ok", withheld: true },
           }),
@@ -967,33 +976,4 @@ export function scenarioStoryName(name: ScenarioName, view: OverviewView) {
 /** The address that opens a view, whatever a reader chose before. */
 export function overviewAddress(view: OverviewView): string {
   return `#/analytics/overview?overview=${view}`;
-}
-
-/**
- * Serves a setup to the app: its routes, and each evaluation answered by the
- * request it is, so the movement read gets its own answer.
- */
-export function installOverviewServer(setup: OverviewSetup): void {
-  installFetchStub(overviewRoutes(setup.routes));
-  const routed = globalThis.fetch;
-  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-    const request = input instanceof Request ? input : null;
-    const url = new URL(
-      request ? request.url : String(input),
-      "http://localhost",
-    );
-    if (url.pathname.endsWith("/analytics/evaluate"))
-      return Promise.resolve(jsonResponse(setup.answer(url)));
-    // The returned list is the waiting route with a state; the stub's route
-    // map cannot see a query, so it is answered here.
-    if (
-      url.pathname.endsWith("/analytics/sdr-summary/handoffs") &&
-      url.searchParams.get("state") === "returned"
-    )
-      return Promise.resolve(
-        setup.returned?.() ??
-          jsonResponse({ as_of: url.searchParams.get("as_of"), rows: [] }),
-      );
-    return routed(input, init);
-  }) as typeof fetch;
 }

@@ -1,11 +1,16 @@
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
+import { taskLine, useTaskHolder } from "../../components/taskassignee";
 import { formatNumber } from "../../format/format";
-import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
+import {
+  calendarDaysBetween,
+  formatDueCompact,
+} from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useCompanySetAside } from "./companysetaside";
 import {
   MayBeDoneVerb,
@@ -96,7 +101,7 @@ export function CompanyNextBar({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { deferOf } = useCompanySetAside(view.company.id);
   const fallback = momentFallbackVerb({
     view,
@@ -110,6 +115,9 @@ export function CompanyNextBar({
       ? view.moment
       : undefined;
   const task = nextBarTask(view);
+  // The bar's task is the account's, not the reader's: its line names who holds it.
+  const holder = useTaskHolder(task?.assignee_id, task?.assignee_name);
+  const heldBy = (rest: ReactNode) => (task ? taskLine([holder, rest]) : rest);
   const late = task && daysLate(task, view.as_of, zone);
   const count = otherTasks(view, task);
   const lateTag =
@@ -154,7 +162,7 @@ export function CompanyNextBar({
         title={task?.subject ?? moment.headline}
         late={lateTag}
         detail={task && taskDetail(task)}
-        sub={moment.why_now}
+        sub={heldBy(moment.why_now)}
         insight={momentBasis(moment)}
         action={
           moment.may_be_done ? (
@@ -170,16 +178,23 @@ export function CompanyNextBar({
   }
   return (
     <RecordNextBar
+      // The Overview's "Last contact" tile already shows the last exchange.
+      lastExchange={false}
       title={task?.subject}
       late={lateTag}
       detail={task && taskDetail(task)}
-      sub={
+      sub={heldBy(
         task?.due_at
           ? t("co.next.due", {
-              when: formatDayMonth(task.due_at, locale, zone),
+              when: formatDueCompact(
+                task.due_at,
+                task.due_has_time,
+                locale,
+                zone,
+              ),
             })
-          : undefined
-      }
+          : undefined,
+      )}
       action={task ? fallback : undefined}
       more={more}
     />

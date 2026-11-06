@@ -74,8 +74,8 @@ func TestALegacyRunningRunIsNeverRequeued(t *testing.T) {
 
 func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	approveAndRead(t, e, run.ID)
 
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); status != http.StatusAccepted {
@@ -90,8 +90,8 @@ func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
 
 func TestALostTestRunJobIsQueuedAgainAndTheRunCompletes(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	// The run's test already ran; put it back as a test whose job was queued and
 	// then lost before any worker claimed it.
 	if _, err := e.Owner.Exec(t.Context(), `
@@ -122,8 +122,8 @@ func TestALostTestRunJobIsQueuedAgainAndTheRunCompletes(t *testing.T) {
 
 func TestALegacyCompleteRunReleasesItsSource(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	approveAndRead(t, e, run.ID)
 	// A legacy finished run still holds its file, and the reaper long since
 	// retired the upload's intent because the run adopted the key.

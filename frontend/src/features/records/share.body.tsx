@@ -41,9 +41,9 @@ import {
   formatNumber,
   identifierNumber,
 } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
 import {
   ApprovalRequiredError,
@@ -60,7 +60,7 @@ export function ShareScreenBody({
   const { locale } = useLocale();
   // Grant expiry must read in the viewer's own timezone. The browser's
   // resolved IANA zone answers "what calendar date does this viewer see".
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const queryClient = useQueryClient();
   // Where focus lands when a dialog closes on a control that is gone. Both
   // dialogs destroy their own trigger on success: a revoked grant's row leaves

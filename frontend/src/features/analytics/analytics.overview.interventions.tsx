@@ -7,16 +7,16 @@ import { AppLink } from "../../design-system/applink";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import {
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
   formatDateAbbrev,
-  formatMoneyOrAbsent,
-  formatNumber,
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { isEntityKind } from "../../lib/entity";
 import { useMemberNames } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import type { UrlParams } from "../../lib/urlstate";
 import { type AttentionState, attentionState } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
@@ -88,6 +88,8 @@ export function InterventionPanel({
   const { locale } = useLocale();
   const { list, state, unreadSources } = interventions;
   const findings = list?.data ?? [];
+  if (findings.length === 0 && state !== "failed" && unreadSources === 0)
+    return null;
   const forecast = (extra?: readonly [string, string]) =>
     analyticsSectionHref(
       "forecast",
@@ -155,7 +157,7 @@ export function InterventionPanel({
             </p>
             <p className="t-caption">
               {plural("analytics.intervention.maintenanceBody", unreadSources, {
-                count: formatNumber(unreadSources, locale),
+                count: formatAnalyticsNumber(unreadSources, locale),
               })}{" "}
               <AppLink href={analyticsSectionHref("coverage", dials)}>
                 {t("analytics.attentionCoverageAction")}
@@ -177,7 +179,7 @@ function FindingRows({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const owners = useMemberNames(
     findings.flatMap((check) => check.owner_id ?? []),
   );
@@ -251,7 +253,7 @@ function findingFacts(
     check.affected_minor == null
       ? undefined
       : t("analytics.attentionAtStake", {
-          amount: formatMoneyOrAbsent(
+          amount: formatAnalyticsMoneyOrAbsent(
             check.affected_minor,
             check.currency,
             locale,
@@ -282,14 +284,14 @@ function Groups({
   }) =>
     [
       plural("analytics.intervention.findings", group.findings, {
-        count: formatNumber(group.findings, locale),
+        count: formatAnalyticsNumber(group.findings, locale),
       }),
       plural("analytics.intervention.deals", group.deals, {
-        count: formatNumber(group.deals, locale),
+        count: formatAnalyticsNumber(group.deals, locale),
       }),
       group.other_findings > 0
         ? plural("analytics.intervention.other", group.other_findings, {
-            count: formatNumber(group.other_findings, locale),
+            count: formatAnalyticsNumber(group.other_findings, locale),
           })
         : undefined,
     ]
@@ -311,7 +313,7 @@ function Groups({
                 counted(group),
                 // One amount per currency, never added across them.
                 ...group.exposure.map((money) =>
-                  formatMoneyOrAbsent(
+                  formatAnalyticsMoneyOrAbsent(
                     money.amount_minor,
                     money.currency,
                     locale,

@@ -59,7 +59,13 @@ type StagedOfferLineInput struct {
 	Quantity       string // exact decimal, numeric(14,3) — see OfferLineInput
 	UnitPriceMinor int64
 	TaxRate        string // exact decimal, numeric(5,2)
-	Evidence       StagedOfferLineEvidence
+	// ProductID is the rate-card product the price was grounded on, nil when
+	// none was. A classified product hands the line its category, and the
+	// sheet its rate, in place of TaxRate.
+	ProductID *ids.ProductID
+	Evidence  StagedOfferLineEvidence
+	// taxCategory is the product's category, set by stagedLineTax.
+	taxCategory *string
 	// PriceGrounded is false only when the orchestrator could not ground a
 	// price in conversation evidence or the rate card and left the line
 	// at the honest zero sentinel instead of guessing (never fabricated,
@@ -108,8 +114,12 @@ func (s *Store) AddStagedOfferLines(ctx context.Context, offerID ids.OfferID, li
 		if err != nil {
 			return err
 		}
+		basis := s.draftTaxBasis(ctx, tx, legalEntityIDOf(current))
 		inserted := make([]crmcontracts.OfferLineItem, 0, len(lines))
 		for i, in := range lines {
+			if err := stagedLineTax(ctx, tx, basis, &in); err != nil {
+				return fmt.Errorf("staged line %d: %w", i+1, err)
+			}
 			line, err := insertStagedOfferLine(ctx, tx, offerID, start+i, in)
 			if err != nil {
 				return fmt.Errorf("staged line %d: %w", i+1, err)
@@ -139,6 +149,20 @@ func (s *Store) AddStagedOfferLines(ctx context.Context, offerID ids.OfferID, li
 	return out, nil
 }
 
+// wireTaxRefs is the product and tax category a staged line carries, as the
+// contract spells them.
+func (in StagedOfferLineInput) wireTaxRefs() (*openapi_types.UUID, *crmcontracts.OfferLineItemTaxCategory) {
+	var productID *ids.UUID
+	if in.ProductID != nil {
+		productID = &in.ProductID.UUID
+	}
+	if in.taxCategory == nil {
+		return uuidPtr(productID), nil
+	}
+	category := crmcontracts.OfferLineItemTaxCategory(*in.taxCategory)
+	return uuidPtr(productID), &category
+}
+
 // CheckStagedLine judges the figures of a drafted line by the limits every
 // other line holds, so a drafter can drop one the store would refuse.
 func CheckStagedLine(in StagedOfferLineInput) error {
@@ -147,28 +171,32 @@ func CheckStagedLine(in StagedOfferLineInput) error {
 	})
 }
 
-// insertStagedOfferLine validates one AI-drafted line, inserts it, and
-// builds the returned OfferLineItem straight from the values just
-// written — a second read-back would only re-derive what this function
-// already knows.
-func insertStagedOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, position int, in StagedOfferLineInput) (crmcontracts.OfferLineItem, error) {
+// checkStagedLineShape refuses a drafted line missing what every staged line
+// carries, or whose figures the store would refuse.
+func checkStagedLineShape(position int, in StagedOfferLineInput) error {
 	if err := checkLinePosition(&position); err != nil {
-		return crmcontracts.OfferLineItem{}, err
+		return err
 	}
 	if in.Description == "" {
-		return crmcontracts.OfferLineItem{}, &RequiredFieldError{Field: "description"}
+		return &RequiredFieldError{Field: descriptionColumn}
 	}
 	if in.Evidence.Snippet == "" {
-		return crmcontracts.OfferLineItem{}, &RequiredFieldError{Field: "evidence.snippet"}
+		return &RequiredFieldError{Field: "evidence.snippet"}
 	}
 	if in.Evidence.SourceID == "" {
-		return crmcontracts.OfferLineItem{}, &RequiredFieldError{Field: "evidence.source_id"}
+		return &RequiredFieldError{Field: "evidence.source_id"}
 	}
 	if !in.PriceGrounded && in.UnitPriceMinor != 0 {
-		return crmcontracts.OfferLineItem{}, &UngroundedPriceNotZeroError{UnitPriceMinor: in.UnitPriceMinor}
+		return &UngroundedPriceNotZeroError{UnitPriceMinor: in.UnitPriceMinor}
 	}
+	return CheckStagedLine(in)
+}
 
-	if err := CheckStagedLine(in); err != nil {
+// insertStagedOfferLine validates one AI-drafted line and inserts it. It
+// builds the returned OfferLineItem from the values it wrote, since a second
+// read would only derive them again.
+func insertStagedOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, position int, in StagedOfferLineInput) (crmcontracts.OfferLineItem, error) {
+	if err := checkStagedLineShape(position, in); err != nil {
 		return crmcontracts.OfferLineItem{}, err
 	}
 	const unit, discount = defaultUnit, zeroPct
@@ -186,11 +214,11 @@ func insertStagedOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, 
 	err = tx.QueryRow(ctx,
 		`INSERT INTO offer_line_item (id, offer_id, position, description, unit,
 		                              quantity, unit_price_minor, discount_pct, tax_rate,
-		                              evidence, price_grounded, proposal_state)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		                              evidence, price_grounded, proposal_state, product_id, tax_category)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		 RETURNING created_at, updated_at, version`,
 		id, offerID, position, in.Description, unit, in.Quantity, in.UnitPriceMinor, discount, in.TaxRate,
-		storekit.JSONArg(evidence), in.PriceGrounded, ProposalStaged).
+		storekit.JSONArg(evidence), in.PriceGrounded, ProposalStaged, in.ProductID, in.taxCategory).
 		Scan(&createdAt, &updatedAt, &version)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
@@ -213,8 +241,11 @@ func insertStagedOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, 
 	}
 
 	grounded := in.PriceGrounded
+	productID, category := in.wireTaxRefs()
 	return crmcontracts.OfferLineItem{
 		Id:             openapi_types.UUID(id),
+		ProductId:      productID,
+		TaxCategory:    category,
 		Position:       position,
 		Description:    in.Description,
 		Unit:           unit,

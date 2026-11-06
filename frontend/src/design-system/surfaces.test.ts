@@ -17,6 +17,7 @@ import {
   specificity,
   splitTopLevel,
 } from "../../scripts/lib/css-rules";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import {
   extensionFrontendFiles,
   filesMatching,
@@ -34,7 +35,7 @@ import {
 import { blocks, resolve, themes } from "./tokens-testing";
 
 // A rule outside surfaces.css that names a rung or paints a member overrules the ladder. The ledger holds what predates it; the ceiling keeps it shrinking.
-const LEDGER_CEILING = { spellings: 78, states: 6 };
+const LEDGER_CEILING = { spellings: 76, states: 6 };
 
 // Joining or leaving the ladder is a decision, so it moves these numbers too.
 const LADDER_SIZE = { surfaces: 80, overlays: 18 };
@@ -143,7 +144,10 @@ function cssSpellings(rules: readonly Rule[]): string[] {
   });
 }
 
+const SPELLS_A_RUNG = new RegExp(`${NAMES_A_RUNG.source}|var\\(`);
+
 function scriptSpellings(path: string, text: string): string[] {
+  if (!mayHoldLiteral(text, SPELLS_A_RUNG)) return [];
   const found: string[] = [];
   const walk = (node: ts.Node) => {
     const part =
@@ -420,6 +424,8 @@ describe("the nesting ladder has one painter", () => {
         `const a = <div style={{ background: "var(--ladder2)" }} />; const b = \`var(--pane)\`; const c = \`var(\${token})\`; const d = "var(--" + name + ")";`,
       ),
     ).toHaveLength(4);
+    const dynamic = 'const d = "var(--" + name;';
+    expect(scriptSpellings(join(here, "probe.ts"), dynamic)).toHaveLength(1);
     expect(
       cssSpellings([
         probe(".probe", `border: 1px solid ${ref("--paneEdgeStrong")}`),
@@ -459,7 +465,10 @@ describe("the nesting ladder has one painter", () => {
     ).toEqual(new Set([...RUNGS, "--cardGround", "--darkStep", "--stepAlias"]));
   });
 
-  it("names a rung only in surfaces.css, apart from the ledger", () => {
+  // Parses every source file, so it takes the tree-walk timeout the other scans use.
+  it("names a rung only in surfaces.css, apart from the ledger", {
+    timeout: 60_000,
+  }, () => {
     const found = [
       ...cssSpellings(allRules),
       ...scripts.flatMap((path) =>

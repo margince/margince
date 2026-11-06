@@ -4,9 +4,9 @@
 package consent
 
 // Data-subject requests (Art. 15/16/17, B-E11.30): the compliance
-// workflow rows the DPO works through. Admin-mediated and human-only at
-// the transport (x-agent-access); status transitions demand a
-// resolution before a request closes. No dsr.* family exists in the
+// workflow rows the DPO works through. Admin-mediated, and open to the
+// agent on that user's passport except for fulfilling an erasure; status
+// transitions demand a resolution before a request closes. No dsr.* family exists in the
 // events.md closed catalog, so these ride the audit-only lane
 // ratified in events.md §5.3c, like the other compliance-config surfaces.
 
@@ -130,9 +130,8 @@ var dsrTransitions = map[string]map[string]bool{
 // the least-privileged role in the matrix. Subject-access fulfilment is
 // admin-mediated, and reading the queue is how it is mediated.
 //
-// A human besides: an agent acting under an admin's passport inherits that
-// admin's live grants, so without this arm a read-scoped passport would
-// enumerate every data subject who ever filed against the workspace.
+// A user or their agent besides. A connector inherits the granting user's live
+// grants, and it would otherwise enumerate every data subject on the queue.
 func requireDSRAdmin(ctx context.Context, action principal.Action) error {
 	// ONE object where there were two gates. `contact` plus the literal admin
 	// role said "may read contacts, and is an administrator" — two questions
@@ -143,8 +142,8 @@ func requireDSRAdmin(ctx context.Context, action principal.Action) error {
 		return err
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return fmt.Errorf("human-only subject-request queue: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return fmt.Errorf("the subject-request queue is for a user or their agent: %w", apperrors.ErrPermissionDenied)
 	}
 	return nil
 }
@@ -254,6 +253,11 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 	}
 	var out dsrRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var found bool
+		var err error
+		if out, found, err = agentsOpenCase(ctx, tx, in); err != nil || found {
+			return err
+		}
 		computed, rule, err := s.requestDeadlineTx(ctx, tx, in.Kind, received)
 		if err != nil {
 			return err

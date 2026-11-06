@@ -1,6 +1,7 @@
 import type { components } from "../../api/schema";
 import { HowItStands } from "../../design-system/howitstands";
 import { statTone } from "../../design-system/readingtone";
+import { useRecordTimeline } from "../../design-system/recordtimeline";
 import { StandingDims } from "../../design-system/standingdims";
 import { StrengthRing } from "../../design-system/standingring";
 import { StandingTimeline } from "../../design-system/standingtimeline";
@@ -9,9 +10,9 @@ import { StatStrip } from "../../design-system/statstrip";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { contactTabRoute } from "../../lib/contacttab";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
+import { useViewerZone } from "../../lib/viewerzone";
 import { contactDims, contactVerdict } from "./contactstanding";
 import { type ContactPeeks, contactPeeks } from "./contactstanding.peeks";
 import {
@@ -36,8 +37,13 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const words: StandingWords = { t, locale, zone };
+  // The 360's page seeds the line; a wider zoom pages older rows from the list.
+  const history = useRecordTimeline("contact", view.contact.id, {
+    firstPage: view.activities,
+    enabled: Boolean(view.activities),
+  });
   const openHistory = () =>
     navigate(contactTabRoute(view.contact.id, "timeline"));
   const peeks = contactPeeks(view, { t, plural, locale, zone }, openHistory);
@@ -77,7 +83,8 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
           record={zone}
           gap={contactGap(view, words)}
           events={contactTimelineEvents(view, words)}
-          marks={activityMarks(view.activities?.data ?? [], {
+          history={history}
+          marks={activityMarks(history.activities, {
             t,
             locale,
             zone,
@@ -128,7 +135,7 @@ function StrengthHero({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const strength = view.strength;
   if (!strength) {
     return null;

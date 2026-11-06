@@ -7,6 +7,7 @@
   min-inline-size: 0;
 }
 .standing-timeline-scroll {
+  position: relative;
   overflow-x: auto;
   overflow-y: hidden;
   margin-inline: calc(-1 * var(--space-2));
@@ -23,6 +24,18 @@
 .standing-timeline-canvas {
   position: absolute;
   inset: 0;
+}
+/* The zoom sits over the canvas's right end, a note on older rows before it. */
+.standing-timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-block-end: var(--space-2);
+}
+.standing-timeline-older {
+  color: var(--textSecondary);
 }
 .standing-timeline-empty {
   margin: 0;

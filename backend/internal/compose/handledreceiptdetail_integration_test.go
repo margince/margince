@@ -94,7 +94,7 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	carded := e.seedSweepDeal(t, "Moved by a card", e.late, new("commit"), new(30), 1)
+	carded := e.seedSweepDeal(t, "Moved by a card", e.late, new(95), new(30), 1)
 	subject := "Renewal call"
 	message, _, err := e.Activities.LogActivity(reader, activities.LogActivityInput{Kind: "call", Subject: &subject, Source: "manual"})
 	if err != nil {
@@ -103,7 +103,7 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	moved := today().AddDate(0, 0, 45)
 	card := e.stageDateCard(reader, t, carded, ids.UUID(message.Id), moved)
 	appliedUnderPolicy(reader, t, e.svc, card, e.Rep1)
-	agentDeal := e.seedSweepDeal(t, "Moved by an agent", e.late, new("commit"), new(30), 1)
+	agentDeal := e.seedSweepDeal(t, "Moved by an agent", e.late, new(95), new(30), 1)
 	agent := principal.WithActor(reader, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", UserID: e.Rep1, OnBehalfOf: e.Rep1,
 		PassportID: e.SeedPassport(t, e.owner, "receipt agent"), SeatType: principal.SeatFull,
@@ -156,7 +156,7 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 func TestASourceTheReaderMayNotOpenIsWithheld(t *testing.T) {
 	e := setupCloseDate(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	deal := e.seedSweepDeal(t, "Moved by a card", e.late, new("commit"), new(30), 1)
+	deal := e.seedSweepDeal(t, "Moved by a card", e.late, new(95), new(30), 1)
 	subject := "Pricing thread"
 	message, _, err := e.Activities.LogActivity(reader, activities.LogActivityInput{Kind: "call", Subject: &subject, Source: "manual"})
 	if err != nil {

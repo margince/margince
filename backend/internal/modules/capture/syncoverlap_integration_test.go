@@ -56,7 +56,7 @@ func TestAnOlderPullCannotReplaceANewerSyncOutcome(t *testing.T) {
 			ctx, reg, _, _ := newCaptureRegistryFixture(t)
 			at := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
 			newerAt := at.Add(time.Minute)
-			reg.WithClock(func() time.Time { return at })
+			reg.SetClock(func() time.Time { return at })
 			reg.Register(&overlappingPull{olderError: tc.err, newerCursor: tc.next, finishNewer: func() error {
 				at = newerAt
 				err := reg.SyncOnce(ctx, connectionOf(ctx, t))
@@ -93,7 +93,7 @@ func TestAnOlderPullCannotReplaceANewerSyncOutcome(t *testing.T) {
 func TestACompletedPullCanRecoverAFailureFromItsStartingSnapshot(t *testing.T) {
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	at := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 	reg.Register(&overlappingPull{newerError: connector.ErrUnreachable, finishNewer: func() error {
 		at = at.Add(time.Minute)
 		if err := reg.SyncOnce(ctx, connectionOf(ctx, t)); !errors.Is(err, connector.ErrUnreachable) {

@@ -87,7 +87,7 @@ func TestAnEditTheForecastDoesNotCountIsNotMaterial(t *testing.T) {
 	now := was
 	now.EffectiveClose = new(time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC))
 	now.Owner = "someone-else"
-	outside := Contribution{DealID: "d9", Category: CategoryCommit}
+	outside := Contribution{DealID: "d9", Source: SourceStage}
 
 	if drift := CompareWithBaseline(called(was), today(now, outside)); drift.Material() {
 		t.Fatalf("a date inside the period, a new owner and a deal outside it read as material: %+v", drift.Deals)
@@ -102,7 +102,7 @@ func TestLeavingThePeriodOrTheQualifiedForecastIsMaterial(t *testing.T) {
 	was.Qualification = viability.QualificationEligible
 	excluded := was
 	excluded.Qualification = viability.QualificationExcluded
-	pushed := Contribution{DealID: "d2", Category: CategoryCommit, Qualification: viability.QualificationEligible}
+	pushed := Contribution{DealID: "d2", Source: SourceStage, Qualification: viability.QualificationEligible}
 	inPeriod := open("d2", 2_000)
 	inPeriod.Qualification = viability.QualificationEligible
 
@@ -204,6 +204,11 @@ func TestEveryReadingIsComparedForACall(t *testing.T) {
 					continue
 				}
 				declared++
+				// A qualified reading restricts a baseline one; its change reaches a
+				// call as QualificationChanges, not as a second net.
+				if _, qualified := baselineOf(Reading(strings.Trim(basic.Value, `"`))); qualified {
+					continue
+				}
 				if !slices.Contains(everyReading, Reading(strings.Trim(basic.Value, `"`))) {
 					t.Errorf("reading %s is declared and not compared for a call", basic.Value)
 				}

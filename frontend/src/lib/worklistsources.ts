@@ -20,6 +20,7 @@ export const reachNames = {
   meeting_follow_up: "brief.coverage.source.meeting_follow_up",
   lead_response: "brief.coverage.source.lead_response",
   deal_at_risk: "brief.coverage.source.deal_at_risk",
+  deal_review: "brief.coverage.source.deal_review",
   meeting: "brief.coverage.source.meeting",
   meeting_outcome: "brief.coverage.source.meeting_outcome",
   relationship_decay: "brief.coverage.source.relationship_decay",

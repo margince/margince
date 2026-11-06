@@ -37,6 +37,15 @@ const VIENNA = entity("le-vienna", {
   legal_name: "Acme Wien GmbH",
   country: "at",
   member_count: 3,
+  address: { line1: "Kärntner Ring 12", postal_code: "1010", city: "Wien" },
+  vat_id: "ATU12345678",
+  register_court: "Handelsgericht Wien",
+  register_number: "FN 123456 a",
+  default_language: "de",
+  bank_account_holder: "Acme Wien GmbH",
+  iban: "AT611904300234573201",
+  bic: "BKAUATWW",
+  imprint: "Acme Wien GmbH, Kärntner Ring 12, 1010 Wien",
 });
 
 const ADMIN = { legal_entity: ["read", "create", "update", "delete"] } as const;
