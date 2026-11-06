@@ -85,6 +85,7 @@ fixture() {
 # variable, so removing the unset goes red on the next push.
 unset MIGRATION_VERSIONS_BASELINE_RESET
 unset MIGRATION_VERSIONS_REQUIRE_BASE
+unset MIGRATION_VERSIONS_MAIN_REF
 
 # expect <name> <want-exit> <declared-reset> <mutation-fn> <want-diagnostic>
 #
@@ -123,6 +124,8 @@ expect() {
   local out rc=0
   if [[ "$declared" = "declared" ]]; then
     out="$(cd "$dir" && MIGRATION_VERSIONS_BASELINE_RESET=1 ./scripts/check-migration-versions.sh base 2>&1)" || rc=$?
+  elif [[ "$declared" = "synced" ]]; then
+    out="$(cd "$dir" && MIGRATION_VERSIONS_MAIN_REF=mainline ./scripts/check-migration-versions.sh base 2>&1)" || rc=$?
   else
     out="$(cd "$dir" && ./scripts/check-migration-versions.sh base 2>&1)" || rc=$?
   fi
@@ -301,6 +304,92 @@ removes_operator_datafix() {
   git -C "$dir" rm -q backend/migrations/datafix/1799999999_correction.up.sql backend/migrations/datafix/1799999999_correction.down.sql || return 1
 }
 
+# add_migration <dir> <version_name> — one migration, committed where HEAD is.
+add_migration() {
+  local dir="$1" migration="$2"
+  printf -- '-- probe\n' > "$dir/backend/migrations/core/$migration.up.sql"
+  printf -- '-- probe\n' > "$dir/backend/migrations/core/$migration.down.sql"
+  git -C "$dir" add backend/migrations/core || return 1
+  git -C "$dir" commit -qm "$migration" || return 1
+}
+
+# diverge <dir> <main's migration> <develop's migration> — `base` plays develop
+# and `mainline` plays main, each with one migration the other lacks. HEAD stays
+# on develop's commit, as a sync branch starts.
+diverge() {
+  local dir="$1" on_main="$2" on_develop="$3" start
+  start="$(git -C "$dir" rev-parse HEAD)" || return 1
+  git -C "$dir" switch -q -c mainline || return 1
+  add_migration "$dir" "$on_main" || return 1
+  git -C "$dir" switch -q --detach "$start" || return 1
+  add_migration "$dir" "$on_develop" || return 1
+  git -C "$dir" branch -f base HEAD || return 1
+}
+
+# The everyday sync: main's newest stamp sorts below develop's, and no re-stamp
+# is owed because develop's still sorts above everything main carries.
+syncs_main_below_develop() {
+  diverge "$1" 1700000005_landed_on_main 1700000006_waiting_on_develop || return 1
+  git -C "$1" merge -q --no-edit mainline || return 1
+}
+
+# Main has passed develop's stamp, so the sync re-stamps develop's migration.
+sync_restamp() {
+  local dir="$1" from="1700000005_waiting_on_develop" to="1700000007_waiting_on_develop"
+  local core="backend/migrations/core" direction
+  for direction in up down; do
+    git -C "$dir" mv "$core/$from.$direction.sql" \
+      "$core/$to.$direction.sql" || return 1
+  done
+  git -C "$dir" commit -qm 're-stamp above main' || return 1
+}
+syncs_and_restamps_above_main() {
+  diverge "$1" 1700000006_landed_on_main 1700000005_waiting_on_develop || return 1
+  git -C "$1" merge -q --no-edit mainline || return 1
+  sync_restamp "$1"
+}
+syncs_without_restamping() {
+  diverge "$1" 1700000006_landed_on_main 1700000005_waiting_on_develop || return 1
+  git -C "$1" merge -q --no-edit mainline || return 1
+}
+
+# Main carries develop's migration at a new stamp, and the merge keeps both files
+# because git sees two different paths.
+syncs_keeping_both_stamps() {
+  diverge "$1" 1700000005_shared_change 1700000006_shared_change || return 1
+  git -C "$1" merge -q --no-edit mainline || return 1
+}
+
+syncs_dropping_develops_migration() {
+  syncs_main_below_develop "$1" || return 1
+  local core="backend/migrations/core" lost="1700000006_waiting_on_develop"
+  git -C "$1" rm -q "$core/$lost.up.sql" "$core/$lost.down.sql" || return 1
+  git -C "$1" commit -qm 'lose it' || return 1
+}
+
+# A branch cut from develop, with main ahead of it elsewhere. Nothing of main's
+# is on it, so naming a main ref must not move the comparison.
+cuts_from_develop_below_its_tip() {
+  diverge "$1" 1700000005_landed_on_main 1700000006_waiting_on_develop || return 1
+  add_migration "$1" 1700000004_late_arrival
+}
+
+# A whole namespace only develop has. It is absent from main and, after this, from
+# the tree, so nothing but the base it was on can report it.
+syncs_dropping_develops_namespace() {
+  local dir="$1" namespace="backend/migrations/extra" migration="1700000001_extra_table"
+  diverge "$dir" 1700000005_landed_on_main 1700000006_waiting_on_develop || return 1
+  mkdir -p "$dir/$namespace" || return 1
+  printf -- '-- probe\n' > "$dir/$namespace/$migration.up.sql"
+  printf -- '-- probe\n' > "$dir/$namespace/$migration.down.sql"
+  git -C "$dir" add "$namespace" || return 1
+  git -C "$dir" commit -qm 'a namespace on develop' || return 1
+  git -C "$dir" branch -f base HEAD || return 1
+  git -C "$dir" merge -q --no-edit mainline || return 1
+  git -C "$dir" rm -rq "$namespace" || return 1
+  git -C "$dir" commit -qm 'lose the namespace' || return 1
+}
+
 # ---- the cases -----------------------------------------------------------
 
 expect "an untouched tree passes" \
@@ -347,6 +436,25 @@ expect "a declared reset does not excuse a real collision" \
 expect "removing an operator script does not remove a ledgered migration" \
   0 plain removes_operator_datafix "OK: check-migration-versions"
 
+# What a sync into develop owes, and that the trigger does not open a hole for
+# an ordinary branch. The first two cases share one tree and differ only in the ref they are told about.
+expect "a sync taking main's stamps below develop's passes" \
+  0 synced   syncs_main_below_develop "are judged against mainline"
+expect "the same tree judged against develop alone fails" \
+  1 plain    syncs_main_below_develop "sorts at or below"
+expect "a sync re-stamping develop's migration above main passes" \
+  0 synced   syncs_and_restamps_above_main "OK: check-migration-versions"
+expect "a sync leaving develop's migration below main fails" \
+  1 synced   syncs_without_restamping "sorts at or below"
+expect "a sync keeping one migration at two stamps fails" \
+  1 synced   syncs_keeping_both_stamps "carries 'shared_change' twice"
+expect "a sync dropping develop's migration fails" \
+  1 synced   syncs_dropping_develops_migration "no longer has it under any version"
+expect "a sync dropping a namespace only develop has fails" \
+  1 synced   syncs_dropping_develops_namespace "extra migration 'extra_table' is on"
+expect "a branch cut from develop stays judged against develop" \
+  1 synced   cuts_from_develop_below_its_tip "sorts at or below"
+
 # ---- census --------------------------------------------------------------
 # TWO guards, because one of them cannot see the other's defect.
 #
@@ -359,7 +467,7 @@ expect "removing an operator script does not remove a ledgered migration" \
 # So the total is also pinned. A literal here is not duplication of the case
 # list: it is the one fact the case list cannot state about itself, which is how
 # many of it there should be.
-expected_cases=17
+expected_cases=25
 
 declared_cases="$(grep -c '^expect "' "$SELF")"
 if [[ "$ran" -ne "$declared_cases" ]]; then

@@ -37,10 +37,9 @@ import (
 )
 
 // The identity vocabulary, the Go spelling of the table's CHECKs. The kinds
-// are the exclusion kinds by design: both lists answer "which addresses does
-// this rule cover", and one spelling of address-or-domain is what lets them
-// share ValidExclusionValue rather than growing a second parser that folds
-// case differently on some path nobody tests.
+// are exclusion kinds by design: both answer "which addresses does this rule
+// cover". One spelling lets them share validRuleValue, so no second parser
+// folds case differently on some path nobody tests.
 const (
 	IdentityKindAddress = ExclusionKindAddress
 	IdentityKindDomain  = ExclusionKindDomain
@@ -158,7 +157,7 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 	if err != nil {
 		return OwnerIdentity{}, err
 	}
-	value, err := ValidExclusionValue(kind, raw)
+	value, err := validRuleValue(identityKinds, kind, raw)
 	if err != nil {
 		return OwnerIdentity{}, err
 	}

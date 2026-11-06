@@ -14,6 +14,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// seededRevision is the commercial revision noted on a seeded record.
+func seededRevision(p *recordPool, id string) int {
+	revision, _ := strconv.Atoi(p.fact(id, "revision"))
+	return revision
+}
+
 // toolRoleFixtures are what a verb needs and its schema does not say. That is
 // a field one record type requires, a record in a given state, or a value a
 // rule outside the schema holds. They are laid over what the filler
@@ -290,9 +296,28 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"complete_intro_request": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("accepted_intro_ask"), "request_body": map[string]any{"version": 2}}
 	},
-	"revert_stage_progression": func(p *recordPool) map[string]any {
-		deal := p.take("auto_moved_deal")
-		return map[string]any{"id": deal, "approvalId": p.fact(deal, "move")}
+	"add_deal_line": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("deal"), "request_body": map[string]any{
+			"expected_revision": 0, "replace_estimate": true, "description": "Role Sweep", "quantity": 1, "unit_price_minor": 1000,
+		}}
+	},
+	"update_deal_line": func(p *recordPool) map[string]any {
+		deal := p.take("priced_deal")
+		return map[string]any{"id": deal, "lineId": p.fact(deal, "line"), "request_body": map[string]any{
+			"expected_revision": seededRevision(p, deal), "description": "Role Sweep Renamed",
+		}}
+	},
+	"remove_deal_line": func(p *recordPool) map[string]any {
+		deal := p.take("priced_deal")
+		return map[string]any{"id": deal, "lineId": p.fact(deal, "line"), "expected_revision": seededRevision(p, deal)}
+	},
+	"use_deal_estimate": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("deal"), "request_body": map[string]any{"expected_revision": 0}}
+	},
+	"refresh_offer_from_deal": func(p *recordPool) map[string]any {
+		offer := p.take("offer_from_lines")
+		version, _ := strconv.Atoi(p.fact(offer, "version"))
+		return map[string]any{"id": offer, "if_version": version, "request_body": map[string]any{"expected_revision": seededRevision(p, offer)}}
 	},
 	"accept_applied_deal_change": func(p *recordPool) map[string]any {
 		deal := p.take("auto_moved_deal")
