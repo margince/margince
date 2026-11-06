@@ -41,8 +41,6 @@ type dealRefileFixture struct {
 	closed                                     ids.StageID
 	o                                          *owedEnv
 	contact, company, deal, mail, meeting, old ids.UUID
-	// page is the refile worker's page size in run.
-	page int
 }
 
 // refileTestPage is the page a full-page test fills. A page of
@@ -72,7 +70,7 @@ func newDealRefileFixture(t *testing.T, extra int) dealRefileFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return dealRefileFixture{pipeline: pipeline, stage: open, closed: closed, o: o, contact: contact, company: company, deal: ids.UUID(deal.Id), mail: mail, meeting: meeting, old: old, page: capture.DealRefileLimit}
+	return dealRefileFixture{pipeline: pipeline, stage: open, closed: closed, o: o, contact: contact, company: company, deal: ids.UUID(deal.Id), mail: mail, meeting: meeting, old: old}
 }
 
 func (f dealRefileFixture) enqueue(t *testing.T, eventType string, entity ids.UUID) CapturedDealRefileArgs {
@@ -116,12 +114,18 @@ func (f dealRefileFixture) enqueueEvent(t *testing.T, envelope events.Envelope) 
 
 func (f dealRefileFixture) run(t *testing.T, args CapturedDealRefileArgs) int {
 	t.Helper()
+	return f.runPaged(t, args, capture.DealRefileLimit)
+}
+
+// runPaged is run with a worker that inspects page candidates per pass.
+func (f dealRefileFixture) runPaged(t *testing.T, args CapturedDealRefileArgs, page int) int {
+	t.Helper()
 	spec, ok := jobs.SpecFor(args.Kind())
 	if !ok {
 		t.Fatal("missing job declaration")
 	}
 	production := newCapturedDealRefileWorker(f.o.e.Pool)
-	production.page = f.page
+	production.page = page
 	worker := rivertest.NewWorker(t, riverpgxv5.New(f.o.e.Pool), &river.Config{}, jobs.Govern(production, spec))
 	var row *rivertype.JobRow
 	for pass := range 10 {
@@ -188,14 +192,13 @@ func TestAContactEventReconsidersCapturedMailAndMeetingsAfterCohortResolution(t 
 
 func TestDealReconsiderationContinuesBeyondItsFirstPage(t *testing.T) {
 	f := newDealRefileFixture(t, refileTestPage+1)
-	f.page = refileTestPage
 	integration.ApplyRiverSchema(t)
-	passes := f.run(t, f.enqueue(t, "contact.created", f.contact))
+	passes := f.runPaged(t, f.enqueue(t, "contact.created", f.contact), refileTestPage)
 	if passes < 3 {
 		t.Fatalf("only %d passes for cohort resolution and more than one page", passes)
 	}
-	if got := f.o.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != f.page+3 {
-		t.Fatalf("filed %d activities, want %d", got, f.page+3)
+	if got := f.o.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != refileTestPage+3 {
+		t.Fatalf("filed %d activities, want %d", got, refileTestPage+3)
 	}
 }
 
@@ -445,7 +448,6 @@ func TestReopeningADealReconsidersActivitiesAClosedDealCouldNotTake(t *testing.T
 
 func TestDealReconsiderationAdvancesPastAFullPageOfAmbiguousActivities(t *testing.T) {
 	f := newDealRefileFixture(t, refileTestPage+1)
-	f.page = refileTestPage
 	e := f.o.e
 	company := ids.From[ids.CompanyKind](f.company)
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Name: "Another rollout", PipelineID: f.pipeline, StageID: f.stage, CompanyID: &company, Source: "manual"}); err != nil {
@@ -471,7 +473,7 @@ func TestDealReconsiderationAdvancesPastAFullPageOfAmbiguousActivities(t *testin
 	}
 	args := f.enqueue(t, "deal.created", f.deal)
 	args.Scope = capture.DealRefileScope{All: true}
-	if passes := f.run(t, args); passes < 2 {
+	if passes := f.runPaged(t, args, refileTestPage); passes < 2 {
 		t.Fatalf("drained in %d passes", passes)
 	}
 	if e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND deal_id=$2`, last, deal.Id) != 1 {
