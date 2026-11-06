@@ -15,6 +15,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { itemTitle, rowHref } from "../../lib/worklistcopy";
 import {
+  partyName,
   phrasedReasons,
   reasonText,
   whenText,
@@ -108,7 +109,7 @@ function WorkRow({ item }: Readonly<{ item: WorklistItem }>) {
   const zone = useViewerZone();
   const when = whenText(item, t, locale, zone, recordZone, new Date());
   const reasons = phrasedReasons(item, when !== null)
-    .map((reason) => reasonText(reason, t, locale, zone))
+    .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
     .filter((phrase): phrase is string => phrase !== null);
   const facts = [when, ...new Set(reasons)].filter(
     (part): part is string => !!part,
