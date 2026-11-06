@@ -593,6 +593,16 @@ jobs:
       - name: Backend static gate (make check-static)
         working-directory: .
         run: make check-static STATIC_LEGS="${{ matrix.legs }}"
+      # A test read outside its module that skips the tree digest merges green
+      # and breaks cache-warm's save hours later. The integration lane's unit
+      # coverage run is the census when the lane runs. A change in `backend`
+      # alone skips the lane, and a cached test still reads the docs or the SPA
+      # it changes, so this leg runs the census then. Skipped into develop: the
+      # develop into main pull request runs it.
+      - name: Census the test cache's inputs (make test-input-census)
+        if: ${{ !cancelled() && matrix.pass == 'strict' && needs.changes.outputs.full_lane == 'true' && needs.changes.outputs.backend_db != 'true' }}
+        working-directory: .
+        run: make test-input-census
 
   # The code-craftsmanship gate (ADR-0045) reads source only, so it starts
   # beside deterministic-gates rather than after it. `ci` fails if either does.
@@ -758,10 +768,8 @@ jobs:
   # cluster moves together now — previously the unit-coverage pass hung off the
   # wider `backend` scope, so a rulebook-only change ran it and then discarded its
   # pods, because the fan-in that consumes them had skipped. The test input
-  # census rides on that pass: a path in `backend` alone holds none of the tests
-  # the census runs, and cache-warm runs it again before each save. A PR into
-  # develop skips the lane (full_lane), so its census runs on develop's PR into
-  # main.
+  # census rides on that pass; backend-lint runs it instead when this lane is
+  # skipped and `backend` is not.
   #
   # Runs in parallel with the Go gate, not behind it: gating the longest lane on
   # the build gate serialized the two slowest jobs and dominated PR wall-clock.

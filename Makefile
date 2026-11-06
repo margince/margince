@@ -1429,16 +1429,19 @@ test-budget:
 ## time; a failing test does not decide it. The integration lane and cache-warm
 ## both run it. COVERDIR=<dir> makes the same run the unit coverage for
 ## SonarCloud: the backend module writes binary coverage pods there, and its
-## uncached packages with code run too, outside the census.
+## uncached packages with code run too, outside the census. Then a failed test
+## fails the target after the census, since pods from it are not a measurement.
 test-input-census:
-	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
+	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; failed=; \
 	$(if $(COVERDIR),mkdir -p "$(abspath $(COVERDIR))";) \
 	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh" \
 	  $(if $(COVERDIR),test-uncached-cover TEST_COVERDIR="$(abspath $(COVERDIR))"); then \
 	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
+	  failed=1; \
 	fi; \
 	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
-	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv"
+	(cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv"); \
+	$(if $(COVERDIR),[ -z "$$failed" ] || { echo "test-input-census: a test failed and $(COVERDIR) holds no coverage to publish" >&2; exit 1; })
 
 ## test-test-budget — the budget gate's own test, run by check-backend because
 ## the gate itself runs only on CI, where a refusal that stopped firing reads green.

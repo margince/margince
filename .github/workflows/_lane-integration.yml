@@ -256,8 +256,8 @@ jobs:
         with:
           flavor: plain
       # One uncached run is both this coverage and the test input census, so
-      # the unit suite runs uncached once per CI run, not twice. Its verdict is
-      # the census; a failing unit test is deterministic-gates' verdict. A
+      # the unit suite runs uncached once per CI run, not twice. It fails on a
+      # census finding, and on a failed test, whose pods measure nothing. A
       # test-only package (backend/gates today) covers code whose own tests
       # already cover it: 307 of 254k statements, for the longest package run
       # of the lane. It still runs, uncovered, in deterministic-gates.
