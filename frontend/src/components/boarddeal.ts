@@ -7,13 +7,13 @@
 // to be copied across here — a field left out is silently absent on every card
 // in every column, which is the failure the tests beside this file exist for.
 
-import type { components } from "../../api/schema";
-import type { OwnerNaming } from "../../components/entityref";
-import type { BoardDealMail } from "../../design-system/dealcard";
-import type { BoardDeal } from "../../design-system/pipelineboard";
-import { routeHash } from "../../lib/router";
-import type { CompanyNaming } from "./dealcompanymarks";
-import { idleSince } from "./idlebase";
+import type { components } from "../api/schema";
+import type { BoardDealMail } from "../design-system/dealcard";
+import type { BoardDeal } from "../design-system/pipelineboard";
+import { idleSince } from "../lib/idlebase";
+import { routeHash } from "../lib/router";
+import type { CompanyNaming } from "./companymarks";
+import type { OwnerNaming } from "./entityref";
 
 type Deal = components["schemas"]["Deal"];
 

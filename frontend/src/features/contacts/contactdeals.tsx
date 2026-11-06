@@ -13,11 +13,11 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
 import "./contact360.css";
+import { toBoardDeal } from "../../components/boarddeal";
 import { AddRelationshipAction } from "../../components/relationships";
 import { closeDayOf } from "../../lib/closeday";
 import { dealRoleLabel } from "../../lib/recordlabels";
 import { useViewerZone } from "../../lib/viewerzone";
-import { toBoardDeal } from "../deals/boarddeal";
 import { ContactDealRooms } from "./contactdealrooms";
 import "./contacttabs.css";
 
@@ -212,14 +212,15 @@ function DealFigures({ roles }: Readonly<{ roles: DealRole[] }>) {
       : null;
   const next = open
     .filter((deal) => deal.expected_close_date)
+    // ISO days sort as plain strings, in no locale.
     .sort((a, b) =>
-      (a.expected_close_date ?? "").localeCompare(b.expected_close_date ?? ""),
+      (a.expected_close_date ?? "") < (b.expected_close_date ?? "") ? -1 : 1,
     )[0];
   return (
     <StatStrip density="plate" label={t("contact.deals.figures")}>
       <StatCard
         label={t("contact.deals.openCount")}
-        value={String(open.length)}
+        value={formatNumber(open.length, locale)}
         detail={plural("contact.deals.ofAll", deals.length, {
           count: formatNumber(deals.length, locale),
         })}
