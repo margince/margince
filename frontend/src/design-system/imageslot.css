@@ -100,9 +100,9 @@
 }
 
 /* The Edit pill sits on the picture's lower left edge, at one place for every
-   shape, so a logo and a face read as the same control. */
+   shape, and far enough in that its touch target stays inside the slot. */
 .image-slot-edit {
   position: absolute;
-  inset-block-end: var(--space-1);
-  inset-inline-start: calc(-1 * var(--space-1));
+  inset-block-end: var(--space-2);
+  inset-inline-start: 0;
 }

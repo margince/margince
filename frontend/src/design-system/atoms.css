@@ -1805,6 +1805,19 @@ span.error-line {
 .overflow-menu-labelled[aria-busy="true"] > svg:not(.busy-mark) {
   display: none;
 }
+/* A thumb gets a 44px-tall target (WCAG 2.5.8 AA asks 24px) from a layer
+   above and below the pill; the pill keeps the size it is drawn at. */
+@media (pointer: coarse) {
+  .overflow-menu .overflow-menu-labelled {
+    position: relative;
+  }
+  .overflow-menu .overflow-menu-labelled::before {
+    content: "";
+    position: absolute;
+    inset-block: calc((100% - max(44px, 100%)) / 2);
+    inset-inline: 0;
+  }
+}
 /* Fixed and portalled to its layer: the dialog's overlay, or the body. It is
    positioned against the trigger's viewport rectangle, so a card that hides
    its own overflow cannot clip it. */
