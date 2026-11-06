@@ -144,6 +144,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins the acquisition calendar to prove that the submitted civil date converts to the intended UTC instant.",
   },
   {
+    file: "features/analytics/analytics.overview.trajectory.test.ts",
+    why: "Month ticks fall on the company's month starts. Only a zone whose local month starts on another UTC date tells that apart from UTC.",
+  },
+  {
     file: "features/analytics/reporting.questioncard.test.tsx",
     why: "A bound card shows the calendar its saved question keeps; that stored basis names a zone, and the note must print it as stored.",
   },
@@ -244,7 +248,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Weekday names are generated from fixed Monday-through-Sunday UTC instants; these are locale labels, not event or record dates.",
   },
   {
-    file: "features/automations/connect-ai-tool.test.tsx",
+    file: "components/connect-ai-tool.test.tsx",
     why: "The admin guide dates a calendar day; a viewer at UTC+14 is where a day handled as an instant would print the next one.",
   },
   {

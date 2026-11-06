@@ -184,7 +184,7 @@ func TestAnAgentCannotQuietASeededRule(t *testing.T) {
 	}
 }
 
-// A rule runs with its owner's authority, so an agent names only its own user.
+// A rule runs with its owner's authority, so an agent changes no rule's owner.
 func TestAnAgentHandsNoRuleToAColleague(t *testing.T) {
 	const adminEmail = "agent-rule-owner@fable.test"
 	d := newTwoDoors(t, "agent-rule-owner", "read", "write", "send")
@@ -215,7 +215,7 @@ func TestAnAgentHandsNoRuleToAColleague(t *testing.T) {
 		t.Errorf("a rule an agent created belongs to %q, want its user %q", rule.OwnerID, user)
 	}
 	refusal := d.toolRefused(t, "change_settings", map[string]any{"action": "update_automation", "id": rule.ID, "if_version": rule.Version, "request_body": AnyMap{"owner_id": colleague}})
-	if !strings.Contains(refusal, "an agent does not hand") {
+	if !strings.Contains(refusal, "an agent does not change who owns") {
 		t.Errorf("handing the rule on answered %q", refusal)
 	}
 }
@@ -233,7 +233,7 @@ func TestEnablingARuleThatSpendsAModelNeedsEnrich(t *testing.T) {
 	if got := automationKeyed(t, d, "post_meeting_recap"); got.Status == "enabled" {
 		t.Errorf("the rule was enabled: %+v", got)
 	}
-	bearer, _ := passportWithID(t, d.e, "with enrich", "read", "write", "enrich")
+	bearer, _ := apptest.PassportWithID(t, d.e, "with enrich", "read", "write", "enrich")
 	withEnrich := &twoDoors{e: d.e, bearer: bearer, mcp: apptest.NewMCPClient(d.e, strings.TrimPrefix(bearer["Authorization"], "Bearer "))}
 	withEnrich.tool(t, "change_settings", args)
 	if got := automationKeyed(t, d, "post_meeting_recap"); got.Status != "enabled" {
@@ -268,13 +268,15 @@ func TestATimeZoneAnAgentSetsHoldsAndNamesIt(t *testing.T) {
 		}
 		return zone, chosen, setBy
 	}
-	refusal := d.toolRefused(t, "change_my_settings", map[string]any{"action": "save_timezone", "request_body": AnyMap{"timezone": "Asia/Tokyo", "source": "chosen"}})
-	if !strings.Contains(refusal, "an agent does not choose") {
-		t.Errorf("choosing a zone answered %q", refusal)
+	for _, source := range []string{"chosen", "browser"} {
+		refusal := d.toolRefused(t, "change_my_settings", map[string]any{"action": "save_timezone", "request_body": AnyMap{"timezone": "Asia/Tokyo", "source": source}})
+		if !strings.Contains(refusal, "an agent does not choose") {
+			t.Errorf("sending source %s answered %q", source, refusal)
+		}
 	}
 	ownAct(t, d, "save_timezone", map[string]any{"request_body": AnyMap{"timezone": "Europe/Berlin", "source": "agent"}})
 	zone, chosen, setBy := seatZone()
-	if zone != "Europe/Berlin" || !chosen || setBy == nil || !isAgentStamp(*setBy) {
+	if zone != "Europe/Berlin" || chosen || setBy == nil || !isAgentStamp(*setBy) {
 		t.Errorf("the seat reads %q, chosen %t, set by %v", zone, chosen, setBy)
 	}
 	if got := actorOfLastAudit(t, d, "user", user); got != "agent" {

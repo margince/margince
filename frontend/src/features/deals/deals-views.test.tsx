@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -15,6 +16,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { SEARCH_DEBOUNCE_MS } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
+import { showLayout } from "../../testing/listquery.testkit";
+import { openView, toggleArchived } from "../../testing/listview.testkit";
 import { DealsScreen } from "./deals";
 
 // What narrowed the pipeline has to be readable ON the surface that is
@@ -189,7 +192,7 @@ describe("a saved view over the deals board", () => {
       }),
     );
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
     await user.click(await screen.findByRole("button", { name: VIEW_NAME }));
     await waitFor(() =>
       expect(viewTab(VIEW_NAME).getAttribute("aria-pressed")).toBe("true"),
@@ -200,20 +203,20 @@ describe("a saved view over the deals board", () => {
   it("keeps the view's tab on the rail, and lit, on the board and back", async () => {
     const user = await pickOnTable();
 
-    await user.click(screen.getByRole("button", { name: "Board" }));
+    await showLayout(user, "Board");
     expect(viewTab(VIEW_NAME).getAttribute("aria-pressed")).toBe("true");
     // The rail is the whole rail: the screen's own preset stands beside the
     // reader's view, unlit, so switching between them is one press either way.
     expect(viewTab("All").getAttribute("aria-pressed")).toBe("false");
 
-    await user.click(screen.getByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
     expect(viewTab(VIEW_NAME).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("shows the filter that narrowed the board, and clears it from there", async () => {
     const dealUrls: string[] = [];
     const user = await pickOnTable(dealUrls);
-    await user.click(screen.getByRole("button", { name: "Board" }));
+    await showLayout(user, "Board");
 
     // The filter reads as a row of its own — the attribute and the value the
     // reader is looking at — rather than as a set of deals with no explanation.
@@ -270,19 +273,20 @@ describe("a saved view over the deals board", () => {
     render(<DealsScreen />);
 
     // The head sums the column counts, and the report measures every column.
-    expect(await screen.findAllByText("7 deals")).toHaveLength(2);
+    expect(await screen.findByText("7 deals in Sales")).toBeInTheDocument();
+    expect(screen.getByText("7 deals")).toBeInTheDocument();
     expect(screen.getByText("€7,000")).toBeTruthy();
 
     // Archived deals are reachable from the board, not only from the table: a
     // deal archived by mistake could otherwise only be restored by leaving.
-    const archived = screen.getByRole("checkbox", { name: "Show archived" });
-    await user.click(archived);
+    await toggleArchived(user);
     await waitFor(() =>
       expect(dealUrls.at(-1)?.includes("include_archived=true")).toBe(true),
     );
     expect(screen.queryByText("€7,000")).toBeNull();
-    expect(screen.queryByText("7 deals")).toBeNull();
-    expect(await screen.findAllByText("2 deals")).toHaveLength(2);
+    expect(screen.queryByText(/^7 deals/)).toBeNull();
+    expect(await screen.findByText("2 deals in Sales")).toBeInTheDocument();
+    expect(screen.getByText("2 deals")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Loaded deals only. Totals are unavailable while archived deals are included.",
@@ -296,24 +300,25 @@ describe("a saved view over the deals board", () => {
     vi.stubGlobal("fetch", stubBackend({ deals: [deal({})] }));
     render(<DealsScreen />);
 
-    expect(await screen.findAllByText("1 deal")).toHaveLength(2);
-    expect(screen.queryByText("1 deals")).toBeNull();
+    expect(await screen.findByText("1 deal in Sales")).toBeInTheDocument();
+    expect(screen.getByText("1 deal")).toBeInTheDocument();
+    expect(screen.queryByText(/1 deals/)).toBeNull();
   });
 
-  // The Display menu's dials describe COLUMNS and ROW HEIGHT, and the board
-  // draws neither. Offered there they are controls a reader can press twice and
-  // see nothing happen, which reads as broken rather than as absent — and the
-  // surface the board replaced never mounted them.
+  // Columns and Compact change only the grid, so on the board they would do nothing.
   it("offers no display dial on the board, and one on the table", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", stubBackend({ deals: [deal({})] }));
     render(<DealsScreen />);
-    await screen.findByRole("button", { name: "Board" });
+    await screen.findByText("Fleet retrofit");
+    const panel = await openView(user);
 
-    expect(screen.queryByRole("button", { name: "Display" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Compact" })).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Table" }));
-    expect(await screen.findByRole("button", { name: "Display" })).toBeTruthy();
+    await user.click(within(panel).getByRole("button", { name: "Table" }));
+    expect(
+      await within(panel).findByRole("button", { name: "Compact" }),
+    ).toBeInTheDocument();
   });
 });
 

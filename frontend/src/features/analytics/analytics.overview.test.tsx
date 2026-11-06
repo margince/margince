@@ -104,11 +104,12 @@ describe("Sales review", () => {
     const hero = within(
       screen.getByRole("region", { name: "Opening readings" }),
     );
-    expect(hero.getByText("420,000 EUR")).toBeVisible();
-    expect(strip.getByText("420,000 EUR")).toBeVisible();
-    expect(strip.getByText("760,000 EUR")).toBeVisible();
-    // The shortfall stands beside target progress, not as a reading.
-    expect(hero.getByText("Projected shortfall 40,000 EUR")).toBeVisible();
+    expect(hero.getByText("€420,000")).toBeVisible();
+    expect(strip.getByText("€420,000")).toBeVisible();
+    expect(strip.getByText("€760,000")).toBeVisible();
+    // The shortfall stands under the projection, short, as a warning.
+    expect(hero.getByText("€40k short of target")).toBeVisible();
+    expect(hero.getByText("of €800,000 target")).toBeVisible();
     expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
 
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
@@ -362,6 +363,6 @@ describe("Sales review gap", () => {
       hero.queryByText("The comparison came back without a gap."),
     ).toBeNull();
     expect(hero.queryByText(/Projected/)).toBeNull();
-    expect(strip.queryByText("0 EUR")).toBeNull();
+    expect(strip.queryByText("€0")).toBeNull();
   });
 });

@@ -235,49 +235,50 @@ export function WaitingOnOthers({
   );
   const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
   return (
-    <Panel title={t("analytics.sdrWaiting")}>
+    <Panel title={t("analytics.sdrWaiting")} flatHead>
       <PanelBody>
         <PanelIntro>{t("analytics.sdrWaitingIntro")}</PanelIntro>
-        <StatStrip>
-          <StatCard
-            narrow="row"
-            label={t("analytics.sdrWaitingCount")}
-            value={formatNumber(totals.waiting, locale)}
-            detail={
-              totals.oldest_waiting_since
-                ? t("analytics.sdrLongestWait", {
-                    age: formatDuration(
-                      asOf - Date.parse(totals.oldest_waiting_since),
-                      locale,
-                    ),
-                  })
-                : undefined
-            }
-          />
-          <StatCard
-            narrow="row"
-            label={t("analytics.sdrBlocked")}
-            value={formatNumber(totals.blocked, locale)}
-            tone={totals.blocked > 0 ? "warning" : undefined}
-            detail={
-              totals.blocked > 0 ? t("analytics.sdrBlockedDetail") : undefined
-            }
-          />
-          <StatCard
-            narrow="row"
-            label={t("analytics.sdrQueued")}
-            value={formatNumber(totals.unassigned, locale)}
-          />
-          <StatCard
-            narrow="row"
-            label={t("analytics.sdrReturned")}
-            value={formatNumber(totals.returned, locale)}
-            detail={
-              totals.returned > 0 ? t("analytics.sdrReturnedDetail") : undefined
-            }
-          />
-        </StatStrip>
       </PanelBody>
+      {/* The plate runs edge to edge under the intro, outside the body's inset. */}
+      <StatStrip density="plate">
+        <StatCard
+          narrow="row"
+          label={t("analytics.sdrWaitingCount")}
+          value={formatNumber(totals.waiting, locale)}
+          detail={
+            totals.oldest_waiting_since
+              ? t("analytics.sdrLongestWait", {
+                  age: formatDuration(
+                    asOf - Date.parse(totals.oldest_waiting_since),
+                    locale,
+                  ),
+                })
+              : undefined
+          }
+        />
+        <StatCard
+          narrow="row"
+          label={t("analytics.sdrBlocked")}
+          value={formatNumber(totals.blocked, locale)}
+          tone={totals.blocked > 0 ? "warning" : undefined}
+          detail={
+            totals.blocked > 0 ? t("analytics.sdrBlockedDetail") : undefined
+          }
+        />
+        <StatCard
+          narrow="row"
+          label={t("analytics.sdrQueued")}
+          value={formatNumber(totals.unassigned, locale)}
+        />
+        <StatCard
+          narrow="row"
+          label={t("analytics.sdrReturned")}
+          value={formatNumber(totals.returned, locale)}
+          detail={
+            totals.returned > 0 ? t("analytics.sdrReturnedDetail") : undefined
+          }
+        />
+      </StatStrip>
       {totals.waiting > 0 && (
         <QueryGate query={rows} pendingLabel={t("analytics.sdrWaiting")}>
           {() => (

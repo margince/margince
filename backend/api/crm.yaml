@@ -2540,7 +2540,7 @@ paths:
       tags: [Contacts, AI]
       operationId: draftIntroNote
       x-waits-on-model: always
-      x-mcp-tool: { verb: draft_intro_note, router: change_relationships, action: draft_intro_note, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: draft_intro_note, router: run_research, action: draft_intro_note, tier: auto_execute, scope: enrich, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Draft the forwardable note a colleague can paste into their own introduction.
       description: |
@@ -3957,7 +3957,7 @@ paths:
       tags: [Companies, AI]
       operationId: draftIntroRequest
       x-waits-on-model: always
-      x-mcp-tool: { verb: draft_intro_request, router: change_relationships, action: draft_intro_request, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: draft_intro_request, router: run_research, action: draft_intro_request, tier: auto_execute, scope: enrich, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Draft the message asking a colleague to introduce you.
       description: |
@@ -4858,9 +4858,10 @@ paths:
         set here — ADR-0079 replaced it, because what a company IS to us is multi-valued.)
         Company identity is never duplicated. Admin write.
 
-        An agent asks its user first, and is refused `margin_tier` (422) for the reason
+        An agent asks its user first, and is refused `margin_tier` (403) for the reason
         `decideCommissionEntry` is human-only: it is the rate the commission ledger multiplies a
-        won deal by, so it sets what a partner is paid on every future deal.
+        won deal by, so it sets what a partner is paid on every future deal. An agent changes the
+        terms of a live partner only (403 otherwise): `setUpPartner` is how it proposes a new one.
       parameters:
         - $ref: '#/components/parameters/IfMatch'   # partner is versioned (data-model §4.3) — optimistic concurrency on update
       requestBody:
@@ -4874,6 +4875,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Partner' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
     get:
@@ -10146,6 +10148,8 @@ paths:
           description: |
             `code: version_skew` — the draft is not at the version you last read: another
             composer saved or discarded it, or one exists and you sent no `If-Match`.
+            `code: own_draft_waiting` — an agent's save, where the user keeps a draft of their
+            own here; the agent leaves it to them.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -10169,6 +10173,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/send-message:
@@ -11736,7 +11741,6 @@ paths:
       operationId: previewAutomation
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: preview_automation, router: read_details, action: automation_preview, tier: auto_execute, scope: read, served_by: route }
-      x-settings-audience: member
       summary: Dry-run an automation's blast radius, writing nothing, sending nothing and staging no approval.
       description: |
         Powers the designer's live dry-run (ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
@@ -11829,8 +11833,9 @@ paths:
           synthesizes its trigger id per evaluation pass and never stages it, so those are
           unreplayable by construction. Nothing is lost: the schedule re-examines the same
           condition on its own next pass.
-        - `passport_revoked` — the agent that set the rule up lost its passport, so the rule
-          is paused. A user resuming it makes it their own.
+        - `passport_revoked` — the agent that set the rule up no longer has a live passport or
+          connection, whether revoked or expired, so the rule is paused. A user resuming it makes
+          it their own. The audit row of the pause says which it was.
 
         A retry is a NEW firing with its own run record, so the history shows both the
         failure and what followed it. Retrying a run whose retry also failed is allowed and
@@ -14887,8 +14892,9 @@ paths:
       tags:
       - Reports
       operationId: previewReportingReportAsRole
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: preview_reporting_report_as_role, router: read_reports, action: reader_preview, tier: auto_execute, scope: read, served_by: route }
+      security: [ { cookieAuth: [] } ]   # human session only: an agent reads a report under its own user's grants
+      x-agent-access: human-only
+      x-human-only-reason: covered
       summary: Evaluate a saved report as a seat holding one role would see it.
       description: |
         The report evaluated under the caller's own permissions narrowed to the role's: an
@@ -17452,8 +17458,9 @@ paths:
         Uses the acting human's resumable onboarding state as the conversation and AI-run scope.
         The response may answer, clarify, or propose typed draft changes, but it never writes
         company truth. Off-topic input is redirected to the next unresolved company question.
-      x-mcp-tool: { verb: message_onboarding_company, router: change_settings, action: ask_company_setup, tier: auto_execute, scope: write, served_by: route }
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      security: [ { cookieAuth: [] } ]   # human session only: the setup conversation is its user's own, with its own model
+      x-agent-access: human-only
+      x-human-only-reason: security
       requestBody:
         required: true
         content:
@@ -18208,7 +18215,7 @@ paths:
       operationId: messageAnchorCompanySiteRead
       x-waits-on-model: always
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: message_anchor_company_site_read, router: change_settings, action: ask_site_read, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: message_anchor_company_site_read, router: run_research, action: ask_site_read, tier: auto_execute, scope: enrich, served_by: route }
       summary: Ask Margince about a website read and receive reviewable company-field suggestions.
       description: |
         Answers only from the selected dossier's grounded findings. Suggested changes are returned
@@ -18480,13 +18487,14 @@ paths:
       summary: Lift an exclusion.
       description: |
         A workspace rule by admin or ops; a user rule by the user it names. Mail from the address or
-        domain is captured again from the next message on; nothing already dropped comes back.
+        domain is captured again from the next message on; nothing already dropped comes back. An
+        agent lifts only a rule an agent added, and a user's rule answers `409`.
       x-mcp-tool: { verb: lift_capture_exclusion, router: change_capture, action: lift_exclusion, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-settings-audience: member
       responses:
         '204': { description: Lifted. }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -18850,12 +18858,14 @@ paths:
         Lifting widens NOTHING already captured. Mail held while the hold stood was held for a
         reason that was true at the time, and re-opening a year of correspondence as a side effect
         of tidying a list is not something anybody asked for. New mail from that party is captured
-        under the mailbox's ordinary posture again.
+        under the mailbox's ordinary posture again. An agent lifts only a hold an agent added, and a
+        user's hold answers `409`.
       x-mcp-tool: { verb: lift_counterparty_hold, router: change_capture, action: lift_counterparty_hold, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       responses:
         '204': { description: Lifted. }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -21308,7 +21318,6 @@ paths:
       operationId: addConsumerMailDomain
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: add_consumer_mail_domain, router: change_capture, action: add_consumer_mail_domain, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      x-settings-audience: member
       summary: Add a consumer-mail domain, or carve one out.
       description: |
         It changes a workspace-wide capture posture, so an agent asks its user first. `kind:
@@ -23326,7 +23335,7 @@ paths:
       tags: [Compliance]
       operationId: createDataSubjectRequest
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: open_data_subject_request, router: change_compliance, action: open_data_subject_request, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: open_data_subject_request, router: change_compliance, action: open_data_subject_request, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       summary: Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
       description: |
         The server computes the deadline from `received_at` under the installation's
@@ -23947,7 +23956,7 @@ paths:
       tags: [Compliance]
       operationId: resolveConfirmSubmission
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: resolve_confirm_submission, router: change_compliance, action: resolve_confirm_submission, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: resolve_confirm_submission, router: change_compliance, action: resolve_confirm_submission, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       summary: Accept or decline what a subject proposed.
       description: |
         Records the decision, and for an ACCEPTED correction writes the proposed value onto the
@@ -24980,7 +24989,7 @@ paths:
       tags: [Compliance]
       operationId: pinActivityToFloor
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: pin_activity_to_floor, router: change_compliance, action: pin_activity_to_floor, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: pin_activity_to_floor, router: change_compliance, action: pin_activity_to_floor, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       # The other direction: a Handelsbrief the derivation did not recognise.
       # Pinning restricts it for the statutory window from the floor in force.
       summary: Pin an activity to the retention floor, restricting it. Requires a stated reason; audited.
@@ -25043,7 +25052,7 @@ paths:
       tags: [Compliance]
       operationId: placeLegalHold
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: place_legal_hold, router: change_compliance, action: place_legal_hold, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: place_legal_hold, router: change_compliance, action: place_legal_hold, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       # A hold overrides the storage-limitation ladder for records litigation or an
       # investigation may need. Placing one only keeps data, so an agent may; lifting
       # one stays with the user. The reason is what makes it a decision and is
@@ -25277,7 +25286,7 @@ paths:
       # The verb records that a contact asked us to stop, which is a thing somebody
       # was told. An agent records it when its user says so, or when the contact's
       # own words say so, never from its reading of their mood; the tool copy says.
-      x-mcp-tool: { verb: suppress_contact, router: change_compliance, action: suppress_contact, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: suppress_contact, router: change_compliance, action: suppress_contact, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       summary: Record that this contact asked us to stop writing to them.
       description: |
         Writes a suppression, which is NOT the absence of consent. It outranks a grant, it does
@@ -26918,7 +26927,7 @@ paths:
         owner. For a member who left, the contacts and companies only they can see move too and
         stay private, now to the new owner; an active member keeps theirs. A record the caller may not change stays with the member and is counted
         in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
-        owner (an active human seat that can write, inside the caller's write scope), else `422`
+        owner (an active human seat that can write), else `422`
         with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
         caller may not change stays with the member. Automations and deal-room stewardships are not moved.
       x-mcp-tool: { verb: hand_over_user_work, router: change_access, action: hand_over_work, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
@@ -28530,13 +28539,12 @@ paths:
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Edit a Deal Room's title and welcome message (partial).
       description: |
-        Edits the WORKING copy only. A live room keeps serving its last published
-        release until a human publishes again, so changing the title or welcome text
-        here never changes what a buyer is currently reading.
+        The buyer reads the new title and welcome text as soon as they are saved, so an
+        agent spends `send` on it.
 
         `state` is not editable — it moves through the lifecycle operations
-        (publish/pause/resume/close).
-      x-mcp-tool: { verb: update_deal_room, router: change_offers, action: update_room, tier: auto_execute, scope: write, served_by: route }
+        (pause/resume/close).
+      x-mcp-tool: { verb: update_deal_room, router: send_outbound, action: update_room, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -28616,7 +28624,7 @@ paths:
         Returns a `paused` room to `live` on its existing release — no republish, and
         every credential that worked before works again. 409 `deal_room_not_paused`
         from any other state.
-      x-mcp-tool: { verb: resume_deal_room, router: change_offers, action: resume_room, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: resume_deal_room, router: send_outbound, action: resume_room, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       responses:
         '200':
           description: The resumed Deal Room.
@@ -28669,8 +28677,9 @@ paths:
       description: |
         Null clears the bound, leaving access open until the room is closed or
         archived. A past instant is accepted and takes effect immediately — that is
-        how access is cut short without ending the room.
-      x-mcp-tool: { verb: set_deal_room_expiry, router: change_offers, action: set_room_expiry, tier: auto_execute, scope: write, served_by: route }
+        how access is cut short without ending the room. It decides how long a buyer can
+        read the room, so an agent spends `send` on it.
+      x-mcp-tool: { verb: set_deal_room_expiry, router: send_outbound, action: set_room_expiry, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -28961,9 +28970,9 @@ paths:
       description: |
         The attachment must be filed on THIS room's deal (`entity_type: deal`, the
         room's `deal_id`); any other id is 404. The attachment row is the exact
-        version the buyer will be shown. Editorial: the buyer sees it at the next
-        publish. Refused once the room can no longer reach a buyer.
-      x-mcp-tool: { verb: add_deal_room_document, router: change_offers, action: add_room_document, tier: auto_execute, scope: write, served_by: route }
+        version the buyer will be shown. The buyer sees it at once, so an agent spends
+        `send` on it. Refused once the room can no longer reach a buyer.
+      x-mcp-tool: { verb: add_deal_room_document, router: send_outbound, action: add_room_document, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       requestBody:
         required: true
         content:
@@ -28993,8 +29002,8 @@ paths:
       operationId: updateDealRoomDocument
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Rename, regroup or reorder a room document.
-      description: Editorial, like adding one — the buyer sees the change at the next publish.
-      x-mcp-tool: { verb: update_deal_room_document, router: change_offers, action: update_room_document, tier: auto_execute, scope: write, served_by: route }
+      description: The buyer reads the change at once, like adding one, so an agent spends `send` on it.
+      x-mcp-tool: { verb: update_deal_room_document, router: send_outbound, action: update_room_document, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -29020,9 +29029,8 @@ paths:
       summary: Take a document out of the room.
       description: |
         Marks the entry removed; the attachment itself is untouched. The buyer stops
-        seeing it at the next publish — a release already published keeps naming it,
-        because that release is what they were shown.
-      x-mcp-tool: { verb: remove_deal_room_document, router: change_offers, action: remove_room_document, tier: auto_execute, scope: write, served_by: route }
+        seeing it at once, so an agent spends `send` on it.
+      x-mcp-tool: { verb: remove_deal_room_document, router: send_outbound, action: remove_room_document, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       responses:
@@ -29066,10 +29074,11 @@ paths:
       operationId: openDealRoomThread
       summary: Open a thread as the seller's side — a question on a document, or a room-level update.
       description: |
-        The first comment is the body. Refused once the room can no longer reach a
+        The first comment is the body. The buyer reads it at once, so an agent spends
+        `send` on it. Refused once the room can no longer reach a
         buyer (closed, expired, archived): `409 deal_room_content_not_editable`. A
         document thread is pinned to the document's current version.
-      x-mcp-tool: { verb: create_record, record_type: deal_room_thread, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: open_deal_room_thread, router: send_outbound, action: open_room_thread, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       requestBody:
         required: true
         content:
@@ -29099,10 +29108,10 @@ paths:
       operationId: replyDealRoomThread
       summary: Reply in a thread as the seller's side.
       description: |
-        Refused on a resolved thread (`409 deal_room_thread_resolved`: open a new
-        thread instead) and in a room that can no longer reach a buyer
+        The buyer reads it at once, so an agent spends `send` on it. Refused on a resolved
+        thread (`409 deal_room_thread_resolved`: open a new thread instead) and in a room that can no longer reach a buyer
         (`409 deal_room_content_not_editable`).
-      x-mcp-tool: { verb: create_record, record_type: deal_room_comment, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: reply_deal_room_thread, router: send_outbound, action: reply_room_thread, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       requestBody:
         required: true
         content:
@@ -29676,7 +29685,7 @@ paths:
         `diff_from_previous` line-item summary versus the prior revision; a mechanical
         regenerate (no AI context available) still works and returns `ai_generated=false`. The
         produced draft's terms are not frozen until the send gate.
-      x-mcp-tool: { verb: regenerate_offer, router: change_offers, action: regenerate_offer, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: regenerate_offer, router: run_research, action: regenerate_offer, tier: auto_execute, scope: enrich, served_by: route }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
@@ -32733,7 +32742,7 @@ paths:
       tags: [Deals, AI]
       operationId: proposeDealRoles
       x-waits-on-model: always
-      x-mcp-tool: { verb: propose_deal_roles, router: change_state, action: propose_deal_roles, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: propose_deal_roles, router: run_research, action: propose_deal_roles, tier: auto_execute, scope: enrich, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Read the buying roles out of what this deal's contacts have written.
       description: |
@@ -36851,6 +36860,12 @@ components:
             Accept a client ID that is the URL of the tool's published metadata document (CIMD).
             Off stops new sign-ins through such a client; connections already made keep renewing.
             Needs `agent_client` update. The deployment file can hold it off.
+        mcp_client_check:
+          type: boolean
+          description: |
+            Offer the `check_client` tool to admins' AI tools, so an admin can test which tools
+            answer a form. Off by default; off, no one sees the tool. Needs `agent_client`
+            update. Read as `client_check` on `GET /installation/agent-clients`.
         oidc_group_role_map:
           type: object
           maxProperties: 64
@@ -40014,9 +40029,10 @@ components:
       description: |
         Whether a connect started right now would proceed, decided by the same predicate the connect
         endpoint itself uses so the two cannot disagree. Reported for the mail providers a contact can
-        choose between (gmail, graph, imap). The paired calendar connectors (gcal, graphcal) are absent:
-        each is its own grant, asked for after its mail provider's (`ConnectConnectorRequest.also_connect`)
-        or connected directly, on the same vendor OAuth app as its mail provider.
+        choose between (gmail, graph, imap). The paired calendar connectors (gcal, graphcal) are absent.
+        Each joins its mail provider's connect (`ConnectConnectorRequest.also_connect`) or is connected
+        directly, on the same vendor OAuth app as its mail provider. `gcal` shares the Gmail consent
+        screen; `graphcal` gets its own consent after `graph`.
       required: [provider, reason]
       properties:
         provider: { type: string, enum: [gmail, graph, imap], description: The mail provider a seat picks between. }
@@ -40077,13 +40093,14 @@ components:
           type: string
           enum: [gcal, graphcal]
           description: |
-            The paired calendar to ask for straight after this mail grant, in one round trip:
-            the mail callback stores its grant, then redirects to the calendar's own consent
-            instead of landing, and the landing names the calendar's outcome. Only `gcal` after
-            `gmail` and `graphcal` after `graph`; any other pairing is refused with
-            `422 also_connect_mismatch`. The calendar must be connectable right now, or the
-            request answers exactly as a direct connect to it would. A declined or failed
-            calendar consent leaves the mail grant in place.
+            The paired calendar to connect with this mail grant, in one round trip, and the
+            landing names the calendar's outcome. `gcal` joins the Gmail consent screen: the
+            one grant connects both, and a calendar the user unticks there lands as declined.
+            `graphcal` gets its own consent straight after the `graph` callback stores its
+            grant. Only `gcal` after `gmail` and `graphcal` after `graph`; any other pairing is
+            refused with `422 also_connect_mismatch`. The calendar must be connectable right
+            now, or the request answers exactly as a direct connect to it would. A declined or
+            failed calendar leaves the mail grant in place.
         import_window:
           type: string
           enum: [3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m]
@@ -55226,6 +55243,32 @@ components:
         html_body:
           type: [string, 'null']
           description: The editor's markup beside the plain body, so reopening restores the formatting.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uuid }
+          description: |
+            The files the rep chose, by the ids `/attachments` gave them. A save replaces the
+            whole draft, so omitting this clears the files; a client keeps them by sending back
+            the `id` of each entry in the draft's `attachments`.
+
+            Held to the send's own cap. A file the caller cannot see, or one the send would
+            refuse, is left out rather than refused, so a save never loses the words; the answer
+            counts it in `attachments_unavailable`.
+        communication_context:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+          description: |
+            The reason for contact the rep chose, checked as the send checks it: a category
+            reserved for the installation's own notices is refused 422. Omit it for none.
+        scheduled_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            The moment the rep picked to send at, checked as the send checks it: with
+            `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
+        scheduled_tz:
+          type: [string, 'null']
+          description: The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
 
     MailDraft:
       type: object
@@ -55258,6 +55301,32 @@ components:
             An agent wrote these words for the author through `draft_email`, and the author has
             not saved over them yet. The screen says so before the message is sent. A save from
             the composer clears it.
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/ApprovalPreviewFile' }
+          description: |
+            The chosen files the author can still attach, in the order chosen, so the composer
+            draws each one without asking again. Resolved only by the draft read and the save
+            answer: absent elsewhere, so its absence there does not mean the draft has no files.
+        attachments_unavailable:
+          type: integer
+          minimum: 1
+          description: |
+            How many chosen files the send would now refuse: removed, out of the author's sight,
+            kept without bytes, or empty. Not named, because a file the author cannot see answers
+            404 everywhere else. Absent when every file resolves.
+        communication_context:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+          description: The reason for contact the author chose. Absent when none was.
+        scheduled_at:
+          type: string
+          format: date-time
+          description: |
+            The moment the author picked to send at, as saved. It may have passed since; the
+            draft schedules nothing. Absent when none was picked.
+        scheduled_tz:
+          type: string
+          description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
@@ -60060,7 +60129,14 @@ components:
           type: boolean
           description: >
             Whether the user chose `timezone` themselves, rather than the app storing the
-            browser's guess. Present on the caller's own seat; absent on the roster.
+            browser's guess or an agent setting it. Present on the caller's own seat; absent on the
+            roster.
+        timezone_set_by:
+          type: string
+          description: >
+            The agent that set `timezone` for this user, as its `captured_by` stamp. Present on the
+            caller's own seat while the zone is the agent's; absent once the user chooses, and on the
+            roster.
         locale:
           type: string
           enum: [en, de, vi]
@@ -60095,19 +60171,22 @@ components:
         assignable:
           type: boolean
           description: >
-            Whether the CALLER may make this member the owner of a record right now: the same
-            check an owner change runs (an active human seat that can write, inside the caller's
-            own write scope), so a picker built on it offers only owners the write will accept.
+            Whether the CALLER may name this member as an owner an automation runs as: an active
+            human seat that can write, inside the caller's own write scope. An automation's owner
+            picker is built on it. A record's owner picker reads `can_own_records` instead.
             Present on `listUsers`; absent means not computed, and a client then offers the
             member and lets the write decide. A deactivated member is listed with `false` on the
             management view, so a list can still be filtered by the work they left behind.
         can_own_records:
           type: boolean
           description: >
-            Whether this member's seat may own records at all: an active human seat that can
-            write, asked without the caller's own write scope. A website form's owner of new
-            leads is checked this way, because the installation writes those leads, so its
-            picker offers these members. Present on `listUsers`; absent means not computed.
+            Whether this member's seat may own records: an active human seat that can write. The
+            answer is the same for every caller. A record's owner change asks this of the new
+            owner. It also needs the caller to be allowed to change the record, unless the record
+            has no owner and the caller is a human. Every record owner picker and a website form's
+            owner of new leads read it. A form's new leads may also go to an invited colleague,
+            so its picker offers fewer members than its write accepts. Present on `listUsers`;
+            absent means not computed.
         roles:
           type: array
           items: { type: string }
@@ -61608,9 +61687,15 @@ components:
       description: >-
         The classified difference between two snapshots. opening_minor plus every bucket
         equals closing_minor, exactly.
-      required: [reading, opening_minor, closing_minor, buckets, deals]
+      required: [reading, base_currency, opening_minor, closing_minor, buckets, deals]
       properties:
         reading: { type: string, enum: [open, weighted, evidence, qualified_evidence, qualified_weighted] }
+        base_currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: >-
+            The currency every amount here is in: the base currency both snapshots
+            converted to.
         opening_minor: { type: integer, format: int64 }
         closing_minor: { type: integer, format: int64 }
         buckets:
@@ -67790,11 +67875,16 @@ components:
         metadata_document: { $ref: '#/components/schemas/AgentClientMethod' }
     AgentClientListResponse:
       type: object
-      required: [data, page, registration]
+      required: [data, page, registration, client_check]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/AgentClient' } }
         page: { $ref: '#/components/schemas/PageInfo' }
         registration: { $ref: '#/components/schemas/AgentClientRegistration' }
+        client_check:
+          type: boolean
+          description: |
+            Whether admins' AI tools are offered the `check_client` tool. Change it with
+            `mcp_client_check` on `PATCH /installation/settings`.
     RegisterAgentClientRequest:
       type: object
       additionalProperties: false
@@ -68788,8 +68878,16 @@ components:
           description: >-
             Why a rule paused itself: the list it watches or adds to was archived, its filter stopped
             working, its owner can no longer find it, one check moved more than 100 records, or the
-            passport of the agent that set the rule up was revoked. Null for a rule running or paused
-            by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
+            agent that set the rule up no longer has a live passport or connection, whether revoked or
+            expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming
+            or editing a rule makes it their own.
+        setter_passport_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The passport of the agent that turned this rule on, which the rule stops with. Null for a
+            rule a user runs. It names the credential and grants nothing: `captured_by` shows the same id
+            on what an agent writes.
         params: { type: object, additionalProperties: true }
         version: { type: integer }
         created_at: { type: string, format: date-time }
@@ -68917,7 +69015,8 @@ components:
             means nobody has established that running this handler twice is safe.
             `trigger_event_unavailable` means the event cannot be rebuilt, which is
             permanent for a scheduled firing rather than a condition that clears.
-            `passport_revoked` means the rule stopped with the passport that set it up.
+            `passport_revoked` means the rule stopped with the agent that set it up, whose passport
+            or connection was revoked or expired.
 
     # ---- Voice DNA ----
     VoiceProfile:
@@ -69889,7 +69988,7 @@ components:
         required_change:
           type: boolean
           description: Only with a document. Marks the thread as one the seller still owes an answer on.
-        source: { type: string, description: 'Provenance. Required on the seller edge; a buyer''s comment always carries the credential''s own value. `manual` for someone writing through this product.' }
+        source: { type: string, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.' }
         request_id:
           type: string
           format: uuid
@@ -69912,7 +70011,7 @@ components:
       required: [body]
       properties:
         body: { type: string, minLength: 1 }
-        source: { type: string }
+        source: { type: string, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.' }
         request_id:
           type: string
           format: uuid
@@ -70364,11 +70463,11 @@ components:
         recorded_by_colleague:
           type: boolean
           description: |
-            A colleague recorded the stop. False when the contact recorded it on a link in a mail or
-            Margince recorded it, for example for a bounce.
+            A colleague recorded the stop, by hand or through their agent. False when the contact recorded
+            it on a link in a mail or Margince recorded it, for example for a bounce.
         recorded_by_name:
           type: [string, 'null']
-          description: The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+          description: The colleague's current name, the user an agent acted for included. Null when no colleague recorded it, or their seat is gone.
         may_lift:
           type: boolean
           description: This caller may take the stop back now, with a reason.

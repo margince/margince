@@ -1418,6 +1418,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.industry": "Branche",
   "reporting.allIndustries": "Alle Branchen",
   "reporting.valueBasis": "Wertbasis",
+  "reporting.filtersMore": "Filter",
+  "reporting.filtersActive": "Filter · {active}",
   "reporting.basis.all": "Gesamter Wert",
   "reporting.basis.software": "Nur Software",
   "reporting.basis.implementation": "Nur Umsetzung",
@@ -2380,6 +2382,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.domain_triage": "Vorprüfung von Websites",
   "systemJob.employment_import_worker": "Import des Werdegangs",
   "systemJob.enabled_oidc_providers_read": "Lesen der Anmeldeanbieter",
+  "systemJob.client_check_read": "Lesen des Schalters für die KI-Tool-Prüfung",
   "systemJob.client_registration_read": "Lesen der Registrierung von KI-Tools",
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
@@ -3405,6 +3408,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.headActions": "Weitere Aktionen",
   "list.search": "Suchen",
   "list.showArchived": "Archivierte anzeigen",
+  "list.viewToggleOn": "An",
+  "list.viewToggleOff": "Aus",
+  "list.viewMenu": "Ansicht",
+  "list.viewMenuBack": "zurück zu den Ansichtsoptionen",
+  "list.viewMenuChanged": "geändert",
+  "list.viewMenuFilters_one": "{count} Filter",
+  "list.viewMenuFilters_other": "{count} Filter",
+  "list.viewMenuNone": "Keine",
   "list.loadMore": "Mehr laden",
   "scrollSentinel.loading": "Mehr wird geladen…",
   "scrollSentinel.failed": "Weitere Einträge konnten nicht geladen werden.",
@@ -3422,15 +3433,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.rowsPerPage": "Zeilen pro Seite",
   "table.perPage": "{count} pro Seite",
   "table.sortedBy": "sortiert nach {column}",
-  "table.shownColumns": "Sichtbare Spalten",
-  "table.display": "Darstellung",
-  "table.density": "Dichte",
   "table.compact": "Kompakt",
+  "table.filters": "Filter",
+  "table.columns": "Spalten",
+  "table.columnsShown": "{shown} von {total}",
+  "table.sortValue": "{column}, {direction}",
   "table.columnHandle": "{name} verschieben, {position} von {total}",
   "table.columnMoved": "{name} auf {position} von {total} verschoben",
   "table.sort": "Sortieren",
-  "table.sortNamed": "Sortierung: {column}",
-  "table.sortMenu": "Sortieren nach",
   "table.sortDefault": "Standardreihenfolge",
   "table.sortAscending": "aufsteigend",
   "table.sortDescending": "absteigend",
@@ -3440,6 +3450,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
   "table.rangeLoaded": "Geladene {unit} {first} bis {last} von {count}",
+  "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "Kontakte",
   "unit.companies": "Unternehmen",
   "unit.deals": "Deals",
@@ -3448,9 +3459,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "unit.partners": "Partner",
   "unit.products": "Produkte",
   "unit.offerTemplates": "Angebotsvorlagen",
-  "table.filter": "Filter",
   "table.filterSearch": "Attribute durchsuchen",
-  "table.addFilter": "Filter hinzufügen",
   "table.filterIs": "ist",
   "table.filterCondition": "Bedingung",
   "table.filterMore": "Weitere Aktionen für den Filter {filter}",
@@ -3460,7 +3469,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.filterSearching": "Wird gesucht…",
   "table.filterSearchFailed": "Suche fehlgeschlagen. Bitte versuche es erneut.",
   "table.filterNoMatches": "Keine Treffer.",
-  "table.filterBack": "Zurück zu allen Filtern",
+  "table.filterBack": "zurück zu allen Filtern",
 
   "contacts.name": "Name",
   "contacts.email": "E-Mail",
@@ -3482,6 +3491,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.saveTitle": "Diese Ansicht speichern",
   "views.name": "Name",
   "views.rail": "Gespeicherte Ansichten",
+  "views.loadFailed":
+    "Die gespeicherten Ansichten konnten nicht geladen werden.",
   "views.manage": "Ansichten verwalten",
   "views.none": "Keine gespeicherten Ansichten",
   "views.rename": "Umbenennen",
@@ -6153,6 +6164,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.correctCloseDayConfirm": "Abschlusstag speichern",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "Deal in {pipeline}: {count}",
+  "deals.countInPipeline_other": "Deals in {pipeline}: {count}",
   "deals.filterStalled": "Nur stockende",
   "deals.totalsOwnerNotMeasurable":
     "Nur geladene Deals. Nur Admins können dir erlauben, die Summen dieser verantwortlichen Person auszuwerten.",
@@ -7386,7 +7399,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftGoneBody":
     "Der Entwurf wurde dort gesendet oder gelöscht. Beim Speichern bleibt der Text auf dem Bildschirm als neuer Entwurf erhalten.",
   "compose.savedDraftFailed":
-    "Der Entwurf konnte nicht gespeichert werden. Speichere den Entwurf erneut oder schließe den Dialog noch einmal, um den Text zu verwerfen.",
+    "Der Entwurf wurde nicht gespeichert. Wähle „Erneut versuchen“ oder schließe noch einmal, um den Text zu verwerfen.",
+  "compose.savedDraftAutosaveFailed":
+    "Das Speichern des Entwurfs wurde nicht abgeschlossen. Es wird erneut versucht, sobald du weiterschreibst oder wieder online bist.",
+  "compose.savedDraftAutosaveRefused":
+    "Der Entwurf wurde nicht gespeichert. Wähle „Erneut versuchen“ oder schreibe weiter, um es erneut zu versuchen.",
+  "compose.savedDraftFilesUnavailable_one":
+    "{count} Datei konnte nicht wiederhergestellt werden.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} Dateien konnten nicht wiederhergestellt werden.",
+  "compose.sendWaitsForAddress":
+    "Korrigiere oder entferne den Text, der keine E-Mail-Adresse ist.",
+  "compose.notAnAddress_one":
+    "Keine E-Mail-Adresse: {parts}. Korrigiere oder entferne sie.",
+  "compose.notAnAddress_other":
+    "Keine E-Mail-Adressen: {parts}. Korrigiere oder entferne sie.",
   "compose.savedDraftLoad": "Gespeicherte Fassung laden",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":
@@ -8029,6 +8056,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.deliveryCoversAll":
     "Diese Zahlen umfassen jedes Projekt, das du lesen kannst.",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
+  "analytics.board.rail": "Ausblick und nächste Schritte",
   "analytics.attentionNoOwner": "Kein Verantwortlicher",
   "analytics.attentionOutOfDate": "veraltet, seit der Prüfung geändert",
   "analytics.attentionAtStake": "{amount} betroffen",
@@ -8699,7 +8727,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "passport.noneOption": "Kein Passport",
   "settings.passportUseAi": "In einem Skript oder einem anderen KI-Tool",
   "settings.passportUseAiDetail":
-    "Installiere den Margince-Skill in einem Tool, das sich nicht selbst anmelden kann, und gib ihm dann deinen Passport. Claude Code, Codex und Antigravity brauchen keinen Passport; sie melden sich unter Coding-Agenten selbst an.",
+    "Installiere den Margince-Skill in einem Tool, das sich nicht selbst anmelden kann, und gib ihm dann deinen Passport. Claude Code, Codex, Cursor und die Editoren brauchen keinen Passport; sie melden sich unter „Verbinde dein KI-Tool“ selbst an.",
   "settings.skillDownload": "Skill herunterladen",
   "settings.skillDownloadFailed": "Skill nicht heruntergeladen",
   "settings.passportUseCode": "In deinem eigenen Code",
@@ -9000,8 +9028,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agents.colConnected": "Verbunden",
   "agents.disconnectConfirm":
     "Damit endet die gesamte Verbindung, nicht nur ein Satz Zugangsdaten. Der Agent verliert den Zugriff beim nächsten Aufruf und kann ihn nicht erneuern. Für eine neue Verbindung muss der Zugriff erneut freigegeben werden.",
-  "agents.connectAntigravityPath":
-    "Antigravity hat keinen Befehl zum Hinzufügen. Füge den Block unten in ~/.gemini/config/mcp_config.json ein, öffne dann die Agent-Einstellungen, „Customizations“, und wähle „Authenticate“ neben margince.",
   "agents.connectorOff":
     "KI-Tools können sich noch nicht mit Margince verbinden.",
   "agents.connectorOffDetail":
@@ -9028,6 +9054,33 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Direkt unter „MCP-Clients“ registriert. Das Tool muss das Client-Secret senden.",
   "agentClients.methods.alwaysOn": "Immer aktiv",
   "agentClients.methods.readOnly": "Nur Admins können das ändern.",
+  "agentClients.experiments.title": "Experimente",
+  "agentClients.experiments.sub":
+    "Funktionen zum Ausprobieren, die sich ändern oder wegfallen können. Für alle deaktiviert, bis ein Admin sie hier aktiviert.",
+  "agentClients.experiments.clientCheck": "Tool-Unterstützung prüfen",
+  "agentClients.experiments.clientCheckHint":
+    "Lässt das KI-Tool eines Admins ein kleines Formular zeigen, um zu prüfen, ob es eines beantworten kann.",
+  "agentClients.experiments.about": "Über dieses Experiment",
+  "agentClients.experiments.whyTitle": "Warum",
+  "agentClients.experiments.why":
+    "Margince kann dich im Chat vor einer Massenänderung fragen, oder welchen Datensatz du meintest, wenn dein KI-Tool ein kleines Formular zeigen kann. Diese Prüfung zeigt, welche deiner KI-Tools das können. Änderungen, die eine Freigabe brauchen, warten weiter unter Freigaben.",
+  "agentClients.experiments.howTitle": "So testest du",
+  "agentClients.experiments.step1": "Aktiviere dies.",
+  "agentClients.experiments.step2":
+    "Verbinde Margince in deinem KI-Tool neu, damit es das neue Tool lädt.",
+  "agentClients.experiments.step3": "Frage es:",
+  "agentClients.experiments.clientCheckQuestion":
+    "Nutze das Margince-Tool check_client, um zu prüfen, ob dieses KI-Tool ein Margince-Formular zeigen kann.",
+  "agentClients.experiments.clientCheckQuestionLabel": "Frage",
+  "agentClients.experiments.copy": "Frage kopieren",
+  "agentClients.experiments.copied": "Kopiert",
+  "agentClients.experiments.copyRemedy":
+    "Der Browser hat das Kopieren abgelehnt. Markiere die Frage und kopiere sie von Hand.",
+  "agentClients.experiments.step4":
+    "Wenn dein KI-Tool ein Formular zeigt, in dem du eine Farbe wählst, unterstützt es Formulare. Sonst nennt die Antwort das Tool, seine Version und den Grund.",
+  "agentClients.experiments.safeTitle": "Gefahrlos zu testen",
+  "agentClients.experiments.safe":
+    "Solange es aktiviert ist, sehen Admins das Tool in jedem KI-Tool, das sie verbinden. Es liest und ändert keine Daten. Deaktiviere es, wenn du fertig bist.",
   "agentClients.title": "MCP-Clients",
   "agentClients.sub":
     "Jeder Client, über den sich ein KI-Tool anmeldet, und wie er entstanden ist.",
@@ -9125,7 +9178,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.connect.help": "Hilfe von {vendor}",
   "aiAccess.connect.helpAdmin": "Hilfe von {vendor} für deine Admins",
   "aiAccess.connect.devHint":
-    "Nutzt du ein Kommandozeilen-Tool oder eigenen Code? Siehe Für die Entwicklung unten.",
+    "Schreibst du eigenen Code? Erstelle unten im Bereich Für die Entwicklung einen API-Schlüssel.",
   "aiAccess.step.allow":
     "Margince öffnet sich. Melde dich an und wähle Autorisieren. Fertig.",
   "aiAccess.claude.openConnectors":
@@ -9206,14 +9259,86 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.guide.checked": "Diese Schritte wurden am {date} geprüft.",
   "aiAccess.dev.title": "Für die Entwicklung",
   "aiAccess.dev.sub":
-    "API-Schlüssel für eigenen Code, Coding-Agenten und was Agenten ohne dich tun dürfen.",
+    "API-Schlüssel für eigenen Code und was Agenten ohne dich tun dürfen.",
   "aiAccess.dev.tab.passports": "API-Schlüssel",
-  "aiAccess.dev.tab.agents": "Coding-Agenten",
   "aiAccess.dev.tab.rules": "Regeln für Agenten",
-  "aiAccess.cli.title": "Coding-Agenten",
-  "aiAccess.cli.sub":
-    "Einmal verbinden, dann im Browser anmelden. Kein Passport nötig.",
-  "aiAccess.cli.then": "Führe dann {command} aus.",
+  "aiAccess.connect.placeQuestion": "Wo nutzt du sie?",
+  "aiAccess.connect.copy": "Kopieren",
+  "aiAccess.connect.command": "Text zum Kopieren",
+  "aiAccess.choice.other": "Ein anderes KI-Tool",
+  "aiAccess.place.claudeApp": "Claude-App: Web, Desktop oder Handy",
+  "aiAccess.place.claudeAppNote":
+    "Eine Verbindung gilt für Claude im Web, in der Desktop-App und auf dem Handy. Claude Code richtest du separat ein.",
+  "aiAccess.place.claudeCodeTerminal": "Claude Code im Terminal",
+  "aiAccess.place.claudeCodeVsCode": "Claude Code in VS Code",
+  "aiAccess.place.claudeCodeJetBrains": "Claude Code in JetBrains",
+  "aiAccess.place.claudeCodeVisualStudio": "Claude Code in Visual Studio",
+  "aiAccess.place.claudeInCopilot":
+    "Nutzt du Claude als Modell in GitHub Copilot? Wähle oben Copilot.",
+  "aiAccess.place.chatgptApp": "ChatGPT-App: Web, Desktop oder Handy",
+  "aiAccess.place.codex": "Codex im Terminal oder Editor",
+  "aiAccess.place.m365": "Microsoft 365 Copilot oder Teams",
+  "aiAccess.place.githubVsCode": "GitHub Copilot in VS Code",
+  "aiAccess.place.githubVisualStudio": "GitHub Copilot in Visual Studio",
+  "aiAccess.place.geminiApp": "Gemini-App, beruflich oder privat",
+  "aiAccess.place.antigravity": "Antigravity, Googles Agent-Editor",
+  "aiAccess.runIn.vscode":
+    "Führe den Befehl im Terminal von VS Code aus: „Terminal“, dann „Neues Terminal“.",
+  "aiAccess.runIn.jetbrains":
+    "Führe den Befehl im Fenster „Terminal“ der IDE aus.",
+  "aiAccess.runIn.visualStudio":
+    "Führe den Befehl im Terminal von Visual Studio aus: „Ansicht“, dann „Terminal“.",
+  "aiAccess.local.sub":
+    "Wird auf deinem eigenen Rechner eingerichtet. Ohne Admin.",
+  "aiAccess.local.claudeCode.add":
+    "Führe das einmal aus. Danach ist Margince in jedem Projekt und Editor da.",
+  "aiAccess.local.claudeCode.signIn":
+    "Tippe in Claude Code /mcp, wähle margince und melde dich an.",
+  "aiAccess.local.codex.add": "Führe das einmal im Terminal aus.",
+  "aiAccess.local.codex.signIn": "Führe dann „codex mcp login margince“ aus.",
+  "aiAccess.local.vscode.add":
+    "Führe in der Befehlspalette „MCP: Add Server“ aus und wähle „HTTP“.",
+  "aiAccess.local.vscode.paste":
+    "Füge die Adresse ein, gib margince als Server-ID ein und wähle „Global“.",
+  "aiAccess.local.vscode.signIn":
+    "Bestätige die Anmeldeabfrage von VS Code. Margince öffnet sich: Melde dich an und wähle Autorisieren.",
+  "aiAccess.local.visualStudio.file":
+    "Lege in Visual Studio die Datei %USERPROFILE%\\.mcp.json an oder öffne sie, füge diesen Text ein und speichere sie. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
+  "aiAccess.local.visualStudio.signIn":
+    "Wähle in der Datei über margince „Authentication Required“ und dann „Authenticate“. Melde dich an und wähle Autorisieren.",
+  "aiAccess.local.visualStudio.tools":
+    "Wechsle im Copilot Chat in den Agent-Modus und schalte die margince-Tools ein.",
+  "aiAccess.local.cursor.file":
+    "Öffne ~/.cursor/mcp.json oder lege die Datei an, füge diesen Text ein und speichere. Starte Cursor dann neu. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
+  "aiAccess.local.cursor.signIn":
+    "Folge der Anmeldeabfrage von Cursor für margince. Margince öffnet sich: Melde dich an und wähle Autorisieren.",
+  "aiAccess.local.antigravity.file":
+    "Füge diesen Text in ~/.gemini/config/mcp_config.json ein. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
+  "aiAccess.local.antigravity.signIn":
+    "Öffne die Agent-Einstellungen, dann „Customizations“, und wähle „Authenticate“ neben margince.",
+  "aiAccess.other.sub":
+    "Margince funktioniert mit jedem KI-Tool, das einen entfernten MCP-Server hinzufügen kann. Suche in seinen Einstellungen nach „MCP“, „Connectors“ oder „Tools“.",
+  "aiAccess.other.typeLabel": "Typ",
+  "aiAccess.other.type":
+    "Entfernter Server über HTTP, manchmal „Streamable HTTP“ genannt",
+  "aiAccess.other.signInLabel": "Anmeldung",
+  "aiAccess.other.signIn":
+    "OAuth im Browser. Die meisten Tools starten sie bei der ersten Verbindung.",
+  "aiAccess.other.apiKey":
+    "Kein Anmelden im Tool möglich? Erstelle in den Einstellungen unter KI-Zugang, Für die Entwicklung, einen API-Schlüssel und sende ihn als Header „Authorization: Bearer“ mit dem Schlüssel dahinter.",
+  "aiAccess.other.notAllowed":
+    "Meldet die Anmeldung, dass das Tool nicht erlaubt ist, legt ein Admin in den Einstellungen unter MCP fest, welche Tools sich verbinden dürfen.",
+  "setup.step.ai": "KI-Tool verbinden",
+  "setup.caption.ai":
+    "Nutze Margince aus Claude, ChatGPT, Copilot oder deinem Editor.",
+  "setup.action.ai": "Verbinden",
+  "setup.step.aiDone": "{name} ist verbunden.",
+  "setup.step.aiDoneUnnamed": "Ein KI-Tool ist verbunden.",
+  "ob.conv.connect.aiRow": "Dein KI-Tool",
+  "ob.conv.connect.aiBody":
+    "Frag Claude, ChatGPT, Copilot oder deinen Editor nach deinen Deals und lass ihn Margince für dich aktualisieren.",
+  "ob.conv.connect.aiConnect": "Verbinden",
+  "ob.conv.connect.aiConnected": "Verbunden",
   "aiAccess.cli.docs": "{tool}-Doku",
   "settings.token": "Zugangsdaten",
   "settings.autonomy": "Autonomiestufen",
@@ -12594,7 +12719,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.pausedReason.listInvalid":
     "Pausiert, da der Filter der beobachteten Live-Liste nicht mehr funktioniert. Wenn du den Filter reparierst, läuft die Automatisierung nicht von selbst weiter.",
   "auto.pausedReason.passportRevoked":
-    "Die Regel wurde pausiert, da der Passport des Agenten, der sie eingerichtet hat, widerrufen wurde. Setze sie fort, dann läuft sie ohne Agenten dahinter weiter.",
+    "Der Agent, der die Regel eingerichtet hat, hat keinen Zugang mehr, da sein Passport abgelaufen oder widerrufen wurde oder seine Verbindung beendet wurde. Setze sie fort, dann läuft sie ohne Agenten weiter.",
+  "auto.setByYourAgent": "Von deinem Agenten",
+  "auto.setByAnAgent": "Von einem Agenten",
   "auto.pausedReason.listUnavailable":
     "Pausiert, da das zuständige Teammitglied die beobachtete Liste nicht mehr findet.",
   "auto.pausedReason.burst":
@@ -12643,8 +12770,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.action.addToShortlist": "zur Shortlist hinzufügen",
   "auto.pausedShort.listArchived": "Pausiert · Liste archiviert",
   "auto.pausedShort.listInvalid": "Pausiert · Listenfilter defekt",
-  "auto.pausedShort.passportRevoked":
-    "Pausiert · Passport des Agenten widerrufen",
+  "auto.pausedShort.passportRevoked": "Pausiert · Zugang des Agenten beendet",
   "auto.pausedShort.listUnavailable": "Pausiert · Liste nicht gefunden",
   "auto.pausedShort.burst": "Pausiert · zu viele Datensätze",
   "auto.withheld":
@@ -14596,6 +14722,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Die Abschlusschance, ab der ein offener Deal mit bestätigtem Abschlussdatum als wahrscheinlich zählt.",
   "forecast.landing": "Erwartetes Ergebnis",
+  "forecast.landingSection": "Wo der Zeitraum landet",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingUnrecorded": "Nicht erfasst",
   "forecast.basis.likely": "Gewonnen + wahrscheinliche Deals",
@@ -14614,6 +14741,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.callBelowLine":
     "Unter den bereits gewonnenen {won}, wie erfasst gezeigt",
   "forecast.model.quarter": "Modelliertes Quartalsergebnis",
+  "forecast.model.short": "Mittlere 80 % der Ergebnisse",
   "forecast.model.month": "Modelliertes Monatsergebnis",
   "forecast.model.week": "Modelliertes Wochenergebnis",
   "forecast.model.value": "{low} bis {high}",
@@ -15120,7 +15248,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.connect.importAndContinue": "{period} importieren und weiter",
   "ob.conv.connect.alsoTitle": "Jetzt auch sinnvoll",
   "ob.conv.connect.alsoSub":
-    "Optional. Beides kannst du später in den Einstellungen ändern.",
+    "Optional. All das kannst du später in den Einstellungen ändern.",
   "ob.conv.connect.linkedinRow": "Dein LinkedIn-Profil",
   "ob.conv.connect.linkedinAdd": "Profil hinzufügen",
   "setup.reminder.trigger": "Einrichtung abschließen",
@@ -15180,6 +15308,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "account.timezoneLabel": "Zeitzone",
   "account.timezoneHelp":
     "Zeiten in Margince, deine buchbaren Zeiten und Mails an dich nutzen diese Zeitzone. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
+  "account.timezoneSetByAgent": "Von deinem Agenten",
   "workingHours.zoneIs": "Deine Zeiten gelten in {zone}.",
   "workingHours.changeZone": "Zeitzone ändern",
   "account.languageCard": "Sprache und Zeitzone",
@@ -17263,7 +17392,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "richtext.bulletList": "Aufzählung",
   "richtext.numberList": "Nummerierte Liste",
   "richtext.link": "Link",
-  "richtext.linkPrompt": "Link-URL (leer lassen, um den Link zu entfernen)",
+  "richtext.linkAdd": "Link einfügen",
+  "richtext.linkEdit": "Link bearbeiten",
+  "richtext.linkAddress": "Web- oder E-Mail-Adresse",
+  "richtext.linkPlaceholder": "example.com oder name@example.com",
+  "richtext.linkApply": "Anwenden",
+  "richtext.linkRemove": "Link entfernen",
+  "richtext.linkRefused":
+    "Das ist keine Web- oder E-Mail-Adresse. Gib eine ein, etwa example.com oder name@example.com.",
   "contact.composer.intentAgenda":
     "eine Agenda für den anstehenden Termin vorschlagen",
   "contact.composer.intentReply":
@@ -18929,7 +19065,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.retryRefusedRepeats":
     "Diese Regel darf nicht zweimal ausgeführt werden, da ein erneuter Lauf ihre Aktionen wiederholen könnte.",
   "worklist.verb.retryRefusedPassportRevoked":
-    "Der Passport des Agenten, der diese Regel eingerichtet hat, wurde widerrufen. Darum ist sie pausiert. Setze sie fort, dann läuft sie ohne Agenten dahinter weiter.",
+    "Der Agent, der die Regel eingerichtet hat, hat keinen Zugang mehr, darum ist die Regel pausiert. Setze sie fort, dann läuft sie ohne Agenten weiter.",
   "worklist.verb.retryRefusedEventGone":
     "Dieser Lauf kann nicht erneut ausgeführt werden, da das auslösende Ereignis nicht mehr existiert. Zeitgesteuerte Regeln prüfen automatisch erneut.",
   "worklist.verb.acknowledgeFailed":
@@ -20519,6 +20655,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.shortfall": "Erwartete Lücke {amount}",
   "analytics.hero.surplus": "Erwarteter Überschuss {amount}",
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
+  "analytics.hero.ofTarget": "Ziel von {target}",
+  "analytics.hero.short": "{amount} unter Ziel",
+  "analytics.hero.over": "{amount} über Ziel",
+  "analytics.trajectory.label": "Gewonnener Umsatz im Zeitraum",
+  "analytics.trajectory.today": "Heute · {date}",
+  "analytics.trajectory.through": "Bis {date}",
+  "analytics.trajectory.target": "Ziel {amount}",
+  "analytics.trajectory.projection": "{amount} erwartet",
+  "analytics.trajectory.range": "Modellierter Abschluss",
   "analytics.overview.more": "Mehr",
   "analytics.outlook.valuedCount": "{included} von {eligible} mit Wert",
   "analytics.outlook.periodPipeline":
@@ -20528,6 +20673,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.outlook.team": "Ausblick zur Teamakquise",
   "analytics.outlook.prospecting": "Akquiseausblick",
   "analytics.outlook.records": "Zugehörige Datensätze anzeigen",
+  "analytics.outlook.more": "Ganzen Ausblick lesen",
   "analytics.assessment.refresh": "Einschätzung erneuern",
   "analytics.assessment.retry": "Erneut versuchen",
   "analytics.assessment.evidenceTitle": "Worauf die Einschätzung beruht",

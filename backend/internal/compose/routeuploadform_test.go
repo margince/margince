@@ -98,7 +98,7 @@ func TestAnUploadVerbRidesItsRoutesCeiling(t *testing.T) {
 		}
 		var read int64
 		var overflow *http.MaxBytesError
-		door := &viewDoor{ceiling: bodyCeilingFor(ceilings), api: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		door := &viewDoor{ceiling: bodyCeilingFor(ceilings, contractRoutes()), api: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var err error
 			read, err = io.Copy(io.Discard, r.Body)
 			if errors.As(err, &overflow) {

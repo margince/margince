@@ -1120,6 +1120,11 @@
   gap: var(--space-3);
 }
 
+/* A badge is as wide as its words, and a column would stretch it to its own width. */
+.form-stack > .badge {
+  align-self: flex-start;
+}
+
 /* Side-by-side fields inside a .form-stack. They wrap rather than compress,
    so a narrow column stacks the fields instead of shrinking the inputs. */
 .form-row {
@@ -1498,10 +1503,15 @@ span.error-line {
    inside a field built entirely from these tokens, so it reads as the hole in
    the surface that `<select>` reads as, and it appears the moment the field has
    focus and content: in the ⌘K palette, that is always.
-   Nothing is lost by removing it. The palette clears its box on Escape and on
-   every reopen, and the results field is a form a reader retypes into. */
+   No search field in the app draws one, so a list's search matches the rest.
+   The palette clears its box on every reopen, and Escape clears a search field
+   in Chromium and Firefox; in Safari a reader selects the text and deletes it. */
 .input[type="search"]::-webkit-search-cancel-button,
-.input[type="search"]::-webkit-search-decoration {
+.input[type="search"]::-webkit-search-decoration,
+.lt-search-input::-webkit-search-cancel-button,
+.lt-search-input::-webkit-search-decoration,
+.lt-fsearch-input::-webkit-search-cancel-button,
+.lt-fsearch-input::-webkit-search-decoration {
   appearance: none;
 }
 
@@ -2022,6 +2032,19 @@ span.error-line {
   font: var(--fontBodyLarge);
   font-weight: var(--fontWeightMedium);
   font-variant-numeric: tabular-nums;
+}
+/* A lead plate heads an Analytics card: its first figure is the one the view
+   leads with, and the rest stand a step under it (statstrip.tsx `lead`). */
+.stat-strip[data-lead] .stat-card-value {
+  font: var(--fontHeadingMedium);
+  font-variant-numeric: tabular-nums;
+}
+.stat-strip[data-lead] > :first-child .stat-card-value {
+  font: var(--fontDisplayFigure);
+  font-variant-numeric: tabular-nums;
+}
+.stat-strip[data-lead] .stat-card-basis::before {
+  font: var(--fontHeadingXXSmall);
 }
 
 /* Nothing left to declare between two adjacent StatCards. A free-standing card

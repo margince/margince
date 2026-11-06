@@ -19,7 +19,7 @@ must_mention:
   - "(?i)in the app|settings|yourself|cannot|can't|not able"
 
 must_not_mention:
-  - "(?i)(?:are|is|have been|has been) (?:now )?(?:off|disabled|turned off|switched off)|\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:turned|switched|disabled)\b"
+  - "(?i)(?:are|is) now (?:off|disabled|turned off|switched off)|(?:have|has) been (?:now )?(?:off|disabled|turned off|switched off)|\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:turned|switched|disabled)\b"
 
 runs: 3
 pass_at: 2

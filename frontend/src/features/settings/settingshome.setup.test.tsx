@@ -65,8 +65,10 @@ function serve({ finished }: Readonly<{ finished: boolean }>) {
   };
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (request: Request) => {
-      const path = new URL(request.url).pathname;
+    // The connector discovery read asks by URL string, the API client by Request.
+    vi.fn(async (request: Request | string) => {
+      const url = typeof request === "string" ? request : request.url;
+      const path = new URL(url, "https://crm.test").pathname;
       const route = Object.keys(answers).find((end) => path.endsWith(end));
       return route ? answers[route]() : jsonResponse({}, 404);
     }),
@@ -126,7 +128,8 @@ describe("Your setup card", () => {
 
     // Every setup read answered, so an absent card is the decision, not a wait.
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledTimes(3);
+      // Mail, voice, booking, and whether AI tools can connect (here: off).
+      expect(fetch).toHaveBeenCalledTimes(4);
       expect(client.isFetching()).toBe(0);
     });
     const directory = screen.getByRole("link", { name: /Connections/ });

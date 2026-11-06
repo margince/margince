@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { focusManager } from "@tanstack/react-query";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -54,12 +55,16 @@ const column = (stageId: string) => {
 
 describe("the deals board's counts", () => {
   it.each([
-    { name: "report in play", hash: "#/deals", head: "260 deals" },
-    { name: "totals withheld", hash: "#/deals?q=fleet", head: "2 deals" },
+    { name: "report in play", hash: "#/deals", head: "260 deals in Sales" },
+    {
+      name: "totals withheld",
+      hash: "#/deals?q=fleet",
+      head: "2 deals in Sales",
+    },
     {
       name: "totals refused",
       hash: "#/deals",
-      head: "2 deals",
+      head: "2 deals in Sales",
       stageTotalsStatus: 403,
     },
   ])(
@@ -94,7 +99,7 @@ describe("the deals board's counts", () => {
     expect(
       await screen.findByText("Could not load this view. Reload the page."),
     ).toBeTruthy();
-    expect(screen.queryByText(/^\d+ deals?$/)).toBeNull();
+    expect(screen.queryByText(/^\d+ deals?\b/)).toBeNull();
   });
 
   // Counted from the cards first and the report after, the head would jump.
@@ -115,10 +120,12 @@ describe("the deals board's counts", () => {
     render(<DealsScreen />);
 
     expect(await screen.findByText("Fleet two")).toBeTruthy();
-    expect(headCount("2 deals")).toEqual([]);
+    expect(headCount("2 deals in Sales")).toEqual([]);
     answerReport();
 
-    await waitFor(() => expect(headCount("260 deals")).toHaveLength(1));
+    await waitFor(() =>
+      expect(headCount("260 deals in Sales")).toHaveLength(1),
+    );
   });
 
   it("says the head counts only the loaded cards while a column has more", async () => {
@@ -131,7 +138,9 @@ describe("the deals board's counts", () => {
     );
     render(<DealsScreen />);
 
-    expect(await screen.findByText("1 to 2 of 2 deals loaded")).toBeTruthy();
+    expect(
+      await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
+    ).toBeInTheDocument();
   });
 
   // A zero over a column still reading would say the stage is empty.
@@ -170,7 +179,9 @@ describe("the deals board's counts", () => {
     );
     render(<DealsScreen />);
 
-    await waitFor(() => expect(headCount("260 deals")).toHaveLength(1));
+    await waitFor(() =>
+      expect(headCount("260 deals in Sales")).toHaveLength(1),
+    );
   });
 
   it("states no count over a column whose first read failed", async () => {
@@ -204,7 +215,9 @@ describe("the deals board's counts", () => {
     );
     render(<DealsScreen />);
 
-    expect(await screen.findByText("1 to 2 of 2 deals loaded")).toBeTruthy();
+    expect(
+      await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
+    ).toBeInTheDocument();
   });
 
   // The cards a failed re-read left may no longer be all the column holds.
@@ -222,7 +235,7 @@ describe("the deals board's counts", () => {
       }),
     );
     render(<DealsScreen />);
-    await waitFor(() => expect(headCount("2 deals")).toHaveLength(1));
+    await waitFor(() => expect(headCount("2 deals in Sales")).toHaveLength(1));
 
     act(() => {
       focusManager.setFocused(false);
@@ -231,7 +244,9 @@ describe("the deals board's counts", () => {
 
     expect(await within(column("s1")).findByRole("alert")).toBeTruthy();
     expect(within(column("s1")).getByText("Fleet one")).toBeTruthy();
-    expect(await screen.findByText("1 to 2 of 2 deals loaded")).toBeTruthy();
+    expect(
+      await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
+    ).toBeInTheDocument();
   });
 });
 

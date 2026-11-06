@@ -103,7 +103,7 @@ func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live 
 		if !live {
 			return apperrors.ErrNotFound
 		}
-		return apperrors.ErrPermissionDenied
+		return refuseRowChange(ctx, "activity")
 	}
 	return nil
 }

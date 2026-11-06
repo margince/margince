@@ -18,7 +18,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 75 of 75 | 🟢 Yes | Reliable on 75 of 75 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 74 of 75 | 🟡 Mostly | Reliable on 70 of 74 jobs tried; not yet: Finish the import; Close the project out; Removing or deactivating a member runs at once. The action says to ask first unless the user asked for it, and this user names no such act; A custom field changes the database for every colleague, so its tool says to ask first. The user only floats the idea, so the model explains and neither creates the field nor claims it did. |
+| `gpt-5.6-sol` | Codex CLI | 74 of 75 | 🟡 Mostly | Reliable on 70 of 74 jobs tried; not yet: What the product tells a user about their agent stays theirs, so no tool changes it. The model says where it is and changes no workspace setting instead; Finish the import; Close the project out; Removing or deactivating a member runs at once. The action says to ask first unless the user asked for it, and this user names no such act. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -95,7 +95,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Adding a stage shapes the pipeline. It moves no deal, so it is change_settings and not change_state | A new stage is pipeline setup | ✅ | ✅ |
 | Near neighbour of case91. Moving a deal stays on the old tool, and the pipeline's ladder stays as it is | A deal moves on the deal tools | ✅ | ✅ |
 | Whether a stage closes a deal stays with the user. The tool says so, so the model sends no semantic change, says so and does not claim it is done | What closes a deal stays with the user | ✅ | ✅ |
-| A custom field changes the database for every colleague, so its tool says to ask first. The user only floats the idea, so the model explains and neither creates the field nor claims it did | Ask before a field that reaches everyone | ✅ | ❌ |
+| A custom field changes the database for every colleague, so its tool says to ask first. The user only floats the idea, so the model explains and neither creates the field nor claims it did | Ask before a field that reaches everyone | ✅ | ✅ |
 | The FX sheet is workspace setup, and the agent writes it through change_settings | A rate goes on the sheet | ✅ | ✅ |
 | A logo comes as a file. The action takes it as base64, as attach_document does, and attaches nothing to a record | A logo is setup, not an attachment | ✅ | ✅ |
 | A vCard file goes through the import, so a matching contact is not doubled. The user hands it over and says go | A vCard file runs the import | ✅ | ✅ |
@@ -104,7 +104,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | The background job page is an operator read an admin's agent may make. It changes nothing | Job health is a read | ✅ | ✅ |
 | Which model the installation runs is readable. Changing it stays with the user, so the question never reaches a write | Reading the routing moves nothing | ✅ | ✅ |
 | The Voice DNA is the user's own. Its preferences go to change_my_settings, and no workspace template changes | The voice is the user's own | ✅ | ✅ |
-| What the product tells a user about their agent stays theirs, so no tool changes it. The model says where it is and changes no workspace setting instead | What reaches the user stays theirs | ✅ | ✅ |
+| What the product tells a user about their agent stays theirs, so no tool changes it. The model says where it is and changes no workspace setting instead | What reaches the user stays theirs | ✅ | ❌ |
 | The user asks for this call themselves, on one named company, so the model makes it | Marking seen when asked | ✅ | ✅ |
 | Near neighbour of case104. Reading what changed must not spend the marker the answer is counted from | Reading does not spend the marker | ✅ | ✅ |
 
@@ -136,7 +136,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 2 |
 | … **no case requires** | 9 |
 | … of those, permitted somewhere but never required | 3 |
-| Prompt tokens spent on tools no case requires | 4603 |
+| Prompt tokens spent on tools no case requires | 4673 |
 | Use cases | 75 |
 | Acceptance criteria the cases declare, each with a statement | 114 |
 
@@ -146,12 +146,12 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 75 of 75 | 75 | 0 | 160/164 | 98% |
-| `gpt-5.6-sol@codex-cli` | 74 of 75 | 70 | 4 | 152/163 | 93% |
+| `claude-sonnet-5-5@claude-cli` | 75 of 75 | 75 | 0 | 159/163 | 98% |
+| `gpt-5.6-sol@codex-cli` | 74 of 75 | 70 | 4 | 151/163 | 93% |
 
 > `gpt-5.6-sol@codex-cli` has no committed run for 1 of 75 cases.
 
-> `gpt-5.6-sol@codex-cli` below its bar on: case10_finish_the_import, case41_close_the_project, case75_sofia_is_leaving, case94_a_field_for_the_region
+> `gpt-5.6-sol@codex-cli` below its bar on: case103_stop_telling_me, case10_finish_the_import, case41_close_the_project, case75_sofia_is_leaving
 
 ## The two surfaces
 
@@ -210,7 +210,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The voice is the user's own | `change_my_settings` |
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The voice is the user's own | `change_my_settings` |
 | [case103_stop_telling_me](../../e2e/llm/scenarios/case103-stop-telling-me.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** What reaches the user stays theirs | - |
-| [case103_stop_telling_me](../../e2e/llm/scenarios/case103-stop-telling-me.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** What reaches the user stays theirs | - |
+| [case103_stop_telling_me](../../e2e/llm/scenarios/case103-stop-telling-me.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 0/2 | 2 | **1** What reaches the user stays theirs | - |
 | [case104_mark_it_seen](../../e2e/llm/scenarios/case104-mark-it-seen.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Marking seen when asked | `change_attention` |
 | [case104_mark_it_seen](../../e2e/llm/scenarios/case104-mark-it-seen.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Marking seen when asked | `change_attention` |
 | [case105_what_changed_there](../../e2e/llm/scenarios/case105-what-changed-there.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Reading does not spend the marker | `find_records` or `read_attention` or `read_context` or `read_details` or `read_record` |
@@ -236,7 +236,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case40_sort_the_queue](../../e2e/llm/scenarios/case40-sort-the-queue.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The record decides which verb applies<br>**2** What was filled and what is still missing are both reported<br>**3** A terminal verb lands on the lead it belongs to | `change_state` |
 | [case40_sort_the_queue](../../e2e/llm/scenarios/case40-sort-the-queue.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The record decides which verb applies<br>**2** What was filled and what is still missing are both reported<br>**3** A terminal verb lands on the lead it belongs to | `change_state` |
 | [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `change_state`, `read_project` |
-| [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 1/3 | 2 | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `change_state`, `read_project` |
+| [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 0/2 | 2 | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `change_state`, `read_project` |
 | [case42_can_i_answer_on_whatsapp](../../e2e/llm/scenarios/case42-can-i-answer-on-whatsapp.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The transport is named as the installation names it<br>**2** A channel that cannot send replies still captures, files and reads | `change_activities`, `read_workspace` |
 | [case42_can_i_answer_on_whatsapp](../../e2e/llm/scenarios/case42-can-i-answer-on-whatsapp.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The transport is named as the installation names it<br>**2** A channel that cannot send replies still captures, files and reads | `change_activities`, `read_workspace` |
 | [case43_the_fair_leads_are_prospects](../../e2e/llm/scenarios/case43-the-fair-leads-are-prospects.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** All four change at once, with nothing waiting<br>**2** The value that was replaced is reported | `update_record` |
@@ -266,7 +266,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case59_file_it_on_the_meeting_and_the_contract](../../e2e/llm/scenarios/case59-file-it-on-the-meeting-and-the-contract.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The file is kept on the meeting it came from<br>**2** The file is filed against its contract | `change_activities` |
 | [case59_file_it_on_the_meeting_and_the_contract](../../e2e/llm/scenarios/case59-file-it-on-the-meeting-and-the-contract.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The file is kept on the meeting it came from<br>**2** The file is filed against its contract | `change_activities` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `find_records` |
-| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `find_records` |
+| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `find_records` |
 | [case60_send_one_draft_one](../../e2e/llm/scenarios/case60-send-one-draft-one.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A reply goes on the thread it answers<br>**2** The mail the user wants to read first stays a draft | `draft_outbound`, `send_outbound` |
 | [case60_send_one_draft_one](../../e2e/llm/scenarios/case60-send-one-draft-one.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A reply goes on the thread it answers<br>**2** The mail the user wants to read first stays a draft | `draft_outbound`, `send_outbound` |
 | [case61_what_have_i_promised](../../e2e/llm/scenarios/case61-what-have-i-promised.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Promised and still open is the commitments view | `read_attention` |
@@ -277,7 +277,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case63_is_she_already_here](../../e2e/llm/scenarios/case63-is-she-already-here.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Is this contact already here is the identify engine | `find_records` |
 | [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Catch-up and the brief each use their own view | `read_context` |
 | [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Catch-up and the brief each use their own view | `read_context` |
-| [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
+| [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
 | [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Add the two deals in money, not in minor units | `find_records` or `read_forecast` or `read_record` |
 | [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Add the two deals in money, not in minor units | `find_records` or `read_forecast` or `read_record` |
@@ -337,7 +337,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case93_count_that_stage_as_won](../../e2e/llm/scenarios/case93-count-that-stage-as-won.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** What closes a deal stays with the user | - |
 | [case93_count_that_stage_as_won](../../e2e/llm/scenarios/case93-count-that-stage-as-won.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** What closes a deal stays with the user | - |
 | [case94_a_field_for_the_region](../../e2e/llm/scenarios/case94-a-field-for-the-region.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Ask before a field that reaches everyone | - |
-| [case94_a_field_for_the_region](../../e2e/llm/scenarios/case94-a-field-for-the-region.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 0/2 | 2 | **1** Ask before a field that reaches everyone | - |
+| [case94_a_field_for_the_region](../../e2e/llm/scenarios/case94-a-field-for-the-region.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Ask before a field that reaches everyone | - |
 | [case95_the_rate_for_today](../../e2e/llm/scenarios/case95-the-rate-for-today.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet | `change_settings` |
 | [case95_the_rate_for_today](../../e2e/llm/scenarios/case95-the-rate-for-today.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet | `change_settings` |
 | [case96_put_our_logo_in](../../e2e/llm/scenarios/case96-put-our-logo-in.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A logo is setup, not an attachment | `change_settings` |
@@ -480,10 +480,10 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
-| `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `read_workspace` | 1.00 | 11 | `case100_are_the_jobs_failing`, `case101_which_model_reads_our_mail`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case80_who_changed_that` |
-| `change_activities` | 1.00 | 14 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
+| `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `read_details` | 1.00 | 8 | `case72_read_the_dossier`, `case73_read_my_weekly_plan`, `case87_may_we_write_to_her`, `case88_send_it_anyway` |
+| `change_activities` | 1.00 | 14 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_settings` | 1.00 | 6 | `case91_add_a_review_stage`, `case95_the_rate_for_today`, `case96_put_our_logo_in` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
@@ -496,11 +496,11 @@ Every run of every case requiring this tool passed, for the model named.
 | `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
-| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case89_set_my_hours`, `case90_show_it_in_german` |
+| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `draft_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
@@ -515,10 +515,9 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
-| `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `read_workspace` | 1.00 | 11 | `case100_are_the_jobs_failing`, `case101_which_model_reads_our_mail`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case80_who_changed_that` |
+| `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `change_activities` | 1.00 | 15 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
-| `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_settings` | 1.00 | 6 | `case91_add_a_review_stage`, `case95_the_rate_for_today`, `case96_put_our_logo_in` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `change_reports` | 1.00 | 4 | `case83_write_the_decision_down`, `case84_my_call_for_the_quarter` |
@@ -528,11 +527,11 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
 | `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
-| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case89_set_my_hours`, `case90_show_it_in_german` |
 | `change_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
+| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `draft_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
@@ -563,14 +562,15 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
-| `change_state` | 0.75 | 9/12 | `case41_close_the_project` | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
 | `read_details` | 0.89 | 8/9 | - | `case72_read_the_dossier`, `case73_read_my_weekly_plan`, `case87_may_we_write_to_her`, `case88_send_it_anyway` |
+| `change_state` | 0.73 | 8/11 | `case41_close_the_project` | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
+| `find_records` | 0.89 | 8/9 | - | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `preview_import` | 0.50 | 2/4 | `case10_finish_the_import` | `case10_finish_the_import`, `case3_spreadsheet` |
-| `create_record` | 0.91 | 10/11 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case98_one_new_contact` |
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
+| `create_record` | 0.91 | 10/11 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case98_one_new_contact` |
 | `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
-| `read_project` | 0.33 | 1/3 | `case41_close_the_project` | `case41_close_the_project` |
+| `read_project` | 0.00 | 0/2 | `case41_close_the_project` | `case41_close_the_project` |
 | `commit_import` | 0.00 | 0/2 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `read_import` | 0.00 | 0/2 | `case10_finish_the_import` | `case10_finish_the_import` |
 
@@ -621,9 +621,9 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
 | `read_view` | 1008 | - | `case102_shorter_in_my_voice`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
-| `run_research` | 676 | - | - | - |
+| `run_research` | 776 | - | - | - |
 | `change_record_parts` | 621 | - | - | - |
-| `change_relationships` | 502 | - | - | - |
+| `change_relationships` | 472 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
 | `list_approvals` | 401 | - | `case1_log_it`, `case32_two_words_for_one_thing`, `case46_get_us_in_a_room`, `case59_file_it_on_the_meeting_and_the_contract` | - |

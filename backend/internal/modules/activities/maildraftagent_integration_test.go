@@ -95,6 +95,42 @@ func TestTheHumansSaveClearsTheMarkAndAnAgentCannotWriteOverIt(t *testing.T) {
 	}
 }
 
+// The route's save and discard hold an agent to the line its own draft verb holds.
+// It replaces and removes its own draft, and never one the human saved.
+func TestAnAgentReachesOnlyItsOwnDraftThroughTheRouteWrites(t *testing.T) {
+	e := setupSend(t)
+	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
+	store := draftStore(e)
+	human, agent := e.as(principal.RowScopeAll), e.asAgentFor(t, principal.RowScopeAll)
+
+	saved, err := store.SaveMailDraft(agent, anchor, agentDraft("The agent's words"), nil)
+	if err != nil || !saved.AgentDrafted {
+		t.Fatalf("the agent's save = %+v (%v), want a draft marked as an agent's", saved, err)
+	}
+	again, err := store.SaveMailDraft(agent, anchor, agentDraft("Shorter"), &saved.Version)
+	if err != nil || !again.AgentDrafted || again.Content.Body != "Shorter" {
+		t.Fatalf("the agent's second save = %+v (%v), want its own draft replaced", again, err)
+	}
+	if err := store.DiscardMailDraft(agent, again.ID); err != nil {
+		t.Fatalf("the agent discarding its own draft: %v", err)
+	}
+
+	own, err := store.SaveMailDraft(human, anchor, agentDraft("My words"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.SaveMailDraft(agent, anchor, agentDraft("Overwrite"), &own.Version); !errors.Is(err, ErrOwnDraftWaiting) {
+		t.Errorf("the agent saving over the human's draft → %v, want ErrOwnDraftWaiting", err)
+	}
+	if err := store.DiscardMailDraft(agent, own.ID); !errors.Is(err, ErrOwnDraftWaiting) {
+		t.Errorf("the agent discarding the human's draft → %v, want ErrOwnDraftWaiting", err)
+	}
+	got, err := store.GetMailDraft(human, anchor)
+	if err != nil || got.Content.Body != "My words" || got.AgentDrafted {
+		t.Errorf("the human's draft reads %+v (%v), want their words untouched", got, err)
+	}
+}
+
 func TestAnAgentsDraftAnswersToItsHumansRowScopeAndOnlyAnAgentMarksOne(t *testing.T) {
 	e := setupSend(t)
 	hidden := replyAnchor(e.seedAnchor(t, "", ""))

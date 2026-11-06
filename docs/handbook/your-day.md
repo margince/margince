@@ -387,7 +387,7 @@ You can also add a note to a teammate's Worklist with **Add note** ("A short not
 
 ### What is in the morning email?
 
-It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing.
+It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing. Each item opens its record's page when it has one. A task, a meeting or its outcome, or an item without a record opens **Home** with that item open.
 
 Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest.
 Mail follows your working days and local clock, with a three-hour window that can end on the next day.

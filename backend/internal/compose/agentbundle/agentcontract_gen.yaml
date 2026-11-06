@@ -1290,7 +1290,7 @@ paths:
         `POST /companies/{id}/intro-request-draft` — which writes the internal ask
         TO the colleague, and says so in its own prompt.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Buy contact data.
 
         Runs at once.
 
@@ -2244,7 +2244,7 @@ paths:
         Philipp. What it could not do is help them ask her, and the asking is where
         the route stops being a fact and becomes a move.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Buy contact data.
 
         Runs at once.
 
@@ -2816,6 +2816,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Partner'}
+        '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
     get:
@@ -7224,6 +7225,8 @@ paths:
           description: |-
             `code: version_skew` — the draft is not at the version you last read: another
             composer saved or discarded it, or one exists and you sent no `If-Match`.
+            `code: own_draft_waiting` — an agent's save, where the user keeps a draft of their
+            own here; the agent leaves it to them.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -7245,6 +7248,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Discard one of the caller's unsent messages.
@@ -10747,50 +10751,6 @@ paths:
           required: true
           schema: {type: string}
       security: [{bearerAuth: []}]
-  /analytics/reports/{id}/reader-preview:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags:
-        - Reports
-      operationId: previewReportingReportAsRole
-      security: [{bearerAuth: []}]
-      summary: Evaluate a saved report as a seat holding one role would see it.
-      description: |-
-        The report evaluated under the caller's own permissions narrowed to the role's: an
-        object only where both grant it, the narrower row scope, and every field mask either
-        carries. So the preview never shows the caller anything their own access withholds.
-        It runs as the caller, so records private to another seat stay hidden here too.
-      parameters:
-        - name: role
-          in: query
-          required: true
-          schema:
-            type: string
-            minLength: 1
-            maxLength: 64
-        - name: revision
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-      responses:
-        '200':
-          description: The report as the role reads it.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReportingEvaluation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
   /analytics/reports/{id}/evaluation:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -12695,42 +12655,6 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /onboarding/company/messages:
-    post:
-      tags: [Companies, AI]
-      operationId: messageOnboardingCompany
-      summary: Continue the scoped company-setup conversation with or without a website read.
-      description: |-
-        Uses the acting human's resumable onboarding state as the conversation and AI-run scope.
-        The response may answer, clarify, or propose typed draft changes, but it never writes
-        company truth. Off-topic input is redirected to the next unresolved company question.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-
-        Holds the request open while an AI model answers.
-      security: [{bearerAuth: []}]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/OnboardingCompanyMessageRequest'}
-      responses:
-        '200':
-          description: Scoped conversational response and optional draft proposals.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/OnboardingCompanyMessageReply'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-        '501':
-          description: No governed model path is configured.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
   /onboarding/company/proposal:
     get:
       tags: [Companies]
@@ -13390,7 +13314,7 @@ paths:
         present in the dossier. The response carries the cumulative, price-on-read AI runtime for
         this read so model identity and estimated provider spend stay visible in context.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Buy contact data.
 
         Runs at once.
 
@@ -13623,7 +13547,8 @@ paths:
       summary: Lift an exclusion.
       description: |-
         A workspace rule by admin or ops; a user rule by the user it names. Mail from the address or
-        domain is captured again from the next message on; nothing already dropped comes back.
+        domain is captured again from the next message on; nothing already dropped comes back. An
+        agent lifts only a rule an agent added, and a user's rule answers `409`.
 
         Needs the passport permission Change records.
 
@@ -13632,6 +13557,7 @@ paths:
       responses:
         '204': {description: Lifted.}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -13871,6 +13797,7 @@ paths:
       responses:
         '204': {description: Lifted.}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -18609,7 +18536,7 @@ paths:
         owner. For a member who left, the contacts and companies only they can see move too and
         stay private, now to the new owner; an active member keeps theirs. A record the caller may not change stays with the member and is counted
         in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
-        owner (an active human seat that can write, inside the caller's write scope), else `422`
+        owner (an active human seat that can write), else `422`
         with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
         caller may not change stays with the member. Automations and deal-room stewardships are not moved.
 
@@ -19590,11 +19517,10 @@ paths:
       security: [{bearerAuth: []}]
       summary: Edit a Deal Room's title and welcome message (partial).
       description: |-
-        Edits the WORKING copy only. A live room keeps serving its last published
-        release until a human publishes again, so changing the title or welcome text
-        here never changes what a buyer is currently reading.
+        The buyer reads the new title and welcome text as soon as they are saved, so an
+        agent spends `send` on it.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Send messages.
 
         Runs at once.
       parameters:
@@ -19681,7 +19607,7 @@ paths:
         every credential that worked before works again. 409 `deal_room_not_paused`
         from any other state.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Send messages.
 
         Runs at once.
       responses:
@@ -19732,9 +19658,10 @@ paths:
       description: |-
         Null clears the bound, leaving access open until the room is closed or
         archived. A past instant is accepted and takes effect immediately — that is
-        how access is cut short without ending the room.
+        how access is cut short without ending the room. It decides how long a buyer can
+        read the room, so an agent spends `send` on it.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Send messages.
 
         Runs at once.
       parameters:
@@ -19965,10 +19892,10 @@ paths:
       description: |-
         The attachment must be filed on THIS room's deal (`entity_type: deal`, the
         room's `deal_id`); any other id is 404. The attachment row is the exact
-        version the buyer will be shown. Editorial: the buyer sees it at the next
-        publish. Refused once the room can no longer reach a buyer.
+        version the buyer will be shown. The buyer sees it at once, so an agent spends
+        `send` on it. Refused once the room can no longer reach a buyer.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Send messages.
 
         Runs at once.
       requestBody:
@@ -20000,9 +19927,9 @@ paths:
       security: [{bearerAuth: []}]
       summary: Rename, regroup or reorder a room document.
       description: |-
-        Editorial, like adding one — the buyer sees the change at the next publish.
+        The buyer reads the change at once, like adding one, so an agent spends `send` on it.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Send messages.
 
         Runs at once.
       parameters:
@@ -20030,10 +19957,9 @@ paths:
       summary: Take a document out of the room.
       description: |-
         Marks the entry removed; the attachment itself is untouched. The buyer stops
-        seeing it at the next publish — a release already published keeps naming it,
-        because that release is what they were shown.
+        seeing it at once, so an agent spends `send` on it.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Send messages.
 
         Runs at once.
       parameters:
@@ -20078,11 +20004,12 @@ paths:
       operationId: openDealRoomThread
       summary: Open a thread as the seller's side — a question on a document, or a room-level update.
       description: |-
-        The first comment is the body. Refused once the room can no longer reach a
+        The first comment is the body. The buyer reads it at once, so an agent spends
+        `send` on it. Refused once the room can no longer reach a
         buyer (closed, expired, archived): `409 deal_room_content_not_editable`. A
         document thread is pinned to the document's current version.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Send messages.
 
         Runs at once.
       requestBody:
@@ -20113,11 +20040,11 @@ paths:
       operationId: replyDealRoomThread
       summary: Reply in a thread as the seller's side.
       description: |-
-        Refused on a resolved thread (`409 deal_room_thread_resolved`: open a new
-        thread instead) and in a room that can no longer reach a buyer
+        The buyer reads it at once, so an agent spends `send` on it. Refused on a resolved
+        thread (`409 deal_room_thread_resolved`: open a new thread instead) and in a room that can no longer reach a buyer
         (`409 deal_room_content_not_editable`).
 
-        Needs the passport permission Change records.
+        Needs the passport permission Send messages.
 
         Runs at once.
       requestBody:
@@ -20704,7 +20631,7 @@ paths:
         regenerate (no AI context available) still works and returns `ai_generated=false`. The
         produced draft's terms are not frozen until the send gate.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Buy contact data.
 
         Runs at once.
 
@@ -23098,7 +23025,7 @@ paths:
         has none — and a committee with no champion recorded looks exactly like a
         committee with no champion.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Buy contact data.
 
         Runs at once.
 
@@ -27412,9 +27339,10 @@ components:
       description: |-
         Whether a connect started right now would proceed, decided by the same predicate the connect
         endpoint itself uses so the two cannot disagree. Reported for the mail providers a contact can
-        choose between (gmail, graph, imap). The paired calendar connectors (gcal, graphcal) are absent:
-        each is its own grant, asked for after its mail provider's (`ConnectConnectorRequest.also_connect`)
-        or connected directly, on the same vendor OAuth app as its mail provider.
+        choose between (gmail, graph, imap). The paired calendar connectors (gcal, graphcal) are absent.
+        Each joins its mail provider's connect (`ConnectConnectorRequest.also_connect`) or is connected
+        directly, on the same vendor OAuth app as its mail provider. `gcal` shares the Gmail consent
+        screen; `graphcal` gets its own consent after `graph`.
       required: [provider, reason]
       properties:
         provider: {type: string, enum: [gmail, graph, imap], description: The mail provider a seat picks between.}
@@ -39234,6 +39162,28 @@ components:
         html_body:
           type: [string, 'null']
           description: The editor's markup beside the plain body, so reopening restores the formatting.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: {type: string, format: uuid}
+          description: |-
+            The files the rep chose, by the ids `/attachments` gave them. A save replaces the
+            whole draft, so omitting this clears the files; a client keeps them by sending back
+            the `id` of each entry in the draft's `attachments`.
+        communication_context:
+          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
+          description: |-
+            The reason for contact the rep chose, checked as the send checks it: a category
+            reserved for the installation's own notices is refused 422. Omit it for none.
+        scheduled_at:
+          type: [string, 'null']
+          format: date-time
+          description: |-
+            The moment the rep picked to send at, checked as the send checks it: with
+            `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
+        scheduled_tz:
+          type: [string, 'null']
+          description: The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
     MailDraft:
       type: object
       required: [id, anchor_type, anchor_id, to, cc, bcc, subject, body, version, agent_drafted, created_at, updated_at]
@@ -39260,6 +39210,32 @@ components:
           type: boolean
           description: >-
             An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it.
+        attachments:
+          type: array
+          items: {$ref: '#/components/schemas/ApprovalPreviewFile'}
+          description: |-
+            The chosen files the author can still attach, in the order chosen, so the composer
+            draws each one without asking again. Resolved only by the draft read and the save
+            answer: absent elsewhere, so its absence there does not mean the draft has no files.
+        attachments_unavailable:
+          type: integer
+          minimum: 1
+          description: |-
+            How many chosen files the send would now refuse: removed, out of the author's sight,
+            kept without bytes, or empty. Not named, because a file the author cannot see answers
+            404 everywhere else. Absent when every file resolves.
+        communication_context:
+          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
+          description: The reason for contact the author chose. Absent when none was.
+        scheduled_at:
+          type: string
+          format: date-time
+          description: |-
+            The moment the author picked to send at, as saved. It may have passed since; the
+            draft schedules nothing. Absent when none was picked.
+        scheduled_tz:
+          type: string
+          description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
     RescheduleSendRequest:
@@ -43522,7 +43498,11 @@ components:
         timezone_chosen:
           type: boolean
           description: >-
-            Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
+            Whether the user chose `timezone` themselves, rather than the app storing the browser's guess or an agent setting it. Present on the caller's own seat; absent on the roster.
+        timezone_set_by:
+          type: string
+          description: >-
+            The agent that set `timezone` for this user, as its `captured_by` stamp. Present on the caller's own seat while the zone is the agent's; absent once the user chooses, and on the roster.
         locale:
           type: string
           enum: [en, de, vi]
@@ -43542,11 +43522,11 @@ components:
         assignable:
           type: boolean
           description: >-
-            Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
+            Whether the CALLER may name this member as an owner an automation runs as: an active human seat that can write, inside the caller's own write scope. An automation's owner picker is built on it. A record's owner picker reads `can_own_records` instead. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
         can_own_records:
           type: boolean
           description: >-
-            Whether this member's seat may own records at all: an active human seat that can write, asked without the caller's own write scope. A website form's owner of new leads is checked this way, because the installation writes those leads, so its picker offers these members. Present on `listUsers`; absent means not computed.
+            Whether this member's seat may own records: an active human seat that can write. The answer is the same for every caller. A record's owner change asks this of the new owner. It also needs the caller to be allowed to change the record, unless the record has no owner and the caller is a human. Every record owner picker and a website form's owner of new leads read it. A form's new leads may also go to an invited colleague, so its picker offers fewer members than its write accepts. Present on `listUsers`; absent means not computed.
         roles:
           type: array
           items: {type: string}
@@ -44540,9 +44520,14 @@ components:
       type: object
       description: >-
         The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
-      required: [reading, opening_minor, closing_minor, buckets, deals]
+      required: [reading, base_currency, opening_minor, closing_minor, buckets, deals]
       properties:
         reading: {type: string, enum: [open, weighted, evidence, qualified_evidence, qualified_weighted]}
+        base_currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: >-
+            The currency every amount here is in: the base currency both snapshots converted to.
         opening_minor: {type: integer, format: int64}
         closing_minor: {type: integer, format: int64}
         buckets:
@@ -47598,72 +47583,6 @@ components:
     CompanyConversationResponseKind:
       type: string
       enum: [status, answer, recommendation, correction, confirmation, clarification, off_topic]
-    OnboardingCompanyMessageRequest:
-      type: object
-      additionalProperties: false
-      required: [message, locale]
-      properties:
-        message: {type: string, minLength: 1, maxLength: 2000}
-        locale:
-          type: string
-          enum: [en, de, vi]
-        act:
-          $ref: '#/components/schemas/OnboardingAct'
-          default: company
-          description: Which onboarding act the conversation is in; omitted means company.
-        selected_option:
-          $ref: '#/components/schemas/OnboardingClarifySelection'
-          description: |-
-            The clarify option the administrator clicked, echoed verbatim. Valid only in the company
-            act; it authorizes exactly one proposed change — the selected field with the selected
-            value — and nothing else. The server re-derives its current clarifications and verifies
-            the tuple against them: an unknown or stale clarify_id, a mismatched field, or a value
-            outside a closed option list is refused with 422.
-        history:
-          type: array
-          maxItems: 8
-          items: {$ref: '#/components/schemas/CompanySiteReadConversationTurn'}
-        company_draft:
-          $ref: '#/components/schemas/OnboardingCompanyDraft'
-          description: The administrator's current unsaved artifact, used only as conversational context.
-    OnboardingCompanyMessageReply:
-      type: object
-      required: [kind, message, act, proposed_changes, citations, remaining_required_fields, ai_runtime]
-      properties:
-        kind: {$ref: '#/components/schemas/CompanyConversationResponseKind'}
-        message: {type: string, minLength: 1}
-        act:
-          $ref: '#/components/schemas/OnboardingAct'
-          description: Echoes the act the request addressed.
-        clarify:
-          $ref: '#/components/schemas/OnboardingClarify'
-          description: |-
-            A deterministically detected open question, attached only when the server's own
-            detectors found one — options are never model-invented.
-        proposed_changes:
-          type: array
-          maxItems: 5
-          items: {$ref: '#/components/schemas/CompanySiteReadSuggestedChange'}
-        citations:
-          type: array
-          items: {$ref: '#/components/schemas/CompanySiteReadCitation'}
-        next_required_field:
-          type: [string, 'null']
-          enum: [null, display_name, offer_summary, icp]
-        remaining_required_fields:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            enum: [display_name, offer_summary, icp]
-        available_action:
-          type: [string, 'null']
-          enum: [null, confirm_company, start_voice_build, upload_voice_source, connect_inbox, finish]
-        ai_runtime: {$ref: '#/components/schemas/AiRunSummary'}
-    OnboardingAct:
-      type: string
-      description: The four onboarding conversation acts.
-      enum: [company, voice, results, connect]
     OnboardingClarify:
       type: object
       description: |-
@@ -47690,14 +47609,6 @@ components:
         evidence_url: {type: [string, 'null'], format: uri}
         evidence_snippet: {type: [string, 'null']}
         detail: {type: [string, 'null'], description: Provenance or disambiguation help for this option.}
-    OnboardingClarifySelection:
-      type: object
-      additionalProperties: false
-      required: [clarify_id, field, value]
-      properties:
-        clarify_id: {type: string}
-        field: {type: string}
-        value: {type: string}
     OnboardingCompanyProposalField:
       type: object
       required: [field, value, confidence, evidence_snippet, source_url]
@@ -49484,7 +49395,12 @@ components:
           type: [string, 'null']
           enum: [list_archived, list_invalid, list_unavailable, burst, passport_revoked, null]
           description: >-
-            Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the passport of the agent that set the rule up was revoked. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
+            Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
+        setter_passport_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The passport of the agent that turned this rule on, which the rule stops with. Null for a rule a user runs. It names the credential and grants nothing: `captured_by` shows the same id on what an agent writes.
         params: {type: object, additionalProperties: true}
         version: {type: integer}
         created_at: {type: string, format: date-time}
@@ -49597,7 +49513,8 @@ components:
             means nobody has established that running this handler twice is safe.
             `trigger_event_unavailable` means the event cannot be rebuilt, which is
             permanent for a scheduled firing rather than a condition that clears.
-            `passport_revoked` means the rule stopped with the passport that set it up.
+            `passport_revoked` means the rule stopped with the agent that set it up, whose passport
+            or connection was revoked or expired.
     VoiceProfile:
       type: object
       description: The calling owner's live personal Voice DNA control record and active derived artifact.
@@ -50410,7 +50327,7 @@ components:
         required_change:
           type: boolean
           description: Only with a document. Marks the thread as one the seller still owes an answer on.
-        source: {type: string, description: 'Provenance. Required on the seller edge; a buyer''s comment always carries the credential''s own value. `manual` for someone writing through this product.'}
+        source: {type: string, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.'}
         request_id:
           type: string
           format: uuid
@@ -50423,7 +50340,7 @@ components:
       required: [body]
       properties:
         body: {type: string, minLength: 1}
-        source: {type: string}
+        source: {type: string, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.'}
         request_id:
           type: string
           format: uuid
@@ -50717,11 +50634,11 @@ components:
         recorded_by_colleague:
           type: boolean
           description: |-
-            A colleague recorded the stop. False when the contact recorded it on a link in a mail or
-            Margince recorded it, for example for a bounce.
+            A colleague recorded the stop, by hand or through their agent. False when the contact recorded
+            it on a link in a mail or Margince recorded it, for example for a bounce.
         recorded_by_name:
           type: [string, 'null']
-          description: The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+          description: The colleague's current name, the user an agent acted for included. Null when no colleague recorded it, or their seat is gone.
         may_lift:
           type: boolean
           description: This caller may take the stop back now, with a reason.

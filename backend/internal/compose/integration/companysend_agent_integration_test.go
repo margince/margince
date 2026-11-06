@@ -80,7 +80,7 @@ func setupAccountSend(t *testing.T) *accountSendEnv {
 	p := setupPreflight(t)
 	// Without the send grant every send below refuses at the pre-flight, and
 	// this suite would pass while proving nothing about authority.
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	company := anchorCompany(t, p.AppEnv, "Northwind")
 	return &accountSendEnv{preflightEnv: p, company: company, deal: openDealWithStakeholder(t, p.AppEnv, company, p.contactID)}
 }
@@ -105,7 +105,7 @@ func openDealWithStakeholder(t *testing.T, e *apptest.AppEnv, company, contactID
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("stake the recipient on the deal → %d", status)
 	}
-	askedAboutTheDeal(t, e, contactID, "buyer@preflight.test", deal.ID)
+	apptest.AskedAboutTheDeal(t, e, contactID, "buyer@preflight.test", deal.ID)
 	return deal.ID
 }
 

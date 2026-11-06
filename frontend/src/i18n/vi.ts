@@ -1392,6 +1392,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.industry": "Ngành",
   "reporting.allIndustries": "Tất cả ngành",
   "reporting.valueBasis": "Cơ sở giá trị",
+  "reporting.filtersMore": "Bộ lọc",
+  "reporting.filtersActive": "Bộ lọc · {active}",
   "reporting.basis.all": "Toàn bộ giá trị",
   "reporting.basis.software": "Chỉ phần mềm",
   "reporting.basis.implementation": "Chỉ triển khai",
@@ -2314,6 +2316,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.domain_triage": "Phân loại trang web",
   "systemJob.employment_import_worker": "Nhập lịch sử công tác",
   "systemJob.enabled_oidc_providers_read": "Đọc nhà cung cấp đăng nhập",
+  "systemJob.client_check_read": "Đọc công tắc kiểm tra công cụ AI",
   "systemJob.client_registration_read": "Đọc cách đăng ký công cụ AI",
   "systemJob.erasure_replay": "Xóa lại dữ liệu sau khi khôi phục",
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
@@ -3302,6 +3305,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "list.headActions": "Thao tác khác",
   "list.search": "Tìm kiếm",
   "list.showArchived": "Hiển thị mục trong kho lưu trữ",
+  "list.viewToggleOn": "Bật",
+  "list.viewToggleOff": "Tắt",
+  "list.viewMenu": "Chế độ xem",
+  "list.viewMenuBack": "quay lại tùy chọn xem",
+  "list.viewMenuChanged": "đã thay đổi",
+  "list.viewMenuFilters_one": "{count} bộ lọc",
+  "list.viewMenuFilters_other": "{count} bộ lọc",
+  "list.viewMenuNone": "Không có",
   "list.loadMore": "Tải thêm",
   "scrollSentinel.loading": "Đang tải thêm…",
   "scrollSentinel.failed": "Không tải thêm được.",
@@ -3318,15 +3329,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.rowsPerPage": "Số dòng mỗi trang",
   "table.perPage": "{count} dòng/trang",
   "table.sortedBy": "sắp xếp theo {column}",
-  "table.shownColumns": "Cột hiển thị",
-  "table.display": "Hiển thị",
-  "table.density": "Mật độ",
   "table.compact": "Thu gọn",
+  "table.filters": "Bộ lọc",
+  "table.columns": "Cột",
+  "table.columnsShown": "{shown} trên {total}",
+  "table.sortValue": "{column} {direction}",
   "table.columnHandle": "Di chuyển {name}, vị trí {position} trên {total}",
   "table.columnMoved": "Đã chuyển {name} đến vị trí {position} trên {total}",
   "table.sort": "Sắp xếp",
-  "table.sortNamed": "Sắp xếp: {column}",
-  "table.sortMenu": "Sắp xếp theo",
   "table.sortDefault": "Thứ tự mặc định",
   "table.sortAscending": "tăng dần",
   "table.sortDescending": "giảm dần",
@@ -3336,6 +3346,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "Đã tải {first} đến {last} trong {count} {unit}",
+  "table.rangeIn": "{range} thuộc {scope}",
   "unit.contacts": "liên hệ",
   "unit.companies": "công ty",
   "unit.deals": "deal",
@@ -3344,9 +3355,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "unit.partners": "đối tác",
   "unit.products": "sản phẩm",
   "unit.offerTemplates": "mẫu báo giá",
-  "table.filter": "Bộ lọc",
   "table.filterSearch": "Tìm thuộc tính",
-  "table.addFilter": "Thêm bộ lọc",
   "table.filterIs": "là",
   "table.filterCondition": "Điều kiện",
   "table.filterMore": "Thao tác khác cho bộ lọc {filter}",
@@ -3356,7 +3365,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.filterSearching": "Đang tìm…",
   "table.filterSearchFailed": "Tìm kiếm không thành công. Thử lại.",
   "table.filterNoMatches": "Không có kết quả.",
-  "table.filterBack": "Quay lại tất cả bộ lọc",
+  "table.filterBack": "quay lại tất cả bộ lọc",
 
   "contacts.name": "Tên",
   "contacts.email": "Email",
@@ -3378,6 +3387,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "views.saveTitle": "Lưu chế độ xem này",
   "views.name": "Tên",
   "views.rail": "Chế độ xem đã lưu",
+  "views.loadFailed": "Không thể tải các chế độ xem đã lưu.",
   "views.manage": "Quản lý chế độ xem",
   "views.none": "Chưa có chế độ xem đã lưu",
   "views.rename": "Đổi tên",
@@ -5996,6 +6006,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.correctCloseDayConfirm": "Lưu ngày chốt",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "{count} deal trong {pipeline}",
+  "deals.countInPipeline_other": "{count} deal trong {pipeline}",
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.totalsOwnerNotMeasurable":
     "Chỉ hiển thị deal đã tải. Chỉ quản trị viên cấp được quyền xem tổng của người chịu trách nhiệm này.",
@@ -7211,7 +7223,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftGoneBody":
     "Bản nháp đã được gửi hoặc xóa ở đó. Khi lưu, nội dung đang hiển thị sẽ thành bản nháp mới.",
   "compose.savedDraftFailed":
-    "Không thể lưu bản nháp. Lưu lại, hoặc đóng lần nữa để bỏ nội dung.",
+    "Không thể lưu bản nháp. Chọn Thử lại, hoặc đóng lần nữa để bỏ nội dung.",
+  "compose.savedDraftAutosaveFailed":
+    "Chưa lưu xong bản nháp. Viết tiếp hoặc kết nối lại mạng để thử lại.",
+  "compose.savedDraftAutosaveRefused":
+    "Không thể lưu bản nháp. Chọn Thử lại, hoặc viết tiếp để thử lại.",
+  "compose.savedDraftFilesUnavailable_one": "{count} tệp không thể khôi phục.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} tệp không thể khôi phục.",
+  "compose.sendWaitsForAddress": "Sửa hoặc xóa phần không phải địa chỉ email.",
+  "compose.notAnAddress_one":
+    "Không phải địa chỉ email: {parts}. Sửa hoặc xóa.",
+  "compose.notAnAddress_other":
+    "Không phải địa chỉ email: {parts}. Sửa hoặc xóa.",
   "compose.savedDraftLoad": "Tải phiên bản đã lưu",
   "compose.aiDisclosureTitle": "Bản nháp có AI hỗ trợ",
   "compose.aiDisclosureFallback":
@@ -7819,6 +7843,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.deliveryCoversAll":
     "Các số liệu này bao gồm mọi dự án bạn đọc được.",
   "analytics.attention": "Cần chú ý",
+  "analytics.board.rail": "Triển vọng và bước tiếp theo",
   "analytics.attentionNoOwner": "Chưa giao",
   "analytics.attentionOutOfDate": "đã cũ, đã thay đổi kể từ lần kiểm tra",
   "analytics.attentionAtStake": "{amount} bị ảnh hưởng",
@@ -8474,7 +8499,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "passport.noneOption": "Không dùng passport",
   "settings.passportUseAi": "Trong script hoặc công cụ AI khác",
   "settings.passportUseAiDetail":
-    "Cài skill Margince vào công cụ không tự đăng nhập được, rồi cung cấp passport cho công cụ đó. Claude Code, Codex và Antigravity đăng nhập không cần passport, trong mục Agent lập trình.",
+    "Cài skill Margince vào công cụ không tự đăng nhập được, rồi cung cấp passport cho công cụ đó. Claude Code, Codex, Cursor và các trình soạn thảo đăng nhập không cần passport, trong mục Kết nối công cụ AI của bạn.",
   "settings.skillDownload": "Tải xuống skill",
   "settings.skillDownloadFailed": "Không thể tải xuống skill",
   "settings.passportUseCode": "Trong mã nguồn riêng",
@@ -8754,8 +8779,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agents.colConnected": "Kết nối",
   "agents.disconnectConfirm":
     "Thao tác này kết thúc cả kết nối chứ không chỉ một thông tin xác thực. Agent sẽ mất quyền truy cập ở lần gọi tiếp theo và không thể gia hạn. Để kết nối lại, cần duyệt lại quyền truy cập.",
-  "agents.connectAntigravityPath":
-    "Antigravity không có lệnh add. Thêm khối bên dưới vào ~/.gemini/config/mcp_config.json, rồi mở cài đặt agent, “Customizations”, và chọn “Authenticate” bên cạnh margince.",
   "agents.connectorOff": "Công cụ AI chưa thể kết nối với Margince.",
   "agents.connectorOffDetail":
     "Bên vận hành bản cài đặt này bật tính năng này trong cấu hình. Trong lúc chờ, passport vẫn dùng được cho script.",
@@ -8780,6 +8803,33 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentClients.methods.alwaysOn": "Luôn bật",
   "agentClients.methods.readOnly":
     "Chỉ quản trị viên mới có thể thay đổi các mục này.",
+  "agentClients.experiments.title": "Thử nghiệm",
+  "agentClients.experiments.sub":
+    "Các tính năng thử nghiệm, có thể thay đổi hoặc bị bỏ. Tắt cho tất cả cho đến khi quản trị viên bật ở đây.",
+  "agentClients.experiments.clientCheck": "Kiểm tra hỗ trợ công cụ",
+  "agentClients.experiments.clientCheckHint":
+    "Cho công cụ AI của quản trị viên hiện một biểu mẫu nhỏ, để kiểm tra nó có trả lời được không.",
+  "agentClients.experiments.about": "Về thử nghiệm này",
+  "agentClients.experiments.whyTitle": "Vì sao",
+  "agentClients.experiments.why":
+    "Margince có thể hỏi bạn ngay trong cuộc trò chuyện trước một thay đổi hàng loạt, hoặc hỏi bạn muốn bản ghi nào, khi công cụ AI hiện được một biểu mẫu nhỏ. Phép kiểm tra này cho biết công cụ AI nào của bạn làm được. Thay đổi cần duyệt vẫn chờ ở mục Phê duyệt.",
+  "agentClients.experiments.howTitle": "Cách kiểm tra",
+  "agentClients.experiments.step1": "Bật mục này.",
+  "agentClients.experiments.step2":
+    "Trong công cụ AI, kết nối lại Margince để nó tải công cụ mới.",
+  "agentClients.experiments.step3": "Hỏi nó:",
+  "agentClients.experiments.clientCheckQuestion":
+    "Dùng công cụ check_client của Margince để kiểm tra xem công cụ AI này có hiện được biểu mẫu của Margince không.",
+  "agentClients.experiments.clientCheckQuestionLabel": "Câu hỏi",
+  "agentClients.experiments.copy": "Sao chép câu hỏi",
+  "agentClients.experiments.copied": "Đã sao chép",
+  "agentClients.experiments.copyRemedy":
+    "Trình duyệt từ chối việc sao chép. Hãy chọn câu hỏi và sao chép thủ công.",
+  "agentClients.experiments.step4":
+    "Nếu công cụ AI hiện biểu mẫu yêu cầu bạn chọn một màu, nó hỗ trợ biểu mẫu. Nếu không, câu trả lời nêu tên công cụ, phiên bản và lý do.",
+  "agentClients.experiments.safeTitle": "An toàn khi thử",
+  "agentClients.experiments.safe":
+    "Khi đang bật, quản trị viên thấy công cụ này trong mọi công cụ AI họ kết nối. Nó không đọc hay thay đổi dữ liệu. Hãy tắt khi bạn dùng xong.",
   "agentClients.title": "MCP client",
   "agentClients.sub":
     "Mỗi ứng dụng mà công cụ AI dùng để đăng nhập, và cách ứng dụng đó được tạo.",
@@ -8873,7 +8923,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.connect.help": "Trợ giúp từ {vendor}",
   "aiAccess.connect.helpAdmin": "Trợ giúp từ {vendor} cho quản trị viên",
   "aiAccess.connect.devHint":
-    "Bạn dùng công cụ dòng lệnh hoặc mã của riêng bạn? Xem Dành cho nhà phát triển bên dưới.",
+    "Bạn tự viết mã? Tạo khóa API trong mục Dành cho nhà phát triển bên dưới.",
   "aiAccess.step.allow": "Margince mở ra. Đăng nhập và chọn Cấp quyền. Xong.",
   "aiAccess.claude.openConnectors":
     "Trong Claude, mở “Customize”, rồi “Connectors”.",
@@ -8953,14 +9003,86 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.guide.checked": "Các bước này được kiểm tra vào {date}.",
   "aiAccess.dev.title": "Dành cho nhà phát triển",
   "aiAccess.dev.sub":
-    "Khóa API cho mã của riêng bạn, agent lập trình, và những gì agent được làm khi không có bạn.",
+    "Khóa API cho mã của riêng bạn, và những gì agent được làm khi không có bạn.",
   "aiAccess.dev.tab.passports": "Khóa API",
-  "aiAccess.dev.tab.agents": "Agent lập trình",
   "aiAccess.dev.tab.rules": "Quy tắc cho agent",
-  "aiAccess.cli.title": "Agent lập trình",
-  "aiAccess.cli.sub":
-    "Kết nối một lần, rồi đăng nhập trong trình duyệt. Không cần passport.",
-  "aiAccess.cli.then": "Sau đó chạy {command}.",
+  "aiAccess.connect.placeQuestion": "Bạn dùng nó ở đâu?",
+  "aiAccess.connect.copy": "Sao chép",
+  "aiAccess.connect.command": "Nội dung cần sao chép",
+  "aiAccess.choice.other": "Công cụ AI khác",
+  "aiAccess.place.claudeApp": "Ứng dụng Claude: web, máy tính hoặc điện thoại",
+  "aiAccess.place.claudeAppNote":
+    "Một kết nối dùng được cho Claude trên web, ứng dụng máy tính và điện thoại. Claude Code được thiết lập riêng.",
+  "aiAccess.place.claudeCodeTerminal": "Claude Code trong terminal",
+  "aiAccess.place.claudeCodeVsCode": "Claude Code trong VS Code",
+  "aiAccess.place.claudeCodeJetBrains": "Claude Code trong JetBrains",
+  "aiAccess.place.claudeCodeVisualStudio": "Claude Code trong Visual Studio",
+  "aiAccess.place.claudeInCopilot":
+    "Bạn dùng Claude làm mô hình trong GitHub Copilot? Hãy chọn Copilot ở trên.",
+  "aiAccess.place.chatgptApp":
+    "Ứng dụng ChatGPT: web, máy tính hoặc điện thoại",
+  "aiAccess.place.codex": "Codex trong terminal hoặc trình soạn thảo",
+  "aiAccess.place.m365": "Microsoft 365 Copilot hoặc Teams",
+  "aiAccess.place.githubVsCode": "GitHub Copilot trong VS Code",
+  "aiAccess.place.githubVisualStudio": "GitHub Copilot trong Visual Studio",
+  "aiAccess.place.geminiApp": "Ứng dụng Gemini, cho công việc hoặc cá nhân",
+  "aiAccess.place.antigravity": "Antigravity, trình soạn thảo agent của Google",
+  "aiAccess.runIn.vscode":
+    "Chạy lệnh trong terminal của VS Code: “Terminal”, rồi “New Terminal”.",
+  "aiAccess.runIn.jetbrains": "Chạy lệnh trong cửa sổ “Terminal” của IDE.",
+  "aiAccess.runIn.visualStudio":
+    "Chạy lệnh trong terminal của Visual Studio: “View”, rồi “Terminal”.",
+  "aiAccess.local.sub":
+    "Thiết lập trên máy tính của bạn. Không cần quản trị viên.",
+  "aiAccess.local.claudeCode.add":
+    "Chạy lệnh này một lần. Sau đó Margince có trong mọi dự án và trình soạn thảo.",
+  "aiAccess.local.claudeCode.signIn":
+    "Trong Claude Code, gõ /mcp, chọn margince và đăng nhập.",
+  "aiAccess.local.codex.add": "Chạy lệnh này một lần trong terminal.",
+  "aiAccess.local.codex.signIn": "Sau đó chạy “codex mcp login margince”.",
+  "aiAccess.local.vscode.add":
+    "Trong Command Palette, chạy “MCP: Add Server” và chọn “HTTP”.",
+  "aiAccess.local.vscode.paste":
+    "Dán địa chỉ, nhập margince làm mã nhận diện máy chủ và chọn “Global”.",
+  "aiAccess.local.vscode.signIn":
+    "Chấp nhận lời nhắc đăng nhập của VS Code. Margince mở ra: đăng nhập và chọn Cấp quyền.",
+  "aiAccess.local.visualStudio.file":
+    "Trong Visual Studio, tạo hoặc mở tệp %USERPROFILE%\\.mcp.json, thêm nội dung này và lưu lại. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
+  "aiAccess.local.visualStudio.signIn":
+    "Trong tệp, phía trên margince, chọn “Authentication Required”, rồi “Authenticate”. Đăng nhập và chọn Cấp quyền.",
+  "aiAccess.local.visualStudio.tools":
+    "Trong Copilot Chat, chuyển sang chế độ Agent và bật các công cụ margince.",
+  "aiAccess.local.cursor.file":
+    "Mở ~/.cursor/mcp.json, hoặc tạo tệp này, thêm nội dung này và lưu. Sau đó khởi động lại Cursor. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
+  "aiAccess.local.cursor.signIn":
+    "Làm theo lời nhắc đăng nhập của Cursor cho margince. Margince mở ra: đăng nhập và chọn Cấp quyền.",
+  "aiAccess.local.antigravity.file":
+    "Thêm nội dung này vào ~/.gemini/config/mcp_config.json. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
+  "aiAccess.local.antigravity.signIn":
+    "Mở cài đặt agent, rồi “Customizations”, và chọn “Authenticate” bên cạnh margince.",
+  "aiAccess.other.sub":
+    "Margince hoạt động với mọi công cụ AI có thể thêm máy chủ MCP từ xa. Hãy tìm “MCP”, “connectors” hoặc “tools” trong phần cài đặt của nó.",
+  "aiAccess.other.typeLabel": "Loại",
+  "aiAccess.other.type":
+    "Máy chủ từ xa qua HTTP, đôi khi gọi là “Streamable HTTP”",
+  "aiAccess.other.signInLabel": "Đăng nhập",
+  "aiAccess.other.signIn":
+    "OAuth trong trình duyệt. Hầu hết công cụ tự bắt đầu ở lần kết nối đầu tiên.",
+  "aiAccess.other.apiKey":
+    "Công cụ không đăng nhập được? Tạo khóa API trong Cài đặt, mục Quyền truy cập AI, Dành cho nhà phát triển, rồi gửi nó trong header “Authorization: Bearer” kèm khóa phía sau.",
+  "aiAccess.other.notAllowed":
+    "Nếu khi đăng nhập có thông báo công cụ không được phép, quản trị viên chọn các công cụ được phép kết nối trong Cài đặt, mục MCP.",
+  "setup.step.ai": "Kết nối công cụ AI của bạn",
+  "setup.caption.ai":
+    "Dùng Margince từ Claude, ChatGPT, Copilot hoặc trình soạn thảo của bạn.",
+  "setup.action.ai": "Kết nối",
+  "setup.step.aiDone": "{name} đã được kết nối.",
+  "setup.step.aiDoneUnnamed": "Một công cụ AI đã được kết nối.",
+  "ob.conv.connect.aiRow": "Công cụ AI của bạn",
+  "ob.conv.connect.aiBody":
+    "Hỏi Claude, ChatGPT, Copilot hoặc trình soạn thảo về các deal của bạn, và để nó cập nhật Margince giúp bạn.",
+  "ob.conv.connect.aiConnect": "Kết nối",
+  "ob.conv.connect.aiConnected": "Đã kết nối",
   "aiAccess.cli.docs": "Tài liệu {tool}",
   "settings.token": "Thông tin xác thực",
   "settings.autonomy": "Cấp tự chủ",
@@ -12255,7 +12377,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.pausedReason.listInvalid":
     "Đã tạm dừng vì bộ lọc của danh sách tự cập nhật mà tự động hóa theo dõi đã ngừng hoạt động. Sửa bộ lọc không làm tự động hóa tiếp tục.",
   "auto.pausedReason.passportRevoked":
-    "Passport của trợ lý AI đã thiết lập quy tắc này đã bị thu hồi nên quy tắc đã tạm dừng. Hãy tiếp tục để quy tắc chạy mà không còn trợ lý AI nào đứng sau.",
+    "Trợ lý AI đã thiết lập quy tắc này không còn quyền truy cập vì passport hết hạn hoặc bị thu hồi, hoặc kết nối đã kết thúc. Hãy tiếp tục để quy tắc chạy không cần trợ lý AI.",
+  "auto.setByYourAgent": "Do trợ lý AI của bạn",
+  "auto.setByAnAgent": "Do một trợ lý AI",
   "auto.pausedReason.listUnavailable":
     "Đã tạm dừng vì người phụ trách tự động hóa không còn tìm thấy danh sách được theo dõi.",
   "auto.pausedReason.burst":
@@ -12305,7 +12429,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.pausedShort.listArchived": "Đã tạm dừng · danh sách đã lưu trữ",
   "auto.pausedShort.listInvalid": "Đã tạm dừng · bộ lọc danh sách bị lỗi",
   "auto.pausedShort.passportRevoked":
-    "Đã tạm dừng · passport của trợ lý AI bị thu hồi",
+    "Đã tạm dừng · trợ lý AI hết quyền truy cập",
   "auto.pausedShort.listUnavailable": "Đã tạm dừng · không tìm thấy danh sách",
   "auto.pausedShort.burst": "Đã tạm dừng · quá nhiều hồ sơ",
   "auto.withheld": "Tự động hóa đã cấu hình bị ẩn với vai trò này.",
@@ -14214,6 +14338,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Xác suất mà từ đó một deal đang mở có ngày chốt đã xác nhận được tính là khả năng cao.",
   "forecast.landing": "Dự kiến cuối kỳ",
+  "forecast.landingSection": "Điểm kết thúc kỳ này",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingUnrecorded": "Chưa ghi nhận",
   "forecast.basis.likely": "Đã chốt + deal khả năng cao",
@@ -14228,6 +14353,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.callAbsentLine": "Chưa có ước tính, nên hiển thị deal khả năng cao",
   "forecast.callBelowLine": "Thấp hơn {won} đã chốt, hiển thị như đã ghi",
   "forecast.model.quarter": "Kết quả quý theo mô hình",
+  "forecast.model.short": "80% kết quả ở giữa",
   "forecast.model.month": "Kết quả tháng theo mô hình",
   "forecast.model.week": "Kết quả tuần theo mô hình",
   "forecast.model.value": "{low} đến {high}",
@@ -14726,7 +14852,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.connect.importAndContinue": "Nhập {period} và tiếp tục",
   "ob.conv.connect.alsoTitle": "Cũng nên làm ngay",
   "ob.conv.connect.alsoSub":
-    "Không bắt buộc. Cả hai có thể đổi sau trong Cài đặt.",
+    "Không bắt buộc. Tất cả có thể đổi sau trong Cài đặt.",
   "ob.conv.connect.linkedinRow": "Hồ sơ LinkedIn của bạn",
   "ob.conv.connect.linkedinAdd": "Thêm hồ sơ",
   "setup.reminder.trigger": "Hoàn tất thiết lập",
@@ -14785,6 +14911,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "account.timezoneLabel": "Múi giờ",
   "account.timezoneHelp":
     "Thời gian trong Margince, giờ nhận đặt lịch của bạn và thư gửi cho bạn dùng múi giờ này. Được lưu vào tài khoản của bạn, nên áp dụng trên mọi thiết bị bạn đăng nhập.",
+  "account.timezoneSetByAgent": "Do trợ lý AI của bạn",
   "workingHours.zoneIs": "Giờ của bạn tính theo {zone}.",
   "workingHours.changeZone": "Đổi múi giờ",
   "account.languageCard": "Ngôn ngữ và múi giờ",
@@ -16801,7 +16928,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "richtext.bulletList": "Danh sách dấu đầu dòng",
   "richtext.numberList": "Danh sách đánh số",
   "richtext.link": "Liên kết",
-  "richtext.linkPrompt": "URL liên kết (để trống để gỡ liên kết)",
+  "richtext.linkAdd": "Thêm liên kết",
+  "richtext.linkEdit": "Sửa liên kết",
+  "richtext.linkAddress": "Địa chỉ web hoặc email",
+  "richtext.linkPlaceholder": "example.com hoặc name@example.com",
+  "richtext.linkApply": "Áp dụng",
+  "richtext.linkRemove": "Gỡ liên kết",
+  "richtext.linkRefused":
+    "Đây không phải địa chỉ web hay email. Nhập một địa chỉ như example.com hoặc name@example.com.",
   "contact.composer.intentAgenda": "đề xuất chương trình cho cuộc họp sắp tới",
   "contact.composer.intentReply": "trả lời tin nhắn gần nhất của họ",
   "contact.composer.intentCommitment": "thực hiện một cam kết",
@@ -18446,7 +18580,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.retryRefusedRepeats":
     "Quy tắc này không được phép chạy hai lần, nên chạy lại có thể lặp lại các thao tác của quy tắc.",
   "worklist.verb.retryRefusedPassportRevoked":
-    "Passport của trợ lý AI thiết lập quy tắc này đã bị thu hồi nên quy tắc đang tạm dừng. Hãy tiếp tục để quy tắc chạy mà không còn trợ lý AI nào đứng sau.",
+    "Trợ lý AI đã thiết lập quy tắc này không còn quyền truy cập nên quy tắc đang tạm dừng. Hãy tiếp tục để quy tắc chạy không cần trợ lý AI.",
   "worklist.verb.retryRefusedEventGone":
     "Sự kiện kích hoạt không còn tồn tại, nên không thể chạy lại. Quy tắc theo lịch sẽ tự kiểm tra lại.",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem. Thử lại.",
@@ -19974,6 +20108,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.shortfall": "Thiếu hụt dự kiến {amount}",
   "analytics.hero.surplus": "Vượt dự kiến {amount}",
   "analytics.hero.prior": "Cùng thời điểm kỳ trước: {amount}",
+  "analytics.hero.ofTarget": "so với mục tiêu {target}",
+  "analytics.hero.short": "Thiếu {amount} so với mục tiêu",
+  "analytics.hero.over": "Vượt mục tiêu {amount}",
+  "analytics.trajectory.label": "Doanh số đã chốt trong kỳ",
+  "analytics.trajectory.today": "Hôm nay · {date}",
+  "analytics.trajectory.through": "Tính đến {date}",
+  "analytics.trajectory.target": "Mục tiêu {amount}",
+  "analytics.trajectory.projection": "Dự kiến {amount}",
+  "analytics.trajectory.range": "Kết quả mô hình",
   "analytics.overview.more": "Thêm",
   "analytics.outlook.valuedCount": "Định giá {included}/{eligible}",
   "analytics.outlook.periodPipeline": "Pipeline dự kiến chốt trong quý",
@@ -19982,6 +20125,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.outlook.team": "Triển vọng tìm khách hàng của nhóm",
   "analytics.outlook.prospecting": "Triển vọng tìm khách hàng",
   "analytics.outlook.records": "Xem bản ghi liên quan",
+  "analytics.outlook.more": "Đọc toàn bộ triển vọng",
   "analytics.assessment.refresh": "Làm mới đánh giá",
   "analytics.assessment.retry": "Thử lại",
   "analytics.assessment.evidenceTitle": "Đánh giá dựa trên điều gì",

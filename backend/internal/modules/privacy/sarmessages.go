@@ -247,6 +247,14 @@ func sarDraftSection(pkg *SARPackage, contactID ids.ContactID, emails []string, 
 		      (SELECT coalesce(jsonb_agg(addr), '[]'::jsonb)
 		         FROM unnest(d.bcc_addresses) AS addr
 		        WHERE lower(btrim(addr)) = ANY($3::text[])) AS bcc,
+		      -- Named as the sent projection names them, for its reason: a draft may
+		      -- carry any file its author could see. A file gone since keeps its id.
+		      (SELECT coalesce(jsonb_agg(jsonb_build_object(
+		                'attachment_id', chosen.id, 'filename', f.filename,
+		                'content_type', f.content_type, 'byte_size', f.byte_size) ORDER BY chosen.ord), '[]'::jsonb)
+		         FROM unnest(d.attachment_ids) WITH ORDINALITY AS chosen(id, ord)
+		         LEFT JOIN attachment f ON f.id = chosen.id) AS attachments,
+		      d.communication_context, d.scheduled_at, d.scheduled_tz,
 		      d.anchor_type, d.created_at, d.updated_at
 		   FROM mail_draft d
 		   WHERE ` + subjectDraftMatch,
