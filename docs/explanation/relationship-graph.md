@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go -->
+<!-- describes: backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go backend/internal/modules/search/graphnewpairs.go backend/internal/modules/search/graphworklocks.go backend/internal/modules/search/graphworkqueue.go backend/internal/modules/search/graphedgetargets.go -->
 # The relationship graph: participants, the interaction edge & deal coverage
 
 Margince answers the question *is this account cold* from the real parties to each conversation. It
@@ -181,6 +181,10 @@ reads waiting pairs in small groups through the same statement. It marks only th
 that its read covered, so mail that comes in during that read stays due. New mail and changes that
 remove access still take effect at once. See the [worker reference](../reference/worker-diagnostics.md)
 for the jobs and the rules when a new version starts.
+
+The lock query also records pairs that do not have a row yet. A first insert can wait while
+another worker writes a newer result. It folds only the missing pairs its first write returned
+once more through the same code, while it still holds their rows. Existing rows and drains need no extra read.
 
 A fixture keeps the two paths in line: a rebuild and a stream of step-by-step updates over the same
 history must agree.

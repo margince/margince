@@ -103,7 +103,8 @@ func LastTouchFor(
 		touched += " AND " + scope
 	}
 	touched += opts.projectScope(arg)
-	touched += " AND " + occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
+	nowAt := fmt.Sprintf("$%d", arg(now))
+	touched += " AND " + occurredday.HappenedSQL("a", nowAt)
 	roster, err := employeeRoster(ctx, arg)
 	if err != nil {
 		return nil, err
@@ -138,7 +139,7 @@ func LastTouchFor(
 		LEFT JOIN last_contact lc ON lc.company_id = %[1]s.id
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
 		lastTouchCompanyAlias, touched, wantedPos, visible,
-		relstrength.DirectionClockSQL("a")+" AND "+relstrength.WorkspaceAudienceSQL("a"), relstrength.InteractionCountsSQL("a"),
+		relstrength.DirectionClockSQL("a", nowAt)+" AND "+relstrength.WorkspaceAudienceSQL("a"), relstrength.InteractionCountsSQL("a", nowAt),
 		employeeSQL(roster, relstrength.TheyWroteSQL("emp.contact_id", "a")),
 		employeeSQL(roster, relstrength.WeWroteSQL("a")+" AND "+employeeReachedSQL),
 		occurredday.LatestPrecisionSQL("", "they_wrote"), occurredday.LatestPrecisionSQL("", "we_wrote")), args...)

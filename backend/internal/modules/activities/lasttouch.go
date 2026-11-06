@@ -48,8 +48,8 @@ type LastTouchCandidate struct {
 // the engine's own output. The scan reads it to find a silence. The resolver
 // (CompleteQuietRemindersReachedBy) reads it to find the silence's end, so a
 // touch that would not have moved the anchor does not close the reminder.
-// Mail from a sending system, an invitation and a meeting nobody reported held
-// are not contact, by the rules every recency clock reads (relstrength).
+// Mail from a sending system, an invitation and a meeting still to come or
+// called off are not contact. Every recency clock reads that rule (relstrength).
 //
 // The three positions bind systemSource, systemCapturedBy and
 // systemCapturedByPattern; source alone is a client's to spell, so it is
@@ -57,7 +57,7 @@ type LastTouchCandidate struct {
 func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) string {
 	return storekit.SQLf(`%[1]s.archived_at IS NULL`+auth.AudienceWorkspaceOnly(alias)+`
 				  AND `+relstrength.WrittenByHumanSQL(alias)+`
-				  AND `+relstrength.HadContactSQL(alias)+`
+				  AND `+relstrength.HadContactSQL(alias, "now()")+`
 				  AND NOT (%[1]s.source = $%[2]d
 				           AND (%[1]s.captured_by = $%[3]d OR %[1]s.captured_by LIKE $%[4]d))`,
 		alias, sourcePos, capturedByPos, patternPos)

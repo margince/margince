@@ -257,8 +257,8 @@ func scanAssuranceSubject(
 }
 
 // customerProgressSQL admits a row that is the CUSTOMER moving the deal. That is
-// a message a contact on it wrote, a call with them that happened, or a meeting
-// with them someone recorded held. A past meeting with no outcome is not progress.
+// a message a contact on it wrote, or a call or meeting with them that kept us
+// in touch (relstrength.HadContactSQL). A past meeting counts with no outcome.
 // Our own mail, a task, a field edit and a machine's mail never count. Nor do a
 // message not every member may read, or a refusal. An unjudged message counts,
 // because every message from before the verdict existed is unjudged.
@@ -269,11 +269,11 @@ func customerProgressSQL(alias, asOf string) string {
 // customerProgressAnyAudienceSQL is customerProgressSQL over every message,
 // those only their participants may read included. Only its date may be used.
 func customerProgressAnyAudienceSQL(alias, asOf string) string {
-	return "(" + relstrength.DirectionClockSQL(alias) +
+	return "(" + relstrength.DirectionClockSQL(alias, asOf) +
 		" AND ((" + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
 		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
-		relstrength.HadContactSQL(alias) + " AND " +
+		relstrength.HadContactSQL(alias, asOf) + " AND " +
 		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
 }
 
@@ -285,7 +285,7 @@ func customerRefusalSQL(alias, asOf string) string {
 
 // customerRefusalAnyAudienceSQL is customerRefusalSQL over every message.
 func customerRefusalAnyAudienceSQL(alias, asOf string) string {
-	return "(" + relstrength.DirectionClockSQL(alias) + " AND " + customerWroteSQL(alias) + " AND " +
+	return "(" + relstrength.DirectionClockSQL(alias, asOf) + " AND " + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict = '" + activities.ReplyVerdictNegative + "' AND " + occurredday.BegunSQL(alias, asOf) + ")"
 }
 

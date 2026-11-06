@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/backfill.go backend/internal/modules/capture/backfillpager.go backend/internal/modules/capture/backfillcheckpoint.go backend/internal/modules/capture/backfillyields.go backend/internal/modules/capture/gmail/backfill.go backend/internal/modules/capture/graph/backfill.go backend/internal/compose/costestimate backend/internal/compose/backfilltransport.go frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/mailcoverage.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/syncsnapshot.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/registry_connections.go backend/internal/compose/mailcapturecoverageseam.go backend/internal/compose/mailcoverage/coverage.go -->
+<!-- describes: backend/internal/modules/capture/backfill.go backend/internal/modules/capture/backfillpager.go backend/internal/modules/capture/backfillcheckpoint.go backend/internal/modules/capture/backfillyields.go backend/internal/modules/capture/gmail/backfill.go backend/internal/modules/capture/graph/backfill.go backend/internal/compose/costestimate backend/internal/compose/backfilltransport.go frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/mailcoverage.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/syncsnapshot.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/registry_connections.go backend/internal/compose/mailcapturecoverageseam.go backend/internal/compose/mailcoverage/coverage.go backend/internal/modules/capture/backfillaccount.go backend/internal/modules/capture/backfillresume.go backend/internal/modules/capture/internalmailhistorystart.go backend/internal/modules/capture/registry_grant.go -->
 # Mail history import: the capped scan back in time and its cost
 
 Connecting a mailbox starts *standing sync*: from then on, new mail comes in. A new connection is also
@@ -143,7 +143,13 @@ being written*:
 - the run reached an end state at the same time (a cancel), or
 - the connection was closed and opened again while the page was out at the provider.
 
-A page cannot write after its grant changes. Messages already stored stay.
+Before a page starts, it checks that the mailbox still belongs to the run's account.
+It does this before reading credentials or calling the provider. A different account cancels queued and running work in the grant transaction
+and keeps its saved counts. A new credential for the same account keeps its saved place.
+If the account changes during the page, its later writes stop; messages already stored stay.
+
+Account changes and new runs share the connection lock. Their stored times follow that lock's
+order, so a transaction that started earlier cannot put a run in the wrong account's history.
 
 **Each failure is handled by its kind.** A rate limit, an internal fault or a provider that cannot be reached is waited out.
 The wait is twice as long each time. The wait keeps to the provider's own `Retry-After` when that asks for

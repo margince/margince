@@ -28,7 +28,9 @@ import (
 // token belongs to one mailbox, so a run from before the connection was bound
 // to another account has nothing to continue.
 const resumableRunPredicate = `b.status = 'error' AND b.cursor IS NOT NULL
-	AND (c.account_bound_at IS NULL OR b.created_at >= c.account_bound_at)`
+	AND ` + backfillMatchesAccount
+
+const backfillMatchesAccount = `(c.account_bound_at IS NULL OR b.created_at >= c.account_bound_at)`
 
 // resumeFailedBackfillTx reopens the connection's newest run when it is
 // resumable and its window covers windowMonths, and answers it; nil when there

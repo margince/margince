@@ -187,25 +187,31 @@ func TestAReplyOrACallSettlesTheFollowUp(t *testing.T) {
 	}
 }
 
-// A meeting with the contact since the message settles it only once someone
-// recorded it held. One nobody reported is awaiting its outcome.
-func TestOnlyAHeldMeetingSinceSettlesTheFollowUp(t *testing.T) {
+// A meeting with the contact since the message settles it once its time has
+// passed, whether or not anyone reported it held. One still to come, a
+// canceled one and a no-show settle nothing.
+func TestAMeetingInTouchSinceSettlesTheFollowUp(t *testing.T) {
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 
-	unreported := e.customerAt(t, "prospect")
-	owed, _ := e.sentTo(t, unreported, "", 3*24*time.Hour)
-	e.metWith(t, unreported, e.rep, "booked", 2*time.Hour)
-
-	held := e.customerAt(t, "prospect")
-	settled, _ := e.sentTo(t, held, "", 3*24*time.Hour)
-	e.metWith(t, held, e.rep, "held", 2*time.Hour)
-
-	if !awaited(t, s, e, owed) {
-		t.Error("a meeting since that nobody reported held settled the follow-up")
-	}
-	if awaited(t, s, e, settled) {
-		t.Error("a held meeting since did not settle the follow-up")
+	for name, tc := range map[string]struct {
+		status  string
+		ago     time.Duration
+		settles bool
+	}{
+		"nobody reported it": {"", 2 * time.Hour, true},
+		"still booked":       {"booked", 2 * time.Hour, true},
+		"held":               {"held", 2 * time.Hour, true},
+		"still to come":      {"booked", -2 * 24 * time.Hour, false},
+		"canceled":           {"canceled", 2 * time.Hour, false},
+		"a no-show":          {"no_show", 2 * time.Hour, false},
+	} {
+		contact := e.customerAt(t, "prospect")
+		owed, _ := e.sentTo(t, contact, "", 3*24*time.Hour)
+		e.metWith(t, contact, e.rep, tc.status, tc.ago)
+		if got := !awaited(t, s, e, owed); got != tc.settles {
+			t.Errorf("a meeting %s since settled the follow-up: %v, want %v", name, got, tc.settles)
+		}
 	}
 }
 

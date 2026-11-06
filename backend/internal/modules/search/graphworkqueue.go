@@ -57,22 +57,22 @@ func (h *graphHistoryTargets) interactionWork() ([]pair, []*ids.UUID) {
 }
 
 // Unmarked pairs can be missing or inserted after the marker scanned; both need coverage.
-func (h *graphHistoryTargets) prepareContacts(ctx context.Context, tx pgx.Tx) error {
+func (h *graphHistoryTargets) prepareContacts(ctx context.Context, tx pgx.Tx, missing []contactPair) error {
 	pairs, _ := h.contactWork()
 	uncovered, err := uncoveredContactPairs(ctx, tx, pairs, h.sources)
 	if err != nil {
 		return err
 	}
-	return recomputeContactPairs(ctx, tx, uncovered)
+	return recomputeContactPairs(ctx, tx, uncovered, missing)
 }
 
-func (h *graphHistoryTargets) prepareInteractions(ctx context.Context, tx pgx.Tx) error {
+func (h *graphHistoryTargets) prepareInteractions(ctx context.Context, tx pgx.Tx, missing []pair) error {
 	pairs, _ := h.interactionWork()
 	uncovered, err := uncoveredInteractionPairs(ctx, tx, pairs, h.sources)
 	if err != nil {
 		return err
 	}
-	return recomputePairs(ctx, tx, uncovered)
+	return recomputePairs(ctx, tx, uncovered, missing)
 }
 
 func (h *graphHistoryTargets) markContacts(ctx context.Context, tx pgx.Tx) error {

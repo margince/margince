@@ -92,23 +92,16 @@ func scanContactPairs(rows pgx.Rows) ([]contactPair, error) {
 	return out, rows.Err()
 }
 
-// recomputeContactPairs re-folds the named pairs from the base tables in one
-// statement and deletes the ones that no longer qualify — the same
-// atomic-with-capture shape recomputePairs keeps, for the same reason, and
-// in the same key order, so concurrent batches lock rows in one order.
-//
-// The audience rule and the role set are graph_interaction_edge's own, applied unchanged:
-// a limited-audience activity contributes NOTHING here, exactly as it
-// contributes nothing to graph_interaction_edge — who talked to whom on a
-// limited thread is content, and this table is readable without reading it.
-func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) error {
+// Sorted folds share the capture transaction, so concurrent batches lock pairs in one order.
+// Limited-audience evidence is excluded because this projection can be read without its source activity.
+func foldContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) ([]contactPair, error) {
 	if len(pairs) == 0 {
-		return nil
+		return nil, nil
 	}
 	first, second := contactPairKeys(pairs)
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
 
-	if _, err := tx.Exec(ctx, `
+	rows, err := tx.Query(ctx, `
 		WITH target AS (
 		    SELECT DISTINCT contact_a, contact_b
 		      FROM unnest($1::uuid[], $2::uuid[]) AS t(contact_a, contact_b)
@@ -140,9 +133,16 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		    count_90d   = EXCLUDED.count_90d,
 		    count_total = EXCLUDED.count_total,
 		    computed_at = EXCLUDED.computed_at,
-            read_snapshot = EXCLUDED.read_snapshot`,
-		first, second); err != nil {
-		return fmt.Errorf("search: recomputing contact edges: %w", err)
+            read_snapshot = EXCLUDED.read_snapshot
+        RETURNING e.contact_a, e.contact_b`,
+		first, second)
+	if err != nil {
+		return nil, fmt.Errorf("search: recomputing contact edges: %w", err)
+	}
+	written, err := scanContactPairs(rows)
+	rows.Close()
+	if err != nil {
+		return nil, err
 	}
 
 	// A pair whose last shared activity was archived or limited loses its row.
@@ -161,9 +161,9 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		        WHERE pa.contact_id = t.contact_a AND pa.role IN `+interactionRoles+`
 		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`))`,
 		first, second); err != nil {
-		return fmt.Errorf("search: pruning contact edges that lost their evidence: %w", err)
+		return nil, fmt.Errorf("search: pruning contact edges that lost their evidence: %w", err)
 	}
-	return nil
+	return written, nil
 }
 
 // contactPairsForContact names every pair one contact can appear in: partners

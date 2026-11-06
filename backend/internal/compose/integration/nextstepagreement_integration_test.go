@@ -59,7 +59,7 @@ func TestBothPagesAgreeTheNextStepIsAMeeting(t *testing.T) {
 	var meeting AnyMap
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "meeting", "subject": "Detailabstimmung Rollout-Plan",
-		"occurred_at": quiet, "source": "manual", "meeting_status": "held",
+		"occurred_at": quiet, "source": "manual",
 		"links": []AnyMap{
 			{"entity_type": "deal", "entity_id": dealID},
 			{"entity_type": "contact", "entity_id": contactID},

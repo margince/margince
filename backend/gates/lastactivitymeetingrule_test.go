@@ -6,7 +6,8 @@
 package gates
 
 // last_activity_at on deal, contact, company and project skips a task and a
-// meeting nobody reported held, and counts only what has happened.
+// canceled or no-show meeting, and counts only what has happened. A past
+// meeting counts whether or not anyone reported it held.
 // relstrength.LastActivityCountsSQL spells all three.
 //
 // The last_activity_of_* SQL functions fold the column and cannot call Go, so
@@ -47,7 +48,7 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 			continue
 		}
 		if missing := armsMissing(body, rule); len(missing) > 0 {
-			t.Errorf("%s: activity arms %v of %d do not carry %q, so a task, a meeting nobody reported held, "+
+			t.Errorf("%s: activity arms %v of %d do not carry %q, so a task, a canceled or no-show meeting, "+
 				"or one still ahead, can keep the record looking recently active. Replace the function in a "+
 				"new migration with the rule's current text in every arm.", name, missing, len(arms), rule)
 		}
@@ -59,7 +60,7 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 			continue
 		}
 		if !strings.Contains(string(src), "relstrength.LastActivityCountsSQL(") && !strings.Contains(string(src), "relstrength.ExternalActivityCountsSQL(") {
-			t.Errorf("%s no longer calls relstrength.LastActivityCountsSQL, so %s can count an unheld "+
+			t.Errorf("%s no longer calls relstrength.LastActivityCountsSQL, so %s can count a canceled "+
 				"meeting, or one still ahead, as a touch", file, what)
 		}
 	}

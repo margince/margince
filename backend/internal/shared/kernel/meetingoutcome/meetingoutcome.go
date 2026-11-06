@@ -5,6 +5,7 @@
 // recorded held outcome. A start time in the past is not one. Nor is a
 // calendar sync with no status, or a transcript on the row. A meeting nobody
 // reported stays "awaiting outcome" on every surface that counts or proves.
+// Being in touch needs no outcome; relstrength.HadContactSQL answers that.
 package meetingoutcome
 
 // Held is the activity.meeting_status value of a meeting someone reported as

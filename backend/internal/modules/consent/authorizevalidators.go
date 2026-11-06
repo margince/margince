@@ -142,7 +142,7 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 // from us. Either they wrote or met with us inside the window, or a request of
 // theirs is on record at any age.
 func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules) (bool, error) {
-	found, err := repliedOrWasRecorded(ctx, tx, subject, time.Now().Add(-w.reply))
+	found, err := repliedOrWasRecorded(ctx, tx, subject, time.Now(), w.reply)
 	if err != nil || found {
 		return found, err
 	}
@@ -157,11 +157,12 @@ func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRu
 // in-person exchange supports a composer send, and both readers agree. A lead
 // has no qualifying event, because the table is keyed on contacts. It keeps
 // the authorship test alone, which wroteToUsWithin spells for both kinds.
-func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, since time.Time) (bool, error) {
+func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, asOf time.Time, window time.Duration) (bool, error) {
+	since := asOf.Add(-window)
 	if subject.Kind != entityContact {
 		return wroteToUsWithin(ctx, tx, subject, since)
 	}
-	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, &subject.Address)
+	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, asOf, &subject.Address)
 	if err != nil {
 		return false, err
 	}

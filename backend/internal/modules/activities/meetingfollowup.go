@@ -220,7 +220,7 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held)
 	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
 		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
-		g.later, relstrength.InteractionCountsSQL("later"), reader,
+		g.later, relstrength.InteractionCountsSQL("later", at), reader,
 		messageSnoozeLiftedSQL(at, g.back), g.customer, limit,
 		held, addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
 	)), args, nil

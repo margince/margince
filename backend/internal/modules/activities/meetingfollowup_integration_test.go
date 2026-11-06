@@ -17,7 +17,7 @@ func (e *loadEnv) metWith(t *testing.T, contact, host ids.UUID, status string, a
 	t.Helper()
 	meeting := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, duration_seconds, meeting_status, host_user_id, source, captured_by)
-		VALUES ($1, 'meeting', 'Discovery workshop', now() - $2::interval, 3600, $3, $4, 'seed', 'system')`,
+		VALUES ($1, 'meeting', 'Discovery workshop', now() - $2::interval, 3600, NULLIF($3, ''), $4, 'seed', 'system')`,
 		meeting, ago.String(), status, host)
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
 		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), meeting, contact)
@@ -111,24 +111,30 @@ func TestAMessageSentDuringTheMeetingDoesNotSettleIt(t *testing.T) {
 	}
 }
 
-// A later meeting with them settles the follow-up only once someone recorded
-// it held. One nobody reported is awaiting its outcome, not a follow-up made.
-func TestOnlyAHeldLaterMeetingSettlesAMeetingFollowUp(t *testing.T) {
+// A later meeting with them settles the follow-up once its time has passed,
+// whether or not anyone reported it held. One still to come, a canceled one
+// and a no-show settle nothing.
+func TestALaterMeetingInTouchSettlesAMeetingFollowUp(t *testing.T) {
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 
-	unreported := e.customerAt(t, "customer")
-	owed := e.metWith(t, unreported, e.rep, "held", 3*24*time.Hour)
-	e.metWith(t, unreported, e.rep, "booked", 2*time.Hour)
-
-	held := e.customerAt(t, "customer")
-	settled := e.metWith(t, held, e.rep, "held", 3*24*time.Hour)
-	e.metWith(t, held, e.rep, "held", 2*time.Hour)
-
-	if !owesMeetingFollowUp(t, s, e, owed) {
-		t.Error("a later meeting nobody reported held settled the follow-up")
-	}
-	if owesMeetingFollowUp(t, s, e, settled) {
-		t.Error("a later held meeting did not settle the follow-up")
+	for name, tc := range map[string]struct {
+		status  string
+		ago     time.Duration
+		settles bool
+	}{
+		"nobody reported it": {"", 2 * time.Hour, true},
+		"still booked":       {"booked", 2 * time.Hour, true},
+		"held":               {"held", 2 * time.Hour, true},
+		"still to come":      {"booked", -2 * 24 * time.Hour, false},
+		"canceled":           {"canceled", 2 * time.Hour, false},
+		"a no-show":          {"no_show", 2 * time.Hour, false},
+	} {
+		contact := e.customerAt(t, "customer")
+		owed := e.metWith(t, contact, e.rep, "held", 3*24*time.Hour)
+		e.metWith(t, contact, e.rep, tc.status, tc.ago)
+		if got := !owesMeetingFollowUp(t, s, e, owed); got != tc.settles {
+			t.Errorf("a later meeting %s settled the follow-up: %v, want %v", name, got, tc.settles)
+		}
 	}
 }

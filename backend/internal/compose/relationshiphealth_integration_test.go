@@ -5,9 +5,10 @@
 
 package compose
 
-// A company's Relationship rating counts a past meeting only once someone
-// recorded it held. The rows come from the real writers. A calendar meeting
-// comes in through the Sink as a live pull lands it, with no status.
+// A company's Relationship rating counts meetings, on the same rule the
+// contact strength fold counts them, against rows the real writers produced:
+// the meeting comes in through the calendar Sink exactly as a live pull lands
+// it, with no direction and no status.
 
 import (
 	"maps"
@@ -74,17 +75,6 @@ func captureMeetingWith(t *testing.T, e *integration.Env, contact ids.UUID, even
 	}
 }
 
-// logAccountMeeting logs a meeting with the contact through the activities writer.
-func logAccountMeeting(t *testing.T, e *integration.Env, acct quietAccount, subject, status string, at time.Time) {
-	t.Helper()
-	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "meeting", Subject: &subject, MeetingStatus: &status, OccurredAt: &at, Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: acct.contact}},
-	}); err != nil {
-		t.Fatalf("logging the %s meeting: %v", status, err)
-	}
-}
-
 func pageOf(t *testing.T, e *integration.Env, acct quietAccount) crmcontracts.Company360 {
 	t.Helper()
 	page, err := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
@@ -112,6 +102,10 @@ func TestAMeetingKeepsTheRelationshipOffAtRisk(t *testing.T) {
 		want      crmcontracts.HealthDimensionReasonCode
 	}{
 		{
+			"held three weeks ago", func(now time.Time) time.Time { return now.AddDate(0, 0, -21) },
+			crmcontracts.HealthDimensionReasonCodeLastMet,
+		},
+		{
 			"booked for the day after tomorrow", func(now time.Time) time.Time { return now.AddDate(0, 0, 2) },
 			crmcontracts.HealthDimensionReasonCodeMeetingBooked,
 		},
@@ -133,42 +127,42 @@ func TestAMeetingKeepsTheRelationshipOffAtRisk(t *testing.T) {
 	}
 }
 
-// A calendar meeting whose start passed and that nobody reported is awaiting
-// its outcome. It is not the last time we met them, so the account stays quiet
-// from their last message.
-func TestAPastMeetingNobodyReportedIsNotLastMet(t *testing.T) {
+// A calendar meeting whose start passed and that nobody reported keeps us in
+// touch on every reading of the Company 360 page. The relationship is not
+// quiet. The meeting is the last one met, the last contact, and the contact's
+// last interaction for strength.
+func TestAPastMeetingNobodyReportedKeepsTheAccountInTouch(t *testing.T) {
 	e := integration.Setup(t)
 	acct := seedQuietAccount(t, e)
-	captureMeetingWith(t, e, acct.contact, "evt-account-review", acct.now.AddDate(0, 0, -21))
+	metAt := acct.now.AddDate(0, 0, -3).Truncate(time.Second)
+	captureMeetingWith(t, e, acct.contact, "evt-unreported-review", metAt)
 
 	page := pageOf(t, e, acct)
 	got := page.Health.Relationship
-	if got == nil || got.ReasonCode == nil || *got.ReasonCode != crmcontracts.HealthDimensionReasonCodeQuiet {
-		t.Fatalf("relationship = %+v, want quiet from their message 77 days ago", got)
+	if got == nil || got.ReasonCode == nil || *got.ReasonCode != crmcontracts.HealthDimensionReasonCodeLastMet {
+		t.Fatalf("relationship = %+v, want last met three days ago, not quiet from their message", got)
 	}
-	if got.ReasonParams == nil || got.ReasonParams.Days == nil || *got.ReasonParams.Days != 77 {
-		t.Errorf("quiet reason params = %+v, want 77 days: the unreported meeting is not the last contact", got.ReasonParams)
+	if page.Health.LastMeetingAt == nil || !page.Health.LastMeetingAt.Equal(metAt) {
+		t.Errorf("last meeting = %v, want the unreported meeting at %v", page.Health.LastMeetingAt, metAt)
 	}
-	if page.Health.LastMeetingAt != nil {
-		t.Errorf("last meeting held = %v, want none: nobody reported the meeting held", page.Health.LastMeetingAt)
-	}
-	if page.LastContact == nil || page.LastContact.Kind == crmcontracts.Company360LastContactKindMeeting {
-		t.Errorf("last contact = %+v, want their message: the unreported meeting is no contact", page.LastContact)
+	if page.LastContact == nil || page.LastContact.Kind != crmcontracts.Company360LastContactKindMeeting {
+		t.Errorf("last contact = %+v, want the unreported meeting", page.LastContact)
 	}
 	if page.Contacts == nil || len(page.Contacts.Data) != 1 {
 		t.Fatalf("contacts = %+v, want the one employed contact", page.Contacts)
 	}
-	if last := page.Contacts.Data[0].Strength.LastInteraction; last == nil || acct.now.Sub(*last) < 76*24*time.Hour {
-		t.Errorf("the contact's last interaction = %v, want their message 77 days ago", last)
+	if last := page.Contacts.Data[0].Strength.LastInteraction; last == nil || !last.Equal(metAt) {
+		t.Errorf("the contact's last interaction = %v, want the unreported meeting at %v", last, metAt)
 	}
 }
 
 // The other direction: a meeting held before the threshold is not current
-// contact, and a canceled one is not contact at all.
+// contact, and a canceled one is not contact at all — for the company rating
+// and for the contact strength fold alike.
 func TestAnOldOrCanceledMeetingLeavesTheRelationshipAtRisk(t *testing.T) {
 	e := integration.Setup(t)
 	acct := seedQuietAccount(t, e)
-	logAccountMeeting(t, e, acct, "Old review", "held", acct.now.AddDate(0, 0, -40))
+	captureMeetingWith(t, e, acct.contact, "evt-old-review", acct.now.AddDate(0, 0, -40))
 	subject, canceled, at := "Called-off check-in", "canceled", acct.now.AddDate(0, 0, -3)
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, MeetingStatus: &canceled, OccurredAt: &at, Source: "manual",
@@ -199,9 +193,9 @@ func TestAnOldOrCanceledMeetingLeavesTheRelationshipAtRisk(t *testing.T) {
 	}
 }
 
-// Status and clock decide together. Only a meeting recorded held whose start
-// passed is contact we had. A past booking is awaiting its outcome. A canceled
-// one is not contact. A row marked held but dated ahead is no booking.
+// Status and clock decide together. A booking whose start passed is contact
+// we had, marked held or not; a canceled one is not; and a row marked held
+// but dated ahead is not a booking to keep the account off at risk.
 func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -209,7 +203,7 @@ func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
 		days   int // negative is ahead
 		want   crmcontracts.HealthDimensionReasonCode
 	}{
-		{"booked, start passed, never marked held", "booked", 5, crmcontracts.HealthDimensionReasonCodeQuiet},
+		{"booked, start passed, never marked held", "booked", 5, crmcontracts.HealthDimensionReasonCodeLastMet},
 		{"canceled, start passed", "canceled", 5, crmcontracts.HealthDimensionReasonCodeQuiet},
 		{"marked held but dated ahead", "held", -2, crmcontracts.HealthDimensionReasonCodeQuiet},
 		{"marked held last week", "held", 7, crmcontracts.HealthDimensionReasonCodeLastMet},

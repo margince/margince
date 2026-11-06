@@ -15,7 +15,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
-	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -97,11 +96,9 @@ func quietAtSQL(alias string, days int, instant string) string {
 		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant)
 }
 
-// MeetingAheadSQL is true when the deal has a booked meeting its stored clock
-// has not reached. That is a booked meeting still to come
-// (relstrength.MeetingAheadSQL), or a held one that started before the refold
-// job moved the clock to it. A past meeting nobody reported never reaches the
-// clock, so it is neither. The
+// MeetingAheadSQL is true when the deal has a meeting nobody called off that
+// its stored clock has not reached. That is a meeting still to come, or one
+// that started before the refold job moved the clock to it. The
 // audience is spelled as in last_activity_of_deal, so a meeting only some
 // colleagues may see changes no number everyone reads.
 func MeetingAheadSQL(alias string) string {
@@ -112,8 +109,7 @@ func MeetingAheadSQL(alias string) string {
 	return `EXISTS (SELECT 1 FROM activity_link ahead_link
 		JOIN activity ahead ON ahead.id = ahead_link.activity_id
 		WHERE ahead_link.deal_id = ` + deal + `.id AND ahead.archived_at IS NULL
-		  AND ahead.kind = 'meeting'
-		  AND (` + meetingoutcome.HeldSQL("ahead") + ` OR ` + relstrength.MeetingAheadSQL("ahead", "now()") + `)` +
+		  AND ahead.kind = 'meeting' AND ` + relstrength.MeetingNotCalledOffSQL("ahead") +
 		auth.OriginIsEngagement("ahead") + ` AND ahead.audience = 'workspace'
 		  AND coalesce(` + deal + `.last_activity_at, '-infinity') < ahead.occurred_at -- occurred_at raw: the stored clock holds an occurred_at
 		)`

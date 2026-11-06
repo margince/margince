@@ -160,7 +160,7 @@ func DropEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) err
 	return t.apply(ctx, tx)
 }
 
-// recomputePairs re-folds the named pairs from the base tables in one
+// foldPairs re-folds the named pairs from the base tables in one
 // statement, and deletes the ones that no longer qualify.
 //
 // Written as one INSERT … ON CONFLICT DO UPDATE plus one DELETE rather than a
@@ -172,14 +172,14 @@ func DropEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) err
 // batch can name thousands of pairs, and two batches for the same colleague
 // name mostly the same ones; taking the row locks in one global order is what
 // makes the second batch wait for the first instead of deadlocking with it.
-func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
+func foldPairs(ctx context.Context, tx pgx.Tx, pairs []pair) ([]pair, error) {
 	if len(pairs) == 0 {
-		return nil
+		return nil, nil
 	}
 	users, contacts := interactionPairKeys(pairs)
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
 
-	if _, err := tx.Exec(ctx, `
+	rows, err := tx.Query(ctx, `
 		WITH target AS (
 		    SELECT DISTINCT user_id, contact_id
 		      FROM unnest($1::uuid[], $2::uuid[]) AS t(user_id, contact_id)
@@ -222,9 +222,16 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		    late_out_count_90d = EXCLUDED.late_out_count_90d,
 		    count_total      = EXCLUDED.count_total,
 		    computed_at      = EXCLUDED.computed_at,
-            read_snapshot = EXCLUDED.read_snapshot`,
-		users, contacts); err != nil {
-		return fmt.Errorf("search: recomputing interaction edges: %w", err)
+            read_snapshot = EXCLUDED.read_snapshot
+        RETURNING e.user_id, e.contact_id`,
+		users, contacts)
+	if err != nil {
+		return nil, fmt.Errorf("search: recomputing interaction edges: %w", err)
+	}
+	written, err := scanPairs(rows)
+	rows.Close()
+	if err != nil {
+		return nil, err
 	}
 
 	// The pairs that no longer have a single qualifying interaction lose their
@@ -244,9 +251,9 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		          AND `+liveContactSQL("pp.contact_id")+`)`,
 		users, contacts); err != nil {
-		return fmt.Errorf("search: pruning interaction edges that lost their evidence: %w", err)
+		return nil, fmt.Errorf("search: pruning interaction edges that lost their evidence: %w", err)
 	}
-	return nil
+	return written, nil
 }
 
 // audienceWorkspaceOnly is the projection's audience rule, spelled once for

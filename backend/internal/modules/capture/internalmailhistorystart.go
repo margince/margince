@@ -43,9 +43,13 @@ func insertBackfillRunTx(ctx context.Context, tx pgx.Tx, run *BackfillRun, estim
 	if estimate.Messages != 0 {
 		total = new(estimate.Messages)
 	}
-	args := []any{run.ConnectionID, run.WindowMonths, run.AfterDate, total, estimate.Floor, run.Status, encoded}
-	err := tx.QueryRow(ctx, `INSERT INTO capture_backfill
- (connection_id, window_months, after_date, total_estimate, total_estimate_is_floor, status, internal_mail_authorization, started_at)
+	createdAt, err := nextBackfillAccountTimeTx(ctx, tx, run.ConnectionID)
+	if err != nil {
+		return err
+	}
+	args := []any{run.ConnectionID, run.WindowMonths, run.AfterDate, total, estimate.Floor, run.Status, encoded, createdAt}
+	err = tx.QueryRow(ctx, `INSERT INTO capture_backfill
+ (connection_id, window_months, after_date, total_estimate, total_estimate_is_floor, status, internal_mail_authorization, created_at, started_at)
  VALUES (`+storekit.Placeholders(args)+`, now()) RETURNING id`, args...).Scan(&run.ID)
 	if storekit.IsUniqueViolation(err) {
 		return ErrBackfillRunning

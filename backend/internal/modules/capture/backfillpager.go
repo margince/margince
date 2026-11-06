@@ -39,13 +39,14 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 		cursor        []byte
 		status        string
 		generation    int
+		sameAccount   bool
 	)
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT b.connection_id, b.after_date, b.cursor, b.status, c.provider, c.user_id, c.credential_ref, c.auth, c.generation
+			SELECT b.connection_id, b.after_date, b.cursor, b.status, c.provider, c.user_id, c.credential_ref, c.auth, c.generation, `+backfillMatchesAccount+`
 			FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
 			WHERE b.id = $1`, backfillID).
-			Scan(&connID, &after, &cursor, &status, &name, &grantedBy, &credentialRef, &authBytes, &generation)
+			Scan(&connID, &after, &cursor, &status, &name, &grantedBy, &credentialRef, &authBytes, &generation, &sameAccount)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return true, false, 0, fmt.Errorf("capture: backfill %s: %w", backfillID, apperrors.ErrNotFound)
@@ -55,6 +56,10 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 	}
 	if status == "cancelled" || status == "done" || status == "error" {
 		return true, false, 0, nil
+	}
+	if !sameAccount {
+		err := r.db.Tx(ctx, func(tx pgx.Tx) error { return cancelReboundBackfillTx(ctx, tx, backfillID) })
+		return true, false, 0, err
 	}
 
 	c, err := r.connector(name)
@@ -359,6 +364,6 @@ func backfillPageCursor(cursor []byte) (string, error) {
 func cancelReboundBackfillTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	args := []any{id}
 	// A run already ended needs no second cancellation.
-	_, err := tx.Exec(ctx, `UPDATE capture_backfill SET status='cancelled', completed_at=now()`+clearBackfillAdmission+resetInflightProgress+` WHERE id=`+storekit.Placeholders(args)+` AND status='running'`, args...)
+	_, err := tx.Exec(ctx, `UPDATE capture_backfill SET status='cancelled', completed_at=now()`+clearBackfillAdmission+resetInflightProgress+` WHERE id=`+storekit.Placeholders(args)+` AND status IN ('queued','running')`, args...)
 	return err
 }

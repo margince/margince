@@ -49,11 +49,8 @@ func TestTheRefoldJobMovesTheProjectClockOnceAMeetingStarts(t *testing.T) {
 	f := newTaskClockFixture(t)
 	meetsAt := f.now.AddDate(0, 0, 2)
 	f.logMeetingOnAll(t, "booked", meetsAt)
-	// The writer refuses held before the start on the real clock, and this
-	// test moves only the clock the refold reads.
-	f.e.WsExec(t, `UPDATE activity SET meeting_status = 'held' WHERE kind = 'meeting'`)
 	runRefold(t, shiftedPool(t, 3*24*time.Hour))
-	f.assertClocks(t, meetsAt, "once the held meeting has started, the refold counts it")
+	f.assertClocks(t, meetsAt, "once the meeting has started, the refold counts it")
 	if at := f.projectClock(t); at == nil || !at.Equal(meetsAt) {
 		t.Errorf("project last_activity_at = %v, want the meeting's start %v", at, meetsAt)
 	}
