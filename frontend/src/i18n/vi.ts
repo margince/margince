@@ -5808,8 +5808,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.valueProposition": "Giá trị mang lại",
   "legalEntities.usp": "Điểm khác biệt",
   "legalEntities.sectionLogo": "Logo công ty",
-  "legalEntities.logoAdd": "Thêm logo",
-  "legalEntities.logoReplace": "Thay logo",
+  "legalEntities.logoAdd": "Tải logo lên",
+  "legalEntities.logoEdit": "Sửa logo",
   "legalEntities.logoHint":
     "PNG, JPEG, GIF, WebP, ICO hoặc SVG. Logo được lưu ngay khi bạn chọn.",
   "legalEntities.logoEmpty": "Thả ảnh vào đây hoặc chọn ảnh",

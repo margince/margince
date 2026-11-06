@@ -13,7 +13,7 @@ import {
 import { CompanyLogo } from "../../design-system/companylogo";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
-import { FileDropzone } from "../../design-system/filedropzone";
+import { ImageSlot } from "../../design-system/imageslot";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
 import { countryOptions } from "../../format/assignedcountries";
@@ -329,8 +329,9 @@ function EntityLogo({
   onVersion: (version: number) => void;
 }>) {
   const t = useT();
+  const hintId = useId();
   const [src, setSrc] = useState(entity.logo_url ?? null);
-  const uploading = write.isPending && write.variables?.file !== null;
+  const removing = write.isPending && write.variables?.file === null;
   const send = (file: File | null) =>
     write.mutate(
       { id: entity.id, version, file },
@@ -342,34 +343,44 @@ function EntityLogo({
         },
       },
     );
+  const monogram = <Avatar identity={entity.id} name={entity.display_name} />;
   return (
     <>
-      <SectionHeader level={3} title={t("legalEntities.sectionLogo")} />
-      {src && (
-        <CompanyLogo
-          name={entity.display_name}
-          src={src}
-          fallback={<Avatar identity={entity.id} name={entity.display_name} />}
-        />
-      )}
-      <FileDropzone
-        label={t(src ? "legalEntities.logoReplace" : "legalEntities.logoAdd")}
-        hint={t("legalEntities.logoHint")}
+      <ImageSlot
+        shape="wide"
+        filled={Boolean(src)}
+        preview={
+          src ? (
+            <CompanyLogo
+              name={entity.display_name}
+              src={src}
+              fallback={monogram}
+            />
+          ) : (
+            monogram
+          )
+        }
+        editable
+        name={t("legalEntities.sectionLogo")}
+        describedBy={hintId}
         emptyLabel={t("legalEntities.logoEmpty")}
         accept={ACCEPTED_IMAGES}
-        disabled={write.isPending || saving}
+        verbs={{
+          edit: t("settings.imageEdit"),
+          editLabel: t("legalEntities.logoEdit"),
+          upload: t("legalEntities.logoAdd"),
+          remove: t("legalEntities.logoRemove"),
+        }}
+        // The form's own save moves the version this write needs, so the
+        // slot waits on it as on its own write.
+        uploading={(write.isPending && !removing) || saving}
+        removing={removing}
         onPick={send}
+        onRemove={() => send(null)}
       />
-      {src && (
-        <Button
-          variant="ghost"
-          onClick={() => send(null)}
-          disabled={saving || uploading}
-          pending={write.isPending && write.variables?.file === null}
-        >
-          {t("legalEntities.logoRemove")}
-        </Button>
-      )}
+      <p className="t-caption" id={hintId}>
+        {t("legalEntities.logoHint")}
+      </p>
       <ErrorLine error={write.isError && problemMessageOf(write.error, t)} />
     </>
   );

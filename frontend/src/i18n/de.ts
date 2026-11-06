@@ -5955,8 +5955,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.valueProposition": "Nutzenversprechen",
   "legalEntities.usp": "Was ihn abhebt",
   "legalEntities.sectionLogo": "Logo",
-  "legalEntities.logoAdd": "Logo hinzufügen",
-  "legalEntities.logoReplace": "Logo ersetzen",
+  "legalEntities.logoAdd": "Logo hochladen",
+  "legalEntities.logoEdit": "Logo bearbeiten",
   "legalEntities.logoHint":
     "PNG, JPEG, GIF, WebP, ICO oder SVG. Es wird gespeichert, sobald du es auswählst.",
   "legalEntities.logoEmpty": "Bild hier ablegen oder auswählen",

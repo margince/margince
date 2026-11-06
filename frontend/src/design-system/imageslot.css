@@ -7,6 +7,7 @@
   align-items: center;
   gap: var(--space-3);
   flex: none;
+  inline-size: fit-content;
   min-width: 0;
   max-width: 100%;
 }

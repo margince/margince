@@ -54,7 +54,7 @@ export function Avatar({
   // A chip with a live logo draws no mesh at any moment. The initials wait on
   // a neutral ground, and only a logo that failed falls back to the mesh.
   const logo = Boolean(picture) && !broken;
-  // A seat waits for its picture on the mesh a person without one wears.
+  // A seat waits for its picture on the mesh a contact without one shows.
   const meshed = !logo || (Boolean(photo) && !painted);
   const classes = [
     "avatar",

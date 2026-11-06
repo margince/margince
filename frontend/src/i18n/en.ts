@@ -5929,8 +5929,8 @@ export const en = {
   "legalEntities.valueProposition": "Value proposition",
   "legalEntities.usp": "What sets it apart",
   "legalEntities.sectionLogo": "Logo",
-  "legalEntities.logoAdd": "Add a logo",
-  "legalEntities.logoReplace": "Replace the logo",
+  "legalEntities.logoAdd": "Upload logo",
+  "legalEntities.logoEdit": "Edit logo",
   "legalEntities.logoHint":
     "PNG, JPEG, GIF, WebP, ICO or SVG. It is saved as soon as you choose it.",
   "legalEntities.logoEmpty": "Drop an image here or choose one",

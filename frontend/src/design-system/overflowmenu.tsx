@@ -2,6 +2,7 @@ import { MoreHorizontal } from "lucide-react";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  type RefObject,
   useEffect,
   useId,
   useRef,
@@ -57,13 +58,15 @@ function borrowedReasons(panel: HTMLElement): string[] {
 }
 
 // Up and Down walk the panel's own buttons and links; a field inside it keeps
-// its arrows for itself.
+// its arrows for itself. A dialog an item opened bubbles here through the
+// portal, so a key from outside the panel's DOM is not the menu's.
 function walkItems(event: ReactKeyboardEvent<HTMLDivElement>) {
   const step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
   const here = event.target;
   if (
     step === undefined ||
     !(here instanceof HTMLElement) ||
+    !event.currentTarget.contains(here) ||
     !here.matches("button, a")
   ) {
     return;
@@ -106,6 +109,7 @@ export function OverflowMenu({
   icon = <MoreHorizontal aria-hidden="true" />,
   inline = false,
   align = "end",
+  within = null,
   pending = false,
   keepMounted = false,
   children,
@@ -115,8 +119,10 @@ export function OverflowMenu({
   text?: string;
   /** The write an item started is out: the trigger shows it as `Button pending` does. */
   pending?: boolean;
-  /** Where the panel hangs: off the trigger's `end` (a mark at a row's end), its `start`, or its `center`, kept inside the trigger's card. */
+  /** Where the panel hangs: off the trigger's `end` (a mark at a row's end), its `start`, or its `center`. */
   align?: "start" | "end" | "center";
+  /** A box the panel stays inside as well as the window, such as the card from `usePanelEdge`. */
+  within?: RefObject<HTMLElement | null> | null;
   /** The trigger's glyph, `aria-hidden`; the three dots unless the menu holds one kind of item (the chats a number opens). */
   icon?: ReactNode;
   /** A trigger inside a line of text, as `IconAction inline`: the square keeps its target and takes one line box. */
@@ -147,7 +153,7 @@ export function OverflowMenu({
   const panel = useRef<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
-  const at = useAnchoredToTrigger(open, trigger, panel, align);
+  const at = useAnchoredToTrigger(open, trigger, panel, align, within);
   const { layer, joinLayer, join } = useDialogLayer(wrap, keepMounted);
   const [reasons, setReasons] = useState<readonly string[]>([]);
 

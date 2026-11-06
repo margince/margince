@@ -10,6 +10,7 @@ import { Callout } from "../../design-system/callout";
 import { CompanyLogo } from "../../design-system/companylogo";
 import { ImageSlot, type ImageSlotVerbs } from "../../design-system/imageslot";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { SettingDescription } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { storeCompany } from "../../lib/installationcompany";
@@ -20,7 +21,6 @@ import {
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
-import "../../design-system/settingrow.css";
 import "./companymark.css";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];
@@ -133,9 +133,9 @@ export function CompanyMark({
             )}
           </div>
         )}
-        <p className="settingrow-description" id={hintId}>
+        <SettingDescription id={hintId}>
           {t("settings.brandHint")}
-        </p>
+        </SettingDescription>
       </PanelBody>
     </Panel>
   );

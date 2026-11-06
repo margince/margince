@@ -7,6 +7,7 @@ import { Button } from "./button";
 import { describedByIds } from "./describedby";
 import { FileDropzoneControl } from "./filedropzone";
 import { OverflowMenu } from "./overflowmenu";
+import { usePanelEdge } from "./panel";
 import "./imageslot.css";
 
 /** The words of a slot's Edit menu: the pill's verb, its full name, and the two items. */
@@ -62,6 +63,7 @@ export function ImageSlot({
   const inputId = useId();
   const tile = useRef<HTMLDivElement>(null);
   const busy = uploading || removing;
+  const card = usePanelEdge();
   // Out of the tab order, since the menu's Upload is the keyboard's way in.
   // The zone stays so a file dropped on the picture lands.
   const control = {
@@ -101,6 +103,7 @@ export function ImageSlot({
           label={verbs.editLabel}
           text={verbs.edit}
           align="center"
+          within={card}
           icon={<Pencil aria-hidden="true" />}
           pending={busy}
         >
