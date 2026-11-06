@@ -5,6 +5,7 @@ package auth
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/platform/workarea"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -21,12 +22,7 @@ func AreasAdmit(p principal.Principal, spec mcp.ToolSpec) bool {
 	if p.Type != principal.PrincipalAgent || spec.SelfDescribing || !p.Areas.Limited {
 		return true
 	}
-	for _, area := range spec.Areas {
-		if p.Areas.Includes(area) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(spec.Areas, p.Areas.Includes)
 }
 
 // AreaRefusal is the refusal for a call AreasAdmit turns away, nil otherwise.
