@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
+import { TaskAssignee } from "../../components/taskassignee";
 import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -113,8 +114,9 @@ function taskColumns(cells: Cells): DataTableColumn<NextStep>[] {
     {
       key: "owner",
       header: t("co.next.col.owner"),
-      render: (step) =>
-        step.assignee_id ? <EntityRef kind="user" id={step.assignee_id} /> : "",
+      render: (step) => (
+        <TaskAssignee id={step.assignee_id} name={step.assignee_name} />
+      ),
     },
     {
       key: "state",

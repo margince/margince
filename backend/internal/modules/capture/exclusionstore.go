@@ -127,10 +127,10 @@ func (s *ExclusionStore) List(ctx context.Context) ([]Exclusion, error) {
 }
 
 // Add records one rule. A workspace rule takes the capture-settings update
-// grant (admin/ops); a user rule takes only a human seat, and names the
+// grant (admin/ops); a user rule takes only a user or their agent, and names the
 // caller. Idempotent on the folded value: re-adding answers the existing row.
 func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Exclusion, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return Exclusion{}, err
 	}
 	actor, err := storekit.Actor(ctx)
@@ -182,7 +182,7 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 			  INSERT INTO capture_exclusion (scope, user_id, kind, value, created_by)
 			  VALUES ($1, $2, $3, $4, $5)
 			  ON CONFLICT (scope, user_id, kind, value)
-			    DO UPDATE SET value = EXCLUDED.value
+			    DO UPDATE SET value = EXCLUDED.value, created_by = `+fmt.Sprintf(agentDecisionTakeoverSQL, "capture_exclusion")+`
 			  RETURNING id, scope, user_id, kind, value, created_at, created_by)
 			SELECT `+exclusionColumns,
 			scope, userID, kind, value, actor.ID), &out); err != nil {
@@ -201,7 +201,7 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 // user it names. Somebody else's user rule is not theirs to see, so it
 // answers not-found like a row that is not there.
 func (s *ExclusionStore) Remove(ctx context.Context, id ids.UUID) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	actor, err := storekit.Actor(ctx)
@@ -210,8 +210,9 @@ func (s *ExclusionStore) Remove(ctx context.Context, id ids.UUID) error {
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var e Exclusion
-		err := tx.QueryRow(ctx, `SELECT id, scope, user_id, kind, value FROM capture_exclusion WHERE id = $1`, id).
-			Scan(&e.ID, &e.Scope, &e.UserID, &e.Kind, &e.Value)
+		var createdBy string
+		err := tx.QueryRow(ctx, `SELECT id, scope, user_id, kind, value, created_by FROM capture_exclusion WHERE id = $1 FOR UPDATE`, id).
+			Scan(&e.ID, &e.Scope, &e.UserID, &e.Kind, &e.Value, &createdBy)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -224,6 +225,9 @@ func (s *ExclusionStore) Remove(ctx context.Context, id ids.UUID) error {
 			}
 		} else if e.UserID == nil || *e.UserID != actor.UserID {
 			return apperrors.ErrNotFound
+		}
+		if err := refuseAgentOverAUsersDecision(actor, &createdBy, "this exclusion"); err != nil {
+			return err
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM capture_exclusion WHERE id = $1`, id); err != nil {
 			return fmt.Errorf("capture: removing an exclusion: %w", err)

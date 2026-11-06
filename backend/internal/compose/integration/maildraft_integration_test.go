@@ -101,7 +101,7 @@ func TestTheDraftRoutesAnswerTheComposersQuestions(t *testing.T) {
 // wrote, even when the refused message is frozen for review.
 func TestADraftStaysThroughARefusalAndGoesWithTheAcceptedSend(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	_, draft := p.saveReplyDraft(t, "As discussed.", nil)
 	send := AnyMap{
 		"subject": "Re: pricing", "body": "As discussed.",
@@ -149,7 +149,7 @@ func TestErasingARecipientDeletesTheDraftsAddressedToThem(t *testing.T) {
 // commits, not when the message later fires.
 func TestAScheduledReplyTakesItsDraftWithIt(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	_, draft := p.saveReplyDraft(t, "Written the night before.", nil)
 
 	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
@@ -172,16 +172,16 @@ func TestAScheduledReplyTakesItsDraftWithIt(t *testing.T) {
 // their record is theirs too; one to somebody else on another record is not.
 func TestASubjectAccessExportCarriesTheDraftsWrittenToThem(t *testing.T) {
 	p := setupPreflight(t)
-	put := func(to, bcc []string, body string) {
-		t.Helper()
-		if status := p.Call(t, "PUT", "/v1/mail-drafts", AnyMap{
-			"anchor_type": "activity", "anchor_id": p.activityID,
-			"to": to, "bcc": bcc, "subject": "Re: pricing", "body": body,
-		}, nil, nil); status != http.StatusOK {
-			t.Fatalf("saving a draft → %d, want 200", status)
-		}
+	file := p.seedDraftFile(t, "price-list.pdf")
+	if status := p.Call(t, "PUT", "/v1/mail-drafts", AnyMap{
+		"anchor_type": "activity", "anchor_id": p.activityID,
+		"to": []string{"colleague@preflight.test"}, "bcc": []string{"Buyer@preflight.test", "other-blind@preflight.test"},
+		"subject": "Re: pricing", "body": "Written and never sent.",
+		"attachment_ids": []string{file}, "communication_context": "precontract_quote",
+		"scheduled_at": "2026-01-07T08:00:00Z", "scheduled_tz": "Europe/Berlin",
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("saving a draft → %d, want 200", status)
 	}
-	put([]string{"colleague@preflight.test"}, []string{"Buyer@preflight.test", "other-blind@preflight.test"}, "Written and never sent.")
 	if status := p.Call(t, "PUT", "/v1/mail-drafts", AnyMap{
 		"anchor_type": "contact", "anchor_id": p.seedStranger(t),
 		"to": []string{"stranger@preflight.test"}, "body": "Not about the subject.",
@@ -225,6 +225,29 @@ func TestASubjectAccessExportCarriesTheDraftsWrittenToThem(t *testing.T) {
 	if strings.Contains(rendered, "other-blind@preflight.test") {
 		t.Errorf("the export disclosed another blind recipient's address: %s", rendered)
 	}
+	for _, held := range []string{file, "price-list.pdf", "precontract_quote", "Europe/Berlin"} {
+		if !strings.Contains(rendered, held) {
+			t.Errorf("the export withheld %q, which the draft holds: %s", held, rendered)
+		}
+	}
+}
+
+// seedDraftFile files a document on the preflight anchor, which the rep sees,
+// so a draft may carry it.
+func (p *preflightEnv) seedDraftFile(t *testing.T, filename string) string {
+	t.Helper()
+	id := ids.NewV7()
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO attachment (id, entity_type, entity_id, filename, content_type, byte_size,
+			                        storage_key, checksum, source, captured_by)
+			VALUES ($1, 'activity', $2, $3, 'application/pdf', 2048, $4, 'sum', 'upload', 'human:test')`,
+			id, p.activityID, filename, "draft-files/"+id.String())
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the file: %v", err)
+	}
+	return id.String()
 }
 
 // seedStranger writes a contact the subject has nothing to do with, as the

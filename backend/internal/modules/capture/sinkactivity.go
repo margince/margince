@@ -317,6 +317,9 @@ func (s *Sink) finishNewActivity(
 		if err != nil {
 			return counterpartyDecision{}, err
 		}
+		if err := s.recordMeetingDocuments(ctx, tx, id, rec, false); err != nil {
+			return counterpartyDecision{}, err
+		}
 	}
 	// And a MESSAGE under the contacts who were on it beyond its counterparty —
 	// the cc'd contact the ladder never judged, whose own inbound mail is what

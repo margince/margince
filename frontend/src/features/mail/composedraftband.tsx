@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { ActionRow } from "../../design-system/actionrow";
 import { Badge, Button } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { identifierNumber } from "../../format/format";
@@ -75,7 +76,7 @@ export function DraftBand({
             )}
           </span>
         </p>
-        {actions}
+        {actions && <ActionRow>{actions}</ActionRow>}
       </div>
       <DraftReasons
         reasons={reasons}

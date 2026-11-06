@@ -8,7 +8,7 @@ import type { components } from "../../api/schema";
 import { WrittenBy } from "../../components/citations.list";
 import { EntityRef } from "../../components/entityref";
 import { AiPending } from "../../design-system/aipending";
-import { Button } from "../../design-system/atoms";
+import { Button, Disclosure } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
@@ -19,6 +19,7 @@ import { useCanWrite } from "../../lib/capability";
 import { isVersionSkewOf, problemFieldErrors, unwrap } from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
 import {
+  assessmentResidue,
   assessmentText,
   readableQuantities,
 } from "./analytics.assessment.text";
@@ -242,6 +243,20 @@ function outlookTitle(view: View, evaluation: ReportingEvaluation) {
   return "analytics.outlook.prospecting";
 }
 
+// The decision is kept only when every figure in it comes from a cell. The
+// check reads the model's own text, before amounts gain their currency sign.
+function proposedDecision(assessment: SalesAssessment, locale: Locale) {
+  const decision = assessment.next_decision;
+  if (!decision) return undefined;
+  const line = {
+    text: decision.text,
+    cells: assessment.cells.map((cell) => cell.id),
+  };
+  if (!readableQuantities(assessmentResidue(line, assessment, locale)))
+    return undefined;
+  return { ...decision, text: assessmentText(line, assessment, locale) };
+}
+
 function WrittenAssessment({
   assessment,
   evaluation,
@@ -262,63 +277,46 @@ function WrittenAssessment({
   const [reading, setReading] = useState(false);
   const [deciding, setDeciding] = useState(false);
   const canDecide = useCanWrite("activity", "create");
-  const proposed = assessment.next_decision
-    ? {
-        ...assessment.next_decision,
-        text: assessmentText(
-          {
-            text: assessment.next_decision.text,
-            cells: assessment.cells.map((cell) => cell.id),
-          },
-          assessment,
-          locale,
-        ),
-      }
-    : undefined;
-  const next =
-    proposed && readableQuantities(proposed.text) ? proposed : undefined;
+  const next = proposedDecision(assessment, locale);
   return (
     <>
       <Panel
         title={t(outlookTitle(view, evaluation))}
         tone="ai"
         flatHead
+        className="analytics-outlook"
         titleAction={
           <Button variant="ghost" onClick={refresh}>
             {t("analytics.assessment.refresh")}
           </Button>
         }
-        footer={<WrittenBy by={assessment.generated_by} />}
-      >
-        <PanelBody>
-          <div className="analytics-outlook-prose">
-            {assessmentParagraphs(assessment).map((paragraph) => (
-              <p key={paragraph.map((s) => s.text).join(" ")}>
-                {paragraph
-                  .map((line) => assessmentText(line, assessment, locale))
-                  .join(" ")}
-              </p>
-            ))}
-          </div>
-          <div className="actions">
+        footer={
+          <>
+            <WrittenBy by={assessment.generated_by} />
             <Button variant="link" onClick={() => setReading(true)}>
               {t("analytics.outlook.records")}
             </Button>
-            {next && (
+          </>
+        }
+      >
+        <PanelBody>
+          <OutlookProse assessment={assessment} />
+          {actions}
+          {next && (
+            <div className="actions">
               <p>
                 {next.text} <EntityRef kind="deal" id={next.deal_id} />{" "}
                 <EntityRef kind="user" id={next.owner_id} />
               </p>
-            )}
-            {next && canDecide && (
-              <Button variant="ghost" onClick={() => setDeciding(true)}>
-                {t("analytics.decisions.record")}
-              </Button>
-            )}
-          </div>
+              {canDecide && (
+                <Button variant="ghost" onClick={() => setDeciding(true)}>
+                  {t("analytics.decisions.record")}
+                </Button>
+              )}
+            </div>
+          )}
         </PanelBody>
       </Panel>
-      {actions}
       {reading && (
         <InterpretationDrawer
           assessment={assessment}
@@ -338,6 +336,35 @@ function WrittenAssessment({
         />
       )}
     </>
+  );
+}
+
+// The first sentence leads, the rest of its paragraph follows, and the
+// remaining paragraphs fold behind one door, so the rail reads at a glance.
+function OutlookProse({
+  assessment,
+}: Readonly<{ assessment: SalesAssessment }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const [first = [], ...later] = assessmentParagraphs(assessment).map(
+    (paragraph) =>
+      paragraph.map((line) => assessmentText(line, assessment, locale)),
+  );
+  const [lead, ...rest] = first;
+  // A paragraph the model repeats is said once, so each keys itself.
+  const more = [...new Set(later.map((paragraph) => paragraph.join(" ")))];
+  return (
+    <div className="analytics-outlook-prose">
+      {lead && <p className="analytics-outlook-lead">{lead}</p>}
+      {rest.length > 0 && <p>{rest.join(" ")}</p>}
+      {more.length > 0 && (
+        <Disclosure summary={t("analytics.outlook.more")}>
+          {more.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </Disclosure>
+      )}
+    </div>
   );
 }
 
@@ -454,11 +481,13 @@ function readableAssessment(
   locale: Locale,
 ): boolean {
   const unsupported =
-    /\b(?:commit_evidence|qualified_commit_evidence|no_target|nothing checked|i checked|i verified|i couldn[’']t confirm)\b/i;
+    /\b(?:qualified_likely|no_target|nothing checked|i checked|i verified|i couldn[’']t confirm)\b/i;
   return assessmentParagraphs(assessment)
     .flat()
     .every((line) => {
-      const text = assessmentText(line, assessment, locale);
-      return !unsupported.test(text) && readableQuantities(text);
+      return (
+        !unsupported.test(assessmentText(line, assessment, locale)) &&
+        readableQuantities(assessmentResidue(line, assessment, locale))
+      );
     });
 }

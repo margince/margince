@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -28,11 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
-
-// fakeEmbedDims is the width every named test binding below uses unless a
-// test deliberately wants a mismatch — matching FakeClient's own default
-// so nothing here depends on a magic number rediscovered elsewhere.
-const fakeEmbedDims = 1024
 
 // fakeEmbedder wires fake through the router (compose.NewLocalModelPath)
 // under a fixed named binding ("embed-fake"), the same seam production's
@@ -53,7 +49,7 @@ func fakeEmbedder(t *testing.T, fake *ai.FakeClient) search.Embedder {
 // test can stand up two distinct EmbedIdentity() values (a binding swap)
 // riding the SAME underlying fake client and dimension — the two "still
 // 1×1024, just a different model" scenarios TestUpsertReembeds... and
-// TestUpsertSkipsUnchanged... need. Width stays fakeEmbedDims throughout:
+// TestUpsertSkipsUnchanged... need. Width stays apptest.FakeEmbedDims throughout:
 // varying it is not what these tests are proving (the guard tests below
 // use stubEmbedder for that instead).
 func fakeEmbedderNamed(t *testing.T, fake *ai.FakeClient, modelName string) search.Embedder {
@@ -61,7 +57,7 @@ func fakeEmbedderNamed(t *testing.T, fake *ai.FakeClient, modelName string) sear
 	cfg := ai.FakeRoutingConfig()
 	cfg.Embeddings = ai.EmbeddingsConfig{
 		Provider: ai.ProviderFake, Model: modelName,
-		Dimensions: fakeEmbedDims,
+		Dimensions: apptest.FakeEmbedDims,
 	}
 	modelPath, err := compose.NewLocalModelPath(cfg, ai.WithFakeClient(fake), ai.WithoutResultCache())
 	if err != nil {

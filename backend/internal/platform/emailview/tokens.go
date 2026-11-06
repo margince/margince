@@ -5,6 +5,7 @@ package emailview
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -50,8 +51,8 @@ var tokens = [tokenCount]Token{
 	borderSubtle:        {"borderSubtle", "#e3eae6", "#22352e"},
 	textPrimary:         {"textPrimary", "#182c28", "#edf6f4"},
 	textSecondary:       {"textSecondary", "#55645f", "#9aa8a3"},
-	accent:              {"accent", "#045647", "#3aae94"},
-	textOnAccentControl: {"textOnAccentControl", "#f4faf7", "#07221d"},
+	accent:              {"accent", "#045647", "#16a34a"},
+	textOnAccentControl: {"textOnAccentControl", "#f4faf7", "#06130b"},
 	warningText:         {"warningText", "#885700", "#f7b750"},
 	infoText:            {"infoText", "#005eb5", "#3d99ff"},
 	successText:         {"successText", "#007132", "#17c964"},
@@ -66,7 +67,22 @@ var tokens = [tokenCount]Token{
 // Tokens lists every design token the mail layout writes in.
 func Tokens() []Token { return tokens[bgPage:] }
 
-func (t token) light() string { return tokens[t].Light }
+func (t token) light() string { return mailCSS(tokens[t].Light) }
+
+// spaceColor is a colour in the CSS Color 4 form, rgb(0 0 0 / 0.05). Gmail
+// drops a whole style attribute that holds one, colours and widths included.
+var spaceColor = regexp.MustCompile(`rgba?\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*(?:/\s*([\d.]+%?)\s*)?\)`)
+
+// mailCSS writes a token value in the comma form every mail client reads.
+func mailCSS(value string) string {
+	return spaceColor.ReplaceAllStringFunc(value, func(color string) string {
+		parts := spaceColor.FindStringSubmatch(color)
+		if parts[4] == "" {
+			return "rgb(" + parts[1] + "," + parts[2] + "," + parts[3] + ")"
+		}
+		return "rgba(" + parts[1] + "," + parts[2] + "," + parts[3] + "," + parts[4] + ")"
+	})
+}
 
 // Face is one rung of the product type scale, as a mail `font` shorthand.
 type Face struct {
@@ -120,9 +136,9 @@ func darkSheet(scope string) string {
 		switch {
 		case value.Dark == value.Light:
 		case isColor(value.Light):
-			fmt.Fprintf(&sheet, "%[1]s .c-%[2]s{color:%[3]s!important}%[1]s .bg-%[2]s{background:%[3]s!important}%[1]s .bd-%[2]s{border-color:%[3]s!important}", scope, name, value.Dark)
+			fmt.Fprintf(&sheet, "%[1]s .c-%[2]s{color:%[3]s!important}%[1]s .bg-%[2]s{background:%[3]s!important}%[1]s .bd-%[2]s{border-color:%[3]s!important}", scope, name, mailCSS(value.Dark))
 		case strings.HasPrefix(name, "shadow-"):
-			fmt.Fprintf(&sheet, "%s .sh-%s{box-shadow:%s!important}", scope, name, value.Dark)
+			fmt.Fprintf(&sheet, "%s .sh-%s{box-shadow:%s!important}", scope, name, mailCSS(value.Dark))
 		}
 	}
 	return sheet.String()

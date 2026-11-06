@@ -60,7 +60,7 @@ func (p *fakeReadProvider) Update(context.Context, datasource.UpdateInput) (data
 	panic("fakeReadProvider: Update not stubbed for this test")
 }
 
-func (p *fakeReadProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (p *fakeReadProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	panic("fakeReadProvider: AdvanceDeal not stubbed for this test")
 }
 

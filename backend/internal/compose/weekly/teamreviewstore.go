@@ -126,14 +126,14 @@ func (e *Engine) mayReadTeam(ctx context.Context, teamID ids.UUID) error {
 	if allowed, bound := auth.IndividualPerformanceOf(ctx); bound && !allowed {
 		return auth.IndividualPerformanceOffError{}
 	}
-	switch auth.TeamWeekReachOf(ctx) {
-	case auth.ReachesEveryTeam:
-		return nil
-	case auth.ReachesTeamsLed:
-		return e.mayReadTeamLed(ctx, teamID)
-	default:
-		return apperrors.ErrPermissionDenied
+	reach, err := auth.RequireTeamWeekReach(ctx)
+	if err != nil {
+		return err
 	}
+	if reach == auth.ReachesTeamsLed {
+		return e.mayReadTeamLed(ctx, teamID)
+	}
+	return nil
 }
 
 // refuseWhileIndividualOff refuses a team's week, written or served, while

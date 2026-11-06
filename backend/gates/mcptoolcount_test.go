@@ -111,7 +111,15 @@ const clientToolCeiling = 100
 //
 // run_research raises it to 45, by a maintainer decision: AI work an agent starts
 // spends the enrich scope, and one router spends one scope.
-const publishedToolCeiling = 45
+//
+// change_compliance and change_capture raise it to 47, by a maintainer decision.
+// Privacy work and what comes into the CRM are each one topic a user hands to
+// their agent, and neither fits an existing router's listing.
+//
+// change_my_settings raises it to 48. A request about the user's own name, hours
+// or voice picked the workspace-wide setting beside it in change_settings. Now the
+// client sees two tools, which tells them apart.
+const publishedToolCeiling = 48
 
 type mcpInfoFile struct {
 	Totals struct {

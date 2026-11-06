@@ -197,8 +197,6 @@ export function dealFactsText(
       ),
     );
   }
-  if (deal.forecast_category === "omitted")
-    parts.push(t("worklist.deal.omitted"));
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 

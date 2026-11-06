@@ -19,6 +19,7 @@ package channels
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -69,6 +70,19 @@ func TestAC_TG_1_ConnectValidatesSealsAndRecordsAuditOnly(t *testing.T) {
 	c.assertConnectionIsWorkspaceOwned(t)
 }
 
+// credentialRef reads the vault ref the connection holds.
+func (c *telegramEnv) credentialRef(t *testing.T) string {
+	t.Helper()
+	var ref string
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT credential_ref FROM channel_connection WHERE id = $1`, c.conn.ID).Scan(&ref)
+	}); err != nil {
+		t.Fatalf("reading the connection's vault ref: %v", err)
+	}
+	return ref
+}
+
 // assertTokenSealed reads the row's vault ref and unseals it. The bot token must be
 // recoverable, because it is the ONE credential both halves of the channel spend:
 // the poll authenticates with it and the send path resolves it. One secret per
@@ -76,13 +90,7 @@ func TestAC_TG_1_ConnectValidatesSealsAndRecordsAuditOnly(t *testing.T) {
 // rotate or destroy.
 func (c *telegramEnv) assertTokenSealed(t *testing.T) {
 	t.Helper()
-	var credentialRef string
-	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT credential_ref FROM channel_connection WHERE id = $1`, c.conn.ID).Scan(&credentialRef)
-	}); err != nil {
-		t.Fatalf("reading the connection's vault ref: %v", err)
-	}
+	credentialRef := c.credentialRef(t)
 	if credentialRef == telegramBotToken {
 		t.Fatal("the vault ref holds the plaintext it is supposed to address")
 	}
@@ -168,5 +176,42 @@ func (c *telegramEnv) assertConnectionIsWorkspaceOwned(t *testing.T) {
 	if len(listed.Data) != 1 || listed.Data[0].ID != c.conn.ID.String() ||
 		listed.Data[0].Status != "connected" || listed.Data[0].Provider != "telegram" {
 		t.Fatalf("the channel list served %+v, want the one connected telegram binding", listed.Data)
+	}
+}
+
+// An agent disconnects the bot for its user, on the route the settings screen
+// calls. The credential goes with it, and the audit row names the agent. A
+// read-only passport does not reach it.
+func TestAnAgentDisconnectsARealChannel(t *testing.T) {
+	c := setupTelegramConnected(t)
+	path := "/v1/channel-connections/" + c.conn.ID.String()
+	readOnly := apptest.PassportBearer(t, c.AppEnv, "channel reader", "read")
+	if status := c.Call(t, http.MethodDelete, path, nil, readOnly, nil); status != http.StatusForbidden {
+		t.Errorf("a read-only passport's disconnect → %d, want 403", status)
+	}
+	credential := keyvault.Ref(c.credentialRef(t))
+	writer := apptest.PassportBearer(t, c.AppEnv, "channel agent", "read", "write")
+	if status := c.Call(t, http.MethodDelete, path, nil, writer, nil); status != http.StatusNoContent {
+		t.Fatalf("the agent's disconnect → %d, want 204", status)
+	}
+	ctx := context.Background()
+	ws := ids.From[ids.WorkspaceKind](c.workspaceID(t))
+	if _, err := c.vault.Get(ctx, ws, credential); !errors.Is(err, keyvault.ErrNotFound) {
+		t.Errorf("the vault after the disconnect answered %v, want the credential gone", err)
+	}
+	var status string
+	if err := c.Owner.QueryRow(ctx, `SELECT status FROM channel_connection WHERE id = $1`, c.conn.ID).Scan(&status); err != nil {
+		t.Fatalf("reading the connection: %v", err)
+	}
+	if status != "disconnected" {
+		t.Errorf("the connection is %q, want disconnected", status)
+	}
+	var actorType string
+	if err := c.Owner.QueryRow(ctx, `
+		SELECT actor_type FROM audit_log WHERE entity_id = $1 ORDER BY occurred_at DESC LIMIT 1`, c.conn.ID).Scan(&actorType); err != nil {
+		t.Fatalf("reading the audit row: %v", err)
+	}
+	if actorType != "agent" {
+		t.Errorf("the audit row names a %q, want the agent", actorType)
 	}
 }

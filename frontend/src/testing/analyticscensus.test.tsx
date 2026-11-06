@@ -282,12 +282,12 @@ describe("the request census of each opening view", () => {
     const period = await screen.findByRole("combobox", { name: "Date range" });
     await user.click(period);
     await user.click(await screen.findByRole("option", { name: "This month" }));
-    expect(await screen.findByText("123,000 EUR")).toBeVisible();
+    expect(await screen.findByText("€123,000")).toBeVisible();
     const quarter = asked.find(
       ({ url }) => url.searchParams.get("period") === "this_quarter",
     );
     expect(quarter?.signal?.aborted).toBe(true);
     releaseQuarter(jsonResponse(salesEvaluation()));
-    await waitFor(() => expect(screen.queryByText("420,000 EUR")).toBeNull());
+    await waitFor(() => expect(screen.queryByText("€420,000")).toBeNull());
   });
 });
