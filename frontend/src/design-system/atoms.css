@@ -1799,6 +1799,33 @@ span.error-line {
   block-size: 1lh;
   vertical-align: top;
 }
+/* `text`: a small pill that prints its verb after the glyph. Its ground is an
+   overlay's, solid, and its edge a control's, so it reads over a picture. */
+.overflow-menu .overflow-menu-labelled {
+  --ghostEdge: var(--borderControl);
+  min-inline-size: 0;
+  padding-inline: var(--space-2) var(--space-3);
+  gap: var(--space-1);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--ground);
+}
+.overflow-menu-labelled[aria-busy="true"] > svg:not(.busy-mark) {
+  display: none;
+}
+/* A thumb gets a 44px-tall target (WCAG 2.5.8 AA asks 24px) from a layer
+   above and below the pill; the pill keeps the size it is drawn at. */
+@media (pointer: coarse) {
+  .overflow-menu .overflow-menu-labelled {
+    position: relative;
+  }
+  .overflow-menu .overflow-menu-labelled::before {
+    content: "";
+    position: absolute;
+    inset-block: calc((100% - max(44px, 100%)) / 2);
+    inset-inline: 0;
+  }
+}
 /* Fixed and portalled to its layer: the dialog's overlay, or the body. It is
    positioned against the trigger's viewport rectangle, so a card that hides
    its own overflow cannot clip it. */
@@ -2026,6 +2053,12 @@ span.error-line {
 [data-density="plate"] .stat-card-label {
   flex-wrap: nowrap;
 }
+/* A plate's name breaks between words, and inside one only when it cannot
+   fit: a syllable cut reads as a typo in a label this short. */
+[data-density="plate"] .stat-card-label-text {
+  hyphens: manual;
+  overflow-wrap: break-word;
+}
 /* The plate's figure: body size at the medium weight, so four figures and
    their labels sit in one band at the foot of a card (statstrip.css). */
 [data-density="plate"] .stat-card-value {
@@ -2036,12 +2069,33 @@ span.error-line {
 /* A lead plate heads an Analytics card: its first figure is the one the view
    leads with, and the rest stand a step under it (statstrip.tsx `lead`). */
 .stat-strip[data-lead] .stat-card-value {
-  font: var(--fontHeadingMedium);
+  font: var(--fontPlateFigure);
   font-variant-numeric: tabular-nums;
 }
+/* The view's own figure fits its cell whole: it shrinks with the cell rather
+   than ending in an ellipsis, down to the size of the figures beside it. */
+.stat-strip[data-lead] > :first-child {
+  container-type: inline-size;
+}
 .stat-strip[data-lead] > :first-child .stat-card-value {
-  font: var(--fontDisplayFigure);
+  font: var(--fontPlateLeadFigure);
   font-variant-numeric: tabular-nums;
+}
+/* A reading that is a word, such as a status, is set as words: it is an
+   answer about the figure, not a figure. */
+.stat-strip[data-density="plate"] .stat-card-value[data-word] {
+  font: var(--fontBodyLarge);
+  font-weight: var(--fontWeightMedium);
+}
+/* A neutral word steps back; a toned one keeps the colour of its state. */
+.stat-strip[data-density="plate"]
+.stat-card-value[data-word]:not(
+  .stat-card-success,
+  .stat-card-info,
+  .stat-card-warning,
+  .stat-card-danger
+) {
+  color: var(--textSecondary);
 }
 .stat-strip[data-lead] .stat-card-basis::before {
   font: var(--fontHeadingXXSmall);
@@ -2074,6 +2128,12 @@ span.error-line {
    clamp's box lays inline children out on one line. Each fact keeps its own. */
 .stat-card-detail > * {
   display: block;
+}
+/* A control in the detail sits above the door's overlay, as the receipt does,
+   or the overlay takes its press. */
+.stat-card-detail :is(a, button) {
+  position: relative;
+  z-index: 1;
 }
 
 /* The label NAMES the reading; it does not announce it. It is sentence-case

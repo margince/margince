@@ -77,6 +77,9 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 			return out, nil, err
 		}
 	}
+	if err := distinguishOwnerNames(ctx, tx, out.Evaluation.Charts); err != nil {
+		return out, nil, err
+	}
 	return out, visible, nil
 }
 

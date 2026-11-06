@@ -405,10 +405,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The contract-breaking gate, the citation gate and the strict
-          # lint's new-from-merge-base all diff against origin/main — a shallow
-          # checkout has no base ref and would silently disarm them.
+          # Every commit and ref, for the gates that diff against the merge base
+          # with origin/main (contract-breaking, migration-versions, pkg-freeze,
+          # citations) and the RBAC gate that reads a fixture at an old commit.
+          # Blobless: only HEAD's files come down, and git fetches an old file
+          # the first time a gate asks for it.
           fetch-depth: 0
+          filter: blob:none
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
@@ -465,13 +468,37 @@ jobs:
           # declaration and the gate enforces again — it goes inert on its own
           # rather than waiting for somebody to remember to delete this line.
           MIGRATION_VERSIONS_BASELINE_RESET: "1"
+          # The gates leg has this runner to itself, so collection need not
+          # hold the package to the limit a laptop running every leg wants.
+          GATES_GOMEMLIMIT: 6GiB
         # pipefail, because the default shell lacks it and tee would turn a red
         # gate green.
         # TEST_LEGS only: backend-lint runs the static legs on its own runner,
         # so lint and the unit tests stop sharing four cores.
+        #
+        # Outside a PR into develop, the unit leg's pass is also the test-input
+        # census: testlog-exec.sh logs what each package read, and the next step
+        # judges it. It runs uncached (-count=1), since a replayed result reads
+        # nothing; develop keeps the test cache.
         run: |
           set -o pipefail
-          make check-backend CHECK_LEGS="${{ matrix.legs }}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
+          census=()
+          if [ "${{ matrix.part }}" = unit ] && [ "${{ needs.changes.outputs.full_lane }}" = true ]; then
+            export TESTLOG_DIR="$RUNNER_TEMP/testlogs"
+            mkdir -p "$TESTLOG_DIR"
+            census=(TEST_EXEC="$PWD/scripts/testlog-exec.sh")
+          fi
+          make check-backend CHECK_LEGS="${{ matrix.legs }}" "${census[@]}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
+      # A test read outside its module that skips the tree digest merges green
+      # and breaks cache-warm's save hours later. Here it fails the PR that
+      # adds it. Skipped into develop: it guards main's cache-warm, and the
+      # develop into main pull request runs it. Judged only after a passing
+      # pass: a failed test stops make before the rest log their reads, and a
+      # verdict over part of the tree is not one.
+      - name: Census the test cache's inputs (make test-input-census-judge)
+        if: ${{ success() && matrix.part == 'unit' && needs.changes.outputs.full_lane == 'true' }}
+        working-directory: .
+        run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs"
       # crm-hello declares capabilities no shipped unit does, so this is the one
       # walk of them; TestEveryPublishedCapabilityHasALiveDeclaringUnit reads the
       # require below. It runs after the merge gate, which must see only the committed
@@ -548,15 +575,21 @@ jobs:
         include:
           - pass: baseline
             legs: lint-base vet arch-lint
+            fetch-depth: 1
+            filter: ""
           - pass: strict
             legs: lint-strict
+            fetch-depth: 0
+            filter: blob:none
     # Setup mirrors deterministic-gates, which says why each step is there.
-    # Full history, because the strict lint diffs against CHECK_BASE_REF.
+    # Only the strict pass reads history (it diffs against CHECK_BASE_REF), so
+    # only its checkout is deep; the baseline legs read the tree alone.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
+          fetch-depth: ${{ matrix.fetch-depth }}
+          filter: ${{ matrix.filter }}
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
@@ -581,16 +614,6 @@ jobs:
       - name: Backend static gate (make check-static)
         working-directory: .
         run: make check-static STATIC_LEGS="${{ matrix.legs }}"
-      # A test read outside its module that skips the tree digest merges green
-      # and breaks cache-warm's save hours later. Here it fails the PR that
-      # adds it. On the strict leg, the shorter golangci pass, so the census's
-      # uncached pass evens the two legs out instead of lengthening the longer.
-      # Skipped into develop: it guards main's cache-warm, and the develop into
-      # main pull request runs it.
-      - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() && matrix.pass == 'strict' && needs.changes.outputs.full_lane == 'true' }}
-        working-directory: .
-        run: make test-input-census
 
   # The code-craftsmanship gate (ADR-0045) reads source only, so it starts
   # beside deterministic-gates rather than after it. `ci` fails if either does.
@@ -611,8 +634,9 @@ jobs:
         with:
           persist-credentials: false
           # The comment checks judge the lines added since origin/main, which a
-          # shallow checkout does not have.
+          # shallow checkout does not have. Blobless, as in deterministic-gates.
           fetch-depth: 0
+          filter: blob:none
       - name: craft static (strict — blocker + major)
         working-directory: .
         run: make craft-static
@@ -830,10 +854,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # SBOM_VERSION is the release tag when HEAD sits exactly on one
-          # (`git describe --tags --exact-match`), else the full revision —
-          # resolving that needs the tags and history.
-          fetch-depth: 0
+          # Shallow. SBOM_VERSION is the release tag when HEAD sits exactly on
+          # one, else the revision. Only a manual dispatch can start on a tag,
+          # so only that run fetches the tags.
+          fetch-tags: ${{ github.event_name == 'workflow_dispatch' }}
       # A scan that read part of pnpm-lock.yaml writes a valid SBOM that grant
       # passes, and only the census inside `make sbom` tells it apart. Planted
       # lockfiles, read by the real pinned YAML reader, and short SBOMs prove it

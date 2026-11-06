@@ -12,13 +12,15 @@ package gates
 // holds the two jobs to the full CHECK_LEGS list a local `make check` runs.
 
 import (
-	"os"
+	"fmt"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -27,12 +29,13 @@ const (
 	staticLegsJob   = "backend-lint"
 )
 
-// ciLegsOverride is the CHECK_LEGS value a `make check-backend` step passes.
-var ciLegsOverride = regexp.MustCompile(`make check-backend\b[^\n]*\bCHECK_LEGS="([^"]*)"`)
+// makeCommand is one `make <target>` shell command: group 1 the target, group 2
+// its arguments up to the end of that command.
+var makeCommand = regexp.MustCompile(`\bmake\s+(check-backend|check-static)(?:[ \t]+([^\n;&|]*))?(?:[\n;&|]|$)`)
 
-// staticLegsOverride is the STATIC_LEGS value a `make check-static` step passes,
-// literal or a matrix value.
-var staticLegsOverride = regexp.MustCompile(`make check-static\b[^\n]*\bSTATIC_LEGS="([^"]*)"`)
+// commandLineVar is a make variable assigned on the command line, in each
+// spelling a shell passes it: double-quoted, single-quoted or bare.
+var commandLineVar = regexp.MustCompile(`\b([A-Z_]+)=(?:"([^"]*)"|'([^']*)'|([^\s'"$]*))(?:\s|$)`)
 
 var matrixRef = regexp.MustCompile(`^\$\{\{\s*matrix\.([a-z_-]+)\s*\}\}$`)
 
@@ -52,7 +55,7 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 	t.Parallel()
 	all, static := backendCheckLegs(t)
 
-	raw, err := os.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
+	raw, err := gatekit.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
 	if err != nil {
 		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
 	}
@@ -60,14 +63,11 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 	if err := yaml.Unmarshal(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", aggregateWorkflow, err)
 	}
-	testLegs, ok := legsPassedBy(t, wf, testLegsJob)
+	testLegs, ok := legsRunBy(t, wf, testLegsJob, "check-backend", "CHECK_LEGS", all)
 	if !ok {
 		t.Fatalf("job %q has no `make check-backend` step, so this test cannot tell which legs it runs", testLegsJob)
 	}
-	if testLegs == nil {
-		testLegs = all
-	}
-	staticRan, ok := staticLegsRunBy(t, wf, static)
+	staticRan, ok := legsRunBy(t, wf, staticLegsJob, "check-static", "STATIC_LEGS", static)
 	if !ok {
 		t.Fatalf("job %q has no `make check-static` step, so nothing in CI runs the legs %v", staticLegsJob, static)
 	}
@@ -91,7 +91,7 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 // expanded through the Makefile's literal variables.
 func backendCheckLegs(t *testing.T) (all, static []string) {
 	t.Helper()
-	body, err := os.ReadFile(backendMakefile)
+	body, err := gatekit.ReadFile(backendMakefile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", backendMakefile, err)
 	}
@@ -116,39 +116,48 @@ func backendCheckLegs(t *testing.T) (all, static []string) {
 	return all, static
 }
 
-// legsPassedBy answers the CHECK_LEGS a job's `make check-backend` step passes,
-// and nil when the step passes none, which runs every leg.
-func legsPassedBy(t *testing.T, wf stepRuns, job string) ([]string, bool) {
+// legsRunBy answers the legs a job's `make <target>` step runs. With no
+// variable assigned, those are the Makefile's own list. Otherwise they are the
+// literal value, or a matrix value unioned over every matrix entry.
+func legsRunBy(t *testing.T, wf stepRuns, job, target, variable string, defaults []string) ([]string, bool) {
 	t.Helper()
 	for _, step := range wf.Jobs[job].Steps {
-		if !strings.Contains(step.Run, "make check-backend") {
+		value, set, found, err := legsOverride(step.Run, target, variable)
+		if err != nil {
+			t.Fatalf("job %q: %v", job, err)
+		}
+		if !found {
 			continue
 		}
-		if match := ciLegsOverride.FindStringSubmatch(step.Run); match != nil {
-			return matrixLegs(t, wf, job, match[1]), true
+		if !set {
+			return defaults, true
 		}
-		return nil, true
+		return matrixLegs(t, wf, job, value), true
 	}
 	return nil, false
 }
 
-// staticLegsRunBy answers the legs backend-lint's `make check-static` step runs:
-// the Makefile's own list, a literal STATIC_LEGS, or the union of a matrix value
-// over every matrix entry.
-func staticLegsRunBy(t *testing.T, wf stepRuns, static []string) ([]string, bool) {
-	t.Helper()
-	job := wf.Jobs[staticLegsJob]
-	for _, step := range job.Steps {
-		if !strings.Contains(step.Run, "make check-static") {
+// legsOverride reads the value the `make <target>` command in run assigns to
+// variable. A mention it cannot read is an error, never "no override", because
+// the default list is every leg and would pass this gate.
+func legsOverride(run, target, variable string) (value string, set, found bool, err error) {
+	for _, command := range makeCommand.FindAllStringSubmatch(strings.ReplaceAll(run, "\\\n", " "), -1) {
+		if command[1] != target {
 			continue
 		}
-		match := staticLegsOverride.FindStringSubmatch(step.Run)
-		if match == nil {
-			return static, true
+		args := command[2]
+		for _, assignment := range commandLineVar.FindAllStringSubmatch(args, -1) {
+			if assignment[1] == variable {
+				return assignment[2] + assignment[3] + assignment[4], true, true, nil
+			}
 		}
-		return matrixLegs(t, wf, staticLegsJob, match[1]), true
+		if strings.Contains(args, variable) {
+			return "", false, true, fmt.Errorf("`make %s %s` passes %s in a shape this gate cannot read; "+
+				"quote the value, or pass it bare with no $", target, args, variable)
+		}
+		return "", false, true, nil
 	}
-	return nil, false
+	return "", false, false, nil
 }
 
 // matrixLegs reads a legs override: literal, or a matrix value unioned over
@@ -172,4 +181,47 @@ func matrixLegs(t *testing.T, wf stepRuns, job, override string) []string {
 		ran = append(ran, legs...)
 	}
 	return ran
+}
+
+func TestLegsOverrideReadsEveryShellSpellingOfTheVariable(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name, run, value string
+		set, found       bool
+	}{
+		{"double-quoted matrix value", `make check-static STATIC_LEGS="${{ matrix.legs }}"`, "${{ matrix.legs }}", true, true},
+		{"single-quoted matrix value", `make check-static STATIC_LEGS='${{ matrix.legs }}'`, "${{ matrix.legs }}", true, true},
+		{"single-quoted list", `make check-static STATIC_LEGS='lint-strict vet'`, "lint-strict vet", true, true},
+		{"bare leg", `make check-static STATIC_LEGS=lint-strict`, "lint-strict", true, true},
+		{"empty double quotes", `make check-static STATIC_LEGS=""`, "", true, true},
+		{"empty single quotes", `make check-static STATIC_LEGS=''`, "", true, true},
+		{"bare empty", `make check-static STATIC_LEGS=`, "", true, true},
+		{"extra whitespace", "make   check-static \t STATIC_LEGS='vet'  ", "vet", true, true},
+		{"after another variable", `make check-static GOFLAGS=-v STATIC_LEGS='vet'`, "vet", true, true},
+		{"continued line", "make check-static \\\n  STATIC_LEGS='vet' 2>&1 | tee log", "vet", true, true},
+		{"no override", `make check-static 2>&1 | tee log`, "", false, true},
+		{"override on a later command", "make check-static\necho STATIC_LEGS='vet'", "", false, true},
+		{"other target only", `make check-backend STATIC_LEGS='vet'`, "", false, false},
+		{"longer target name", `make check-static-extra STATIC_LEGS='vet'`, "", false, false},
+	}
+	for _, tc := range cases {
+		value, set, found, err := legsOverride(tc.run, "check-static", "STATIC_LEGS")
+		if err != nil || value != tc.value || set != tc.set || found != tc.found {
+			t.Errorf("%s: legsOverride(%q) = (%q, set %v, found %v, %v), want (%q, set %v, found %v, nil)",
+				tc.name, tc.run, value, set, found, err, tc.value, tc.set, tc.found)
+		}
+	}
+}
+
+func TestLegsOverrideRefusesAnAssignmentItCannotRead(t *testing.T) {
+	t.Parallel()
+	for _, run := range []string{
+		`make check-static STATIC_LEGS=${{ matrix.legs }}`,
+		`make check-static STATIC_LEGS=$LEGS`,
+		`make check-static STATIC_LEGS="unclosed`,
+	} {
+		if _, _, _, err := legsOverride(run, "check-static", "STATIC_LEGS"); err == nil {
+			t.Errorf("legsOverride(%q) read an assignment it cannot parse as no override", run)
+		}
+	}
 }

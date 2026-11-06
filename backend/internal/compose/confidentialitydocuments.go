@@ -45,6 +45,10 @@ const (
 	// confidentialityDocumentChars is each document's share of the prompt, the
 	// same order as the body's.
 	confidentialityDocumentChars = 1500
+	// confidentialityCVChars is how much of a document the CV rule reads. A
+	// CV's headings often start past the prompt's share. The staff-cost rule
+	// reads only the excerpt: over more text, decks with a team page match it.
+	confidentialityCVChars = 6000
 	// confidentialityDocumentTimeout bounds one file's parse. A file that
 	// needs longer is marked unreadable, because it would need longer again.
 	confidentialityDocumentTimeout = 10 * time.Second
@@ -105,15 +109,33 @@ func (e *ConfidentialityVerdictEngine) WithObjectStore(blob blobstore.Store) *Co
 	return &out
 }
 
-// listsStaffCosts says whether the body or any document excerpt names staff
-// with an amount each. Such a thread is personnel without asking a model,
-// which would read an invoice billing engineers by name as ordinary trade.
-func listsStaffCosts(row capture.PendingThread) bool {
+// isPersonnelWithoutAModel says whether the thread is personnel by a rule. The
+// body or a document lists staff with amounts, or a document is a CV by its
+// text or name. Or a file the verdict did not read, an image or a scan among
+// them, is named as an invoice, cost sheet or CV. A model would read a staff
+// invoice as ordinary trade and a CV as an application.
+func isPersonnelWithoutAModel(row capture.PendingThread) bool {
 	if capture.ListsStaffCosts(row.Body) {
 		return true
 	}
+	// Names are counted, not keyed: a readable file must not vouch for an
+	// unread one that shares its name.
+	readByName := map[string]int{}
 	for _, doc := range row.Documents {
-		if capture.ListsStaffCosts(doc.Excerpt) {
+		if doc.Personnel || capture.NamedAsCV(doc.Filename) ||
+			doc.Unreadable && capture.NamedAsPrivate(doc.Filename) {
+			return true
+		}
+		if !doc.Unreadable {
+			readByName[doc.Filename]++
+		}
+	}
+	for _, name := range row.Attachments {
+		if readByName[name] > 0 {
+			readByName[name]--
+			continue
+		}
+		if capture.NamedAsPrivate(name) {
 			return true
 		}
 	}
@@ -213,7 +235,7 @@ func (d *threadDocuments) fetch(ctx context.Context, id ids.UUID) ([]byte, strin
 func (d *threadDocuments) excerpt(ctx context.Context, doc *capture.ThreadDocument, raw []byte, mediaType string) error {
 	fileCtx, cancel := context.WithTimeout(ctx, confidentialityDocumentTimeout)
 	defer cancel()
-	text, truncated, err := d.parse(fileCtx, raw, mediaType)
+	text, truncated, err := d.parse(fileCtx, raw, mediaType, confidentialityCVChars)
 	if ctx.Err() != nil {
 		return fmt.Errorf("%w: %w", errDocumentsDeferred, ctx.Err())
 	}
@@ -221,22 +243,27 @@ func (d *threadDocuments) excerpt(ctx context.Context, doc *capture.ThreadDocume
 		doc.Unreadable = true
 		return nil
 	}
+	isCV := capture.DescribesACareer(text)
+	if utf8.RuneCountInString(text) > confidentialityDocumentChars {
+		text, truncated = textcut.Runes(text, confidentialityDocumentChars), true
+	}
 	doc.Excerpt, doc.Truncated = text, truncated
+	doc.Personnel = isCV || capture.ListsStaffCosts(text)
 	return nil
 }
 
 // parse dispatches a PDF to pdftext and everything else to doctext.
-func (d *threadDocuments) parse(ctx context.Context, raw []byte, mediaType string) (string, bool, error) {
+func (d *threadDocuments) parse(ctx context.Context, raw []byte, mediaType string, maxChars int) (string, bool, error) {
 	if mediaType == documentPDFMIME || bytes.HasPrefix(raw, []byte("%PDF-")) {
-		text, err := d.pdf.Read(ctx, raw, confidentialityDocumentChars)
+		text, err := d.pdf.Read(ctx, raw, maxChars)
 		if err != nil {
 			return "", false, err
 		}
-		if utf8.RuneCountInString(text) > confidentialityDocumentChars {
-			return textcut.Runes(text, confidentialityDocumentChars), true, nil
+		if utf8.RuneCountInString(text) > maxChars {
+			return textcut.Runes(text, maxChars), true, nil
 		}
 		return text, false, nil
 	}
-	excerpt, err := doctext.Read(ctx, raw, confidentialityDocumentChars)
+	excerpt, err := doctext.Read(ctx, raw, maxChars)
 	return excerpt.Text, excerpt.Truncated, err
 }

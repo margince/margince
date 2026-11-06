@@ -18,12 +18,12 @@ package gates
 // advertised pattern to the same text, so the three spellings are one.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -53,7 +53,7 @@ func priceCorpus() []string {
 
 func TestTheFrontendPriceInputPatternMatchesTheServersDomain(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendPriceInput)
+	source, err := gatekit.ReadFile(frontendPriceInput)
 	if err != nil {
 		t.Fatalf("reading the frontend price pattern: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestTheFrontendPriceInputPatternMatchesTheServersDomain(t *testing.T) {
 		}
 	}
 
-	contract, err := os.ReadFile(crmContractPath)
+	contract, err := gatekit.ReadFile(crmContractPath)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

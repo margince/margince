@@ -38,8 +38,6 @@ package gates
 
 import (
 	"io/fs"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -70,12 +68,12 @@ func TestAMeetingWithNoStatusIsNotDroppedFromAPositiveTest(t *testing.T) {
 
 	var strict []string
 	scanned := 0
-	err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.Contains(path, "/contracts/") {
 			return err
 		}
-		raw, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted tree
+		raw, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted tree
 		if readErr != nil {
 			return readErr
 		}

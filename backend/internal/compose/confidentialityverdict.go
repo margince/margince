@@ -217,7 +217,7 @@ func (e *ConfidentialityVerdictEngine) judgeOne(
 	if err != nil {
 		return err
 	}
-	if listsStaffCosts(read) {
+	if isPersonnelWithoutAModel(read) {
 		return e.apply(ctx, row, capture.VerdictHeld, confidentialityPersonnel, 1)
 	}
 	results, err := e.ask(ctx, read)

@@ -168,3 +168,19 @@ func TestACancelledPassDefersTheThread(t *testing.T) {
 		t.Errorf("read = %v, want a deferral for a cancelled pass", err)
 	}
 }
+
+func TestAFileTheVerdictDidNotReadIsJudgedByItsName(t *testing.T) {
+	readable := capture.ThreadDocument{Filename: "Invoice.pdf", Excerpt: "Hosting March 450.00"}
+	for name, row := range map[string]capture.PendingThread{
+		"a scanned invoice":                {Documents: []capture.ThreadDocument{{Filename: "INV 3556.pdf", Unreadable: true}}},
+		"a photographed CV":                {Attachments: []string{"CV_Anna.jpg"}},
+		"an unread twin of a read invoice": {Attachments: []string{"Invoice.pdf", "Invoice.pdf"}, Documents: []capture.ThreadDocument{readable}},
+	} {
+		if !isPersonnelWithoutAModel(row) {
+			t.Errorf("%s: left to the model", name)
+		}
+	}
+	if isPersonnelWithoutAModel(capture.PendingThread{Attachments: []string{"Invoice.pdf"}, Documents: []capture.ThreadDocument{readable}}) {
+		t.Error("an invoice the verdict read and found ordinary was held by its name")
+	}
+}

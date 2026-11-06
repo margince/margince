@@ -22,7 +22,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"slices"
 	"sort"
 	"strconv"
@@ -348,7 +347,7 @@ const noResponseBody = "no-response-body"
 // reading only one would let the other's row scope go unchecked.
 func successResponseSchemas(t *testing.T) map[string][]string {
 	t.Helper()
-	src, err := os.ReadFile("api/crm.yaml")
+	src, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading api/crm.yaml: %v", err)
 	}
@@ -622,7 +621,7 @@ func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 	if contractProperties != nil {
 		return contractProperties
 	}
-	src, err := os.ReadFile("api/crm.yaml")
+	src, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading api/crm.yaml: %v", err)
 	}

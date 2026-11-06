@@ -6,11 +6,14 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-36 columns · primary key `(id)` · referenced by 153 foreign keys
+39 columns · primary key `(id)` · referenced by 153 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `avatar_object_key` | `text` |  |  |
+| `avatar_origin` | `text` |  | One of `upload`, `google`. |
+| `avatar_removed_at` | `timestamp with time zone` |  |  |
 | `combine_routine_email` | `boolean` |  |  |
 | `delivery_hour_local` | `integer` |  |  |
 | `display_name` | `text` | yes |  |
@@ -58,6 +61,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `app_user_agent_is_full`: `CHECK (((NOT is_agent) OR (seat_type = 'full')))`
 - `app_user_agent_never_forced`: `CHECK ((NOT (is_agent AND must_change_password)))`
+- `app_user_avatar_names_its_origin`: `CHECK (((avatar_object_key IS NULL) = (avatar_origin IS NULL)))`
+- `app_user_avatar_origin_check`: `CHECK ((avatar_origin = ANY (ARRAY['upload', 'google'])))`
 - `app_user_delivery_hour_check`: `CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))`
 - `app_user_does_not_merge_into_itself`: `CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))`
 - `app_user_failed_login_count_check`: `CHECK ((failed_login_count >= 0))`
@@ -249,7 +254,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_authorization_code
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -264,6 +269,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `resource` | `text` |  |  |
 | `scopes` | `text[]` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
+| `work_areas` | `text[]` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -315,7 +321,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_grant
 
-9 columns · primary key `(id)` · referenced by 3 foreign keys
+10 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -327,6 +333,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `scopes` | `text[]` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
+| `work_areas` | `text[]` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -420,7 +427,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## passport
 
-11 columns · primary key `(id)` · referenced by 9 foreign keys
+12 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -434,6 +441,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `scopes` | `text[]` | yes |  |
 | `token_hash` | `text` | yes |  |
+| `work_areas` | `text[]` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**

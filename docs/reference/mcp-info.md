@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 13 |
-| Tool catalog | 227.4 KB |
+| Tool catalog | 227.5 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 59518 |
+| Approx. wire tokens | 59546 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.0 KB | 23% | Yes, every step |
-| Input schemas | 111.9 KB | 49% | Yes, every step |
+| Input schemas | 112.0 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **164.9 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **165.0 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -104,7 +104,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2587 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 984 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2625 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2653 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
@@ -11521,7 +11521,7 @@ cf_<slug>.
       "type": "string"
     },
     "contact_id": {
-      "description": "confirm_submissions only",
+      "description": "confirm_submissions, held_threads only",
       "format": "uuid",
       "type": "string"
     },
@@ -11530,7 +11530,7 @@ cf_<slug>.
       "type": "string"
     },
     "cursor": {
-      "description": "ai_calls, audit_log, automation_runs, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, import_runs, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
+      "description": "ai_calls, audit_log, automation_runs, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, held_threads, import_runs, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
       "type": "string"
     },
     "days": {
@@ -11619,7 +11619,7 @@ cf_<slug>.
       "type": "array"
     },
     "limit": {
-      "description": "ai_calls, audit_log, automation_runs, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, import_runs, legacy_loss_reasons, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
+      "description": "ai_calls, audit_log, automation_runs, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, held_threads, import_runs, legacy_loss_reasons, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
       "type": "integer"
     },
     "locale": {
@@ -11680,7 +11680,7 @@ cf_<slug>.
       "type": "string"
     },
     "q": {
-      "description": "ai_calls, colleagues, consumer_mail_baseline only",
+      "description": "ai_calls, colleagues, consumer_mail_baseline, held_threads only",
       "type": "string"
     },
     "readId": {
@@ -11776,12 +11776,16 @@ cf_<slug>.
       "type": "array"
     },
     "status": {
-      "description": "data_subject_requests only",
+      "description": "data_subject_requests, held_threads only",
       "enum": [
-        "open",
-        "in_progress",
         "fulfilled",
-        "rejected"
+        "held",
+        "held_by_owner",
+        "in_progress",
+        "open",
+        "pending",
+        "rejected",
+        "unsure"
       ],
       "type": "string"
     },

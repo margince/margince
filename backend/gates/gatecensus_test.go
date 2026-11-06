@@ -219,7 +219,7 @@ func censusFiles(t *testing.T, what string, keep func(path string) bool) ([]pars
 	t.Helper()
 	fset := gatekit.SourceFileSet()
 	var out []parsedFile
-	err := filepath.WalkDir(backendTree, func(walked string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(backendTree, func(walked string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() {
 			return walkErr
 		}

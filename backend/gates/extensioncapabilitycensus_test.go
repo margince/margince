@@ -221,7 +221,7 @@ var surfaceConstants = map[string]string{"extension.MigrationsDir": extension.Mi
 // composedLayers is the unit subdirectories the composer reads.
 func composedLayers(t *testing.T) []string {
 	t.Helper()
-	entries, err := os.ReadDir(composerDir)
+	entries, err := gatekit.ReadDir(composerDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", composerDir, err)
 	}
@@ -260,7 +260,7 @@ func resolveLayer(t *testing.T, expr string) string {
 // drop without a word.
 func liveUnits(t *testing.T) []unit {
 	t.Helper()
-	entries, err := os.ReadDir(tierDir)
+	entries, err := gatekit.ReadDir(tierDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", tierDir, err)
 	}
@@ -316,7 +316,7 @@ func stagedFixtures(t *testing.T) []unit {
 // nothing, and the census that follows depends on that unit reading as empty.
 func declaredCapabilities(t *testing.T, dir string) []string {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
@@ -368,7 +368,7 @@ func shippedLayers(t *testing.T, dir string) []string {
 	t.Helper()
 	layers := composedLayers(t)
 	var shipped []string
-	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

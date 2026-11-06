@@ -54,7 +54,7 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 	if err != nil {
 		return false, false, 0, err
 	}
-	if status == "cancelled" || status == "done" || status == "error" {
+	if backfillFinished(status) {
 		return true, false, 0, nil
 	}
 	if !sameAccount {
@@ -366,4 +366,9 @@ func cancelReboundBackfillTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error 
 	// A run already ended needs no second cancellation.
 	_, err := tx.Exec(ctx, `UPDATE capture_backfill SET status='cancelled', completed_at=now()`+clearBackfillAdmission+resetInflightProgress+` WHERE id=`+storekit.Placeholders(args)+` AND status IN ('queued','running')`, args...)
 	return err
+}
+
+// backfillFinished says whether a run's status leaves no page to pull.
+func backfillFinished(status string) bool {
+	return status == "cancelled" || status == "done" || status == "error"
 }

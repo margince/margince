@@ -19,13 +19,14 @@ import (
 	"go/token"
 	"go/types"
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -553,7 +554,7 @@ var (
 // internal to identity, which this gate cannot import.
 func readRoleGrants(t *testing.T) roleGrants {
 	t.Helper()
-	body, err := os.ReadFile(rbacMatrixPage)
+	body, err := gatekit.ReadFile(rbacMatrixPage)
 	if err != nil {
 		t.Fatalf("reading the seeded role matrix: %v", err)
 	}

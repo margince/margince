@@ -53,9 +53,10 @@ export function InitiativeReports() {
   return (
     <Panel
       title={t("reporting.initiatives")}
+      flatHead
       titleAction={
         canCreate ? (
-          <Button variant="primary" onClick={() => setDrawer("new")}>
+          <Button variant="link" onClick={() => setDrawer("new")}>
             {t("reporting.newInitiative")}
           </Button>
         ) : undefined

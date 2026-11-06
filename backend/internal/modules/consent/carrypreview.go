@@ -172,7 +172,7 @@ func previewCarriedBases(ctx context.Context, tx pgx.Tx, args pgx.NamedArgs) ([]
 	}
 	for _, basis := range out {
 		if basis.SourceActivityID != nil {
-			if err := authorizeCarryEvidence(ctx, tx, "activity", *basis.SourceActivityID); err != nil {
+			if err := authorizeCarryEvidence(ctx, tx, entityActivity, *basis.SourceActivityID); err != nil {
 				return nil, err
 			}
 		}

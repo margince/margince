@@ -34,6 +34,7 @@ type historyQueryCost struct {
 type historySQLProfile struct {
 	mu      sync.Mutex
 	queries map[string]historyQueryCost
+	report  func(historyQueryCost)
 }
 
 type historyQuerySpan struct {
@@ -65,11 +66,29 @@ func (p *historySQLProfile) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, _ pg
 	}
 	cost.query, cost.calls, cost.elapsed = span.query, cost.calls+1, cost.elapsed+elapsed
 	p.queries[span.query] = cost
+	if p.report != nil {
+		p.report(cost)
+	}
+}
+
+func logHistoryQueryCost(t *testing.T, cost historyQueryCost) {
+	t.Helper()
+	query := strings.Join(strings.Fields(cost.query), " ")
+	if len(query) > 180 {
+		query = query[:180]
+	}
+	t.Logf("sql_profile calls=%d elapsed=%s query=%q", cost.calls, cost.elapsed, query)
 }
 
 func profileHistoryPool(ctx context.Context, t *testing.T, pool *pgxpool.Pool) *pgxpool.Pool {
 	t.Helper()
 	profile := &historySQLProfile{queries: map[string]historyQueryCost{}}
+	// A package timeout bypasses cleanup, so long runs also report their completed work.
+	profile.report = func(cost historyQueryCost) {
+		if cost.calls%1000 == 0 || cost.calls&(cost.calls-1) == 0 {
+			logHistoryQueryCost(t, cost)
+		}
+	}
 	config := pool.Config()
 	if os.Getenv("MARGINCE_IMPORT_BENCH_PREPARED") != "" {
 		config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
@@ -92,36 +111,39 @@ func profileHistoryPool(ctx context.Context, t *testing.T, pool *pgxpool.Pool) *
 			return
 		}
 		if directory := os.Getenv("MARGINCE_IMPORT_BENCH_PLAN_DIR"); directory != "" {
-			if err := os.MkdirAll(directory, 0o700); err != nil {
-				t.Fatal(err)
-			}
-			for i, cost := range costs {
-				query := strings.TrimSpace(cost.query)
-				if i >= 2 && !strings.HasPrefix(query, "WITH perfect AS") {
-					continue
-				}
-				if !strings.HasPrefix(query, "WITH candidate") && !strings.HasPrefix(query, "WITH perfect AS") && !strings.HasPrefix(query, "WITH emails AS") && !strings.HasPrefix(query, "SELECT EXISTS") {
-					continue
-				}
-				var plan []byte
-				err := database.WithWorkspaceTx(ctx, measured, func(tx pgx.Tx) error {
-					return tx.QueryRow(ctx, "EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) "+cost.query, cost.args...).Scan(&plan)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(filepath.Join(directory, fmt.Sprintf("query-%d.json", i)), plan, 0o600); err != nil {
-					t.Fatal(err)
-				}
-			}
+			writeHistoryQueryPlans(ctx, t, measured, directory, costs)
 		}
 		for _, cost := range costs[:min(20, len(costs))] {
-			query := strings.Join(strings.Fields(cost.query), " ")
-			if len(query) > 180 {
-				query = query[:180]
-			}
-			t.Logf("sql_profile calls=%d elapsed=%s query=%q", cost.calls, cost.elapsed, query)
+			logHistoryQueryCost(t, cost)
 		}
 	})
 	return measured
+}
+
+// writeHistoryQueryPlans saves the plans of the costliest import queries when
+// MARGINCE_IMPORT_BENCH_PLAN_DIR names a directory.
+func writeHistoryQueryPlans(ctx context.Context, t *testing.T, measured *pgxpool.Pool, directory string, costs []historyQueryCost) {
+	t.Helper()
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for i, cost := range costs {
+		query := strings.TrimSpace(cost.query)
+		if i >= 2 && !strings.HasPrefix(query, "WITH perfect AS") {
+			continue
+		}
+		if !strings.HasPrefix(query, "WITH candidate") && !strings.HasPrefix(query, "WITH perfect AS") && !strings.HasPrefix(query, "WITH emails AS") && !strings.HasPrefix(query, "SELECT EXISTS") {
+			continue
+		}
+		var plan []byte
+		err := database.WithWorkspaceTx(ctx, measured, func(tx pgx.Tx) error {
+			return tx.QueryRow(ctx, "EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) "+cost.query, cost.args...).Scan(&plan)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(directory, fmt.Sprintf("query-%d.json", i)), plan, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
 }

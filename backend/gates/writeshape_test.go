@@ -19,7 +19,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -173,9 +172,9 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	"internal/modules/knowledge:CreateCorpus":                "defining a document corpus, editing its words and moving its grounding floor are workspace CONFIGURATION, not facts about a record \u2014 the same events.md \u00a75.3c family as saved views, lists, retention policies and the lead vocabularies, and the closed catalog (events.md \u00a75) defines no knowledge_corpus.* type. The closed-verb law forbids inventing one build-side, and no existing verb comes close: the nearest shapes are all statements that a SUBJECT's record moved, and nobody's record moves when an admin renames a corpus. Nothing downstream is left stale either \u2014 the ask resolves the corpus and its floor at question time, from the row, so a subscriber could not act on the change any sooner than the next question already does; and the ingest that would care about an archive re-reads the document's own archived_at inside its write transaction rather than waiting to be told. The audit row carries both field images, which is what answers the question this surface actually raises: \"who moved the floor, and what would we have answered before?\"",
 	"internal/modules/knowledge:EditCorpus":                  "defining a document corpus, editing its words and moving its grounding floor are workspace CONFIGURATION, not facts about a record \u2014 the same events.md \u00a75.3c family as saved views, lists, retention policies and the lead vocabularies, and the closed catalog (events.md \u00a75) defines no knowledge_corpus.* type. The closed-verb law forbids inventing one build-side, and no existing verb comes close: the nearest shapes are all statements that a SUBJECT's record moved, and nobody's record moves when an admin renames a corpus. Nothing downstream is left stale either \u2014 the ask resolves the corpus and its floor at question time, from the row, so a subscriber could not act on the change any sooner than the next question already does; and the ingest that would care about an archive re-reads the document's own archived_at inside its write transaction rather than waiting to be told. The audit row carries both field images, which is what answers the question this surface actually raises: \"who moved the floor, and what would we have answered before?\"",
 	"internal/modules/knowledge:ArchiveCorpus":               "defining a document corpus, editing its words and moving its grounding floor are workspace CONFIGURATION, not facts about a record \u2014 the same events.md \u00a75.3c family as saved views, lists, retention policies and the lead vocabularies, and the closed catalog (events.md \u00a75) defines no knowledge_corpus.* type. The closed-verb law forbids inventing one build-side, and no existing verb comes close: the nearest shapes are all statements that a SUBJECT's record moved, and nobody's record moves when an admin renames a corpus. Nothing downstream is left stale either \u2014 the ask resolves the corpus and its floor at question time, from the row, so a subscriber could not act on the change any sooner than the next question already does; and the ingest that would care about an archive re-reads the document's own archived_at inside its write transaction rather than waiting to be told. The audit row carries both field images, which is what answers the question this surface actually raises: \"who moved the floor, and what would we have answered before?\"",
-	"internal/modules/collections:CreateSavedView":           "saved views are per-user view state, not record facts — events.md §5.3c ratifies this config family as audit-only and defines no saved_view.* type",
-	"internal/modules/collections:UpdateSavedView":           "saved views are per-user view state, not record facts — events.md §5.3c ratifies this config family as audit-only and defines no saved_view.* type",
-	"internal/modules/collections:archiveSavedViewTx":        "saved views are per-user view state, not record facts — events.md §5.3c ratifies this config family as audit-only and defines no saved_view.* type",
+	"internal/modules/collections:CreateSavedView":           "saved views are per-user view state, not record facts; this config family is audit-only and has no saved_view.* event type",
+	"internal/modules/collections:UpdateSavedView":           "saved views are per-user view state, not record facts; this config family is audit-only and has no saved_view.* event type",
+	"internal/modules/collections:archiveSavedViewTx":        "saved views are per-user view state, not record facts; this config family is audit-only and has no saved_view.* event type",
 	"internal/modules/collections:insertTagTx":               "tags are ratified audit-only in V1 — events.md \u00a75.3c defines no tag.* types and none is added",
 	"internal/modules/collections:ArchiveTag":                "tags are ratified audit-only in V1 — events.md \u00a75.3c defines no tag.* types and none is added",
 	"internal/modules/collections:UpdateTag":                 "a tag is workspace vocabulary, not a record fact: the closed event catalog carries no tag.* type and none is added here, because a subscriber acts on the RECORD a tag was applied to and that write emits its own event. The audit row answers who changed the word, which is the question a vocabulary dispute asks",
@@ -239,6 +238,7 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	"internal/modules/identity:createRecordGrantInTx":          "the closed catalog (events.md \u00a75) defines no grant.* type; the closed-verb law forbids inventing one build-side",
 	"internal/modules/identity:RevokeRecordGrant":              "the closed catalog (events.md \u00a75) defines no grant.* type; the closed-verb law forbids inventing one build-side",
 	"internal/modules/identity:mintPassport":                   "minting an Agent Seat Passport is ratified audit-only \u2014 the closed catalog (events.md \u00a75.6a) defines passport.revoked and NO issuance counterpart, so the only bus-visible passport fact is its death. That asymmetry is deliberate on the consumer side (a long-lived holder must drop a credential that died; nobody has to react to one being born) and the closed-verb law forbids inventing passport.issued build-side. The mint is attributable via its audit row; the missing type is raised upstream (P3)",
+	"internal/modules/identity:SetPassportAreas":               "choosing where a passport may act is ratified audit-only for the reason mintPassport is: the closed catalog (events.md \u00a75.6a) defines passport.revoked and nothing for a passport that changes, and no consumer holds a passport's areas, since every call reads them again at authentication and at admission. The change is attributable via its audit row, with the areas before and after",
 	"internal/modules/identity:mintConsentedAuthorizationCode": "the record of WHICH scopes a human ticked and granted to a client is ratified audit-only — the closed catalog (events.md §5) defines no consent fact at all, and the one type that would fit structurally, audit.appended, is declared in the contract as having no emit site and an EMPTY payload, so it could name neither the scopes nor the client. It sits beside issueGrant and mintPassport, the two credential writes this same consent produces when the code is redeemed, and carries the same waiver for the same reason; the addition (an OAuth-consent verb covering the grant, the issuance and the revoke cascade) is raised upstream (P3)",
 	"internal/modules/signals:settleSignalTx":                  "human triage remains audit-only; the ownership-only signal.updated event does not publish private triage decisions",
 	"internal/modules/signals:UpdateSignal":                    "human triage remains audit-only; the ownership-only signal.updated event does not publish private triage decisions",
@@ -344,7 +344,7 @@ func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
 	emissionPathsByDir := map[string]map[string]bool{}
 	fset := gatekit.SourceFileSet()
 	for _, root := range []string{"internal/modules", "internal/compose", settingsStoreDir} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
 				isIntegrationTagged(path) {
 				return err
@@ -411,7 +411,7 @@ func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
 func emissionBearingFunctions(fset *token.FileSet, dir string) (map[string]bool, error) {
 	emits := map[string]bool{}
 	calls := map[string][]string{}
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}

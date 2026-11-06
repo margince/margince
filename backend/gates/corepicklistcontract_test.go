@@ -34,13 +34,13 @@ package gates
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // contractDocument is the OpenAPI document these sets mirror.
@@ -238,7 +238,7 @@ func loadContractDocument(t *testing.T) map[string]any {
 // in both is read here twice rather than by two readers.
 func loadOpenAPIDocument(t *testing.T, path string) map[string]any {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/agents/registry.go backend/internal/compose/agentgate.go backend/internal/modules/agents/runner backend/internal/modules/ai/selectbrain.go backend/internal/modules/ai/router.go backend/internal/modules/ai/budget.go backend/tools/gen-agentcontract backend/internal/compose/agentbundle -->
+<!-- describes: backend/internal/modules/agents/registry.go backend/internal/compose/agentgate.go backend/internal/modules/agents/runner backend/internal/modules/ai/selectbrain.go backend/internal/modules/ai/router.go backend/internal/modules/ai/budget.go backend/tools/gen-agentcontract backend/internal/compose/agentbundle backend/internal/platform/workarea backend/internal/compose/workareaseam.go -->
 # The agent surface & the model runtime
 
 How AI agents *act* inside Margince, and what *runs the model* behind them. The write path covers how
@@ -151,6 +151,18 @@ choice. `internal/modules/ai/` owns it:
   The filter changes only the list. A scheduled run may choose any tool its passport's scopes and its
   user's seat allow, whatever the user's grants. The gate still checks each call: the grants, row
   scope and the arguments.
+
+  The list also drops a tool, or a router action, in a group the passport's `work_areas` leave off.
+
+- **`work_areas`** hold a passport to the groups of work its human chose, checked in three places.
+  `Gate.Admit` checks them after its per-call read of the passport, so a change binds a run or a
+  session from its next call. A verb whose operations sit in several groups is admitted while one of
+  them is on. The record type a call names then narrows it to one group.
+
+  The REST gate holds each route to its one operation's group, and that includes a tool's own
+  in-process call. Work an agent queued is made again with the passport's `work_areas` as they stand
+  when it runs. The table is `backend/internal/platform/workarea/workareas.json`, written by the
+  test that writes [mcp-parity.md](../reference/mcp-parity.md).
 
   The catalog itself: [reference/agent-tools.md](../reference/agent-tools.md).
   Connecting: [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md);

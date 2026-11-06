@@ -104,6 +104,7 @@ GOWORK_ROOT := GOWORK=$(abspath ../go.work)
 # them from the cached wildcard and re-runs them, from this one list, so the
 # two cannot drift apart.
 UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
+GATES_GOMEMLIMIT ?= 4GiB
 
 # TEST_EXEC=<wrapper> runs every cached test binary through a `go test -exec`
 # wrapper, uncached. `make test-input-census` sets it to scripts/testlog-exec.sh, which logs
@@ -281,10 +282,11 @@ test-uncached: composition
 	# which fails a pull request for the lane's own size rather than for
 	# anything in the diff. The perf lanes below name theirs for the same
 	# reason.
-	# GOMEMLIMIT, because the gates binary peaked near 5 GB with no limit and
-	# check runs beside other legs. At 3GiB it peaked at 3.4 GB in the same
-	# wall time; 2GiB doubled its CPU, since the parse cache alone holds ~1.9 GB.
-	GOMEMLIMIT=3GiB $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
+	# GOMEMLIMIT, because the gates binary reaches 9 GB with no limit and check
+	# runs beside other legs. The parse cache alone holds ~1.9 GB, so a limit
+	# near it spends the run collecting: 3GiB cost 1.4x the wall time of 4GiB
+	# for the same 4 GB peak. A CI job with a runner to itself passes 6GiB.
+	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this

@@ -25,7 +25,6 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -100,14 +99,14 @@ func TestASubjectBodyModelReplyHasOneReader(t *testing.T) {
 	// its cwd, and walking the repo root sweeps every sibling git worktree on
 	// this machine — their copies of these files would be reported as this
 	// tree's, which is a finding about somebody else's branch.
-	err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		body, readErr := os.ReadFile(path)
+		body, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}

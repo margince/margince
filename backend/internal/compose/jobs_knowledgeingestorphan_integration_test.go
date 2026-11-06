@@ -220,13 +220,13 @@ func TestAnIngestWhoseHoldingConnectionDiedDoesNotBlockTheNext(t *testing.T) {
 	}
 
 	// The holder's process dies: the server drops its connection and its lock.
+	// The 5 s wait returns once the backend is gone. Without it the lock can
+	// outlive the call, and the next run reads a holder that is still dying.
 	var killed int
 	if err := o.e.Pool.QueryRow(ctx, `
-		SELECT count(*) FROM (
-		  SELECT pg_terminate_backend(pid) FROM pg_locks
-		  WHERE locktype = 'advisory' AND granted
-		    AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended($1, 0)
-		) AS ended`, "knowledge_ingest:"+o.doc.String()).Scan(&killed); err != nil || killed != 1 {
+		SELECT count(*) FILTER (WHERE pg_terminate_backend(pid, 5000)) FROM pg_locks
+		WHERE locktype = 'advisory' AND granted
+		  AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended($1, 0)`, "knowledge_ingest:"+o.doc.String()).Scan(&killed); err != nil || killed != 1 {
 		t.Fatalf("ending the holder's connection: ended=%d err=%v", killed, err)
 	}
 

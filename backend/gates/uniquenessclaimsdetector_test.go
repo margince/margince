@@ -356,7 +356,7 @@ func (c claim) key() string { return c.path + "#" + c.decl }
 func findClaims(root string) ([]claim, error) {
 	var found []claim
 	fset := gatekit.SourceFileSet()
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}

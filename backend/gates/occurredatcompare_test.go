@@ -41,7 +41,6 @@ import (
 	"go/token"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -123,7 +122,7 @@ func TestWhetherAnActivityHappenedIsAskedOfItsOwner(t *testing.T) {
 		if strings.HasPrefix(filepath.Clean(src.Path), occurredAtOwner) {
 			continue
 		}
-		text, err := os.ReadFile(filepath.Join(root, src.Path)) // #nosec G304 -- a swept file of the trusted module tree
+		text, err := gatekit.ReadFile(filepath.Join(root, src.Path)) // #nosec G304 -- a swept file of the trusted module tree
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -142,7 +141,7 @@ func TestWhetherAnActivityHappenedIsAskedOfItsOwner(t *testing.T) {
 		Exempt:  gatekit.Waive(map[string]string{}),
 	}
 	for _, src := range callers.Files(t) {
-		text, err := os.ReadFile(filepath.Join(root, src.Path)) // #nosec G304 -- a swept file of the trusted module tree
+		text, err := gatekit.ReadFile(filepath.Join(root, src.Path)) // #nosec G304 -- a swept file of the trusted module tree
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -492,11 +491,11 @@ type sqlBody struct{ where, text, args string }
 func TestNoMigrationBodyAsksWhetherAnActivityHappenedRaw(t *testing.T) {
 	t.Parallel()
 	byDir := map[string][]sqlFile{}
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".sql") || strings.HasSuffix(path, ".down.sql") {
 			return err
 		}
-		raw, err := os.ReadFile(path) // #nosec G304 G122 -- a .sql file from walking the trusted module tree
+		raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- a .sql file from walking the trusted module tree
 		byDir[filepath.Dir(path)] = append(byDir[filepath.Dir(path)], sqlFile{path: path, text: string(raw)})
 		return err
 	})

@@ -102,30 +102,35 @@ func reportingUnassignedLanguage(t *testing.T, language, label string) {
 	}
 }
 
+// The three older histories share one fixture. Each case puts back the history
+// the writers recorded, then degrades the twelve customer meetings' rows. The
+// internal meeting keeps the full history a new meeting gets.
 func TestReportingOlderHeldMeetingsUseKnownHostAndCustomerLinks(t *testing.T) {
-	for _, history := range []string{"missing_attribution", "partial_snapshot", "no_history"} {
+	f := reportingBusiness(t)
+	store := activities.NewStore(InstallationDB(f.env.Pool)).WithClock(func() time.Time { return f.at })
+	held := "held"
+	start := f.at.Add(-time.Hour)
+	subject := "Internal meeting"
+	host := ids.From[ids.UserKind](f.env.Rep1)
+	internal, _, err := store.LogActivity(f.human, activities.LogActivityInput{Kind: "meeting", HostUserID: &host, Subject: &subject, OccurredAt: &start, MeetingStatus: &held, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.env.owner.Exec(f.human, "CREATE TEMP TABLE written_meeting_history AS SELECT * FROM activity_meeting_history"); err != nil {
+		t.Fatal(err)
+	}
+	for history, degrade := range map[string]string{
+		"missing_attribution": "UPDATE activity_meeting_history SET host_id_at_change=NULL,customer_eligible_at_change=NULL WHERE activity_id<>$1",
+		"partial_snapshot":    "UPDATE activity_meeting_history SET partial_pre_history=true WHERE activity_id<>$1",
+		"no_history":          "DELETE FROM activity_meeting_history WHERE activity_id<>$1",
+	} {
 		t.Run(history, func(t *testing.T) {
-			f := reportingBusiness(t)
-			switch history {
-			case "missing_attribution":
-				if _, err := f.env.owner.Exec(f.human, "UPDATE activity_meeting_history SET host_id_at_change=NULL,customer_eligible_at_change=NULL"); err != nil {
-					t.Fatal(err)
-				}
-			case "partial_snapshot":
-				if _, err := f.env.owner.Exec(f.human, "UPDATE activity_meeting_history SET partial_pre_history=true"); err != nil {
-					t.Fatal(err)
-				}
-			case "no_history":
-				if _, err := f.env.owner.Exec(f.human, "DELETE FROM activity_meeting_history"); err != nil {
+			for _, statement := range []string{"DELETE FROM activity_meeting_history", "INSERT INTO activity_meeting_history SELECT * FROM written_meeting_history"} {
+				if _, err := f.env.owner.Exec(f.human, statement); err != nil {
 					t.Fatal(err)
 				}
 			}
-			store := activities.NewStore(InstallationDB(f.env.Pool)).WithClock(func() time.Time { return f.at })
-			held := "held"
-			start := f.at.Add(-time.Hour)
-			subject := "Internal meeting"
-			host := ids.From[ids.UserKind](f.env.Rep1)
-			if _, _, err := store.LogActivity(f.human, activities.LogActivityInput{Kind: "meeting", HostUserID: &host, Subject: &subject, OccurredAt: &start, MeetingStatus: &held, Source: "manual"}); err != nil {
+			if _, err := f.env.owner.Exec(f.human, degrade, ids.UUID(internal.Id)); err != nil {
 				t.Fatal(err)
 			}
 			selection := f.selection()

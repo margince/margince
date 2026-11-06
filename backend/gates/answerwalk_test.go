@@ -208,7 +208,7 @@ func fragmentKey(call *ast.CallExpr, pkg string) (key, callee string) {
 func kernelFragments(t *testing.T) map[string]fragment {
 	t.Helper()
 	out := map[string]fragment{}
-	err := filepath.WalkDir(filepath.Join("internal", "shared", "kernel"), func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(filepath.Join("internal", "shared", "kernel"), func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
@@ -255,7 +255,7 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 			walkRoot = filepath.Join("..", "extensions")
 		}
 		packages := map[string]map[string]*ast.File{}
-		err := filepath.WalkDir(walkRoot, func(path string, entry fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(walkRoot, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				return err

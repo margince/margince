@@ -15,12 +15,13 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var frontendAcquisitionKinds = filepath.Join(repoRoot, "frontend", "src", "lib", "acquisitionkinds.ts")
@@ -107,7 +108,7 @@ func stringValuesOf(t *testing.T, gen *ast.GenDecl) map[string]bool {
 // quoted entries and commas are gone is an entry this parser cannot see.
 func tsAcquisitionKinds(t *testing.T) map[string]bool {
 	t.Helper()
-	source, err := os.ReadFile(frontendAcquisitionKinds)
+	source, err := gatekit.ReadFile(frontendAcquisitionKinds)
 	if err != nil {
 		t.Fatalf("reading the frontend acquisition kinds: %v", err)
 	}

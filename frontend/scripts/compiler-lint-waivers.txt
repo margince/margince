@@ -23,7 +23,6 @@
 3 react-hooks/refs src/design-system/breadcrumb.tsx
 1 react-hooks/set-state-in-effect src/design-system/countup.tsx
 1 react-hooks/refs src/design-system/crawl-canvas.tsx
-3 react-hooks/refs src/design-system/dealcard.tsx
 1 react-hooks/set-state-in-effect src/design-system/debouncedsearch.ts
 1 react-hooks/set-state-in-effect src/design-system/decisiondeck.tsx
 8 react-hooks/refs src/design-system/emaildetail.tsx

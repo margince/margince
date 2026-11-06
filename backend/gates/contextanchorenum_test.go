@@ -23,7 +23,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"slices"
 	"strconv"
 	"testing"
@@ -75,7 +74,7 @@ func TestEveryContextAnchorIsAnAdmissibleRefType(t *testing.T) {
 // contextAnchorEnum reads the path parameter's enum off the contract.
 func contextAnchorEnum(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(contractFile)
+	raw, err := gatekit.ReadFile(contractFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractFile, err)
 	}

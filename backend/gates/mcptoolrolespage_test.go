@@ -13,10 +13,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
-	"os"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -58,7 +59,7 @@ type toolChecksFile struct {
 func readSweepFile[T toolRolesFile | toolChecksFile](t *testing.T, path string) T {
 	t.Helper()
 	var into T
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

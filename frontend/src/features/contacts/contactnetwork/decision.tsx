@@ -78,7 +78,7 @@ export function DecisionStrip({
   // (statstrip.css), and the fold is the plate's — a strip where only some
   // cards carry it draws a bordered box among a column of borderless rows.
   return (
-    <StatStrip>
+    <StatStrip density="plate" label={t("contact.intro.stripLabel")}>
       <StatCard
         narrow="row"
         label={t("contact.intro.stripWho")}

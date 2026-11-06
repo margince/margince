@@ -28,7 +28,7 @@ cross the split:
   the resource server's own 401, which a split origin breaks. It must be the host
   `--public-base-url` names.
 - The consent flow crosses the two services in both directions. `GET
-  /oauth/authorize` (api) redirects the human's browser to `/#/oauth-consent`
+  /oauth/authorize` (api) redirects the human's browser to `/consent#/oauth-consent`
   (web). That screen reads `/v1/oauth/consent-request` and posts the decision
   back to `/oauth/authorize` (api). Say an ingress serves `/` from somewhere
   else than `/oauth/authorize`, or routes `/oauth` to the web service. Then it gives a 404

@@ -29,7 +29,7 @@ func TestTheKeptStopBackfillHashesTheAddressAndReadsTheChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	through := namespaceThroughVersion(t, core, "1793936300")
+	through := namespaceThroughVersion(t, core, "1793958481")
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatalf("up: %v", err)
 	}

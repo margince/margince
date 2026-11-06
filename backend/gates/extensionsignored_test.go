@@ -37,6 +37,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestEveryEnabledExtensionIsTracked: no directory under extensions/ may be
@@ -49,7 +51,7 @@ func TestEveryEnabledExtensionIsTracked(t *testing.T) {
 	t.Parallel()
 	operator := operatorUnits(t)
 	for _, root := range []string{"../extensions", "../fixtures/extensions"} {
-		entries, err := os.ReadDir(root)
+		entries, err := gatekit.ReadDir(root)
 		if os.IsNotExist(err) {
 			continue
 		}
@@ -93,7 +95,7 @@ const operatorUnitsFile = "operator-units"
 // operatorUnits reads the operator's list, or nothing when there is none.
 func operatorUnits(t *testing.T) map[string]bool {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("..", "extensions", operatorUnitsFile)) // #nosec G304 -- a fixed path in this tree
+	raw, err := gatekit.ReadFile(filepath.Join("..", "extensions", operatorUnitsFile)) // #nosec G304 -- a fixed path in this tree
 	if os.IsNotExist(err) {
 		return nil
 	}

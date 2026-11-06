@@ -16,6 +16,9 @@ The test checks the range in
 [`capture_backfill_cost_integration_test.go`](../../backend/internal/compose/integration/capture/capture_backfill_cost_integration_test.go).
 Use the same count and configuration when comparing revisions.
 
+Set `MARGINCE_IMPORT_BENCH_CONTACTS` to choose how many addresses to use, from one to the message count.
+Without it, each message has a new address. The test checks the contact and creation ledger counts.
+
 The report shows each part of the run. Compare the last parts with the first ones
 to check whether the database work per message grows with the imported history.
 

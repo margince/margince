@@ -30,8 +30,8 @@ import (
 const calendarAPIBase = "https://www.googleapis.com/calendar/v3"
 
 // Default Google OAuth endpoints; overridable via OAuthConfig for tests. The
-// calendar connector authorizes against the same Google identity platform as
-// Gmail, but as its OWN authorization (calendar scope only).
+// calendar connector authorizes against the same Google identity platform as Gmail.
+// Its grant is its own: the calendar scopes and the profile scope, and no mail scope.
 const (
 	googleAuthURL  = "https://accounts.google.com/o/oauth2/v2/auth"
 	googleTokenURL = "https://oauth2.googleapis.com/token" //nolint:gosec // G101 false positive: Google's public OAuth token *endpoint URL*, not a credential
@@ -108,12 +108,12 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		Provider:     connectorName,
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
-		Scopes:       ConsentScopes(),
+		Scopes:       append(ConsentScopes(), googleconn.ProfileScope),
 		AuthURL:      cfg.AuthURL,
 		TokenURL:     cfg.TokenURL,
 		// Google needs offline access + a forced consent prompt to return a
-		// refresh token. No include_granted_scopes: keep this credential scoped
-		// to the calendar alone.
+		// refresh token. No include_granted_scopes: keep the mail scopes out of
+		// this credential.
 		AuthParams: map[string]string{
 			"access_type": "offline",
 			"prompt":      "consent",

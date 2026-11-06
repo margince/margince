@@ -14,12 +14,12 @@ package gates
 // many screens follow. A side that disagrees promises what the server refuses.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendVendorServices = "../frontend/src/format/connectorprovider.ts"
@@ -31,7 +31,7 @@ var tsVendorPair = regexp.MustCompile(
 
 func TestTheFrontendVendorPairsMatchTheServersChain(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendVendorServices)
+	source, err := gatekit.ReadFile(frontendVendorServices)
 	if err != nil {
 		t.Fatalf("reading the frontend vendor table: %v", err)
 	}

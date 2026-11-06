@@ -288,7 +288,7 @@ func backfillRunForDispositionTx(ctx context.Context, tx pgx.Tx, dispositionID i
 	args := []any{dispositionID}
 	err := tx.QueryRow(ctx, `SELECT backfill_id FROM capture_pending_counterparty WHERE id = `+storekit.Placeholders(args), args...).Scan(&run)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return nil, nil //nolint:nilnil // a disposition outside any backfill run has no run; callers read nil as that
 	}
 	return run, err
 }

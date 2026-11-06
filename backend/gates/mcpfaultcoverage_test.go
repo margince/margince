@@ -138,7 +138,7 @@ func parseModules(t *testing.T) []moduleSource {
 	t.Helper()
 	byUnit := map[string]*moduleSource{}
 	for _, root := range seamReachableRoots {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
 				return err
 			}

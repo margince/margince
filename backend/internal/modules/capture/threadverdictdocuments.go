@@ -34,6 +34,9 @@ type ThreadDocument struct {
 	Excerpt      string   `json:"-"`
 	Truncated    bool     `json:"-"`
 	Unreadable   bool     `json:"-"`
+	// Personnel is the document rules' answer over more of the text than
+	// Excerpt holds: a CV's headings often start past the excerpt.
+	Personnel bool `json:"-"`
 }
 
 // IsThreadDocument says whether a file is a document a thread verdict must

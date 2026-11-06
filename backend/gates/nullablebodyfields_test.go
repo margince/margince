@@ -17,7 +17,6 @@ import (
 	"go/token"
 	"maps"
 	"os"
-	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
@@ -219,7 +218,7 @@ func handlerTypeCalls(t *testing.T) map[string]map[string]bool {
 func methodCalls(t *testing.T, accept func(recv string) bool) map[string]map[string]bool {
 	t.Helper()
 	out := map[string]map[string]bool{}
-	err := filepath.WalkDir("internal", func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}

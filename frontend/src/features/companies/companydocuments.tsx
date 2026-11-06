@@ -1,19 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { FileOrigin } from "../../components/fileorigin";
-import { Badge, Button, EmptyState } from "../../design-system/atoms";
+import {
+  AttachmentGrid,
+  AttachmentTile,
+  CATEGORY_LABELS,
+} from "../../components/attachmenttile";
+import { Button, EmptyState } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
-import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { Panel, PanelBody } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { attachmentAnchor } from "../../lib/attachmentlink";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
@@ -23,7 +26,6 @@ import { DocumentExtractionPanel } from "../voice-knowledge/documentextraction";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
-import { useViewerZone } from "../../lib/viewerzone";
 
 // The account's documents: the offers, legal files and loose paper a rep goes
 // looking for before a call.
@@ -47,17 +49,6 @@ import { useViewerZone } from "../../lib/viewerzone";
 
 type Attachment = components["schemas"]["Attachment"];
 type Category = NonNullable<Attachment["category"]>;
-type DocState = NonNullable<Attachment["doc_state"]>;
-
-const CATEGORY_LABELS: Record<Category, MessageKey> = {
-  contract: "docs.category.contract",
-  offer: "docs.category.offer",
-  legal: "docs.category.legal",
-  email_attachment: "docs.category.email",
-  message_attachment: "docs.category.message",
-  other: "docs.category.other",
-  link: "docs.category.link",
-};
 
 // The chips a reader can press. `contract` is absent because the agreements
 // card above is where contract paper is read — a chip that filtered this list
@@ -72,19 +63,6 @@ const FILTER_CATEGORIES: readonly Category[] = [
   "other",
   "link",
 ];
-
-const STATE_LABELS: Record<DocState, MessageKey> = {
-  draft: "docs.state.draft",
-  current: "docs.state.current",
-  final: "docs.state.final",
-  superseded: "docs.state.superseded",
-};
-
-// Superseded is the one state that changes how a row should READ: it is history,
-// not a candidate. The rest are equal citizens and get no tone.
-const STATE_TONE: Partial<Record<DocState, "warning">> = {
-  superseded: "warning",
-};
 
 // A FILTERED read that found nothing is not an empty account. SectionCard's
 // empty state replaces the whole body — filters included — so reporting it here
@@ -289,14 +267,18 @@ export function CompanyDocumentsCard({
             </EmptyState>
           </PanelBody>
         ) : (
-          documents.map((doc) => (
-            <DocumentRow
-              key={doc.id}
-              doc={doc}
-              canWriteDeals={canWriteDeals}
-              onOpenEmail={onOpenEmail}
-            />
-          ))
+          <PanelBody>
+            <AttachmentGrid>
+              {documents.map((doc) => (
+                <DocumentRow
+                  key={doc.id}
+                  doc={doc}
+                  canWriteDeals={canWriteDeals}
+                  onOpenEmail={onOpenEmail}
+                />
+              ))}
+            </AttachmentGrid>
+          </PanelBody>
         )
       ) : (
         <PanelBody>
@@ -326,82 +308,39 @@ function DocumentRow({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const readerZone = useViewerZone();
   // The staged reading is OPENED, never mounted by the list. Each panel asks
   // the server for its own document's reading on mount, so a list that opened
-  // them all fired one request per deal file and stacked a wall of panels over
-  // the filenames the reader came for.
+  // them all fired one request per deal file.
   const [reading, setReading] = useState(false);
   // Only a deal-scoped file is offered one, because a deal is the only record
-  // the accept can write to — offering it on a contact's CV would be offering
-  // an act that can only be refused.
+  // the accept can write to.
   const offersReading = doc.entity_type === "deal";
-
   return (
-    <Fragment>
-      <PanelRow className="rec-row">
-        {/* DIVs, not spans, matching the contract row this list sits beside:
-            these halves are the row's block containers, and both set their own
-            `display: flex`, so nothing moves. */}
-        <div className="rec-main">
-          {/* No pinned badge. `pinned` is a real field — the endpoint sorts on
-              it and can filter by it — but nothing in this product SETS it, so
-              the badge could only ever appear for a document pinned through the
-              API by hand. A state a reader can see and cannot reach reads as a
-              feature that is broken rather than one that is absent. It comes
-              back with the control that pins. */}
-          {/* The NAME is the download. A reader who wants a document clicks its
-              title — a separate action word at the far end of the row is a
-              second thing to find for the only thing this row does. The title
-              if somebody gave it one, else the filename: a display name is what
-              a reader looks for; the filename is what arrived, and it is what
-              the saved file is called. */}
-          <a className="co-rowlink rec-title" {...attachmentAnchor(doc)}>
-            {doc.title || doc.filename}
-          </a>
-          <FileOrigin origin={doc.origin} onOpenEmail={onOpenEmail} />
-          {/* What qualifies the file, on one quiet line under its name: the
-              filename it will save as when a human gave it a different title,
-              where it came from, and when it arrived. The filename is absent
-              when the two names are the same string, because a row that says
-              one thing twice says it once. */}
-          <span className="rec-meta t-caption">
-            {doc.title && doc.title !== doc.filename && (
-              <span>{doc.filename}</span>
-            )}
-            <span>{doc.source}</span>
-            <span>{formatDateTime(doc.created_at, locale, readerZone)}</span>
-          </span>
-        </div>
-        <div className="rec-end">
-          {doc.category && <Badge>{t(CATEGORY_LABELS[doc.category])}</Badge>}
-          {doc.doc_state && (
-            <Badge tone={STATE_TONE[doc.doc_state]}>
-              {t(STATE_LABELS[doc.doc_state])}
-            </Badge>
-          )}
-          {offersReading && (
+    <li>
+      <AttachmentTile
+        file={doc}
+        onOpenEmail={onOpenEmail}
+        withSource
+        verbs={
+          offersReading && (
             <Button
               aria-expanded={reading}
               onClick={() => setReading(!reading)}
             >
               {t(reading ? "docs.reading.hide" : "docs.reading.show")}
             </Button>
-          )}
-        </div>
-      </PanelRow>
-      {/* The staged reading sits UNDER its own row rather than inside it: what
-          it offers is about the document above it, and a panel wedged into a
-          list row would push the filename and the download out of line. */}
-      {offersReading && reading && (
-        <PanelRow className="rec-reading">
-          <DocumentExtractionPanel
-            attachmentId={doc.id}
-            canAccept={canWriteDeals}
-          />
-        </PanelRow>
-      )}
-    </Fragment>
+          )
+        }
+        after={
+          offersReading &&
+          reading && (
+            <DocumentExtractionPanel
+              attachmentId={doc.id}
+              canAccept={canWriteDeals}
+            />
+          )
+        }
+      />
+    </li>
   );
 }

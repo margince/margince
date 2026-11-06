@@ -28,6 +28,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // pnpmVersionLiteral matches a concrete pnpm version wherever it is written:
@@ -89,7 +91,7 @@ func TestThePnpmVersionHasOneSource(t *testing.T) {
 // back with npm's release schedule, which is the whole defect.
 func pinnedPackageManager(t *testing.T) string {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join(repoRoot, "package.json"))
+	body, err := gatekit.ReadFile(filepath.Join(repoRoot, "package.json"))
 	if err != nil {
 		t.Fatalf("reading the workspace root manifest: %v", err)
 	}
@@ -118,7 +120,7 @@ func pinnedPackageManager(t *testing.T) string {
 // caller can refuse a sweep that found none.
 func assertActionSetupReadsThePin(t *testing.T, file string) int {
 	t.Helper()
-	body, err := os.ReadFile(file)
+	body, err := gatekit.ReadFile(file)
 	if err != nil {
 		t.Fatalf("reading %s: %v", file, err)
 	}
@@ -155,7 +157,7 @@ func assertActionSetupReadsThePin(t *testing.T, file string) int {
 // and a stage added later inherits it.
 func assertDockerfileActivatesThePin(t *testing.T) {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join(repoRoot, "Dockerfile"))
+	body, err := gatekit.ReadFile(filepath.Join(repoRoot, "Dockerfile"))
 	if err != nil {
 		t.Fatalf("reading the Dockerfile: %v", err)
 	}
@@ -210,7 +212,7 @@ func assertNamesNoPnpmVersion(t *testing.T, rel, pin string) {
 		// version that wrote it rather than choosing one.
 		return
 	}
-	body, err := os.ReadFile(filepath.Join(repoRoot, rel))
+	body, err := gatekit.ReadFile(filepath.Join(repoRoot, rel))
 	if err != nil {
 		// Tracked but absent happens mid-rebase and after `git rm`; not this
 		// gate's business.

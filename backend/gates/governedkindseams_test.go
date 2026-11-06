@@ -12,9 +12,10 @@ package gates
 // A disagreement fails silently in either direction.
 
 import (
-	"os"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const autoApplyFile = "internal/compose/autoapply.go"
@@ -22,7 +23,7 @@ const autoApplyFile = "internal/compose/autoapply.go"
 // The sweep looks for exactly the kinds the applier will admit.
 func TestTheAutoApplySweepScansTheKindsTheApplierAdmits(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(autoApplyFile)
+	raw, err := gatekit.ReadFile(autoApplyFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", autoApplyFile, err)
 	}

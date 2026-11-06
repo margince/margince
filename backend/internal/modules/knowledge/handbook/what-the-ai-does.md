@@ -88,7 +88,7 @@ question**. See [Documents and files](documents-and-files.md). It answers only
 from the set of documents you filed, and refuses a question that set does not
 cover.
 
-An agent can ask a document set for you if its passport has **Buy contact data**, the permission that also covers AI work like this. It gets the same answer you would, with the same passages under each sentence, for the sets you may read.
+An agent can ask a document set for you if its passport has **Use AI and buy data**, the permission for AI work like this. It gets the same answer you would, with the same passages under each sentence, for the sets you may read.
 
 **The brief during the night.** The Morning brief looks at your companies during
 the night and ranks what most needs your first hour. If it found nothing, it

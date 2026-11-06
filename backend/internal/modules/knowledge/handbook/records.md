@@ -121,7 +121,7 @@ To write to a contact, press **Email** in its header; a contact reached only on 
 Also called: phone a contact, click to call, dial, call result, not reached.
 
 ### Can I add a photo to a contact, or change a company's logo?
-No. Margince has no photo upload for a contact: its picture is made from the name. A customer company's logo is read from its website and cannot be uploaded. Only your own company's logo is set, in **Settings → Company profile** under **Company logo**.
+No. Margince has no photo upload for a contact: its picture is made from the name. A customer company's logo is read from its website and cannot be uploaded. Only your own company's logo is set, in **Settings → Company profile** on the **Brand** card. Your own profile picture is set in **Settings → Account**.
 Also called: profile picture, avatar, company image.
 
 ## Companies

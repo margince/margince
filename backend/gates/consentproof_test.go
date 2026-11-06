@@ -48,7 +48,7 @@ func TestEveryConsentStateWriteAppendsProof(t *testing.T) {
 	t.Parallel()
 	defer unprovenConsentWrites.AssertAllMatched(t)
 	for _, root := range []string{"internal/modules", "internal/compose"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
 				isIntegrationTagged(path) {
 				return err

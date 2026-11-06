@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -241,9 +243,9 @@ var plainPools = []struct{ prefix, list string }{
 var plainCaps = map[string]int{
 	plainWordsFile:                     plainWordCap,
 	"docs/how-to/plain-words.txt":      1366,
-	"docs/explanation/plain-words.txt": 1643,
+	"docs/explanation/plain-words.txt": 1642,
 	"docs/handbook/plain-words.txt":    1386,
-	"docs/reference/plain-words.txt":   1716,
+	"docs/reference/plain-words.txt":   1715,
 	plainProjectFile:                   1779,
 }
 
@@ -336,7 +338,7 @@ func loadPlainPool(t *testing.T, rel string, names []string) plainVocab {
 
 func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 	t.Parallel()
-	glossary, err := os.ReadFile(filepath.Join(docsTreeRoot, glossaryFile))
+	glossary, err := gatekit.ReadFile(filepath.Join(docsTreeRoot, glossaryFile))
 	if err != nil {
 		t.Fatalf("read %s: %v", glossaryFile, err)
 	}
@@ -368,7 +370,7 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 		if f.symlink || !strings.HasSuffix(f.path, ".md") {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(docsTreeRoot, f.path))
+		raw, err := gatekit.ReadFile(filepath.Join(docsTreeRoot, f.path))
 		if err != nil {
 			t.Fatalf("read %s: %v", f.path, err)
 		}
