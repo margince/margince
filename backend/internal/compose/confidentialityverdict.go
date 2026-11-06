@@ -28,7 +28,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -62,6 +61,8 @@ type ConfidentialityVerdictEngine struct {
 	log      *slog.Logger
 	// released ends the contact holds a thread that clears no longer justifies.
 	released *heldContactReleaser
+	// documents reads the files on the message a verdict judges.
+	documents *threadDocuments
 }
 
 // NewConfidentialityVerdictEngine builds the engine over the pool and the model
@@ -70,12 +71,13 @@ type ConfidentialityVerdictEngine struct {
 // not an error.
 func NewConfidentialityVerdictEngine(pool *pgxpool.Pool, brain completer, log *slog.Logger) *ConfidentialityVerdictEngine {
 	return &ConfidentialityVerdictEngine{
-		pool:     pool,
-		threads:  capture.NewThreadVerdictStore(InstallationDB(pool)),
-		contacts: contacts.NewStore(InstallationDB(pool)),
-		brain:    brain,
-		log:      log,
-		released: newHeldContactReleaser(pool, log),
+		pool:      pool,
+		threads:   capture.NewThreadVerdictStore(InstallationDB(pool)),
+		contacts:  contacts.NewStore(InstallationDB(pool)),
+		brain:     brain,
+		log:       log,
+		released:  newHeldContactReleaser(pool, log),
+		documents: newThreadDocuments(pool, nil),
 	}
 }
 
@@ -119,6 +121,7 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		maxVerdicts = passCap
 	}
 	judged := 0
+	documents := newDocumentPass()
 	for judged < maxVerdicts {
 		// A claim never takes more than the pass has left. An admin's cap need
 		// not be a multiple of the claim size, and a batch judged past it would
@@ -130,9 +133,9 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		if len(batch) == 0 {
 			return nil
 		}
-		reached, err := e.judgeClaimed(wsCtx, batch)
+		reached, err := e.judgeClaimed(wsCtx, batch, documents)
 		judged += reached
-		if ai.IsDeferral(err) {
+		if confidentialityDeferred(err) {
 			// The refund is judgeClaimed's, because it is what knows where it
 			// stopped. Releasing from here would hand back the whole batch,
 			// including the thread already deferred and refunded inside.
@@ -158,7 +161,7 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 // here rather than in the caller because this is what knows where it stopped:
 // a caller handed the remainder could still pass the whole batch.
 func (e *ConfidentialityVerdictEngine) judgeClaimed(
-	ctx context.Context, claimed []capture.PendingThread,
+	ctx context.Context, claimed []capture.PendingThread, documents *documentPass,
 ) (int, error) {
 	// A LOCAL rather than a method, which is what makes the wrong call
 	// unwritable instead of merely unwritten: only the loop that knows where it
@@ -176,9 +179,9 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 	reached := 0
 	for i, row := range claimed {
 		reached++
-		err := e.judgeOne(ctx, row)
+		err := e.judgeOne(ctx, row, documents)
 		if err != nil {
-			deferred := ai.IsDeferral(err)
+			deferred := confidentialityDeferred(err)
 			backoff := deferralBackoff(err)
 			if deferErr := e.threads.Defer(ctx, row, backoff,
 				"the confidentiality verdict could not be completed", deferred); deferErr != nil {
@@ -207,8 +210,14 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 // An OPENING answer below the floor is not believed: the thread resolves to
 // `unsure`, which holds. A HOLDING answer needs no floor, because requiring
 // confidence to hold would publish exactly the threads the model found hardest.
-func (e *ConfidentialityVerdictEngine) judgeOne(ctx context.Context, row capture.PendingThread) error {
-	results, err := e.ask(ctx, row)
+func (e *ConfidentialityVerdictEngine) judgeOne(
+	ctx context.Context, row capture.PendingThread, documents *documentPass,
+) error {
+	read, err := e.documents.read(ctx, row, documents)
+	if err != nil {
+		return err
+	}
+	results, err := e.ask(ctx, read)
 	if err != nil {
 		return err
 	}
@@ -223,7 +232,10 @@ func (e *ConfidentialityVerdictEngine) judgeOne(ctx context.Context, row capture
 		return fmt.Errorf("confidentiality: unknown kind for thread %s", row.ID)
 	}
 	kind := answer.Verdict
-	if status == capture.VerdictCleared && float64(answer.Confidence) < confidentialityFloor {
+	// A thread with documents the verdict never read cannot open: the sender
+	// names the files, so the unread ones are theirs to choose.
+	if status == capture.VerdictCleared &&
+		(float64(answer.Confidence) < confidentialityFloor || read.DocumentsOmitted > 0) {
 		// Below the floor the OPENING answer is discarded and the thread holds.
 		// The kind is kept as the model gave it, because "the model thought
 		// this was ordinary and was not sure" is what a human reviewing the

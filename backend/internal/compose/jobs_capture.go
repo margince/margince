@@ -189,7 +189,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// brain would leave exactly that deployment with a backlog nothing ends.
 	addDeclaredWorker[ConfidentialityVerdictArgs](reg, &confidentialityVerdictWorker{
 		pool:     pool,
-		engine:   NewConfidentialityVerdictEngine(pool, cfg.ConfidentialityBrain, log),
+		engine:   NewConfidentialityVerdictEngine(pool, cfg.ConfidentialityBrain, log).WithObjectStore(cfg.Blobstore),
 		receipts: newSweepRecorder(pool),
 	})
 	// The trace sweep, registered unconditionally and deliberately so: it is
