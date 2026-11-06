@@ -5551,7 +5551,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.product.change": "Produkt ändern",
   "lead.product.clear": "Produkt entfernen",
   "lead.product.search": "Produkte suchen",
-  "lead.product.loading": "Produkt wird gelesen…",
+  "lead.product.loading": "Produkt wird geladen…",
   "lead.rail.project.attach": "Projekt verknüpfen",
   "lead.rail.project.change": "Projekt ändern",
   "lead.terminalReadOnly":
@@ -16340,9 +16340,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "https://www.example.com/datenschutz",
   "webForms.field.product": "Produkt",
   "webForms.field.productHint":
-    "Jeder Lead aus diesem Formular fragt nach diesem Produkt, und Produktberichte zählen ihn dort. Leer lassen, wenn das Formular nicht zu einem Produkt gehört.",
+    "Jeder neue Lead aus diesem Formular fragt nach diesem Produkt, und Produktberichte zählen ihn dort. Ein bestehender Lead behält sein Produkt. Leer lassen, wenn das Formular nicht zu einem Produkt gehört.",
   "webForms.field.productClear": "Leads ohne Produkt erfassen",
-  "webForms.field.productLoading": "Produkt wird gelesen…",
+  "webForms.field.productLoading": "Produkt wird geladen…",
   "webForms.field.owner": "Verantwortlich für neue Leads",
   "webForms.field.ownerHint":
     "Jeder neue Lead aus diesem Formular geht an dieses Teammitglied. Ohne Zuweisung kann ihn jedes Teammitglied übernehmen.",

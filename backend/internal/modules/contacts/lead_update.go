@@ -308,8 +308,12 @@ func admitLeadReferences(ctx context.Context, tx pgx.Tx, current crmcontracts.Le
 			return in, err
 		}
 	}
-	if err := ensureLeadProduct(ctx, tx, in.ProductID); err != nil {
-		return in, err
+	// A product retired since it was chosen stays on the lead. Echoing it back
+	// must not fail an unrelated edit.
+	if !sameLeadProduct(current, in.ProductID) {
+		if err := ensureLeadProduct(ctx, tx, in.ProductID); err != nil {
+			return in, err
+		}
 	}
 	in, err := settleOriginHint(ctx, tx, current, in)
 	if err != nil {

@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -18,6 +19,10 @@ import (
 // leadProductField is the product a lead is interested in.
 const leadProductField = "product_id"
 
+// ErrLeadProductRetired marks a product the catalog no longer offers, so a
+// writer that names one on the sender's behalf can land the lead without it.
+var ErrLeadProductRetired = errors.New("the lead's product is retired")
+
 // ensureLeadProduct refuses a product that is not in the live catalog. A
 // product is not a row-scoped record, so any reader may name one.
 func ensureLeadProduct(ctx context.Context, tx pgx.Tx, product *ids.UUID) error {
@@ -29,9 +34,15 @@ func ensureLeadProduct(ctx context.Context, tx pgx.Tx, product *ids.UUID) error 
 		return fmt.Errorf("contacts: reading the lead's product: %w", err)
 	}
 	if !live {
-		return httperr.Validation(leadProductField, "unknown", "choose a live product from /v1/products")
+		refused := httperr.Validation(leadProductField, "unknown", "choose a live product from /v1/products")
+		return fmt.Errorf("%w: %w", ErrLeadProductRetired, refused)
 	}
 	return nil
+}
+
+// sameLeadProduct reports a patch naming the product the lead already holds.
+func sameLeadProduct(current crmcontracts.Lead, product *ids.UUID) bool {
+	return product != nil && current.ProductId != nil && ids.UUID(*current.ProductId) == *product
 }
 
 // setLeadReferences patches the records a lead points at that take no

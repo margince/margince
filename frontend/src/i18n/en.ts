@@ -16226,7 +16226,7 @@ export const en = {
     "https://www.example.com/privacy",
   "webForms.field.product": "Product",
   "webForms.field.productHint":
-    "Every lead this form captures asks about this product, and product reports count it there. Leave it empty when the form is not about one product.",
+    "Every new lead this form captures asks about this product, and product reports count it there. A lead that already exists keeps its own product. Leave it empty when the form is not about one product.",
   "webForms.field.productClear": "Capture leads with no product",
   "webForms.field.productLoading": "Reading the product…",
   "webForms.field.owner": "Owner of new leads",

@@ -38,6 +38,31 @@ func productOf(lead crmcontracts.Lead) *ids.UUID {
 	return &id
 }
 
+// A product retired after it was chosen stays on the lead, and an edit that
+// echoes it back still lands.
+func TestALeadKeepsAProductRetiredSinceItWasChosen(t *testing.T) {
+	e := integration.Setup(t)
+	product := seedProduct(t, e, "Retiring plan")
+	name := "Asked before it retired"
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
+		FullName: &name, Status: "new", Source: "manual", ProductID: &product,
+	})
+	if err != nil {
+		t.Fatalf("creating a lead with a product: %v", err)
+	}
+	e.WsExec(t, `UPDATE product SET archived_at = now() WHERE id = $1`, product)
+
+	id := ids.From[ids.LeadKind](ids.UUID(lead.Id))
+	rename := "Renamed after it retired"
+	renamed, err := e.Contacts.UpdateLead(e.Admin(), id, contacts.UpdateLeadInput{FullName: &rename, ProductID: &product})
+	if err != nil {
+		t.Fatalf("an edit echoing the lead's own product: %v", err)
+	}
+	if got := productOf(renamed); got == nil || *got != product {
+		t.Errorf("the lead names product %v, want its own %v", got, product)
+	}
+}
+
 // A lead names the product it is interested in when it is written. It may
 // change or clear it, and cannot name a product the catalog retired.
 func TestALeadNamesTheProductItIsInterestedIn(t *testing.T) {
