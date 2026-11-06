@@ -316,7 +316,7 @@ func (s dailySeeder) deals(stages apptest.SeededStages) {
 	s.analyze("daily_seed_deal")
 	s.exec("deal", `INSERT INTO deal (id, name, amount_minor, amount_minor_base, currency, fx_rate_to_base, fx_rate_date,
 	                                 pipeline_id, stage_id, company_id, owner_id, status, lost_reason,
-	                                 expected_close_date, closed_at, forecast_category, priority, commercial_motion,
+	                                 expected_close_date, closed_at, win_probability_override, win_probability_set_by, priority, commercial_motion,
 	                                 source, captured_by, created_at)
 	      SELECT d.id, d.stem || ' ' || ($1::text[])[1 + d.word_n % cardinality($1::text[])], d.amount, d.amount, $2,
 	             CASE WHEN d.status <> 'open' THEN 1 END, CASE WHEN d.status <> 'open' THEN (now() - d.days * interval '1 day')::date END,
@@ -325,7 +325,8 @@ func (s dailySeeder) deals(stages apptest.SeededStages) {
 	             CASE WHEN d.status = 'lost' THEN (ARRAY['price','timing','competitor','no decision'])[1 + d.word_n % 4] END,
 	             CASE WHEN d.status = 'open' THEN current_date + (d.days / 2 + 1) ELSE (now() - d.days * interval '1 day')::date END,
 	             CASE WHEN d.status <> 'open' THEN now() - d.days * interval '1 day' END,
-	             CASE WHEN d.status = 'open' THEN (ARRAY['pipeline','best_case','commit'])[1 + d.word_n % 3] END,
+	             CASE WHEN d.status = 'open' AND d.word_n % 3 = 2 THEN 95 END,
+             CASE WHEN d.status = 'open' AND d.word_n % 3 = 2 THEN 'human' END,
 	             (ARRAY['low','medium','high'])[1 + d.days % 3],
 	             (ARRAY['new_business','renewal','upsell','expansion'])[1 + d.word_n % 4],
 	             'manual', 'human:' || d.owner_id, now() - (d.days + 45) * interval '1 day'

@@ -143,7 +143,7 @@ func isNameSeparator(r rune) bool { return r == '-' || r == '_' || r == '.' || r
 // cannot tell which.
 func siteNameIsOffTheSendersDomain(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput) (bool, error) {
 	label := freemail.RegistrableLabel(in.Domain)
-	if in.Source == DomainSourceHuman || in.DossierName == "" || statedNameSpellsLabel(in.DossierName, label) {
+	if in.decidedByAUser() || in.DossierName == "" || statedNameSpellsLabel(in.DossierName, label) {
 		return false, nil
 	}
 	contacts, err := OnDomain(ctx, tx, in.Domain)

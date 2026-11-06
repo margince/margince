@@ -200,7 +200,7 @@ func forecastToolResult(
 		ScopeKind:          scope.Kind,
 		WonMinor:           in.WonMinor,
 		EvidenceMinor:      in.EvidenceMinor,
-		BestCaseMinor:      in.BestCaseMinor,
+		LikelyThreshold:    in.LikelyThreshold,
 		OpenMinor:          in.OpenMinor,
 		WeightedMinor:      in.WeightedMinor,
 		EligibleCount:      in.EligibleCount,
@@ -223,7 +223,7 @@ func forecastToolResult(
 	}
 	if q := in.Qualified; q != nil {
 		out.Qualified = &agents.ForecastQualifiedResult{
-			EvidenceMinor: q.EvidenceMinor, BestCaseMinor: q.BestCaseMinor, WeightedMinor: q.WeightedMinor,
+			EvidenceMinor: q.EvidenceMinor, WeightedMinor: q.WeightedMinor,
 			ExcludedMinor: q.ExcludedMinor, UnknownMinor: q.UnknownMinor,
 			ExcludedCount: q.ExcludedCount, UnknownCount: q.UnknownCount, AmountsPartial: q.AmountsPartial,
 			UnsupportedMinor: q.UnsupportedMinor, UnsupportedCount: q.UnsupportedCount,
@@ -315,6 +315,7 @@ func movementToolReader(pool *pgxpool.Pool) agents.MovementReader {
 func movementToolResult(reading forecasting.Reading, in forecasting.Movement) agents.ForecastMovementResult {
 	out := agents.ForecastMovementResult{
 		Reading:      string(reading),
+		BaseCurrency: in.BaseCurrency,
 		OpeningMinor: in.OpeningMinor,
 		ClosingMinor: in.ClosingMinor,
 		// Empty, never nil: "nothing moved" is a real answer, and null reads as

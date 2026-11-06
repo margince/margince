@@ -1,0 +1,28 @@
+# CASE 95 — The FX sheet is workspace setup, and the agent writes it through change_settings.
+name: case95_the_rate_for_today
+criteria: [1]
+writes: true
+
+prompt: |
+  Finance gave us today's rate: one USD is 0.92 EUR. Please put that on the rate sheet.
+
+must_call:
+  - change_settings
+
+must_call_with:
+  - change_settings.action=set_fx_rate
+
+must_call_matching:
+  - 'change_settings~"from_currency": "USD"'
+  - 'change_settings~"rate": "0\.92"'
+
+must_not_call_with:
+  - update_record~.
+  - log_activity~.
+
+may_call:
+  - read_workspace
+  - whoami
+
+runs: 3
+pass_at: 2

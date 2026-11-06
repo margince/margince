@@ -39,7 +39,7 @@ type AtRisk interface {
 // collapsing them would say "at risk" and leave the rep to guess which.
 type RiskyDeal struct {
 	CloseDateProvisional *bool
-	ForecastCategory     *string
+	WinProbability       *int
 	DealID               ids.UUID
 	Name                 string
 	// The card's facts, carried so the client draws value, stage and

@@ -118,7 +118,7 @@ function Providers({ children }: Readonly<{ children: ReactNode }>) {
 function draw(query: ListQuery = UNNARROWED) {
   render(
     <Providers>
-      <SaveViewAction resource="companies" query={query} />
+      <SaveViewAction resource="companies" state={{ query }} />
     </Providers>,
   );
 }

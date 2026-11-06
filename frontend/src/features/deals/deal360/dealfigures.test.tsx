@@ -109,12 +109,56 @@ describe("Days in stage", () => {
   });
 });
 
-it("reads the probability off the deal's stage, and says so", () => {
-  show({});
-  expect(screen.getByText("40%")).toBeInTheDocument();
-  expect(
-    screen.getByText(en["deal.standing.figure.stageDefault"]),
-  ).toBeInTheDocument();
+describe("an open deal's probability", () => {
+  it("reads the stage's probability and says it comes from the stage", () => {
+    show({
+      deal: deal({
+        stage_id: "s2",
+        win_probability: 40,
+        win_probability_source: "stage",
+        stage_win_probability: 40,
+      }),
+    });
+    expect(screen.getByText("40%")).toBeInTheDocument();
+    expect(
+      screen.getByText(en["deal.winProbability.source.stage"]),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a probability set by hand beside the stage's own", () => {
+    show({
+      deal: deal({
+        stage_id: "s2",
+        win_probability: 75,
+        win_probability_source: "human",
+        stage_win_probability: 40,
+      }),
+    });
+    expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `${en["deal.winProbability.source.human"]} · ${translate(
+          ENGLISH,
+          "deal.winProbability.stageValue",
+          { percent: "40%" },
+        )}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("names Margince when it lowered the probability", () => {
+    show({
+      deal: deal({
+        win_probability: 10,
+        win_probability_source: "margince",
+        stage_win_probability: 40,
+      }),
+    });
+    expect(screen.getByText("10%")).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(en["deal.winProbability.source.margince"])),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("a closed deal's figures", () => {

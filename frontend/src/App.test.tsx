@@ -609,6 +609,14 @@ describe("password-reset deep link", () => {
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
+    // No digest yet, as on a new install. The catch-all list body below is no
+    // digest, and the Brief's greeting reads one the moment it arrives.
+    if (url.endsWith("/v1/digest")) {
+      return new Response(JSON.stringify({ code: "no_digest_yet" }), {
+        status: 404,
+        headers: { "Content-Type": "application/problem+json" },
+      });
+    }
     if (url.endsWith("/v1/assistant/profile")) {
       return new Response(
         JSON.stringify({

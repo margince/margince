@@ -321,8 +321,9 @@ func Settings() []config.Any {
 	out := []config.Any{
 		Name, Country, BaseLanguage, DateFormat, TimeFormat, FiscalYearStartMonth, DeadWorkBannerHours,
 		ForecastForwardMeasure, EnabledOidcProviders, RequireSSO, RequireMFA, OidcGroupRoleMap,
-		OAuthAccessTokenTTLMinutes, DynamicClientRegistration, MetadataDocumentClients,
+		OAuthAccessTokenTTLMinutes, DynamicClientRegistration, MetadataDocumentClients, McpClientCheck,
 		CallWhatsApp, CallTelegram, CallZalo, IndividualPerformance, ForecastSelfCorrecting,
+		ForecastLikelyThreshold,
 	}
 	for _, s := range ScheduleSettings() {
 		out = append(out, s)

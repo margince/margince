@@ -115,6 +115,14 @@ func (s *Setting[T]) KeptByDataReset() bool { return s.store != nil && s.store.S
 // Key is the dotted name, also the YAML path.
 func (s *Setting[T]) Key() string { return s.spec.Key }
 
+// Object is the RBAC object gating a stored setting, and empty for a boot-only one.
+func (s *Setting[T]) Object() string {
+	if s.store == nil {
+		return ""
+	}
+	return s.store.RBACObject
+}
+
 // Env is the environment variable name.
 func (s *Setting[T]) Env() string { return s.spec.Env }
 

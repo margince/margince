@@ -67,7 +67,7 @@ func recordChange[T any](ctx context.Context, tx pgx.Tx, object string, id ids.U
 
 func requireReadWrite(ctx context.Context, object string, action principal.Action) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || !actor.SeatType.CanMutate() {
+	if !ok || !actor.HumanOrItsAgent() || !actor.SeatType.CanMutate() {
 		return apperrors.ErrPermissionDenied
 	}
 	return requireGrants(ctx, object, action)

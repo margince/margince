@@ -56,6 +56,32 @@ func EnsureVisibleLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID
 	return probeVisible(ctx, tx, table, id, probeLive)
 }
 
+// HideRow is a gate's answer to a row it found and the caller's scope does not
+// reach. It is ErrNotFound, as EnsureVisible answers, so "not yours" reads as
+// "not there". Only a gate that has told the two apart calls it.
+func HideRow(ctx context.Context, object string) error {
+	if recording(ctx) {
+		noteRefusal(ctx, rowRefusalPrefix+object)
+	}
+	return apperrors.ErrNotFound
+}
+
+// refuseRowChange is a gate's answer to a row the caller sees and may not change.
+func refuseRowChange(ctx context.Context, table string) error {
+	return RefuseRow(ctx, table, apperrors.ErrPermissionDenied)
+}
+
+// RefuseRow is a store's refusal of a record the caller sees. The rule is one
+// the record holds rather than a grant, such as the level it was recorded at. It
+// notes the refusal as a gate's and answers refusal, so a recorder never meets
+// a 403 no gate made.
+func RefuseRow(ctx context.Context, object string, refusal error) error {
+	if recording(ctx) {
+		noteRefusal(ctx, rowRefusalPrefix+object)
+	}
+	return refusal
+}
+
 func probeVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, mode rowProbe) error {
 	if recordkinds.IsExtensionName(table) {
 		return ensureExtensionRecord(ctx, tx, table, id, mode == probeLive)

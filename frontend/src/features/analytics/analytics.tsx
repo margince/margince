@@ -52,6 +52,7 @@ import { ReportingTargets } from "./reporting.targets";
 import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
 
+import { ReportBoard } from "./analytics.reportboard";
 // Analytics: a picker over three reports — deals-by-stage (unweighted beside
 // weighted), forecast (category readings plus the server-derived "slipped"
 // bucket), and open deals per company. "Explain this number" opens the executed
@@ -61,7 +62,7 @@ import "./analytics.css";
 // three bodies render into ONE panel whose action band carries the explain
 // toggle: the segment changes what the panel holds, not what the page is.
 import { ExtensionReports } from "../../components/extensionreports";
-import { ReportCard, SECTION_REPORTS, useReportRun } from "./analytics.reports";
+import { SECTION_REPORTS, useReportRun } from "./analytics.reports";
 
 export { buildStageAggregates, ForecastTile } from "./analytics.pipeline";
 
@@ -386,14 +387,11 @@ function SectionBody({
           {section === "delivery" && (
             <p className="sub">{t("analytics.deliveryCoversAll")}</p>
           )}
-          {SECTION_REPORTS[section].map((report) => (
-            <ReportCard
-              key={report}
-              report={report}
-              stages={stages}
-              locale={locale}
-            />
-          ))}
+          <ReportBoard
+            reports={SECTION_REPORTS[section]}
+            stages={stages}
+            locale={locale}
+          />
         </>
       );
   }
@@ -481,20 +479,17 @@ function PipelineSection({
   return (
     <>
       {scope && (
-        <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
+        <FilterBar label={t("analytics.filters")} quiet labels="inside">
+          {scopeControl}
+        </FilterBar>
       )}
       {emptyNotice(first.data?.scope_holds_deals)}
-      {SECTION_REPORTS.pipeline.map((report) => (
-        <ReportCard
-          // Keyed by scope too, so an open explanation never outlives the
-          // records it explains.
-          key={scope ? `${report}:${scopeKey(scope)}` : report}
-          report={report}
-          stages={stages}
-          locale={locale}
-          scope={scope}
-        />
-      ))}
+      <ReportBoard
+        reports={SECTION_REPORTS.pipeline}
+        stages={stages}
+        locale={locale}
+        scope={scope}
+      />
       <ExtensionReports />
     </>
   );

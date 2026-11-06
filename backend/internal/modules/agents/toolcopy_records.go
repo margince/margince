@@ -23,7 +23,7 @@ var searchRecordsCopy = toolCopy{
 
 var listRecordsCopy = toolCopy{
 	Purpose: "List the records of one record_type that meet exact conditions: every deal in one " +
-		"pipeline, the leads one rep owns, a contact's timeline.",
+		"pipeline, a rep's leads, a contact's timeline.",
 	Limits: "It narrows only by the filters listed for that record_type, and answers ONE page: " +
 		"the set continues past it.",
 	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +
@@ -67,9 +67,9 @@ var createRecordCopy = toolCopy{
 		"what yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
 		"actually stores are accepted, and a field belonging to a neighbouring type is refused " +
 		"rather than dropped. A CONTACT created here is visible to everyone in the workspace, " +
-		"the same as one a human types in." + pastDayNeedsATime,
+		"the same as one a human types in." + pastDayNeedsATime + meetingStatusRule,
 	Instead: "Record a signed contract with change_offers action record_contract, never as a deal. " +
-		"Search first when the record might already exist — a second copy of a contact or " +
+		"A vCard file goes through change_capture. Search first when the record might already exist — a second copy of a contact or " +
 		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
 		"a name, with a different email, phone or employer, is not proof of a duplicate. When the " +
 		"search finds a contact with the same name at the same employer, ask the human whether " +
@@ -94,9 +94,11 @@ var updateRecordCopy = toolCopy{
 		"two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so " +
 		"reassigning moves the record onto someone else's book and can take it off the owner's. " +
 		"An activity moved to another day keeps its time of day unless the user names one; " +
-		`moving a date-only one, send occurred_precision "day" again, or it reads as a time.`,
-	Instead: "Use progress_deal to move a deal between stages, and relink_activity " +
-		"to change what an activity is about; neither is a field edit.",
+		`moving a date-only one, send occurred_precision "day" again, or it reads as a time.` +
+		meetingStatusRule,
+	Instead: "Use progress_deal to move a deal between stages, relink_activity " +
+		"to change what an activity is about, and change_compliance when a contact gave consent " +
+		"or asked to stop; none is a field edit.",
 	Retain: "Send if_version with the version you read. If the call comes back staged, keep its " +
 		"approval id to retry the same change once a human has released it.",
 }
@@ -118,13 +120,12 @@ var logActivityCopy = toolCopy{
 		"and also concerns their company and its deal.",
 	Limits: "It writes history and can add a follow_up_task to a meeting, call or note in one " +
 		"transaction; the task inherits source links and audience, and its assignee must be able to " +
-		"read the source. A source-identity replay returns the original and adds no task. " +
+		"read the source. A source-identity replay adds no task. " +
 		"No deal or field changes; nobody is notified. Unlinked, it is on no timeline; " +
 		"relink_activity links it later (onto a project, after the user's yes)." +
 		pastDayNeedsATime,
-	Instead: "Use progress_deal when the event also moves a deal, so move and note are one " +
-		"act; create_task for something still owed; attach_document for a file, whose text never " +
-		"goes into a note.",
+	Instead: "Use progress_deal when the event also moves a deal; create_task for something " +
+		"still owed; attach_document for a file, whose text never goes into a note.",
 	Retain: "Keep the activity id — draft_outbound and send_outbound identify a conversation " +
 		"by it.",
 }

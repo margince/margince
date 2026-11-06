@@ -40,7 +40,7 @@ func setupBooking(t *testing.T) *relEnv {
 func TestAvailabilityAndBooking(t *testing.T) {
 	e := setupBooking(t)
 
-	from := apptest.NextBookableMorning().Add(-2 * time.Hour)
+	from := apptest.NextBookableMorning(t).Add(-2 * time.Hour)
 	to := from.Add(24 * time.Hour)
 	window := fmt.Sprintf("from=%s&to=%s&duration_minutes=60",
 		from.Format(time.RFC3339), to.Format(time.RFC3339))
@@ -129,7 +129,7 @@ func TestOnlyABookingClaimsTheHostsHour(t *testing.T) {
 	var booked struct {
 		ID string `json:"id"`
 	}
-	slot := apptest.NextBookableMorning()
+	slot := apptest.NextBookableMorning(t)
 	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
 		"start": slot, "end": slot.Add(time.Hour),
 		"subject": "Discovery call", "links": link,
@@ -181,7 +181,7 @@ func claimsHostSlot(t *testing.T, e *relEnv, activityID string) bool {
 // calendar event with the contact first, and nothing left behind on the request.
 func TestABookingQueuesItsInvitationWithEveryAttendee(t *testing.T) {
 	e := setupBooking(t)
-	slot := apptest.NextBookableMorning()
+	slot := apptest.NextBookableMorning(t)
 	var booked struct {
 		ID string `json:"id"`
 	}
