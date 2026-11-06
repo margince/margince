@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { removeStored, STORAGE_KEYS } from "../../lib/storage";
 import { ContactFilesTab } from "./contactfiles";
 
 type Attachment = components["schemas"]["Attachment"];
@@ -36,6 +37,7 @@ function attachment(
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  removeStored(STORAGE_KEYS.documentsView);
 });
 
 // The session and the installation read that the upload in this tab's header
@@ -170,6 +172,37 @@ describe("the contact's files tab", () => {
     expect(signed.getAttribute("download")).toBe("signed.pdf");
   });
 
+  it("draws the files as a list once the reader asks, and keeps that choice", async () => {
+    const user = userEvent.setup();
+    stub({
+      data: [
+        attachment({ id: "f-1", entity_id: "p-1", filename: "quote.pdf" }),
+      ],
+      page: { has_more: false },
+    });
+    const first = show(
+      <ContactFilesTab contactId="p-1" contactName="Dana Buyer" />,
+    );
+    const file = await screen.findByRole("article", { name: "quote.pdf" });
+    expect(file.classList.contains("board-doc-row")).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "List" }));
+    expect(
+      screen
+        .getByRole("article", { name: "quote.pdf" })
+        .classList.contains("board-doc-row"),
+    ).toBe(true);
+    expect(screen.getByRole("link", { name: "quote.pdf" })).toBeTruthy();
+
+    first.unmount();
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
+    const again = await screen.findByRole("article", { name: "quote.pdf" });
+    expect(again.classList.contains("board-doc-row")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "List" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
   it("opens a document link in a new tab instead of downloading it", async () => {
     stub({
       data: [
@@ -260,7 +293,7 @@ describe("the contact's files tab", () => {
 
     await screen.findByRole("link", { name: "contract.pdf" });
     expect(
-      within(screen.getByRole("table")).getByText("SOW/Contract"),
+      within(screen.getByRole("list")).getByText(/^SOW\/Contract ·/),
     ).toBeTruthy();
   });
 
@@ -335,12 +368,12 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     await screen.findByRole("link", { name: "deck.png" });
-    const table = within(screen.getByRole("table"));
-    expect(table.getByText("Message attachment")).toBeTruthy();
+    const table = within(screen.getByRole("list"));
+    expect(table.getByText(/^Message attachment ·/)).toBeTruthy();
     // The negative is the point. A missing label falls back to the raw key or
     // the neighbouring one, and a photo from a chat reported as mail is the
     // wrong record this category exists to stop.
-    expect(table.queryByText("Email attachment")).toBeNull();
+    expect(table.queryByText(/Email attachment/)).toBeNull();
   });
 
   it("says nothing about a category the file was never filed under", async () => {
@@ -353,7 +386,7 @@ describe("the contact's files tab", () => {
     await screen.findByRole("link", { name: "scan.pdf" });
     // No category was set: the row leaves the cell empty rather than printing
     // an "uncategorised" placeholder for a fact the record never asserted.
-    const table = within(screen.getByRole("table"));
+    const table = within(screen.getByRole("list"));
     expect(table.queryByText("SOW/Contract")).toBeNull();
     expect(table.queryByText("Other")).toBeNull();
   });
@@ -590,6 +623,9 @@ describe("a file a mail carried, on the contact's files tab", () => {
     );
 
     const name = await screen.findByRole("link", { name: "cv.pdf" });
-    expect(name.closest(".contact-file")?.textContent).toBe("cv.pdf");
+    expect(name.textContent).toBe("cv.pdf");
+    expect(
+      name.closest(".board-doc")?.querySelector(".file-origin"),
+    ).toBeNull();
   });
 });
