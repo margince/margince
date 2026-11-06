@@ -23,8 +23,8 @@ import (
 // event row. Rows on a boundary the test asserts should still use the writer.
 //
 // vary maps a column name to a SQL expression over the template row (r) and the
-// copy's 1-based position (n.ord), for a column with a unique key. It applies to
-// every table with the column. Write literals only.
+// copy's 1-based position (n.ord). Use it for a unique key. It applies to every
+// table with the column. Write literals only.
 func (e *Env) CloneActivity(t *testing.T, template ids.ActivityID, count int, vary map[string]string) []ids.UUID {
 	t.Helper()
 	copies := make([]ids.UUID, count)
