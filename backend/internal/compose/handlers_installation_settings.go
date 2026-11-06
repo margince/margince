@@ -62,12 +62,20 @@ func (h installationSettingsHandlers) GetInstallationSettings(w http.ResponseWri
 		httperr.NotImplemented(w, r, "GetInstallationSettings")
 		return
 	}
-	s, err := h.store.GetInstallation(r.Context())
+	s, err := h.read(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, h.toContract(s))
+	httperr.WriteJSON(w, http.StatusOK, s)
+}
+
+func (h installationSettingsHandlers) read(ctx context.Context) (crmcontracts.InstallationSettings, error) {
+	s, err := h.store.GetInstallation(ctx)
+	if err != nil {
+		return crmcontracts.InstallationSettings{}, err
+	}
+	return h.toContract(s), nil
 }
 
 // GetAuthenticationPolicy answers the sign-in half on its own grant.

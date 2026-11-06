@@ -102,6 +102,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	}
 	srv.applySendPath(pool)
 	srv.publishListsAvailability(pool)
+	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)
 	// After the lists switch, so /me probes list_id through the resolvers the deal and lead lists hold.
 	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters).WithRefusedLeadFilters(srv.RefusedLeadFilters)
 	// The tool registry is built HERE, after the options, on the Server that is

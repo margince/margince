@@ -4,6 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor, within } from "storybook/test";
 import { ScreenView } from "./App.views";
+import {
+  isSetup,
+  OVERVIEW_SCENARIOS,
+  overviewAddress,
+} from "./features/analytics/analytics.overview.scenarios.fixtures";
+import { installOverviewServer } from "./features/analytics/analytics.overview.server.fixtures";
 import { routeHash } from "./lib/router";
 import {
   installFetchStub,
@@ -50,5 +56,28 @@ export const Onboarding: Story = {
 
 export const OnboardingDark: Story = {
   ...Onboarding,
+  globals: { theme: "dark" },
+};
+
+export const InitialAnalytics: Story = {
+  render: () => {
+    const pair = OVERVIEW_SCENARIOS.populated.views.sales;
+    if (!isSetup(pair)) throw new Error("Populated sales fixture is missing");
+    globalThis.location.hash = overviewAddress("sales");
+    installOverviewServer(pair);
+    return (
+      <StoryProviders>
+        <ScreenView screen="analytics" id="overview" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("region", {
+      name: "Opening readings",
+    });
+  },
+};
+export const InitialAnalyticsDark: Story = {
+  ...InitialAnalytics,
   globals: { theme: "dark" },
 };

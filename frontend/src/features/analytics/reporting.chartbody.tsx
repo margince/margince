@@ -13,13 +13,12 @@ import {
   formatDateTime,
   MONEY_ABSENT,
 } from "../../format/format";
-import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { chartTitle } from "./reporting.chartlabel";
 import { CohortTable } from "./reporting.cohort";
 import { withDealCount } from "./reporting.dealcount";
 import { breakdownLabel } from "./reporting.grouplabel";
 import {
-  blockLabel,
-  type MetricNames,
   type ReportingChart,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
@@ -413,31 +412,6 @@ function GroupedBars({
       </Disclosure>
     </>
   );
-}
-
-export function chartTitle(
-  chart: ReportingChart,
-  evaluation: ReportingEvaluation,
-  t: Translator,
-  metricName: MetricNames,
-): string {
-  if (chart.kind === "owner_attainment")
-    return t("reporting.ownerMetric", { metric: metricName(chart.metric) });
-  // A chart named after its metric, as stage age is, reads the catalog's name.
-  if (chart.kind === "target_progress" || chart.kind === chart.metric)
-    return metricName(chart.metric);
-  if (chart.kind === "breakdown")
-    return t("reporting.breakdownTitle", {
-      metric: metricName(chart.metric),
-    });
-  if (
-    chart.kind === "sdr_outcomes" &&
-    !evaluation.charts.some(
-      (other) => other.kind === "sdr_outcomes" && other.metric !== chart.metric,
-    )
-  )
-    return metricName(chart.metric);
-  return blockLabel(chart.kind, t);
 }
 
 // Today's stock by stage, under the total it splits unless the head says it.

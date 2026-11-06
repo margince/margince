@@ -27,7 +27,7 @@ import {
 import { NotificationBell } from "./notificationbell";
 import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
-import { paletteHotkeyCaps } from "./palette";
+import { paletteHotkeyCaps } from "./palettehotkey";
 import { SetupReminder } from "./setup-reminder";
 import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
 import "./topbar.css";

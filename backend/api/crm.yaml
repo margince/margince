@@ -199,6 +199,11 @@ paths:
       x-agent-access: human-only
       x-human-only-reason: covered
       summary: Get the signed-in human's own profile, roles and settings.
+      parameters:
+        - in: query
+          name: prepare
+          schema: { type: string, enum: [analytics] }
+          description: Include optional caller-filtered data for opening Analytics. Other reads remain available when preparation is unavailable.
       responses:
         '200':
           description: The current principal.
@@ -226,6 +231,7 @@ paths:
         # must be able to read off /me rather than discover on the first real
         # call it makes.
         '403': { $ref: '#/components/responses/PasswordChangeRequired' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------------- /auth ------------------------------------
   # There is NO public tenant-provisioning endpoint (ADR-0061): the company and
@@ -62027,10 +62033,25 @@ components:
         email:    { type: string, format: email }
         password: { type: string, minLength: 1, maxLength: 256 }
 
+    AnalyticsStartup:
+      type: object
+      additionalProperties: false
+      description: Optional data for opening Analytics, read through the same authorization and readers as the individual routes.
+      required: [context, catalog, framework, installation_settings, company_context]
+      properties:
+        context: { $ref: '#/components/schemas/AnalyticsContext' }
+        catalog: { $ref: '#/components/schemas/ReportingCatalog' }
+        framework: { $ref: '#/components/schemas/ReportingFramework' }
+        installation_settings: { $ref: '#/components/schemas/InstallationSettings' }
+        company_context: { $ref: '#/components/schemas/CompanyContextCapabilities' }
+        pipelines:
+          type: array
+          items: { $ref: '#/components/schemas/Pipeline' }
     MeResponse:
       type: object
       required: [user, roles, teams, workspace_name, non_production, admin_password_link]
       properties:
+        analytics_startup: { $ref: '#/components/schemas/AnalyticsStartup' }
         user: { $ref: '#/components/schemas/User' }
         workspace_name:
           type: string

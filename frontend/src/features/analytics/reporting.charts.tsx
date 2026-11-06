@@ -1,12 +1,18 @@
-import type { ReactNode } from "react";
-import { Button, EmptyState } from "../../design-system/atoms";
+import { type ReactNode, Suspense } from "react";
+import { Button, EmptyState, PendingBody } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
+import { lazy } from "../../i18n/lazy";
 import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { AssessmentCard } from "./reporting.assessmentcard";
-import { ChartBody, chartTitle } from "./reporting.chartbody";
+import { chartTitle } from "./reporting.chartlabel";
+
+const ChartBody = lazy(async () => ({
+  default: (await import("./reporting.chartbody")).ChartBody,
+}));
+
 import { ChartContext, ChartDetails } from "./reporting.chartcontext";
 import {
   type LaidOutItem,
@@ -401,12 +407,14 @@ export function ChartPanel({
         )}
         {drawn && note}
         {drawn ? (
-          <ChartBody
-            chart={chart}
-            evaluation={evaluation}
-            onEvidence={onEvidence}
-            headline={meta == null}
-          />
+          <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+            <ChartBody
+              chart={chart}
+              evaluation={evaluation}
+              onEvidence={onEvidence}
+              headline={meta == null}
+            />
+          </Suspense>
         ) : (
           <EmptyState>{chart.coverage.reason ?? t("common.empty")}</EmptyState>
         )}

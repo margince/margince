@@ -89,3 +89,22 @@ it.each(["signed out", "left Analytics"])(
     expect(fetched).toHaveBeenCalledTimes(state === "signed out" ? 1 : 0);
   },
 );
+
+it("does not fetch the full company profile when the session already names it", async () => {
+  location.hash = "#/analytics/performance";
+  const cache = client();
+  cache.setQueryData(sessionOptions.queryKey, {
+    ...meFixture(),
+    installation_brand: { display_name: "Demo company" },
+  });
+  const paths: string[] = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    paths.push(
+      new URL(input instanceof Request ? input.url : String(input)).pathname,
+    );
+    return Response.json({ data: [] });
+  });
+  await prefetchAnalytics(cache);
+  expect(paths).toContain("/v1/analytics/context");
+  expect(paths).not.toContain("/v1/company");
+});

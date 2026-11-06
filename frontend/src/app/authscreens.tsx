@@ -33,3 +33,14 @@ export function SetupClaimScreen(props: ComponentProps<typeof Setup>) {
     </Suspense>
   );
 }
+
+const Skew = lazy(async () => ({
+  default: (await import("../features/settings/releaseskew")).ReleaseSkewScreen,
+}));
+export function ReleaseSkewScreen(props: ComponentProps<typeof Skew>) {
+  return (
+    <Suspense fallback={<AuthSplash />}>
+      <Skew {...props} />
+    </Suspense>
+  );
+}

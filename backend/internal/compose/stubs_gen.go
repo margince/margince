@@ -2791,7 +2791,7 @@ func (stubs) DiscardMailDraft(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "DiscardMailDraft")
 }
 
-func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetCurrentPrincipalParams) {
 	httperr.NotImplemented(w, r, "GetCurrentPrincipal")
 }
 

@@ -45424,7 +45424,17 @@ export interface components {
             email: string;
             password: string;
         };
+        /** @description Optional data for opening Analytics, read through the same authorization and readers as the individual routes. */
+        AnalyticsStartup: {
+            context: components["schemas"]["AnalyticsContext"];
+            catalog: components["schemas"]["ReportingCatalog"];
+            framework: components["schemas"]["ReportingFramework"];
+            installation_settings: components["schemas"]["InstallationSettings"];
+            company_context: components["schemas"]["CompanyContextCapabilities"];
+            pipelines?: components["schemas"]["Pipeline"][];
+        };
         MeResponse: {
+            analytics_startup?: components["schemas"]["AnalyticsStartup"];
             user: components["schemas"]["User"];
             /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
             workspace_name: string;
@@ -58469,7 +58479,10 @@ export interface operations {
     };
     getCurrentPrincipal: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include optional caller-filtered data for opening Analytics. Other reads remain available when preparation is unavailable. */
+                prepare?: "analytics";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -58487,6 +58500,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PasswordChangeRequired"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getAssistantProfile: {
