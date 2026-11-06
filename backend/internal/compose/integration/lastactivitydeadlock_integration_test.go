@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -40,7 +41,8 @@ func TestActivitiesCrossingAnEmployerQueueRatherThanDeadlock(t *testing.T) {
 	employForLockOrder(t, e, atSecond, second)
 
 	barrier := holdRows(t, `SELECT 1 FROM contact WHERE id = ANY($1) FOR UPDATE`, []ids.UUID{atFirst, atSecond})
-	errs := runConcurrently(t, e, barrier,
+	errs := runConcurrently(
+		t, e, barrier,
 		func(ctx context.Context, tx pgx.Tx) error {
 			return logNoteTx(ctx, e, tx, noteLink("company", second), noteLink("contact", atFirst))
 		},
@@ -166,13 +168,8 @@ func waitForParkedWriters(t *testing.T, n int) {
 		if ctx.Err() != nil {
 			t.Fatalf("fewer than %d writers ever parked behind the barrier, so the interleaving under test never happened", n)
 		}
-		if _, err := probe.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the stats snapshot: %v", err)
-		}
-		var parked int
-		if err := probe.QueryRow(ctx, `
-			SELECT count(*)::int FROM pg_stat_activity
-			 WHERE datname = current_database() AND cardinality(pg_blocking_pids(pid)) > 0`).Scan(&parked); err != nil {
+		parked, err := testdb.QueuedAnywhere(ctx, probe)
+		if err != nil {
 			t.Fatalf("counting parked writers: %v", err)
 		}
 		if parked >= n {
