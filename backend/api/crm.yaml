@@ -8717,6 +8717,7 @@ paths:
       security: [ { cookieAuth: [] } ]   # the record page's History reads it; an agent reads the signal and the record kinds themselves
       x-agent-access: human-only
       x-human-only-reason: covered
+      x-settings-audience: member
       summary: What installed extensions add to one core record's History.
       description: |
         Two kinds of entry, newest first, for one contact, company or deal. A `record` entry is a
