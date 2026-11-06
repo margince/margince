@@ -123,7 +123,7 @@ func leadDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContext, 
 func companyDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContext, b *reportingBindings, object, companyID, ownIndustry string) (string, error) {
 	where := ""
 	if frame.Country != nil {
-		if err := auth.RefuseMaskedFilter(ctx, object, "country", "company_id"); err != nil {
+		if err := auth.RefuseMaskedFilter(ctx, object, "country", fieldCompanyID); err != nil {
 			return "", err
 		}
 		country, err := storekit.LinkedCompanyColumn(ctx, companyID, "address_country", b.arg)
@@ -133,7 +133,7 @@ func companyDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContex
 		where += " AND " + country + "=" + b.add(*frame.Country)
 	}
 	if frame.Industry != nil {
-		if err := auth.RefuseMaskedFilter(ctx, object, "industry", "company_id"); err != nil {
+		if err := auth.RefuseMaskedFilter(ctx, object, "industry", fieldCompanyID); err != nil {
 			return "", err
 		}
 		linked, err := storekit.LinkedCompanyColumn(ctx, companyID, "industry", b.arg)

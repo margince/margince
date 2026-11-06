@@ -70,7 +70,7 @@ func reportingSelectionDeals(ctx context.Context, tx pgx.Tx, store *initiatives.
 		return nil, err
 	}
 	var b reportingBindings
-	population, _, err := reportingDealPopulationSQL(ctx, tx, frame, "t.owner_id", []string{fieldOwnerID, "pipeline_id"}, &b)
+	population, _, err := reportingDealPopulationSQL(ctx, tx, frame, "t.owner_id", []string{fieldOwnerID, fieldPipelineID}, &b)
 	if err != nil {
 		return nil, err
 	}
