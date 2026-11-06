@@ -61,9 +61,10 @@ func OpenTasksByDealTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, in Li
 	for rows.Next() {
 		var dealID ids.UUID
 		var task OpenTask
-		if err := rows.Scan(&dealID, &task.ID, &task.Subject, &task.DueAt, &task.AssigneeID, &task.AssigneeName, &task.CreatedAt); err != nil {
+		if err := rows.Scan(&dealID, &task.ID, &task.Subject, &task.DueAt, &task.DueHasTime, &task.AssigneeID, &task.AssigneeName, &task.CreatedAt); err != nil {
 			return nil, err
 		}
+		task.DueHasTime = task.DueHasTime && task.DueAt != nil
 		page := out[dealID]
 		if len(page.Tasks) < limit {
 			page.Tasks = append(page.Tasks, task)

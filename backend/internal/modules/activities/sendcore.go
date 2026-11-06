@@ -110,6 +110,9 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 	if err != nil {
 		return PreparedSend{}, err
 	}
+	if err := s.fileTypedRecipients(ctx, origin, in.Recipients); err != nil {
+		return PreparedSend{}, err
+	}
 
 	// Who the recipient sees this is from, read ONCE: the From header and a
 	// closing's name line both carry it, and two reads could give two names.
@@ -137,7 +140,11 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 
 	// Deliverability is derived here, after the gates, so both transports
 	// get it and neither can send marketing mail without it.
-	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surfaceFor(in.Context, in.MarketingPurpose, in.ConsentPurpose))
+	surface, err := surfaceForRecipients(ctx, in, origin, links, gate)
+	if err != nil {
+		return PreparedSend{}, err
+	}
+	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surface)
 	if err != nil {
 		return PreparedSend{}, err
 	}
@@ -187,6 +194,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 			inlineLogoKey:   sign.LogoKey,
 			files:           files,
 			listUnsubscribe: derived.listUnsubscribe,
+			advertising:     surface.disclosureCategory() == commsauthz.CategoryMarketing,
 			to:              ToRecipients(in.Recipients, in.Cc, in.Bcc),
 			links:           links,
 			provider:        provider,

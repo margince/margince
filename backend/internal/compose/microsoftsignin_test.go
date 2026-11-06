@@ -169,7 +169,7 @@ func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 	rig := newOIDCTestRig(t)
 	adapter := microsoftOIDCVerifierAdapter{
 		v: newOIDCVerifier(rig.jwksURL(), microsoftHostIssuer, identityResolvedPerRequest).
-			withHTTPClient(rig.srv.Client()).withClock(func() time.Time { return rig.base }),
+			withHTTPClient(rig.srv.Client()).setClock(func() time.Time { return rig.base }),
 		matchIdentity: microsoftIssuer([]string{testTenant}),
 	}
 
@@ -334,7 +334,7 @@ func TestAPersonalAccountsSignInNameIsNotTakenAsItsAddress(t *testing.T) {
 	tenants := []string{testTenant, microsoftConsumerTenant}
 	adapter := microsoftOIDCVerifierAdapter{
 		v: newOIDCVerifier(rig.jwksURL(), microsoftHostIssuer, identityResolvedPerRequest).
-			withHTTPClient(rig.srv.Client()).withClock(func() time.Time { return rig.base }),
+			withHTTPClient(rig.srv.Client()).setClock(func() time.Time { return rig.base }),
 		matchIdentity: microsoftIssuer(tenants),
 	}
 

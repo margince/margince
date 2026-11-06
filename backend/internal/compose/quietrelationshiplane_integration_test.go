@@ -152,7 +152,7 @@ func TestAPermanentStopOutlastsNinetyDaysAndResumes(t *testing.T) {
 	contact := e.SeedContact(t, "Over For Good", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
 	rep := e.As(e.Rep1, nil, integration.AdminPerms)
-	store := contacts.NewStore(e.DB()).WithClock(func() time.Time { return quietLaneNow })
+	store := contacts.NewStore(e.DB()).SetClock(func() time.Time { return quietLaneNow })
 	id := ids.From[ids.ContactKind](contact)
 	if err := store.DismissRelationshipNudge(rep, id, 7); err != nil {
 		t.Fatalf("dismissing for a week: %v", err)
@@ -182,7 +182,7 @@ func TestDismissAllSetsEveryListedContactAsideOrNone(t *testing.T) {
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, first, 60)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, second, 70)
 	rep := e.As(e.Rep1, nil, integration.AdminPerms)
-	store := contacts.NewStore(e.DB()).WithClock(func() time.Time { return quietLaneNow })
+	store := contacts.NewStore(e.DB()).SetClock(func() time.Time { return quietLaneNow })
 
 	missing := ids.From[ids.ContactKind](ids.NewV7())
 	if err := store.DismissRelationshipNudges(rep,
@@ -258,7 +258,7 @@ func TestAQuietScanThatSpendsItsBudgetSaysSoWithNoSurvivors(t *testing.T) {
 func TestAStopReadsBackPerReaderAndClearsOnResume(t *testing.T) {
 	e := integration.Setup(t)
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Per Reader", &e.Rep1))
-	store := contacts.NewStore(e.DB()).WithClock(func() time.Time { return quietLaneNow })
+	store := contacts.NewStore(e.DB()).SetClock(func() time.Time { return quietLaneNow })
 	reader := e.As(e.Rep1, nil, integration.AdminPerms)
 	colleague := e.As(e.Rep2, nil, integration.AdminPerms)
 	if err := store.DismissRelationshipNudges(reader, []ids.ContactID{contact}, contacts.NudgeSpan{Permanent: true}); err != nil {
@@ -282,7 +282,7 @@ func TestAStopStaysWithItsReaderWhenTheContactChangesOwner(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Handed Over", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
-	store := contacts.NewStore(e.DB()).WithClock(func() time.Time { return quietLaneNow })
+	store := contacts.NewStore(e.DB()).SetClock(func() time.Time { return quietLaneNow })
 	id := ids.From[ids.ContactKind](contact)
 	first := e.As(e.Rep1, nil, integration.AdminPerms)
 	second := e.As(e.Rep2, nil, integration.AdminPerms)

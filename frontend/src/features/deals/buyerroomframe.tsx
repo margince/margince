@@ -18,7 +18,7 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDateAbbrev } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
@@ -179,7 +179,7 @@ export function BuyerHero({
             {access === "closed" && closedAt ? (
               <span className="t-caption">
                 {t("buyer.closedOn", {
-                  date: formatDateAbbrev(closedAt, locale, viewerZone()),
+                  date: formatDateAbbrev(closedAt, locale, browserZone()),
                 })}
               </span>
             ) : null}

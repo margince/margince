@@ -1,8 +1,10 @@
-import type { MouseEvent, ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { Children, useId } from "react";
 import { useT } from "../i18n";
+import { isImeCommit } from "../lib/imecommit";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
+import { isParagraphCommit } from "./fieldeditdialog";
 import { refuseUnreadableField } from "./formvalidity";
 import { Heading } from "./heading";
 import type { ModalIntent } from "./modal";
@@ -87,17 +89,27 @@ export function ConfirmModal({
   const t = useT();
   const headingId = useId();
   const body = Children.toArray(children).length > 0 || Boolean(error);
-  // Escape, the backdrop and the corner X all wait for a write in flight.
-  const close = () => {
-    if (!pending) onClose();
-  };
   const confirm = (event: MouseEvent<HTMLButtonElement>) => {
     if (!refuseUnreadableField(event.currentTarget)) onConfirm();
+  };
+  // Enter is a new line in a note, so ⌘/Ctrl+Enter there presses Confirm.
+  const confirmFromNote = (event: KeyboardEvent<HTMLDivElement>) => {
+    const refused = pending || confirmDisabled || confirmReason !== undefined;
+    if (
+      !(event.target instanceof HTMLTextAreaElement) ||
+      !isParagraphCommit(event) ||
+      isImeCommit(event) ||
+      refused
+    ) {
+      return;
+    }
+    event.preventDefault();
+    if (!refuseUnreadableField(event.target)) onConfirm();
   };
   return (
     <Modal
       open={open}
-      onClose={close}
+      onClose={onClose}
       labelledBy={headingId}
       intent={intent}
       closeDisabled={pending}
@@ -114,7 +126,8 @@ export function ConfirmModal({
         {title}
       </Heading>
       {body && (
-        <div className="form-stack">
+        // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it hears ⌘/Ctrl+Enter from a note inside it; Confirm stays the control
+        <div className="form-stack" onKeyDown={confirmFromNote}>
           {children}
           {error && <ErrorLine>{error}</ErrorLine>}
         </div>

@@ -4,7 +4,7 @@
     1,
     2
   ],
-  "passed": 2,
+  "passed": 0,
   "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -13,10 +13,10 @@
   "search": "semantic",
   "self_judged": false,
   "usage": {
-    "input_tokens": 50369,
-    "output_tokens": 3504,
+    "input_tokens": 97086,
+    "output_tokens": 4868,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 389120,
+    "cache_read_input_tokens": 738560,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null

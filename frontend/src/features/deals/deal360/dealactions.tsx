@@ -28,12 +28,14 @@ import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { ErrorLine } from "../../../design-system/errorline";
 import { VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
-import { useT } from "../../../i18n";
+import { useToast } from "../../../design-system/toast";
+import { useLocale, useT } from "../../../i18n";
 import { dealRecordKeys } from "../../../lib/activitykeys";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
+import { probabilitySetNote } from "../dealprobability";
 import { CorrectCloseDayAction } from "./correctcloseday";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
@@ -90,6 +92,8 @@ function ReopenAction({
   disabledReasonId?: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [stageId, setStageId] = useState<string | null>(null);
@@ -114,8 +118,12 @@ function ReopenAction({
         t,
       );
     },
-    onSuccess: () => {
+    onSuccess: (advanced) => {
       setOpen(false);
+      const note = probabilitySetNote(advanced, t, locale);
+      if (note) {
+        toast.show(note);
+      }
       for (const queryKey of dealRecordKeys(dealId)) {
         queryClient.invalidateQueries({ queryKey });
       }

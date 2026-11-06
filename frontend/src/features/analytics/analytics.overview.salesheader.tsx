@@ -60,6 +60,7 @@ export function SalesHeader({
     <FilterBar
       label={t("analytics.filters")}
       quiet
+      labels="inside"
       // The active filters lead the line that says what the figures cover.
       caption={
         <span className="analytics-chips">

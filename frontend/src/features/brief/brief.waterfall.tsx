@@ -60,16 +60,9 @@ export function OutlookPanel({
       minor: (o) => o.won_minor,
     },
     {
-      key: "commit",
-      label: t("brief.weekly.outlook.commit"),
-      minor: (o) => o.commit_minor,
-    },
-    {
-      key: "best",
-      label: t("brief.weekly.outlook.bestCase"),
-      // A reader adding best case to commit would count the overlap twice.
-      basis: t("brief.weekly.outlook.bestCaseDetail"),
-      minor: (o) => o.best_case_minor,
+      key: "likely",
+      label: t("brief.weekly.outlook.likely"),
+      minor: (o) => o.likely_minor,
     },
     {
       key: "weighted",

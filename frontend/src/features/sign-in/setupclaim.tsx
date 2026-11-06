@@ -4,7 +4,7 @@ import { Button, Field, TextInput } from "../../design-system/atoms";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { Select } from "../../design-system/select";
 import { jurisdictionName } from "../../format/jurisdiction";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   detectLocale,
   LOCALES,
@@ -145,7 +145,7 @@ function claimDefaults(): ClaimFields {
     setupToken: "",
     baseCurrency: currencyForRegion(),
     baseLanguage: detectLocale(),
-    timezone: viewerZone(),
+    timezone: browserZone(),
     country: "",
   };
 }

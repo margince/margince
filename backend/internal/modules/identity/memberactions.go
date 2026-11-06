@@ -31,6 +31,7 @@ const (
 	actionRemove            memberAction = "remove"
 	actionChangeRole        memberAction = "change_role"
 	actionIssuePasswordLink memberAction = "issue_password_link"
+	actionResendInvite      memberAction = "resend_invite"
 	actionRemoveMFA         memberAction = "remove_mfa"
 	actionDeactivate        memberAction = "deactivate"
 	actionReactivate        memberAction = "reactivate"
@@ -112,6 +113,8 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 		actionIssuePasswordLink: callerOutranks(actor, target.grants, reachTakeover) == nil &&
 			!target.holdsArchivedRole &&
 			refusePasswordLinkTarget(status, target.row.IsAgent) == nil,
+		actionResendInvite: callerOutranks(actor, target.grants, reachTakeover) == nil &&
+			!target.holdsArchivedRole && refuseResendTarget(status, target.row.IsAgent) == nil,
 		actionRemoveMFA: target.hasFactor && userID != actor.UserID && !target.holdsArchivedRole &&
 			callerOutranks(actor, target.grants, reachTakeover) == nil,
 		actionDeactivate: callerOutranks(actor, target.grants, reachDenial) == nil &&
@@ -126,7 +129,7 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 	}
 	out := []memberAction{}
 	for _, action := range []memberAction{
-		actionChangeRole, actionIssuePasswordLink, actionRemoveMFA, actionDeactivate, actionReactivate, actionHandOver, actionEdit, actionMerge, actionRemove,
+		actionChangeRole, actionIssuePasswordLink, actionResendInvite, actionRemoveMFA, actionDeactivate, actionReactivate, actionHandOver, actionEdit, actionMerge, actionRemove,
 	} {
 		if admitted[action] && callerMay(ctx, actor, action) {
 			out = append(out, action)
@@ -143,12 +146,11 @@ func keepsAnAdmin(target memberTarget) bool {
 	return !target.soleAdmin || len(target.row.Roles) > 1
 }
 
-// callerMay is the gate in front of every member verb: the user_admin grant
-// the action takes, and a seat that may write at all, which the HTTP layer
-// checks above RBAC for every mutating method.
+// callerMay decides whether a member verb is offered: the user_admin grant the
+// action takes, and a seat that may write at all. The write handlers enforce it.
 func callerMay(ctx context.Context, actor Identity, action memberAction) bool {
 	return principal.SeatType(actor.SeatType).CanMutate() &&
-		auth.Require(ctx, objectUserAdmin, action.verb()) == nil
+		auth.Allows(ctx, objectUserAdmin, action.verb())
 }
 
 // alreadyDeactivated reports a member deactivating changes nothing for.

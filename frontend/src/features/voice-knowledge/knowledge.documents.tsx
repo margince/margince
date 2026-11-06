@@ -23,7 +23,6 @@ import {
   formatDateAbbrev,
   formatNumber,
 } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
   type PluralTranslator,
@@ -40,6 +39,7 @@ import {
   throwProblem,
   unwrap,
 } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
@@ -315,6 +315,7 @@ export function DocumentList({
   // A deleted document takes its row's menu with it; focus lands here instead.
   afterDelete: () => HTMLElement | null;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -345,7 +346,7 @@ export function DocumentList({
             t,
             plural,
             locale,
-            zone: viewerZone(),
+            zone: readerZone,
             setSpeaksForAll,
             anyBadge,
             canManage,

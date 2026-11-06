@@ -104,6 +104,9 @@ type Store struct {
 	// (WithRecipientDirectory wires it). A reply never consults it — its
 	// addressees come from the captured conversation it answers.
 	recipients RecipientDirectory
+	// recipientFiler makes a contact for a typed address no record holds.
+	// Nil files nothing, and recipients then refuses the address.
+	recipientFiler RecipientFiler
 	// heldNotifier puts a stopped scheduled message in the rep's approval
 	// inbox; nil holds silently (WithHeldNotifier wires it).
 	heldNotifier HeldNotifier
@@ -125,6 +128,9 @@ type Store struct {
 	catalog FieldCatalog
 	// leadQualifyTasks commits the owner follow-up with a lead's booking.
 	leadQualifyTasks LeadQualifyTasks
+	// invitationAttention tells a host, in the parking transaction, that their
+	// invitations wait for them.
+	invitationAttention InvitationAttention
 }
 
 // LeadQualifyTasks writes the follow-up for a booking filed on a lead.

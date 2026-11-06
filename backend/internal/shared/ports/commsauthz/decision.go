@@ -4,6 +4,8 @@
 package commsauthz
 
 import (
+	"time"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -123,6 +125,24 @@ type Request struct {
 	// transmit phase compares against, so a field missing from one side is a
 	// field neither side can notice changing.
 	HTMLBody string
+	// OmitsAdvertisingDuties says the caller composed this body without the
+	// marketing-only disclosures and the unsubscribe surface. Staging refuses
+	// it when a recipient resolves to marketing. False makes no claim, for a
+	// caller that composes no such footer.
+	OmitsAdvertisingDuties bool
+	// SendingEntity is the legal entity the message goes out for. Staging
+	// resolves it from the sender; transmit reads the one staging stored, and
+	// never the principal the dispatcher runs as. Zero means unknown, and then
+	// nothing that is scoped to an entity can allow the message.
+	SendingEntity ids.UUID
+}
+
+// ExistingCustomerGround is the sale and the collection-notice declaration a
+// marketing message went out on without consent.
+type ExistingCustomerGround struct {
+	NoticeID ids.UUID
+	OfferID  ids.UUID
+	SoldAt   time.Time
 }
 
 // Decision is the engine's answer about ONE recipient at ONE phase.
@@ -169,6 +189,14 @@ type Decision struct {
 	// would otherwise have been discarded (aStopThatBindsTheMessage,
 	// consent/reviewcontext.go).
 	PurposeID *ids.UUID
+
+	// SendingEntity and PurposeKey are what this decision was taken for, and
+	// are stored on its row so transmit asks about the same entity and purpose.
+	SendingEntity ids.UUID
+	PurposeKey    string
+	// ExistingCustomer is set when the message is allowed on the
+	// existing-customer route.
+	ExistingCustomer *ExistingCustomerGround
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.
@@ -192,6 +220,19 @@ func (s DecisionSet) Allowed() bool {
 		}
 	}
 	return true
+}
+
+// AdvertisesToASubject reports whether the engine reads the message as
+// marketing to a recipient it identified. One body reaches every recipient, so
+// it then owes the advertising duties. An address no record answers for is
+// refused for want of a subject, never advertised to.
+func (s DecisionSet) AdvertisesToASubject() bool {
+	for _, d := range s.Decisions {
+		if d.SubjectKind != "" && d.Resolved == CategoryMarketing {
+			return true
+		}
+	}
+	return false
 }
 
 // AllowedByOverride returns this decision flipped to allow, naming the override
@@ -253,9 +294,13 @@ type TransmitTicket struct {
 	// waive every refusal because it carries an instruction would send the
 	// wrong message under somebody's name.
 	//
-	// False on an allowed ticket, and false on a refusal about anything but
-	// consent.
+	// False on an allowed ticket, on a refusal about anything but consent, and
+	// on a refusal no exception answers (DecisionSet.ExceptionMayAnswer).
 	ConsentRefused bool
+	// Fingerprint digests everything the ticket was decided on: each
+	// recipient's decision, country and rule pack, and the ticket's answer. A
+	// recheck at the wire keeps the ticket only when its fingerprint is equal.
+	Fingerprint string
 }
 
 // Current reports whether this ticket authorizes THIS attempt of THIS

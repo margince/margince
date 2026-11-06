@@ -31,10 +31,10 @@ type stageHistoryInput struct {
 	LostReasonCode *string
 }
 
-func (s *Store) recordStageHistory(ctx context.Context, tx pgx.Tx, in stageHistoryInput) error {
+func (s *Store) recordStageHistory(ctx context.Context, tx pgx.Tx, in stageHistoryInput) (ids.UUID, error) {
 	valuation, err := s.stageValuation(ctx, tx, in)
 	if err != nil {
-		return err
+		return ids.Nil, err
 	}
 	semantic := string(DealOpen)
 	if in.Semantic != nil {
@@ -42,7 +42,7 @@ func (s *Store) recordStageHistory(ctx context.Context, tx pgx.Tx, in stageHisto
 	}
 	from, to, err := stagePositionsAtMove(ctx, tx, in.FromStageID, in.ToStageID)
 	if err != nil {
-		return err
+		return ids.Nil, err
 	}
 	provenance, importRun := stageMoveProvenance(ctx)
 	args := []any{in.DealID}
@@ -50,15 +50,17 @@ func (s *Store) recordStageHistory(ctx context.Context, tx pgx.Tx, in stageHisto
 	placeholders := storekit.Placeholders(args)
 	// Both writers supply the domain owner and pipeline from their mutation,
 	// never the actor who happened to perform the transition.
-	_, err = tx.Exec(ctx, `INSERT INTO deal_stage_history
+	var historyID ids.UUID
+	err = tx.QueryRow(ctx, `INSERT INTO deal_stage_history
    (deal_id,from_stage_id,to_stage_id,changed_by,amount_minor_at_change,currency_at_change,
     win_probability_at_change,approval_id,reversal_of,semantic_at_change,base_minor_at_change,base_currency_at_change,fx_rate_at_change,fx_date_at_change,valuation_provenance,changed_at,owner_id_at_change,pipeline_id_at_change,lost_reason_code_at_change,
     from_position_at_change,to_position_at_change,provenance,import_run_id)
-   VALUES (`+placeholders+`)`, args...)
+   VALUES (`+placeholders+`)
+   RETURNING id`, args...).Scan(&historyID)
 	if err != nil {
-		return fmt.Errorf("record stage history: %w", err)
+		return ids.Nil, fmt.Errorf("record stage history: %w", err)
 	}
-	return nil
+	return historyID, nil
 }
 
 // Stage move provenance values: the move was made in Margince, or an import run

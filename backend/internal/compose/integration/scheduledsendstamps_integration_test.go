@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // The 201 for a scheduling and a later read of the same row agree on when the
@@ -16,7 +18,7 @@ import (
 // a message created in the year 1.
 func TestASchedulingAnswersWithTheStampsTheRowHolds(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	type stamps struct {
 		ID        string    `json:"id"`

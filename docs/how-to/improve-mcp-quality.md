@@ -208,4 +208,4 @@ Commit the verdicts under
 `backend/internal/compose/aicert/records/mcp_e2e/<folder>/`, and generate the
 coverage page again. The steps are in [the run guide](test-the-mcp-surface-end-to-end.md#8-publish-the-result).
 In the PR, name each case that changed, its before and after, and the layer each
-fix was in.
+fix was in. Run `make test-roles` too, as [the run guide](test-the-mcp-surface-end-to-end.md#9-run-the-role-sweep-with-every-pass) says.

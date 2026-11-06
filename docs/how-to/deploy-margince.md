@@ -4,6 +4,7 @@
 Margince ships container materials that suit any container platform (Kubernetes, Nomad, Docker
 Compose, a plain host). This repo carries only the **generic** pieces. A concrete deployment (its
 domain, secrets, platform manifests) is yours to own, so keep those in your own infra repo.
+To run a release on one Linux server with no containers, read [install-on-a-server.md](install-on-a-server.md).
 
 Why a deployment is shaped this way (two database roles, one host, one release for every role) is
 in [explanation/self-hosting.md](../explanation/self-hosting.md). Every setting is in
@@ -31,6 +32,14 @@ What each other feature needs is in
 | `scripts/deploy/worker-entrypoint.sh` | start the worker as app (no owner credential) |
 | `scripts/deploy/db-bootstrap.sql` | one-time DB role + database + extension setup |
 | `frontend/nginx.conf` | SPA static serving (listens on 8080, non-root) |
+| `scripts/deploy/server/` | the systemd units and nginx files of a server bundle |
+
+## Pull a release
+
+Each `v*` release pushes `ghcr.io/margince/api:<tag>`, `ghcr.io/margince/worker:<tag>` and
+`ghcr.io/margince/web:<tag>`, for `linux/amd64` and `linux/arm64`. Pull each by the hash that `images.txt` on
+the release page names, so all three roles come from one release. The release page gives the `cosign verify`
+command that checks each one.
 
 ## Build the images
 

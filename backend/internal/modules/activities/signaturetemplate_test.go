@@ -88,6 +88,26 @@ func TestTheLogoPlaceholderEmbedsTheWorkspaceLogoAndNothingRemote(t *testing.T) 
 	}
 }
 
+// {imprint} is the sender's entity imprint: escaped like every other value,
+// with its lines kept as lines in both parts.
+func TestTheImprintPlaceholderKeepsItsLinesAndIsEscaped(t *testing.T) {
+	t.Parallel()
+	store := (&Store{}).WithSignature(&stubSignature{
+		template: "<p>{name}</p><p>{imprint}</p>",
+		imprint:  "Acme Wien GmbH\nFN 123456 a <HG Wien>",
+	})
+	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello", "Hi", "Anna")
+	if err != nil {
+		t.Fatalf("signing: %v", err)
+	}
+	if !strings.Contains(sign.HTML, "Acme Wien GmbH<br>FN 123456 a &lt;HG Wien&gt;") {
+		t.Errorf("markup %q lacks the escaped imprint on two lines", sign.HTML)
+	}
+	if sign.Text != "Anna\nAcme Wien GmbH\nFN 123456 a <HG Wien>" {
+		t.Errorf("text part = %q, want the imprint on its own lines", sign.Text)
+	}
+}
+
 // The text part keeps each list item, quote and rule-separated part on its
 // own line, as the markup shows them.
 func TestTheTextPartBreaksWhereTheMarkupBreaks(t *testing.T) {

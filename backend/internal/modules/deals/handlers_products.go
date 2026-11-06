@@ -18,6 +18,7 @@ func (h Handlers) ListProducts(w http.ResponseWriter, r *http.Request, params cr
 		Limit:           params.Limit,
 		Query:           params.Q,
 		Active:          params.Active,
+		TaxCategory:     componentKindOf(params.TaxCategory),
 		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
 		Sort:            params.Sort,
 	}

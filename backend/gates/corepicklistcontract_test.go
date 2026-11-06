@@ -63,7 +63,6 @@ var picklistInContract = map[string]struct{ schema, property string }{
 	"company.size_band":         {"Company", "size_band"},
 	"company.relationship_type": {"Company", "relationship_types"},
 	"deal.status":               {"Deal", "status"},
-	"deal.forecast_category":    {"Deal", "forecast_category"},
 	"lead.status":               {"Lead", "status"},
 	"project.phase":             {"Project", "phase"},
 	// A deal filters on its customer's account through a link leaf, so two of the

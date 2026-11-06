@@ -27,10 +27,16 @@ import {
   blocksOf,
   hasAssessment,
   layoutEdits,
+  layoutOf,
   MAX_CARDS,
 } from "./reporting.layout";
 import type { ReportingReport, ReportingSelection } from "./reporting.model";
 import { unsaveable } from "./reporting.save";
+import { selectionWithProposal } from "./reporting.setupapply";
+import {
+  type SetupProposal,
+  SetupProposalStep,
+} from "./reporting.setupproposal";
 
 type Audience = ReportingReport["audience"];
 
@@ -124,6 +130,18 @@ export function CustomReportDrawer({
     cards === 0 ||
     reader === undefined ||
     unsaveable(selection, metrics);
+  // The proposal fills what the words named and leaves the rest as it
+  // stands; a name the reader typed is theirs.
+  const applyProposal = (proposal: SetupProposal) => {
+    if (proposal.name && name.trim() === "") setName(proposal.name);
+    const next = selectionWithProposal(selection, proposal);
+    composition.setSelection(next);
+    if (next.metrics !== selection.metrics) {
+      composition.setMetrics(next.metrics);
+      if (next.blocks !== selection.blocks)
+        composition.setLayout(layoutOf({ ...next, layout: undefined }));
+    }
+  };
   const preview = () => {
     if (reader === undefined) return;
     holdCustomReport(reader, {
@@ -176,6 +194,11 @@ export function CustomReportDrawer({
           >
             {t("reporting.useExample")}
           </Button>
+          <SetupProposalStep
+            site="custom_report_setup"
+            description={description}
+            onApply={applyProposal}
+          />
           <Field label={t("reporting.audience")}>
             {(field) => (
               <Select

@@ -2,20 +2,22 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import {
+  formatAnalyticsHours,
+  formatAnalyticsNumber,
+  formatAnalyticsPercent,
   formatDuration,
-  formatHours,
-  formatNumber,
-  formatPercent,
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { type HandoffScope, upcomingThrough } from "./analytics.outcomes.sdr";
 import { readingState } from "./analytics.overview.prospectinghero";
+import { UpcomingMeetings } from "./analytics.overview.prospectingwork";
 import { metricOf } from "./analytics.overview.readings";
 import {
   type Decided,
@@ -23,6 +25,7 @@ import {
   WaitingDrawer,
 } from "./analytics.overview.team.drawers";
 import { figureWithheld } from "./analytics.overview.team.members";
+import { EvidenceFrame } from "./reporting.evidenceframe";
 import { useSelectionHeld } from "./reporting.evidenceselection";
 import type {
   ReportingEvaluation,
@@ -97,22 +100,19 @@ export function TeamStanding({
   const opened = useSelectionHeld<Decided | "waiting">(
     JSON.stringify([scope, review.interval]),
   );
-  const evaluation = readings.data;
   const rows = useBottlenecks(review, readings, {
     evidence: onEvidence,
     reasons: opened.open,
     waiting: () => opened.open("waiting"),
   });
-  // Nothing waits only when every input was read. A hidden, failed or pending
-  // input is a row of its own, and a handoff team needs its handoffs read.
-  const nothingWaits =
-    rows.length === 0 &&
-    (review.workflow !== "handoff" || review.handoffs !== undefined);
   return (
     <Panel title={t("analytics.team.standing")}>
       <PanelBody>
-        <TeamOutcomes review={review} evaluation={evaluation} />
-        <UpcomingLine summary={summary} />
+        <TeamOutcomes review={review} />
+        <UpcomingLine
+          summary={summary}
+          allowRecords={!review.members_withheld}
+        />
       </PanelBody>
       {rows.map((row) => (
         <PanelRow key={row.key} className="analytics-attention-row">
@@ -125,11 +125,6 @@ export function TeamStanding({
           )}
         </PanelRow>
       ))}
-      {nothingWaits && (
-        <PanelBody>
-          <p>{t("analytics.team.nothingWaits")}</p>
-        </PanelBody>
-      )}
       {opened.held && opened.held !== "waiting" && review.handoffs && (
         <ReasonsDrawer
           outcome={opened.held}
@@ -148,14 +143,11 @@ export function TeamStanding({
 
 // The period's outcome as one cohort: of what started in the period, how much
 // ended which way so far. Rates need a cohort at least the review's floor.
-function TeamOutcomes({
-  review,
-  evaluation,
-}: Readonly<{ review: Review; evaluation?: ReportingEvaluation }>) {
+function TeamOutcomes({ review }: Readonly<{ review: Review }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const count = (value: number) => formatNumber(value, locale);
+  const count = (value: number) => formatAnalyticsNumber(value, locale);
   const floor = review.small_sample_below;
   if (review.workflow === "handoff") {
     const cohort = review.handoffs?.cohort;
@@ -171,39 +163,30 @@ function TeamOutcomes({
         })}{" "}
         {cohort.rounds >= floor
           ? t("analytics.team.acceptedRate", {
-              rate: formatPercent(cohort.accepted / cohort.rounds, locale),
+              rate: formatAnalyticsPercent(
+                cohort.accepted / cohort.rounds,
+                locale,
+              ),
               rounds: count(cohort.rounds),
             })
           : cohort.rounds > 0 &&
             t("analytics.team.tooFewForRate", { below: count(floor) })}{" "}
         {cohort.median_decision_hours != null &&
           t("analytics.team.medianDecision", {
-            hours: formatHours(cohort.median_decision_hours, locale),
+            hours: formatAnalyticsHours(cohort.median_decision_hours, locale),
           })}
       </p>
     );
   }
-  const qualified = evaluation && metricOf(evaluation, "leads_promoted");
-  const arrived = qualified?.denominator;
-  if (qualified?.value == null || arrived == null) return null;
-  return (
-    <p>
-      {plural("analytics.team.qualifiedOf", arrived, {
-        qualified: count(qualified.value),
-        count: count(arrived),
-      })}{" "}
-      {arrived >= floor
-        ? t("analytics.team.qualifiedRate", {
-            rate: formatPercent(qualified.value / arrived, locale),
-          })
-        : arrived > 0 &&
-          t("analytics.team.tooFewForRate", { below: count(floor) })}
-    </p>
-  );
+  return null;
 }
 
 // Meetings booked ahead, in the window and words My prospecting uses.
-function UpcomingLine({ summary }: Readonly<{ summary: SummaryRead }>) {
+function UpcomingLine({
+  summary,
+  allowRecords,
+}: Readonly<{ summary: SummaryRead; allowRecords: boolean }>) {
+  const [opened, setOpened] = useState(false);
   const t = useT();
   const { locale } = useLocale();
   const label = t("analytics.prospect.upcoming");
@@ -222,10 +205,26 @@ function UpcomingLine({ summary }: Readonly<{ summary: SummaryRead }>) {
       </p>
     );
   return (
-    <p className="t-caption">
-      {label}: {formatNumber(data.upcoming_meetings, locale)} ·{" "}
-      {upcomingThrough(data.upcoming_window, t, locale)}
-    </p>
+    <>
+      <p className="t-caption">
+        {label}: {formatAnalyticsNumber(data.upcoming_meetings, locale)} ·{" "}
+        {upcomingThrough(data.upcoming_window, t, locale)}{" "}
+        {allowRecords && data.upcoming_meetings > 0 && (
+          <Button variant="link" onClick={() => setOpened(true)}>
+            {t("analytics.team.viewMeetings")}
+          </Button>
+        )}
+      </p>
+      {allowRecords && opened && (
+        <EvidenceFrame
+          title={label}
+          lines={[upcomingThrough(data.upcoming_window, t, locale)]}
+          onClose={() => setOpened(false)}
+        >
+          <UpcomingMeetings self="" summary={summary} title={label} />
+        </EvidenceFrame>
+      )}
+    </>
   );
 }
 
@@ -274,7 +273,7 @@ function waitingBottleneck(
 ): Bottleneck | undefined {
   const { waiting } = handoffs;
   if (waiting.waiting === 0) return undefined;
-  const count = (value: number) => formatNumber(value, locale);
+  const count = (value: number) => formatAnalyticsNumber(value, locale);
   const facts = [t("analytics.team.waitingBasis")];
   if (waiting.oldest_waiting_since)
     facts.push(
@@ -310,7 +309,7 @@ function handoffBottlenecks(
   locale: Locale,
 ): Bottleneck[] {
   const { outcomes, reasons } = handoffs;
-  const count = (value: number) => formatNumber(value, locale);
+  const count = (value: number) => formatAnalyticsNumber(value, locale);
   const waiting = waitingBottleneck(review, handoffs, open, t, plural, locale);
   const rows: Bottleneck[] = waiting ? [waiting] : [];
   for (const outcome of ["recycled", "rejected"] as const) {
@@ -373,7 +372,9 @@ function unansweredBottleneck(
       title: t("analytics.team.unansweredPending"),
       basis: t("analytics.readingLoading"),
     };
-  const metric = metricOf(readings.data, "leads_awaiting_response");
+  const metric =
+    metricOf(readings.data, "leads_awaiting_response_now") ??
+    metricOf(readings.data, "leads_awaiting_response");
   if (metric?.coverage.withheld) return hidden;
   const state = readingState(metric);
   if (state === "failed" || state === "other" || !metric) return failed;
@@ -382,9 +383,12 @@ function unansweredBottleneck(
   return {
     key: "unanswered",
     title: plural("analytics.team.unansweredRow", value, {
-      count: formatNumber(value, locale),
+      count: formatAnalyticsNumber(value, locale),
     }),
-    basis: t("analytics.team.unansweredBasis"),
+    basis:
+      metric.id === "leads_awaiting_response_now"
+        ? t("analytics.team.currentUnansweredBasis")
+        : t("analytics.team.unansweredBasis"),
     action: {
       label: t("analytics.team.showLeads"),
       open: () => open.evidence(metric.evidence),

@@ -11,6 +11,14 @@
 # nothing here depends on it, because a tag moves no branch, so tagging a
 # candidate deploys nothing today either way.
 #
+# WHAT A RELEASE CARRIES. The three images, pushed to ghcr.io/margince as
+# ghcr.io/margince/<role>:<tag>; one server bundle per Linux platform (the same
+# binaries and SPA as files, with the units and nginx files a server needs);
+# the source SBOMs; images.txt, naming each image by digest; and SHA256SUMS over
+# all of them. Each image and SHA256SUMS are signed keyless with cosign, so one
+# signature vouches for every file on the page. Everything is built and signed
+# before the release page is touched, so a failed build leaves no page.
+#
 # WHY THIS IS NOT release.yml. That lane drafts a constellation release into the
 # dist service at test.margince.com, versioned YYYY.edition.bugfix, and its
 # version grammar (pkg/version in margince-constellation) rejects a v-prefixed
@@ -226,9 +234,125 @@ jobs:
             exit 1
           fi
 
+  # The images and the bundles, from one bake on one builder, so a bundle and
+  # an image of one release run the same build. The images go public the
+  # moment this job pushes them, which is why every check above runs first.
+  build:
+    name: Build the images and the server bundles
+    needs: [version, draft]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      # Push the three images to ghcr.io/margince.
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      # qemu runs the amd64 runtime layers on this arm64 runner, and the SBOM
+      # pipeline's amd64-pinned validators; the Go and SPA builders run native.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      # The docker-container driver: the default driver writes no pushed
+      # digest to the bake metadata, and images.txt names each image by it.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Log in to ghcr.io
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+      - name: Bake and push the images
+        env:
+          REPO: ghcr.io/margince
+          VERSION: ${{ needs.version.outputs.version }}
+          PLATFORMS: linux/amd64,linux/arm64
+          MARGINCE_BUILD_REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          VERSION="$(./scripts/release-version-stamped.sh "${VERSION:-}")"
+          export VERSION
+          docker buildx bake --push --provenance "mode=max" \
+            --metadata-file bake-metadata.json api web worker
+          mkdir -p dist/release
+          for role in api web worker; do
+            digest="$(jq -er --arg role "$role" '.[$role]."containerimage.digest"' bake-metadata.json)"
+            echo "$REPO/$role:$VERSION@$digest"
+          done > dist/release/images.txt
+          cat dist/release/images.txt
+      - name: Bake and pack the server bundles
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          PLATFORMS: linux/amd64,linux/arm64
+          MARGINCE_BUILD_REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          docker buildx bake bundle
+          bash scripts/release-bundle.sh "$VERSION" "$MARGINCE_BUILD_REVISION" dist/bundle dist/release
+      # The source SBOMs through the full pinned pipeline, named for the
+      # release so a downloaded file says which one it describes.
+      - name: Generate the SBOMs
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          make sbom SBOM_VERSION="$VERSION"
+          cp sboms/margince.cdx.json "dist/release/margince-$VERSION.cdx.json"
+          cp sboms/margince.spdx221.json "dist/release/margince-$VERSION.spdx22.json"
+          cp sboms/margince.spdx300.json "dist/release/margince-$VERSION.spdx30.json"
+      - name: Sum every asset
+        working-directory: dist/release
+        run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
+      - uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: release-assets
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: 30
+
+  # Signing is a job of its own so the OIDC credential is never in scope while
+  # build code runs. A keyless signature lands in the public Rekor log for good,
+  # so this runs only after the build has finished and passed.
+  sign:
+    name: Sign the images and the sums
+    needs: [build]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # cosign pushes each image's signature next to it on ghcr.io.
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-assets
+          path: dist/release/
+      # Written where release-sign hands it to the cosign container.
+      - name: Log in to ghcr.io for cosign
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/cosign-home/docker
+          echo "$GHCR_TOKEN" | DOCKER_CONFIG=.tmp/cosign-home/docker docker login ghcr.io -u "$GHCR_USER" --password-stdin
+      - name: Sign (keyless cosign)
+        run: make release-sign
+      - uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: release-signature
+          path: dist/release/SHA256SUMS.cosign.bundle
+          if-no-files-found: error
+          retention-days: 30
+
   release:
     name: Publish the GitHub release
-    needs: [version, draft]
+    needs: [version, draft, build, sign]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 10
     permissions:
@@ -261,6 +385,14 @@ jobs:
           filter: blob:none
           sparse-checkout: scripts/release-notes.sh
           sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-assets
+          path: dist/release/
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-signature
+          path: dist/release/
       - name: Create the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -272,11 +404,34 @@ jobs:
           set -euo pipefail
           # The install step belongs on this page and not only in the docs,
           # because the release page is where a reader decides how to run it.
-          # A QUOTED heredoc, so the backticks and brackets stay literal.
-          cat > install.md <<'NOTES'
-          Margince ships as container images for your own servers: the api, the
-          worker and the web front end. How to build, deploy and configure them:
-          [docs/how-to/deploy-margince.md](https://github.com/margince/margince/blob/main/docs/how-to/deploy-margince.md)
+          # An unquoted heredoc for the version and the revision; every other
+          # backtick and dollar is escaped.
+          cat > install.md <<NOTES
+          **Containers.** \`ghcr.io/margince/api:$VERSION\`, \`ghcr.io/margince/worker:$VERSION\`
+          and \`ghcr.io/margince/web:$VERSION\`, for linux/amd64 and linux/arm64. \`images.txt\`
+          names each by digest. Deploy them with
+          [docs/how-to/deploy-margince.md](https://github.com/margince/margince/blob/main/docs/how-to/deploy-margince.md).
+
+          **A server without containers.** \`margince-$VERSION-linux-amd64.tar.gz\` or
+          \`-linux-arm64.tar.gz\`: the programs, the web app, and the systemd and nginx files.
+          Install it with
+          [docs/how-to/install-on-a-server.md](https://github.com/margince/margince/blob/main/docs/how-to/install-on-a-server.md).
+
+          **Check what you downloaded.** \`sha256sum -c SHA256SUMS --ignore-missing\`, then:
+
+          \`\`\`sh
+          cosign verify-blob SHA256SUMS --bundle SHA256SUMS.cosign.bundle \\
+            --certificate-identity "https://github.com/$GH_REPO/.github/workflows/release-tag.yml@refs/tags/$VERSION" \\
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
+          \`\`\`
+
+          And each image:
+
+          \`\`\`sh
+          xargs -I{} cosign verify {} < images.txt \\
+            --certificate-identity "https://github.com/$GH_REPO/.github/workflows/release-tag.yml@refs/tags/$VERSION" \\
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
+          \`\`\`
           NOTES
 
           # The hand-written half: the draft's body, or on a re-run the
@@ -319,21 +474,22 @@ jobs:
           fi
 
           # Re-running a failed run after the release was created must not fail:
-          # it edits the existing release instead.
+          # it edits the existing release instead. A new one is created as a
+          # draft, so the page is published only once its assets are on it.
           if [ -s existing.json ]; then
             echo "release-tag: $VERSION exists as a draft or a release — filling it in"
             # The notes are rebuilt above on every run, so a re-run is also the
             # only way to correct them. Without this the body keeps whatever the
             # first run wrote, and a wrong instruction on the release page would
             # be unfixable by the lane that wrote it.
-            args=(--title "Margince $VERSION" --notes-file notes.md --draft=false --prerelease="$PRERELEASE")
-            gh release edit "$VERSION" "${args[@]}"
+            gh release edit "$VERSION" --title "Margince $VERSION" --notes-file notes.md
           else
-            args=(--target "$REVISION" --title "Margince $VERSION" --notes-file notes.md --verify-tag)
-            if [ "$PRERELEASE" = true ]; then
-              args+=(--prerelease)
-            fi
-            gh release create "$VERSION" "${args[@]}"
+            gh release create "$VERSION" --draft --target "$REVISION" --title "Margince $VERSION" \
+              --notes-file notes.md --verify-tag
           fi
+          # --clobber: a re-run rebuilt every asset, and the page must carry
+          # this run's files, whose sums and signature agree with each other.
+          gh release upload "$VERSION" dist/release/* --clobber
+          gh release edit "$VERSION" --draft=false --prerelease="$PRERELEASE"
 
           echo "release-tag: published $VERSION" >> "$GITHUB_STEP_SUMMARY"

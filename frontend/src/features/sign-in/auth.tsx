@@ -18,7 +18,11 @@ import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
 import { useAuthCapabilities } from "../../lib/capabilities";
 import { useOutageRecovery } from "../../lib/connectivity";
 import { OIDC_FAILURE_HASH, takeReturnRoute } from "../../lib/returnroute";
-import { forgetHashCredential, takeHashCredential } from "../../lib/router";
+import {
+  forgetHashCredential,
+  takeHashCredential,
+  watchAddress,
+} from "../../lib/router";
 import { sessionAnswers } from "../../lib/session";
 import { FederatedOnlyCard } from "./auth-providers";
 import { MfaForm } from "./auth-signin";
@@ -167,14 +171,14 @@ export function AuthScreen({
   // one view that sends a reader off to ask for a fresh link leaves them on
   // #/reset-password, which is exactly the tab they paste it into.
   useEffect(() => {
-    const onHashChange = () => {
+    // watchAddress and not a raw `hashchange`: a Back or Forward that changes
+    // the path fires only `popstate`, and the router hears both.
+    return watchAddress(() => {
       const token = takeHashCredential(RESET_ROUTE);
       if (token) {
         setView({ kind: "reset", token });
       }
-    };
-    globalThis.addEventListener("hashchange", onHashChange);
-    return () => globalThis.removeEventListener("hashchange", onHashChange);
+    });
   }, []);
   // The token is in this screen's state now, so memory empties the way the
   // address did. Memory outlives a mount and the address did not: left there,

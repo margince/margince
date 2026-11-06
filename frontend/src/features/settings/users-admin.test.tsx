@@ -9,6 +9,7 @@ import { UsersAdminCard } from "./users-admin";
 import {
   backend,
   jsonResponse,
+  openRoleDialog,
   ROSTER,
   render,
   roleControl,
@@ -548,7 +549,7 @@ describe("UsersAdminCard", () => {
     );
   });
 
-  it("surfaces a failed member action as an inline alert on the row", async () => {
+  it("surfaces a refused role change in the role dialog, beside the pick", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
@@ -605,15 +606,23 @@ describe("UsersAdminCard", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     const active = rowFor("Ada Active");
-    await pickOption(user, roleSelect(active, "ada active"), "User");
+    const { dialog, chooser, save } = await openRoleDialog(
+      user,
+      active,
+      "ada active",
+    );
+    await pickOption(user, chooser, "User");
+    await user.click(save);
 
-    await waitFor(() => expect(within(active).getByRole("alert")).toBeTruthy());
-    expect(screen.getByText(/leave no admin/i)).toBeTruthy();
+    await waitFor(() => expect(within(dialog).getByRole("alert")).toBeTruthy());
+    expect(within(dialog).getByText(/leave no admin/i)).toBeTruthy();
     // The refusal keeps the operator's pick open beside the reason; backing out
     // puts back the role the member still holds.
-    expect(roleShown(active)).toBe("User");
-    await user.keyboard("{Escape}");
-    await waitFor(() => expect(roleShown(active)).toBe("Admin"));
+    expect(chooser.textContent).toBe("User");
+    expect(roleShown(active)).toBe("Admin");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(dialog.isConnected).toBe(false));
+    expect(roleShown(active)).toBe("Admin");
   });
 
   it("surfaces a failed invite as an inline error", async () => {

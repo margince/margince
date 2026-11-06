@@ -81,8 +81,8 @@ func TestReadingTheBriefEmitsTheOpen(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	createDealClosingThisWeek(t, e, stages, "Closing this week")
-	createDealClosingThisWeek(t, e, stages, "Also closing")
+	apptest.CreateDealClosingThisWeek(t, e, stages, "Closing this week")
+	apptest.CreateDealClosingThisWeek(t, e, stages, "Also closing")
 
 	var generated briefResponse
 	if status := e.Call(t, "POST", "/v1/brief", nil, nil, &generated); status != http.StatusCreated {
@@ -144,7 +144,7 @@ func TestTheBriefOpenNamesNoEntity(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	createDealClosingThisWeek(t, e, stages, "Closing this week")
+	apptest.CreateDealClosingThisWeek(t, e, stages, "Closing this week")
 
 	var generated briefResponse
 	if status := e.Call(t, "POST", "/v1/brief", nil, nil, &generated); status != http.StatusCreated {
@@ -174,7 +174,7 @@ func TestEveryReadOfTheBriefIsItsOwnOpen(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	createDealClosingThisWeek(t, e, stages, "Closing this week")
+	apptest.CreateDealClosingThisWeek(t, e, stages, "Closing this week")
 
 	var generated briefResponse
 	if status := e.Call(t, "POST", "/v1/brief", nil, nil, &generated); status != http.StatusCreated {
@@ -197,7 +197,7 @@ func TestHomesWindowReadsAreNotBriefOpens(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	createDealClosingThisWeek(t, e, stages, "Closing this week")
+	apptest.CreateDealClosingThisWeek(t, e, stages, "Closing this week")
 
 	if status := e.Call(t, "POST", "/v1/brief", nil, nil, nil); status != http.StatusCreated {
 		t.Fatalf("POST /v1/brief = %d, want 201", status)

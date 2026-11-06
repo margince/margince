@@ -2,12 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import { ConnectAiToolCard } from "../../components/connect-ai-tool";
 import { SegmentedControl } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { useT } from "../../i18n";
 import { ApprovalPreferencesCard } from "../automations/approval-preferences";
-import { CodingAgentsCard } from "../automations/coding-agents";
-import { ConnectAiToolCard } from "../automations/connect-ai-tool";
 import { ConnectedAgentsCard } from "../automations/connected-agents";
 import { AutonomySettingsCard } from "./autonomy-settings";
 import { AgentToolsCard } from "./settings-agenttools";
@@ -16,7 +15,7 @@ import { PassportCard } from "./settings-passports";
 import "./settings-aiaccess.css";
 
 // Every seat gets this page, ungated: a connection's authority is the reader's
-// own consent. Connecting a tool comes first; tokens and commands wait behind
+// own consent. Connecting a tool comes first; API keys and agent rules wait behind
 // "For developers", closed until a reader asks for them.
 export function AiAccessTab() {
   const t = useT();
@@ -35,7 +34,7 @@ export function AiAccessTab() {
   );
 }
 
-const DEVELOPER_TABS = ["passports", "agents", "rules"] as const;
+const DEVELOPER_TABS = ["passports", "rules"] as const;
 type DeveloperTab = (typeof DEVELOPER_TABS)[number];
 
 // API keys open first: a developer who opens this section most often came for
@@ -53,17 +52,13 @@ function DeveloperTabs() {
         onChange={setTab}
         labels={{
           passports: t("aiAccess.dev.tab.passports"),
-          agents: t("aiAccess.dev.tab.agents"),
           rules: t("aiAccess.dev.tab.rules"),
         }}
       />
-      {/* All three stay mounted, so a tab keeps its state and settings search
+      {/* Both stay mounted, so a tab keeps its state and settings search
           finds every card; only the chosen one shows. */}
       <div hidden={tab !== "passports"}>
         <PassportCard />
-      </div>
-      <div hidden={tab !== "agents"}>
-        <CodingAgentsCard />
       </div>
       <div hidden={tab !== "rules"} className="aiaccess-dev-rules">
         <AgentToolsCard />

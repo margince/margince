@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -117,6 +118,79 @@ func TestTheDuplicateScanTaskRefusesAMalformedCursor(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("a batch accepted a cursor that names no record")
+	}
+}
+
+// Two contacts stored under two Gmail spellings of one mailbox before the rule
+// folded them get one pair. Dots at another host still name two mailboxes.
+func TestTheGmailScanTaskFilesStoredSpellingsOnceAndReplaysSafely(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	for name, email := range map[string]string{
+		"Ab": "ab@gmail.com", "Anna Beispiel": "a.b@googlemail.com",
+		"Cd": "cd@outlook.com", "Carla Dorn": "c.d@outlook.com",
+	} {
+		if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+			FullName: name, Source: "manual",
+			Emails: []contacts.ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+		}); err != nil {
+			t.Fatalf("create %s: %v", name, err)
+		}
+	}
+	e.WsExec(t, `DELETE FROM dedupe_candidate`)
+
+	task := gmailDedupeScanDataTask()
+	task.Steps[0].Limit, task.Steps[0].MinLimit = 1, 1
+	runMachineAddressTask(ctx, t, e, task)
+	if got := scannedPairs(t, e); got != 1 {
+		t.Fatalf("the task filed %d pairs, want the one Gmail pair", got)
+	}
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		out, err := gmailDedupeScanDataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
+		if err == nil && out.Changed != 0 {
+			t.Errorf("a replay from a nil cursor filed %d pairs", out.Changed)
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Eight contacts on one Gmail base are 28 pairs, more than the five rivals one
+// contact's check takes. Pairs the queue holds are left out before that cap, so
+// one pass files every pair.
+func TestTheGmailScanTaskFilesEveryPairOnABaseCrowdedPastTheRivalCap(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	addresses := []string{
+		"ab@gmail.com", "a.b@gmail.com", "ab@googlemail.com", "a.b@googlemail.com",
+		"ab+one@gmail.com", "ab+two@gmail.com", "a.b+three@googlemail.com", "ab+four@googlemail.com",
+	}
+	for i, email := range addresses {
+		if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+			FullName: fmt.Sprintf("Holder %c", 'A'+i), Source: "manual",
+			Emails: []contacts.ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+		}); err != nil {
+			t.Fatalf("create %s: %v", email, err)
+		}
+	}
+	e.WsExec(t, `DELETE FROM dedupe_candidate`)
+
+	// The batches run directly: the engine's ledger is per installation, and
+	// the test beside this one already finished the task there.
+	step := gmailDedupeScanDataTask().Steps[0]
+	var cursor []byte
+	for done := false; !done; {
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			out, err := step.Batch(ctx, tx, datatask.BatchIn{Cursor: cursor, Limit: 100, RunID: ids.NewV7()})
+			cursor, done = out.Cursor, out.Done
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got, want := scannedPairs(t, e), len(addresses)*(len(addresses)-1)/2; got != want {
+		t.Fatalf("the task filed %d pairs, want %d: every two holders of one base are a pair", got, want)
 	}
 }
 
