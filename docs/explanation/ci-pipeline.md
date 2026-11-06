@@ -477,7 +477,7 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 
 ### Why some jobs are shaped as they are
 
-- **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
+- **Jobs that read the merge base clone blobless**: every commit, and only the files of `HEAD`.
 - **`craftsmanship` starts beside `deterministic-gates`.** It reads source only, so a red build does
   not change its findings, and both reds show in one round.
 - **`deterministic-gates (unit)` stages `crm-hello` last.** After the merge gate it copies the fixture
