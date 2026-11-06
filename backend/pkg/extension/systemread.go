@@ -138,7 +138,7 @@ type Directory interface {
 //
 // It is not the contract's Activity, which answers per caller (masked_fields,
 // writable). It holds no subject, body, address or attachment, so a unit that
-// needs the words reads them as a person with their own rights.
+// needs the words reads them as a user with their own rights.
 type MailSummary struct {
 	ID string
 	// Direction is inbound or outbound.
@@ -164,7 +164,7 @@ type Activities interface {
 	// email private to its participants is left out, and so is one held back
 	// from reading. A reply that sits only in a private mailbox is therefore
 	// invisible here: a unit that decides "no reply yet" from this read is
-	// reminding a person to check, and must not act on it alone, such as by
+	// reminding a user to check, and must not act on it alone, such as by
 	// sending a message.
 	//
 	// A deal that does not exist answers ErrNotFound; an id that is not a

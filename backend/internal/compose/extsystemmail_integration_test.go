@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -41,7 +42,7 @@ func (s *systemReadEnv) dealMail(t *testing.T, q extension.MailQuery) extension.
 func TestTheMailReadHoldsOnlyWhatTheWholeTeamMaySee(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadActivities)
-	now := time.Now().UTC().Truncate(time.Microsecond)
+	now := clocktest.Now(t).UTC().Truncate(time.Microsecond)
 	sent := s.mail(t, "outbound", "workspace", false, now.Add(-3*time.Hour))
 	s.mail(t, "inbound", "participants", false, now.Add(-2*time.Hour))
 	automatic := s.mail(t, "inbound", "workspace", true, now.Add(-time.Hour))
@@ -66,7 +67,7 @@ func TestTheMailReadHoldsOnlyWhatTheWholeTeamMaySee(t *testing.T) {
 func TestADealWithMoreMailThanAPageIsReadOverSeveralPages(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadActivities)
-	now := time.Now().UTC().Truncate(time.Microsecond)
+	now := clocktest.Now(t).UTC().Truncate(time.Microsecond)
 	want := map[string]bool{}
 	for i := range 5 {
 		want[s.mail(t, "outbound", "workspace", false, now.Add(-time.Duration(i)*time.Minute)).String()] = true

@@ -14,7 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// checkTaskAssignee holds a task filed for a colleague to the rule a person
+// checkTaskAssignee holds a task filed for a colleague to the rule a user
 // assigning one meets. A task already filed under this key is a replay. Its
 // assignee was judged once and may have left since, and that is no reason to
 // refuse the unit's retry.
