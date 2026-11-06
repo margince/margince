@@ -2916,6 +2916,7 @@ export const en = {
   "record.registration": "Registration",
   "record.leadProfileReadOnly": "LinkedIn cannot be changed on a lead.",
   "record.openProfile": "Open profile",
+  "record.linkedinProfile": "{name} on LinkedIn",
   "record.fieldsFailed": "Custom fields could not be loaded.",
   "record.fieldsLoading": "Loading custom fields…",
   "record.fieldsRetry": "Retry",
@@ -6236,6 +6237,13 @@ export const en = {
   "bulk.selected_one": "{count} selected",
   "bulk.selected_other": "{count} selected",
   "bulk.selectRow": "Select {name}",
+  "bulk.selectPage": "Select every row on this page",
+  "bulk.selectAll": "Select all",
+  "bulk.clearSelection": "Clear selection",
+  "bulk.selectionLimit_one":
+    "One change takes at most {count} record, so the selection stops there.",
+  "bulk.selectionLimit_other":
+    "One change takes at most {count} records, so the selection stops there.",
   "bulk.owner": "New owner",
   "bulk.ownerPick": "Pick an owner",
   "bulk.assign": "Assign owner",
@@ -17944,18 +17952,6 @@ export const en = {
     "Nothing chosen yet. Add records from a record page or a selection.",
   "lists.members.projects":
     "Project lists show their members in the Projects list.",
-  "lists.members.selectAll_one": "Select all {count} member",
-  "lists.members.selectAll_other": "Select all {count} members",
-  "lists.members.selectionFullTitle": "The selection is full",
-  "lists.members.selectionFull_one":
-    "One change can include at most {count} member. Untick one to select another.",
-  "lists.members.selectionFull_other":
-    "One change can include at most {count} members. Untick one to select another.",
-  "lists.members.selectAllCappedTitle": "Not every member is selected",
-  "lists.members.selectAllCapped_one":
-    "Only the first {count} member can be selected at once. Act on it, then select the rest.",
-  "lists.members.selectAllCapped_other":
-    "Only the first {count} members can be selected at once. Act on these, then select the rest.",
   "lists.history.title": "What changed",
   "lists.history.empty": "Nothing has changed yet.",
   "lists.history.loading": "Loading history",

@@ -554,8 +554,8 @@ describe("the contact's LinkedIn in the details", () => {
       social: { linkedin: "https://www.linkedin.com/in/dana-buyer" },
     },
   };
-  // The left column draws the profile's path as the link's words.
-  const openProfile = "in/dana-buyer";
+  // The left column draws the contact's name on LinkedIn's logo, not the path.
+  const openProfile = `${view.contact.full_name} on LinkedIn`;
 
   it("opens the profile it names", async () => {
     mount("overview", withLinkedin);
