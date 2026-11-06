@@ -22,7 +22,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
@@ -148,49 +147,23 @@ func writeHistoryQueryPlans(ctx context.Context, t *testing.T, measured *pgxpool
 			if os.Getenv("MARGINCE_IMPORT_BENCH_PREPARED") == "" {
 				return tx.QueryRow(ctx, "EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) "+cost.query, cost.args...).Scan(&plan)
 			}
-			statementQuery, values := cost.query, cost.args
-			if len(values) == 1 {
-				if named, ok := values[0].(pgx.NamedArgs); ok {
-					var err error
-					statementQuery, values, err = named.RewriteQuery(ctx, tx.Conn(), statementQuery, nil)
-					if err != nil {
-						return err
-					}
-				}
-			}
-			var statement string
-			var parameterTypes []uint32
-			if err := tx.QueryRow(ctx, `SELECT name, parameter_types::oid[] FROM pg_prepared_statements WHERE statement=$1`, statementQuery).Scan(&statement, &parameterTypes); err != nil {
-				return fmt.Errorf("locating the measured cached statement: %w", err)
-			}
-			if len(values) != len(parameterTypes) {
-				return fmt.Errorf("cached statement has %d parameters for %d values", len(parameterTypes), len(values))
-			}
-			encoded := make([]any, len(values))
-			for i, value := range values {
-				text, err := tx.Conn().TypeMap().Encode(parameterTypes[i], pgx.TextFormatCode, value, nil)
-				if err != nil {
-					return fmt.Errorf("encoding cached parameter %d: %w", i, err)
-				}
-				if text != nil {
-					encoded[i] = string(text)
-				}
-			}
-			query := `EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) EXECUTE ` + pgx.Identifier{statement}.Sanitize() + `(` + storekit.Placeholders(values) + `)`
-			arguments := append([]any{pgx.QueryExecModeSimpleProtocol}, encoded...)
-			if err := tx.QueryRow(ctx, query, arguments...).Scan(&plan); err != nil {
+			var err error
+			plan, err = testdb.ExplainCachedStatement(ctx, tx, cost.query, cost.args)
+			if err != nil {
 				return err
 			}
 			if _, err := tx.Exec(ctx, `SET LOCAL plan_cache_mode=force_generic_plan`); err != nil {
 				return err
 			}
-			if err := tx.QueryRow(ctx, query, arguments...).Scan(&genericPlan); err != nil {
+			genericPlan, err = testdb.ExplainCachedStatement(ctx, tx, cost.query, cost.args)
+			if err != nil {
 				return err
 			}
 			if _, err := tx.Exec(ctx, `SET LOCAL plan_cache_mode=force_custom_plan`); err != nil {
 				return err
 			}
-			return tx.QueryRow(ctx, query, arguments...).Scan(&customPlan)
+			customPlan, err = testdb.ExplainCachedStatement(ctx, tx, cost.query, cost.args)
+			return err
 		}
 		err := func() error {
 			if os.Getenv("MARGINCE_IMPORT_BENCH_PREPARED") == "" {

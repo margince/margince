@@ -116,7 +116,7 @@ func TestTheAddressVariantLaneReadsTheMailboxBaseIndex(t *testing.T) {
 		t.Fatalf("planning the lane query: %v", err)
 	}
 	var plans []struct {
-		Plan mailboxPlanNode `json:"Plan"` //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+		Plan mailboxPlanNode `json:"Plan"` //nolint:tagliatelle // PostgreSQL EXPLAIN defines the field name.
 	}
 	if err := json.Unmarshal(raw, &plans); err != nil || len(plans) != 1 {
 		t.Fatalf("reading the plan: %v (%d plans)", err, len(plans))
@@ -127,12 +127,18 @@ func TestTheAddressVariantLaneReadsTheMailboxBaseIndex(t *testing.T) {
 }
 
 // mailboxPlanNode is the part of an EXPLAIN (FORMAT JSON) node this test reads.
+//
+//nolint:tagliatelle // PostgreSQL owns the EXPLAIN field names.
 type mailboxPlanNode struct {
-	IndexName    string            `json:"Index Name"`    //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
-	Plans        []mailboxPlanNode `json:"Plans"`         //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
-	RelationName string            `json:"Relation Name"` //nolint:tagliatelle // Postgres's EXPLAIN key.
-	ActualRows   int               `json:"Actual Rows"`   //nolint:tagliatelle // Postgres's EXPLAIN key.
-	ActualLoops  int               `json:"Actual Loops"`  //nolint:tagliatelle // Postgres's EXPLAIN key.
+	IndexName     string            `json:"Index Name"`
+	Plans         []mailboxPlanNode `json:"Plans"`
+	RelationName  string            `json:"Relation Name"`
+	ActualRows    int               `json:"Actual Rows"`
+	FilteredRows  int               `json:"Rows Removed by Filter"`
+	RecheckedRows int               `json:"Rows Removed by Index Recheck"`
+	SharedHits    int               `json:"Shared Hit Blocks"`
+	SharedReads   int               `json:"Shared Read Blocks"`
+	ActualLoops   int               `json:"Actual Loops"`
 }
 
 func (n mailboxPlanNode) usesIndex(name string) bool {
