@@ -126,8 +126,7 @@ func (h Handlers) admitReachable(ctx context.Context, areas principal.WorkAreas)
 	}
 	for _, area := range areas.Chosen {
 		if !slices.Contains(reachable, area) {
-			return &InvalidPassportFieldError{Field: fieldAreas, Code: "area_not_reachable",
-				Message: fmt.Sprintf("your role reaches nothing in %q, so a passport cannot be limited to it", area)}
+			return &InvalidPassportFieldError{Field: fieldAreas, Code: "area_not_reachable", Message: fmt.Sprintf("your role reaches nothing in %q, so a passport cannot be limited to it", area)}
 		}
 	}
 	return nil
