@@ -1,6 +1,11 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
@@ -115,6 +120,8 @@ describe("DealsCard — a money reading with one half missing", () => {
     );
 
     expect(screen.getByText("Retrofit rollout")).toBeTruthy();
-    expect(screen.getByText(MONEY_ABSENT)).toBeTruthy();
+    expect(
+      within(screen.getByRole("table")).getByText(MONEY_ABSENT),
+    ).toBeTruthy();
   });
 });

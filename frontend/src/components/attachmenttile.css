@@ -1,7 +1,7 @@
 /* A record's files as a gallery of tiles, as many to a row as fit. */
 .attachment-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
   gap: var(--gapCards);
   align-items: start;
   margin: 0;

@@ -17234,7 +17234,7 @@ export const en = {
   "contact.meetings.noneBooked": "No upcoming meetings.",
   "contact.meetings.noneLogged": "No meetings logged.",
   "contact.meetings.untitled": "Untitled meeting",
-  "contact.meetings.hostedBy": "With {name}",
+  "contact.meetings.hostedBy": "Hosted by {name}",
   "contact.meetings.figures": "Meetings in figures",
   "contact.meetings.nextLabel": "Next meeting",
   "contact.meetings.bookedLabel": "Booked ahead",

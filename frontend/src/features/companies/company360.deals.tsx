@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
+import { openValueWords } from "../../components/openvaluewords";
 import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -14,6 +15,7 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { dealsFilteredBy } from "../../lib/dealsaddress";
+import { openValue } from "../../lib/openvalue";
 import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import type { Company360 } from "./company360";
@@ -112,26 +114,23 @@ function DealFigures({
   const t = useT();
   const { locale } = useLocale();
   const won = deals.won_lifetime;
-  const amounts = deals.data.flatMap((deal) =>
-    deal.amount?.amount_minor == null ? [] : [deal.amount],
+  // A capped page is not the account's whole pipeline: its count is a floor
+  // and its sum is not said.
+  const complete = !deals.page.has_more;
+  const value = openValue(
+    deals.data.map((deal) => deal.amount ?? {}),
+    complete,
   );
-  const currencies = new Set(amounts.map((amount) => amount.currency));
-  const [currency] = currencies;
-  const openValue =
-    currencies.size === 1 && currency
-      ? formatMoneyOrAbsent(
-          amounts.reduce((sum, amount) => sum + (amount.amount_minor ?? 0), 0),
-          currency,
-          locale,
-        )
-      : t("contact.deals.noValue");
   return (
     <StatStrip density="plate" label={t("contact.deals.figures")}>
       <StatCard
         label={t("contact.deals.openCount")}
-        value={formatNumber(deals.data.length, locale)}
+        value={`${formatNumber(deals.data.length, locale)}${complete ? "" : "+"}`}
       />
-      <StatCard label={t("contact.deals.openValue")} value={openValue} />
+      <StatCard
+        label={t("contact.deals.openValue")}
+        value={openValueWords(value, t, locale)}
+      />
       <StatCard
         label={t("co.deals.wonLifetime")}
         value={formatMoneyOrAbsent(won?.amount_minor, won?.currency, locale)}

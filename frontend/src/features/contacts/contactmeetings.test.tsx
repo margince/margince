@@ -439,7 +439,7 @@ it("names the colleague who hosted a held meeting", async () => {
       jsonResponse({ data: [{ id: "u-host", display_name: "Lena Fischer" }] }),
   });
   const held = await screen.findByRole("region", { name: "Held" });
-  expect(await within(held).findByText(/With Lena Fischer/)).toBeTruthy();
+  expect(await within(held).findByText(/Hosted by Lena Fischer/)).toBeTruthy();
 });
 
 it("names no host for a held meeting nobody hosted", async () => {
@@ -456,7 +456,7 @@ it("names no host for a held meeting nobody hosted", async () => {
   });
   const held = await screen.findByRole("region", { name: "Held" });
   await within(held).findByText("Site visit");
-  expect(within(held).queryByText(/With /)).toBeNull();
+  expect(within(held).queryByText(/Hosted by /)).toBeNull();
 });
 
 it("reads older meetings when the reader asks for them", async () => {

@@ -429,6 +429,8 @@ describe("company view — figures that outlive the list they sit under", () => 
     expect(screen.getByText(/120,000/)).toBeTruthy();
     const lost = screen.getByText("Lost").closest(".stat-card");
     expect(lost?.textContent).toContain("3");
-    expect(lost?.querySelector("a[href]")).not.toBeNull();
+    const href = lost?.querySelector("a[href]")?.getAttribute("href") ?? "";
+    expect(href).toContain("status=lost");
+    expect(href).toMatch(/company_id=/);
   });
 });

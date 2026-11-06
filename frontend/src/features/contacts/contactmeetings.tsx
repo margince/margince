@@ -138,7 +138,12 @@ function splitMeetings(
   listed: readonly Activity[],
   asOf: string,
   nextId: string | undefined,
-): Readonly<{ ahead: Activity[]; held: Activity[]; pastReached: boolean }> {
+): Readonly<{
+  ahead: Activity[];
+  held: Activity[];
+  happened: Activity[];
+  pastReached: boolean;
+}> {
   const now = Date.parse(asOf);
   const at = (activity: Activity) => Date.parse(activity.occurred_at);
   // A meeting called off keeps its date, and the server's next-meeting read
@@ -146,12 +151,15 @@ function splitMeetings(
   const isAhead = (activity: Activity) =>
     at(activity) > now && !calledOff(activity);
   const others = listed.filter((activity) => activity.id !== nextId);
+  // Newest first: the row on top answers "what just happened".
+  const held = others
+    .filter((activity) => !isAhead(activity))
+    .sort((a, b) => at(b) - at(a));
   return {
     ahead: others.filter(isAhead).sort((a, b) => at(a) - at(b)),
-    // Newest first: the row on top answers "what just happened".
-    held: others
-      .filter((activity) => !isAhead(activity))
-      .sort((a, b) => at(b) - at(a)),
+    held,
+    // What the figures count as held: one called off keeps its row, unheld.
+    happened: held.filter((activity) => !calledOff(activity)),
     // The list arrives newest first, so once a page reaches a meeting already
     // behind the read, every meeting still ahead is on the pages read so far.
     pastReached: listed.some((activity) => at(activity) <= now),
@@ -180,17 +188,19 @@ function heldState(
 // page not read yet until the list has reached the past.
 function bookedCount(
   upcoming: string,
-  complete: boolean,
+  listed: Readonly<{ isSuccess: boolean; hasNextPage: boolean }>,
+  pastReached: boolean,
   booked: readonly unknown[],
 ): number | null {
-  if (upcoming !== "ready" || !complete) return null;
+  const complete = listed.isSuccess && (pastReached || !listed.hasNextPage);
+  if ((upcoming !== "ready" && upcoming !== "empty") || !complete) return null;
   return booked.filter(Boolean).length;
 }
 
 /**
- * ContactMeetingsTab reads as its figures, then three panels: what is booked, what is still
- * waiting on the contact's answer, and what has already been held. The booked
- * meeting leads, from the server's own next-meeting read taken through this
+ * ContactMeetingsTab reads as its figures, then three panels: what is
+ * booked, what is still waiting on the contact's answer, and what has already
+ * been held. The booked meeting leads, from the server's own next-meeting read taken through this
  * contact's activity link rather than their account's — the company's answer
  * names a meeting this contact may not be in.
  */
@@ -220,7 +230,7 @@ export function ContactMeetingsTab({
     enabled: view !== undefined && !omitted(view, "activities"),
   });
   const next = view?.next_meeting;
-  const { ahead, held, pastReached } = splitMeetings(
+  const { ahead, held, happened, pastReached } = splitMeetings(
     listed.activities,
     view?.as_of ?? "",
     next?.activity_id,
@@ -256,10 +266,7 @@ export function ContactMeetingsTab({
       {briefOf(activity)}
     </>
   );
-  const booked = bookedCount(upcoming, pastReached || !listed.hasNextPage, [
-    next,
-    ...ahead,
-  ]);
+  const booked = bookedCount(upcoming, listed, pastReached, [next, ...ahead]);
   const figured = view && (upcoming === "ready" || upcoming === "empty");
   return (
     <div className="record-stack pe-meetings">
@@ -268,7 +275,7 @@ export function ContactMeetingsTab({
           <MeetingFigures
             next={next}
             booked={booked}
-            held={held}
+            held={happened}
             heldMore={listed.hasNextPage}
             asOf={view.as_of}
           />
@@ -283,6 +290,7 @@ export function ContactMeetingsTab({
       <Panel
         title={t("contact.meetings.upcoming")}
         titleAction={
+          upcoming === "ready" &&
           booked !== null && <Badge>{formatNumber(booked, locale)}</Badge>
         }
       >

@@ -213,7 +213,10 @@
 /* One underline that travels to the tab a reader picks, so the eye follows
    the move. Anchored in CSS: no script measures the tabs, and a browser
    without anchor positioning keeps each tab's own underline above. */
-@supports (anchor-name: --a) and (anchor-scope: all) {
+@supports (anchor-name: --a) and
+  (anchor-scope: all) and
+  (position-anchor: --a) and
+  (inset-inline-start: anchor(start)) {
   .recordtabs-strip {
     anchor-scope: --recordtabs-open;
   }

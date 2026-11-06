@@ -17396,7 +17396,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.meetings.noneBooked": "Keine anstehenden Termine.",
   "contact.meetings.noneLogged": "Keine Termine erfasst.",
   "contact.meetings.untitled": "Termin ohne Titel",
-  "contact.meetings.hostedBy": "Mit {name}",
+  "contact.meetings.hostedBy": "Organisiert von {name}",
   "contact.meetings.figures": "Termine in Zahlen",
   "contact.meetings.nextLabel": "Nächster Termin",
   "contact.meetings.bookedLabel": "Geplant",

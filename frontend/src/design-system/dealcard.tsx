@@ -409,7 +409,10 @@ export function DealCard({
    * seat the record around it holds. A board column already says the stage.
    */
   standing?: ReactNode;
-  /** The day a won or lost deal closed, worded; the board shows open deals only. */
+  /**
+   * Given for a won or lost deal (the board shows open ones only): the day it
+   * closed, worded, or null for one closed on no recorded day.
+   */
   closed?: string | null;
 }>) {
   const t = useT();
@@ -476,8 +479,8 @@ export function DealCard({
             formatMoneyCompact,
           )}
         </span>
-        {closed ? (
-          <span className="deal-closes">{closed}</span>
+        {closed !== undefined ? (
+          <span className="deal-closes">{closed ?? t("deal.undated")}</span>
         ) : deal.closeDate ? (
           <DealCloses
             day={deal.closeDate}

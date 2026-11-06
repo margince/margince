@@ -397,8 +397,8 @@
   )
   .record-split-feed
   :is(
-    .panel-body > .surfacestate-empty:only-child,
-    .panel > .surfacestate-empty
+    .panel-body > :is(.surfacestate-empty, .surfacestate-nothing):only-child,
+    .panel > :is(.surfacestate-empty, .surfacestate-nothing)
   ) {
   padding: var(--space-6) var(--space-4);
   border: 1px dashed var(--borderStrong);
@@ -412,6 +412,6 @@
   )
   .record-split-feed
   .panel
-  > .surfacestate-empty {
+  > :is(.surfacestate-empty, .surfacestate-nothing) {
   margin: 0 var(--padPanel) var(--padPanel);
 }

@@ -38,6 +38,30 @@ export const StoredFile: Story = {
   },
 };
 
+// A door that opens a dialog over the page, as the Deal Room's reader does.
+export const OpensDialog: Story = {
+  args: {
+    filename: "MSA-draft.docx",
+    title: "Master agreement, draft",
+    open: () => undefined,
+    meta: "Shared · 84 KB",
+  },
+};
+
+// A web address: the link leaves for its own tab and never previews here.
+export const WebLink: Story = {
+  args: {
+    filename: "Pricing page",
+    title: "Pricing page",
+    anchor: {
+      href: "https://example.com/pricing",
+      target: "_blank",
+      rel: "noopener noreferrer",
+    },
+    meta: "Links sent · 6 Nov 2026",
+  },
+};
+
 export const Superseded: Story = {
   args: {
     ...StoredFile.args,

@@ -29,6 +29,7 @@ export function MeetingFigures({
   next?: NextMeeting;
   // Null while meetings ahead may still sit on a page not read yet.
   booked: number | null;
+  // Meetings held, newest first; one called off is not among them.
   held: readonly Activity[];
   heldMore: boolean;
   asOf: string;
@@ -41,8 +42,14 @@ export function MeetingFigures({
     activityDay(at, precision, locale, zone, (iso, l, z) =>
       formatDayMonthNearYear(iso, l, z, now),
     );
-  const last = held.find((meeting) => meeting.meeting_status !== "canceled");
+  // Held meetings only, newest first; a page not read yet may hold the last.
+  const last = held[0];
   const none = t("contact.meetings.noneYet");
+  const lastValue = last
+    ? day(last.occurred_at, last.occurred_precision)
+    : heldMore
+      ? "…"
+      : none;
   return (
     <StatStrip density="plate" label={t("contact.meetings.figures")}>
       <StatCard
@@ -57,10 +64,7 @@ export function MeetingFigures({
         label={t("contact.meetings.heldLabel")}
         value={`${formatNumber(held.length, locale)}${heldMore ? "+" : ""}`}
       />
-      <StatCard
-        label={t("contact.meetings.lastHeld")}
-        value={last ? day(last.occurred_at, last.occurred_precision) : none}
-      />
+      <StatCard label={t("contact.meetings.lastHeld")} value={lastValue} />
     </StatStrip>
   );
 }

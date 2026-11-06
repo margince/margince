@@ -7,15 +7,17 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
-import { formatDayMonth, formatMoney, formatNumber } from "../../format/format";
+import { formatDayMonth, formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
 import "./contact360.css";
 import { toBoardDeal } from "../../components/boarddeal";
+import { openValueWords } from "../../components/openvaluewords";
 import { AddRelationshipAction } from "../../components/relationships";
 import { closeDayOf } from "../../lib/closeday";
+import { openValue } from "../../lib/openvalue";
 import { dealRoleLabel } from "../../lib/recordlabels";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ContactDealRooms } from "./contactdealrooms";
@@ -118,7 +120,8 @@ function DealTile({ role }: Readonly<{ role: DealRole }>) {
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const deal = useDealSummary(role.deal_id).data;
-  const company = useDealCompany(deal?.company_id).data;
+  const companyRead = useDealCompany(deal?.company_id);
+  const company = companyRead.data;
   const roleWord = dealRoleLabel(role.role, t);
   if (!deal) {
     return <DealRow role={role} roleWord={roleWord} />;
@@ -136,7 +139,16 @@ function DealTile({ role }: Readonly<{ role: DealRole }>) {
   return (
     <li>
       <DealCard
-        deal={toBoardDeal(deal, { marks, unreadable: new Set() })}
+        deal={toBoardDeal(deal, {
+          marks,
+          // A company the read failed on, or refused, keeps its row as one
+          // not read rather than vanishing from the card.
+          unreadable: new Set(
+            deal.company_id && (companyRead.isError || company === null)
+              ? [deal.company_id]
+              : [],
+          ),
+        })}
         href={routeHash({ screen: "deals", id: deal.id })}
         zone={readerZone}
         closed={
@@ -191,54 +203,58 @@ function DealRow({
 }
 
 // The deals in figures: how many are open, what they are worth together, and
-// which closes next. A sum is stated only in one currency; deals in several
-// say how many are open and leave the sum out rather than add unlike money.
+// which closes next. Until every deal is read, and read in full, a figure says
+// it is a floor or says nothing rather than print part of the answer.
 function DealFigures({ roles }: Readonly<{ roles: DealRole[] }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
-  const deals = useQueries({
+  const reads = useQueries({
     queries: roles.map((role) => dealSummaryQuery(role.deal_id)),
-  })
-    .map((query) => query.data)
+  });
+  const settled = reads.every((read) => read.isSuccess);
+  const deals = reads
+    .map((read) => read.data)
     .filter((deal): deal is Deal => deal != null);
+  const complete = settled && deals.length === roles.length;
   const open = deals.filter((deal) => deal.status === "open");
-  const currencies = new Set(open.map((deal) => deal.currency));
-  const [currency] = currencies;
-  const sum =
-    currencies.size === 1 && currency
-      ? open.reduce((total, deal) => total + (deal.amount_minor ?? 0), 0)
-      : null;
   const next = open
     .filter((deal) => deal.expected_close_date)
     // ISO days sort as plain strings, in no locale.
     .sort((a, b) =>
       (a.expected_close_date ?? "") < (b.expected_close_date ?? "") ? -1 : 1,
     )[0];
+  const pending = "…";
   return (
     <StatStrip density="plate" label={t("contact.deals.figures")}>
       <StatCard
         label={t("contact.deals.openCount")}
-        value={formatNumber(open.length, locale)}
-        detail={plural("contact.deals.ofAll", deals.length, {
-          count: formatNumber(deals.length, locale),
+        value={
+          settled
+            ? `${formatNumber(open.length, locale)}${complete ? "" : "+"}`
+            : pending
+        }
+        detail={plural("contact.deals.ofAll", roles.length, {
+          count: formatNumber(roles.length, locale),
         })}
       />
       <StatCard
         label={t("contact.deals.openValue")}
         value={
-          sum !== null && currency
-            ? formatMoney(sum, currency, locale)
-            : t("contact.deals.noValue")
+          settled
+            ? openValueWords(openValue(open, complete), t, locale)
+            : pending
         }
       />
       <StatCard
         label={t("contact.deals.nextClose")}
         value={
-          next?.expected_close_date
-            ? formatDayMonth(next.expected_close_date, locale, readerZone)
-            : t("contact.deals.noClose")
+          !settled
+            ? pending
+            : next?.expected_close_date
+              ? formatDayMonth(next.expected_close_date, locale, readerZone)
+              : t("contact.deals.noClose")
         }
         detail={next?.name}
       />

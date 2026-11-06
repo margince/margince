@@ -88,7 +88,7 @@
 /* The contact's deals as the board's cards, as many to a row as fit. */
 .ct-deal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
   gap: var(--gapCards);
   margin: var(--space-4) 0 0;
   padding: 0;
