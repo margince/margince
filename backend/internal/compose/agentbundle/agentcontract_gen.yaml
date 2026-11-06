@@ -2351,6 +2351,43 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /companies/{id}/share-contacts:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Companies]
+      operationId: shareCompanyContacts
+      security: [{bearerAuth: []}]
+      summary: Share the company's current contacts with a person or team.
+      description: |-
+        Creates ordinary record grants for the current employees this caller can read and share.
+        Reuses the single-record share checks, audit and event writer. Contacts the caller can
+        read but cannot share are skipped. Hidden contacts are absent from both counts.
+        Ended employments and archived contacts are excluded. Needs company, contact and
+        relationship read rights, and contact update rights. A company outside row scope is 404.
+        All grants commit together; an invalid recipient or grant aborts the whole request.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ShareCompanyContactsRequest'}
+      responses:
+        '200':
+          description: Counts of shared and skipped readable contacts.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ShareCompanyContactsResult'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/link-candidates:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -4502,6 +4539,12 @@ paths:
       operationId: replaceDealProducts
       security: [{bearerAuth: []}]
       summary: Set a deal's products by hand, replacing every allocation it had.
+      description: |-
+        A deal in `lines` mode takes its products from its lines and refuses a hand-set list (422 `deal_has_lines`).
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       requestBody:
         required: true
         content:
@@ -4516,12 +4559,146 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/{id}/lines:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealLines
+      security: [{bearerAuth: []}]
+      summary: The products and services a deal sells, and the value they add up to.
       description: |-
-        Set a deal's products by hand, replacing every allocation it had.
+        A deal in `lines` mode takes its value from these lines: `amount_minor` on the deal is the
+        committed net, excluding tax, and `expected_arr_minor` the annual recurring value. A deal in
+        `estimate` or `legacy` mode keeps a value a human typed or an accepted offer set, and has no lines.
+        A reader the deal's amount is masked from reads the lines without any price or figure.
+      responses:
+        '200':
+          description: The deal's lines and their totals.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealCommercial'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    post:
+      tags: [Deals]
+      operationId: addDealLine
+      security: [{bearerAuth: []}]
+      summary: Add a product or a custom item to a deal; the deal's value follows its lines.
+      description: |-
+        The first line puts the deal in `lines` mode. A deal that holds a typed value is refused
+        (422 `estimate_present`) unless the request says `replace_estimate: true`; the old value then
+        stays in the deal's history and is not added to the lines. `expected_revision` is the
+        `commercial_revision` the caller last read; another one answers 409 `version_skew`.
 
         Needs the passport permission Change records.
 
         Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AddDealLineRequest'}
+      responses:
+        '200':
+          description: The deal's lines and totals after the write.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealCommercial'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/{id}/lines/{lineId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: lineId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    patch:
+      tags: [Deals]
+      operationId: updateDealLine
+      security: [{bearerAuth: []}]
+      summary: Change one line of a deal; omit a field to leave it as it is, send null to clear it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateDealLineRequest'}
+      responses:
+        '200':
+          description: The deal's lines and totals after the write.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealCommercial'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: |-
+        Change one line of a deal; omit a field to leave it as it is, send null to clear it.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+    delete:
+      tags: [Deals]
+      operationId: removeDealLine
+      security: [{bearerAuth: []}]
+      summary: Remove one line of a deal. The last line removed leaves the deal unpriced, in `lines` mode.
+      parameters:
+        - name: expected_revision
+          in: query
+          required: true
+          schema: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: The deal's lines and totals after the write.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealCommercial'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: |-
+        Remove one line of a deal. The last line removed leaves the deal unpriced, in `lines` mode.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+  /deals/{id}/lines/estimate:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: useDealEstimate
+      security: [{bearerAuth: []}]
+      summary: Return a deal with no lines to a typed estimate.
+      description: |-
+        Refused while the deal holds a line (422 `deal_has_lines`). The deal then has no value until
+        somebody types one; an old estimate is not brought back.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DealRevisionRequest'}
+      responses:
+        '200':
+          description: The deal's commercial state after the write.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealCommercial'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /analytics/initiatives:
     get:
       tags: [Reports]
@@ -5840,8 +6017,8 @@ paths:
       security: [{bearerAuth: []}]
       summary: Accept a recorded automatic deal change.
       description: |-
-        Records the human's acceptance of a close-date correction (audit id) or
-        automatic stage progression (approval id). It keeps the applied values;
+        Records the human's acceptance of a change Margince made to a deal (its
+        audit id). It keeps the applied values;
         acceptance is an audited review decision, not another application of the change.
         Requires the displayed deal version. A reversed or superseded change is refused.
 
@@ -5860,61 +6037,56 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /deals/{id}/stage-progressions/{approvalId}/revert:
+  /deals/{id}/margince-changes:
     parameters:
       - $ref: '#/components/parameters/Id'
-      - name: approvalId
-        in: path
-        required: true
-        schema: {type: string, format: uuid}
-        description: The stage-progression approval whose move is being taken back.
-    post:
+    get:
       tags: [Deals]
-      operationId: revertStageProgression
+      operationId: listDealMarginceChanges
       security: [{bearerAuth: []}]
-      summary: Take back a stage move the product made by itself.
+      summary: Every change Margince made to this deal, newest first.
       description: |-
-        Undo for an AUTOMATICALLY applied stage move, inside the window the
-        transition's rule allows (`undo_window_hours`, default 72).
-
-        Needs the passport permission Change records.
-
-        Runs at once.
+        The deal's own list of what Margince changed on it: closed as lost, a new close date,
+        amount or probability, and the close-date checks. Accepted and undone changes stay in
+        the list and say so; a change still open carries its `undo`. Dismissing a change on
+        Home does not remove it here. Paged newest first; `next_cursor` continues the list.
+        A deal the caller may not see answers 404.
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: cursor
+          in: query
+          required: false
+          schema: {type: string}
+          description: The `next_cursor` of the page before. A token this server did not mint is refused with 422.
       responses:
         '200':
-          description: The deal, back at the stage it came from.
+          description: One page of the deal's changes.
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/Deal'}
+              schema: {$ref: '#/components/schemas/DealMarginceChanges'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404':
-          description: |-
-            No such deal, no such progression, or the caller may not see it.
-            Also the answer when the approval names a different deal, so a
-            caller cannot learn that a progression exists by probing ids.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-        '409':
-          description: |-
-            The move cannot be taken back: the undo window has closed, the move
-            was made by a contact rather than automatically, or it has already
-            been reversed.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                windowClosed:
-                  value:
-                    type: 'https://errors.gradion.com/undo_window_closed'
-                    title: The undo window has closed
-                    status: 409
-                    code: undo_window_closed
-                    detail: This move can no longer be taken back automatically; move the deal by hand instead.
+        '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /deal-corrections/pending:
+    get:
+      tags: [Deals]
+      operationId: getPendingMarginceChanges
+      security: [{bearerAuth: []}]
+      summary: The changes Margince made to your deals that you have not accepted or undone.
+      description: |-
+        One bundle per deal: every open change Margince made to one of the caller's own deals,
+        newest first inside the bundle. The counts are deals, counted in SQL over every open
+        change, so a deal changed twice counts once and a cut list never shrinks a count.
+        Bundles are ordered by the deal's value in the base currency, the largest first. At
+        most 500 bundles; `truncated` says when more exist.
+      responses:
+        '200':
+          description: The open changes, one bundle per deal.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MarginceChangeSummary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /deals/{id}/stage-evidence:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -5952,56 +6124,6 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/DealWinEvidence'}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-  /stage-automation/report:
-    get:
-      tags: [Pipelines]
-      operationId: getStageAutomationReport
-      summary: What each stage transition has earned.
-      description: |-
-        Every from→to transition in one pipeline, with what happened to the moves
-        the product proposed on it. This is the evidence behind letting a
-        transition move deals by itself: it reports, and decides nothing.
-      parameters:
-        - name: pipeline_id
-          in: query
-          required: true
-          schema: {type: string, format: uuid}
-        - name: window_days
-          in: query
-          required: false
-          description: |-
-            How far back to count, in days. The default matches the launch
-            gate's own window, so what a reader sees is what the gate reads.
-          schema: {type: integer, minimum: 1, maximum: 365, default: 30}
-      responses:
-        '200':
-          description: The pipeline's transitions and their record.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/StageAutomationReport'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-  /stage-automation/policies/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Pipelines]
-      operationId: listTransitionPolicies
-      summary: What each transition in this pipeline is allowed to do.
-      description: |-
-        One rule per from→to transition an admin has decided about. A transition
-        absent from this list has no rule, which is the default state of every
-        transition in the product and means it proposes.
-      responses:
-        '200':
-          description: The pipeline's transition rules.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/TransitionPolicyList'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -6244,7 +6366,7 @@ paths:
           in: query
           schema: {type: boolean}
           description: >-
-            Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+            Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply. It lists for the whole team, whoever the mail is addressed to, within what the caller may read; the caller's own waiting mail is `GET /v1/worklist`.
         - name: reminder_due
           in: query
           schema: {type: boolean}
@@ -6311,6 +6433,36 @@ paths:
               schema: {$ref: '#/components/schemas/Activity'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /activities/deal-filing:
+    get:
+      tags: [Activities]
+      operationId: getActivityDealFiling
+      security: [{bearerAuth: []}]
+      summary: How a call or meeting logged from this record will be filed on a deal.
+      description: |-
+        Uses the same current employer and open-deal resolver as activity creation.
+        One accessible open deal is suggested; several require a deal choice or an explicit
+        choice of none. Hidden deals are never named. Needs activity create and read on the
+        source record. A role that cannot read deals gets no suggestion.
+      parameters:
+        - name: record_type
+          in: query
+          required: true
+          schema: {$ref: '#/components/schemas/ActivityDealFilingRecordType'}
+        - name: record_id
+          in: query
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: The filing decision for the current company and its open deals.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ActivityDealFilingOptions'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /activities/latest-inbound:
     get:
@@ -7500,6 +7652,29 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/SchedulingProfile'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /scheduling/profile/shared:
+    post:
+      tags: [Activities]
+      operationId: markBookingPageShared
+      security: [{bearerAuth: []}]
+      summary: Record that the caller shared their booking link.
+      description: |-
+        The app calls this after the caller copies their booking link. The first call marks the
+        caller's booking page as used; later calls change nothing. Home warns a host about a
+        paused booking page only once the page was used: somebody booked through it, or its host
+        shared its link. Answers 404 when the caller has no booking page.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '204': {description: The booking page is marked as used.}
+        '404': {$ref: '#/components/responses/NotFound'}
   /scheduling/invitations:
     post:
       tags: [Activities]
@@ -14558,6 +14733,31 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /worklist/team/changes:
+    get:
+      tags: [Brief]
+      operationId: getTeamMarginceChanges
+      security: [{bearerAuth: []}]
+      summary: What Margince changed on your team's deals.
+      description: |-
+        Per teammate and kind of change: how many deals Margince changed since `since`, their
+        value in the base currency, and how many of those deals had the change undone. The
+        rows follow, newest first, at most 200; `truncated` says when more exist. The counts
+        are read over every change, so a cut list never shrinks them.
+      parameters:
+        - in: query
+          name: since
+          schema: {type: string, format: date-time}
+          description: Where the window starts. Seven days before now when absent.
+      responses:
+        '200':
+          description: The team's changes.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TeamMarginceChanges'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /worklist/handled:
     get:
       tags: [Brief]
@@ -16449,6 +16649,14 @@ paths:
       operationId: updateDataSubjectRequest
       security: [{bearerAuth: []}]
       summary: Update a data-subject request's status / assignee / resolution.
+      description: |-
+        Fulfilling an erasure runs the erasure and records its own answer, `erased` or
+        `nothing_held`. Text sent as `resolution` with it is refused with 422 before anything
+        is erased.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       requestBody:
         required: true
         content:
@@ -16465,12 +16673,6 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Update a data-subject request's status / assignee / resolution.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
   /confirm-submissions:
     get:
       tags: [Compliance]
@@ -20524,6 +20726,37 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+  /offers/{id}/refresh-from-deal:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Offers]
+      operationId: refreshOfferFromDeal
+      summary: Replace a draft offer's lines with the deal's current lines; the header stays.
+      description: |-
+        Only a draft made from a deal's lines can be refreshed. `expected_revision` is the deal's
+        `commercial_revision` the caller reviewed; another one answers 409 `version_skew`. A sent
+        offer is a document and is never refreshed: regenerate a revision instead.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DealRevisionRequest'}
+      responses:
+        '200':
+          description: The refreshed draft offer.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Offer'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /offers/{id}/send:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -21280,26 +21513,6 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-  /forecast/assurance/enforcement:
-    get:
-      tags: [Reports]
-      operationId: getForecastAssuranceEnforcement
-      security: [{bearerAuth: []}]
-      summary: Whether the qualified forecast applies the viability reviews.
-      description: |-
-        `state` is `not_enrolled` before the input check has ever run, `observing` once it
-        runs and raises reviews and tasks but the forecast figures are unchanged, and
-        `enforcing` once an admin switched enforcement on. Only while `enforcing` does a
-        forecast reading carry `qualified`, and only then does the close-date sweep stop
-        lowering forecast categories.
-      responses:
-        '200':
-          description: The installation's enforcement state.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/ForecastAssuranceEnforcement'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
   /analytics/coverage:
     get:
       tags: [Reports]
@@ -21398,80 +21611,6 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /forecast/assurance/exceptions/{id}/wait:
-    post:
-      tags: [Reports]
-      operationId: waitInputCheck
-      security: [{bearerAuth: []}]
-      summary: Answer a customer review with the day the customer asked you to wait until.
-      description: |-
-        For a `deal_viability` review only. One transaction records the customer's wait on
-        the deal (`wait_until`) and answers the review `remind_later` for the same day. The
-        review stays open and the deal stays out of the qualified forecast while it waits:
-        a wait is not support. The review comes back on that day.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string, format: uuid}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [until]
-              properties:
-                until: {type: string, format: date}
-              additionalProperties: false
-      responses:
-        '204':
-          description: The wait was recorded on the deal and the review.
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-  /forecast/assurance/exceptions/{id}/close-lost:
-    post:
-      tags: [Reports]
-      operationId: closeLostInputCheck
-      security: [{bearerAuth: []}]
-      summary: Answer a customer review by closing its deal as lost.
-      description: |-
-        For a `deal_viability` review only. One transaction moves the deal to its pipeline's
-        lost stage with the reason given, and answers the review `not_relevant` with that
-        reason. A review is never answered `not_relevant` while its deal is still open.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string, format: uuid}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [lost_reason]
-              properties:
-                lost_reason: {type: string, minLength: 1}
-                lost_reason_code: {type: string, description: 'An active key from `/loss-reasons`. Without one the loss is recorded with its note alone, as unmapped.'}
-              additionalProperties: false
-      responses:
-        '204':
-          description: The deal was closed as lost and the review answered.
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /forecast/movement:
     get:
       tags: [Reports]
@@ -21493,7 +21632,7 @@ paths:
           in: query
           schema: {type: string, enum: [open, weighted, evidence, qualified_evidence, qualified_weighted], default: open}
           description: >-
-            Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`.
+            Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The deprecated `qualified_` readings answer as `evidence` and `weighted`.
       responses:
         '200':
           description: The classified difference.
@@ -22979,29 +23118,6 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /deals/{id}/viability:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Deals]
-      operationId: getDealViability
-      security: [{bearerAuth: []}]
-      summary: Whether the customer still supports this deal, and the review behind the answer.
-      description: |-
-        The deal's treatment in the qualified forecast and what it rests on: the input check's
-        last receipt and its reasons, the close date's standing, the stage chance, and the open
-        `deal_viability` review with its task. The review is shown while it is open, even when
-        its task is done: completing the task does not answer the review.
-      responses:
-        '200':
-          description: The deal's viability.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/DealViability'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/commitments:
     get:
       tags: [Deals]
@@ -23797,6 +23913,11 @@ paths:
         Every returned field carries a non-empty source_quote/page_or_section/confidence,
         or is listed in `omitted` with reason "not_stated_in_file" — never a guessed value. Valid for any entity_type; the same parent-visibility gate as
         `downloadAttachment`/`listAttachments` applies.
+      parameters:
+        - name: question
+          in: query
+          required: false
+          schema: {type: string, enum: [deal_facts, chat_capture]}
       responses:
         '200':
           description: The newest reading of this attachment.
@@ -23804,6 +23925,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/AttachmentExtraction'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
@@ -23820,6 +23942,11 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AttachmentReadRequest'}
       responses:
         '202':
           description: The reading is queued; poll it with `getAttachmentExtraction`.
@@ -23850,8 +23977,9 @@ paths:
         `edits`. Only valid on a deal-scoped attachment (`entity_type == "deal"`) — 422
         `unsupported_entity_type` otherwise. `field_keys` is checked against the closed
         allowlist of deal-writable fields before any write lands — a key outside that
-        allowlist 422s the whole request (no partial acceptance). Requires deal UPDATE
-        authority on the target deal (object RBAC + row-scope visibility).
+        allowlist 422s the whole request (no partial acceptance). An `extraction_id` naming
+        a reading not read for deal facts 422s with `not_deal_facts` on `extraction_id`.
+        Requires deal UPDATE authority on the target deal (object RBAC + row-scope visibility).
 
         Needs the passport permission Change records.
 
@@ -23871,7 +23999,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422':
-          description: The attachment is not deal-scoped, or field_keys names a field outside the deal-update allowlist.
+          description: The attachment is not deal-scoped, field_keys names a field outside the deal-update allowlist, or extraction_id names a reading not read for deal facts.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -25309,6 +25437,26 @@ components:
                   errors:
                     - {field: 'emails[0].email', code: invalid_email}
   schemas:
+    AssuranceReviewDeliveries:
+      type: object
+      description: >-
+        The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+      required: [pending, failed, delivered]
+      properties:
+        pending:
+          type: integer
+          minimum: 0
+          description: Reviews whose task is queued or retrying.
+        failed:
+          type: integer
+          minimum: 0
+          description: Reviews whose task could not be delivered after every retry.
+        delivered:
+          type: integer
+          minimum: 0
+          description: >-
+            Reviews that have their task, including a task somebody already completed while the review stays open.
+      additionalProperties: false
     UpdateCompanyProfileFieldRequest:
       type: object
       description: 'A human correction. The canonical store changes; the machine''s proposal and its evidence survive in history.'
@@ -27712,7 +27860,7 @@ components:
       required: [id, kind, state, company_id, company_name, pipeline_id, stage_id, name_hint, confidence, created_at, evidence]
       properties:
         id: {type: string, format: uuid}
-        kind: {type: string, enum: [open_deal, advance_stage, revive], description: 'Only open_deal is suggested today.'}
+        kind: {type: string, enum: [open_deal, advance_stage, revive], description: 'An open suggestion is open_deal. One Margince reopened a lost deal from is revive.'}
         state: {type: string, enum: [open, accepted, dismissed, superseded]}
         company_id: {type: string, format: uuid}
         company_name: {type: string}
@@ -29842,11 +29990,21 @@ components:
           readOnly: true
           description: >-
             Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
+        attachable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether this caller may attach an activity or meeting to this live contact. Computed with the same row-scope and write-share predicate the attach gate uses. A read-only share grants no attach right. Activity creation also needs its own object permission. Absent means no attach right; the server rechecks every write.
         writable:
           type: boolean
           readOnly: true
           description: >-
             Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         social:
           type: object
           additionalProperties: true
@@ -30315,6 +30473,11 @@ components:
           readOnly: true
           description: >-
             Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS company: the row write gate `writable` asks, plus the `company:delete` grant or being the company's owner with `company:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         parent_company_id: {type: [string, 'null'], format: uuid, description: Single-level hierarchy FK; no cycles.}
         assess_against_entity_id:
           type: [string, 'null']
@@ -32085,6 +32248,13 @@ components:
         deal_id: {type: string, format: uuid}
         deal_title: {type: [string, 'null']}
         deal_stage: {type: [string, 'null']}
+        deal_status:
+          type: string
+          enum: [open, won, lost]
+          description: "The deal's status, so a reader can tell an open opportunity from one that has closed."
+        seat_current:
+          type: boolean
+          description: "False once the seat has an end date. A seat that ended stays listed as history, and a follow-up cannot rest on it."
         role:
           type: string
           description: "The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title."
@@ -35680,8 +35850,9 @@ components:
       properties:
         product_id: {type: string, format: uuid}
         product_name: {type: string}
-        source: {type: string, enum: [offer, manual], description: '`offer` is derived from the accepted offer; `manual` was set by hand on the deal.'}
-        amount_minor: {type: [integer, 'null'], format: int64, description: 'The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it.'}
+        source: {type: string, enum: [offer, manual, line], description: '`offer` is derived from the accepted offer; `manual` was set by hand on the deal; `line` is the sum of the deal''s own lines for the product.'}
+        amount_minor: {type: [integer, 'null'], format: int64, description: 'The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it. For a `line` row, the committed net of its lines, null while one of them is incomplete.'}
+        known_amount_minor: {type: [integer, 'null'], format: int64, description: 'For a `line` row, the part of the value already known. Null on other rows.'}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'The classification of the product when the allocation was written.'}
         updated_at: {type: string, format: date-time}
@@ -35707,6 +35878,109 @@ components:
           type: array
           maxItems: 50
           items: {$ref: '#/components/schemas/DealProductInput'}
+      additionalProperties: false
+    DealLine:
+      type: object
+      description: |-
+        One product or custom item a deal sells. A product line copies the product's name, unit, price,
+        tax and billing once, when it is added; a later catalogue edit does not change it. A figure is
+        null while an input it needs is unknown. A reader the deal's amount is masked from gets no
+        number at all: no quantity, price, discount, tax rate, billing period, term or figure.
+      required: [id, position, description, unit, currency, discount_pct, missing, version, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        position: {type: integer}
+        product_id: {type: [string, 'null'], format: uuid, description: Null on a custom item.}
+        catalog_name: {type: [string, 'null'], description: The product's name when the line was added.}
+        sku: {type: [string, 'null']}
+        description: {type: string}
+        unit: {type: string}
+        quantity: {type: [number, 'null'], format: double, description: 'Up to 3 decimal places, greater than 0. Null while unknown.'}
+        unit_price_minor: {type: [integer, 'null'], format: int64, description: 'The selling price in minor units of `currency`. Null while unknown, or masked.'}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        discount_pct: {type: [number, 'null'], format: double, description: 'Null for a masked reader.'}
+        tax_rate: {type: [number, 'null'], format: double, description: 'The typed rate, or the rate the tax rate sheet holds today for `tax_category`. Null when the sheet has none.'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null]}
+        billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Null means nobody has classified the line yet, which leaves the deal''s value incomplete.'}
+        billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null]}
+        interval_count: {type: [integer, 'null'], minimum: 1, description: 'How many billing periods are committed. Recurring lines only.'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null]}
+        line_net_minor: {type: [integer, 'null'], format: int64, readOnly: true, description: 'Net per billing period after the discount.'}
+        committed_net_minor: {type: [integer, 'null'], format: int64, readOnly: true, description: 'Net times the committed periods; one period for a one-time line.'}
+        arr_minor: {type: [integer, 'null'], format: int64, readOnly: true}
+        missing: {type: array, items: {type: string, enum: [quantity, unit_price, billing_model, interval_count, tax_rate]}, description: What the line still needs before its figures are complete.}
+        version: {$ref: '#/components/schemas/RowVersion'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+      additionalProperties: false
+    DealCommercial:
+      type: object
+      description: |-
+        A deal's commercial state. In `lines` mode the deal's value is `committed_net_minor`: net,
+        excluding tax, with each recurring line counted for its committed periods. It is null until
+        every line is complete; `known_committed_net_minor` is the part already known.
+      required: [deal_id, mode, commercial_revision, lines, complete, missing, money_withheld, writable]
+      properties:
+        deal_id: {type: string, format: uuid}
+        mode: {type: string, enum: [estimate, lines, legacy], description: '`estimate` is a value a human typed, `lines` the sum of the lines, `legacy` a deal from before deals had lines.'}
+        amount_basis: {type: [string, 'null'], enum: [lines_net_committed, offer_gross, estimate, unknown, null], description: 'What the deal''s amount means. Null while the deal has no amount.'}
+        commercial_revision: {type: integer, format: int64, description: Counts the accepted changes to the lines. Send it back as `expected_revision`.}
+        currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
+        lines: {type: array, items: {$ref: '#/components/schemas/DealLine'}}
+        committed_net_minor: {type: [integer, 'null'], format: int64}
+        known_committed_net_minor: {type: [integer, 'null'], format: int64}
+        arr_minor: {type: [integer, 'null'], format: int64}
+        tax_minor: {type: [integer, 'null'], format: int64, description: 'Tax on the committed net, at today''s rates. An offer takes the rate of its send day.'}
+        gross_minor: {type: [integer, 'null'], format: int64}
+        complete: {type: boolean}
+        missing: {type: array, items: {type: string, enum: [lines, quantity, unit_price, billing_model, interval_count, tax_rate]}}
+        money_withheld: {type: boolean, description: 'The deal''s amount is masked from this reader, so every price and figure is null.'}
+        writable: {type: boolean, description: Whether this reader may change the lines now.}
+      additionalProperties: false
+    AddDealLineRequest:
+      type: object
+      required: [expected_revision]
+      description: |-
+        With `product_id` the line copies the product's name, unit, price, tax category and billing;
+        anything sent here is used instead. A product priced in another currency needs an explicit
+        `unit_price_minor` (422 `product_currency_mismatch`). Without `product_id`, `description` is required.
+      properties:
+        expected_revision: {type: integer, format: int64, minimum: 0}
+        replace_estimate: {type: boolean, description: 'Replace the value a human typed with the lines. Required while the deal holds one.'}
+        currency: {type: string, pattern: '^[A-Z]{3}$', description: 'The currency of the lines. Defaults to the deal''s; required on a deal with none. Every line of a deal shares one.'}
+        product_id: {type: [string, 'null'], format: uuid}
+        description: {type: [string, 'null']}
+        unit: {type: [string, 'null']}
+        quantity: {type: [number, 'null'], format: double, description: '> 0, up to 3 decimal places. Omit while unknown.'}
+        unit_price_minor: {type: [integer, 'null'], format: int64, minimum: 0}
+        discount_pct: {type: [number, 'null'], format: double, minimum: 0, maximum: 100}
+        tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: 'A typed rate. Refused together with `tax_category`.'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null]}
+        billing_model: {type: [string, 'null'], enum: [one_time, recurring, null]}
+        billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null]}
+        interval_count: {type: [integer, 'null'], minimum: 1}
+      additionalProperties: false
+    UpdateDealLineRequest:
+      type: object
+      required: [expected_revision]
+      properties:
+        expected_revision: {type: integer, format: int64, minimum: 0}
+        description: {type: string}
+        unit: {type: string}
+        quantity: {type: [number, 'null'], format: double}
+        unit_price_minor: {type: [integer, 'null'], format: int64, minimum: 0}
+        discount_pct: {type: number, format: double, minimum: 0, maximum: 100}
+        tax_rate: {type: number, format: double, minimum: 0, description: A typed rate. It drops the line's tax category.}
+        tax_category: {type: string, enum: [standard, reduced, exempt], description: Take the rate from the tax rate sheet. It drops a typed rate.}
+        billing_model: {type: [string, 'null'], enum: [one_time, recurring, null]}
+        billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null]}
+        interval_count: {type: [integer, 'null'], minimum: 1}
+      additionalProperties: false
+    DealRevisionRequest:
+      type: object
+      required: [expected_revision]
+      properties:
+        expected_revision: {type: integer, format: int64, minimum: 0, description: The deal's `commercial_revision` the caller last read.}
       additionalProperties: false
     Relationship:
       type: object
@@ -35900,6 +36174,16 @@ components:
           readOnly: true
           description: >-
             Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+        win_probability_set_by_user_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
+        win_probability_set_by_name:
+          type: [string, 'null']
+          readOnly: true
+          description: The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
         stage_win_probability:
           type: integer
           minimum: 0
@@ -36793,7 +37077,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task]
+      required: [lead, contact, company, deal, project, task, webhook]
       properties:
         lead: {type: integer, minimum: 0}
         contact: {type: integer, minimum: 0}
@@ -36801,6 +37085,7 @@ components:
         deal: {type: integer, minimum: 0}
         project: {type: integer, minimum: 0}
         task: {type: integer, minimum: 0, description: Open tasks assigned to the member.}
+        webhook: {type: integer, minimum: 0, description: 'Live webhook subscriptions the member owns. Each delivers only while its owner is active.'}
     UserHandover:
       type: object
       required: [owned]
@@ -37225,176 +37510,6 @@ components:
         kind: {$ref: '#/components/schemas/StageCriterionKind'}
         required: {type: boolean}
         hint: {type: [string, 'null']}
-    TransitionPolicyList:
-      type: object
-      required: [data, automation_enabled]
-      properties:
-        data:
-          type: array
-          items: {$ref: '#/components/schemas/TransitionPolicy'}
-        automation_enabled:
-          type: boolean
-          description: |-
-            Whether this installation permits stage automation at all
-            (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
-            off every transition is forced to `propose` regardless of its own rule.
-    TransitionPolicy:
-      type: object
-      required: [id, pipeline_id, from_stage_id, to_stage_id, mode, clean_acceptance_threshold, correction_reversal_threshold, min_reviewed, min_observation_days, window_days, undo_window_hours, version]
-      properties:
-        id: {type: string, format: uuid}
-        pipeline_id: {type: string, format: uuid}
-        from_stage_id: {type: string, format: uuid}
-        to_stage_id: {type: string, format: uuid}
-        mode:
-          type: string
-          enum: [propose, auto]
-          description: |-
-            What the admin has asked for. `auto` is a request, not a state:
-            moves still go to a contact until the thresholds below hold in the
-            transaction that would apply them.
-        clean_acceptance_threshold:
-          type: number
-          format: double
-          description: |-
-            The share of reviewed proposals a contact must have accepted
-            UNCHANGED. An edit is agreement with a correction, which is a
-            weaker claim about the proposal than agreement without one.
-        correction_reversal_threshold:
-          type: number
-          format: double
-          description: |-
-            The ceiling on moves that were undone or whose evidence was
-            corrected. The one threshold that is a maximum rather than a
-            minimum, and the one the product suspends a rule for crossing.
-        min_reviewed:
-          type: integer
-          description: |-
-            How many proposals a contact must have answered before the rates
-            mean anything. It also bounds suspension: the volume at which a
-            record is worth trusting and the volume at which it is worth
-            distrusting are one judgement.
-        min_observation_days:
-          type: integer
-          description: |-
-            The span the record must cover. A fine acceptance rate earned
-            entirely in one afternoon has not been observed.
-        window_days:
-          type: integer
-          description: How far back the rates are counted.
-        undo_window_hours:
-          type: integer
-          description: |-
-            How long a contact has to take an automatic move back. Frozen onto
-            each move as it is applied, so editing this governs the next move
-            and not the last one.
-        enabled_by:
-          type: string
-          format: uuid
-          description: |-
-            Who FIRST trusted this transition with automatic moves. Not
-            overwritten by later threshold edits — who first trusted it is a
-            different fact from who last adjusted it, and the first is the one
-            an auditor asks for.
-        enabled_at: {type: string, format: date-time}
-        suspended_at:
-          type: string
-          format: date-time
-          description: |-
-            When the PRODUCT turned this rule off. Absent on a rule that is
-            running. It is not an admin's act and an ordinary save does not
-            clear it.
-        suspended_reason:
-          type: string
-          description: Why the product stopped it, in words an operator can act on.
-        version:
-          type: integer
-          format: int64
-    StageAutomationReport:
-      type: object
-      required: [data, window_days]
-      properties:
-        data:
-          type: array
-          items: {$ref: '#/components/schemas/StageTransitionRecord'}
-        window_days:
-          type: integer
-          description: The window the counts were taken over.
-    StageTransitionRecord:
-      type: object
-      required: [pipeline_id, from_stage_id, to_stage_id, from_stage_name, to_stage_name, reviewed, proposed, expired, superseded, accepted_clean, accepted_edited, rejected, auto_applied, unsafe, observation_days, clean_acceptance_rate, edit_rate, rejection_rate, unsafe_rate, evidence_kinds]
-      properties:
-        pipeline_id: {type: string, format: uuid}
-        from_stage_id: {type: string, format: uuid}
-        to_stage_id: {type: string, format: uuid}
-        from_stage_name: {type: string}
-        to_stage_name: {type: string}
-        reviewed:
-          type: integer
-          description: |-
-            Proposals a human answered. The denominator of every rate here, and
-            zero means "nobody has answered one yet" rather than "the rates are
-            bad" — read it before reading any rate below.
-        proposed:
-          type: integer
-          description: Cards still standing, unanswered.
-        expired:
-          type: integer
-          description: |-
-            Cards whose window closed with nobody answering. A refusal by
-            NOBODY, which is why it is neither a rejection nor reviewed.
-        superseded:
-          type: integer
-          description: Cards a fresher reading replaced before anyone answered.
-        accepted_clean:
-          type: integer
-          description: Approved with nothing changed.
-        accepted_edited:
-          type: integer
-          description: |-
-            Approved only after the human changed it. Not a clean acceptance:
-            the question is whether the proposal is right AS IT STANDS.
-        rejected: {type: integer}
-        auto_applied:
-          type: integer
-          description: |-
-            Applied without anybody being asked. Reported apart so a reader can
-            see how much of a transition's record the autopilot wrote about
-            itself.
-        unsafe:
-          type: integer
-          description: |-
-            Reviewed moves that were reversed OR whose evidence a human
-            corrected. One outcome counts once even when both are true.
-        observation_days:
-          type: integer
-          description: |-
-            Whole days from the first answered proposal to the last, rounded
-            down.
-        clean_acceptance_rate: {type: number, format: double, minimum: 0, maximum: 1}
-        edit_rate: {type: number, format: double, minimum: 0, maximum: 1}
-        rejection_rate: {type: number, format: double, minimum: 0, maximum: 1}
-        unsafe_rate:
-          type: number
-          format: double
-          minimum: 0
-          maximum: 1
-          description: The safety number, held to a ceiling rather than a floor.
-        evidence_kinds:
-          type: array
-          description: |-
-            The same moves cut by the criterion kinds they rested on, so an
-            installation can see WHICH evidence it accepts rather than only that
-            it accepts most things.
-          items: {$ref: '#/components/schemas/StageTransitionEvidenceRecord'}
-    StageTransitionEvidenceRecord:
-      type: object
-      required: [kind, reviewed, accepted_clean, unsafe]
-      properties:
-        kind: {type: string}
-        reviewed: {type: integer}
-        accepted_clean: {type: integer}
-        unsafe: {type: integer}
     StageExitCriterionListResponse:
       type: object
       required: [data, page]
@@ -38145,10 +38260,44 @@ components:
               entity_id: {type: string, format: uuid}
         source: {type: string}
       additionalProperties: false
+    ActivityDealFilingRecordType:
+      type: string
+      enum: [contact, company]
+    ActivityDealFiling:
+      type: object
+      required: [record_type, record_id]
+      properties:
+        record_type: {$ref: '#/components/schemas/ActivityDealFilingRecordType'}
+        record_id: {type: string, format: uuid}
+        deal_id:
+          type: string
+          format: uuid
+          description: Explicitly selected deal; omitted for automatic filing.
+        skip:
+          type: boolean
+          default: false
+          description: True explicitly chooses no deal. Otherwise the one-open-deal rule applies unless links already name a deal.
+    ActivityDealFilingOptions:
+      type: object
+      required: [choice_required]
+      properties:
+        company_id: {type: string, format: uuid}
+        suggested_deal_id: {type: string, format: uuid}
+        choice_required:
+          type: boolean
+          description: Choose a deal or set deal_filing.skip. Required for several open deals, and whenever deal access is limited.
     CreateActivityRequest:
       type: object
       required: [kind, source]
       properties:
+        deal_filing:
+          $ref: '#/components/schemas/ActivityDealFiling'
+          description: |-
+            Call and meeting only. The contact or company the logging form started on.
+            One open deal of its current company is added automatically. With this field,
+            several require an explicit deal link or skip=true. Without this field,
+            contact/company links supply the context when they identify one company;
+            several open deals remain unfiled. Existing deal links stay.
         recommendation: {$ref: '#/components/schemas/RecommendationReceipt'}
         source_activity_id:
           type: string
@@ -38440,6 +38589,9 @@ components:
     UpdateActivityRequest:
       type: object
       properties:
+        deal_filing:
+          $ref: '#/components/schemas/ActivityDealFiling'
+          description: Optional filing choice when recording a call or meeting outcome. Existing deal links remain.
         subject: {type: [string, 'null']}
         body: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time}
@@ -38678,9 +38830,15 @@ components:
         honestly omitted. A reading that is still running carries empty lists; that is not
         the same answer as a finished reading that grounded nothing, which is why `status`
         is required rather than inferable from the lists.
-      required: [id, status, stalled, fields, omitted, created_at]
+      required: [id, question, status, stalled, fields, omitted, created_at]
       properties:
         id: {type: string, format: uuid, description: This reading's own id.}
+        question:
+          type: string
+          enum: [deal_facts, chat_capture]
+          description: |-
+            What the file was read for. `deal_facts` grounds the four deal fields;
+            `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
         status:
           type: string
           enum: [queued, running, done, failed]
@@ -38703,6 +38861,21 @@ components:
         omitted: {type: array, items: {$ref: '#/components/schemas/OmittedExtractionField'}}
         created_at: {type: string, format: date-time}
         finished_at: {type: [string, 'null'], format: date-time}
+        other_counterparty:
+          type: [string, 'null']
+          description: |-
+            For a finished `chat_capture` reading of a screenshot on a contact: the name or
+            number the chat header shows when neither agrees with that contact. Null when
+            they agree, when the header shows neither, and for every other reading.
+            `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
+    AttachmentReadRequest:
+      type: object
+      properties:
+        question:
+          type: string
+          enum: [deal_facts, chat_capture]
+          default: deal_facts
+          description: What to read the file for. `chat_capture` is accepted only on an image.
     AttachmentReadStarted:
       type: object
       description: The reading `readAttachmentForFields` started, or the one already in flight it joined.
@@ -38726,7 +38899,7 @@ components:
             inferable: resolving "the newest reading" instead would let a reading started
             by someone else between the display and the click decide what gets written,
             which is precisely the divergence storing the fields exists to prevent. A reading belonging to another attachment, or one that never
-            existed, is a 404.
+            existed, is a 404. A reading not read for deal facts is a 422 `not_deal_facts`.
         field_keys:
           type: array
           items: {type: string}
@@ -39129,7 +39302,7 @@ components:
           description: The timeline activity this produced, once released.
         held_reason:
           type: [string, 'null']
-          enum: [consent_withdrawn, sender_inactive, passport_revoked, missed_window, timer_exhausted, send_refused, followup_settled, meeting_canceled, null]
+          enum: [consent_withdrawn, sender_inactive, passport_revoked, missed_window, timer_exhausted, send_refused, followup_settled, meeting_canceled, recipient_stopped, recipient_replied, null]
           description: |-
             Why a human has to look at it. `consent_withdrawn` — a recipient withdrew consent
             after it was scheduled. `sender_inactive` — the scheduler lost their seat or mailbox.
@@ -39139,6 +39312,8 @@ components:
             `passport_revoked` — the agent credential was revoked.
             `followup_settled` — the recorded request was answered or completed after scheduling.
             `meeting_canceled` — the meeting named as follow-up evidence was canceled.
+            `recipient_stopped` — a recipient stopped marketing after a marketing message was scheduled.
+            `recipient_replied` — new mail came in from a recipient after a deal follow-up or quote was scheduled: on its own thread for a scheduled reply, from any thread for a new message.
         review_id:
           type: [string, 'null']
           format: uuid
@@ -39384,6 +39559,14 @@ components:
             The reason for contact the sender claimed. An unproven claim never becomes
             `resolved_category`, so a composer reads this one to name the gap the sender can
             close: a refused `active_deal_followup` claim asks for the deal, not for consent.
+        supported_alternatives:
+          type: array
+          items: {$ref: '#/components/schemas/CommunicationContext'}
+          description: |-
+            When the claimed reason does not allow the message, the other reasons the record would
+            carry for this recipient, each one checked the way a send under it would be. Empty or
+            absent when there are none, and never offered for a marketing claim. Nothing is switched
+            for the sender: picking one asks the preview again.
         new_contact:
           type: boolean
           description: |-
@@ -42550,7 +42733,7 @@ components:
           format: double
         basis:
           type: string
-          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
+          enum: [likely, weighted, manager_call]
           description: The forward measure the landing was projected with.
         landing:
           type: number
@@ -42570,8 +42753,6 @@ components:
         coverage:
           type: number
           format: double
-        qualified:
-          $ref: '#/components/schemas/ReportingQualifiedCoverage'
         operands:
           $ref: '#/components/schemas/ReportingComparisonOperands'
     ReportingForecastBasis:
@@ -42629,27 +42810,6 @@ components:
           minimum: 0
           description: >-
             The priced deals the totals count: `priced_count` without the `fx_missing_count` ones. Absent on editions captured before the field existed; a reader then states no included count rather than working one out.
-    ReportingQualifiedCoverage:
-      type: object
-      additionalProperties: false
-      description: |-
-        Coverage over the deals the qualified forecast keeps, beside the
-        coverage over all open deals. Present when the comparison carries
-        figures.
-      required: [status]
-      properties:
-        status:
-          type: string
-          enum: [compared, target_reached, not_enforced]
-          description: |-
-            `not_enforced` means the qualified forecast is switched off, so no
-            open deal is judged and no qualified figure exists.
-        open_pipeline:
-          type: number
-          format: double
-        coverage:
-          type: number
-          format: double
     ReportingComparisonOperands:
       type: object
       additionalProperties: false
@@ -42661,8 +42821,6 @@ components:
         landing:
           $ref: '#/components/schemas/ReportingEvidenceRef'
         open_pipeline:
-          $ref: '#/components/schemas/ReportingEvidenceRef'
-        qualified_open_pipeline:
           $ref: '#/components/schemas/ReportingEvidenceRef'
     ReportingEvaluation:
       type: object
@@ -43858,12 +44016,12 @@ components:
           items: {$ref: '#/components/schemas/ForecastSnapshotRef'}
           description: >-
             The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
-        qualified: {$ref: '#/components/schemas/ForecastQualifiedReadings'}
         qualification_mode:
           type: string
           enum: ['off', enforcing]
+          deprecated: true
           description: >-
-            Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
+            Always `off`, because the qualified forecast is retired. The field stays for one release ahead of its removal.
         self_correcting:
           type: boolean
           description: >-
@@ -44015,126 +44173,6 @@ components:
           description: The estimated share of those deals that end won. Absent when none closed.
         chance_in_use: {type: integer, minimum: 0, maximum: 100}
       additionalProperties: false
-    DealViability:
-      type: object
-      additionalProperties: false
-      required: [deal_id, qualification_mode, qualification, stage_probability, close_date_provisional, close_date_overdue]
-      properties:
-        deal_id: {type: string, format: uuid}
-        qualification_mode:
-          type: string
-          enum: ['off', enforcing]
-          description: Whether the installation's qualified forecast applies `qualification`.
-        qualification:
-          type: string
-          enum: [eligible, excluded, unsupported, unknown, closed]
-          description: >-
-            The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
-        assessed_at:
-          type: [string, 'null']
-          format: date-time
-          description: When the input check last assessed the deal; null when it never did.
-        disposition:
-          type: string
-          enum: [none, open_review, override, unsupported]
-          description: The review standing the qualification rests on.
-        complete:
-          type: boolean
-          description: Whether the deal was judged on its current evidence under the current policy.
-        policy_version: {type: string}
-        receipt:
-          $ref: '#/components/schemas/DealViabilityReceipt'
-        expected_close_date: {type: [string, 'null'], format: date}
-        close_date_provisional: {type: boolean}
-        close_date_overdue:
-          type: boolean
-          description: True when the expected close date is before today in the installation's zone.
-        stage_probability:
-          type: integer
-          minimum: 0
-          maximum: 100
-          description: The baseline chance, the deal's stage probability.
-        review:
-          $ref: '#/components/schemas/DealViabilityReview'
-    DealViabilityReceipt:
-      type: object
-      additionalProperties: false
-      description: The input check's last answer about the deal. Absent when it never assessed it.
-      required: [outcome, reasons, valid_until, policy_version, current]
-      properties:
-        outcome: {type: string, description: 'The check''s outcome, such as `eligible` or `unsupported`.'}
-        policy_version: {type: string, description: The viability policy the check applied.}
-        current:
-          type: boolean
-          description: >-
-            Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`.
-        reasons:
-          type: array
-          items: {type: string}
-          description: The reason codes the check recorded.
-        valid_until: {type: string, format: date-time}
-    DealViabilityReview:
-      type: object
-      additionalProperties: false
-      description: >-
-        The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
-      required: [id, opened_at, episode]
-      properties:
-        id: {type: string, format: uuid}
-        opened_at: {type: string, format: date-time}
-        episode: {type: integer, minimum: 1}
-        delivery_state:
-          type: [string, 'null']
-          enum: [pending, failed, delivered, null]
-          description: How far handing the review to a task got; null before a pass queued it.
-        task:
-          $ref: '#/components/schemas/DealViabilityTask'
-    DealViabilityTask:
-      type: object
-      additionalProperties: false
-      description: The task the review was delivered as. Absent until delivered, or when the reader may not see it.
-      required: [id, done]
-      properties:
-        id: {type: string, format: uuid}
-        done: {type: boolean}
-    ForecastQualifiedReadings:
-      type: object
-      description: >-
-        The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
-      required:
-        - evidence_minor
-        - weighted_minor
-        - excluded_minor
-        - unknown_minor
-        - excluded_count
-        - unknown_count
-        - unsupported_minor
-        - unsupported_count
-      properties:
-        evidence_minor: {type: integer, format: int64}
-        weighted_minor: {type: integer, format: int64}
-        excluded_minor:
-          type: integer
-          format: int64
-          description: >-
-            Open baseline money on every deal left out: under an open viability review, or unsupported.
-        unsupported_minor:
-          type: integer
-          format: int64
-          description: >-
-            The part of `excluded_minor` on deals left out with no review: a close date that is provisional or overdue, or no next step. A deal with no close date falls in no period, so no reading counts it.
-        unsupported_count: {type: integer}
-        unknown_minor:
-          type: integer
-          format: int64
-          description: Open baseline money on deals the check could not judge on current evidence.
-        excluded_count: {type: integer}
-        unknown_count: {type: integer}
-        amounts_partial:
-          type: boolean
-          description: >-
-            True when an excluded or unknown deal had no amount the reader can see: unpriced, no exchange rate, or masked. The two subtotals are then lower than the money those deals carry, and are not the full figure.
-      additionalProperties: false
     ForecastSnapshotRef:
       type: object
       description: One frozen forecast, by the handle a movement read takes.
@@ -44159,9 +44197,9 @@ components:
           description: The projection itself, in the installation's base currency.
         measure:
           type: string
-          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
+          enum: [likely, weighted, manager_call, qualified_likely, qualified_weighted]
           description: >-
-            Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
+            Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name. `qualified_likely` and `qualified_weighted` appear only on a shared snapshot frozen under the retired qualified forecast. Their forward half counts only the open deals that snapshot froze as still supported by their customer.
         won_minor:
           type: integer
           format: int64
@@ -44178,9 +44216,9 @@ components:
             Beside a manager call only: what the deal records alone project, won plus commit evidence. The call replaces this figure, so a reader comparing the call with the records needs both. Absent for every other measure, whose amount_minor already is the records' projection.
         caveat:
           type: string
-          enum: [call_absent, call_below_actual, qualified_unavailable]
+          enum: [call_absent, call_below_actual]
           description: >-
-            Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
+            Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
       additionalProperties: false
     ForecastSufficiency:
       type: object
@@ -44410,34 +44448,6 @@ components:
       properties:
         status: {type: string, enum: [enqueued]}
       additionalProperties: false
-    ForecastAssuranceEnforcement:
-      type: object
-      description: Whether the qualified forecast applies the viability reviews.
-      required: [state]
-      properties:
-        locks: {$ref: '#/components/schemas/SettingLocks', readOnly: true}
-        state:
-          type: string
-          enum: [not_enrolled, observing, enforcing]
-        preview:
-          $ref: '#/components/schemas/ForecastEnforcementPreview'
-      additionalProperties: false
-    ForecastEnforcementPreview:
-      type: object
-      description: >-
-        What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since.
-      required: [left_out_count, unknown_count, digest]
-      properties:
-        left_out_count:
-          type: integer
-          description: Open deals the qualified forecast would leave out, under review or unsupported.
-        unknown_count:
-          type: integer
-          description: Open deals the last check could not judge on current evidence.
-        digest:
-          type: string
-          description: Names the policy version and every open deal's treatment this preview counted.
-      additionalProperties: false
     ForecastAssurance:
       type: object
       description: >-
@@ -44465,27 +44475,9 @@ components:
           description: Every source the run tried, and how far it reached into each.
           items: {$ref: '#/components/schemas/ForecastAssuranceSource'}
         freshness: {$ref: '#/components/schemas/AssuranceFreshness'}
-        review_deliveries: {$ref: '#/components/schemas/AssuranceReviewDeliveries'}
-      additionalProperties: false
-    AssuranceReviewDeliveries:
-      type: object
-      description: >-
-        The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
-      required: [pending, failed, delivered]
-      properties:
-        pending:
-          type: integer
-          minimum: 0
-          description: Reviews whose task is queued or retrying.
-        failed:
-          type: integer
-          minimum: 0
-          description: Reviews whose task could not be delivered after every retry.
-        delivered:
-          type: integer
-          minimum: 0
-          description: >-
-            Reviews that have their task, including a task somebody already completed while the review stays open.
+        review_deliveries:
+          $ref: '#/components/schemas/AssuranceReviewDeliveries'
+          deprecated: true
       additionalProperties: false
     AssuranceFreshness:
       type: object
@@ -44539,7 +44531,7 @@ components:
         The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
       required: [reading, base_currency, opening_minor, closing_minor, buckets, deals]
       properties:
-        reading: {type: string, enum: [open, weighted, evidence, qualified_evidence, qualified_weighted]}
+        reading: {type: string, enum: [open, weighted, evidence]}
         base_currency:
           type: string
           pattern: '^[A-Z]{3}$'
@@ -44563,9 +44555,9 @@ components:
       properties:
         name:
           type: string
-          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, excluded, reinstated, not_checked, won, lost, reopened_or_archived, fx, definition, model]
+          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, definition, model]
           description: >-
-            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
+            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. The set can grow, so a client shows an unknown bucket by its name.
         amount_minor: {type: integer, format: int64}
         deal_count: {type: integer}
       additionalProperties: false
@@ -44590,10 +44582,10 @@ components:
         causes:
           type: array
           description: >-
-            Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading.
+            Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row.
           items:
             type: string
-            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, qualification]
+            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx]
       additionalProperties: false
     NewForecastCall:
       type: object
@@ -46835,6 +46827,7 @@ components:
         - cold_start
         - corpus_ask
         - deal_health
+        - deal_verdict
         - document_extract
         - draft_reply
         - enrich
@@ -46862,7 +46855,7 @@ components:
         - weekly_review
     AiActivityKind:
       type: string
-      enum: [morning_brief, overnight_at_risk_sweep, document_extract, site_read, brief_ranking, capture_classify, capture_confidentiality_verdict, capture_counterparty_verdict, cert_judge, cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search, offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract, site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build, corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict, request_settlement, account_scan, tag_suggest, report_setup, report_interpret, reader_rendering]
+      enum: [morning_brief, overnight_at_risk_sweep, document_extract, site_read, brief_ranking, capture_classify, capture_confidentiality_verdict, capture_counterparty_verdict, cert_judge, cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search, offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract, site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build, corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict, request_settlement, account_scan, tag_suggest, report_setup, report_interpret, reader_rendering, deal_verdict]
       description: |-
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -48828,6 +48821,21 @@ components:
         access: {type: string, enum: [read, write]}
         reason: {type: [string, 'null']}
         expires_at: {type: [string, 'null'], format: date-time}
+    ShareCompanyContactsRequest:
+      type: object
+      required: [subject_type, subject_id, access]
+      properties:
+        subject_type: {type: string, enum: [user, team]}
+        subject_id: {type: string, format: uuid}
+        access: {type: string, enum: [read, write]}
+        reason: {type: [string, 'null']}
+        expires_at: {type: [string, 'null'], format: date-time}
+    ShareCompanyContactsResult:
+      type: object
+      required: [shared, skipped]
+      properties:
+        shared: {type: integer, minimum: 0}
+        skipped: {type: integer, minimum: 0}
     UserListResponse:
       type: object
       required: [data, page]
@@ -49357,7 +49365,9 @@ components:
         assignee_id: {type: [string, 'null'], format: uuid, description: 'null hands the request back to the unassigned pool.'}
         resolution:
           type: [string, 'null']
-          description: 'A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.'
+          description: |-
+            A closed (fulfilled or rejected) request keeps its answer: null, or text other than
+            the stored answer, is refused with 422. An open request takes any draft.
         identity_check:
           type: string
           enum: [confirm_link, address_on_file, id_document, in_person, not_verified]
@@ -49494,6 +49504,12 @@ components:
         target_ref: {type: [string, 'null'], description: 'Record the run acted on (type + id or label).'}
         action_result: {type: [string, 'null'], description: 'What happened (e.g. "created task", "queued to approval inbox").'}
         reason: {type: [string, 'null'], description: 'For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.'}
+        reason_code:
+          type: [string, 'null']
+          description: |-
+            For failed/blocked: why the run stopped, as a code a client puts into the reader's language:
+            target_missing, not_permitted, conflict, record_changed, no_consent, budget_exhausted,
+            not_completed or blocked. A code a client does not know reads as not_completed.
         audit_id: {type: [string, 'null']}
     SettleClaimRequest:
       type: object
@@ -50175,11 +50191,12 @@ components:
         queued:
           type: boolean
           description: |-
-            Whether a mail relay accepted the invitation for sending. False when the
-            installation has no outbound mail configured, or the relay refused it — the
-            participant and the credential are recorded either way, and the caller is
-            expected to pass the link on themselves rather than being told the
-            invitation failed.
+            Whether the mail relay took the invitation. The answer waits for the relay
+            for at most 10 seconds. False when the installation has no outbound mail
+            configured, when the relay refused the mail, or when it did not answer in
+            time; the send stops then too. The participant and the credential are
+            recorded either way, and the caller is expected to pass the link on
+            themselves rather than being told the invitation failed.
       additionalProperties: false
     DealRoomBrief:
       type: object
@@ -50428,6 +50445,7 @@ components:
         line_tax_minor: {type: integer, format: int64, readOnly: true, description: 'round — server-computed.'}
         line_total_minor: {type: integer, format: int64, readOnly: true, description: line_net + line_tax — server-computed.}
         evidence: {type: [object, 'null'], additionalProperties: true, description: '{snippet, source_id} when AI-drafted; an AI-drafted line without evidence is omitted.'}
+        source_deal_line_id: {type: [string, 'null'], format: uuid, readOnly: true, description: The deal line this line was copied from.}
         price_grounded: {type: boolean, readOnly: true, default: true, description: 'false only for an AI-proposed line whose price could not be grounded in conversation evidence or the rate card (unit_price_minor is 0 in that case: a sentinel, never a guessed value); true for every human-entered or grounded line.'}
         version: {$ref: '#/components/schemas/RowVersion'}
         created_at: {type: string, format: date-time}
@@ -50475,9 +50493,9 @@ components:
         valid_until: {type: [string, 'null'], format: date}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
-        net_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line nets; derived, never client-set.'}
-        tax_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line taxes; derived, never client-set.'}
-        gross_minor: {type: integer, format: int64, readOnly: true, description: 'net + tax; derived, never client-set.'}
+        net_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line nets; derived, never client-set. Zero when money_withheld.'}
+        tax_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line taxes; derived, never client-set. Zero when money_withheld.'}
+        gross_minor: {type: integer, format: int64, readOnly: true, description: 'net + tax; derived, never client-set. Zero when money_withheld.'}
         arr_minor: {type: integer, format: int64, readOnly: true, description: 'The annualized NET value of this offer''s recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.'}
         net_tcv_minor: {type: integer, format: int64, readOnly: true, description: 'The total the buyer commits to: one-off lines in full, plus each recurring line''s per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.'}
         fx_rate_to_base: {type: [string, 'null'], readOnly: true, description: 'Native→base, frozen at send. Decimal-as-string to avoid float rounding.'}
@@ -50505,6 +50523,8 @@ components:
           type: array
           readOnly: true
           items: {$ref: '#/components/schemas/OfferLineItem'}
+        money_withheld: {type: boolean, readOnly: true, description: 'True for a reader the deal''s amount is masked from. Such a reader gets zero totals, no lines, no exchange rate and no PDF: the offer states the deal''s amount by another name.'}
+        source_commercial_revision: {type: [integer, 'null'], format: int64, readOnly: true, description: 'The deal''s `commercial_revision` the lines were copied from. Such an offer''s lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: Server-stamped from the authenticated principal; never client-supplied.}
         version: {$ref: '#/components/schemas/RowVersion'}
@@ -50574,6 +50594,14 @@ components:
         line_items:
           type: [array, 'null']
           items: {$ref: '#/components/schemas/OfferLineItemInput'}
+        from_deal_revision:
+          type: [integer, 'null']
+          format: int64
+          minimum: 0
+          description: |-
+            Copy the deal's lines at this `commercial_revision` into the offer. Required for a deal in
+            `lines` mode, which refuses `line_items`, and refused for any other deal. Another revision
+            answers 409 `version_skew`. The currency must be the deal's.
         source: {type: string}
       additionalProperties: false
     UpdateOfferRequest:
@@ -51404,7 +51432,7 @@ components:
           description: What the window was landing on when the week closed.
         forward_measure:
           type: string
-          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
+          enum: [likely, weighted, manager_call, qualified_likely, qualified_weighted]
           description: |-
             Which measure the closing landing was built from, FROZEN. The installation setting can
             change, and a past week must keep saying what it was read under rather than silently
@@ -51429,13 +51457,11 @@ components:
       properties:
         bar:
           type: string
-          enum: [created, advanced, slipped, excluded, reinstated, not_checked, won, lost, other]
+          enum: [created, advanced, slipped, won, lost, other]
           description: |-
             Which move this is. Folded from the forecast engine's movement buckets, whose
             grain is right for diagnosing a quarter and too fine for a weekly retrospective.
-            `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
-            qualified measure: a deal that left or rejoined the qualified number on its viability
-            review alone, or left because its review status became unknown. The set can grow.
+            The set can grow.
         delta_minor:
           type: integer
           format: int64
@@ -51959,7 +51985,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch, deal_review]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, booking_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -52067,7 +52093,7 @@ components:
       description: The recorded automatic change and its current review state.
       required: [kind, accepted, reversed, version, can_undo, can_accept, writable]
       properties:
-        kind: {type: string, enum: [close_date, close_lost, stage]}
+        kind: {type: string, enum: [close_date, close_lost, amount, probability, stage, deal_open, deal_revive]}
         accepted: {type: boolean}
         reversed: {type: boolean}
         version: {type: integer, format: int64}
@@ -52641,12 +52667,18 @@ components:
         domain_note:
           type: string
           description: The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+        run_reason_code:
+          type: string
+          description: |-
+            On an `automation_run` item: why the firing stopped, in the code set of
+            AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
+            engine's English sentence.
         domain_context: {$ref: '#/components/schemas/DomainQuestionContext'}
         notice_origin: {$ref: '#/components/schemas/NoticeOrigin'}
         id: {type: string, description: "The owning record's id, as its own endpoint spells it."}
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch, deal_review]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, booking_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: |-
             Which producer raised it, and therefore which endpoint its verbs go to.
         category:
@@ -53077,6 +53109,187 @@ components:
           type: boolean
           description: >-
             Somebody already put this back. The row stays and says so rather than vanishing, which would leave a reader unsure their Undo landed.
+    MarginceChangeSummary:
+      type: object
+      description: |-
+        The changes Margince made to the caller's deals that are neither accepted nor undone.
+        Every count is a number of deals; a deal with two kinds of change counts once in
+        `deals` and once under each kind.
+      required: [as_of, deals, closed, redated, revalued, probabilities, moved, opened, revived, base_currency, bundles, truncated]
+      properties:
+        as_of: {type: string, format: date-time}
+        deals: {type: integer, description: Deals with at least one open change.}
+        closed: {type: integer, description: Deals Margince closed as lost.}
+        redated: {type: integer, description: Deals given a new close date.}
+        revalued: {type: integer, description: Deals given a new amount.}
+        probabilities: {type: integer, description: Deals given a new probability.}
+        moved: {type: integer, description: Deals Margince moved to a later stage.}
+        opened: {type: integer, description: Deals Margince opened from buying evidence.}
+        revived: {type: integer, description: Lost deals Margince reopened from new buying evidence.}
+        base_currency: {type: string, description: The currency of every `value_base_minor`.}
+        bundles:
+          type: array
+          items: {$ref: '#/components/schemas/MarginceChangeBundle'}
+          description: One per deal, the largest value first.
+        truncated: {type: boolean, description: True when more bundles exist than were returned. The counts are never cut.}
+    MarginceChangeBundle:
+      type: object
+      description: Every open change Margince made to one deal. Its Undo takes them all back.
+      required: [deal_id, deal_name, version, audit_log_ids, kinds, latest_at]
+      properties:
+        deal_id: {type: string, format: uuid}
+        deal_name: {type: string}
+        version:
+          type: integer
+          format: int64
+          description: The deal's version as read, for the first undo of the bundle.
+        audit_log_ids:
+          type: array
+          items: {type: string, format: uuid}
+          description: The changes, newest first.
+        kinds:
+          type: array
+          items: {type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability, stage_move, deal_open, deal_revive]}
+        value_base_minor:
+          type: integer
+          format: int64
+          description: The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
+        latest_at: {type: string, format: date-time}
+    DealMarginceChanges:
+      type: object
+      required: [changes]
+      properties:
+        changes:
+          type: array
+          items: {$ref: '#/components/schemas/Receipt'}
+          description: The deal's changes, newest first.
+        next_cursor: {type: string, description: Where the next page starts; absent on the last page.}
+        last_check: {$ref: '#/components/schemas/DealMarginceCheck'}
+    DealMarginceCheck:
+      type: object
+      description: |-
+        Margince's latest nightly reading of the deal, present on the first page only when that
+        reading changed nothing. Every reader of the deal sees when it was and when the next one
+        is due. Only the owner it was made for, signed in as themselves, reads why and which
+        sources it read. For anyone else, an agent acting for the owner included, `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
+        reasons come from the deal's mail and meetings.
+      required: [checked_at, explained, outcomes, sources]
+      properties:
+        checked_at: {type: string, format: date-time}
+        next_check_at:
+          type: string
+          format: date-time
+          description: When the clock alone makes the deal due again, the day after its close date. Absent when only new evidence or a changed field does.
+        explained: {type: boolean, description: Whether the caller may read why.}
+        skipped:
+          type: string
+          enum: [switched_off, no_evidence]
+          description: Why no model was asked. `switched_off` is every switch off; `no_evidence` is no mail, meeting, call or note every member may read.
+        outcomes:
+          type: array
+          items: {$ref: '#/components/schemas/DealMarginceCheckOutcome'}
+        sources:
+          type: array
+          items: {$ref: '#/components/schemas/DealMarginceCheckSource'}
+    DealMarginceCheckOutcome:
+      type: object
+      description: One change Margince weighed and did not make.
+      required: [kind, why]
+      properties:
+        kind: {type: string, enum: [close_date, amount, probability, stage]}
+        why:
+          type: string
+          enum: [switched_off, kept_your_edit, not_sure, outside_limits, changed_while_checking, undo_hold, already_right, accepted_offer, priced_by_products, no_rate, no_owner, owner_cannot_edit, stage_rules, other]
+    DealMarginceCheckSource:
+      type: object
+      description: |-
+        One source and what the reading made of it. `private` is a source whose only items on
+        the deal are ones not every member may read, so they were left out. `unavailable` is a
+        mailbox that was not read on time.
+      required: [source, state]
+      properties:
+        source: {type: string, enum: [mail, meetings, calls, notes, offers]}
+        state: {type: string, enum: [read, private, unavailable, none]}
+    TeamMarginceChanges:
+      type: object
+      required: [as_of, since, base_currency, groups, rows, truncated, ownerless, ownerless_truncated]
+      properties:
+        as_of: {type: string, format: date-time}
+        since: {type: string, format: date-time}
+        base_currency: {type: string}
+        groups:
+          type: array
+          items: {$ref: '#/components/schemas/TeamMarginceChangeGroup'}
+        rows:
+          type: array
+          items: {$ref: '#/components/schemas/TeamMarginceChangeRow'}
+        truncated: {type: boolean, description: True when more rows exist than were returned. The groups are never cut.}
+        ownerless:
+          type: array
+          description: |-
+            Open deals Margince leaves alone because they have no live owner: no owner, or an
+            owner who left, is invited, suspended or archived. Every such deal the nightly check
+            skips, read under the caller's row scope, the largest value first, at most 200. They
+            wait for somebody to assign an owner; this list does not follow `since`.
+          items: {$ref: '#/components/schemas/TeamMarginceOwnerlessDeal'}
+        ownerless_truncated: {type: boolean, description: True when more ownerless deals exist than were returned.}
+    TeamMarginceOwnerlessDeal:
+      type: object
+      required: [deal_id, deal_name, reason]
+      properties:
+        deal_id: {type: string, format: uuid}
+        deal_name: {type: string}
+        reason:
+          type: string
+          enum: [no_owner, departed_owner, inactive_owner]
+          description: '`departed_owner` left; `inactive_owner` is invited, suspended or archived.'
+        owner_id: {type: string, format: uuid, description: The owner who is not live; absent for an unowned deal.}
+        owner_name: {type: string, description: 'The name of the owner who is not live; absent for an unowned deal or an archived owner.'}
+        value_base_minor:
+          type: integer
+          format: int64
+          description: The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate, or the caller's mask withholds it.
+    TeamMarginceChangeGroup:
+      type: object
+      required: [owner_id, owner_name, kind, deals, undone, value_base_minor, value_moved_base_minor, unvalued]
+      properties:
+        owner_id: {type: string, format: uuid}
+        owner_name: {type: string}
+        kind: {type: string}
+        deals: {type: integer, description: Deals changed in this kind.}
+        undone: {type: integer, description: 'Of those deals, how many had the change undone.'}
+        value_base_minor:
+          type: integer
+          format: int64
+          description: The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+        value_moved_base_minor:
+          type: integer
+          format: int64
+          description: |-
+            How much value these changes moved, in the base currency's minor units. Each deal's
+            changes of this kind net out first and the group adds the size of each net move.
+            An amount change moves its difference; a close as lost takes the deal's value out
+            of the pipeline and an opened or revived deal puts it in; a probability change or a
+            stage move moves the amount times the change in win probability; a close date moves
+            nothing. Each move is valued from the deal as it stood when the change was made, so
+            a later edit does not rewrite it. An undone change adds nothing. A deal whose move
+            cannot be valued adds nothing and counts in `unvalued`.
+        unvalued:
+          type: integer
+          description: |-
+            Of these deals, how many moved a value this total leaves out: the amount is masked
+            for the caller, no exchange rate is stored, or a probability change was written
+            before Margince kept the amount it was valued from.
+    TeamMarginceChangeRow:
+      type: object
+      required: [owner_id, change]
+      properties:
+        owner_id: {type: string, format: uuid}
+        change: {$ref: '#/components/schemas/Receipt'}
+        value_moved_base_minor:
+          type: integer
+          format: int64
+          description: The value this change moved, signed, as the group counts it. Absent for a change that moves no value or one the caller may not price.
     MagicUndo:
       type: object
       description: |-

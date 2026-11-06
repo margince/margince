@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 2,
     "never_driven": 9,
     "permitted_but_never_required": 3,
-    "tokens_served_but_never_driven": 4673,
+    "tokens_served_but_never_driven": 4649,
     "use_case_cases": 75,
     "acceptance_criteria_named": 114,
     "tools_added_by_shipped_units": 0,
@@ -3243,7 +3243,7 @@
   "tools": [
     {
       "name": "read_view",
-      "tokens": 1008,
+      "tokens": 984,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -3590,7 +3590,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 2580,
+      "tokens": 2587,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us",
@@ -3621,7 +3621,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 2031,
+      "tokens": 2125,
       "agents": [],
       "required_by_cases": [
         "case72_read_the_dossier",
@@ -3658,43 +3658,8 @@
       }
     },
     {
-      "name": "change_state",
-      "tokens": 1896,
-      "agents": [],
-      "required_by_cases": [
-        "case40_sort_the_queue",
-        "case41_close_the_project",
-        "case45_move_the_deal_on",
-        "case47_tidy_the_fair_list",
-        "case85_the_pilot_slipped"
-      ],
-      "required_as_one_of_a_set_by_cases": [
-        "case92_move_the_deal_not_the_ladder"
-      ],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 12,
-          "passed": 11,
-          "reliability": 0.9166666666666666,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 11,
-          "passed": 8,
-          "reliability": 0.7272727272727273,
-          "cases_below_their_bar": [
-            "case41_close_the_project"
-          ]
-        }
-      }
-    },
-    {
       "name": "change_activities",
-      "tokens": 1893,
+      "tokens": 1898,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -3820,8 +3785,43 @@
       }
     },
     {
+      "name": "change_state",
+      "tokens": 1872,
+      "agents": [],
+      "required_by_cases": [
+        "case40_sort_the_queue",
+        "case41_close_the_project",
+        "case45_move_the_deal_on",
+        "case47_tidy_the_fair_list",
+        "case85_the_pilot_slipped"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case92_move_the_deal_not_the_ladder"
+      ],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 12,
+          "passed": 11,
+          "reliability": 0.9166666666666666,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 11,
+          "passed": 8,
+          "reliability": 0.7272727272727273,
+          "cases_below_their_bar": [
+            "case41_close_the_project"
+          ]
+        }
+      }
+    },
+    {
       "name": "change_settings",
-      "tokens": 1703,
+      "tokens": 1710,
       "agents": [],
       "required_by_cases": [
         "case91_add_a_review_stage",
@@ -3880,7 +3880,7 @@
     },
     {
       "name": "change_reports",
-      "tokens": 1296,
+      "tokens": 1264,
       "agents": [],
       "required_by_cases": [
         "case83_write_the_decision_down",
@@ -3965,8 +3965,38 @@
       }
     },
     {
+      "name": "read_analytics",
+      "tokens": 927,
+      "agents": [],
+      "required_by_cases": [
+        "case20_put_it_in_the_board_pack"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case49_who_can_introduce_us",
+        "case62_held_meetings_to_opportunities"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "read_forecast",
-      "tokens": 952,
+      "tokens": 924,
       "agents": [],
       "required_by_cases": [
         "case22_can_i_trust_the_numbers",
@@ -3995,36 +4025,6 @@
         "gpt-5.6-sol@codex-cli": {
           "runs": 4,
           "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "read_analytics",
-      "tokens": 927,
-      "agents": [],
-      "required_by_cases": [
-        "case20_put_it_in_the_board_pack"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case49_who_can_introduce_us",
-        "case62_held_meetings_to_opportunities"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -4175,7 +4175,7 @@
     },
     {
       "name": "change_access",
-      "tokens": 693,
+      "tokens": 706,
       "agents": [],
       "required_by_cases": [
         "case68_let_sofia_read_the_account",
@@ -4198,6 +4198,33 @@
         "gpt-5.6-sol@codex-cli": {
           "runs": 4,
           "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "change_offers",
+      "tokens": 678,
+      "agents": [],
+      "required_by_cases": [
+        "case71_record_the_signed_contract"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -4260,7 +4287,7 @@
     },
     {
       "name": "resolve_duplicates",
-      "tokens": 613,
+      "tokens": 618,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company",
@@ -4341,33 +4368,6 @@
         "gpt-5.6-sol@codex-cli": {
           "runs": 9,
           "passed": 9,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "change_offers",
-      "tokens": 559,
-      "agents": [],
-      "required_by_cases": [
-        "case71_record_the_signed_contract"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         }

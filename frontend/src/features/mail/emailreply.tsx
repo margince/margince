@@ -68,11 +68,13 @@ export function EmailDrawerActions({
   onReply,
   onForward,
   onRelink,
+  onBook,
 }: Readonly<{
   presentation: EmailPresentation;
   onReply: () => void;
   onForward: () => void;
   onRelink: () => void;
+  onBook?: () => void;
 }>) {
   const t = useT();
   const anchor = replyAnchor(presentation.links);
@@ -91,10 +93,15 @@ export function EmailDrawerActions({
         <Forward aria-hidden="true" />
         {t("email.forward")}
       </Button>
-      {presentation.can_relink && (
+      {(presentation.can_relink || onBook) && (
         <span className="emaildetail__more">
           <OverflowMenu label={t("record.moreActions")}>
-            <Button onClick={onRelink}>{t("email.fileUnder")}</Button>
+            {onBook && (
+              <Button onClick={onBook}>{t("scheduling.bookContact")}</Button>
+            )}
+            {presentation.can_relink && (
+              <Button onClick={onRelink}>{t("email.fileUnder")}</Button>
+            )}
           </OverflowMenu>
         </span>
       )}

@@ -97,15 +97,15 @@ func progressOf(p migration.Progress) *crmcontracts.ImportRunProgress {
 	out := crmcontracts.ImportRunProgress{
 		Objects: make([]struct {
 			Object    string `json:"object"`
-			RowsDone  int    `json:"rows_done"`
-			RowsTotal int    `json:"rows_total"`
+			RowsDone  int    `json:"rows_done" minimum:"0"`
+			RowsTotal int    `json:"rows_total" minimum:"0"`
 		}, 0, len(p.Objects)),
 	}
 	for _, o := range p.Objects {
 		out.Objects = append(out.Objects, struct {
 			Object    string `json:"object"`
-			RowsDone  int    `json:"rows_done"`
-			RowsTotal int    `json:"rows_total"`
+			RowsDone  int    `json:"rows_done" minimum:"0"`
+			RowsTotal int    `json:"rows_total" minimum:"0"`
 		}{Object: o.Object, RowsDone: o.RowsDone, RowsTotal: o.RowsTotal})
 	}
 	out.Counts.Created, out.Counts.Updated, out.Counts.Unchanged = p.Counts.Created, p.Counts.Updated, p.Counts.Unchanged

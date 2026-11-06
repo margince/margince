@@ -177,8 +177,9 @@ func TestImportRefusesHubSpotBCC(t *testing.T) {
 	}
 }
 
-// A row that states both name parts takes its full name from them. The store
-// never sees a full name that disagrees with the parts beside it.
+// A created row that states both name parts takes its full name from them. An
+// update never sends a full name that disagrees with the parts beside it. It
+// sends new parts alone, and the store decides whether the display name follows.
 func TestAnImportRowsNamePartsSetItsFullName(t *testing.T) {
 	fields := map[string]string{fieldFullName: "Signing-Noreply", "first_name": "Contact", "last_name": "A"}
 	if got := contactCreateFrom(fields, nil, "csv", "src").FullName; got != "Contact A" {
@@ -191,8 +192,13 @@ func TestAnImportRowsNamePartsSetItsFullName(t *testing.T) {
 		t.Errorf("changed = %v (err %v), want nothing: the parts still name Contact A", changed, err)
 	}
 	renamed := map[string]string{"first_name": "Ada", "last_name": "Lovelace"}
-	if changed, err := changedFields(current, renamed, nil); err != nil || changed[fieldFullName] != "Ada Lovelace" {
-		t.Errorf("changed = %v (err %v), want the full name to follow new parts", changed, err)
+	changed, err := changedFields(current, renamed, nil)
+	if _, sent := changed[fieldFullName]; err != nil || sent || changed["first_name"] != "Ada" {
+		t.Errorf("changed = %v (err %v), want the new parts and no full name", changed, err)
+	}
+	renamed[fieldFullName] = "Signing-Noreply"
+	if changed, err := changedFields(current, renamed, nil); err != nil || changed[fieldFullName] != "" {
+		t.Errorf("changed = %v (err %v), want the disagreeing full name left out", changed, err)
 	}
 	delete(fields, "last_name")
 	if got := contactCreateFrom(fields, nil, "csv", "src").FullName; got != "Signing-Noreply" {

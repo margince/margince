@@ -104,7 +104,6 @@ describe("the scope each page declares", () => {
     // PATCH /roles/{key} and its siblings — one workspace's roles.
     roles: "workspace",
     pipelines: "workspace",
-    stageautomation: "workspace",
     leads: "workspace",
     acquisition: "workspace",
     lossreasons: "workspace",
@@ -225,7 +224,6 @@ describe("what each page lets a reader change", () => {
     // The report is read-only, but the per-transition switches beneath it are
     // not: turning a transition on is a pipeline write, so a rep who may only
     // READ pipelines opens the page and finds every switch refused.
-    stageautomation: "all(full-seat, any(any(pipeline:update)))",
     leads:
       "all(full-seat, any(any(custom_field:update, custom_field:create), custom_field:delete))",
     // No delete arm: a source is retired through its switch, never removed.

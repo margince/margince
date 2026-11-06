@@ -61,6 +61,7 @@ func (e *Eraser) eraseAttachments(ctx context.Context, tx pgx.Tx, reason, cause,
 				return fmt.Errorf("privacy: purging attachment object: %w", err)
 			}
 		}
+		destroyedOutside(tx, armAttachmentObject)
 	}
 	// RETURNING, because the rows are gone after this and the audit images they
 	// left behind are not. An attachment's create image carries the FILENAME the
