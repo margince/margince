@@ -62,7 +62,11 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { parseSource, resolveRelative, sourceFileAt } from "../../scripts/lib/source-tree";
+import {
+  parseSource,
+  resolveRelative,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 
 const srcRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROUTER = join(srcRoot, "lib/router.tsx");
