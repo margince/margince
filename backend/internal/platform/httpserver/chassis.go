@@ -124,8 +124,9 @@ func SecureHeaders(next http.Handler) http.Handler {
 		// ignores it on the plain-HTTP hop, so it is safe to set always.
 		h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 		h.Set("Permissions-Policy", PermissionsPolicy)
-		// Isolated on every route, and on a route that does not exist: the
-		// popup pages override it in their own handlers.
+		// Isolated on every route, and on a route that does not exist. Of the
+		// popup pages, /oauth/authorize overrides it (identity.keepOpener) and
+		// nginx serves /consent with its own value.
 		h.Set("Cross-Origin-Opener-Policy", OpenerPolicyIsolated)
 		// Nothing here is meant to be embedded by another origin.
 		h.Set("Cross-Origin-Resource-Policy", "same-origin")
