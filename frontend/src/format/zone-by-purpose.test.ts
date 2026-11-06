@@ -216,6 +216,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The days-late count takes the zone its date is drawn in; the fixture pins UTC so the expected count does not move with the test machine.",
   },
   {
+    file: "features/brief/brief.taskcard.words.test.ts",
+    why: "A task card counts the days a task is late in the zone it is given; the fixture pins UTC so the count does not move with the test machine.",
+  },
+  {
     file: "features/companies/companynextbar.late.test.tsx",
     why: "A promise 35 hours late is one elapsed day and two midnights only in a named zone; the badge and the sentence must both say two.",
   },

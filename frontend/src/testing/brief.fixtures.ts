@@ -328,6 +328,24 @@ export const narratedWeek: WeeklyReview = {
   pipeline: weeklyPipeline,
   narrative: "Weber signed on Thursday; two promises slipped into this week.",
   narrated_at: "2026-07-06T06:01:00Z",
+  // Thursday is the busiest and the meetings sum to counts.meetings_held.
+  // Saturday's one email puts a weekend day on the chart.
+  daily_activity: (
+    [
+      ["2026-06-29", 14, 3, 1],
+      ["2026-06-30", 18, 4, 2],
+      ["2026-07-01", 9, 2, 0],
+      ["2026-07-02", 22, 5, 2],
+      ["2026-07-03", 11, 1, 0],
+      ["2026-07-04", 1, 0, 0],
+      ["2026-07-05", 0, 0, 0],
+    ] as const
+  ).map(([day, emails_sent, calls_logged, meetings_held]) => ({
+    day,
+    emails_sent,
+    calls_logged,
+    meetings_held,
+  })),
   prior: {
     local_week_start: PRIOR_WEEK_START,
     // Deliberately uneven against the week above: one figure up, one down and
