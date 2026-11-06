@@ -9522,7 +9522,7 @@ paths:
       tags: [Links]
       operationId: listLinkTypes
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves typed record links yet
+      x-human-only-reason: security   # a reader decides which records are linked
       security: [{ cookieAuth: [] }]
       summary: The types a link between two records may have.
       description: |
@@ -9542,7 +9542,7 @@ paths:
       tags: [Links]
       operationId: listRecordLinks
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves typed record links yet
+      x-human-only-reason: security   # a reader decides which records are linked
       security: [{ cookieAuth: [] }]
       summary: The links of one deal, company or contact, in both directions.
       description: |
@@ -9567,7 +9567,7 @@ paths:
       tags: [Links]
       operationId: createRecordLink
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves typed record links yet
+      x-human-only-reason: security   # a reader decides which records are linked
       security: [{ cookieAuth: [] }]
       summary: Link one record to another with a type.
       description: |
@@ -9599,7 +9599,7 @@ paths:
       tags: [Links]
       operationId: deleteRecordLink
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves typed record links yet
+      x-human-only-reason: security   # a reader decides which records are linked
       security: [{ cookieAuth: [] }]
       summary: Remove a link.
       description: |
@@ -9617,7 +9617,7 @@ paths:
       tags: [Activities]
       operationId: listLinkSuggestions
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves the link-suggestion queue yet
+      x-human-only-reason: security   # a reader decides what a message attaches to
       security: [{ cookieAuth: [] }]
       summary: The records an extension suggests messages belong to, waiting for a reader to decide.
       description: |
@@ -9644,7 +9644,7 @@ paths:
       tags: [Activities]
       operationId: acceptLinkSuggestion
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves the link-suggestion queue yet
+      x-human-only-reason: security   # a reader decides what a message attaches to
       security: [{ cookieAuth: [] }]
       summary: Accept a suggestion, which files the message under the record it names.
       description: |
@@ -9671,7 +9671,7 @@ paths:
       tags: [Activities]
       operationId: rejectLinkSuggestion
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves the link-suggestion queue yet
+      x-human-only-reason: security   # a reader decides what a message attaches to
       security: [{ cookieAuth: [] }]
       summary: Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
       description: |
