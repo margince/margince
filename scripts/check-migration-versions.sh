@@ -43,6 +43,12 @@
 # and core's zero-padded baseline version — which the ten-digit stamps sort above
 # — all compare as strings, the same ordering pgmigrate itself applies.
 #
+# WHY A SYNC INTO develop IS JUDGED AGAINST main. Installations apply what main
+# carries, and nothing runs develop, so main's order is the one that has to hold.
+# A nightly sync takes main's stamps and re-stamps what only develop has above
+# them, so every migration it touches reads as renamed or out of order against
+# develop. See the SYNC block below.
+#
 # Usage: check-migration-versions.sh [base-ref]   (default: origin/main)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -98,6 +104,22 @@ if ! git rev-parse --verify -q "$BASE_REF" >/dev/null; then
   fi
   echo "skip check-migration-versions: base ref '$BASE_REF' not found (nothing to compare against)"
   exit 0
+fi
+
+# A branch carrying main commits its base lacks is a sync, whatever it is named.
+# It is judged against the main it merged rather than main's tip, because a
+# migration landing on main afterwards is the next sync's to order. A branch cut
+# from develop has no such commit, so it stays judged against develop. MAIN_REF
+# missing leaves that stricter reading in place.
+MAIN_REF="${MIGRATION_VERSIONS_MAIN_REF:-origin/main}"
+SYNC_BASE=""
+if git rev-parse --verify -q "$MAIN_REF" >/dev/null; then
+  merged_main="$(git merge-base HEAD "$MAIN_REF" 2>/dev/null || true)"
+  if [[ -n "$merged_main" ]] && ! git merge-base --is-ancestor "$merged_main" "$BASE_REF"; then
+    SYNC_BASE="$BASE_REF"
+    BASE_REF="$merged_main"
+    echo "note: this branch brings $MAIN_REF commits into $SYNC_BASE, so its migrations are judged against $MAIN_REF at $merged_main"
+  fi
 fi
 
 # The FORK point scopes exactly one check below. Versions this branch ADDS are
@@ -250,6 +272,22 @@ for ns in $all_namespaces; do
     done
     failed=1
     continue
+  fi
+
+  # Judging a sync against main stops seeing what only develop has, so the two
+  # ways a merge loses track of it are checked here. Matched by name, because a
+  # re-stamp changes the version and keeps the name.
+  if [[ -n "$SYNC_BASE" ]]; then
+    tree_names="$(echo "$tree_rows" | cut -d' ' -f2 | sort)"
+    lost="$(comm -23 <(migrations_at "$SYNC_BASE" "$ns" | cut -d' ' -f2 | sort -u) <(echo "$tree_names" | sort -u))"
+    for name in $lost; do
+      echo "FAIL: $ns migration '$name' is on $SYNC_BASE but this sync no longer has it under any version — keep it, re-stamped above what $MAIN_REF carries" >&2
+      failed=1
+    done
+    for name in $(echo "$tree_names" | uniq -d); do
+      echo "FAIL: $ns carries '$name' twice, under versions $(echo "$tree_rows" | awk -v n="$name" '$2==n {print $1}' | tr '\n' ' ')— keep the one $MAIN_REF has and delete the other" >&2
+      failed=1
+    done
   fi
 
   if [[ -z "$base_rows" ]]; then
