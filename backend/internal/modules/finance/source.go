@@ -150,7 +150,7 @@ func insertConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, connectedAt t
 // Disconnect stops the sync. The mirrored rows stay, labelled with their
 // source, so the history a reader came for is not lost with the connection.
 func (s *Store) Disconnect(ctx context.Context) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionDelete); err != nil {
@@ -191,7 +191,7 @@ func (s *Store) Disconnect(ctx context.Context) error {
 // RequireConnected answers ErrNotFound when no source is connected, for a
 // caller about to queue a sync that would find nothing to do.
 func (s *Store) RequireConnected(ctx context.Context) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionUpdate); err != nil {

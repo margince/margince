@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // offeredPair is one maskable-field catalog line: the RBAC object an
@@ -51,7 +52,7 @@ func catalogPairs(t *testing.T) []offeredPair {
 }
 
 func catalogPairsIn(catalog string) ([]offeredPair, error) {
-	body, err := os.ReadFile(catalog) // #nosec G304 -- a fixture path this package spells itself
+	body, err := gatekit.ReadFile(catalog) // #nosec G304 -- a fixture path this package spells itself
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", catalog, err)
 	}

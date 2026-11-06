@@ -177,24 +177,8 @@ func survivingSubject(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, er
 // to the data subject; a rep relaying the phone call is a courier, not the
 // author, and recording their seat level would let another seat of equal or
 // greater rank lift a stop the subject asked for. CanOverrule refuses to rank
-// anything above LevelSubject, so stamping it here is what makes the objection
-// hold against the whole staff.
-//
-// THE COST IS REAL AND CURRENTLY WORSE THAN THE DESIGN INTENDS. The plan has a
-// subject-initiated reversal and a per-message exception path; NEITHER EXISTS
-// YET. PublicSaveChoices writes contact_consent and never touches this table, so
-// today a mistyped objection is undone by a database correction and nothing
-// else.
-//
-// Shipping it anyway, because the alternative was worse in the direction that
-// matters: with no writer at all, a rep told "stop the newsletter" recorded a
-// subject_request, which stopped that contact's invoices. A stop too hard to
-// lift is an awkward conversation. A stop too easy to lift is mail somebody
-// explicitly refused, and one that was never recordable is both.
-//
-// The reversal path is the slice that closes this; the door's own description
-// in crm.yaml says plainly that nothing lifts one today, so nobody records one
-// expecting an undo button.
+// anything above LevelSubject, so stamping it here holds the objection against
+// every rep. judgeLift lets an admin correct one a seat typed by mistake.
 //
 // subject_request keeps the seat's own level: it is the rep's report of a
 // conversation, with no article behind it, and an admin correcting a
@@ -216,7 +200,7 @@ func levelFor(ctx context.Context, kind string) commsauthz.AuthorityLevel {
 // LevelUser. That is deliberate and matches the RBAC defaults, where ops and
 // admin are separated by exactly this gate — see LevelAdmin's own comment.
 func authorityOf(ctx context.Context) commsauthz.AuthorityLevel {
-	if auth.RequireAdmin(ctx) == nil {
+	if auth.AdminGranted(ctx) {
 		return commsauthz.LevelAdmin
 	}
 	return commsauthz.LevelUser
@@ -345,10 +329,14 @@ func (s *Store) suppressAdmittedTx(
 // missing field.
 func suppressionSource(reason string) string {
 	if reason == "" {
-		return "recorded by a contact"
+		return seatSourcePrefix
 	}
-	return "recorded by a contact: " + reason
+	return seatSourcePrefix + ": " + reason
 }
+
+// seatSourcePrefix opens the source of every stop recorded through Suppress.
+// reasonFromSource reads the words back after it.
+const seatSourcePrefix = "recorded by a contact"
 
 // suppressionRecordedPayload names what was recorded and at which authority.
 //

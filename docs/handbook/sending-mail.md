@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
 # Writing and sending mail
 
 ### How do I send an email to a contact?
@@ -173,14 +173,21 @@ The answers are:
 - Their customer relationship
 - Marketing
 
-Margince does not ask for a reason when you reply to their own message.
+Margince does not ask for a reason when you reply to their own message. On a contact's page,
+**Active deal** adds **Deal this follow-up is about**: pick their open deal before **Send**.
 
 The consent check reads the reason, and it runs *before* you send. Beside
-**Send** the composer shows **Ready to send** once the check allows it. When it
-does not, the warning bar above **Send** shows the answer: **No recorded reason
-to contact this recipient**, or **Message cannot be sent**. A check with no answer never counts
-as permission: "The send check did not complete. Sending runs the check
-again."
+**Send** the composer shows **Recipients checked** once the check allows it and
+nothing on the form is missing. The mailbox is still checked when you send.
+
+When the check does not allow it, the warning bar above **Send** shows one
+answer for the message, with its fix: see the list below. With several recipients, the bar names the address
+the answer applies to. A check with no answer never counts as permission: "The
+send check did not complete. Sending runs the check again."
+
+When **Send** is refused, the refusal takes the place of the earlier answer in
+the same bar. It goes away when you change anything in the message, or when
+a new check allows the message.
 
 Some purposes that Margince knows, such as a security notice, are not offered
 here. A sender who could pick one could send marketing that looks like a
@@ -188,20 +195,20 @@ security notice.
 
 ### Why can't I send an email to this contact?
 When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
-- **Send blocked: no consent**: there is no consent for this purpose. Use **Review consent**, or press **Overrule with a reason** where it is offered.
-- **No recorded reason to contact this recipient**: pick why you may write from the list beside the refusal. When **Reason for contact** already names it, press **Record this reason**. It is recorded at once under your name for this kind of message, and it is not consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
-- **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail.
-- **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing."
+- **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
+- **Consent needed for this message**: there is no consent for this kind of message. Press **Overrule with a reason** where it is offered.
+- **No recorded reason to contact this recipient**: pick why you may write from the list beside the refusal. When **Reason for contact** already names it, press **Keep as a standing reason**. It covers this kind of message to them from your company until someone revokes it. It is your word, not their consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
+- **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail. Where you hold the exception right, **Send with a recorded exception** sends this one message instead. It grants nothing for later messages, and the composer closes once it has sent.
+- **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 Also called: email blocked, cannot email customer, send refused.
 
 ## What a send refuses, and what it only warns about
 
-A send without consent is refused:
+A marketing send without consent is refused:
 
-> **Send blocked: no consent**
-> A recipient has not given consent for this purpose, so the send was blocked.
-> With no consent, the answer is always no.
+> **Consent needed for this message**
+> Marketing needs the recipient's consent, and none is on record.
 
 The reason is always clear. Some say that nobody can lift them: "The recipient
 objected to marketing", and no one here can change that, an administrator
@@ -287,18 +294,18 @@ later means writing it again.
 
 ### Held
 
-A scheduled message is **Held** when its time came and a check refused it. The
-reason says which check, and what to do:
+A scheduled message is **Held** when a check refused it, or when a recipient answered first. The
+reason says which, and what to do:
 
 - **A recipient withdrew their consent** after you set the send.
+- **A recipient stopped marketing** after you scheduled a marketing message. It is held at once.
+- **New mail came in from a recipient** after you scheduled a deal follow-up or a quote. Read it first.
 - **Your seat or mailbox changed**, so it cannot be sent as you.
-- **Its send time passed** while the system was not running, and it is now too
-  late to send. Reschedule or withdraw it.
+- **Its send time passed** while the system was not running, and it is now too late to send. Reschedule or withdraw it.
 - **The send job ran out of attempts.** Reschedule it to try again.
 - **A check blocked it when it was due.** Nothing was sent.
 
-A held message also adds an approval card that never runs out. See
-[Approvals](approvals.md).
+A held message also adds an approval card that never runs out. See [Approvals](approvals.md).
 
 ## What the recipient controls
 
@@ -350,7 +357,7 @@ Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
 
 ### Why does a contact say “Review source”?
 The record does not say where the contact's details come from, so no notice deadline is set.
-In **Settings → Privacy**, a user with privacy access can check the source and its proof.
+A user with privacy access answers how the details came in, under **Source** on the contact or in **Settings → Privacy**.
 If the details come from the contact, the review ends. Data from someone else may still need a notice.
 **Due no later than** is the last possible date. The duty may already be due.
 

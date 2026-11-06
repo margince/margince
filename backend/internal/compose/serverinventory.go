@@ -41,15 +41,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 )
 
-// Server satisfies crmcontracts.ServerInterface by embedding: every
-// module transport handler set together covers the full contract
-// surface.
+// Server satisfies crmcontracts.ServerInterface by embedding: every module
+// transport handler set together covers the full contract surface.
 type Server struct {
 	reportingHandlers
 	reportingExportHandlers
 	reportingReaderPreviewHandlers
-
 	authHandlers
+	avatarHandlers
 	contactsHandlers
 	dealsHandlers
 	projectsHandlers
@@ -59,6 +58,7 @@ type Server struct {
 	activitiesHandlers
 	approvalsHandlers
 	bulkHandlers
+	companyContactShareHandlers
 	handoverHandlers
 	searchHandlers
 	consentHandlers
@@ -120,6 +120,7 @@ type Server struct {
 	captureCounterpartyHoldHandlers
 	conversationSuggestionHandlers
 	claimHandlers
+	marginceChangeHandlers
 	ownershipRequestHandlers
 	dealCommitmentHandlers
 	promiseTakeOverHandlers
@@ -133,12 +134,12 @@ type Server struct {
 	exportBundleHandlers
 	agentBundleHandlers
 	companyRollupHandlers
-	reviewAnswerHandlers
 	companyOfferedHandlers
 	receiptHandlers
 	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
+	chatCaptureHandlers
 	outcomeReviewHandlers
 	embedReindexHandlers
 	rateRefreshHandlers
@@ -162,6 +163,7 @@ type Server struct {
 	meetingBriefHandlers
 	dealStatusHandlers
 	roomBriefHandlers
+	readerRenderingHandlers
 	contactResearchHandlers
 	contactDraftHandlers
 	leadDraftHandlers
@@ -296,9 +298,8 @@ type Server struct {
 	// zero — which would refuse every upload.
 	uploadLimits UploadLimits
 
-	// blob is the object store, injected by WithBlobstore. When configured
-	// it feeds a /readyz probe and backs the attachment handlers; nil means
-	// a role that stores no objects.
+	// blob is the object store WithBlobstore injects, behind /readyz and every
+	// stored file. Nil means a role that stores no objects.
 	blob blobstore.Store
 	// threadAudience applies an owner own decision about a thread they imported.
 	threadAudience *ThreadAudienceSetter
@@ -481,7 +482,6 @@ type Server struct {
 	// the job queue, the event bus, the cache-flush announcement — injected by
 	// WithResetRuntime. Zero value = a Postgres-only reset, which is the honest
 	// posture for a role that wired no queue and no bus.
-	//
 	// dataResetHandlers holds a POINTER to this field rather than a copy:
 	// options run in the order the caller passed them, so a copy taken by
 	// WithDataReset would be the zero value whenever WithResetRuntime is listed

@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -24,6 +26,16 @@ type BookingCalendar struct {
 }
 
 func (*BookingCalendar) Check(context.Context, ids.UserID, string) error { return nil }
+
+// ReconnectedSince answers true: this calendar is freshly granted.
+func (*BookingCalendar) ReconnectedSince(context.Context, ids.UserID, string, time.Time) (bool, error) {
+	return true, nil
+}
+
+// Blocker answers none: this calendar is connected and writable.
+func (*BookingCalendar) Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error) {
+	return crmcontracts.SchedulingProfileBlockerNone, nil
+}
 
 func (*BookingCalendar) List(context.Context, ids.UserID, string) ([]connector.CalendarOption, error) {
 	return []connector.CalendarOption{{ID: "work", Name: "Work", Writable: true, Primary: true}}, nil
@@ -68,8 +80,9 @@ func EnableBooking(t *testing.T, e *AppEnv) {
 
 // NextBookableMorning is 10:00 UTC on the next weekday at least a day ahead:
 // inside the default working hours and the booking horizon.
-func NextBookableMorning() time.Time {
-	day := time.Now().UTC().AddDate(0, 0, 2)
+func NextBookableMorning(t testing.TB) time.Time {
+	t.Helper()
+	day := clocktest.Now(t).UTC().AddDate(0, 0, 2)
 	for day.Weekday() == time.Saturday || day.Weekday() == time.Sunday {
 		day = day.AddDate(0, 0, 1)
 	}

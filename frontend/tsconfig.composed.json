@@ -48,9 +48,9 @@
       // workspace member into its DEPENDENTS' node_modules, so resolving
       // @margince-ext/<unit> by installation would mean frontend/package.json
       // listing every enabled unit — an upstream-owned file that adding a unit
-      // would have to edit. The whole tier rests on presence under extensions/
-      // being the enablement, so the SPA learns a unit exists from the
-      // generated registry and resolves it from here.
+      // would have to edit. The SPA learns a unit exists from the generated
+      // registry and resolves it through the link gen-composition writes for
+      // it, wherever the unit lives.
       //
       // Workspace membership still earns its keep: it is what installs and
       // resolves a unit's OWN dependencies, from inside the unit's directory.
@@ -66,7 +66,7 @@
       "@margince/frontend/design-system": ["./src/surface/design-system.ts"],
       "@margince/frontend/api": ["./src/surface/api.ts"],
       "@margince/frontend/app": ["./src/surface/index.ts"],
-      "@margince-ext/*": ["../extensions/*/frontend"]
+      "@margince-ext/*": ["../build/composition-frontend/units/*"]
     }
   },
   // A unit's screen lives outside src/ entirely now, and tsc reaches it by

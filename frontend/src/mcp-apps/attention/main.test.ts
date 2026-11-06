@@ -153,6 +153,48 @@ describe("the attention card for open promises", () => {
   });
 });
 
+describe("a promise's due date", () => {
+  const coming = (extra: object) => ({
+    as_of: "2026-10-20T00:00:00Z",
+    commitments: [
+      {
+        source: "task",
+        task_id: "0195c3a0-0000-7000-8000-0000000000f3",
+        subject: "Call back the buyer",
+        due_at: "2026-10-27T14:00:00Z",
+        state: "upcoming",
+        about: [],
+        ...extra,
+      },
+    ],
+  });
+  const badgeText = (root: HTMLElement) =>
+    root.querySelector(".attention-status .badge")?.textContent;
+
+  // The day is the installation's, as every task screen prints it, and the
+  // hour shows only on a promise that has one.
+  it("prints the day in the installation's zone, with the time when it has one", () => {
+    expect(
+      badgeText(
+        mount({
+          ...coming({ due_has_time: true }),
+          time_zone: "Europe/Berlin",
+        }),
+      ),
+    ).toBe("Due 27 Oct, 15:00");
+    expect(
+      badgeText(mount({ ...coming({}), time_zone: "Europe/Berlin" })),
+    ).toBe("Due 27 Oct");
+  });
+
+  it("does not move a day due late in the evening onto the next UTC day", () => {
+    const late = coming({ due_at: "2026-10-28T06:59:59Z" });
+    expect(
+      badgeText(mount({ ...late, time_zone: "America/Los_Angeles" })),
+    ).toBe("Due 27 Oct");
+  });
+});
+
 describe("an answer the card does not know", () => {
   it("says there is nothing to show", () => {
     const root = mount({ something: "else" });

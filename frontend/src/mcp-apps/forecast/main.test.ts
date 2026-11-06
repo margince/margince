@@ -47,14 +47,9 @@ describe("the forecast card for a period's readings", () => {
     expect(bars(root)).toEqual([
       { label: "Won", figure: compactMoney(4_000_000, "EUR"), width: "33%" },
       {
-        label: "With evidence",
+        label: "Likely",
         figure: compactMoney(6_500_000, "EUR"),
         width: "54%",
-      },
-      {
-        label: "Best case",
-        figure: compactMoney(9_000_000, "EUR"),
-        width: "75%",
       },
       { label: "Open", figure: compactMoney(12_000_000, "EUR"), width: "100%" },
     ]);

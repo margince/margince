@@ -42,7 +42,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -115,7 +114,7 @@ func TestTheConsentCarryIsSpelledOnceInContacts(t *testing.T) {
 // record holding it retires".
 func TestEveryConsentWriteInTheCarryFileBelongsToTheCarry(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(theCarryFile)
+	source, err := gatekit.ReadFile(theCarryFile)
 	if err != nil {
 		t.Fatalf("reading the carry: %v", err)
 	}

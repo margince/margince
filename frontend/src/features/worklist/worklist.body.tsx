@@ -39,6 +39,7 @@ import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
 import { OptionalRelationships } from "./worklist.relationships";
 import { rowIdentity } from "./worklist.rowidentity";
+import { TeamMarginceChangesPanel } from "./worklist.teamchanges";
 import { DayUnread, dayPartlyRead } from "./worklist.unread";
 import { UpcomingSection } from "./worklist.upcoming";
 import { WalkNotice } from "./worklist.walknotice";
@@ -364,6 +365,7 @@ function ScopePanels({
   return (
     <>
       {wide && <TeamExceptionsPanel enabled={leads} onOwner={onOwnerDay} />}
+      {wide && <TeamMarginceChangesPanel enabled={leads} />}
       {wide && <TeamBoard onOwner={onOwnerDay} onUnassigned={onUnassigned} />}
       {scope === "all" && (
         <HiddenBacklogPanel enabled={leads} onOpenEmail={onOpenEmail} />

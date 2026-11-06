@@ -24,12 +24,12 @@ package gates
 // the product says which languages it speaks, and the other two answer to it.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -43,7 +43,7 @@ var onboardingLocaleEnums = regexp.MustCompile(
 func TestTheOnboardingConversationSpeaksEveryShippedLanguage(t *testing.T) {
 	t.Parallel()
 
-	contract, err := os.ReadFile("api/crm.yaml")
+	contract, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -104,7 +104,7 @@ func splitEnum(raw string) []string {
 // benefit of the thing checking it.
 func onboardingCopyDeclares(t *testing.T, code string) bool {
 	t.Helper()
-	body, err := os.ReadFile("internal/compose/onboardingcopy.go")
+	body, err := gatekit.ReadFile("internal/compose/onboardingcopy.go")
 	if err != nil {
 		t.Fatalf("reading the onboarding copy table: %v", err)
 	}

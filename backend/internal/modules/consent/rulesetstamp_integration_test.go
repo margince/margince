@@ -28,17 +28,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// inCountry binds the env's gate and store to a pack with the given version.
+// inCountry registers a pack with the given version and puts the env's
+// recipient in its country, the way the contacts writer stores one.
 func inCountry(t *testing.T, e *resolveEnv, code string, version int) {
 	t.Helper()
 	messagingrules.Register(messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code(code), Version: version,
 	})
-	reader := InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
-		return jurisdiction.Code(code), nil
-	})
-	e.gate = e.gate.WithInstallationCountry(reader)
-	e.store = e.store.WithInstallationCountry(reader)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, e.contact, code); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // rulesetOf reads back what a decision recorded about the rules that judged it.
@@ -80,13 +80,13 @@ func TestADecisionRecordsTheRulesetThatJudgedIt(t *testing.T) {
 	}
 }
 
-// TestAnInstallationDeclaringNoCountryRecordsNoRuleset.
+// TestARecipientWithNoCountryRecordsNoRuleset.
 //
 // NULL is a real answer and not a gap: no country resolves to no rules at all,
 // and a zero version would read as a ruleset that exists and has none. The
 // consent requirement that binds everywhere is enforced by the marketing
 // verdict, which runs before any pack.
-func TestAnInstallationDeclaringNoCountryRecordsNoRuleset(t *testing.T) {
+func TestARecipientWithNoCountryRecordsNoRuleset(t *testing.T) {
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 
@@ -174,45 +174,33 @@ func TestTheRecordedRulesetIsRefusedWhenItNamesNoJurisdiction(t *testing.T) {
 	}
 }
 
-// TestTheRecordedRulesetIsTheOneThatJudgedNotTheOneLiveAtWriteTime.
+// TestTheSendersCountryIsNotStampedOnARecipientWithNone.
 //
-// Codex found this: the stamp was read AFTER the decisions were taken, in the
-// function that writes the rows. An installation changing its declared country
-// mid-transmit would have had its frequency ceiling applied under the old pack
-// while the row named the new one — a record saying Vietnam judged a message
-// Germany judged.
+// The installation is established in a country with a pack, and the recipient's
+// record states no country. Marketing rules follow the recipient, and the
+// approved rules never put the sender's country in its place, so the decision
+// records the baseline: no ruleset.
 //
-// The country reads are separate unlocked SELECTs under READ COMMITTED, so
-// sharing one transaction does not make two of them agree. Reading once, before
-// any decision, is what does.
-//
-// Mutation: move the rulesetStamp call in stageDecisions back below the decide
-// loop and this fails.
-func TestTheRecordedRulesetIsTheOneThatJudgedNotTheOneLiveAtWriteTime(t *testing.T) {
+// Mutation: add the sender's code to the applicableRules call in rulesetStamp and
+// this fails.
+func TestTheSendersCountryIsNotStampedOnARecipientWithNone(t *testing.T) {
 	e := setupResolve(t)
-	inCountry(t, e, "rd", 5)
-	delivery := e.plantDelivery(t)
-
-	// The country flips the moment the first decision has been taken, which is
-	// exactly the window the old ordering left open.
-	flipped := false
+	messagingrules.Register(messagingrules.Rules{
+		Jurisdiction: jurisdiction.Code("rd"), Version: 5,
+	})
 	e.gate = e.gate.WithInstallationCountry(
 		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
-			if flipped {
-				return jurisdiction.Code("re"), nil
-			}
-			flipped = true
 			return jurisdiction.Code("rd"), nil
 		}))
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: jurisdiction.Code("re"), Version: 6,
-	})
+	delivery := e.plantDelivery(t)
 
 	stageThenTransmit(t, e, delivery, stagedSubject, stagedBody)
 
-	version, codes := rulesetOf(t, e, delivery, "staging")
-	if version == nil || *version != 5 || len(codes) != 1 || codes[0] != "rd" {
-		t.Errorf("the staging decision recorded version %v codes %v, want 5 and [rd] — "+
-			"the row names a ruleset that judged nothing", version, codes)
+	for _, phase := range []string{"staging", "transmit"} {
+		version, codes := rulesetOf(t, e, delivery, phase)
+		if version != nil || len(codes) != 0 {
+			t.Errorf("the %s decision recorded version %v codes %v for a recipient with no "+
+				"country — that is the sender's pack standing in for the recipient's", phase, version, codes)
+		}
 	}
 }

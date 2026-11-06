@@ -27,7 +27,8 @@ type Vouch = ReasonTarget & Readonly<{ reason: string }>;
  * A rep's own reason to write to a contact the engine found nothing for. The
  * standing vouch `allowContact` writes, under the rep's name and not consent,
  * for the category the engine resolved; the engine is then asked again.
- * A reason the message already names is one press, not a second pick.
+ * A reason the message already names is one press, not a second pick. The
+ * caption says it is standing, so it is not read as a fact about one message.
  */
 export function ContactReasonPick({
   target,
@@ -51,6 +52,9 @@ export function ContactReasonPick({
   const chosenLabel = options.find((o) => o.value === chosen)?.label;
   return (
     <div className="compose-reason">
+      <p className="t-caption">
+        {t("compose.reasonStanding", { address: target.address })}
+      </p>
       {chosenLabel ? (
         <Button
           onClick={() => vouch.mutate({ ...target, reason: chosenLabel })}
@@ -87,6 +91,59 @@ export function ContactReasonPick({
       {vouch.isError && (
         <ErrorLine>{problemMessageOf(vouch.error, t)}</ErrorLine>
       )}
+    </div>
+  );
+}
+
+type Preview = components["schemas"]["SendAuthorizationPreview"];
+
+/**
+ * The reason the record already carries for every recipient, when the claimed
+ * one refuses them all. The engine names alternatives only for a recipient it
+ * refuses. A switch changes the reason for the whole message, so a send with
+ * an allowed recipient is offered none. An answer still out, or one that
+ * failed, offers none either.
+ */
+export function alternativeReasonOf(permission: {
+  preview: Preview | undefined;
+  asking: boolean;
+  unanswered: boolean;
+}): CommunicationContext | undefined {
+  if (permission.asking || permission.unanswered || !permission.preview) {
+    return undefined;
+  }
+  const { recipients } = permission.preview;
+  if (!recipients.every((r) => r.would_refuse)) {
+    return undefined;
+  }
+  const [first, ...rest] = recipients;
+  return (first?.supported_alternatives ?? []).find((reason) =>
+    rest.every((r) => r.supported_alternatives?.includes(reason)),
+  );
+}
+
+/**
+ * The one press that answers a refused reason with the one the record
+ * carries. It switches the reason and the engine is asked again; it records
+ * nothing and sends nothing.
+ */
+export function ReasonSwitch({
+  reason,
+  onSwitch,
+}: Readonly<{
+  reason: CommunicationContext;
+  onSwitch: (next: CommunicationContext) => void;
+}>) {
+  const t = useT();
+  const label =
+    contextOptions(t).find((option) => option.value === reason)?.label ??
+    reason;
+  return (
+    <div className="compose-reason">
+      <p className="t-caption">{t("compose.reasonSwitchText")}</p>
+      <Button onClick={() => onSwitch(reason)}>
+        {t("compose.reasonSwitch", { reason: label })}
+      </Button>
     </div>
   );
 }

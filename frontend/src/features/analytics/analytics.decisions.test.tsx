@@ -124,3 +124,20 @@ it("asks for the decisions of the review's deals", async () => {
   expect(list?.searchParams.get("country")).toBe("DE");
   expect(list?.searchParams.has("industry")).toBe(false);
 });
+
+it("can record the first manual decision without drawing an empty table", async () => {
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /me": meRoute({ activity: ["read", "create"], deal: ["read"] }),
+    "GET /analytics/decisions": () => jsonResponse({ data: [] }),
+  });
+  render(
+    <StoryProviders>
+      <DecisionsPanel />
+    </StoryProviders>,
+  );
+  const action = await screen.findByRole("button", { name: "Record decision" });
+  expect(screen.queryByRole("table")).toBeNull();
+  await userEvent.setup().click(action);
+  expect(await screen.findByRole("dialog")).toBeVisible();
+});

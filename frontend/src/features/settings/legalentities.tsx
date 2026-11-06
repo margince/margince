@@ -15,13 +15,12 @@ import { QueryStates } from "../../design-system/querystates";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { type Translator, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { problemMessageOf } from "../../lib/problem";
 import {
   type CreateLegalEntity,
   type LegalEntity,
   useCreateLegalEntity,
   useLegalEntities,
-} from "./legalentities.queries";
+} from "../../lib/legalentities.queries";
 import {
   ArchiveEntityDialog,
   CountryField,
@@ -211,9 +210,7 @@ function NewEntityDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             value={form.country}
             onChange={set("country")}
           />
-          <ErrorLine
-            error={create.isError && problemMessageOf(create.error, t)}
-          />
+          <ErrorLine error={create.error} />
         </form>
       }
       actions={

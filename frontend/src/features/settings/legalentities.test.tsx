@@ -229,6 +229,12 @@ it("saves only the fields an edit changed, on the version it read", async () => 
     within(dialog).getByRole("textbox", { name: en["legalEntities.iban"] }),
     "AT61 1904 3002 3457 3201",
   );
+  await user.type(
+    within(dialog).getByRole("textbox", {
+      name: en["legalEntities.signatureTemplate"],
+    }),
+    "<p>Acme Wien</p>",
+  );
   await user.click(
     within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
   );
@@ -238,6 +244,7 @@ it("saves only the fields an edit changed, on the version it read", async () => 
   expect(patch?.ifMatch).toBe("4");
   expect(patch?.body).toEqual({
     iban: "AT61 1904 3002 3457 3201",
+    signature_template: "<p>Acme Wien</p>",
     address: { city: "Graz" },
   });
 });
@@ -259,6 +266,12 @@ it("offers the default only the fields it keeps itself", async () => {
   expect(
     within(dialog).getByRole("textbox", { name: en["legalEntities.iban"] }),
   ).toBeInTheDocument();
+  // It signs with the workspace template, which has its own card.
+  expect(
+    within(dialog).queryByRole("textbox", {
+      name: en["legalEntities.signatureTemplate"],
+    }),
+  ).toBeNull();
   expect(
     within(dialog).getByRole("combobox", { name: /Country/ }),
   ).toHaveTextContent(en["legalEntities.countryInstallation"]);
@@ -315,6 +328,14 @@ it("offers a reader no verbs on a row", async () => {
   ).toBeNull();
 });
 
+// The logo slot's drop target, named by the slot it sits in.
+function logoPicker(dialog: HTMLElement) {
+  const slot = within(dialog).getByRole("region", {
+    name: en["legalEntities.sectionLogo"],
+  });
+  return within(slot).getByLabelText(en["legalEntities.sectionLogo"]);
+}
+
 it("stores a chosen logo at once, and saves the next edit on the version it left", async () => {
   const user = userEvent.setup();
   const calls: Call[] = [];
@@ -323,12 +344,14 @@ it("stores a chosen logo at once, and saves the next edit on the version it left
   await rowVerb(user, "Acme Wien", en["legalEntities.edit"]);
   const dialog = await screen.findByRole("dialog");
   await user.upload(
-    within(dialog).getByLabelText(en["legalEntities.logoAdd"]),
+    logoPicker(dialog),
     new File(["png"], "logo.png", { type: "image/png" }),
   );
-  await within(dialog).findByRole("button", {
-    name: en["legalEntities.logoRemove"],
-  });
+  await user.click(
+    within(dialog).getByRole("button", { name: en["legalEntities.logoEdit"] }),
+  );
+  await screen.findByRole("button", { name: en["legalEntities.logoRemove"] });
+  await user.keyboard("{Escape}");
   const upload = calls.find(
     (call) =>
       call.method === "POST" &&
@@ -365,7 +388,7 @@ it("holds Save and the close while a logo write is out", async () => {
     "BKAUATWW",
   );
   await user.upload(
-    within(dialog).getByLabelText(en["legalEntities.logoAdd"]),
+    logoPicker(dialog),
     new File(["png"], "logo.png", { type: "image/png" }),
   );
   const save = within(dialog).getByRole("button", {

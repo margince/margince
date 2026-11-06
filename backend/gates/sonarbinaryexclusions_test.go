@@ -25,6 +25,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // trackedBinaries returns the committed files the sensor would fail to read.
@@ -58,7 +60,7 @@ func trackedBinaries(t *testing.T) []string {
 		if !info.Mode().IsRegular() {
 			continue
 		}
-		content, err := os.ReadFile(full)
+		content, err := gatekit.ReadFile(full)
 		if err != nil {
 			t.Fatalf("reading tracked file %s: %v", rel, err)
 		}
@@ -79,7 +81,7 @@ func trackedBinaries(t *testing.T) []string {
 func sonarExclusions(t *testing.T) []string {
 	t.Helper()
 	const property = "sonar.exclusions="
-	raw, err := os.ReadFile(filepath.Join(repoRoot, "sonar-project.properties"))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, "sonar-project.properties"))
 	if err != nil {
 		t.Fatalf("reading the scan configuration: %v", err)
 	}

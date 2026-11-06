@@ -150,16 +150,20 @@ func TestAFrozenIDTheSendCouldNotCarryIsCountedNotRefused(t *testing.T) {
 		return OutboundFile{AttachmentID: id, Filename: "quote.pdf"}, nil
 	}
 
-	files, err := sortFrozenFiles(context.Background(), frozen, sendable)
+	chosen, malformed := frozenAttachmentIDs(frozen)
+	if malformed != 1 {
+		t.Errorf("malformed = %d, want the one unparseable id", malformed)
+	}
+	files, err := sortChosenFiles(context.Background(), chosen, sendable)
 	if err != nil {
 		t.Fatalf("a read with uncarriable ids refused: %v", err)
 	}
 	if asked != maxAttachmentsPerSend {
 		t.Errorf("looked up %d files, want the cap of %d", asked, maxAttachmentsPerSend)
 	}
-	// One unparseable, one past the cap, one archived.
-	if files.unavailable != 3 {
-		t.Errorf("unavailable = %d, want 3", files.unavailable)
+	// One past the cap, one archived.
+	if files.unavailable != 2 {
+		t.Errorf("unavailable = %d, want 2", files.unavailable)
 	}
 	var want []ids.UUID
 	for _, id := range named[:maxAttachmentsPerSend] {
@@ -181,7 +185,7 @@ func TestALookupThatFailsStopsTheDetailRead(t *testing.T) {
 	sendable := func(context.Context, ids.UUID) (OutboundFile, error) {
 		return OutboundFile{}, fmt.Errorf("resolving an attached file: %w", context.DeadlineExceeded)
 	}
-	if _, err := sortFrozenFiles(context.Background(), []string{ids.NewV7().String()}, sendable); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := sortChosenFiles(context.Background(), []ids.UUID{ids.NewV7()}, sendable); !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("a failed lookup read as %v, want it to stop the read", err)
 	}
 }

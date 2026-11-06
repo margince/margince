@@ -378,7 +378,7 @@ func TestTheReadmeLeadsWithConnectingATool(t *testing.T) {
 	if connect < 0 || scripts < 0 || connect > scripts {
 		t.Fatalf("README puts connecting a tool at %d and scripts at %d; connecting must come first", connect, scripts)
 	}
-	if !strings.Contains(readme[connect:scripts], "claude mcp add --transport http margince "+mcpURL) {
+	if !strings.Contains(readme[connect:scripts], "claude mcp add --transport http --scope user margince "+mcpURL) {
 		t.Error("README does not give the connector address in the command-line steps")
 	}
 	if strings.Contains(readme, "does not accept AI tool connections") {

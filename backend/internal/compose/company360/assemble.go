@@ -390,8 +390,11 @@ func (a *assembly) readNextSteps() error {
 	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
 		return err
 	}
-	data, page, err := nextStepsSection(a.ctx, a.tx, a.companyID, a.now, a.opts)
+	data, page, sources, err := nextStepsSection(a.ctx, a.tx, a.companyID, a.now, a.opts)
 	if err != nil {
+		return err
+	}
+	if err := a.svc.askTasksDone(a.ctx, a.tx, data, sources, a.now); err != nil {
 		return err
 	}
 	a.out.NextSteps = &struct {

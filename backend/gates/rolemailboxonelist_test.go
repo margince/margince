@@ -185,7 +185,7 @@ func roleMailboxListsIn(t *testing.T, roots ...string) []string {
 			if strings.Contains(filepath.ToSlash(path), roleMailboxOwner) {
 				continue
 			}
-			raw, err := os.ReadFile(path)
+			raw, err := gatekit.ReadFile(path)
 			if err != nil {
 				t.Fatalf("read %s: %v", path, err)
 			}

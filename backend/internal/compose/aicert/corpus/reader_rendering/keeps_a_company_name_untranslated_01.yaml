@@ -1,0 +1,22 @@
+name: reader_rendering_keeps_a_company_name_untranslated
+task: reader_rendering
+site: activity_text
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  kind: "note"
+  subject: "Call with Grüne Wiese Energie"
+  body: "Spoke with the team at Grüne Wiese Energie GmbH about the rollout. They want to start with the Hamburg site and will send the floor plans next week."
+  source: "en"
+  target: "de"
+expect:
+  outcome: accepted
+  answer:
+    already_in_target: false
+    keeps: ["Grüne Wiese Energie GmbH", "Hamburg"]
+    omits: ["Green Meadow"]
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The company name stays exactly as written, never translated. The rendering is natural German and keeps that they will send the floor plans next week."

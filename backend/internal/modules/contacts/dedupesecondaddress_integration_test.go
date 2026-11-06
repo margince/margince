@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence/correspondencetest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -155,10 +156,8 @@ func TestCapturingATaggedAddressFilesOnePair(t *testing.T) {
 func TestTheAddressBaseAgreesInGoAndSQL(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	for _, address := range []string{
-		"ab@example.com", "ab+x@example.com", "+x@example.com", "ab+x+y@example.com",
-		"AB+X@Example.COM", "a.b+tag@sub.example.com", "ab@x+y.example.com",
-	} {
+	for _, c := range correspondencetest.BaseAddressCases {
+		address := c.Address
 		want, _ := correspondence.BaseAddress(address)
 		var got string
 		if err := e.store.tx(ctx, func(tx pgx.Tx) error {

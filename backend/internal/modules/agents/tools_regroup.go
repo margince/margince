@@ -110,10 +110,10 @@ type changeReports struct{ routed }
 
 func (changeReports) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "change_reports", Title: "Prepare saved reports", Version: toolVersionV1,
+		Name: "change_reports", Title: "Work saved reports and the forecast", Version: toolVersionV1,
 		Description: changeReportsCopy.render(), Instead: changeReportsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"description":"draft: save a report's next charts as a draft for a human to publish, or create a new report only they see"},
+			"action":{"description":"draft: save a report's next charts as a draft to publish later, or create a new report only its author sees"},
 			"selection":{"description":"The report's metrics, charts and sections; a pipeline_id comes from ` + pipelinesSource + `"}}}`),
 	}
 }

@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { EntityRef } from "../../components/entityref";
+import { LinkedInChip } from "../../components/linkedinchip";
 import { saveRecordEdit } from "../../components/recordedit";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
@@ -15,7 +16,6 @@ import {
 } from "../../design-system/contactlink";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
-import { OffsiteLink } from "../../design-system/offsitelink";
 import {
   type DetailRow,
   type DetailSection,
@@ -23,7 +23,6 @@ import {
 } from "../../design-system/recorddetails";
 import { formatDateAbbrev } from "../../format/format";
 import { industryOptions, industryWords } from "../../format/industry";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
@@ -37,10 +36,12 @@ import {
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { ProblemError } from "../../lib/problem";
 import { useRecordTags } from "../../lib/tags.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
 import { useLeadPartnerRow } from "./leadpartner";
+import { LeadProductLine } from "./leadproduct";
 import { LeadProjectAttachButton } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
 import { mapLeadUpdate } from "./leads.form";
@@ -131,6 +132,7 @@ function useAboutRows(
   writer: LeadWriter,
   reasonId: string | undefined,
 ): DetailRow[] {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const origins = useLeadOrigins();
@@ -255,7 +257,7 @@ function useAboutRows(
     {
       key: "received",
       term: t("lead.aside.received"),
-      value: formatDateAbbrev(lead.created_at, locale, viewerZone()),
+      value: formatDateAbbrev(lead.created_at, locale, readerZone),
     },
     // The name heads the card; the row is only here to fill a blank one.
     ...(isBlank(lead.full_name)
@@ -266,9 +268,7 @@ function useAboutRows(
       term: t("create.linkedinUrl"),
       empty: isBlank(lead.linkedin_url),
       value: lead.linkedin_url ? (
-        <OffsiteLink href={lead.linkedin_url}>
-          {t("record.openProfile")}
-        </OffsiteLink>
+        <LinkedInChip href={lead.linkedin_url} name={lead.full_name} />
       ) : (
         <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
       ),
@@ -287,6 +287,15 @@ function useAboutRows(
           writer={writer}
           reasonId={reasonId}
         />
+      ),
+    },
+    {
+      key: "product_id",
+      term: t("lead.product"),
+      empty: !lead.product_id,
+      block: !lead.product_id,
+      value: (
+        <LeadProductLine lead={lead} writer={writer} reasonId={reasonId} />
       ),
     },
     {

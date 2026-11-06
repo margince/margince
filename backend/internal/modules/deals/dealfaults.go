@@ -17,6 +17,19 @@ func (e *PastCloseDateError) FieldFault() (field, code, message string) {
 	return closeDateField, "close_date_past", e.Error()
 }
 
+// ProbabilityFixedWhenClosedError maps to 422 probability_fixed_when_closed: a
+// won or lost deal's probability is its stage's.
+type ProbabilityFixedWhenClosedError struct{}
+
+func (e *ProbabilityFixedWhenClosedError) Error() string {
+	return "a won or lost deal takes its stage's probability; reopen it to set its own"
+}
+
+// FieldFault refuses a probability on a closed deal.
+func (e *ProbabilityFixedWhenClosedError) FieldFault() (field, code, message string) {
+	return "win_probability", "probability_fixed_when_closed", e.Error()
+}
+
 // The deal's money and forecast fields, whose wire name and column name are the
 // SAME word — deliberately, because the contract was written from the schema, and
 // a refusal that named a different field from the column it guards would send a
@@ -34,6 +47,15 @@ const currencyField = "currency"
 
 // amountField is the other half of a money value.
 const amountField = "amount_minor"
+
+// stageIDColumn is the deal's stage, as a stage move writes and audits it.
+const stageIDColumn = "stage_id"
+
+// lineItemsField is the field a refusal about a whole set of lines points at.
+const lineItemsField = "line_items"
+
+// productsField is a deal's product split, in a refusal and in its audit image.
+const productsField = "products"
 
 // arrField is the recurring figure. It shares the currency with amountField
 // rather than carrying one of its own: a deal quoting its one-off price in one

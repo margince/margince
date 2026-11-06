@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -21,7 +22,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // read_view serves a REST read by running that route's own handler, in
@@ -34,27 +37,33 @@ type viewQuery = agents.ViewQuery
 // registry is built first, so the seam reaches the router through this.
 type viewDoor struct {
 	api http.Handler
+	// ceiling is the body bound the chassis gives a route. The chassis does not
+	// stand in front of an in-process call, so serveInProcess applies it.
+	ceiling httpserver.BodyCeiling
 }
 
-// admittedByTheToolKey marks a request read_view runs. The MCP door already
-// admitted the call (scope, seat, volume), so the REST gate must not admit and
-// charge it again. It is a context value, which no client can send.
+// admittedByTheToolKey marks a request a tool runs in process, holding the one
+// route ("METHOD pattern") the tool meant. The MCP door already admitted the
+// call (scope, seat, volume), so the REST gate must not admit and charge it
+// again. It is a context value, which no client can send.
 type admittedByTheToolKey struct{}
 
-// admittedByTheTool reports a request read_view runs that landed on a view's
-// own route. A path value can spell a fixed sibling segment, which the router
-// prefers. A request that lands anywhere else is gated like any agent read.
+// admittedByTheTool reports a request a tool runs that landed on the one route
+// the tool meant. A path value can spell a fixed sibling segment, which
+// the router prefers; a request that lands anywhere else is gated like any
+// agent request.
 func admittedByTheTool(r *http.Request) bool {
-	admitted, _ := r.Context().Value(admittedByTheToolKey{}).(bool)
-	if !admitted || r.Method != http.MethodGet {
-		return false
-	}
+	meant, _ := r.Context().Value(admittedByTheToolKey{}).(string)
 	route := chi.RouteContext(r.Context())
-	if route == nil {
+	if meant == "" || route == nil {
 		return false
 	}
-	pol := agentPolicies[http.MethodGet+" "+route.RoutePattern()]
-	return pol.Tool == agents.ReadViewTool && pol.Access == accessTool
+	landed := r.Method + " " + route.RoutePattern()
+	pol := agentPolicies[landed]
+	if landed != meant || pol.Access != accessTool {
+		return false
+	}
+	return pol.Tool == agents.ReadViewTool || pol.ServedBy == servedByRoute
 }
 
 var pathParameter = regexp.MustCompile(`\{([^}]+)\}`)
@@ -68,12 +77,8 @@ func readViews(policies map[string]agentPolicy) []agents.ReadView {
 			continue
 		}
 		pattern := strings.SplitN(route, " ", 2)[1]
-		var params []string
-		for _, m := range pathParameter.FindAllStringSubmatch(pattern, -1) {
-			params = append(params, m[1])
-		}
 		views = append(views, agents.ReadView{
-			Name: viewName(pol.Op), Op: pol.Op, Pattern: pattern, PathParams: params, Query: readViewQueries[route],
+			Name: viewName(pol.Op), Op: pol.Op, Pattern: pattern, PathParams: pathParamsOf(pattern), Query: readViewQueries[route],
 		})
 	}
 	slices.SortFunc(views, func(a, b agents.ReadView) int { return strings.Compare(a.Name, b.Name) })
@@ -123,18 +128,12 @@ func readViewThrough(door *viewDoor) agents.ViewReader {
 		if door == nil || door.api == nil {
 			return nil, fmt.Errorf("read_view: views are served by the API process: %w", apperrors.ErrUnsupportedBySoR)
 		}
-		target := pathParameter.ReplaceAllStringFunc(view.Pattern, func(m string) string {
-			return url.PathEscape(path[strings.Trim(m, "{}")])
-		})
-		if len(query) > 0 {
-			target += "?" + query.Encode()
+		// Here as well as at the route, because the route's 403 reaches the tool
+		// as a bare refusal and this one names the area.
+		if err := operationAreaRefusal(ctx, mcp.ToolSpec{Name: agents.ReadViewTool}, view.Op); err != nil {
+			return nil, err
 		}
-		// A fresh chi route context, so an outer chi request's matched route and
-		// URL parameters never carry into this one.
-		inner := context.WithValue(context.WithValue(ctx, admittedByTheToolKey{}, true), chi.RouteCtxKey, (*chi.Context)(nil))
-		req := httptest.NewRequestWithContext(inner, http.MethodGet, target, nil)
-		rec := &cappedRecorder{ResponseRecorder: httptest.NewRecorder()}
-		door.api.ServeHTTP(rec, req)
+		rec := door.serveInProcess(ctx, inProcessCall{Method: http.MethodGet, Pattern: view.Pattern, Path: path, Query: query})
 		if rec.overflowed {
 			return nil, httperr.Validation("view", "view_too_large", fmt.Sprintf(
 				"the view answered more than %d MB; narrow it with its filters, or fetch it from its REST route",
@@ -142,6 +141,79 @@ func readViewThrough(door *viewDoor) agents.ViewReader {
 		}
 		return viewAnswer(rec.Result())
 	}
+}
+
+// pathParamsOf names a route pattern's path parameters, in order.
+func pathParamsOf(pattern string) []string {
+	var params []string
+	for _, m := range pathParameter.FindAllStringSubmatch(pattern, -1) {
+		params = append(params, m[1])
+	}
+	return params
+}
+
+// inProcessCall is one request a tool runs through the contract router.
+type inProcessCall struct {
+	Method, Pattern string
+	Path            map[string]string
+	Query           url.Values
+	Body            json.RawMessage
+	Version         string
+	IdempotencyKey  string
+	// Upload is a multipart body, sent in place of Body.
+	Upload *uploadForm
+	// FileLimit lets a file answer past maxViewAnswerBytes, up to this many bytes.
+	FileLimit int
+}
+
+// uploadForm is a multipart body and the content type that names its boundary.
+type uploadForm struct {
+	contentType string
+	body        []byte
+}
+
+// serveInProcess runs one call through the contract router as the caller,
+// marked with the one route it means. A fresh chi route context keeps an outer
+// request's matched route and URL parameters out of this one.
+func (door *viewDoor) serveInProcess(ctx context.Context, call inProcessCall) *cappedRecorder {
+	target := pathParameter.ReplaceAllStringFunc(call.Pattern, func(m string) string {
+		return url.PathEscape(call.Path[strings.Trim(m, "{}")])
+	})
+	if len(call.Query) > 0 {
+		target += "?" + call.Query.Encode()
+	}
+	inner := context.WithValue(context.WithValue(ctx, admittedByTheToolKey{}, call.Method+" "+call.Pattern), chi.RouteCtxKey, (*chi.Context)(nil))
+	var body io.Reader
+	contentType := ""
+	switch {
+	case call.Upload != nil:
+		body, contentType = bytes.NewReader(call.Upload.body), call.Upload.contentType
+	case call.Body != nil:
+		body, contentType = bytes.NewReader(call.Body), mcpClaimContentType
+	}
+	req := httptest.NewRequestWithContext(inner, call.Method, target, body)
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	if call.Version != "" {
+		req.Header.Set("If-Match", call.Version)
+	}
+	if call.IdempotencyKey != "" {
+		req.Header.Set("Idempotency-Key", call.IdempotencyKey)
+	}
+	rec := &cappedRecorder{ResponseRecorder: httptest.NewRecorder(), fileLimit: call.FileLimit}
+	req.Body = http.MaxBytesReader(rec, req.Body, door.bodyCeiling(req))
+	door.api.ServeHTTP(rec, req)
+	return rec
+}
+
+// bodyCeiling asks the chassis's own question of the request the tool built, so
+// both doors resolve one route to one ceiling.
+func (door *viewDoor) bodyCeiling(req *http.Request) int64 {
+	if door.ceiling == nil {
+		return httperr.MaxBodyBytes
+	}
+	return door.ceiling(req)
 }
 
 // maxViewAnswerBytes bounds what one view may hold in memory. An answer past
@@ -152,11 +224,33 @@ const maxViewAnswerBytes = 4 << 20
 // what it dropped. The handler runs to its end on bounded memory.
 type cappedRecorder struct {
 	*httptest.ResponseRecorder
+	fileLimit  int
 	overflowed bool
+	// declaredType is what the handler set before its first write. The recorder
+	// sniffs a type for a body with none, and that guess does not make it a file.
+	declaredType string
+	started      bool
+}
+
+func (c *cappedRecorder) noteDeclaredType() {
+	if !c.started {
+		c.started, c.declaredType = true, c.Header().Get("Content-Type")
+	}
+}
+
+// WriteHeader freezes the headers, so the declared type is read here too.
+func (c *cappedRecorder) WriteHeader(status int) {
+	c.noteDeclaredType()
+	c.ResponseRecorder.WriteHeader(status)
 }
 
 func (c *cappedRecorder) Write(p []byte) (int, error) {
-	if c.overflowed || c.Body.Len()+len(p) > maxViewAnswerBytes {
+	c.noteDeclaredType()
+	limit := maxViewAnswerBytes
+	if c.fileLimit > 0 && answersAFile(c.declaredType) {
+		limit = c.fileLimit
+	}
+	if c.overflowed || c.Body.Len()+len(p) > limit {
 		c.overflowed = true
 		return len(p), nil
 	}
@@ -185,19 +279,26 @@ func viewAnswer(res *http.Response) (json.RawMessage, error) {
 		return nil, refusal
 	}
 	switch {
-	case res.StatusCode >= http.StatusInternalServerError:
+	case res.StatusCode >= http.StatusInternalServerError && res.StatusCode != http.StatusNotImplemented:
 		return nil, fmt.Errorf("read_view: the route failed with %d", res.StatusCode)
 	case res.StatusCode >= http.StatusBadRequest:
 		var problem struct {
 			Detail string `json:"detail"`
 			Code   string `json:"code"`
 		}
-		if err := json.Unmarshal(body, &problem); err != nil || problem.Detail == "" {
+		detailed := json.Unmarshal(body, &problem) == nil && problem.Detail != ""
+		if res.StatusCode == http.StatusNotImplemented {
+			if !detailed {
+				problem.Detail = http.StatusText(res.StatusCode)
+			}
+			return nil, notOfferedHere(problem.Detail)
+		}
+		if !detailed {
 			return nil, fmt.Errorf("read_view: the route answered %d: %w", res.StatusCode, apperrors.ErrInvalidArgument)
 		}
 		return nil, httperr.Validation("view", problem.Code, problem.Detail)
 	}
-	if strings.HasPrefix(res.Header.Get("Content-Type"), "application/json") && len(body) > 0 {
+	if strings.Contains(res.Header.Get("Content-Type"), "json") && len(body) > 0 {
 		if body[0] == '[' {
 			return json.Marshal(map[string]json.RawMessage{"items": body})
 		}
