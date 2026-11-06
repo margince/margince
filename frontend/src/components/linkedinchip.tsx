@@ -22,15 +22,15 @@ export function LinkedInChip({
   if (!linkedinUrl(href)) {
     return href;
   }
-  const shown = name?.trim() || t("contact.page.linkedin");
+  const named = name?.trim();
   return (
     <Chip
       mark={<ProviderMark providerKey="linkedin" />}
       href={href}
-      label={t("record.linkedinProfile", { name: shown })}
+      label={named ? t("record.linkedinProfile", { name: named }) : undefined}
       dense
     >
-      {shown}
+      {named || t("contact.page.linkedin")}
     </Chip>
   );
 }

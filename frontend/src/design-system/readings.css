@@ -276,3 +276,6 @@
 .chip .provider-mark {
   --providerMarkSize: 14px;
 }
+.chip-dense .provider-mark {
+  --providerMarkSize: 12px;
+}

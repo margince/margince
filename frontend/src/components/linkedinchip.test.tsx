@@ -31,9 +31,9 @@ describe("LinkedInChip names the record and opens its profile", () => {
 
   it("says LinkedIn where the record has no name", () => {
     draw("https://linkedin.com/company/brandt", "  ");
-    expect(
-      screen.getByRole("link", { name: "LinkedIn on LinkedIn" }),
-    ).toHaveTextContent("LinkedIn");
+    expect(screen.getByRole("link", { name: "LinkedIn" })).toHaveTextContent(
+      "LinkedIn",
+    );
   });
 
   // The logo claims the destination; another host must not borrow it.
