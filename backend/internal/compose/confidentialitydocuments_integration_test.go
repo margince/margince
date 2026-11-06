@@ -135,10 +135,10 @@ func TestASalarySheetUnderANeutralNameIsStillRead(t *testing.T) {
 func TestAThreadWithDocumentsPastTheCapDoesNotOpen(t *testing.T) {
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
-	mail := seedHeldThreadMail(t, e, "thread-many-files", "billing@vendor.example", "Invoices")
+	mail := seedHeldThreadMail(t, e, "thread-many-files", "billing@vendor.example", "Reports")
 	for i := range capture.MaxThreadDocuments + 1 {
-		name := "INV " + string(rune('A'+i)) + ".csv"
-		captureMailDocument(t, e, blob, mail, name, "text/plain", []byte("Invoice,"+name+"\nTotal,100 EUR\n"))
+		name := "Report " + string(rune('A'+i)) + ".csv"
+		captureMailDocument(t, e, blob, mail, name, "text/plain", []byte("Report,"+name+"\nTotal,100 EUR\n"))
 	}
 	thread := seedThreadQuestion(t, e, "thread-many-files", mail)
 
@@ -199,6 +199,40 @@ BALANCE DUE USD 6,212.00`, "", "L", false)
 	return buf.Bytes()
 }
 
+// scannedPDF is a page with no text layer, as a scan or a print to an image is.
+func scannedPDF(t *testing.T) []byte {
+	t.Helper()
+	pdf := fpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.Rect(20, 20, 120, 60, "F")
+	var buf bytes.Buffer
+	if err := pdf.Output(&buf); err != nil {
+		t.Fatalf("rendering the scan fixture: %v", err)
+	}
+	return buf.Bytes()
+}
+
+// curriculumVitaePDF is one candidate's CV under a file name that says nothing.
+// The prose before its headings fills more than the prompt's excerpt.
+func curriculumVitaePDF(t *testing.T) []byte {
+	t.Helper()
+	pdf := fpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.MultiCell(0, 5, `Anna Berger
+Senior Project Manager
+`+strings.Repeat("I lead delivery teams through rollouts and keep customers informed. ", 30)+`
+Work Experience
+2019 - today  Delivery lead, Northwind GmbH
+Education
+2012 - 2016  M.Sc. Computer Science`, "", "L", false)
+	var buf bytes.Buffer
+	if err := pdf.Output(&buf); err != nil {
+		t.Fatalf("rendering the CV fixture: %v", err)
+	}
+	return buf.Bytes()
+}
+
 func TestAStaffInvoiceAndCostPlusSheetStayPrivateWhateverTheModelSays(t *testing.T) {
 	costPlus, err := os.ReadFile("../platform/doctext/testdata/costplus.xlsx")
 	if err != nil {
@@ -207,6 +241,9 @@ func TestAStaffInvoiceAndCostPlusSheetStayPrivateWhateverTheModelSays(t *testing
 	for name, files := range map[string]map[string][2]string{
 		"the invoice alone":         {"2026.03 Northwind INV 1043 SAP.pdf": {"application/pdf", string(staffInvoicePDF(t))}},
 		"the cost-plus sheet alone": {"2026 03 Northwind Cost+ VER 2.xlsx": {"application/zip", string(costPlus)}},
+		"a scanned invoice":         {"2023.09 NORTHWIND INV 3556.pdf": {"application/pdf", string(scannedPDF(t))}},
+		"a CV under a plain name":   {"anna-berger.pdf": {"application/pdf", string(curriculumVitaePDF(t))}},
+		"a photographed CV":         {"CV_Anna_Berger.jpg": {"image/jpeg", "\xff\xd8\xff\xe0 not a real photo"}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -232,6 +269,26 @@ func TestAStaffInvoiceAndCostPlusSheetStayPrivateWhateverTheModelSays(t *testing
 				t.Errorf("the model was asked %d times; the rule decides this thread without it", brain.asked)
 			}
 		})
+	}
+}
+
+func TestAScanUnderAPlainNameIsLeftToTheModel(t *testing.T) {
+	e := integration.Setup(t)
+	blob := blobstore.NewMemory()
+	mail := seedHeldThreadMail(t, e, "thread-scanned-map", "office@gradion.example", "Directions to the venue")
+	captureMailDocument(t, e, blob, mail, "venue map.pdf", "application/pdf", scannedPDF(t))
+	thread := seedThreadQuestion(t, e, "thread-scanned-map", mail)
+
+	brain := &alwaysOrdinaryBrain{}
+	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("confidentiality pass: %v", err)
+	}
+	if brain.asked != 1 {
+		t.Fatalf("the model was asked %d times, want once: only a file named as private skips it", brain.asked)
+	}
+	if got := threadStatus(t, e, thread); got != capture.VerdictCleared {
+		t.Errorf("thread status = %q, want cleared as the model answered", got)
 	}
 }
 
