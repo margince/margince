@@ -12088,8 +12088,9 @@ export interface paths {
          *     id here that reaches a colleague's list and no admin view of one.
          *
          *     A page at a time, pending first and then newest. `q` matches the opening message's subject
-         *     and a party's address or name; a thread whose message was erased is still found by the
-         *     addresses its hold kept. `counts` counts the whole list whatever a page narrows to.
+         *     and a party's address or name, within what the reader may read. A thread whose message
+         *     was erased is found by the addresses its hold kept, less any contact erased since. `counts`
+         *     counts the whole list whatever a page narrows to.
          */
         get: operations["listHeldThreads"];
         put?: never;

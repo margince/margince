@@ -75,9 +75,9 @@ func (h captureSenderHandlers) ListCaptureContactsAwaitingDecision(w http.Respon
 
 // ListHeldThreads answers what the caller's mailbox is withholding.
 //
-// It sits beside the senders list rather than in a file of its own: both are
-// this seat's view of what the capture posture decided on their behalf, both
-// are human-only and owner-scoped, and both are read from the same db.
+// It sits beside the senders list rather than in a file of its own. Both are
+// this seat's view of what the capture posture decided on their behalf. Both
+// are owner-scoped and read from the same db.
 func (h captureSenderHandlers) ListHeldThreads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListHeldThreadsParams) {
 	page, err := capture.HeldThreadsFor(r.Context(), h.db, heldThreadQuery(params))
 	if err != nil {
@@ -230,9 +230,7 @@ func heldThreadQuery(params crmcontracts.ListHeldThreadsParams) capture.HeldThre
 	if params.Cursor != nil {
 		query.Cursor = *params.Cursor
 	}
-	if params.Limit != nil {
-		query.Limit = *params.Limit
-	}
+	query.Limit = params.Limit
 	if params.Q != nil {
 		query.Q = *params.Q
 	}

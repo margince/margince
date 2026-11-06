@@ -99,6 +99,10 @@ func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery)
 	if !ok || actor.UserID == ids.Nil {
 		return HeldThreadPage{}, apperrors.ErrPermissionDenied
 	}
+	after, err := query.checked()
+	if err != nil {
+		return HeldThreadPage{}, err
+	}
 	// The arguments the clause and the query share, numbered together: the
 	// content clause mints its own placeholders and they must not collide with
 	// the seat's.
@@ -119,11 +123,11 @@ func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery)
 	}
 	var out HeldThreadPage
 	err = db.Tx(ctx, func(tx pgx.Tx) error {
-		filters, err := query.filters(ctx, tx, arg)
-		if err != nil {
+		if err := query.ensureContactReadable(ctx, tx); err != nil {
 			return err
 		}
-		limit := query.limit()
+		filters := query.filters(after, arg)
+		limit := storekit.ClampLimit(query.Limit)
 		limitAt := arg(limit + 1)
 		// The activity join is a LEFT one and the ledger is the driving table:
 		// a verdict outlives the message it was raised about (first_activity_id
@@ -144,7 +148,8 @@ func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery)
 		//
 		// It discloses nothing new: the reader is looking at their own verdict
 		// row, which names first_activity_id. Only the boolean crosses over —
-		// no subject, no id, no occurred_at.
+		// no subject, no id, no occurred_at. A filter reads `a`, or the ledger
+		// through ledgerReadable, so no match crosses over either.
 		rows, err := tx.Query(ctx, `
 			SELECT v.thread_key,
 			       v.status,
@@ -168,7 +173,7 @@ func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery)
 			   AND present.archived_at IS NULL
 			 WHERE v.user_id = $1
 			   AND v.status NOT IN ('cleared', 'shared_by_owner')`+filters+`
-			 ORDER BY `+heldOrderDescending+`
+			 ORDER BY pending DESC, sort_at DESC, v.id DESC
 			 LIMIT `+fmt.Sprintf("$%d", limitAt), args...)
 		if err != nil {
 			return fmt.Errorf("capture: listing a seat's held threads: %w", err)

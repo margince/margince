@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -17,24 +18,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Page sizes for the held list. A mailbox with years of mail holds thousands of
-// threads, and each one loads its parties too.
-const (
-	heldThreadsPageDefault = 50
-	heldThreadsPageMax     = 200
-)
-
-// heldStatuses are the ledger words the list holds, and so the ones a filter
-// may name.
-var heldStatuses = map[string]bool{VerdictPending: true, VerdictUnsure: true, VerdictHeld: true, VerdictHeldByOwner: true}
+// heldSearchMax bounds a search, as the contract does.
+const heldSearchMax = 200
 
 // HeldThreadQuery narrows and pages one seat's held threads.
 type HeldThreadQuery struct {
 	Cursor string
-	Limit  int
+	Limit  *int
 	// Q matches the opening message's subject, and a party's address or name.
-	// A thread whose message was erased is still found by the addresses its
-	// ledger row kept.
+	// A thread whose message was erased is found by the addresses its ledger
+	// row kept. Erasing a contact removes their address from that row.
 	Q         string
 	Status    string
 	ContactID *ids.UUID
@@ -60,61 +53,69 @@ type heldCursor struct {
 	ID      ids.UUID  `json:"id"`
 }
 
-// heldOrder is the tuple the list sorts by, every column descending, and the
-// one its cursor compares against.
-const (
-	heldOrder           = `(v.status = 'pending')::int, coalesce(a.occurred_at, v.created_at), v.id`
-	heldOrderDescending = `(v.status = 'pending')::int DESC, coalesce(a.occurred_at, v.created_at) DESC, v.id DESC`
-)
+// heldOrder is the tuple the cursor compares against. The list's ORDER BY sorts
+// the same three values by their aliases, each descending.
+const heldOrder = `(v.status = 'pending', coalesce(a.occurred_at, v.created_at), v.id)`
 
-func (q HeldThreadQuery) limit() int {
-	if q.Limit <= 0 {
-		return heldThreadsPageDefault
+// ledgerReadable admits a thread to a match on its ledger's addresses. Those
+// carry no content gate, so a message the reader may not read matches nothing:
+// a match would name its parties. An erased message has no gate left to hold.
+const ledgerReadable = `(a.id IS NOT NULL OR present.id IS NULL)`
+
+// checked refuses a query before any transaction opens, and reads its cursor.
+// The first page has none, which is the zero cursor.
+func (q HeldThreadQuery) checked() (heldCursor, error) {
+	if utf8.RuneCountInString(q.Q) > heldSearchMax {
+		return heldCursor{}, fmt.Errorf("a search is at most %d characters: %w", heldSearchMax, apperrors.ErrInvalidArgument)
 	}
-	return min(q.Limit, heldThreadsPageMax)
+	if q.Cursor == "" {
+		return heldCursor{}, nil
+	}
+	after, err := storekit.DecodeOpaque[heldCursor](q.Cursor)
+	if err != nil || after.ID == ids.Nil {
+		return heldCursor{}, &storekit.MalformedCursorError{}
+	}
+	return after, nil
 }
 
-// filters renders the query's narrowing over the verdict `v`, the gated
-// message `a` and the ungated one `present`.
-func (q HeldThreadQuery) filters(ctx context.Context, tx pgx.Tx, arg func(any) int) (string, error) {
+// ensureContactReadable answers 404 for a contact the reader may not read, as
+// heldThreadPartiesTx leaves one unnamed: no grant, out of scope, or archived.
+func (q HeldThreadQuery) ensureContactReadable(ctx context.Context, tx pgx.Tx) error {
+	if q.ContactID == nil {
+		return nil
+	}
+	if !auth.ReadGranted(ctx, "contact") {
+		return apperrors.ErrNotFound
+	}
+	return auth.EnsureVisibleLive(ctx, tx, "contact", *q.ContactID)
+}
+
+// filters renders the query's narrowing over the verdict `v`, the gated message
+// `a` and the ungated one `present`. Every match goes through `a` or
+// ledgerReadable, so a filter cannot test a party of a withheld message.
+func (q HeldThreadQuery) filters(after heldCursor, arg func(any) int) string {
 	var where strings.Builder
 	if q.Status != "" {
-		if !heldStatuses[q.Status] {
-			return "", fmt.Errorf("status %q is not one the held list holds: %w", q.Status, apperrors.ErrInvalidArgument)
-		}
 		fmt.Fprintf(&where, " AND v.status = $%d", arg(q.Status))
 	}
 	if term := strings.TrimSpace(q.Q); term != "" {
 		pattern := arg("%" + storekit.EscapeLike(term) + "%")
 		fmt.Fprintf(&where, ` AND (a.subject ILIKE $%[1]d
-			OR EXISTS (SELECT 1 FROM unnest(v.seen_addresses) seen WHERE seen ILIKE $%[1]d)
+			OR (`+ledgerReadable+` AND EXISTS (SELECT 1 FROM unnest(v.seen_addresses) seen WHERE seen ILIKE $%[1]d))
 			OR EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id
 			            AND (p.address ILIKE $%[1]d OR p.display_name ILIKE $%[1]d)))`, pattern)
 	}
 	if q.ContactID != nil {
-		// A contact the reader may not see is a missing row, so the filter
-		// cannot confirm one exists.
-		if err := auth.EnsureVisible(ctx, tx, "contact", *q.ContactID); err != nil {
-			return "", err
-		}
 		contact := arg(*q.ContactID)
-		fmt.Fprintf(&where, ` AND (EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = present.id AND p.contact_id = $%[1]d)
-			OR EXISTS (SELECT 1 FROM unnest(v.seen_addresses) seen
+		fmt.Fprintf(&where, ` AND (EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id AND p.contact_id = $%[1]d)
+			OR (`+ledgerReadable+` AND EXISTS (SELECT 1 FROM unnest(v.seen_addresses) seen
 			            JOIN contact_email ce ON lower(ce.email) = lower(seen)
-			           WHERE ce.contact_id = $%[1]d AND ce.archived_at IS NULL))`, contact)
+			           WHERE ce.contact_id = $%[1]d AND ce.archived_at IS NULL)))`, contact)
 	}
-	if q.Cursor != "" {
-		after, err := storekit.DecodeOpaque[heldCursor](q.Cursor)
-		if err != nil || after.ID == ids.Nil {
-			return "", &storekit.MalformedCursorError{}
-		}
-		rank := 0
-		if after.Pending {
-			rank = 1
-		}
-		fmt.Fprintf(&where, " AND (%s) < ($%d, $%d, $%d)", heldOrder, arg(rank), arg(after.At), arg(after.ID))
+	if after.ID != ids.Nil {
+		fmt.Fprintf(&where, " AND %s < ($%d, $%d, $%d)", heldOrder, arg(after.Pending), arg(after.At), arg(after.ID))
 	}
-	return where.String(), nil
+	return where.String()
 }
 
 // heldThreadCountsTx counts the seat's whole list, whatever a page narrows to.
