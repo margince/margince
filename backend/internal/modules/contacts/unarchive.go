@@ -87,7 +87,18 @@ func (s *Store) RestoreContactTx(
 	if err := refuseRestoreOverLead(ctx, tx, id); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	return storekit.Unarchive(ctx, tx, contactUnarchive, id.UUID, ifVersion, with)
+	report, err := storekit.Unarchive(ctx, tx, contactUnarchive, id.UUID, ifVersion, with)
+	if err != nil {
+		return report, err
+	}
+	// The restore brings the contact's employment edges back with it, so it can
+	// hand the contact an employer it shares with a live one. The create's
+	// duplicate check ran before the archive, and it cannot have seen this.
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return report, err
+	}
+	return report, fileEmployerTwins(ctx, tx, id, by)
 }
 
 // refuseRestoreOverLead refuses bringing a contact back while a live lead holds
