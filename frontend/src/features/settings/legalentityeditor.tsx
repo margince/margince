@@ -18,7 +18,6 @@ import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
 import { countryOptions } from "../../format/assignedcountries";
 import { useLocale, useT } from "../../i18n";
-import { problemMessageOf } from "../../lib/problem";
 import {
   type LegalEntity,
   type LogoWrite,
@@ -26,7 +25,8 @@ import {
   useArchiveLegalEntity,
   useLegalEntityLogo,
   useUpdateLegalEntity,
-} from "./legalentities.queries";
+} from "../../lib/legalentities.queries";
+import { problemMessageOf } from "../../lib/problem";
 
 // The editor's fields, flat. The contract nests the address and the offering;
 // draftOf and changesOf are the one place that maps between the two shapes.

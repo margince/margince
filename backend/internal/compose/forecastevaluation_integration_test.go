@@ -103,7 +103,7 @@ func (e *evaluationEnv) seedDeal(t *testing.T, pipeline ids.PipelineID, owner id
 // move takes one deal to a stage through the deal writer, at a set instant.
 func (e *evaluationEnv) move(t *testing.T, deal int, stage ids.StageID, at time.Time) {
 	t.Helper()
-	store := e.Deals.WithClock(func() time.Time { return at })
+	store := e.Deals.SetClock(func() time.Time { return at })
 	if _, err := store.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](e.deals[deal]),
 		deals.AdvanceDealInput{ToStageID: stage, WonWithoutContractReason: new("verbal")}); err != nil {
 		t.Fatalf("moving deal %d at %s: %v", deal, at, err)

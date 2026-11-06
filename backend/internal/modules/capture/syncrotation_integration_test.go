@@ -52,7 +52,7 @@ func TestAPullsOwnTokenRotationKeepsItsFailureAndBackoff(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, reg, _, _ := newCaptureRegistryFixture(t)
 			at := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
-			reg.WithClock(func() time.Time { return at })
+			reg.SetClock(func() time.Time { return at })
 			reg.Register(&rotatingFailurePull{failure: tc.failure})
 			if err := syncOnceOf(ctx, t, reg, haltingProvider); !errors.Is(err, tc.failure) {
 				t.Fatalf("rotated pull = %v, want %v", err, tc.failure)

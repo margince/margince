@@ -13,7 +13,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { activityDay } from "../format/activitywhen";
 import { useLocale, useT } from "../i18n";
 import { unwrap } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
+import { useViewerZone } from "../lib/viewerzone";
 import { useTaskUpdate } from "./taskactions";
 import { useCompleteTask } from "./taskcomplete";
 
@@ -42,7 +42,7 @@ export function MayBeDone({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const queryClient = useQueryClient();
   const refreshed = [...refresh, ["contact360", question?.contact_id ?? ""]];
   const task = useTaskUpdate(refreshed);

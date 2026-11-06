@@ -28,7 +28,7 @@ func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasou
 }
 
 // AdvanceDeal moves a deal to a stage, in the deals module.
-func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	return p.deals.AdvanceDeal(ctx, in)
 }
 

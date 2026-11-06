@@ -24,9 +24,15 @@ if [[ ! -f "$backend_makefile" ]]; then
 fi
 
 # A sub-make of `make check` inherits the caller's flags and job server; this
-# check asks make its own questions and must not inherit them.
+# check asks make its own questions and must not inherit them. Nor does it take
+# the switch `make check` sets for its lanes. A dry run still runs every line
+# that holds $(MAKE), so the lane logs of `make -n check` go to a folder of
+# their own instead of over the logs of the `make check` that runs this gate.
+lane_logs="$(mktemp -d)"
+trap 'rm -rf "$lane_logs"' EXIT
 root_make() {
-  (cd "$root_dir" && env -u MAKEFLAGS -u MFLAGS -u MAKELEVEL make --no-print-directory "$@")
+  (cd "$root_dir" && env -u MAKEFLAGS -u MFLAGS -u MAKELEVEL -u CHECK_WRITERS_RAN \
+    CHECK_LANE_LOGS="$lane_logs" make --no-print-directory "$@")
 }
 
 # The backend's advertised surface, spelled the way `make -C backend help`

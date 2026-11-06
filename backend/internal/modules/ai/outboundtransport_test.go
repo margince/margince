@@ -230,3 +230,18 @@ func outboundHTTPClientOf(t *testing.T, client model.Client) *http.Client {
 		return nil
 	}
 }
+
+type wrappedTransport struct{ http.RoundTripper }
+
+// A process that wraps net/http's default transport still gets an outbound
+// client, built on net/http's own settings rather than on the wrapper.
+func TestOutboundClientSurvivesAWrappedDefaultTransport(t *testing.T) {
+	previous := http.DefaultTransport
+	http.DefaultTransport = wrappedTransport{previous}
+	t.Cleanup(func() { http.DefaultTransport = previous })
+	client := newOutboundClient("openai")
+	transport, ok := client.Transport.(*http.Transport)
+	if !ok || transport.TLSHandshakeTimeout == 0 || transport.Proxy != nil {
+		t.Errorf("the client's transport is %T %+v, want net/http's settings with no proxy", client.Transport, transport)
+	}
+}

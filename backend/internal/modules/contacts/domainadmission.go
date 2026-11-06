@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -47,6 +48,9 @@ const (
 	AdmissionSourceVerdict   = "verdict"
 	AdmissionSourceHeuristic = "heuristic"
 	AdmissionSourceHuman     = "human"
+	// AdmissionSourceAgent is an agent deciding for its user. A machine may not
+	// overwrite it, and it may not overwrite a user's own decision.
+	AdmissionSourceAgent = "agent"
 )
 
 // domainSuppressedTx reports whether a domain carries a standing refusal.
@@ -78,10 +82,9 @@ func domainSuppressedTx(ctx context.Context, tx pgx.Tx, domain string) (bool, er
 // The row is created if the domain has never been seen, because an admin
 // blocking a competitor's newsletter before it ever arrives is the same
 // decision as blocking one that already did.
-// The source is NOT a parameter: this method IS the human path, the one the
-// admin surface calls, and it takes the company-update gate above. A
-// caller-supplied source would let any code claim human authority and make its
-// decision sticky, which is the one thing the stickiness rule exists to stop.
+// The source is no parameter. It follows the signed-in actor, a user or their
+// agent, under the company-update gate. A caller-supplied source would let any
+// code claim a user's authority and make its decision sticky.
 // Machine callers use SuppressBulkSenderDomainTx, which stamps its own source.
 func (s *Store) SetDomainAdmission(ctx context.Context, domain, admission, reason string) (BlockedDomain, error) {
 	return s.applyDomainAdmission(ctx, domain, admission, statedAdmissionReason(reason))
@@ -139,16 +142,22 @@ func recordHumanDomainAdmissionTx(
 	// surface exists to answer. Without it admission_source says "human"
 	// but never WHICH human, and admission_at is overwritten on every
 	// change.
-	before, applied, err := setDomainAdmissionTx(ctx, tx, domain, admission, reason, AdmissionSourceHuman)
+	before, applied, err := setDomainAdmissionTx(ctx, tx, domain, admission, reason, DomainDecisionSource(ctx))
 	if err != nil {
 		return BlockedDomain{}, err
 	}
 	if !applied {
-		// The sticky rule refuses a MACHINE overwrite of a human decision,
-		// and this path always writes as the human — so a decision that did
-		// not land means the row was never replaced, and the audit row below
-		// would describe a change the table does not carry.
-		return BlockedDomain{}, fmt.Errorf("contacts: the admission of %s was not recorded", domain)
+		// The sticky rule refuses an agent's overwrite of a user's decision, so
+		// nothing moved and an audit row would describe no change. An agent that
+		// agrees with the user has already got what it asked for.
+		stored, err := readDomainAdmissionTx(ctx, tx, domain)
+		if err != nil {
+			return BlockedDomain{}, err
+		}
+		if stored.Admission == admission {
+			return stored, nil
+		}
+		return BlockedDomain{}, fmt.Errorf("contacts: a user already decided about %s, so the user changes it: %w", domain, apperrors.ErrConflict)
 	}
 	if admission == DomainAdmitted {
 		// Unblocking has to RE-ASK, not merely clear a flag. The domain was
@@ -351,6 +360,15 @@ func readDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain string) (Block
 		return BlockedDomain{}, err
 	}
 	return d, nil
+}
+
+// DomainDecisionSource is the source a decision about a domain carries: the
+// signed-in user, or the agent acting for them.
+func DomainDecisionSource(ctx context.Context) string {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return AdmissionSourceAgent
+	}
+	return AdmissionSourceHuman
 }
 
 // actingHuman is the app_user answerable for this call, or nil when none is —

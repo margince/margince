@@ -26,11 +26,15 @@ import { Avatar } from "../../design-system/avatar";
 import { ContactLink } from "../../design-system/contactlink";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
+import { useViewerZone } from "../../lib/viewerzone";
 import { VCardImportAction, VCardImportPage } from "../import/vcard-import";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import { ContactCreateActions } from "./contactcreate";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
@@ -82,7 +86,7 @@ function ContactsList() {
   const t = useT();
   const pageName = usePageName("contacts");
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // Offered only once /me has answered: a chip whose value is still "" reads
   // as "clear this filter", so a half-built owner dial narrows nothing.
   const viewerId = useViewerId();
@@ -198,10 +202,11 @@ function ContactsList() {
           },
           tagsColumn<Contact>(t),
           ownerColumn<Contact>(t),
-          lastActivityColumn<Contact>(t, locale, recordZone),
-          createdColumn<Contact>(t, locale, recordZone),
+          lastActivityColumn<Contact>(t, locale, readerZone),
+          createdColumn<Contact>(t, locale, readerZone),
         ]}
-        saveView={<SaveViewAction resource="contacts" query={state.query} />}
+        saveView={<SaveViewAction resource="contacts" state={state} />}
+        notice={<SavedViewsFailure resource="contacts" />}
         rowKey={(contact) => contact.id}
         rowRoute={(contact) => ({ screen: "contacts", id: contact.id })}
         selection={selection}

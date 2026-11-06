@@ -2,18 +2,19 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
 import { MayBeDone } from "../../components/maybedone";
+import { TaskAssignee } from "../../components/taskassignee";
 import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
 import { calendarDaysUntil } from "../../format/daysuntil";
 import { formatNumber } from "../../format/format";
-import { formatDayMonth } from "../../format/format.dates";
+import { formatDueCompact } from "../../format/format.dates";
+import { calendarLateness } from "../../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
-import { useRecordZone } from "../../lib/recordzone";
-import { daysLate } from "./companynextbar";
 import "./companytabs.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./company360.css";
 
 type Company360 = components["schemas"]["Company360"];
@@ -52,7 +53,7 @@ export function CompanyTaskTable({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const steps = view.next_steps?.data ?? [];
   const state = sectionState(
     view,
@@ -110,13 +111,16 @@ function taskColumns(cells: Cells): DataTableColumn<NextStep>[] {
       key: "due",
       header: t("co.next.col.due"),
       render: (step) =>
-        step.due_at ? formatDayMonth(step.due_at, locale, zone) : "",
+        step.due_at
+          ? formatDueCompact(step.due_at, step.due_has_time, locale, zone)
+          : "",
     },
     {
       key: "owner",
       header: t("co.next.col.owner"),
-      render: (step) =>
-        step.assignee_id ? <EntityRef kind="user" id={step.assignee_id} /> : "",
+      render: (step) => (
+        <TaskAssignee id={step.assignee_id} name={step.assignee_name} />
+      ),
     },
     {
       key: "state",
@@ -183,7 +187,7 @@ function TaskCell({ step, cells }: Readonly<{ step: NextStep; cells: Cells }>) {
   );
 }
 
-// Where a task stands on the 360's own day: late by whole days, due in so
+// Where a task stands on the 360's own day: late by calendar days, due in so
 // many days, or undated. Counted from `as_of`, never the browser clock.
 function TaskStanding({
   step,
@@ -193,11 +197,11 @@ function TaskStanding({
   if (!step.due_at) {
     return <Badge>{t("co.next.undated")}</Badge>;
   }
-  const late = daysLate(step, asOf, zone);
   if (step.overdue) {
+    const late = calendarLateness(step.due_at, asOf, zone).days;
     return (
       <Badge tone="danger">
-        {late === undefined
+        {late === 0
           ? t("co.next.overdue")
           : plural("co.next.daysLate", late, {
               days: formatNumber(late, locale),

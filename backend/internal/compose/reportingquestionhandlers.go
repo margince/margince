@@ -26,7 +26,7 @@ func (h analyticsQueryHandlers) AnswerReportingQuestionCard(
 		answer     AnalyticsAnswer
 		binding    *crmcontracts.ReportingQuestionBinding
 	)
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		card, scope, err := h.reportMetrics.QuestionCardIn(ctx, tx, ids.UUID(id), params.Revision, cardID)
 		if err != nil {
 			return err
@@ -64,7 +64,7 @@ func (h analyticsQueryHandlers) ExplainReportingQuestionCard(
 	}
 	ctx := r.Context()
 	var out AnalyticsExplanation
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		card, scope, err := h.reportMetrics.QuestionCardIn(ctx, tx, ids.UUID(id), params.Revision, cardID)
 		if err != nil {
 			return err

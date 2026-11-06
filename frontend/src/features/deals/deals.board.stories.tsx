@@ -69,11 +69,17 @@ const deals = dealNames.map((name, index) => ({
   updated_at: "2026-06-01T00:00:00Z",
 }));
 
-// The deal list answers its own `q`, so the board holds only what matched.
+// The deal list answers its own `q` and `stage_id`, so each column holds only
+// what matched in its stage.
 function dealsMatching(url: URL): Response {
   const word = (url.searchParams.get("q") ?? "").toLowerCase();
+  const stageId = url.searchParams.get("stage_id");
   return jsonResponse({
-    data: deals.filter((deal) => deal.name.toLowerCase().includes(word)),
+    data: deals.filter(
+      (deal) =>
+        deal.name.toLowerCase().includes(word) &&
+        (!stageId || deal.stage_id === stageId),
+    ),
     page: { next_cursor: null, has_more: false },
   });
 }

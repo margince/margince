@@ -196,8 +196,12 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(
       within(signIn).getByRole("button", { name: "Sign out" }),
     ).toBeTruthy();
+    const language = card("Language and time zone");
     expect(
-      within(card("Language")).getByRole("combobox", { name: "Language" }),
+      within(language).getByRole("combobox", { name: "Language" }),
+    ).toBeTruthy();
+    expect(
+      await within(language).findByRole("combobox", { name: "Time zone" }),
     ).toBeTruthy();
     expect(
       within(card("This browser")).getByRole("group", { name: "Appearance" }),
@@ -701,13 +705,12 @@ describe("SettingsScreen restructured pages", () => {
     expect(developers.textContent).toContain("Passports");
     await userEvent.setup().click(screen.getByText("For developers"));
     expect(developers.open).toBe(true);
-    // API keys open first: the passports, not the coding agents.
+    // API keys open first: the passports, not the agent rules.
     expect(
       screen
         .getByRole("button", { name: "API keys" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
-    expect(screen.queryByRole("heading", { name: "Coding agents" })).toBeNull();
   });
 
   it("renders the consent registry on Privacy, and the trail on its own page", async () => {

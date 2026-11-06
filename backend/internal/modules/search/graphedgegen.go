@@ -168,7 +168,12 @@ func (t *edgeTargets) addContactEvent(ctx context.Context, tx pgx.Tx, env events
 			return t.addContact(ctx, tx, target)
 		}
 		return nil
-	case "contact.archived", "contact.restored", "contact.updated", "contact.created", "retention.applied":
+	case "contact.archived":
+		// An archived contact has no edges, and dropping them reads no history:
+		// the folds below skip archived contacts, and contact.restored refolds.
+		t.dropped = append(t.dropped, contactID)
+		return nil
+	case "contact.restored", "contact.updated", "contact.created", "retention.applied":
 		return t.addContact(ctx, tx, contactID)
 	default:
 		return nil

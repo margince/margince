@@ -119,7 +119,7 @@ func AdmitChangers(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, ps
 				return err
 			}
 			if write >= 0 && !answers[write] {
-				return apperrors.ErrPermissionDenied
+				return refuseRowChange(pctx, table)
 			}
 			if p.SeatType == principal.SeatRead {
 				return fmt.Errorf("%s.%s: %w", table, principal.ActionUpdate, apperrors.ErrSeatTierInsufficient)

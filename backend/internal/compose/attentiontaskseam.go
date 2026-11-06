@@ -342,9 +342,9 @@ func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Ta
 // to a recipient kept it. The company page asks the same question
 // (momentaction.AskTasksDone).
 func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
-	// Only a human answers the question, so an agent reading the queue sees
-	// the plain row.
-	if human := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHuman(ctx) == nil; t.db == nil || !human {
+	// A user or their agent answers the question, so automatic work reading the
+	// queue sees the plain row.
+	if answers := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHumanOrItsAgent(ctx) == nil; t.db == nil || !answers {
 		return tasks, nil
 	}
 	candidates := doneCandidates(tasks)

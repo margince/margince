@@ -1,13 +1,14 @@
 import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { ActionRow } from "../../design-system/actionrow";
 import { Badge, Button } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { identifierNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useOpenEmail } from "../../lib/openemail";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { openCitation } from "../records/record360";
 import { VoiceDegradedNotice } from "./compose.notices";
 import { DraftReasons } from "./composedraftcontext";
@@ -47,7 +48,7 @@ export function DraftBand({
   const t = useT();
   // One shared email drawer keeps sources from opening competing dialogs.
   const [openEmail, setOpenEmail] = useOpenEmail();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   if (!provenance.ai_generated) {
     return null;
   }
@@ -75,7 +76,7 @@ export function DraftBand({
             )}
           </span>
         </p>
-        {actions}
+        {actions && <ActionRow>{actions}</ActionRow>}
       </div>
       <DraftReasons
         reasons={reasons}

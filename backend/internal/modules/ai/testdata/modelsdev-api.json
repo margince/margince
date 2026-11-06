@@ -1,5 +1,6 @@
 {
   "google": {"id": "google", "name": "Google", "models": {
+    "gemini-3.1-pro-preview": {"id": "gemini-3.1-pro-preview", "name": "Gemini 3.1 Pro Preview", "family": "gemini-pro", "modalities": {"input": ["text"], "output": ["text"]}, "cost": {"input": 2.5, "output": 15, "cache_read": 0.25, "context_over_200k": {"input": 5, "output": 22.5, "cache_read": 0.5}}},
     "gemini-3.5-flash": {"id": "gemini-3.5-flash", "name": "Gemini 3.5 Flash", "family": "gemini-flash", "modalities": {"input": ["text", "image", "video", "audio", "pdf"], "output": ["text"]}, "cost": {"input": 1.5, "output": 9, "cache_read": 0.15, "input_audio": 1.5}},
     "gemini-3.1-flash-lite": {"id": "gemini-3.1-flash-lite", "name": "Gemini 3.1 Flash Lite", "family": "gemini-flash-lite", "modalities": {"input": ["text", "image", "video", "audio", "pdf"], "output": ["text"]}, "cost": {"input": 0.25, "output": 1.5, "cache_read": 0.025, "input_audio": 0.5}},
     "gemini-embedding-001": {"id": "gemini-embedding-001", "name": "Gemini Embedding 001", "family": "gemini", "modalities": {"input": ["text"], "output": ["text"]}, "cost": {"input": 0.15, "output": 0}},

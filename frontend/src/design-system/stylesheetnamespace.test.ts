@@ -56,9 +56,8 @@ const namespaces = [
   { prefix: "querygate-", home: "design-system/querystates.css" },
   {
     prefix: "relationshiprows-",
-    home: "features/records/relationshiprows.css",
+    home: "components/relationshiprows.css",
   },
-  { prefix: "relationships-", home: "features/records/relationships.css" },
   {
     prefix: "repeatablerowsfield-",
     home: "components/repeatablerowsfield.css",

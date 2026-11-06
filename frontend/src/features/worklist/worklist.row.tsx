@@ -5,19 +5,22 @@ import type { ReactNode } from "react";
 import { MayBeDone } from "../../components/maybedone";
 import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
-import { viewerZone } from "../../format/timezone";
+import { QuietVerbs } from "../../design-system/verbvolume";
 import { useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
-import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import {
   briefContextTitle,
   briefSubjectLabel,
   dealFactsText,
   itemTitle,
+  partyName,
   phrasedReasons,
+  readerTask,
   reasonText,
   rowHref,
+  sentenceTitled,
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
@@ -34,13 +37,9 @@ import { WaitingEmailLine } from "./worklist.emailtitle";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
+import { isPinned } from "./worklist.pinmark";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
-import {
-  noticeDetail,
-  readerTask,
-  sentenceTitled,
-  sharedResponsibility,
-} from "./worklist.reader";
+import { noticeDetail, sharedResponsibility } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
 import {
   aboutRecord,
@@ -51,6 +50,7 @@ import {
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PreparationNote } from "./worklist.ready";
 import { rowAnswer } from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
@@ -98,6 +98,7 @@ export function WorklistRow({
   onOpenEmail,
   context,
   framed = false,
+  quiet = false,
   pick,
 }: Readonly<{
   item: WorklistItem;
@@ -107,6 +108,8 @@ export function WorklistRow({
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
+  /** The card already holds a filled verb, so the row's own is outlined. */
+  quiet?: boolean;
   /** A CARD around this row says whose it is, why it is here and where it
    *  stands, so the row withholds those captions and the verb that only
    *  reaches its record. The Brief's card is the only frame there is. */
@@ -141,10 +144,10 @@ export function WorklistRow({
   RowDensity) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
-  // A task's deadline is the record's day; everything else on this row is a
-  // moment the reader is racing on their own clock.
-  const recordZone = useRecordZone();
+  const zone = useViewerZone();
+  // The due day is the server's bucket, counted on the company's clock (B1),
+  // so the day comparison and the due-day text read that clock.
+  const companyZone = useCompanyZone();
   // Inside the drawer a row's record links carry the way back to it.
   const listed = useListed();
   const target = rowHref(item);
@@ -164,7 +167,7 @@ export function WorklistRow({
   // The clock this row is racing. A meeting said "starting shortly" whether it
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
-  const when = whenText(item, t, locale, zone, recordZone, new Date());
+  const when = whenText(item, t, locale, zone, companyZone, new Date());
   // The supporting line, which every source sends as a sentence already.
   const sourceDetail = noticeDetail(item, viewer, t);
   const detail = sourceDetail === item.verdict?.line ? undefined : sourceDetail;
@@ -174,7 +177,7 @@ export function WorklistRow({
   // hour a rep is racing, and "due today" underneath it is that clock said
   // again in a coarser register.
   const reasons = phrasedReasons(item, when !== null)
-    .map((reason) => reasonText(reason, t, locale, zone))
+    .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
     .filter((phrase): phrase is string => phrase !== null);
   const said = [...new Set(reasons)].filter(
     (reason) => reason !== detail && reason !== item.verdict?.line,
@@ -196,15 +199,16 @@ export function WorklistRow({
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   const responsibility = sharedResponsibility(item, locale, t);
-  // Whether the day put a state on this row: overdue, or a meeting the reader
-  // has not confirmed ready. They ride on the title line, which is why it is
-  // drawn on a row that has no title of its own to draw.
-  const badged = item.overdue === true || isUnprepared(item);
+  const pinned = allowPin && isPinned(item);
+  // Whether the title line has a mark to show: overdue, a meeting the reader
+  // has not confirmed ready, or the reader's pin. They ride on the title line,
+  // which is why it is drawn on a row that has no title of its own to draw.
+  const badged = item.overdue === true || isUnprepared(item) || pinned;
   // One brief write per row, shared by Act and the two set-asides. The hook
   // registers a mutation and reads nothing, so every row may call it. Two
   // writes would carry two settled flags, and one item could be answered twice.
   const brief = useBriefAnswer(item);
-  const answer = withFoldedBrief(rowAnswer(item, brief), item, brief);
+  const answer = withFoldedBrief(rowAnswer(item, brief, quiet), item, brief);
   const readings: RowReadings = shapedReadings(framed, {
     item,
     ...name,
@@ -220,6 +224,7 @@ export function WorklistRow({
     about,
     host,
     touch,
+    pinned,
   });
   const named = conditionOf(item, t);
   return (
@@ -314,26 +319,29 @@ export function WorklistRow({
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the
             work where the card has no column to spare for it, beside the work
-            where it has, so the answer keeps one x down the whole queue. */}
-        <RowActs
-          allowPin={allowPin}
-          onOpenEmail={onOpenEmail}
-          item={item}
-          title={title}
-          href={href}
-          owner={owner}
-          primary={answer.primary}
-          equals={answer.equals}
-          onReview={onReview}
-          context={context}
-          framed={framed}
-          titled={titleLinks(emailOpener, href, source.open)}
-        />
-        {/* An answer that is not a VERB: a duplicate pair, whose two buttons
+            where it has, so the answer keeps one x down the whole queue.
+            Outlined in a list; only the card in hand has a filled verb. */}
+        <QuietVerbs quiet={!framed}>
+          <RowActs
+            allowPin={allowPin}
+            onOpenEmail={onOpenEmail}
+            item={item}
+            title={title}
+            href={href}
+            owner={owner}
+            primary={answer.primary}
+            equals={answer.equals}
+            onReview={onReview}
+            context={context}
+            framed={framed}
+            titled={titleLinks(emailOpener, href, source.open)}
+          />
+          {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names
             it. It stays a block under the row, where it has the width to show
             both sides. */}
-        {answer.below}
+          {answer.below}
+        </QuietVerbs>
         {source.drawer}
       </PutDownByThumb>
     </PanelRow>
@@ -365,5 +373,7 @@ function RowAsk({
   framed,
 }: Readonly<{ item: WorklistItem; framed: boolean }>) {
   const t = useT();
-  return framed ? <p className="t-body">{t(askKey(item))}</p> : null;
+  return framed ? (
+    <p className="t-body worklist-row-ask">{t(askKey(item))}</p>
+  ) : null;
 }

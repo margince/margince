@@ -77,6 +77,9 @@ func TestAnOptOutIsAcknowledged(t *testing.T) {
 	if !messagingRules().OptOutAcknowledgement {
 		t.Fatal("the pack owes no opt-out acknowledgement, want one — Art. 16 requires a confirmation within 24 hours")
 	}
+	if within := messagingRules().OptOutAcknowledgementWithin; within != 24*time.Hour {
+		t.Errorf("the acknowledgement is due within %s, want 24h", within)
+	}
 }
 
 // TestAnAdvertisingMessageNamesItsAdvertiser holds Art. 13 alongside the

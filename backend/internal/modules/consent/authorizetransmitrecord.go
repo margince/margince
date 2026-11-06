@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,7 +29,7 @@ import (
 // exists so a later reader can tell whether the message that went is the
 // message that was authorized, and storing the words themselves would make the
 // decision a second copy of the mail.
-func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet, ruleset rulesetStampValue) ([]commsauthz.Decision, error) {
+func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet, countries []RecipientCountry) ([]commsauthz.Decision, error) {
 	var written []commsauthz.Decision
 	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
@@ -47,7 +48,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 	if err != nil {
 		return nil, err
 	}
-	for _, d := range set.Decisions {
+	for i, d := range set.Decisions {
 		// Both or neither, which the table's own CHECK also demands: a
 		// subject_kind naming a row with no id describes nothing.
 		subjectKind := nullableText(d.SubjectKind)
@@ -56,13 +57,18 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			id := d.SubjectID
 			subjectID = &id
 		}
+		// The country this recipient was decided under, so the row names the
+		// pack that judged it.
+		ruleset := rulesetStamp(countries[i])
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, legacy_verdict, mode, actor,
-			   execution_authority, instruction_id, ruleset_version, ruleset_codes)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+			   execution_authority, instruction_id, ruleset_version, ruleset_codes,
+			   legal_entity_id, purpose_key, existing_customer_notice_id, existing_customer_offer_id,
+			   existing_customer_sold_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
 			req.DeliveryID, req.Attempt, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), string(d.Resolved), string(d.Verdict),
@@ -72,7 +78,8 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			// for one recipient and directed for another did not go out on
 			// somebody's decision for both.
 			authorityFor(authority, d.Verdict), instructionFor(instruction, d.Verdict),
-			ruleset.Version, ruleset.Codes)
+			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
+			groundNotice(d), groundOffer(d), groundSoldAt(d))
 		if err != nil {
 			return nil, fmt.Errorf("consent: record the transmit decision: %w", err)
 		}
@@ -109,6 +116,8 @@ func nullableText(s string) *string {
 type liveStop struct {
 	Kind      string
 	PurposeID *ids.UUID
+	// RecordedAt is when the newest row of this kind and purpose was recorded.
+	RecordedAt time.Time
 }
 
 // stopKinds names the reason codes a set of stops carries, with the purpose
@@ -152,15 +161,16 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 	// purpose — neither known here. applySuppression decides that, after
 	// resolution.
 	//
-	// DISTINCT now spans (kind, purpose_id): two narrow rows for the same kind
-	// but different purposes are two different stops, and collapsing them
-	// would silently drop one of them.
+	// One row per (kind, purpose_id). Two narrow rows for the same kind but
+	// different purposes are two different stops, and collapsing them would
+	// drop one of them. The newest recorded_at of each is kept.
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT kind, purpose_id FROM communication_suppression
+		SELECT kind, purpose_id, max(recorded_at) FROM communication_suppression
 		 WHERE revoked_at IS NULL
 		   AND (contact_id = $1
 		        OR lead_id = $1
-		        OR (address IS NOT NULL AND $2 <> '' AND `+sameAddressSQL("address", "$2")+`))`,
+		        OR (address IS NOT NULL AND $2 <> '' AND `+sameAddressSQL("address", "$2")+`))
+		 GROUP BY kind, purpose_id`,
 		contactID, r.Email)
 	if err != nil {
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
@@ -170,10 +180,11 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 	for rows.Next() {
 		var kind string
 		var purposeID *ids.UUID
-		if err := rows.Scan(&kind, &purposeID); err != nil {
+		var recordedAt time.Time
+		if err := rows.Scan(&kind, &purposeID, &recordedAt); err != nil {
 			return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
 		}
-		stops = append(stops, liveStop{Kind: reasonForSuppressionKind(kind), PurposeID: purposeID})
+		stops = append(stops, liveStop{Kind: reasonForSuppressionKind(kind), PurposeID: purposeID, RecordedAt: recordedAt})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
@@ -240,6 +251,21 @@ func deliveryAuthorityTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (s
 		return "", nil, fmt.Errorf("consent: reading the authority this delivery goes out under: %w", err)
 	}
 	return authority, instruction, nil
+}
+
+// exceptionGivenByAdminTx answers whether the exception this delivery goes out
+// under was given by an admin. A delivery with no exception answers false.
+func exceptionGivenByAdminTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (bool, error) {
+	var byAdmin bool
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce(bool_or(i.given_by_admin), false)
+		  FROM comms_outbound o
+		  JOIN communication_instruction i ON i.id = o.instruction_id
+		 WHERE o.id = $1`, deliveryID).Scan(&byAdmin)
+	if err != nil {
+		return false, fmt.Errorf("consent: reading who gave the exception this delivery goes out under: %w", err)
+	}
+	return byAdmin, nil
 }
 
 // authorityFor names the instruction on a refused row and the engine's own

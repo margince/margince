@@ -43,11 +43,11 @@ func TestObjectLevelRBACDeniesUngrantedActions(t *testing.T) {
 		t.Errorf("read_only get → %v, want success", err)
 	}
 
-	// A rep (no delete grant on contact) cannot archive even an OWN record:
-	// object-level denial precedes row scope.
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	// A rep (no delete grant on contact) cannot archive a teammate's record,
+	// though row scope admits it. Their own is TestTheOwnerOfAContactArchivesIt.
+	rep := e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms)
 	if _, err := e.Contacts.ArchiveContact(rep, ContactIDOf(target), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("rep archive own → %v, want ErrPermissionDenied", err)
+		t.Errorf("rep archive teammate's → %v, want ErrPermissionDenied", err)
 	}
 }
 

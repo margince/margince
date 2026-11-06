@@ -28,8 +28,8 @@ func TestTheSuggestionListPagesAndFilters(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	seedScoutedNamed(t, e, "Acme GmbH", "Dana Buyer")
-	seedScoutedNamed(t, e, "Globex AG", "Lee Buyer")
+	apptest.SeedScoutedNamed(t, e, "Acme GmbH", "Dana Buyer")
+	apptest.SeedScoutedNamed(t, e, "Globex AG", "Lee Buyer")
 
 	var first, second suggestionPage
 	if status := e.Call(t, "GET", "/v1/deal-suggestions?limit=1&pipeline_id="+stages.PipelineID, nil, nil, &first); status != http.StatusOK {

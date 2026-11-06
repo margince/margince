@@ -1,6 +1,11 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
@@ -79,6 +84,10 @@ function render(ui: ReactNode) {
 
 afterEach(cleanup);
 
+// The lifetime figure's card, label and value together.
+const wonToDate = () =>
+  screen.getByText("Won to date").closest(".stat-card")?.textContent;
+
 describe("DealsCard — a money reading with one half missing", () => {
   it("renders an unlabelled lifetime total as an absence instead of dying", () => {
     render(
@@ -87,7 +96,7 @@ describe("DealsCard — a money reading with one half missing", () => {
       />,
     );
 
-    expect(screen.getByText(`Won to date ${MONEY_ABSENT}`)).toBeTruthy();
+    expect(wonToDate()).toContain(MONEY_ABSENT);
   });
 
   it("never states a zero for a lifetime total the server did not compute", () => {
@@ -97,7 +106,7 @@ describe("DealsCard — a money reading with one half missing", () => {
       />,
     );
 
-    expect(screen.getByText(`Won to date ${MONEY_ABSENT}`)).toBeTruthy();
+    expect(wonToDate()).toContain(MONEY_ABSENT);
     expect(screen.queryByText(/€\s?0/)).toBeNull();
   });
 
@@ -111,6 +120,8 @@ describe("DealsCard — a money reading with one half missing", () => {
     );
 
     expect(screen.getByText("Retrofit rollout")).toBeTruthy();
-    expect(screen.getByText(MONEY_ABSENT)).toBeTruthy();
+    expect(
+      within(screen.getByRole("table")).getByText(MONEY_ABSENT),
+    ).toBeTruthy();
   });
 });

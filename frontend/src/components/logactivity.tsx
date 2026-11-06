@@ -1,8 +1,4 @@
-import {
-  type QueryKey,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
@@ -22,6 +18,9 @@ import { useT } from "../i18n";
 import {
   type ActivityDraft,
   activityRequestBody,
+  canHaveTranscript,
+  draftHoldsWork,
+  draftSaysSomething,
   freshDraft,
   isActivityKind,
   KINDS_WITH_A_CONTACT,
@@ -29,24 +28,23 @@ import {
   NO_ATTENDEES,
   todayDay,
 } from "../lib/activitybody";
-import {
-  activityFileStaleKeys,
-  activityFollowUpsKey,
-  loggedActivityKeys,
-  TASK_QUEUE_KEY,
-} from "../lib/activitykeys";
 import { useCanWrite } from "../lib/capability";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
 import { useMe } from "../lib/session";
-import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import "./logactivity.css";
-import { FollowUpTaskFields } from "./followuptaskfields";
+import { useViewerZone } from "../lib/viewerzone";
+import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
+import { CallOutcomeField } from "./logactivity.calloutcome";
 import { useActivityCustomFields } from "./logactivity.custom";
+import {
+  activityDealFilingKey,
+  useLogDealFiling,
+} from "./logactivity.dealfiling";
+import { activityLogKeys } from "./logactivity.keys";
 import {
   type MeetingRecord,
   openMeetingKey,
@@ -62,39 +60,6 @@ import {
 } from "./logactivityfiles";
 import { MeetingAttendeeFields } from "./meetingattendees";
 import { useUnsavedGuard } from "./unsaved";
-
-// Every read a logged entry makes stale.
-function staleAfterLog(
-  loggedId: string,
-  input: Readonly<{
-    draft: ActivityDraft;
-    attendees: MeetingAttendees;
-    files: readonly File[];
-    record: MeetingRecord | undefined;
-  }>,
-  entityType: EntityKind | undefined,
-  entityId: string | undefined,
-): QueryKey[] {
-  const { draft } = input;
-  const keys: QueryKey[] =
-    entityType && entityId
-      ? [
-          ...loggedActivityKeys(
-            draft.followUp && draft.kind !== "task" ? "task" : draft.kind,
-            entityType,
-            entityId,
-            input.attendees.contacts.map((contact) => contact.id),
-          ),
-          openMeetingKey(entityType, entityId),
-        ]
-      : [TASK_QUEUE_KEY];
-  if (draft.sourceActivityId)
-    keys.push(activityFollowUpsKey(draft.sourceActivityId));
-  if (input.record) keys.push(["activity", input.record.meeting.id]);
-  if (input.files.length > 0) keys.push(...activityFileStaleKeys(loggedId));
-  keys.push(worklistKey);
-  return keys;
-}
 
 // Meetings arrive through the calendar rather than a preselected form address.
 export type OpeningKind = "note" | "task" | "call";
@@ -130,7 +95,7 @@ export function LogActivityForm({
   const t = useT();
   const formId = useId();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const recordZone = useViewerZone();
   const reportUnattached = useReportUnattached();
   const [draft, setDraft] = useState<ActivityDraft>(() =>
     freshDraft(recordZone, askedKind),
@@ -144,14 +109,14 @@ export function LogActivityForm({
     }
   }
   const [files, setFiles] = useState<readonly PickedFile[]>([]);
-  const custom = useActivityCustomFields();
+  const custom = useActivityCustomFields(draft.kind);
   // Who was in the room, asked for the kinds that are with a contact (see
   // KINDS_WITH_A_CONTACT). Only a company page cannot send one without a name.
   const [attendees, setAttendees] = useState<MeetingAttendees>(NO_ATTENDEES);
   const asksAttendees = KINDS_WITH_A_CONTACT.has(draft.kind);
   const needsAttendee = entityType === "company" && asksAttendees;
   // The same test activityRequestBody sends source_system on.
-  const transcript = draft.kind === "meeting" && draft.asTranscript;
+  const transcript = canHaveTranscript(draft.kind) && draft.asTranscript;
   const banded = frame !== undefined;
   const recordOf = useRecordOfMeeting(
     entityType,
@@ -160,11 +125,15 @@ export function LogActivityForm({
     recordZone,
     attendees.contacts.map((contact) => contact.id),
   );
+  const dealFiling = useLogDealFiling(
+    entityType,
+    entityId,
+    asksAttendees && !recordOf.recordingFiledMeeting,
+  );
   const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
   const { key: idempotencyKey, renew: renewKey } = useIdempotencyKey();
   const log = useMutation({
-    // The parent record is already named in the cache.
     mutationKey: ["activity-log", entityId],
     // Pass the zone with the mutation so a stale render cannot store the wrong day.
     mutationFn: async (input: {
@@ -180,7 +149,11 @@ export function LogActivityForm({
           { ...input, record: input.record, entityType, entityId },
           t,
         );
-        return { id, unattached: await attachLoggedFiles(id, input.files) };
+        return {
+          id,
+          unattached: await attachLoggedFiles(id, input.files),
+          linkedDealIds: input.record.linkedDealIds ?? [],
+        };
       }
       const created = unwrap(
         await api.POST("/activities", {
@@ -197,13 +170,24 @@ export function LogActivityForm({
       );
       // After the create: a file needs the activity's id as its parent.
       const unattached = await attachLoggedFiles(created.id, input.files);
-      return { id: created.id, unattached };
+      return {
+        id: created.id,
+        unattached,
+        linkedDealIds: (created.links ?? [])
+          .filter((link) => link.entity_type === "deal")
+          .map((link) => link.entity_id),
+      };
     },
     // A save that wrote the outcome and then failed is kept, so the retry
     // sends only the missing steps. A refused version re-reads the meeting:
     // answered meanwhile, the question goes and Save logs a separate meeting.
     onError: (_error, input) => {
       recordOf.keep(input.record);
+      const filing = input.draft.dealFiling?.context;
+      if (filing)
+        queryClient.invalidateQueries({
+          queryKey: activityDealFilingKey(filing.record_type, filing.record_id),
+        });
       if (entityType && entityId) {
         queryClient.invalidateQueries({
           queryKey: openMeetingKey(entityType, entityId),
@@ -213,11 +197,13 @@ export function LogActivityForm({
     onSuccess: (logged, input) => {
       reportUnattached(logged.unattached);
       recordOf.clear();
-      for (const queryKey of staleAfterLog(
+      dealFiling.clear();
+      for (const queryKey of activityLogKeys(
         logged.id,
         input,
         entityType,
         entityId,
+        logged.linkedDealIds,
       ))
         queryClient.invalidateQueries({ queryKey });
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
@@ -230,7 +216,8 @@ export function LogActivityForm({
   });
 
   // The words are the work a reader would retype; the kind and day are a pick.
-  useUnsavedGuard(draft.subject.trim() !== "" || draft.body.trim() !== "");
+  // A call's outcome is what the rep came to record, so it counts too.
+  useUnsavedGuard(draftHoldsWork(draft));
 
   // Enter in a field submits past the Save button, so the form is latched too.
   const singlePress = useSinglePress(log.isPending);
@@ -242,18 +229,16 @@ export function LogActivityForm({
       variant="primary"
       type="submit"
       form={formId}
-      // An unnamed attendee is refused by the server with a 422 the reader
-      // cannot act on from here, so the button says no first. Never
-      // auto-selecting the company's first contact to make the submit work:
-      // filing a meeting against somebody who was not there is worse.
       disabled={
         !log.isPending &&
-        (!draft.subject.trim() ||
+        (dealFiling.blocked ||
+          !draftSaysSomething(draft) ||
           (draft.kind !== "task" &&
             draft.followUp !== undefined &&
             !draft.followUp.subject.trim()) ||
           (needsAttendee && attendees.contacts.length === 0))
       }
+      reason={dealFiling.reason}
       pending={log.isPending}
       busyLabel={t("log.saving")}
     >
@@ -266,11 +251,16 @@ export function LogActivityForm({
       className="form-stack"
       onSubmit={singlePress((event) => {
         event.preventDefault();
-        if (refuseUnreadableField(event.currentTarget)) {
+        if (dealFiling.blocked || refuseUnreadableField(event.currentTarget)) {
           return;
         }
         log.mutate({
-          draft: { ...draft, sourceActivityId, custom: custom.body() },
+          draft: {
+            ...draft,
+            dealFiling: dealFiling.request,
+            sourceActivityId,
+            custom: custom.body(),
+          },
           zone: recordZone,
           attendees,
           idempotencyKey,
@@ -324,20 +314,20 @@ export function LogActivityForm({
             />
           )}
         </Field>
+        {draft.kind === "task" && (
+          <TaskTimeField
+            day={draft.day}
+            value={draft.time}
+            onChange={(time) => setField({ time })}
+          />
+        )}
       </div>
       {recordOf.question}
-      {/* WHO owes this task, asked beside when it is due. Only a task is held
-          by a colleague; the field renders nothing for a note or meeting, and
-          defers its roster walk to that same condition. */}
       <TaskAssigneeField
         active={draft.kind === "task"}
         value={draft.assigneeId}
         onChange={(value) => setField({ assigneeId: value })}
       />
-      {/* WHO was in the room, asked before what was said. A meeting or a call
-          is with a contact and the server refuses one filed against a company,
-          so on a company this is the field that decides whether the entry can
-          be sent at all — not a refinement of one that could. */}
       {asksAttendees && entityType && entityId && (
         <MeetingAttendeeFields
           entityType={entityType}
@@ -347,7 +337,14 @@ export function LogActivityForm({
           disabled={log.isPending}
         />
       )}
-      <Field label={t("log.subject")} required>
+      {dealFiling.field}
+      {draft.kind === "call" && (
+        <CallOutcomeField
+          value={draft.callOutcome}
+          onChange={(callOutcome) => setField({ callOutcome })}
+        />
+      )}
+      <Field label={t("log.subject")} required={draft.kind !== "call"}>
         {(control) => (
           <TextInput
             {...control}
@@ -356,7 +353,7 @@ export function LogActivityForm({
           />
         )}
       </Field>
-      {draft.kind === "meeting" && (
+      {canHaveTranscript(draft.kind) && (
         <Checkbox
           label={t("log.asTranscript")}
           checked={draft.asTranscript}

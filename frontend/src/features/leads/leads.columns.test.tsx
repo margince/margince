@@ -6,7 +6,7 @@ import type { components } from "../../api/schema";
 import type { CreateFieldOption } from "../../components/create.fields";
 import type { ListColumn } from "../../design-system/listtable";
 import { LocaleProvider, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { leadColumns } from "./leads.columns";
 
 type Lead = components["schemas"]["Lead"];
@@ -41,7 +41,7 @@ function Cell({
   partners?: readonly CreateFieldOption[];
 }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const column = leadColumns(t, "en", zone, undefined, partners).find(
     (c) => c.key === columnKey,
   );
@@ -175,7 +175,7 @@ function ColumnKeys({
   partners,
 }: Readonly<{ partners?: readonly CreateFieldOption[] }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   return (
     <div data-testid="keys">
       {leadColumns(t, "en", zone, undefined, partners)

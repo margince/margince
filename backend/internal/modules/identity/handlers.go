@@ -61,6 +61,9 @@ type Handlers struct {
 	// when it finishes, so a test can wait for the captured mail without
 	// sleeping. Nil in production.
 	resetSendStarted func()
+	// sendBudget is a test seam: a shorter budget for the invitation send, so
+	// a test can see a send run out of time. Zero in production.
+	sendBudget time.Duration
 
 	// The unauthenticated endpoints carry their own throttles: login
 	// attempts cost a full Argon2 verification each and reset requests

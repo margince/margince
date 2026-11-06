@@ -9,7 +9,10 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { formatHours, formatMoneyCompact } from "../../format/format";
+import {
+  formatAnalyticsHours,
+  formatAnalyticsMoney,
+} from "../../format/format";
 import { en } from "../../i18n/en";
 import {
   reportingMetricNames,
@@ -133,9 +136,9 @@ describe("the Leads view", () => {
     showView("leads", reportingLeadsEvaluation);
 
     // The headline and the metrics table both state it.
-    expect(await screen.findAllByText(formatHours(3.5, "en"))).not.toHaveLength(
-      0,
-    );
+    expect(
+      await screen.findAllByText(formatAnalyticsHours(3.5, "en")),
+    ).not.toHaveLength(0);
     expect(
       screen.getByText(
         new RegExp(en["reporting.outOf"].replace("{total}", "24")),
@@ -206,7 +209,7 @@ describe("the Partners view", () => {
     showView("partners", reportingPartnersEvaluation);
 
     const pipeline = await panel(titled(reportingMetricNames.partner_pipeline));
-    const amount = formatMoneyCompact(500_000, "EUR", "en");
+    const amount = formatAnalyticsMoney(500_000, "EUR", "en");
     expect(
       pipeline.getByRole("button", {
         name: `Partner you cannot see · Sourced: ${amount}`,
@@ -370,7 +373,13 @@ describe("the preset views", () => {
       const asked = showView(view, reportingStoryEvaluation);
 
       expect(await evaluated(asked)).toEqual({
-        metrics: preset?.metrics,
+        metrics:
+          view === "sdr"
+            ? preset?.metrics.filter(
+                (id) =>
+                  id !== "accepted_opportunities" && id !== "leads_promoted",
+              )
+            : preset?.metrics,
         blocks: preset?.blocks,
       });
     },

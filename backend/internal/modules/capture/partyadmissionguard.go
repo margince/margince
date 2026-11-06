@@ -205,6 +205,21 @@ func partyAdmissionHasRoomTx(ctx context.Context, tx pgx.Tx, activity ids.Activi
 	return count+needed <= maxDerivedMeetingLinks-(postCommitLinkReservation-1), nil
 }
 
+// holdPartyAuthorityTx takes the user's authority locks before the ensure locks
+// any record. A member's removal takes them first too, so the admission's later
+// authority read cannot close a lock cycle with it.
+func (s *Sink) holdPartyAuthorityTx(ctx context.Context, tx pgx.Tx, user ids.UUID) error {
+	if s.partyAuthority == nil {
+		return nil
+	}
+	_, _, err := s.partyAuthority.EffectiveAuthorityTx(ctx, tx, user)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		// The admission refuses a member who is not live; the lock is held either way.
+		return nil
+	}
+	return err
+}
+
 func (s *Sink) partyActorTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (context.Context, error) {
 	if s.partyAuthority == nil {
 		return ctx, errors.Join(apperrors.ErrPermissionDenied, errPartyAuthorityChanged)
@@ -222,7 +237,7 @@ func (s *Sink) partyActorTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (cont
 	}
 	actor.Permissions, actor.TeamIDs, actor.SeatType = rbac.Permissions, rbac.TeamIDs, seat
 	ctx = principal.WithActor(ctx, actor)
-	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, capturedContactObject, principal.ActionCreate); err != nil {
 		return ctx, errors.Join(err, errPartyAuthorityChanged)
 	}
 	return ctx, nil

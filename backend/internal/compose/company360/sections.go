@@ -220,7 +220,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		extra += " AND " + activities.NotSystemMinted("a", arg)
 	}
 	query := fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, ''), a.body, `+storekit.TaskDueSQL("a")+`, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
+		SELECT a.id, coalesce(a.subject, ''), a.body, `+storekit.TaskDueSQL("a")+`, a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
 		       a.source_activity_id, coalesce(a.source_system, ''),
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
@@ -291,11 +291,13 @@ func scanNextStep(row pgx.CollectableRow, now time.Time) (crmcontracts.Company36
 	// click, and the version found could already be the wrong one.
 	var version int64
 	var source taskSource
-	if err := row.Scan(&id, &step.Subject, &step.Body, &step.DueAt, &assignee, &assigneeName, &occurredAt, &version,
+	var dueHasTime bool
+	if err := row.Scan(&id, &step.Subject, &step.Body, &step.DueAt, &dueHasTime, &assignee, &assigneeName, &occurredAt, &version,
 		&source.activity, &source.system, &dealID, &contactID); err != nil {
 		return step, occurredAt, source, err
 	}
 	step.ActivityId = openapi_types.UUID(id)
+	step.DueHasTime = new(dueHasTime && step.DueAt != nil)
 	step.Version = &version
 	step.AssigneeId = uuidPtr(assignee)
 	step.AssigneeName = namedOrNobody(assigneeName)
