@@ -18,7 +18,10 @@ func purgePartySourcesTx(ctx context.Context, tx pgx.Tx, activities []ids.UUID) 
 	return err
 }
 
-// PurgePartySourcesForEmailsTx preserves other recipients while erasing the subject proof.
+// PurgePartySourcesForEmailsTx preserves other recipients while erasing the
+// subject proof. The thread ledger's seen addresses go too: a verdict outlives
+// its message and the held list searches them. A later message from that
+// address is then judged again, because an opening answer needs a sender it saw.
 func (*PendingStore) PurgePartySourcesForEmailsTx(ctx context.Context, tx pgx.Tx, emails []string) error {
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return err
@@ -29,5 +32,12 @@ func (*PendingStore) PurgePartySourcesForEmailsTx(ctx context.Context, tx pgx.Tx
  recipients=ARRAY(SELECT address FROM unnest(ps.recipients) address WHERE NOT(lower(address)=ANY(erased.addresses))),
  policy_addresses=ARRAY(SELECT address FROM unnest(ps.policy_addresses) address WHERE NOT(lower(address)=ANY(erased.addresses)))
  FROM erased WHERE ps.recipients && erased.addresses OR ps.policy_addresses && erased.addresses`, pgx.NamedArgs{"emails": emails})
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, `WITH erased AS (SELECT ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address) AS addresses)
+ UPDATE capture_thread_verdict v SET
+ seen_addresses=ARRAY(SELECT address FROM unnest(v.seen_addresses) address WHERE NOT(lower(address)=ANY(erased.addresses)))
+ FROM erased WHERE EXISTS (SELECT 1 FROM unnest(v.seen_addresses) address WHERE lower(address)=ANY(erased.addresses))`, pgx.NamedArgs{"emails": emails})
 	return err
 }

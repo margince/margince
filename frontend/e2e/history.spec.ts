@@ -215,6 +215,12 @@ test("a section is an address, and Back steps between sections", async ({
   page,
 }) => {
   await page.goto("/#/analytics");
+  // The overview hands its question to the next section once it has one,
+  // and its filter bar is drawn with that question. A tab pressed before
+  // then opens the section on its own defaults, with nothing in the address.
+  await expect(
+    page.getByRole("group", { name: de["analytics.filters"] }),
+  ).toBeVisible();
   await page
     .getByRole("group", { name: "Analytics-Bereiche" })
     .getByRole("button", { name: "Pipeline", exact: true })
