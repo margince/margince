@@ -90,8 +90,8 @@ export function EditMember({
     },
   });
   const teamsChanged =
-    [...teamIds].sort().join(";") !==
-    [...(baseline.team_ids ?? [])].sort().join(";");
+    [...teamIds].sort((a, b) => a.localeCompare(b)).join(";") !==
+    [...(baseline.team_ids ?? [])].sort((a, b) => a.localeCompare(b)).join(";");
   const initialRole = memberRole(baseline);
   const roleChanged = role !== initialRole;
   const ready =
