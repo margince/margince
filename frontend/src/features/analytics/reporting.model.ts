@@ -4,6 +4,7 @@ import {
   formatAnalyticsMoney,
   formatAnalyticsNumber,
   formatDateAbbrev,
+  formatDateAbbrevRange,
   formatDateTime,
   formatNumber,
 } from "../../format/format";
@@ -139,7 +140,12 @@ export function reportingPeriodLabel(
   if (reportingPeriodIsEmpty(interval)) {
     return formatDateAbbrev(interval.start_at, locale, zone);
   }
-  return `${formatDateAbbrev(interval.start_at, locale, zone)} – ${formatDateAbbrev(new Date(Date.parse(interval.end_at) - 1).toISOString(), locale, zone)}`;
+  return formatDateAbbrevRange(
+    interval.start_at,
+    new Date(Date.parse(interval.end_at) - 1).toISOString(),
+    locale,
+    zone,
+  );
 }
 
 export type ReportAction = {

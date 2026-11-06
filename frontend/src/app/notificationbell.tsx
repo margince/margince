@@ -11,7 +11,6 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { usePortalPanelFocus } from "../design-system/portalfocus";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
-import { approvalHref } from "../features/automations/approvaldrawer";
 import {
   NOTIFICATIONS_KEY,
   type NotificationItem,
@@ -21,10 +20,10 @@ import {
 import { worklistKey } from "../features/worklist/worklist.queries";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { recordRoute } from "../lib/entity";
+import { opensElsewhere } from "../lib/linkclick";
 import { problemMessageOf } from "../lib/problem";
-import { routeHash } from "../lib/router";
 import { useViewerZone } from "../lib/viewerzone";
+import { noticeAction } from "./noticeaction";
 import { noticeHeadline } from "./noticeheadline";
 import { usePopoverDismiss } from "./popover";
 import "./notificationbell.css";
@@ -282,11 +281,8 @@ function NoticeRow({
 }>) {
   const readerZone = useViewerZone();
   const t = useT();
-  // A notice asking for a decision opens that decision; any other names a record.
-  const href =
-    notice.target?.type === "approval"
-      ? approvalHref(notice.target.id)
-      : recordHref(notice.target?.type, notice.target?.id);
+  const action = noticeAction(notice.target);
+  const href = action?.href;
   const { locale } = useLocale();
   const settled = notice.read_at !== undefined;
   const { headline, detail } = noticeHeadline(notice, t);
@@ -319,22 +315,33 @@ function NoticeRow({
       <time className="t-caption" dateTime={notice.created_at}>
         {formatDateTime(notice.created_at, locale, readerZone)}
       </time>
-      {/* The verb is its own control rather than something the link does on its
-          way out: a mutation fired as the reader navigates away races the
-          unmount, and a reader who opened a record in a new tab would find the
-          notice settled by a visit they had not made yet. */}
-      {!settled && (
+      {/* Mark read is its own control rather than something the open does on
+          its way out: a mutation fired as the reader navigates away races the
+          unmount, and a record opened in a new tab is not yet a visit made. */}
+      {(action || !settled) && (
         <div className="notifrow-verb">
-          <Button pending={settling} onClick={() => onSettle(notice.id)}>
-            {t("notifications.markRead")}
-          </Button>
+          {action && (
+            <AppLink
+              className="btn btn-ghost"
+              href={action.href}
+              onClick={(event) => {
+                if (!opensElsewhere(event)) onActivate();
+              }}
+            >
+              {t(action.label)}
+            </AppLink>
+          )}
+          {!settled && (
+            <Button
+              variant="link"
+              pending={settling}
+              onClick={() => onSettle(notice.id)}
+            >
+              {t("notifications.markRead")}
+            </Button>
+          )}
         </div>
       )}
     </li>
   );
-}
-
-function recordHref(type?: string, id?: string): string | undefined {
-  const route = recordRoute(type, id);
-  return route ? routeHash(route) : undefined;
 }

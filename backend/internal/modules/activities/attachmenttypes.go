@@ -21,6 +21,9 @@ type attachmentType struct {
 	aliases              []string
 }
 
+// mediaTypeJPEG is the media type a JPEG is stored and read under.
+const mediaTypeJPEG = "image/jpeg"
+
 // SVG is left out because an image viewer runs its script, and executables because
 // nobody files one as a record. HTML and zip are kept: they are only ever downloaded.
 var attachmentTypes = []attachmentType{
@@ -39,8 +42,8 @@ var attachmentTypes = []attachmentType{
 	{extension: ".csv", mediaType: "text/csv", aliases: []string{"application/csv", "text/x-csv"}},
 	{extension: ".md", mediaType: "text/markdown", aliases: []string{"text/x-markdown"}},
 	{extension: ".png", mediaType: "image/png"},
-	{extension: ".jpg", mediaType: "image/jpeg", aliases: []string{"image/jpg"}},
-	{extension: ".jpeg", mediaType: "image/jpeg", aliases: []string{"image/jpg"}},
+	{extension: ".jpg", mediaType: mediaTypeJPEG, aliases: []string{"image/jpg"}},
+	{extension: ".jpeg", mediaType: mediaTypeJPEG, aliases: []string{"image/jpg"}},
 	{extension: ".gif", mediaType: "image/gif"},
 	{extension: ".webp", mediaType: "image/webp"},
 	{extension: ".heic", mediaType: "image/heic"},

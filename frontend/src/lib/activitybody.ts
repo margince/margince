@@ -16,6 +16,10 @@ import type { EntityKind } from "./entity";
 // the draft lives in logactivity.tsx; this is the projection alone, so a test
 // can pin the body the server sees without mounting a component.
 
+export function canHaveTranscript(kind: ActivityDraft["kind"]): boolean {
+  return kind === "call" || kind === "meeting";
+}
+
 /** Whether a value the kind picker handed back is a kind the draft holds. */
 export function isActivityKind(value: string): value is ActivityDraft["kind"] {
   return (
@@ -40,7 +44,13 @@ export const CALL_OUTCOMES: readonly CallOutcome[] = [
   "put_through",
 ];
 
+export type ActivityDealSelection = Readonly<{
+  context: components["schemas"]["ActivityDealFiling"];
+  dealId?: string;
+}>;
+
 export type ActivityDraft = {
+  dealFiling?: ActivityDealSelection;
   kind: "note" | "task" | "meeting" | "call";
   subject: string;
   body: string;
@@ -50,12 +60,7 @@ export type ActivityDraft = {
   // A task's callback time, `HH:MM` on the record's clock, "" for none. It
   // means nothing without a day.
   time: string;
-  // A meeting's body is ordinary notes UNLESS this is explicitly checked —
-  // otherwise "discussed pricing, follow up Tuesday" typed while logging a
-  // meeting would silently carry source_system: transcript, which the
-  // backend documents as meaning pasted/uploaded transcript TEXT and which
-  // the activity/transcript retention scope sweeps on a different schedule
-  // than an ordinary meeting note. Meaningless outside kind: meeting.
+  // Transcript text is opt-in because its processing and retention differ from ordinary notes.
   asTranscript: boolean;
   // Who this task is for, "" for nobody. Meaningless outside kind: task — a
   // note or meeting is not held by a colleague — so it only reaches the wire on
@@ -160,16 +165,10 @@ export function activityRequestBody(
   attendees: MeetingAttendees,
 ) {
   const withAttendees = KINDS_WITH_A_CONTACT.has(input.kind);
-  // source_system: transcript is what routes the body through the
-  // server's ADR-0058 normalizer and what the activity/transcript
-  // retention scope keys its sweep on (see backend logActivity's
-  // `transcript` example) — only when the writer has explicitly marked
-  // this text as one (asTranscript), never inferred from kind: meeting
-  // alone, or ordinary meeting notes would carry a marker meaning
-  // something else and sweep on a different retention schedule.
-  const isTranscript = input.kind === "meeting" && input.asTranscript;
+  const isTranscript = canHaveTranscript(input.kind) && input.asTranscript;
   return {
     kind: input.kind,
+    ...callAndMeetingFields(input),
     ...occurredFields(input, recordZone),
     ...(input.kind === "task"
       ? {
@@ -183,20 +182,18 @@ export function activityRequestBody(
             ? { follow_up_task: taskRequestFields(input.followUp, recordZone) }
             : {}),
         }),
-    // Held: a hand-logged meeting already took place (the date caps at
-    // today), and held is what the lead ladder reads as engagement.
-    ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
-    // A call always names its outcome; "No outcome" is an explicit null.
-    ...(input.kind === "call"
-      ? { call_outcome: input.callOutcome === "" ? null : input.callOutcome }
-      : {}),
     ...(isTranscript ? { source_system: "transcript" } : {}),
     // Only for the kinds that ask who attended. Switching to a note hides the
     // fields but keeps their picks in state. A note must not be filed against them.
     links:
       entityType && entityId
         ? withAttendees
-          ? meetingLinks(entityType, entityId, attendees.contacts)
+          ? meetingLinks(
+              entityType,
+              entityId,
+              attendees.contacts,
+              input.dealFiling?.dealId,
+            )
           : [{ entity_type: entityType, entity_id: entityId }]
         : [],
     ...(withAttendees && attendees.colleagueIds.length > 0
@@ -204,6 +201,21 @@ export function activityRequestBody(
       : {}),
     ...input.custom,
     source: "manual",
+  };
+}
+
+function callAndMeetingFields(input: ActivityDraft) {
+  return {
+    ...(KINDS_WITH_A_CONTACT.has(input.kind) && input.dealFiling
+      ? { deal_filing: input.dealFiling.context }
+      : {}),
+    // Held: a hand-logged meeting already took place (the date caps at
+    // today), and held is what the lead ladder reads as engagement.
+    ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
+    // A call always names its outcome; "No outcome" is an explicit null.
+    ...(input.kind === "call"
+      ? { call_outcome: input.callOutcome === "" ? null : input.callOutcome }
+      : {}),
   };
 }
 
@@ -215,6 +227,7 @@ function meetingLinks(
   entityType: EntityKind,
   entityId: string,
   contacts: readonly RecordPickerCandidate[],
+  dealId?: string,
 ): { entity_type: EntityKind; entity_id: string }[] {
   const record = { entity_type: entityType, entity_id: entityId };
   const links = entityType === "company" ? [] : [record];
@@ -223,6 +236,7 @@ function meetingLinks(
       links.push({ entity_type: "contact", entity_id: contact.id });
     }
   }
+  if (dealId) links.push({ entity_type: "deal", entity_id: dealId });
   return links.length > 0 ? links : [record];
 }
 

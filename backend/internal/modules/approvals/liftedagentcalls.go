@@ -26,6 +26,12 @@ const liftedAgentCallReason = "an agent on its colleague's passport now runs thi
 // cursorArg names the id a withdrawal batch resumes after.
 const cursorArg = "after"
 
+// capArg names the bound an estimate counts up to.
+const capArg = "cap"
+
+// batchLimitArg names the size of a withdrawal batch.
+const batchLimitArg = "batch_limit"
+
 // liftedAgentCallScope selects the live approvals a passport staged for a tool
 // kind that no longer waits. One a scheduled run is paused on stays: the run
 // resumes only on a decision, which a withdrawal never sends.
@@ -41,7 +47,7 @@ func EstimateLiftedAgentCalls(kinds []string) func(context.Context, datatask.Que
 		}
 		var count int64
 		err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id `+liftedAgentCallScope+` LIMIT @cap) candidates`,
-			pgx.NamedArgs{"kinds": kinds, "cap": maximum + 1}).Scan(&count)
+			pgx.NamedArgs{"kinds": kinds, capArg: maximum + 1}).Scan(&count)
 		return min(count, maximum), count > maximum, err
 	}
 }
@@ -51,32 +57,52 @@ func EstimateLiftedAgentCalls(kinds []string) func(context.Context, datatask.Que
 // promise withdrawal does.
 func WithdrawLiftedAgentCallsTx(kinds []string) func(context.Context, pgx.Tx, datatask.BatchIn) (datatask.BatchOut, error) {
 	return func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-		if err := auth.RequireSystem(ctx); err != nil {
-			return datatask.BatchOut{}, err
-		}
-		after, err := datatask.UUIDCursor(in.Cursor)
-		if err != nil {
-			return datatask.BatchOut{}, err
-		}
-		rows, err := tx.Query(ctx, `SELECT id `+liftedAgentCallScope+` AND id > @after ORDER BY id LIMIT @batch_limit`,
-			pgx.NamedArgs{"kinds": kinds, cursorArg: after, "batch_limit": in.Limit})
-		if err != nil {
-			return datatask.BatchOut{}, fmt.Errorf("approvals: reading pending agent calls: %w", err)
-		}
-		scanned, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-		if err != nil {
-			return datatask.BatchOut{}, err
-		}
-		changed := 0
-		for _, id := range scanned {
-			withdrawn, err := withdrawInTx(ctx, tx, ids.From[ids.ApprovalKind](id), liftedAgentCallReason)
-			if err != nil {
-				return datatask.BatchOut{}, err
-			}
-			if withdrawn {
-				changed++
-			}
-		}
-		return datatask.AdvanceUUID(in, scanned, changed)
+		return withdrawPendingBatch(ctx, tx, in, pendingWithdrawal{
+			scope: liftedAgentCallScope, args: pgx.NamedArgs{"kinds": kinds},
+			noun: "agent calls", reason: liftedAgentCallReason,
+		})
 	}
+}
+
+// pendingWithdrawal names the pending approvals one data task withdraws.
+type pendingWithdrawal struct {
+	// scope is the clause selecting them, and args binds it.
+	scope string
+	args  pgx.NamedArgs
+	// noun names them in a read failure.
+	noun string
+	// reason is the audit reason on each withdrawal.
+	reason string
+}
+
+// withdrawPendingBatch withdraws one id-ordered batch through the approvals
+// writer, which audits each one.
+func withdrawPendingBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn, pending pendingWithdrawal) (datatask.BatchOut, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return datatask.BatchOut{}, err
+	}
+	after, err := datatask.UUIDCursor(in.Cursor)
+	if err != nil {
+		return datatask.BatchOut{}, err
+	}
+	pending.args[cursorArg], pending.args[batchLimitArg] = after, in.Limit
+	rows, err := tx.Query(ctx, `SELECT id `+pending.scope+` AND id > @after ORDER BY id LIMIT @batch_limit`, pending.args)
+	if err != nil {
+		return datatask.BatchOut{}, fmt.Errorf("approvals: reading pending %s: %w", pending.noun, err)
+	}
+	scanned, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return datatask.BatchOut{}, err
+	}
+	changed := 0
+	for _, id := range scanned {
+		withdrawn, err := withdrawInTx(ctx, tx, ids.From[ids.ApprovalKind](id), pending.reason)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
+		if withdrawn {
+			changed++
+		}
+	}
+	return datatask.AdvanceUUID(in, scanned, changed)
 }

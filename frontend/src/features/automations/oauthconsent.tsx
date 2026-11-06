@@ -25,7 +25,7 @@ import "./oauthconsent.css";
 // that decision is made, and the only one: the api serves no HTML, so there is
 // no other surface a consent decision can be taken on. GET /oauth/authorize
 // arms a single-use nonce, sets an HttpOnly Path=/oauth/authorize cookie
-// carrying its counterpart, and 302s to `/#/oauth-consent?…&consent=<nonce>`.
+// carrying its counterpart, and 302s to `/consent#/oauth-consent?…&consent=<nonce>`.
 // The nonce is deliberately absent from the consent-request endpoint's
 // response (the cookie never reaches it), so it is read out of the redirect
 // fragment instead and POSTed back — the POST proves possession of both

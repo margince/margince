@@ -40,6 +40,12 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "device",
   },
+  // Whether Documents tabs draw files as tiles or as rows.
+  documentsView: {
+    name: "margince.documents.view",
+    area: "local",
+    lifetime: "device",
+  },
   // v2: widths saved under content sizing pin columns wrongly under shares.
   tableWidths: {
     prefix: "margince.table.widths.v2.",

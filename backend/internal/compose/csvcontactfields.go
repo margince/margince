@@ -85,19 +85,34 @@ func contactFullName(fields map[string]string) string {
 	if name := strings.TrimSpace(fields[fieldFullName]); name != "" {
 		return name
 	}
-	joined := strings.TrimSpace(strings.TrimSpace(fields["first_name"]) + " " + strings.TrimSpace(fields["last_name"]))
-	if joined != "" {
+	if joined := contacts.JoinNameParts(fields["first_name"], fields["last_name"]); joined != "" {
 		return joined
 	}
 	return strings.TrimSpace(fields[fieldEmail])
 }
 
-// withNamePartsAsFullName gives a row that states both name parts those parts
-// as its full name, whether or not it maps a full name column. The update
-// comparison reads it, so a disagreeing full name is never sent on its own.
-func withNamePartsAsFullName(fields map[string]string) map[string]string {
+// withoutDisagreeingFullName drops a full name that disagrees with the two name
+// parts beside it in the same row. Such a name is never sent on its own. The parts
+// go to the store, whose rule decides whether the stored display name follows
+// them: a plain join does, a hand-typed name stays.
+func withoutDisagreeingFullName(fields map[string]string) map[string]string {
 	joined := joinedNameParts(fields)
-	if joined == "" || fields[fieldFullName] == joined {
+	if _, given := fields[fieldFullName]; !given || joined == "" || strings.TrimSpace(fields[fieldFullName]) == joined {
+		return fields
+	}
+	out := maps.Clone(fields)
+	delete(out, fieldFullName)
+	return out
+}
+
+// withNamePartsOverStoredEmail gives a record still named by its own address the
+// name the row's parts spell. The address is the last rung of contactFullName, a
+// name nobody chose. The store protects anything that is not a join of the stored
+// parts, so the row has to send this one.
+func withNamePartsOverStoredEmail(current map[string]json.RawMessage, fields map[string]string) map[string]string {
+	joined := contacts.JoinNameParts(fields["first_name"], fields["last_name"])
+	stored := textOf(current[fieldFullName])
+	if joined == "" || stored == "" || !strings.EqualFold(stored, textOf(storedPrimaryEmail(current))) {
 		return fields
 	}
 	out := maps.Clone(fields)
@@ -107,11 +122,11 @@ func withNamePartsAsFullName(fields map[string]string) map[string]string {
 
 // joinedNameParts is "first last" when the row states both parts, else "".
 func joinedNameParts(fields map[string]string) string {
-	first, last := strings.TrimSpace(fields["first_name"]), strings.TrimSpace(fields["last_name"])
-	if first == "" || last == "" {
+	first, last := fields["first_name"], fields["last_name"]
+	if strings.TrimSpace(first) == "" || strings.TrimSpace(last) == "" {
 		return ""
 	}
-	return first + " " + last
+	return contacts.JoinNameParts(first, last)
 }
 
 // contactEmailsFrom reads the single email column a spreadsheet carries into the

@@ -82,6 +82,11 @@ func (s *Store) PreviewOfferCreation(ctx context.Context, dealID ids.DealID, in 
 		if err != nil {
 			return err
 		}
+		// The writer's own line admission, so a preview of an offer from the
+		// deal shows the lines the create will copy.
+		if in, _, _, err = admitOfferLines(ctx, tx, dealID, in); err != nil {
+			return err
+		}
 		if in.TemplateID != nil {
 			if err := auth.Require(ctx, "offer_template", principal.ActionRead); err != nil {
 				return err

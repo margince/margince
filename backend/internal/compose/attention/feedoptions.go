@@ -55,6 +55,13 @@ func (s *Service) WithDomainQuestions(d DomainQuestions) *Service {
 	return s
 }
 
+// WithBookingHealth binds the reader's own paused booking page. Unbound, the
+// lane is ABSENT rather than empty, for the reason WithDomainQuestions gives.
+func (s *Service) WithBookingHealth(b BookingHealth) *Service {
+	s.bookingHealth = b
+	return s
+}
+
 // WithMachineSender binds the rule that tells a sending system from a contact.
 func (s *Service) WithMachineSender(is MachineSender) *Service {
 	s.machine = is

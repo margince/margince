@@ -321,18 +321,40 @@
   border-block-start: 0;
 }
 /* Where two cells no longer fit, a lead plate stacks like any other row of
-   readings, its lead first. */
+   readings, its lead first. So does a plate whose cells asked to fold. */
 @container (max-width: 40rem) {
-  .stat-strip[data-density="plate"][data-lead] {
+  .stat-strip[data-density="plate"]:is(
+    [data-lead],
+    :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+  ) {
     grid-template-columns: minmax(0, 1fr);
   }
   /* Stacked cells part with a rule across, never one down the edge. */
-  .stat-strip[data-density="plate"][data-lead] > .stat-card,
-  .stat-strip[data-density="plate"][data-lead] > * > .stat-card {
+  .stat-strip[data-density="plate"]:is(
+    [data-lead],
+    :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+  ) > .stat-card,
+  .stat-strip[data-density="plate"]:is(
+      [data-lead],
+      :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    )
+    > *
+    > .stat-card {
     border-inline-end: 0;
   }
-  .stat-strip[data-density="plate"][data-lead] > * + .stat-card,
-  .stat-strip[data-density="plate"][data-lead] > * + * > .stat-card {
+  .stat-strip[data-density="plate"]:is(
+      [data-lead],
+      :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    )
+    > *
+    + .stat-card,
+  .stat-strip[data-density="plate"]:is(
+      [data-lead],
+      :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    )
+    > *
+    + *
+    > .stat-card {
     border-block-start: 1px solid var(--borderSubtle);
   }
   /* A plate keeps its cells' column shape when they fold, so the figure

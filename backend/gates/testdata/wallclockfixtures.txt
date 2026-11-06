@@ -215,7 +215,7 @@ internal/compose/integration/signalextract_integration_test.go 1
 internal/compose/integration/signals_integration_test.go 3
 internal/compose/integration/signalscan_integration_test.go 3
 internal/compose/integration/signalscan_project_integration_test.go 2
-internal/compose/integration/stageevidencesource_integration_test.go 2
+internal/compose/integration/stageevidencesource_integration_test.go 1
 internal/compose/integration/standardfilterfields_http_integration_test.go 1
 internal/compose/integration/testmailbox_integration_test.go 2
 internal/compose/integration/toolschema_conformance_integration_test.go 5
@@ -418,9 +418,6 @@ internal/modules/contacts/vcardimport_integration_test.go 2
 internal/modules/deals/edgegrant_test.go 5
 internal/modules/deals/fxrates_integration_test.go 2
 internal/modules/deals/stageevidence_integration_test.go 5
-internal/modules/deals/stageprogression_integration_test.go 3
-internal/modules/deals/stageprogressionpolicy_integration_test.go 1
-internal/modules/deals/stageprogressionsuspend_integration_test.go 1
 internal/modules/forecasting/movement_test.go 1
 internal/modules/identity/oauth_cimd_integration_test.go 1
 internal/modules/identity/revocation_integration_test.go 2
