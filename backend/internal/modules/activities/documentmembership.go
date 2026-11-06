@@ -39,6 +39,15 @@ func mailFileIDs(linkedTo string) string {
 //
 // The arms are a `UNION ALL` of ids, so the plan starts from the holder.
 // An `OR` reads every mail file of the installation. No file is in both arms.
+//
+// A row with no bytes is admitted when its category is a link. A captured
+// document link is a Documents entry and has nothing to store.
+//
+// The deal room's own predicate leaves that arm out, so a link row never
+// reaches a buyer's download.
+//
+// The two rules share their storekit halves and part here. Neither calls the
+// other: a module reaches no sibling.
 func documentMembership(holder string, pos int) string {
 	var own, linked string
 	switch holder {

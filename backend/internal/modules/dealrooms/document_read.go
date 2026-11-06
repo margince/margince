@@ -78,6 +78,13 @@ const documentFrom = `deal_room_document d
 // The deal's own Files read applies the same message link and listed-file
 // rule from storekit. A logo a rep never sees in the area is not shareable by id.
 //
+// `NOT a.bytes_withheld` also excludes a row that never had bytes, which is a
+// captured document link. That is the one clause this predicate does not share
+// with a Documents list, which admits a link row by its category.
+//
+// So the two are not one rule in two spellings, and sharing them would hand a
+// buyer a link to a file nobody uploaded.
+//
 // Held by: TestRoomDocumentMembershipIsSpelledOnce (backend/internal/modules/dealrooms/documentmembership_test.go)
 var inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
 	AND ((a.entity_type = 'deal' AND a.entity_id = r.deal_id)
@@ -143,7 +150,8 @@ func documentRows(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) ([]crmc
 		`SELECT %s FROM %s
 		  WHERE d.room_id = $%d AND d.archived_at IS NULL%s
 		  ORDER BY d.group_key, d.position, d.created_at, d.id`,
-		documentColumns, documentFrom, arg(roomID), readable)
+		documentColumns, documentFrom, arg(roomID), readable,
+	)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list deal room documents: %w", err)
@@ -185,7 +193,8 @@ func readDocumentIn(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, id id
 	}
 	row := tx.QueryRow(ctx, storekit.SQLf(
 		`SELECT %s FROM %s WHERE d.room_id = $%d AND d.id = $%d%s%s`,
-		documentColumns, documentFrom, roomPos, docPos, liveOnly, readable), args...)
+		documentColumns, documentFrom, roomPos, docPos, liveOnly, readable,
+	), args...)
 	doc, err := scanDocument(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.DealRoomDocument{}, apperrors.ErrNotFound
