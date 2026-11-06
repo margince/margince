@@ -178,7 +178,7 @@ func TestAConditionalByIDWriteReportsThatItDeclined(t *testing.T) {
 	var unchecked []string
 	var corpus int
 	// The module root, one up from this package.
-	if err := filepath.WalkDir("..", func(path string, d fs.DirEntry, err error) error {
+	if err := gatekit.WalkDir("..", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 			return err

@@ -645,7 +645,7 @@ func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 	t.Helper()
 	pkgs := map[string]gatePkg{}
 	for _, root := range storeEntryPointScope.Roots {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
 				isIntegrationTagged(path) {
 				return err
@@ -795,7 +795,7 @@ func TestTheAuthDecisionVerbsStillDescribeThePackage(t *testing.T) {
 	t.Parallel()
 
 	decisions := 0
-	err := filepath.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
@@ -907,7 +907,7 @@ func returnsPermissionDenied(fn *ast.FuncDecl) bool {
 func authPackageDeclares(t *testing.T, name string) bool {
 	t.Helper()
 	declared := false
-	err := filepath.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}

@@ -52,7 +52,6 @@ package gates
 
 import (
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -60,6 +59,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // envVarName matches one MARGINCE_* name in prose — the reference doc and the
@@ -138,7 +138,7 @@ func liveEnvVars(t *testing.T) map[string]string {
 		t.Fatalf("globbing Dockerfiles: %v", err)
 	}
 	for _, path := range images {
-		b, err := os.ReadFile(path) // #nosec G304 -- path comes from a fixed glob in the trusted source tree
+		b, err := gatekit.ReadFile(path) // #nosec G304 -- path comes from a fixed glob in the trusted source tree
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
@@ -159,7 +159,7 @@ func liveEnvVars(t *testing.T) map[string]string {
 // writes out. A variable name a reader cannot grep for is not documented.
 func namesIn(t *testing.T, path string) map[string]bool {
 	t.Helper()
-	b, err := os.ReadFile(path) // #nosec G304 -- fixed path in the trusted source tree
+	b, err := gatekit.ReadFile(path) // #nosec G304 -- fixed path in the trusted source tree
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
@@ -276,7 +276,7 @@ const entrypointSection = "## What the image entrypoint reads"
 // starts with heading to the next `## ` line.
 func namesInSection(t *testing.T, path, heading string) map[string]bool {
 	t.Helper()
-	b, err := os.ReadFile(path) // #nosec G304 -- fixed path in the trusted source tree
+	b, err := gatekit.ReadFile(path) // #nosec G304 -- fixed path in the trusted source tree
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

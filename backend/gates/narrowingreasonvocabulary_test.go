@@ -11,12 +11,12 @@ package gates
 // for.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var narrowingReasonCheckRE = regexp.MustCompile(
@@ -24,7 +24,7 @@ var narrowingReasonCheckRE = regexp.MustCompile(
 
 func TestTheNarrowingReasonVocabularyIsTheCatalogsCheck(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(replyVerdictCatalog)
+	raw, err := gatekit.ReadFile(replyVerdictCatalog)
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

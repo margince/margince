@@ -18,10 +18,12 @@ package gates
 // notice is to send to a dead mailbox and watch it go out.
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestTheBounceSinkCarriesTheObserverThatStopsTheAddress holds the claim in
@@ -34,7 +36,7 @@ import (
 func TestTheBounceSinkCarriesTheObserverThatStopsTheAddress(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(repoRoot, "backend", "internal", "compose", "capturebounce.go")
-	src, err := os.ReadFile(path)
+	src, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("capturebounce.go no longer exists — this gate names the file that wires "+
 			"delivery reports to the ledger, point it at what replaced it: %v", err)
@@ -71,7 +73,7 @@ func TestTheBounceSinkCarriesTheObserverThatStopsTheAddress(t *testing.T) {
 func TestABounceAlsoReopensTheDutyItFailedToDischarge(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(repoRoot, "backend", "internal", "modules", "consent", "bouncesuppress.go")
-	src, err := os.ReadFile(path)
+	src, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("bouncesuppress.go no longer exists — this gate names the writer that "+
 			"records a dead address, point it at what replaced it: %v", err)
@@ -118,14 +120,14 @@ func TestOnlyOneWriterMakesABounceStop(t *testing.T) {
 // into communication_suppression naming the given literal.
 func filesInserting(dir, literal string) ([]string, error) {
 	var out []string
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := gatekit.WalkDir(dir, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		src, err := os.ReadFile(path)
+		src, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

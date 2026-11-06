@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -78,7 +79,7 @@ func dealMaskedColumns(t testing.TB) *regexp.Regexp {
 // otherwise leave a pattern short of the columns it names, and the census would
 // sweep the same tree and report PASS over every one it dropped.
 func maskedColumnsIn(catalog, object string, answeredElsewhere func(string) bool) (*regexp.Regexp, error) {
-	body, err := os.ReadFile(catalog)
+	body, err := gatekit.ReadFile(catalog)
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", catalog, err)
 	}
@@ -423,7 +424,7 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 	t.Helper()
 	names := map[string]bool{}
 	var functions []*ast.FuncDecl
-	err := filepath.Walk("internal", func(filePath string, info os.FileInfo, err error) error {
+	err := gatekit.WalkDir("internal", func(filePath string, info fs.DirEntry, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(filePath, ".go") ||
 			strings.HasSuffix(filePath, "_test.go") || strings.HasSuffix(filePath, "_gen.go") {
 			return err

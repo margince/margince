@@ -86,15 +86,17 @@ type promptTypeDecl struct {
 }
 
 func newMinorUnitSources(moduleRoot string, parse func(string) (*ast.File, error)) *minorUnitSources {
-	return &minorUnitSources{moduleRoot: moduleRoot, parse: parse, files: map[string][]*ast.File{},
-		types: map[promptTypeKey]promptTypeDecl{}, funcs: map[promptFuncKey]promptFuncDecl{}}
+	return &minorUnitSources{
+		moduleRoot: moduleRoot, parse: parse, files: map[string][]*ast.File{},
+		types: map[promptTypeKey]promptTypeDecl{}, funcs: map[promptFuncKey]promptFuncDecl{},
+	}
 }
 
 func (p *minorUnitSources) load(dir string) []*ast.File {
 	if files, seen := p.files[dir]; seen {
 		return files
 	}
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		p.errs = append(p.errs, err)
 	}
@@ -467,7 +469,7 @@ func promptMinorUnitFindings(t *testing.T, moduleRoot string, parse func(string)
 	walk := &promptWalk{packages: packages, findings: map[string]bool{}}
 	rootNames := map[string]bool{}
 	var dirs []string
-	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err == nil && entry.IsDir() {
 			dirs = append(dirs, path)
 		}
@@ -573,9 +575,11 @@ func TestThePromptMinorUnitDetectorSeesWhatItClaimsTo(t *testing.T) {
 	})
 	brief, money := filepath.Join(root, "internal/brief"), filepath.Join(root, "internal/money")
 	var want []string
-	for _, name := range []string{"Assigned.AssignedMinor", "Built.TaxMinor", "DealIn.AmountMinor", "Embedded.FeeMinor",
+	for _, name := range []string{
+		"Assigned.AssignedMinor", "Built.TaxMinor", "DealIn.AmountMinor", "Embedded.FeeMinor",
 		"Encoded.EncMinor", "Fielded.FieldedMinor", "Helper.ExtraMinor", "Indented.IndentMinor", "Input.Tagged",
-		"Made.CostMinor", "Passed.PassedMinor", "Variants.ByStageMinor", "Variants.DoubleMinor", "Variants.PriceMinor"} {
+		"Made.CostMinor", "Passed.PassedMinor", "Variants.ByStageMinor", "Variants.DoubleMinor", "Variants.PriceMinor",
+	} {
 		want = append(want, brief+"."+name)
 	}
 	want = append(want, filepath.Join(root, toolResultDir)+".Inner.NetMinor", money+".Line.TotalMinor", money+".Sum.SumMinor")

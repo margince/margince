@@ -18,7 +18,6 @@ package gates
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -26,13 +25,14 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var nginxServerHeader = regexp.MustCompile(`(?m)^    add_header (\S+) "([^"]*)" always;$`)
 
 func TestTheWebTierSendsTheApisBrowserFacingHeaders(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(filepath.Join("..", "frontend", "nginx.conf"))
+	raw, err := gatekit.ReadFile(filepath.Join("..", "frontend", "nginx.conf"))
 	if err != nil {
 		t.Fatalf("reading nginx.conf: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestTheWebTierSendsTheApisBrowserFacingHeaders(t *testing.T) {
 // redirect the api sends, so moving the screen moves what this reads.
 func TestTheConsentScreenLeavesAnOAuthPopupItsOpener(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(filepath.Join("..", "frontend", "nginx.conf"))
+	raw, err := gatekit.ReadFile(filepath.Join("..", "frontend", "nginx.conf"))
 	if err != nil {
 		t.Fatalf("reading nginx.conf: %v", err)
 	}

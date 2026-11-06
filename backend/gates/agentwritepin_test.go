@@ -31,7 +31,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -81,7 +80,7 @@ func TestEveryReadResolvedToolPinsItsWrite(t *testing.T) {
 func agentToolMethods(t *testing.T) (resolvers map[string]bool, handlers map[string]string) {
 	t.Helper()
 	dir := filepath.Join(repoRoot, "backend", "internal", "modules", "agents")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
@@ -91,7 +90,7 @@ func agentToolMethods(t *testing.T) (resolvers map[string]bool, handlers map[str
 			continue
 		}
 		path := filepath.Join(dir, entry.Name())
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

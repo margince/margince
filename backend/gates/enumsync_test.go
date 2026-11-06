@@ -19,7 +19,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -203,7 +202,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 	t.Helper()
 	sets := map[string][]string{}
 	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
 				return err
 			}
@@ -212,7 +211,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 			if !migrationPrefix.MatchString(d.Name()) {
 				return fmt.Errorf("%s: migration name lacks the numeric version prefix the lexical-order derivation relies on", path)
 			}
-			raw, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
+			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
 			if err != nil {
 				return err
 			}
@@ -265,7 +264,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 	t.Helper()
 	var vals []string
-	entries, err := os.ReadDir(pkgDir)
+	entries, err := gatekit.ReadDir(pkgDir)
 	if err != nil {
 		t.Fatal(err)
 	}

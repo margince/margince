@@ -13,7 +13,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"strings"
 	"testing"
 
@@ -76,7 +75,7 @@ func TestABookingsAttendeesReachTheCalendarInvitation(t *testing.T) {
 
 func TestTheBookingContractSaysItQueuesAnInvitation(t *testing.T) {
 	t.Parallel()
-	contract, err := os.ReadFile("api/crm.yaml")
+	contract, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

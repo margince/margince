@@ -12,10 +12,11 @@ package gates
 // failed. Dispatchers enumerate; workers take the workspace they were given.
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // fleetScanMarker is any read of the workspace COLLECTION. It is deliberately
@@ -187,7 +188,7 @@ func TestFleetEnumerationOnlyAtRatifiedSites(t *testing.T) {
 		if isIntegrationTagged(path) {
 			continue
 		}
-		src, err := os.ReadFile(path)
+		src, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

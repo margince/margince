@@ -20,7 +20,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -36,7 +35,7 @@ import (
 func projectionEdgeTables(t *testing.T) []string {
 	t.Helper()
 	pattern := regexp.MustCompile(`(?m)^CREATE TABLE (graph_[a-z_]*_edge)\b`)
-	entries, err := os.ReadDir(filepath.Join("migrations", "core"))
+	entries, err := gatekit.ReadDir(filepath.Join("migrations", "core"))
 	if err != nil {
 		t.Fatalf("reading the migration directory: %v", err)
 	}
@@ -45,7 +44,7 @@ func projectionEdgeTables(t *testing.T) []string {
 		if !strings.HasSuffix(entry.Name(), ".up.sql") {
 			continue
 		}
-		ddl, err := os.ReadFile(filepath.Join("migrations", "core", entry.Name()))
+		ddl, err := gatekit.ReadFile(filepath.Join("migrations", "core", entry.Name()))
 		if err != nil {
 			t.Fatalf("reading %s: %v", entry.Name(), err)
 		}

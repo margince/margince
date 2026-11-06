@@ -17,7 +17,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -195,7 +194,7 @@ var (
 // tsSplitterTables reads every vocabulary out of the TypeScript file.
 func tsSplitterTables(t *testing.T) map[string][]string {
 	t.Helper()
-	raw, err := os.ReadFile(tsSplitter)
+	raw, err := gatekit.ReadFile(tsSplitter)
 	if err != nil {
 		t.Fatalf("reading %s: %v", tsSplitter, err)
 	}
@@ -271,7 +270,7 @@ func tsEntries(body string) []string {
 // tsSplitterConst reads one numeric constant out of the TypeScript file.
 func tsSplitterConst(t *testing.T, name string) int {
 	t.Helper()
-	raw, err := os.ReadFile(tsSplitter)
+	raw, err := gatekit.ReadFile(tsSplitter)
 	if err != nil {
 		t.Fatalf("reading %s: %v", tsSplitter, err)
 	}

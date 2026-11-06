@@ -14,7 +14,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -153,7 +152,7 @@ const (
 
 func readDirectionRegister(t *testing.T) map[string]bool {
 	t.Helper()
-	body, err := os.ReadFile(directionRegisterPath)
+	body, err := gatekit.ReadFile(directionRegisterPath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", directionRegisterPath, err)
 	}

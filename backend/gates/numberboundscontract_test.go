@@ -9,7 +9,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"reflect"
 	"slices"
 	"strconv"
@@ -56,7 +55,7 @@ var untaggableBounds = gatekit.Waive(map[string]string{
 func TestEveryNumberBoundIsTaggedForTheDecoders(t *testing.T) {
 	t.Parallel()
 	defer untaggableBounds.AssertAllMatched(t)
-	raw, err := os.ReadFile(contractPath)
+	raw, err := gatekit.ReadFile(contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
