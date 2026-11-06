@@ -384,6 +384,8 @@ export function DealCard({
   mailAside,
   actions,
   dragHandlers,
+  standing,
+  closed,
 }: Readonly<{
   deal: BoardDeal;
   /** The record calendar for close dates and ages, shared with the timeline. */
@@ -409,6 +411,10 @@ export function DealCard({
     draggable: true;
     onDragStart: (event: React.DragEvent) => void;
   };
+  /** Stage and seat, for a card off the board; a board column says the stage. */
+  standing?: ReactNode;
+  /** A closed deal's day, worded; null when no day was recorded. */
+  closed?: string | null;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -474,7 +480,9 @@ export function DealCard({
             formatMoneyCompact,
           )}
         </span>
-        {deal.closeDate ? (
+        {closed !== undefined ? (
+          <span className="deal-closes">{closed ?? t("deal.undated")}</span>
+        ) : deal.closeDate ? (
           <DealCloses
             day={deal.closeDate}
             provisional={deal.closeDateProvisional ?? false}
@@ -484,6 +492,7 @@ export function DealCard({
           <span className="deal-closes">{t("deal.undated")}</span>
         )}
       </span>
+      {standing != null && <span className="deal-standing">{standing}</span>}
       <DealCardFoot
         zone={zone}
         deal={deal}
