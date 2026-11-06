@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/consent"
 )
 
 // A user's agent carries out the user's decision to send a refused message. The
@@ -30,7 +31,7 @@ func TestAnAgentDirectsARefusedSendAndTheRowNamesItAndItsUser(t *testing.T) {
 	}
 	review := liveReviewID(t, c)
 	shown := string(agent.CallOK(t, "read_details", map[string]any{"action": "communication_review", "id": review}).Envelope(t).Data)
-	if !strings.Contains(shown, "override-v1") {
+	if !strings.Contains(shown, consent.OverrideWarningVersion) {
 		t.Fatalf("the review shows the agent no warning to put to its user: %s", shown)
 	}
 

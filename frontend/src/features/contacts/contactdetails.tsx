@@ -33,6 +33,7 @@ import { industryWords } from "../../format/industry";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { currentEmployer } from "../../lib/employmentcurrency";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -43,7 +44,6 @@ import { ContactSource } from "./contactfacts";
 import { EmployerValue } from "./employerchange";
 import { type ProfileField, proposedEmployer } from "./employerproposal";
 import { ProposedEmployerRow } from "./employerproposalrow";
-import { currentEmployer } from "./employmentcurrency";
 
 type Contact = components["schemas"]["Contact"];
 type Contact360 = components["schemas"]["Contact360"];

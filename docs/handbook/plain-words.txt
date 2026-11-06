@@ -219,7 +219,6 @@ cloudflare
 coach
 code
 cold
-collaborate
 collapse
 colleague
 collection
@@ -544,7 +543,6 @@ hour
 how
 human
 i
-idea
 if
 ignore
 image
@@ -1045,6 +1043,7 @@ score
 scorecard
 scrape
 screen
+screenshot
 script
 seal
 search

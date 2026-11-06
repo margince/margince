@@ -58,7 +58,6 @@ const namespaces = [
     prefix: "relationshiprows-",
     home: "components/relationshiprows.css",
   },
-  { prefix: "relationships-", home: "components/relationships.css" },
   {
     prefix: "repeatablerowsfield-",
     home: "components/repeatablerowsfield.css",

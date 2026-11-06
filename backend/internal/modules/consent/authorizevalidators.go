@@ -172,18 +172,27 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, si
 // links and the picked deal are asked one way. A live deal the contact never
 // asked about gets its own reason: the deal is there, their request about it
 // is not.
+//
+// A message filed under a deal names that deal even when no evidence field
+// repeats it. The refusal then says what is missing, instead of asking for a
+// deal the message already carries. The links were probed for visibility before
+// the gate, and the outcome is unchanged: resolveCategory asked the same links.
 func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
-	if req.Evidence.DealID == (ids.UUID{}) {
+	deals := req.Links
+	if req.Evidence.DealID != (ids.UUID{}) {
+		deals = []ids.UUID{req.Evidence.DealID}
+	}
+	if len(deals) == 0 {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
 	}
-	live, err := liveDealInLinks(ctx, tx, []ids.UUID{req.Evidence.DealID}, subject)
+	live, err := liveDealInLinks(ctx, tx, deals, subject)
 	if err != nil {
 		return resolution{}, err
 	}
 	if !live {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
 	}
-	asked, err := requestedNegotiation(ctx, tx, []ids.UUID{req.Evidence.DealID}, subject)
+	asked, err := requestedNegotiation(ctx, tx, deals, subject)
 	if err != nil {
 		return resolution{}, err
 	}
