@@ -79,8 +79,12 @@ func TestThePhoneLayoutSurvivesAClientThatDropsTheDarkSheet(t *testing.T) {
 	if layout != 1 || dark != 1 {
 		t.Fatalf("want one layout block and one dark block, got %d and %d", layout, dark)
 	}
-	if strings.Contains(layoutSheet(), "@media(") {
+	queries := strings.Count(layoutSheet(), "@media")
+	if queries == 0 || strings.Count(layoutSheet(), "@media screen and (") != queries {
 		t.Fatal("write each media query as `@media screen and (…)`, the form every mail client parses")
+	}
+	if !strings.Contains(rendered, "<!--[if mso]><style>"+wideFigures()+"</style><![endif]-->") {
+		t.Fatal("Outlook on Windows reads no media query and lost the desktop figures")
 	}
 }
 

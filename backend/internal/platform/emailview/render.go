@@ -81,7 +81,7 @@ func renderText(message Message) string {
 // it rejects, so the layout must not ride with the dark sheet.
 func document(language, preheader, card string) string {
 	return `<!doctype html><html lang="` + html.EscapeString(language) + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">` +
-		`<style>` + layoutSheet() + `</style><style>@media (prefers-color-scheme:dark){` + darkSheet(":root") + `}</style></head>` +
+		`<style>` + layoutSheet() + `</style><style>@media (prefers-color-scheme:dark){` + darkSheet(":root") + `}</style><!--[if mso]><style>` + wideFigures() + `</style><![endif]--></head>` +
 		`<body data-email-version="` + strconv.Itoa(PresentationVersion) + `"` + look{ink: textPrimary, fill: bgPage}.attrs("margin:0;font:"+body.font()+";overflow-wrap:anywhere;word-wrap:break-word") + `>` +
 		`<div style="display:none;max-height:0;overflow:hidden" aria-hidden="true">` + html.EscapeString(preheader) + `</div>` +
 		`<table role="presentation" width="100%" cellspacing="0" cellpadding="0"` + look{fill: bgPage}.attrs("") + `><tr><td align="center" class="frame" style="padding:32px 12px">` +
@@ -102,10 +102,16 @@ func layoutSheet() string {
 		`.facts th{padding:10px 16px 0!important}` +
 		`.facts td{border-top:0!important;padding:2px 16px 10px!important}` +
 		`.itemtext,.itemlink{display:block!important;width:auto!important}` +
-		`.itemlink{text-align:left!important;padding:6px 0 0!important}}` +
-		`@media screen and (min-width:481px){` +
-		`.stats td{padding:14px 16px!important}` +
-		`.figure{font:` + headingXLarge.font() + `!important}}`
+		`.itemlink{text-align:left!important;padding:6px 0 0!important}` +
+		`.itemlink a{white-space:normal!important}}` +
+		`@media screen and (min-width:481px){` + wideFigures() + `}`
+}
+
+// wideFigures is the desktop StatStrip. Outlook on Windows reads no media
+// query, so the document repeats these rules for it alone.
+func wideFigures() string {
+	return `.stats td{padding:14px 16px!important}` +
+		`.figure{font:` + headingXLarge.font() + `!important}`
 }
 
 // header names who the mail comes from, over a hairline. A company logo
