@@ -5,6 +5,7 @@ package consent
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -353,17 +354,26 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), RecordQualifyingEventInput{
-		Kind:       string(req.Kind),
-		Note:       req.Note,
-		OccurredAt: req.OccurredAt,
+		Kind:         string(req.Kind),
+		Note:         req.Note,
+		OccurredAt:   req.OccurredAt,
+		AsksForQuote: req.AsksForQuote != nil && *req.AsksForQuote,
 	})
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
+	recordedID, err := ids.Parse(recorded.ID)
+	if err != nil {
+		writeConsentErr(w, r, fmt.Errorf("consent: the recorded exchange has no id: %w", err))
+		return
+	}
 	out := crmcontracts.QualifyingEventRecord{
-		Kind:       crmcontracts.QualifyingEventRecordKind(recorded.Kind),
-		OccurredAt: recorded.OccurredAt,
+		Id:           openapi_types.UUID(recordedID),
+		Kind:         crmcontracts.QualifyingEventRecordKind(recorded.Kind),
+		OccurredAt:   recorded.OccurredAt,
+		AsksForQuote: recorded.AsksForQuote,
+		Retracted:    recorded.Retracted,
 	}
 	if recorded.Note != "" {
 		note := recorded.Note
@@ -372,16 +382,28 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 	httperr.WriteJSON(w, http.StatusCreated, out)
 }
 
+// RetractQualifyingEvent serves POST
+// /contacts/{id}/consent/qualifying-events/{event_id}/retract. Wire-only.
+func (h Handlers) RetractQualifyingEvent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, eventID openapi_types.UUID) {
+	if err := h.store.RetractQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), ids.UUID(eventID)); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func writeConsentErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
 func wirePurpose(p Purpose) crmcontracts.ConsentPurpose {
+	class := crmcontracts.ConsentPurposeClass(p.Class)
 	return crmcontracts.ConsentPurpose{
 		Id:                  openapi_types.UUID(p.ID.UUID),
 		Key:                 p.Key,
 		Label:               p.Label,
 		RequiresDoubleOptIn: &p.RequiresDoubleOptIn,
+		Class:               &class,
 		CreatedAt:           p.CreatedAt,
 	}
 }

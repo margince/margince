@@ -3,8 +3,13 @@
 
 import type { ReactNode } from "react";
 import { StatCard } from "../../design-system/atoms";
+import { Panel } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatAnalyticsNumber, formatDateAbbrev } from "../../format/format";
+import {
+  formatAnalyticsNumber,
+  formatDateAbbrev,
+  formatMoneyCompact,
+} from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { landingBasisLines } from "./analytics.forecast.landing";
 import {
@@ -22,14 +27,33 @@ import {
   reportingCompactAmount,
 } from "./reporting.model";
 
+/**
+ * The review's head: its figures as one plate, the first one leading, and on
+ * a quarter the trajectory to where it can finish.
+ */
 export function SalesOverviewMetrics(
+  props: Parameters<typeof QuarterOverviewMetrics>[0] &
+    Readonly<{ trajectory?: ReactNode }>,
+) {
+  const { trajectory, ...quarter } = props;
+  return (
+    <Panel className="analytics-sales-hero">
+      {props.evaluation.selection.period === "this_quarter" ? (
+        <QuarterOverviewMetrics {...quarter} />
+      ) : (
+        <PeriodOverviewMetrics {...quarter} />
+      )}
+      {trajectory}
+    </Panel>
+  );
+}
+
+function PeriodOverviewMetrics(
   props: Parameters<typeof QuarterOverviewMetrics>[0],
 ) {
   const t = useT();
-  if (props.evaluation.selection.period === "this_quarter")
-    return <QuarterOverviewMetrics {...props} />;
   return (
-    <StatStrip label={t("analytics.overview.readings")} density="compact">
+    <StatStrip label={t("analytics.overview.readings")} density="plate" lead>
       <MetricReading
         narrow="stack"
         evaluation={props.evaluation}
@@ -55,11 +79,14 @@ export function SalesOverviewMetrics(
 function QuarterOverviewMetrics({
   evaluation,
   aside,
+  receipt,
   forecastHref,
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
+  // The one line under Sales won, and what it rests on behind its receipt.
   aside: ReactNode;
+  receipt?: ReactNode;
   forecastHref: string;
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
@@ -78,18 +105,24 @@ function QuarterOverviewMetrics({
       evaluation.context.currency,
       locale,
     );
+  // A range reads as two short amounts; the exact ends are on Forecast.
+  const short = (value: number | null | undefined) =>
+    value == null
+      ? "—"
+      : formatMoneyCompact(value, evaluation.context.currency, locale);
   const periodPipeline =
     basis?.open_pipeline_minor ?? comparison?.open_pipeline;
   const hasRange =
     visibleForecast?.range_low_minor != null &&
     visibleForecast.range_high_minor != null;
   return (
-    <StatStrip label={t("analytics.overview.readings")} density="compact">
+    <StatStrip label={t("analytics.overview.readings")} density="plate" lead>
       <MetricReading
         narrow="stack"
         evaluation={evaluation}
         id="bookings_won"
         detail={aside}
+        basis={receipt}
         onEvidence={onEvidence}
       />
       <ForecastOverviewReading
@@ -103,12 +136,13 @@ function QuarterOverviewMetrics({
         label={t("forecast.model.quarter")}
         value={
           hasRange
-            ? `${money(visibleForecast.range_low_minor)} – ${money(visibleForecast.range_high_minor)}`
+            ? `${short(visibleForecast.range_low_minor)} – ${short(visibleForecast.range_high_minor)}`
             : "—"
         }
         detail={
-          hasRange ? t("forecast.model.detail") : forecast?.coverage.reason
+          hasRange ? t("forecast.model.short") : forecast?.coverage.reason
         }
+        basis={hasRange ? t("forecast.model.detail") : undefined}
         href={hasRange ? forecastHref : undefined}
         opens="forecast"
       />
@@ -119,20 +153,16 @@ function QuarterOverviewMetrics({
         basis={
           coverage ? <ForecastCoverage evaluation={evaluation} /> : undefined
         }
-        detail={
-          basis ? (
-            <>
-              {basis.open_count != null && (
-                <span>
-                  {plural("analytics.outlook.dealCount", basis.open_count, {
-                    count: formatAnalyticsNumber(basis.open_count, locale),
-                  })}
-                </span>
-              )}
-              {coverage?.summary && <span>{coverage.summary}</span>}
-            </>
-          ) : undefined
-        }
+        detail={[
+          basis?.open_count != null
+            ? plural("analytics.outlook.dealCount", basis.open_count, {
+                count: formatAnalyticsNumber(basis.open_count, locale),
+              })
+            : undefined,
+          coverage?.summary,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         onOpen={
           basis?.open_evidence && periodPipeline != null
             ? () => {
@@ -177,6 +207,14 @@ function ForecastOverviewReading({
           ),
         })
       : undefined;
+  // A landing on target has no gap to show, as on the trajectory.
+  const shownGap = gap == null || gap === 0 ? undefined : gap;
+  // Without a gap the first basis line is the visible detail, and only the
+  // rest stays behind the receipt.
+  const shown = shownGap == null ? (calledAt ?? lines.beside) : undefined;
+  const folded = [calledAt, lines.beside].filter(
+    (line) => line && line !== shown,
+  );
   return (
     <StatCard
       narrow="stack"
@@ -184,27 +222,52 @@ function ForecastOverviewReading({
         basis ? `forecast.basis.${basis.landing.measure}` : "forecast.landing",
       )}
       tone={lines.warning ? "warning" : undefined}
-      basis={calledAt && lines.beside ? <span>{lines.beside}</span> : undefined}
+      basis={
+        folded.length > 0
+          ? folded.map((line) => <span key={line}>{line}</span>)
+          : undefined
+      }
       value={readingValue(forecast, evaluation, t, locale)}
       href={forecast?.value != null ? href : undefined}
       opens="forecast"
       detail={
-        <>
-          {(calledAt || lines.beside) && (
-            <span>{calledAt || lines.beside}</span>
-          )}
-          {gap != null && (
-            <span>
-              {t(
-                gap < 0 ? "analytics.hero.surplus" : "analytics.hero.shortfall",
-                {
-                  amount: money(Math.abs(gap)),
-                },
-              )}
-            </span>
-          )}
-        </>
+        shownGap == null ? (
+          shown
+        ) : (
+          <GapLine
+            gap={shownGap}
+            currency={evaluation.context.currency}
+            money={money}
+          />
+        )
       }
     />
+  );
+}
+
+// The projected gap to target in its short form; the exact amount is its title.
+function GapLine({
+  gap,
+  currency,
+  money,
+}: Readonly<{
+  gap: number;
+  currency: string;
+  money: (value: number | undefined) => string;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const over = gap < 0;
+  return (
+    <span
+      className={over ? undefined : "analytics-hero-short"}
+      title={t(over ? "analytics.hero.surplus" : "analytics.hero.shortfall", {
+        amount: money(Math.abs(gap)),
+      })}
+    >
+      {t(over ? "analytics.hero.over" : "analytics.hero.short", {
+        amount: formatMoneyCompact(Math.abs(gap), currency, locale),
+      })}
+    </span>
   );
 }

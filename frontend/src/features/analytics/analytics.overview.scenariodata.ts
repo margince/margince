@@ -399,7 +399,7 @@ export function backlogFindings(
   });
 }
 
-type CheckList = Readonly<{
+export type CheckList = Readonly<{
   data: InputCheck[];
   groups: NonNullable<components["schemas"]["InputCheckGroup"]>[];
   totals: components["schemas"]["InputCheckTotals"];

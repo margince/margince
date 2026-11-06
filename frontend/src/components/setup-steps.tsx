@@ -21,6 +21,7 @@ import {
 const TITLE: Readonly<Record<SetupStepId, MessageKey>> = {
   mail: "setup.step.mail",
   calendar: "setup.step.calendar",
+  ai: "setup.step.ai",
   voice: "setup.step.writingVoice",
   booking: "setup.step.booking",
 };
@@ -28,6 +29,7 @@ const TITLE: Readonly<Record<SetupStepId, MessageKey>> = {
 const ACTION: Readonly<Record<SetupStepId, MessageKey>> = {
   mail: "setup.action.mail",
   calendar: "setup.action.calendar",
+  ai: "setup.action.ai",
   voice: "setup.action.voice",
   booking: "setup.action.booking",
 };
@@ -36,6 +38,7 @@ const ACTION: Readonly<Record<SetupStepId, MessageKey>> = {
 const WHY: Readonly<Record<SetupStepId, MessageKey>> = {
   mail: "setup.caption.mail",
   calendar: "setup.caption.calendar",
+  ai: "setup.caption.ai",
   voice: "setup.caption.voiceSamples",
   booking: "setup.caption.booking",
 };
@@ -120,24 +123,34 @@ function reasonKey(step: SetupStep): MessageKey {
   return step.reason ? REASON[step.reason] : WHY[step.id];
 }
 
+function doneCaption(t: Translator, step: SetupStep): string {
+  if (step.account) {
+    const provider = t(accountNameOf(step.account.provider));
+    return step.account.label
+      ? t("setup.step.connectedAs", { address: step.account.label, provider })
+      : provider;
+  }
+  if (step.id === "ai") {
+    const name = step.agent?.name;
+    return name
+      ? t("setup.step.aiDone", { name })
+      : t("setup.step.aiDoneUnnamed");
+  }
+  return t(
+    step.id === "voice" ? "setup.step.voiceDone" : "setup.step.bookingDone",
+  );
+}
+
 function useCaption(): (step: SetupStep) => string {
   const t = useT();
   const { locale } = useLocale();
   return (step) => {
-    if (step.state !== "done") {
-      return step.id === "voice"
-        ? voiceCaption(t, locale, step)
-        : t(reasonKey(step));
+    if (step.state === "done") {
+      return doneCaption(t, step);
     }
-    if (step.account) {
-      const provider = t(accountNameOf(step.account.provider));
-      return step.account.label
-        ? t("setup.step.connectedAs", { address: step.account.label, provider })
-        : provider;
-    }
-    return t(
-      step.id === "voice" ? "setup.step.voiceDone" : "setup.step.bookingDone",
-    );
+    return step.id === "voice"
+      ? voiceCaption(t, locale, step)
+      : t(reasonKey(step));
   };
 }
 

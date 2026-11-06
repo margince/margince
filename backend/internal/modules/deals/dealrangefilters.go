@@ -23,8 +23,12 @@ const (
 	filterCloseTo   = "close_to"
 	filterValueMin  = "value_min"
 	filterValueMax  = "value_max"
-	filterCurrency  = "currency"
-	filterCountry   = "country"
+	// The probability dials read WinProbabilitySQL, the figure the forecast
+	// weights by.
+	filterWinProbabilityMin = "win_probability_min"
+	filterWinProbabilityMax = "win_probability_max"
+	filterCurrency          = "currency"
+	filterCountry           = "country"
 )
 
 // RangeFilters are the commercial dials of a deal list. Every bound is
@@ -38,6 +42,10 @@ type RangeFilters struct {
 	// currency, as the Value sort reads it.
 	ValueMin *int64
 	ValueMax *int64
+	// WinProbabilityMin and WinProbabilityMax bound the deal's win
+	// probability in percent, 0 to 100.
+	WinProbabilityMin *int
+	WinProbabilityMax *int
 	// Currency is the ISO-4217 code the deal is priced in, and Country the
 	// ISO-3166 alpha-2 code on its company's address. Either case matches.
 	Currency *string
@@ -77,6 +85,9 @@ func appendRangeFilters(ctx context.Context, where []string, f RangeFilters, arg
 		}
 		where = appendBounds(where, valueInBaseSQL(f.valuation, arg), "bigint", f.ValueMin, f.ValueMax, arg)
 	}
+	if f.WinProbabilityMin != nil || f.WinProbabilityMax != nil {
+		where = appendBounds(where, WinProbabilitySQL(""), "int", f.WinProbabilityMin, f.WinProbabilityMax, arg)
+	}
 	if f.Currency != nil {
 		currency, err := storekit.CodeOperand(*f.Currency, filterCurrency, values.ValidCurrency, "a three-letter ISO-4217 code, such as EUR")
 		if err != nil {
@@ -103,7 +114,7 @@ func appendRangeFilters(ctx context.Context, where []string, f RangeFilters, arg
 
 // appendBounds adds `expr >= low` and `expr <= high` for each bound given. A
 // NULL expression fails both, which keeps a deal with no figure out.
-func appendBounds[T string | int64](where []string, expr, cast string, low, high *T, arg func(any) int) []string {
+func appendBounds[T string | int64 | int](where []string, expr, cast string, low, high *T, arg func(any) int) []string {
 	if low != nil {
 		where = append(where, storekit.SQLf("(%s) >= $%d::%s", expr, arg(*low), cast))
 	}
@@ -136,6 +147,17 @@ func refuseNegativeValues(f RangeFilters) error {
 			}
 		}
 	}
+	for _, bound := range []struct {
+		field string
+		value *int
+	}{{filterWinProbabilityMin, f.WinProbabilityMin}, {filterWinProbabilityMax, f.WinProbabilityMax}} {
+		if bound.value != nil && (*bound.value < 0 || *bound.value > 100) {
+			return &values.ParseError{
+				Field: bound.field, Code: "out_of_range",
+				Message: bound.field + " is a percent from 0 to 100",
+			}
+		}
+	}
 	return nil
 }
 
@@ -152,6 +174,12 @@ func refuseInvertedRanges(f RangeFilters) error {
 		return &values.ParseError{
 			Field: filterValueMin, Code: "range_inverted",
 			Message: "value_min must not be above value_max",
+		}
+	}
+	if f.WinProbabilityMin != nil && f.WinProbabilityMax != nil && *f.WinProbabilityMin > *f.WinProbabilityMax {
+		return &values.ParseError{
+			Field: filterWinProbabilityMin, Code: "range_inverted",
+			Message: "win_probability_min must not be above win_probability_max",
 		}
 	}
 	return nil

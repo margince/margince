@@ -41,9 +41,12 @@ type lister struct {
 	verbs *regexp.Regexp
 }
 
-func (r *Registry) lister() lister {
+func (r *Registry) lister() lister { return listerOf(r.Specs()) }
+
+// listerOf rewords by the router actions specs offer.
+func listerOf(specs []mcp.ToolSpec) lister {
 	calls := map[string]string{}
-	for _, spec := range r.Specs() {
+	for _, spec := range specs {
 		if spec.Unlisted || spec.ActionField == "" {
 			continue
 		}

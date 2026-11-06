@@ -30,7 +30,7 @@ import (
 func TestAVintageRecordsTheBasisItWasTakenUnder(t *testing.T) {
 	e := setupEvaluation(t)
 	before := wholeWorkspace(e.dataset(t))[1]
-	if before.Measure != string(forecasting.MeasureCommitEvidence) || before.Policy != "" {
+	if before.Measure != string(forecasting.MeasureLikely) || before.Policy != "" {
 		t.Fatalf("with qualification off the vintage says measure %q policy %q", before.Measure, before.Policy)
 	}
 	sweep := &assuranceSweepWorker{
@@ -73,7 +73,7 @@ func TestAWeeksCloseStampsTheBasisAndIsNoPrediction(t *testing.T) {
 		Scan(&measure, &trigger, &localDay, &periodEnd); err != nil {
 		t.Fatalf("reading the week's closing snapshot: %v", err)
 	}
-	if measure != string(forecasting.MeasureCommitEvidence) {
+	if measure != string(forecasting.MeasureLikely) {
 		t.Fatalf("the week's closing snapshot says measure %q", measure)
 	}
 	if kind := forecasting.PredictionKindOf(trigger, localDay, periodEnd); kind != forecasting.PredictionAfterOutcome {

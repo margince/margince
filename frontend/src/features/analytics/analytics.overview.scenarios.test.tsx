@@ -210,12 +210,12 @@ const SIGNATURES: Readonly<
   Record<string, Partial<Record<OverviewView, Signature>>>
 > = {
   populated: {
-    sales: shows("Won + confirmed commit"),
+    sales: shows("Won + Likely deals"),
     prospecting: shows("All 5 items in your Worklist"),
     team: shows(/Most often: Wrong territory/),
   },
   trueZero: {
-    sales: shows("0 EUR"),
+    sales: shows("€0"),
     prospecting: async () => {
       await shows("No meetings recorded as held this week")();
       expect(screen.queryByText("Nothing needs you right now")).toBeNull();
@@ -329,7 +329,7 @@ const SIGNATURES: Readonly<
     },
   },
   targetReached: { sales: shows("Target reached") },
-  landingBases: { sales: shows("Won + confirmed commit") },
+  landingBases: { sales: shows("Won + Likely deals") },
   legacyLanding: { sales: shows("Landing") },
   noForecast: { sales: shows("Unavailable") },
   unknownWorkflow: {

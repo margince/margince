@@ -44,7 +44,7 @@ func storedHorizonTx(t *testing.T) (context.Context, pgx.Tx, *Store) {
 
 func readHorizon(ctx context.Context, t *testing.T, tx pgx.Tx, store *Store) int {
 	t.Helper()
-	got, err := store.waitingHorizonFor(ctx, tx)
+	got, err := store.waitingHorizonFor(ctx, tx, store.now())
 	if err != nil {
 		t.Fatalf("reading the horizon: %v", err)
 	}

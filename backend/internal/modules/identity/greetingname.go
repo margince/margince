@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // greetingNameField is the name this answers to in the audit images and the
@@ -71,14 +70,14 @@ func greetingNameColumn(name string) *string {
 // Nil or blank clears it.
 //
 // Self-scoped from the authenticated principal on the terms SaveMyDisplayName
-// states: no id on the request, no object grant, and an agent may not set it
-// for its grantor.
+// states: no id on the request and no object grant. An agent sets it only for
+// its own user, and only after asking.
 func (s *Service) SaveMyGreetingName(ctx context.Context, raw *string) (Seat, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		return Seat{}, apperrors.ErrPermissionDenied
+	own, err := ownSettingsSeat(ctx)
+	if err != nil {
+		return Seat{}, err
 	}
-	human := ids.From[ids.UserKind](actor.UserID)
+	human := ids.From[ids.UserKind](own)
 	typed, err := greetingNameOf(raw)
 	if err != nil {
 		return Seat{}, err
@@ -97,6 +96,9 @@ func (s *Service) SaveMyGreetingName(ctx context.Context, raw *string) (Seat, er
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}
+			return err
+		}
+		if err := readSeatZone(ctx, tx, &seat); err != nil {
 			return err
 		}
 		if sameGreetingName(before, name) {

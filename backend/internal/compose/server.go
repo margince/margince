@@ -133,6 +133,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 
 	api := contractAPI(srv, pool, identitySvc)
 	srv.views.api = api
+	ceiling := bodyCeilingFor(uploadCeilings(srv.uploadLimits), api)
+	srv.views.ceiling = ceiling
 	// ONE identity.Service for the whole process: contractAPI's admission
 	// gate and the connector's authenticate closure share this instance, so
 	// they share its singleton cache and its clock.
@@ -150,7 +152,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// decided rather than on whichever proxy the request happened to arrive by.
 	return httpserver.RecoverPanics(log,
 		httpserver.ResolveClientIP(srv.trustedProxies,
-			httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
+			httpserver.LimitBodies(ceiling,
 				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))
 }
 
@@ -197,7 +199,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// deliberately left unbounded here.
 		searchHandlers: search.NewHandlers(
 			rankedSearchDB(pool),
-			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch,
+			collections.CountTagReachBatch, searchEmailSummaries, contacts.LivePartnerCompaniesBatch,
 			contacts.CompanyLogoURLsBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated

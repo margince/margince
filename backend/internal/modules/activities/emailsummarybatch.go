@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -26,7 +27,7 @@ func (s *Store) EmailSummariesByID(
 	var out map[ids.UUID]crmcontracts.EmailSummary
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var readErr error
-		out, readErr = EmailSummariesByIDBatch(ctx, tx, activityIDs)
+		out, readErr = EmailSummariesByIDBatch(ctx, tx, activityIDs, s.now())
 		return readErr
 	})
 	return out, err
@@ -47,7 +48,7 @@ func (s *Store) EmailSummariesByID(
 // is admitting its content: the discover gate would answer "you may know this
 // row exists", and then this function would print what it says.
 func EmailSummariesByIDBatch(
-	ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID,
+	ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf time.Time,
 ) (map[ids.UUID]crmcontracts.EmailSummary, error) {
 	// An empty map rather than a nil one on both early exits: a caller reads
 	// this by key, and "no rows for you" and "no rows asked for" are the same
@@ -105,7 +106,7 @@ func EmailSummariesByIDBatch(
 	// Collected first: the count runs a second statement on this transaction,
 	// which needs the cursor above already closed.
 	rows.Close()
-	if err := WithEmailRowFacts(ctx, tx, admitted); err != nil {
+	if err := WithEmailRowFacts(ctx, tx, admitted, asOf); err != nil {
 		return nil, err
 	}
 

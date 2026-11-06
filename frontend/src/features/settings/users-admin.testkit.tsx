@@ -45,6 +45,7 @@ export const ROSTER: {
       is_agent: false,
       roles: ["admin"],
       assignable: true,
+      can_own_records: true,
       allowed_actions: [
         "change_role",
         "issue_password_link",
@@ -63,6 +64,7 @@ export const ROSTER: {
       is_agent: false,
       roles: ["read_only"],
       assignable: false,
+      can_own_records: false,
       allowed_actions: ["change_role", "reactivate", "hand_over"],
     },
     // An invitation nobody has redeemed: it holds a licensed seat and appears
@@ -75,6 +77,7 @@ export const ROSTER: {
       is_agent: false,
       roles: ["rep"],
       assignable: false,
+      can_own_records: false,
       allowed_actions: ["change_role", "issue_password_link", "deactivate"],
     },
     {
@@ -85,6 +88,7 @@ export const ROSTER: {
       is_agent: false,
       roles: [],
       assignable: true,
+      can_own_records: true,
       // The one member holding a confirmed second factor.
       allowed_actions: [
         "change_role",

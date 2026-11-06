@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -44,8 +45,11 @@ func assembleForecast(
 	if err := applyForecastChances(ctx, tx, model, asOf, deals); err != nil {
 		return forecasting.Assembly{}, err
 	}
-	// The as-of DAY, not the instant: the slipped rule compares calendar days.
-	readings, err := forecasting.Compute(period, period.LocalDay(asOf), deals)
+	threshold, err := identity.ForecastLikelyThresholdTx(ctx, tx)
+	if err != nil {
+		return forecasting.Assembly{}, err
+	}
+	readings, err := forecasting.Compute(period, deals, forecasting.Rules{LikelyThreshold: threshold})
 	if err != nil {
 		return forecasting.Assembly{}, err
 	}

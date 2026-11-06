@@ -116,12 +116,18 @@ func (s *Store) CreateStageExitCriterion(
 	}
 	var out crmcontracts.StageExitCriterion
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := holdStagesLadderForAgent(ctx, tx, in.StageID); err != nil {
+			return err
+		}
 		// The stage row serializes every reshaping of its criteria list, so
 		// two concurrent adds cannot both compute the same tail position.
 		if _, err := lockCriteriaList(ctx, tx, in.StageID); err != nil {
 			return err
 		}
 		if err := refuseCriterionOnTerminalStage(ctx, tx, in.StageID); err != nil {
+			return err
+		}
+		if err := refuseAgentOnStagesLadder(ctx, tx, in.StageID); err != nil {
 			return err
 		}
 		if err := refuseTakenCriterionKey(ctx, tx, in.StageID, in.Key); err != nil {
@@ -189,6 +195,9 @@ func (s *Store) UpdateStageExitCriterion(
 	}
 	var out crmcontracts.StageExitCriterion
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := holdStagesLadderForAgent(ctx, tx, stageID); err != nil {
+			return err
+		}
 		if _, err := lockCriteriaList(ctx, tx, stageID); err != nil {
 			return err
 		}
@@ -207,6 +216,9 @@ func (s *Store) UpdateStageExitCriterion(
 			return apperrors.ErrVersionSkew
 		}
 		if err := refuseKindChangeAcrossLegalReview(current, in.Kind); err != nil {
+			return err
+		}
+		if err := refuseAgentOnStagesLadder(ctx, tx, stageID); err != nil {
 			return err
 		}
 		if CriterionKind(current.Kind) == CriterionLegalReviewed && current.Required &&
@@ -252,10 +264,16 @@ func (s *Store) ArchiveStageExitCriterion(
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := holdStagesLadderForAgent(ctx, tx, stageID); err != nil {
+			return err
+		}
 		if _, err := lockCriteriaList(ctx, tx, stageID); err != nil {
 			return err
 		}
 		if _, err := storekit.LockRow(ctx, tx, criterionEntity, id.UUID, storekit.LiveOnly); err != nil {
+			return err
+		}
+		if err := refuseAgentOnStagesLadder(ctx, tx, stageID); err != nil {
 			return err
 		}
 		current, err := readCriterion(ctx, tx, id, storekit.LiveOnly)

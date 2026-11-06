@@ -127,14 +127,14 @@ func leadPreviewDefs() map[string]previewDef {
 			table:     "lead",
 			baseWhere: previewBaseWhereNotArchived,
 			fields: map[string]storekit.Field{
-				"status":   {Expr: "t.status", Type: storekit.FieldPicklist},
+				keyStatus:  {Expr: "t.status", Type: storekit.FieldPicklist},
 				keyOwnerID: {Expr: "t.owner_id", Type: storekit.FieldID},
 			},
 			// When: lead.created. If: the router only assigns where no
 			// owner is set — so the blast radius now is the open, unrouted
 			// lead pool.
 			match: storekit.Predicate{And: []storekit.Predicate{
-				{Field: "status", Op: storekit.OpIn, Value: []any{"new", "contacted", "engaged"}},
+				{Field: keyStatus, Op: storekit.OpIn, Value: []any{"new", "contacted", "engaged"}},
 				{Field: keyOwnerID, Op: storekit.OpExists, Value: false},
 			}},
 			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
@@ -174,13 +174,13 @@ func dealPreviewDefs() map[string]previewDef {
 			table:     "deal",
 			baseWhere: previewBaseWhereNotArchived,
 			fields: map[string]storekit.Field{
-				"status": {Expr: "t.status", Type: storekit.FieldPicklist},
+				keyStatus: {Expr: "t.status", Type: storekit.FieldPicklist},
 			},
 			// When: deal.stage_changed. If: only OPEN destinations mint a
 			// follow-up — so the records in range now are the open deals.
 			// dealStatusOpen is the SAME value the runtime Match tests
 			// (handlers_event.go), so the dry-run and the firing agree.
-			match: storekit.Predicate{Field: "status", Op: storekit.OpEq, Value: dealStatusOpen},
+			match: storekit.Predicate{Field: keyStatus, Op: storekit.OpEq, Value: dealStatusOpen},
 			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
 				var n int
 				err := tx.QueryRow(ctx, `
