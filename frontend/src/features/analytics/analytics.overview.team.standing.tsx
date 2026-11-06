@@ -15,7 +15,8 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { type HandoffScope, upcomingThrough } from "./analytics.outcomes.sdr";
+import type { HandoffScope } from "./analytics.outcomes.handoffpages";
+import { upcomingThrough } from "./analytics.outcomes.sdr";
 import { readingState } from "./analytics.overview.prospectinghero";
 import { UpcomingMeetings } from "./analytics.overview.prospectingwork";
 import { metricOf } from "./analytics.overview.readings";

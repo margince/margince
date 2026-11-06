@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import { Badge, Button, StatCard } from "../../design-system/atoms";
+import { Badge, StatCard } from "../../design-system/atoms";
 import {
   Panel,
   PanelBody,
@@ -25,6 +25,7 @@ import { type Locale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
+import { MoreRows, useHandoffPages } from "./analytics.outcomes.handoffpages";
 import { DoNext } from "./analytics.overview.donext";
 import {
   type ReportingEvaluation,
@@ -43,6 +44,9 @@ const LEAD_READINGS = [
   "leads_awaiting_response",
 ] as const;
 
+// An evaluation may run for minutes, and the handoffs that wait on it should not.
+export const EVALUATION_WAIT_MS = 5_000;
+
 /**
  * An SDR's own work beside their results: their leads, the handoffs that wait
  * on somebody else, and what waits on them. Every figure is the server's; this
@@ -54,11 +58,28 @@ export function MySdrWork({
 }: Readonly<{ self: string; locale: Locale }>) {
   const t = useT();
   const readsLeads = useCan("lead", "read");
-  const summary = useSdrSummary(self, readsLeads);
+  const readsReports = useCan("report_definition", "read");
+  const evaluation = useMyLeadsEvaluation(self, readsReports && readsLeads);
+  // The summary counts at the evaluation's instant, so the two describe one
+  // moment. It waits for that instant only briefly, never on a failure, and
+  // only a successful evaluation pins it, even one arriving after the wait.
+  const awaitsInstant = readsLeads && readsReports && evaluation.isPending;
+  const waitedLongEnough = useWaitedLongEnough(awaitsInstant);
+  const summary = useSdrSummary(
+    self,
+    readsLeads && (!awaitsInstant || waitedLongEnough),
+    readsReports && evaluation.isSuccess
+      ? evaluation.data.context.evaluated_at
+      : undefined,
+  );
   return (
     <>
       {readsLeads && (
-        <MyLeads self={self} locale={locale} summary={summary.data} />
+        <MyLeads
+          locale={locale}
+          summary={summary.data}
+          evaluation={readsReports ? evaluation : undefined}
+        />
       )}
       {/* Which workflow applies is the summary's answer, so a failed read
           says so instead of reading as a workspace with no handoffs. */}
@@ -89,32 +110,43 @@ export function MySdrWork({
   );
 }
 
-/** The seat's own handoff and meeting counts, under the key both views share. */
-export function useSdrSummary(self: string, enabled: boolean) {
+/**
+ * The seat's own handoff and meeting counts, under the key both views share.
+ * asOf counts them at an evaluation's instant; omitted, they are counted now.
+ */
+export function useSdrSummary(self: string, enabled: boolean, asOf?: string) {
   return useQuery({
-    queryKey: ["sdr-summary", self],
+    queryKey: ["sdr-summary", self, asOf ?? null],
     enabled,
+    placeholderData: keepPreviousData,
     queryFn: async ({ signal }): Promise<SdrSummary> =>
       unwrap(
         await api.GET("/analytics/sdr-summary", {
-          params: { query: { scope_kind: "owner", scope_id: self } },
+          params: {
+            query: { scope_kind: "owner", scope_id: self, as_of: asOf },
+          },
           signal,
         }),
       ),
   });
 }
 
-function MyLeads({
-  self,
-  locale,
-  summary,
-}: Readonly<{ self: string; locale: Locale; summary?: SdrSummary }>) {
-  const t = useT();
-  const readsReports = useCan("report_definition", "read");
-  const catalog = useReportingCatalog(readsReports);
-  const evaluation = useQuery({
+/** Turns true once `waiting` has held for the evaluation wait. */
+function useWaitedLongEnough(waiting: boolean) {
+  const [waited, setWaited] = useState(false);
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = setTimeout(() => setWaited(true), EVALUATION_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [waiting]);
+  return waited;
+}
+
+/** The seat's lead readings for this month, which the summary is read beside. */
+function useMyLeadsEvaluation(self: string, enabled: boolean) {
+  return useQuery({
     queryKey: [...REPORTING_EVALUATION_KEY, "my-leads", self],
-    enabled: readsReports,
+    enabled,
     queryFn: async ({ signal }): Promise<ReportingEvaluation> => {
       const selection: ReportingSelection = {
         scope: { kind: "owner", id: self },
@@ -132,7 +164,20 @@ function MyLeads({
       );
     },
   });
-  if (!readsReports) return null;
+}
+
+function MyLeads({
+  locale,
+  summary,
+  evaluation,
+}: Readonly<{
+  locale: Locale;
+  summary?: SdrSummary;
+  evaluation?: ReturnType<typeof useMyLeadsEvaluation>;
+}>) {
+  const t = useT();
+  const catalog = useReportingCatalog(evaluation !== undefined);
+  if (!evaluation) return null;
   // The catalog's own words for "Leads qualified", so the screen never
   // restates a definition the server may change.
   const qualifiedMeans = catalog.data?.metrics.find(
@@ -232,6 +277,7 @@ export function WaitingOnOthers({
     { kind: "owner", id: self },
     "waiting",
     totals.waiting > 0,
+    summary.as_of,
   );
   const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
   return (
@@ -296,7 +342,9 @@ export function WaitingOnOthers({
           )}
         </QueryGate>
       )}
-      {totals.returned > 0 && <ReturnedHandoffs self={self} locale={locale} />}
+      {totals.returned > 0 && (
+        <ReturnedHandoffs self={self} locale={locale} at={summary.as_of} />
+      )}
     </Panel>
   );
 }
@@ -386,9 +434,15 @@ function HandoffRow({
 function ReturnedHandoffs({
   self,
   locale,
-}: Readonly<{ self: string; locale: Locale }>) {
+  at,
+}: Readonly<{ self: string; locale: Locale; at: string }>) {
   const t = useT();
-  const rows = useHandoffPages({ kind: "owner", id: self }, "returned", true);
+  const rows = useHandoffPages(
+    { kind: "owner", id: self },
+    "returned",
+    true,
+    at,
+  );
   const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
   const asOf = Date.parse(rows.data?.pages[0]?.as_of ?? "");
   return (
@@ -402,64 +456,5 @@ function ReturnedHandoffs({
         </>
       )}
     </QueryGate>
-  );
-}
-
-/**
- * Whose open handoffs to list: one seat, a team, or the whole company. No
- * kind is the seat's own default population, which My teams is.
- */
-export type HandoffScope = Readonly<{
-  kind?: "owner" | "team" | "workspace";
-  id?: string;
-}>;
-
-/** The open handoffs of a scope in one state, one page at a time. */
-export function useHandoffPages(
-  scope: HandoffScope,
-  state: "waiting" | "returned",
-  enabled: boolean,
-) {
-  return useInfiniteQuery({
-    queryKey: [
-      "sdr-summary",
-      scope.id ?? scope.kind ?? "default",
-      "handoffs",
-      state,
-    ],
-    enabled,
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam, signal }) =>
-      unwrap(
-        await api.GET("/analytics/sdr-summary/handoffs", {
-          params: {
-            query: {
-              ...(scope.kind ? { scope_kind: scope.kind } : {}),
-              ...(scope.id ? { scope_id: scope.id } : {}),
-              state,
-              ...(pageParam ? { cursor: pageParam } : {}),
-            },
-          },
-          signal,
-        }),
-      ),
-    getNextPageParam: (last) => last.next_cursor ?? undefined,
-  });
-}
-
-export function MoreRows({
-  rows,
-}: Readonly<{ rows: ReturnType<typeof useHandoffPages> }>) {
-  const t = useT();
-  if (!rows.hasNextPage) return null;
-  return (
-    <PanelRow>
-      <Button
-        onClick={() => void rows.fetchNextPage()}
-        disabled={rows.isFetchingNextPage}
-      >
-        {t("analytics.sdrShowMore")}
-      </Button>
-    </PanelRow>
   );
 }
