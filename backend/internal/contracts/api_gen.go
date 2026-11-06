@@ -64921,6 +64921,19 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyDayActivity One local day of a rep's own activity, in the installation reporting timezone.
+type WeeklyDayActivity struct {
+	// CallsLogged Calls the rep logged, by their own hand or an agent acting for them.
+	CallsLogged int                `json:"calls_logged" minimum:"0"`
+	Day         openapi_types.Date `json:"day"`
+
+	// EmailsSent Outbound emails the rep wrote or their mailbox sent.
+	EmailsSent int `json:"emails_sent" minimum:"0"`
+
+	// MeetingsHeld Meetings credited to the rep that took place that day.
+	MeetingsHeld int `json:"meetings_held" minimum:"0"`
+}
+
 // WeeklyFigureCoverage Whether one figure family's source held records for the review's owner scope across
 // the week, so a zero can be told from an unmeasured week.
 //
@@ -65109,6 +65122,12 @@ type WeeklyReview struct {
 	AsOf   time.Time          `json:"as_of"`
 	Counts WeeklyReviewCounts `json:"counts"`
 
+	// DailyActivity What the rep did on each day of the week, Monday first, frozen with the review.
+	// Only their own work counts: emails they sent, calls they logged, meetings they were
+	// credited with. A received email is not work they did. Absent on a review frozen
+	// before this was measured, and for a reader who may not read activities.
+	DailyActivity *[]WeeklyDayActivity `json:"daily_activity,omitempty"`
+
 	// Deals The deals the week is about, won and lost first. Capped for reading — the counts stay
 	// complete, so a busy week reads "12 moved" beside the most recent of them rather than
 	// a truncated number.
@@ -65296,8 +65315,28 @@ type WeeklyReviewDriver struct {
 
 // WeeklyReviewIndex defines model for WeeklyReviewIndex.
 type WeeklyReviewIndex struct {
+	// Entries The same weeks in the same order, each with what it won, so the index can draw the
+	// weeks beside each other. Frozen with each review, like every figure in it. Absent
+	// from an older server.
+	Entries *[]WeeklyReviewIndexEntry `json:"entries,omitempty"`
+
 	// Weeks The Monday of each week with a review, newest first.
 	Weeks []openapi_types.Date `json:"weeks"`
+}
+
+// WeeklyReviewIndexEntry defines model for WeeklyReviewIndexEntry.
+type WeeklyReviewIndexEntry struct {
+	// Currency The currency `won_minor` is in. Present exactly when `won_minor` is.
+	Currency *string `json:"currency,omitempty"`
+
+	// DealsWon Deals the week won.
+	DealsWon int `json:"deals_won" minimum:"0"`
+
+	// Week The Monday of the week.
+	Week openapi_types.Date `json:"week"`
+
+	// WonMinor What they were worth, in minor units of `currency`. Zero when the week won nothing. Absent when the value is unknown: a deal could not be converted, or the installation names no base currency.
+	WonMinor *int64 `json:"won_minor,omitempty" minimum:"0"`
 }
 
 // WeeklyReviewLearning One thing the week taught, with what it was drawn from.
@@ -66083,9 +66122,8 @@ type WorklistComparisonComparator string
 // moments are the READER's, filled under their own grants; each is absent
 // where the reader may not have it, which is not the same as unnamed or never.
 type WorklistContactFacts struct {
-	// Employer Where the contact works today, so a meeting row says which account the
-	// meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
-	// other row's title already names its record.
+	// Employer Where the contact works today, so every row that names a contact can also
+	// name the account, and a meeting row says which account the meeting was with.
 	//
 	// Absent where the contact has no current employer, or where this caller may
 	// not read the employment or the company. Absent never means "works nowhere".
@@ -67194,7 +67232,7 @@ type WorklistSourceUnavailable struct {
 	Category *string `json:"category,omitempty"`
 
 	// ContributesRows False for a side read that puts no row on the queue — `calendar`,
-	// `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
+	// `next_meeting`, `deal_advice` and `contact_employers` — so its failure cannot hide a row, and a figure counted over
 	// the queue stays exact. True for a lane whose rows may be missing. Absent from
 	// an older server and from a surface that names only lanes, and a client reads
 	// absent as true.
