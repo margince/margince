@@ -257,7 +257,8 @@ func scanAssuranceSubject(
 }
 
 // customerProgressSQL admits a row that is the CUSTOMER moving the deal. That is
-// a message a contact on it wrote, or a meeting or call with them that happened.
+// a message a contact on it wrote, a call with them that happened, or a meeting
+// with them someone recorded held. A past meeting with no outcome is not progress.
 // Our own mail, a task, a field edit and a machine's mail never count. Nor do a
 // message not every member may read, or a refusal. An unjudged message counts,
 // because every message from before the verdict existed is unjudged.
@@ -272,7 +273,7 @@ func customerProgressAnyAudienceSQL(alias, asOf string) string {
 		" AND ((" + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
 		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
-		relstrength.NotCalledOffSQL(alias) + " AND " +
+		relstrength.HadContactSQL(alias) + " AND " +
 		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
 }
 

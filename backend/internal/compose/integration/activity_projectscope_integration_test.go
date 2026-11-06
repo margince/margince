@@ -325,7 +325,7 @@ func TestAScopedAccountPageDerivesItsHealthFromOneEngagement(t *testing.T) {
 			links = append(links, activities.ActivityLinkInput{EntityType: "contact", EntityID: other})
 		}
 		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-			Kind: "meeting", MeetingStatus: new("booked"), Subject: &subject, OccurredAt: &at,
+			Kind: "meeting", MeetingStatus: new("held"), Subject: &subject, OccurredAt: &at,
 			Links: links,
 		})
 		if err != nil {

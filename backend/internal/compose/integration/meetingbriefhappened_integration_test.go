@@ -193,3 +193,21 @@ func TestABriefTakesNoUnreachedCallAsAnAttendeesLastTouch(t *testing.T) {
 		t.Errorf("attendee = %q, want the reached call", line)
 	}
 }
+
+// A past meeting nobody reported held is awaiting its outcome, so the reader
+// still meets the attendee for the first time. Once it is recorded held, it is
+// their last touch.
+func TestABriefTakesNoUnreportedMeetingAsAnAttendeesLastTouch(t *testing.T) {
+	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
+	room := newBriefRoom(t, "UTC", now, now.Add(7*24*time.Hour))
+	met := room.log(t, "meeting", now.Add(-3*time.Hour), activities.PrecisionInstant)
+	if line := room.attendeeLine(t); !strings.Contains(line, "first time you are meeting them") {
+		t.Errorf("attendee = %q, but nobody reported the earlier meeting held", line)
+	}
+	if _, err := OwnerConn(t).Exec(t.Context(), `UPDATE activity SET meeting_status = 'held' WHERE id = $1`, met); err != nil {
+		t.Fatal(err)
+	}
+	if line := room.attendeeLine(t); strings.Contains(line, "first time you are meeting them") {
+		t.Errorf("attendee = %q, want the held meeting as their last touch", line)
+	}
+}

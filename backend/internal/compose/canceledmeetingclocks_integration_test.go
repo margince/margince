@@ -101,7 +101,7 @@ func TestACanceledCalendarMeetingLeavesTheDealClock(t *testing.T) {
 		Links: []datasource.EntityRef{{Type: "deal", ID: deal}},
 	}
 	review.Capture(t, f.e)
-	assertClock(t, f.dealClock(t, deal), review.At, "a captured meeting nobody called off is the newest activity")
+	assertClock(t, f.dealClock(t, deal), heldAt, "a captured meeting nobody reported held is no activity yet")
 
 	review.Cancel(t, f.e)
 	assertClock(t, f.dealClock(t, deal), heldAt, "a canceled meeting must not keep the deal looking recently active")
@@ -120,7 +120,9 @@ func TestANoShowLoggedMeetingLeavesTheDealClock(t *testing.T) {
 	heldAt, missedAt := f.now.AddDate(0, 0, -10), f.now.AddDate(0, 0, -2)
 	f.logMeeting(t, onRecord("deal", deal), "held", heldAt)
 	missed := f.logMeeting(t, onRecord("deal", deal), "booked", missedAt)
-	assertClock(t, f.dealClock(t, deal), missedAt, "a booked meeting is the newest activity")
+	assertClock(t, f.dealClock(t, deal), heldAt, "a past meeting still booked is awaiting its outcome")
+	f.setStatus(t, missed, "held")
+	assertClock(t, f.dealClock(t, deal), missedAt, "a meeting recorded held is the newest activity")
 
 	f.setStatus(t, missed, "no_show")
 	assertClock(t, f.dealClock(t, deal), heldAt, "a no-show must not keep the deal looking recently active")
@@ -135,7 +137,7 @@ func TestABookedFutureMeetingDoesNotMoveTheDealClockBeforeItStarts(t *testing.T)
 	heldAt := f.now.AddDate(0, 0, -10)
 	f.logMeeting(t, onRecord("deal", deal), "held", heldAt)
 	f.logMeeting(t, onRecord("deal", deal), "booked", f.now.AddDate(0, 0, 14))
-	assertClock(t, f.dealClock(t, deal), heldAt, "a booked meeting counts as contact once it has started")
+	assertClock(t, f.dealClock(t, deal), heldAt, "a booked meeting still ahead is no contact")
 }
 
 func TestACanceledCalendarMeetingLeavesTheContactClock(t *testing.T) {
@@ -152,7 +154,7 @@ func TestACanceledCalendarMeetingLeavesTheContactClock(t *testing.T) {
 	f.logMeeting(t, onRecord("contact", contact), "held", heldAt)
 	intro := integration.CalendarMeeting{Event: "evt-clock-intro", At: f.now.AddDate(0, 0, -2), Links: contactLink(contact)}
 	intro.Capture(t, f.e)
-	assertClock(t, clock(), intro.At, "a captured meeting nobody called off is the newest activity")
+	assertClock(t, clock(), heldAt, "a captured meeting nobody reported held is no contact yet")
 
 	intro.Cancel(t, f.e)
 	assertClock(t, clock(), heldAt, "a canceled meeting must not keep the contact looking recently contacted")
@@ -180,8 +182,8 @@ func TestANoShowOnItsDealLeavesTheCompanyClock(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("logging the note: %v", err)
 	}
-	missed := f.logMeeting(t, onRecord("deal", deal), "booked", missedAt)
-	assertClock(t, clock(), missedAt, "a booked meeting on its deal is the company's newest activity")
+	missed := f.logMeeting(t, onRecord("deal", deal), "held", missedAt)
+	assertClock(t, clock(), missedAt, "a held meeting on its deal is the company's newest activity")
 
 	f.setStatus(t, missed, "no_show")
 	assertClock(t, clock(), notedAt, "a no-show on its deal must not keep the company looking recently active")

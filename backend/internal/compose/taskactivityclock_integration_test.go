@@ -67,6 +67,9 @@ func (f taskClockFixture) logOnAll(t *testing.T, kind string, at time.Time) {
 	if kind == "email" || kind == "call" {
 		in.Direction = new("inbound")
 	}
+	if kind == "meeting" {
+		in.MeetingStatus = new("held")
+	}
 	if _, _, err := f.e.Activities.LogActivity(f.e.Admin(), in); err != nil {
 		t.Fatalf("logging the %s: %v", kind, err)
 	}
@@ -144,6 +147,7 @@ func TestATaskAnAgentFilesLeavesLastActivityAlone(t *testing.T) {
 	f.assertAll(t, f.mailed, "the commitment scan's task is intent, not contact")
 }
 
+// A meeting is contact once someone recorded it held, as logOnAll logs it.
 func TestANoteACallAndAMeetingStillMoveLastActivity(t *testing.T) {
 	for i, kind := range []string{"note", "call", "meeting"} {
 		t.Run(kind, func(t *testing.T) {

@@ -3,15 +3,15 @@
 
 package relstrength
 
-// Which activity says we are in touch with someone, for every reading that
-// asks: the contact strength fold and the company relationship rating. Two
-// readings that counted different things disagreed on one page about one
-// account, so the meeting rule lives here once.
+// Which activity says we are in touch with someone. Each meeting rule lives
+// here once: a meeting nobody called off (MeetingNotCalledOffSQL) and a
+// meeting we met them at (MeetingHeldByNowSQL, held only).
 
 import (
 	"slices"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
@@ -19,17 +19,17 @@ import (
 // with an account no longer counts as current.
 const InTouchDays = 30
 
-// countingMeetingStatuses are the statuses of a meeting that took place or is
-// booked. An untracked meeting (no status) counts too; canceled and no_show
-// never do. Both the SQL and the Go predicate below render from this list.
-var countingMeetingStatuses = []string{"booked", "held"}
+// notCalledOffMeetingStatuses are the statuses of a meeting nobody called off:
+// booked or held. An untracked meeting (no status) is not called off either;
+// canceled and no_show are. Both the SQL and the Go predicate render from it.
+var notCalledOffMeetingStatuses = []string{"booked", "held"}
 
-// MeetingCountsSQL is the predicate a meeting row passes to count toward
-// contact strength: not canceled and not a no-show, whenever it is. alias, and
-// now in the two below, are compile-time literals or bind placeholders.
-func MeetingCountsSQL(alias string) string {
+// MeetingNotCalledOffSQL admits a meeting row that is not canceled and not a
+// no-show, whenever it is. It says nothing about whether we met: that is
+// MeetingHeldByNowSQL. alias, and now below, are literals or bind placeholders.
+func MeetingNotCalledOffSQL(alias string) string {
 	return "(" + alias + ".meeting_status IS NULL OR " + alias + ".meeting_status IN (" +
-		sqlList(countingMeetingStatuses) + "))"
+		sqlList(notCalledOffMeetingStatuses) + "))"
 }
 
 // countingCallOutcomes are the outcomes of a call that reached somebody. A call
@@ -50,33 +50,45 @@ func CallOutcomeCounts(outcome string) bool {
 	return outcome == "" || slices.Contains(countingCallOutcomes, outcome)
 }
 
-// MeetingStatusCounts is MeetingCountsSQL for a reader holding the row in Go;
+// MeetingStatusNotCalledOff is MeetingNotCalledOffSQL for a reader holding the row in Go;
 // status is "" when the meeting has none.
-func MeetingStatusCounts(status string) bool {
-	return status == "" || slices.Contains(countingMeetingStatuses, status)
+func MeetingStatusNotCalledOff(status string) bool {
+	return status == "" || slices.Contains(notCalledOffMeetingStatuses, status)
 }
 
 // InteractionCounts is InteractionCountsSQL for a reader holding the row in Go.
 // automatic is the row's Evidence.Automatic, empty when a human wrote it.
 func InteractionCounts(kind, meetingStatus, callOutcome string, automatic AutomaticKind) bool {
-	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus)) &&
-		(kind != kindCall || CallOutcomeCounts(callOutcome)) && automatic == ""
+	return IsInteractionKind(kind) && HadContact(kind, meetingStatus, callOutcome) && automatic == ""
+}
+
+// HadContact is HadContactSQL for a reader holding the row in Go; status and
+// outcome are "" when the row has none.
+func HadContact(kind, meetingStatus, callOutcome string) bool {
+	return (kind != kindMeeting || meetingoutcome.IsHeld(meetingStatus)) &&
+		(kind != kindCall || CallOutcomeCounts(callOutcome))
 }
 
 // HappenedByNowSQL admits a row that has happened by now (occurredday.HappenedSQL),
-// so a post-dated row cannot take a place in a capped page of history. A note or
-// meeting must also not be canceled or a no-show. draftcore.IsLoggedTouch is the
-// same rule for a row held in Go.
+// so a post-dated row cannot take a place in a capped page of history. A note
+// must not be called off, and a meeting must be held (HeldWhenMeetingSQL).
+// draftcore.IsLoggedTouch is the same rule for a row held in Go.
 func HappenedByNowSQL(alias, now string) string {
-	return "(" + occurredday.HappenedSQL(alias, now) + " AND (" + alias + ".kind NOT IN ('note', '" + kindMeeting + "') OR " +
-		MeetingCountsSQL(alias) + "))"
+	return "(" + occurredday.HappenedSQL(alias, now) + " AND (" + alias + ".kind <> 'note' OR " +
+		MeetingNotCalledOffSQL(alias) + ") AND " + HeldWhenMeetingSQL(alias) + ")"
 }
 
-// MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
-// off, and taken place (occurredday.MeetingTookPlaceSQL). A `booked` row stays
-// booked after it happens, because few users ever mark a meeting held.
-func MeetingTookPlaceSQL(alias, now string) string {
-	return "(" + MeetingCountsSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, now) + ")"
+// HeldWhenMeetingSQL admits any row that is not a meeting, and a meeting only
+// when someone recorded it held (meetingoutcome.HeldSQL).
+func HeldWhenMeetingSQL(alias string) string {
+	return "(" + alias + ".kind <> '" + kindMeeting + "' OR " + meetingoutcome.HeldSQL(alias) + ")"
+}
+
+// MeetingHeldByNowSQL is a meeting we met them at: recorded held
+// (meetingoutcome.HeldSQL) and taken place (occurredday.MeetingTookPlaceSQL).
+// A past meeting still booked or with no status is awaiting its outcome.
+func MeetingHeldByNowSQL(alias, now string) string {
+	return "(" + meetingoutcome.HeldSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, now) + ")"
 }
 
 // MeetingAheadSQL is a meeting still to come (occurredday.AheadSQL) that nobody
@@ -86,12 +98,12 @@ func MeetingAheadSQL(alias, now string) string {
 		occurredday.AheadSQL(alias, now) + ")"
 }
 
-// NotCalledOffSQL admits any activity row except a meeting that was canceled or
-// a no-show, and a call that reached nobody (CallCountsSQL).
-// last_activity_of_deal carries this text verbatim.
-func NotCalledOffSQL(alias string) string {
-	return "((" + alias + ".kind <> '" + kindMeeting + "' OR " + MeetingCountsSQL(alias) + ") AND (" +
-		alias + ".kind <> '" + kindCall + "' OR " + CallCountsSQL(alias) + "))"
+// HadContactSQL admits an activity row that is contact we had, as far as its
+// kind can say. A meeting counts only once someone recorded it held
+// (meetingoutcome.HeldSQL). A call counts only when it reached somebody
+// (CallCountsSQL). The last_activity_of_* functions carry this text verbatim.
+func HadContactSQL(alias string) string {
+	return "(" + HeldWhenMeetingSQL(alias) + " AND (" + alias + ".kind <> '" + kindCall + "' OR " + CallCountsSQL(alias) + "))"
 }
 
 // lastActivityKinds are the kinds that move a record's last-activity clock. A
@@ -122,19 +134,20 @@ func scheduledRunNoteSQL(alias string) string {
 }
 
 // LastActivityCountsSQL admits an activity row to a record's last-activity
-// clock. It needs a kind that moves it, no called-off meeting and no scheduled
-// run's note. It must also have happened at now (occurredday.HappenedSQL).
+// clock. It needs a kind that moves it, contact we had (HadContactSQL) and no
+// scheduled run's note. It must also have happened at now (occurredday.HappenedSQL).
 // The last_activity_of_* functions carry its text rendered with now().
 func LastActivityCountsSQL(alias, now string) string {
-	return "(" + LastActivityKindSQL(alias) + " AND " + NotCalledOffSQL(alias) + " AND NOT " +
+	return "(" + LastActivityKindSQL(alias) + " AND " + HadContactSQL(alias) + " AND NOT " +
 		scheduledRunNoteSQL(alias) + " AND " + occurredday.HappenedSQL(alias, now) + ")"
 }
 
 // InteractionCountsSQL is the whole test for an activity row that counts as an
-// exchange. It needs an interaction kind and a meeting nobody called off. It
-// also needs a row a human wrote (WrittenByHumanSQL).
+// exchange. It needs an interaction kind and contact we had (HadContactSQL),
+// so a past meeting nobody reported held is no exchange. It also needs a row a
+// human wrote (WrittenByHumanSQL).
 func InteractionCountsSQL(alias string) string {
-	return alias + ".kind IN " + InteractionKindSQLGroup() + " AND " + NotCalledOffSQL(alias) +
+	return alias + ".kind IN " + InteractionKindSQLGroup() + " AND " + HadContactSQL(alias) +
 		" AND " + WrittenByHumanSQL(alias)
 }
 
@@ -160,7 +173,7 @@ func WorkspaceAudienceSQL(alias string) string {
 // How an account's contact stands, by what made it so.
 const (
 	InTouchWrote  = "wrote"  // they wrote to us inside InTouchDays
-	InTouchMet    = "met"    // we met them inside InTouchDays
+	InTouchMet    = "met"    // a meeting with them was held inside InTouchDays
 	InTouchBooked = "booked" // quiet, but a meeting with them is booked ahead
 	InTouchQuiet  = "quiet"  // no word and no meeting inside InTouchDays
 	InTouchNever  = "never"  // no word and no meeting, ever
@@ -191,11 +204,12 @@ func (r InTouch) Current() bool {
 	return r.Basis == InTouchWrote || r.Basis == InTouchMet || r.Basis == InTouchBooked
 }
 
-// ReadInTouch folds the three dates every in-touch question rests on. A
-// message that has not begun never counts as contact we had. Nor does a meeting
-// that has not taken place (occurredday.MeetingTookPlace); a meeting ahead
-// counts only as nextMeeting. Days are counted
-// by the calendar of loc, the zone the reader sees the dates in.
+// ReadInTouch folds the three dates every in-touch question rests on.
+// lastMeeting is the last held one (MeetingHeldByNowSQL). A message that has
+// not begun never counts as contact we had. Nor does a meeting that has not
+// taken place (occurredday.MeetingTookPlace); one ahead counts only as
+// nextMeeting. Days are counted by the calendar of loc, the zone the reader
+// sees the dates in.
 func ReadInTouch(lastInbound, lastMeeting, nextMeeting *occurredday.Moment, now time.Time, loc *time.Location) InTouch {
 	latest, basis := lastInbound, InTouchWrote
 	if !begun(latest, now, loc) {

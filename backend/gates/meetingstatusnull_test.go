@@ -33,8 +33,8 @@ package gates
 // tightened.
 //
 // NOT a claim that NULL means booked everywhere. It means "nothing said it was
-// off", and each surface adds its own time bound — which is why a past meeting
-// with NULL reads as held in the brief and a future one reads as booked here.
+// off", and each surface adds its own time bound. A future meeting with NULL
+// reads as booked. A past one reads as awaiting its outcome, never as held.
 
 import (
 	"io/fs"
@@ -61,7 +61,7 @@ var (
 // drop an unrecorded meeting. Keyed by the file and the line's own text, so a
 // waiver covers one reading and not every reading added to that file after it.
 var meetingStatusReadersAdmitted = gatekit.Waive(map[string]string{
-	"internal/shared/kernel/meetingoutcome/meetingoutcome.go: return \"(\" + alias + \".meeting_status = '\" + Held + \"')\"": "the shared rule for a held meeting, and its subject is what the record says: a meeting nobody reported stays awaiting its outcome. Its callers either ask only about a reported meeting (the follow-up reminder, the conversion report, which has no time bound) or classify with it, where the next CASE arm names an unrecorded meeting booked, so nothing is dropped",
+	"internal/shared/kernel/meetingoutcome/meetingoutcome.go: return \"(\" + alias + \".meeting_status = '\" + Held + \"')\"": "the shared rule for a held meeting, and its subject is what the record says: a meeting nobody reported stays awaiting its outcome. Its callers either ask whether we met (every contact fold through relstrength.HadContactSQL: strength, last-activity clocks, graph edges, the brief's last touch; the follow-up reminder and reconciliation, the conversion report, the account's last meeting, deal assurance's customer progress, a draft's prior contact), where a past meeting nobody reported is awaiting its outcome and must be dropped, or classify with it, where the next CASE arm names an unrecorded meeting booked",
 })
 
 func TestAMeetingWithNoStatusIsNotDroppedFromAPositiveTest(t *testing.T) {

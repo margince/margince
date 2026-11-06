@@ -32723,7 +32723,7 @@ export interface components {
             last_outbound_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Which sides have written, rolled up from the account's current contacts. Absent together with last_inbound_at, named in `sections_omitted` as `last_touch`. */
             relationship_direction?: components["schemas"]["RelationshipDirection"];
-            /** @description The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws. */
+            /** @description The newest exchange with the account in either direction, over the same walk: an email, a call that reached somebody, a chat message, or a meeting someone recorded as held. A past meeting with no recorded outcome is not contact, and nor is a note. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws. */
             last_contact?: components["schemas"]["Company360LastContact"];
             state_strip?: components["schemas"]["Company360StateStrip"];
             next_meeting?: components["schemas"]["Company360NextMeeting"];

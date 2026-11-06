@@ -37,6 +37,7 @@ func TestAMeetingAheadIsNoGraphEdgesLastInteraction(t *testing.T) {
 	held := integration.CalendarMeeting{Event: "evt-ahead-held", At: now.AddDate(0, 0, -10), Links: contactLink(dana), Parties: parties}
 	ahead := integration.CalendarMeeting{Event: "evt-ahead-booked", At: now.AddDate(0, 0, 5), Links: contactLink(dana), Parties: parties}
 	touched := []ids.UUID{held.Capture(t, e), ahead.Capture(t, e)}
+	e.RecordHeld(t, touched[0])
 
 	assertLastAtHeld := func(path string) {
 		t.Helper()

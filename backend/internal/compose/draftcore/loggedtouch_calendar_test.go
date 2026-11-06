@@ -8,6 +8,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 )
 
 func TestDatedNoteSilenceKeepsItsStatedDay(t *testing.T) {
@@ -40,5 +41,32 @@ func TestLoggedTouchOrderFollowsTheRecordCalendar(t *testing.T) {
 	state := ClassifyWithLogged(now, zone, time.Time{}, time.Time{}, notes)
 	if state.SilenceDays != 1 {
 		t.Fatalf("silence = %d, want 1 from the latest local activity day", state.SilenceDays)
+	}
+}
+
+// A past meeting is prior contact only once someone recorded it held. One
+// still booked, or with no status, is awaiting its outcome.
+func TestOnlyAHeldPastMeetingIsPriorContact(t *testing.T) {
+	now := time.Date(2026, 6, 12, 9, 0, 0, 0, time.UTC)
+	booked, held := crmcontracts.ActivityMeetingStatusBooked, crmcontracts.ActivityMeetingStatusHeld
+	for name, tc := range map[string]struct {
+		status *crmcontracts.ActivityMeetingStatus
+		want   bool
+	}{
+		"no status": {nil, false},
+		"booked":    {&booked, false},
+		"held":      {&held, true},
+	} {
+		meeting := crmcontracts.Activity{
+			Kind: crmcontracts.ActivityKindMeeting, MeetingStatus: tc.status,
+			OccurredAt: now.AddDate(0, 0, -3), OccurredPrecision: "instant",
+		}
+		if got := IsLoggedTouch(meeting, now, time.UTC); got != tc.want {
+			t.Errorf("%s: a meeting three days ago is a logged touch = %v, want %v", name, got, tc.want)
+		}
+		state := ClassifyWithLogged(now, time.UTC, time.Time{}, time.Time{}, []crmcontracts.Activity{meeting})
+		if met := state.Band != convstate.BandNone; met != tc.want {
+			t.Errorf("%s: the meeting is prior contact = %v (state %+v), want %v", name, met, state, tc.want)
+		}
 	}
 }

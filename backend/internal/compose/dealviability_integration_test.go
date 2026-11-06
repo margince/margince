@@ -337,3 +337,34 @@ func TestANewDeliveringMailboxMakesTheReceiptStale(t *testing.T) {
 		t.Fatal("a second mailbox delivering the deal's mail left the receipt current")
 	}
 }
+
+// A past meeting with the buyer moves the deal only once someone recorded it
+// held. One with no status, or still booked, is awaiting its outcome, so the
+// customer-progress clock does not start from it.
+func TestOnlyAHeldMeetingIsCustomerProgress(t *testing.T) {
+	e := integration.Setup(t)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	buyer, now := e.SeedContact(t, "Buyer", nil), clocktest.Now(t)
+	progressOf := func(deal ids.UUID) string {
+		return e.WsScalar(t, `SELECT coalesce(max(a.occurred_at)::text, 'none') FROM activity a
+			JOIN activity_link al ON al.activity_id = a.id
+			WHERE al.deal_id = $1 AND a.archived_at IS NULL AND `+customerProgressSQL("a", "$2"), deal, now)
+	}
+	for _, status := range []string{"", "booked", "held"} {
+		deal := e.SeedDeal(t, "Met the buyer ("+status+")", pipeline, open, &e.Rep1)
+		subject, at := "Workshop with the buyer", now.AddDate(0, 0, -3)
+		in := activities.LogActivityInput{
+			Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}, {EntityType: "contact", EntityID: buyer}},
+		}
+		if status != "" {
+			in.MeetingStatus = &status
+		}
+		if _, _, err := e.Activities.LogActivity(e.Admin(), in); err != nil {
+			t.Fatal(err)
+		}
+		if got, moved := progressOf(deal), status == "held"; (got != "none") != moved {
+			t.Errorf("a past meeting with status %q: customer progress at %s, want progress %v", status, got, moved)
+		}
+	}
+}

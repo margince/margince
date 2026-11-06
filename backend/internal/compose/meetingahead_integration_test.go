@@ -157,26 +157,27 @@ func TestDealHealthHoldsAcrossTheMeetingsStart(t *testing.T) {
 	f := newClockFixture(t)
 	deal := f.idleDeal(t, "Meeting starts", 70)
 	meetsAt := f.now.AddDate(0, 0, 2)
-	f.logOn(t, "meeting", onRecord("deal", deal), meetsAt)
+	meeting := f.logOn(t, "meeting", onRecord("deal", deal), meetsAt)
 	ws := ids.From[ids.WorkspaceKind](f.e.WS)
-	for _, read := range []struct {
-		when  string
-		shift time.Duration
-	}{
-		{"just before it starts", 2*24*time.Hour - 2*time.Minute},
-		{"just after it starts, before the refold", 2*24*time.Hour + 2*time.Minute},
-		{"three days later, no refold run", 5 * 24 * time.Hour},
-	} {
-		at := clocktest.Now(t).UTC().Add(read.shift)
-		store := deals.NewStore(database.BindTo(shiftedPool(t, read.shift), ws), DealsInstallation())
+	read := func(when string, shift time.Duration, wantRecent bool) {
+		t.Helper()
+		at := clocktest.Now(t).UTC().Add(shift)
+		store := deals.NewStore(database.BindTo(shiftedPool(t, shift), ws), DealsInstallation())
 		h, err := store.DealHealth(f.e.Admin(), ids.From[ids.DealKind](deal), at)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if h.Factors.ActivityRecency != 1.0 || h.Evidence.Stalled {
-			t.Errorf("%s: recency %v, stalled %v; want 1.0 and not stalled", read.when, h.Factors.ActivityRecency, h.Evidence.Stalled)
+		if recent := h.Factors.ActivityRecency == 1.0 && !h.Evidence.Stalled; recent != wantRecent {
+			t.Errorf("%s: recency %v, stalled %v; want recent %v", when, h.Factors.ActivityRecency, h.Evidence.Stalled, wantRecent)
 		}
 	}
+	read("just before it starts", 2*24*time.Hour-2*time.Minute, true)
+	read("after it started, nobody reported it", 2*24*time.Hour+2*time.Minute, false)
+	// The writer refuses held before the start on the real clock, which this
+	// test shifts only for the pool that reads.
+	f.e.WsExec(t, `UPDATE activity SET meeting_status = 'held' WHERE id = $1`, meeting.UUID)
+	read("just after it starts, held, before the refold", 2*24*time.Hour+2*time.Minute, true)
+	read("three days later, no refold run", 5*24*time.Hour, true)
 	runRefold(t, shiftedPool(t, 3*24*time.Hour))
 	assertClock(t, f.dealClock(t, deal), meetsAt, "the refold moves the clock to the meeting")
 	if h := f.health(t, deal, meetsAt.Add(time.Minute)); h.Factors.ActivityRecency != 1.0 || h.Evidence.Stalled || h.Evidence.MeetingAhead {

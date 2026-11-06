@@ -9,11 +9,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// ClassifyWithLogged counts notes and meetings as prior contact, even without mail.
+// ClassifyWithLogged counts notes and held meetings as prior contact, even without mail.
 // It counts as our side: nothing claims the contact wrote.
 func ClassifyWithLogged(now time.Time, zone *time.Location, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
 	if logged := lastLoggedTouch(activities, now, zone); logged.After(lastOut) {
@@ -48,13 +49,19 @@ func IsLoggedKind(kind crmcontracts.ActivityKind) bool {
 }
 
 // IsLoggedTouch reports a note or meeting that has happened by now in zone
-// (occurredday.Happened). A canceled or missed meeting records no contact. A
-// past meeting still marked booked counts: it most often took place, and reps
-// rarely come back to mark it held.
+// (occurredday.Happened), the Go form of relstrength.HappenedByNowSQL. A
+// meeting is contact only when someone recorded it held. A past meeting still
+// booked or with no status is awaiting its outcome.
 func IsLoggedTouch(activity crmcontracts.Activity, now time.Time, zone *time.Location) bool {
 	if !IsLoggedKind(activity.Kind) || !occurredday.Happened(string(activity.Kind), activitywhen.MomentOf(activity), now, zone) {
 		return false
 	}
-	status := activity.MeetingStatus
-	return status == nil || relstrength.MeetingStatusCounts(string(*status))
+	var status string
+	if activity.MeetingStatus != nil {
+		status = string(*activity.MeetingStatus)
+	}
+	if activity.Kind == crmcontracts.ActivityKindMeeting {
+		return meetingoutcome.IsHeld(status)
+	}
+	return relstrength.MeetingStatusNotCalledOff(status)
 }

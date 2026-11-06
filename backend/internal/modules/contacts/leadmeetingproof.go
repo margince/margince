@@ -22,7 +22,7 @@ func meetingProof(status string, declined bool) (PromoteTrigger, bool) {
 		return "", false
 	case meetingoutcome.IsHeld(status):
 		return TriggerMeetingHeld, true
-	case relstrength.MeetingStatusCounts(status):
+	case relstrength.MeetingStatusNotCalledOff(status):
 		return TriggerMeetingBooked, true
 	}
 	return "", false
@@ -39,7 +39,7 @@ func meetingProves(status string, declined bool) bool {
 func meetingProofSQL(alias, leadRef string) string {
 	return `(CASE WHEN ` + leadDeclinedSQL(leadRef, alias) + ` THEN NULL
 	              WHEN ` + meetingoutcome.HeldSQL(alias) + ` THEN '` + string(TriggerMeetingHeld) + `'
-	              WHEN ` + relstrength.MeetingCountsSQL(alias) + ` THEN '` + string(TriggerMeetingBooked) + `' END)`
+	              WHEN ` + relstrength.MeetingNotCalledOffSQL(alias) + ` THEN '` + string(TriggerMeetingBooked) + `' END)`
 }
 
 // leadDeclinedSQL is whether the lead leadRef names answered the calendar

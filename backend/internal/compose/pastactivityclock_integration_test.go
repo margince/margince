@@ -116,6 +116,14 @@ func (f accountFixture) log(t *testing.T, kind string, at time.Time) {
 	}
 }
 
+// recordHeld marks the fixture's meetings held, as a member reports them once
+// they took place. The writer refuses that before the real clock reaches the
+// start, and these tests move only the clock the refold reads.
+func (f accountFixture) recordHeld(t *testing.T) {
+	t.Helper()
+	f.e.WsExec(t, `UPDATE activity SET meeting_status = 'held' WHERE kind = 'meeting'`)
+}
+
 // assertClocks holds the contact, company and deal clock to want.
 func (f accountFixture) assertClocks(t *testing.T, want time.Time, why string) {
 	t.Helper()
@@ -142,13 +150,14 @@ func TestAFutureMeetingIsNotTheLastActivity(t *testing.T) {
 	mailed, meetsAt := f.now.AddDate(0, 0, -3), f.now.AddDate(0, 0, 7)
 	f.log(t, "email", mailed)
 	f.log(t, "meeting", meetsAt)
+	f.recordHeld(t)
 	f.assertClocks(t, mailed, "a meeting next week has not happened")
 
 	runRefold(t, f.e.Pool)
 	f.assertClocks(t, mailed, "a refold before the meeting starts must not count it")
 
 	runRefold(t, shiftedPool(t, 8*24*time.Hour))
-	f.assertClocks(t, meetsAt, "once the meeting has started, the refold counts it")
+	f.assertClocks(t, meetsAt, "once the held meeting has started, the refold counts it")
 }
 
 func TestAFutureDatedNoteCallOrEmailIsNotTheLastActivity(t *testing.T) {
@@ -170,6 +179,7 @@ func TestAMeetingThatStartedDuringAnOutageStillMovesTheClock(t *testing.T) {
 	mailed, meetsAt := f.now.AddDate(0, 0, -3), f.now.AddDate(0, 0, 1)
 	f.log(t, "email", mailed)
 	f.log(t, "meeting", meetsAt)
+	f.recordHeld(t)
 
 	runRefold(t, shiftedPool(t, 4*24*time.Hour))
 	f.assertClocks(t, meetsAt, "a meeting that started three days before the next run")
@@ -234,6 +244,7 @@ func TestADayMeetingMovesTheClockOnceItsDateEnds(t *testing.T) {
 	f.log(t, "email", mailed)
 	date := f.now.In(losAngeles).AddDate(0, 0, 2)
 	met := f.logDay(t, "meeting", date)
+	f.recordHeld(t)
 
 	runRefold(t, shiftedPool(t, shiftTo(t, date, 13, losAngeles)))
 	f.assertClocks(t, mailed, "on its own date the day meeting has not yet taken place")
@@ -255,6 +266,7 @@ func TestADayMeetingEastOfUTCPlus12MovesTheClockBeforeItsStoredNoon(t *testing.T
 	f.log(t, "email", mailed)
 	date := f.now.In(kiritimati).AddDate(0, 0, 2)
 	met := f.logDay(t, "meeting", date)
+	f.recordHeld(t)
 
 	runRefold(t, shiftedPool(t, shiftTo(t, date, 13, kiritimati)))
 	f.assertClocks(t, mailed, "on its own date the day meeting has not yet taken place")
@@ -329,6 +341,7 @@ func TestASecondRefoldWritesNothing(t *testing.T) {
 	f.log(t, "email", f.now.AddDate(0, 0, -3))
 	meetsAt := f.now.AddDate(0, 0, 2)
 	f.log(t, "meeting", meetsAt)
+	f.recordHeld(t)
 	later := shiftedPool(t, 3*24*time.Hour)
 	runRefold(t, later)
 	f.assertClocks(t, meetsAt, "the first refold moves the clocks")

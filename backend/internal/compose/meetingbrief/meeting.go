@@ -135,9 +135,9 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(activityID)
 	requestedPos := arg(nullableProject(requested))
-	// A last touch is contact we had: not a canceled meeting, and not a call
-	// that reached nobody (relstrength.NotCalledOffSQL).
-	happened := occurredday.HappenedSQL("pa", fmt.Sprintf("$%d", arg(now))) + " AND " + relstrength.NotCalledOffSQL("pa")
+	// A last touch is contact we had: a meeting someone recorded held, not a
+	// call that reached nobody (relstrength.HadContactSQL).
+	happened := occurredday.HappenedSQL("pa", fmt.Sprintf("$%d", arg(now))) + " AND " + relstrength.HadContactSQL("pa")
 	clauses, err := roomClauses(ctx, arg)
 	if err != nil {
 		return meeting{}, err

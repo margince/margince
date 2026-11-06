@@ -42,6 +42,8 @@ var writesMeetingStatusWithoutHistory = gatekit.Waive(map[string]string{
 	"internal/modules/activities/scheduling_change.go": "settles provider delivery through updateActivityInTx, which records the meeting transition in the same transaction",
 	"internal/modules/activities/mapping.go": "maps a request onto LogActivityInput and executes " +
 		"nothing; the store it hands that input to records the transition",
+	"internal/compose/integration/harnesscalendar.go": "the test harness records a meeting held through " +
+		"activities.UpdateActivity, the store that records the transition",
 })
 
 func TestEveryMeetingStatusWriterRecordsHistory(t *testing.T) {

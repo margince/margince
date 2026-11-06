@@ -71,14 +71,14 @@ func logMail(t *testing.T, e *integration.Env, contact ids.UUID, direction strin
 	}
 }
 
-// loggedMeeting is a booked meeting logged by hand with a direction.
+// loggedMeeting is a held meeting logged by hand with a direction.
 type loggedMeeting struct{ id ids.ActivityID }
 
 func logMeeting(t *testing.T, e *integration.Env, link activities.ActivityLinkInput, direction string, at time.Time) loggedMeeting {
 	t.Helper()
-	subject, booked := "Fold meeting", "booked"
+	subject, held := "Fold meeting", "held"
 	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "meeting", Subject: &subject, Direction: &direction, MeetingStatus: &booked,
+		Kind: "meeting", Subject: &subject, Direction: &direction, MeetingStatus: &held,
 		OccurredAt: &at, Source: "manual", Links: []activities.ActivityLinkInput{link},
 	})
 	if err != nil {
@@ -118,6 +118,7 @@ func TestACanceledMeetingIsNoGraphEdgesLastInteraction(t *testing.T) {
 	held := integration.CalendarMeeting{Event: "evt-fold-held", At: now.AddDate(0, 0, -10), Links: contactLink(dana), Parties: parties}
 	called := integration.CalendarMeeting{Event: "evt-fold-called", At: now.AddDate(0, 0, -2), Links: contactLink(dana), Parties: parties}
 	touched := []ids.UUID{held.Capture(t, e), called.Capture(t, e)}
+	e.RecordHeld(t, touched[0])
 	called.Cancel(t, e)
 
 	assertLastAtHeld := func(path string) {
@@ -165,7 +166,7 @@ func TestACanceledMeetingIsNoDealEngagement(t *testing.T) {
 		return slices.Contains(found, contact)
 	}
 	if !engaged() {
-		t.Fatal("their reply and our booked meeting do not engage the stakeholder — the case below proves nothing")
+		t.Fatal("their reply and our held meeting do not engage the stakeholder — the case below proves nothing")
 	}
 	pitch.cancel(t, e)
 	if engaged() {
@@ -206,8 +207,16 @@ func TestACanceledMeetingIsNotTheAccountsNewestMessage(t *testing.T) {
 	acct := quietAccount{company: ids.From[ids.CompanyKind](company), now: time.Now().UTC()}
 	acct.contact = employedAt(t, e, company, "Rae Reply")
 	logMail(t, e, acct.contact, "outbound", acct.now.AddDate(0, 0, -10))
-	chat := integration.CalendarMeeting{Event: "evt-fold-chat", At: acct.now.AddDate(0, 0, -2), Links: contactLink(acct.contact)}
-	chat.Capture(t, e)
+	// A calendar cancel leaves a meeting someone recorded held alone, so the
+	// held meeting is called off by its member.
+	subject, held, at := "Fold chat", "held", acct.now.AddDate(0, 0, -2)
+	chat, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, MeetingStatus: &held, OccurredAt: &at, Source: "manual",
+		Links: []activities.ActivityLinkInput{onContact(acct.contact)},
+	})
+	if err != nil {
+		t.Fatalf("logging the held meeting: %v", err)
+	}
 
 	asksForAReply := func() bool {
 		page := pageOf(t, e, acct)
@@ -221,7 +230,7 @@ func TestACanceledMeetingIsNotTheAccountsNewestMessage(t *testing.T) {
 	if asksForAReply() {
 		t.Fatal("a meeting after our mail still reads as no reply — the case below proves nothing")
 	}
-	chat.Cancel(t, e)
+	loggedMeeting{id: ids.From[ids.ActivityKind](ids.UUID(chat.Id))}.cancel(t, e)
 	if !asksForAReply() {
 		t.Error("a canceled meeting still answers our mail, so the no-reply suggestion never fires")
 	}
@@ -237,6 +246,13 @@ func TestACanceledMeetingIsNoFollowUpEvidence(t *testing.T) {
 	}
 	called.Capture(t, e.Env)
 	called.Cancel(t, e.Env)
+	// The same meeting recorded held is the evidence, so a captured meeting
+	// counts once held and not once canceled.
+	kept := e.SeedDeal(t, "Fold follow-up, held", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, kept, "call", "Discovery call", 5)
+	e.RecordHeld(t, integration.CalendarMeeting{
+		Event: "evt-fold-kept", At: called.At, Links: []datasource.EntityRef{{Type: "deal", ID: kept}},
+	}.Capture(t, e.Env))
 
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
@@ -247,6 +263,9 @@ func TestACanceledMeetingIsNoFollowUpEvidence(t *testing.T) {
 	if _, proposal := e.followUpApproval(t, deal); proposal.EvidenceKind != "call" {
 		t.Errorf("the follow-up cites a %q, want the call — a canceled meeting left no conversation behind",
 			proposal.EvidenceKind)
+	}
+	if _, proposal := e.followUpApproval(t, kept); proposal.EvidenceKind != "meeting" {
+		t.Errorf("the follow-up on the held meeting cites a %q, want the meeting", proposal.EvidenceKind)
 	}
 }
 

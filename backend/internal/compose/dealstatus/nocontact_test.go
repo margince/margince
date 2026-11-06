@@ -20,9 +20,10 @@ func TestRecentHistoryDoesNotClaimThatNoContactEverHappened(t *testing.T) {
 	called.MeetingStatus = &canceled
 
 	for name, timeline := range map[string][]crmcontracts.Activity{
-		"a note":             {act(crmcontracts.ActivityKindNote, testNow.AddDate(0, 0, -1))},
-		"a booked meeting":   {act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, 3))},
-		"a canceled meeting": {called},
+		"a note":                         {act(crmcontracts.ActivityKindNote, testNow.AddDate(0, 0, -1))},
+		"a booked meeting":               {act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, 3))},
+		"a canceled meeting":             {called},
+		"a past meeting nobody reported": {act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -2))},
 	} {
 		t.Run(name, func(t *testing.T) {
 			f := facts{deal: openDeal(), now: testNow, loc: time.UTC, timeline: timeline}

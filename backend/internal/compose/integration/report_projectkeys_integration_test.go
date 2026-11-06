@@ -79,6 +79,10 @@ func fileActivity(ctx context.Context, t *testing.T, e *Env, kind string, when t
 	if project != nil {
 		in.Links = []activities.ActivityLinkInput{{EntityType: "project", EntityID: project.UUID}}
 	}
+	if kind == "meeting" {
+		// Only a meeting someone recorded held is activity on the project.
+		in.MeetingStatus = new("held")
+	}
 	if _, _, err := e.Activities.LogActivity(ctx, in); err != nil {
 		t.Fatalf("logging a %s: %v", kind, err)
 	}

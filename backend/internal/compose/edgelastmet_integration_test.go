@@ -6,7 +6,8 @@
 package compose
 
 // The colleague edge knows when the pair last met, on the incremental fold and
-// on the rebuild alike. Its recency then counts from a meeting as well as a reply.
+// on the rebuild alike. Its recency then counts from a held meeting as well as
+// a reply. A meeting nobody reported held is no meeting of the pair.
 
 import (
 	"testing"
@@ -29,21 +30,28 @@ func TestTheColleagueEdgeKnowsWhenThePairLastMet(t *testing.T) {
 	met := integration.CalendarMeeting{Event: "evt-met", At: now.AddDate(0, 0, -6), Links: contactLink(dana), Parties: parties}
 	touched := []ids.UUID{met.Capture(t, e)}
 
-	assertMet := func(path string) {
+	assertMet := func(path string, want int) {
 		t.Helper()
 		if got := e.WsCount(t, `SELECT count(*) FROM graph_interaction_edge
 		                         WHERE user_id = $1 AND contact_id = $2 AND last_met_at = $3`,
-			e.AdminUser, dana, met.At); got != 1 {
-			t.Errorf("%s: the colleague edge's last_met_at is not the meeting", path)
+			e.AdminUser, dana, met.At); got != want {
+			t.Errorf("%s: %d colleague edges name the meeting as last_met_at, want %d", path, got, want)
 		}
 	}
-	inWorkspaceTx(t, e, func(tx pgx.Tx) error { return search.RecomputeEdgesForActivities(e.Admin(), tx, touched) })
-	assertMet("incremental fold")
-	inWorkspaceTx(t, e, func(tx pgx.Tx) error { return search.RebuildEdges(e.Admin(), tx) })
-	assertMet("rebuild")
+	refold := func(want int) {
+		t.Helper()
+		inWorkspaceTx(t, e, func(tx pgx.Tx) error { return search.RecomputeEdgesForActivities(e.Admin(), tx, touched) })
+		assertMet("incremental fold", want)
+		inWorkspaceTx(t, e, func(tx pgx.Tx) error { return search.RebuildEdges(e.Admin(), tx) })
+		assertMet("rebuild", want)
+	}
+	refold(0)
+	e.RecordHeld(t, touched[0])
+	refold(1)
 }
 
-// A meeting the contact declined gives the pair no last meeting.
+// A meeting the contact declined gives the pair no last meeting, even once
+// someone recorded it held.
 func TestADeclinedMeetingGivesThePairNoLastMeeting(t *testing.T) {
 	e := integration.Setup(t)
 	now := clocktest.Now(t).UTC().Truncate(time.Second)
@@ -53,6 +61,7 @@ func TestADeclinedMeetingGivesThePairNoLastMeeting(t *testing.T) {
 	}
 	declined := integration.CalendarMeeting{Event: "evt-declined", At: now.AddDate(0, 0, -6), Links: contactLink(dana), Parties: parties}
 	touched := []ids.UUID{declined.Capture(t, e)}
+	e.RecordHeld(t, touched[0])
 	for path, refold := range map[string]func(tx pgx.Tx) error{
 		"incremental fold": func(tx pgx.Tx) error { return search.RecomputeEdgesForActivities(e.Admin(), tx, touched) },
 		"rebuild":          func(tx pgx.Tx) error { return search.RebuildEdges(e.Admin(), tx) },

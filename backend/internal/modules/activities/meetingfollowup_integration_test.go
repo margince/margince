@@ -110,3 +110,25 @@ func TestAMessageSentDuringTheMeetingDoesNotSettleIt(t *testing.T) {
 		t.Error("a message sent during the meeting settled the follow-up after it")
 	}
 }
+
+// A later meeting with them settles the follow-up only once someone recorded
+// it held. One nobody reported is awaiting its outcome, not a follow-up made.
+func TestOnlyAHeldLaterMeetingSettlesAMeetingFollowUp(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+
+	unreported := e.customerAt(t, "customer")
+	owed := e.metWith(t, unreported, e.rep, "held", 3*24*time.Hour)
+	e.metWith(t, unreported, e.rep, "booked", 2*time.Hour)
+
+	held := e.customerAt(t, "customer")
+	settled := e.metWith(t, held, e.rep, "held", 3*24*time.Hour)
+	e.metWith(t, held, e.rep, "held", 2*time.Hour)
+
+	if !owesMeetingFollowUp(t, s, e, owed) {
+		t.Error("a later meeting nobody reported held settled the follow-up")
+	}
+	if owesMeetingFollowUp(t, s, e, settled) {
+		t.Error("a later held meeting did not settle the follow-up")
+	}
+}

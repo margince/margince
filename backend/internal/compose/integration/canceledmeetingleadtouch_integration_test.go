@@ -60,6 +60,10 @@ func TestANoShowIsNotALeadsLastActivity(t *testing.T) {
 		}
 		return l.LastActivityAt
 	}
+	if got := lastActivity(); got == nil || !got.Equal(heldAt) {
+		t.Fatalf("lead last activity = %v, want the held meeting %v — a past booking is awaiting its outcome", got, heldAt)
+	}
+	callOff(t, e, missed, "held")
 	if got := lastActivity(); got == nil || !got.Equal(missedAt) {
 		t.Fatalf("lead last activity = %v before the no-show, want %v — the case below proves nothing", got, missedAt)
 	}
