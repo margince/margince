@@ -18,8 +18,8 @@ export type ImageSlotVerbs = Readonly<{
 }>;
 
 /**
- * One stored picture as the hero of its row, with an Edit pill whose menu
- * uploads or removes it. Nothing takes a file while a write is out. A drop
+ * One stored picture as the hero of its row, with an Edit pill under it whose
+ * menu uploads or removes it. Nothing takes a file while a write is out. A drop
  * racing a removal lands in whichever order the two answer.
  */
 export function ImageSlot({
@@ -90,27 +90,25 @@ export function ImageSlot({
           />
         )}
         <div className="image-slot-mark">{preview}</div>
-        {editable && (
-          <div className="image-slot-edit">
-            <OverflowMenu
-              label={verbs.editLabel}
-              text={verbs.edit}
-              align="start"
-              icon={<Pencil aria-hidden="true" />}
-              pending={busy}
-            >
-              <Button onClick={choose} aria-describedby={refusalId}>
-                {verbs.upload}
-              </Button>
-              {filled && (
-                <Button onClick={onRemove} aria-describedby={refusalId}>
-                  {verbs.remove}
-                </Button>
-              )}
-            </OverflowMenu>
-          </div>
-        )}
       </div>
+      {editable && (
+        <OverflowMenu
+          label={verbs.editLabel}
+          text={verbs.edit}
+          align="center"
+          icon={<Pencil aria-hidden="true" />}
+          pending={busy}
+        >
+          <Button onClick={choose} aria-describedby={refusalId}>
+            {verbs.upload}
+          </Button>
+          {filled && (
+            <Button onClick={onRemove} aria-describedby={refusalId}>
+              {verbs.remove}
+            </Button>
+          )}
+        </OverflowMenu>
+      )}
       {name !== undefined && (
         <span className="t-name" id={nameId}>
           {name}

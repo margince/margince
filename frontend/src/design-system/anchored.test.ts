@@ -194,3 +194,32 @@ it("places the panel again when capped content grows without moving its box", ()
 
   expect(result.current.top).toBeLessThan(662);
 });
+
+// A pill centred under a picture hangs its panel from its middle.
+// A card edge the panel would cross moves it back inside the card.
+it.each([
+  { pillLeft: 300, expected: 250 },
+  { pillLeft: 20, expected: 10 },
+  { pillLeft: 560, expected: 400 },
+])(
+  "centres a panel on a pill at $pillLeft and keeps it in its card",
+  ({ pillLeft, expected }) => {
+    vi.stubGlobal("innerHeight", 800);
+    vi.stubGlobal("innerWidth", 1200);
+    const card = document.createElement("section");
+    card.className = "panel";
+    card.getBoundingClientRect = () => new DOMRect(10, 0, 590, 600);
+    const pill = document.createElement("button");
+    pill.getBoundingClientRect = () => new DOMRect(pillLeft, 100, 100, 30);
+    card.appendChild(pill);
+    document.body.appendChild(card);
+    const trigger = { current: pill };
+    const panel = panelOf(200, 200);
+
+    const { result } = renderHook(() =>
+      useAnchoredToTrigger(true, trigger, panel, "center"),
+    );
+
+    expect(result.current.left).toBe(expected);
+  },
+);

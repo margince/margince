@@ -115,8 +115,8 @@ export function OverflowMenu({
   text?: string;
   /** The write an item started is out: the trigger shows it as `Button pending` does. */
   pending?: boolean;
-  /** The trigger edge the panel lines up with: `end` for a mark at a row's end, `start` for a pill that leads its slot. */
-  align?: "start" | "end";
+  /** Where the panel hangs: off the trigger's `end` (a mark at a row's end), its `start`, or its `center`, kept inside the trigger's card. */
+  align?: "start" | "end" | "center";
   /** The trigger's glyph, `aria-hidden`; the three dots unless the menu holds one kind of item (the chats a number opens). */
   icon?: ReactNode;
   /** A trigger inside a line of text, as `IconAction inline`: the square keeps its target and takes one line box. */

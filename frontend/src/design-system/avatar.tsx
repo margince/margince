@@ -54,18 +54,19 @@ export function Avatar({
   // A chip with a live logo draws no mesh at any moment. The initials wait on
   // a neutral ground, and only a logo that failed falls back to the mesh.
   const logo = Boolean(picture) && !broken;
+  // A seat waits for its picture on the mesh a person without one wears.
+  const meshed = !logo || (Boolean(photo) && !painted);
   const classes = [
     "avatar",
-    logo ? "avatar-has-logo" : "avatar-mesh",
+    logo ? "avatar-has-logo" : "",
+    meshed ? "avatar-mesh" : "",
+    logo && photo ? "avatar-photo" : "",
     `avatar-${size}`,
-  ];
-  if (logo && photo) {
-    classes.push("avatar-photo");
-  }
+  ].filter(Boolean);
   return (
     <span
       className={classes.join(" ")}
-      style={logo ? undefined : meshStyle(meshOf(identity || name))}
+      style={meshed ? meshStyle(meshOf(identity || name)) : undefined}
     >
       {logo ? (
         // The monogram stays underneath: it is what the chip shows until the

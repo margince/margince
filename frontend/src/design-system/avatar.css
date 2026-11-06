@@ -96,6 +96,8 @@
    padded and never stretched. */
 .avatar-has-logo {
   position: relative;
+}
+.avatar-has-logo:not(.avatar-mesh) {
   background: var(--bgInset);
   color: var(--textSecondary);
 }

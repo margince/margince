@@ -4,8 +4,8 @@
   --imageSlotSize: calc(var(--space-12) * 2.5);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-4);
+  align-items: center;
+  gap: var(--space-3);
   flex: none;
   min-width: 0;
   max-width: 100%;
@@ -63,13 +63,15 @@
 }
 
 /* Above the zone and deaf to the pointer, so a drop on the picture still
-   reaches the zone's input. */
+   reaches the zone's input. The picture meets the ring with no inset. */
 .image-slot-mark {
   position: absolute;
-  inset: var(--space-3);
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  border-radius: inherit;
   pointer-events: none;
 }
 
@@ -79,7 +81,7 @@
 }
 
 .image-slot-round .image-slot-mark {
-  inset: 0;
+  corner-shape: round;
 }
 
 /* Initials stand in at the slot's own scale, not a list chip's. */
@@ -99,10 +101,9 @@
   opacity: 0.5;
 }
 
-/* The Edit pill sits on the picture's lower left edge, at one place for every
-   shape, and far enough in that its touch target stays inside the slot. */
-.image-slot-edit {
-  position: absolute;
-  inset-block-end: var(--space-2);
-  inset-inline-start: 0;
+/* An empty logo slot is the company's mesh edge to edge, as a picture would be. */
+.image-slot:not(.image-slot-round) .image-slot-mark > .avatar {
+  width: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
 }
