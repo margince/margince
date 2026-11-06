@@ -32,3 +32,8 @@
 .worklist-embedded .worklist-list > li > .worklist-row-selected {
   border-color: var(--textSecondary);
 }
+/* A row here names the work; its preview and last contact are in its details. */
+.worklist-embedded .worklist-list .emailentry__preview,
+.worklist-embedded .worklist-list .worklist-row-touch {
+  display: none;
+}
