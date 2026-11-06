@@ -124,8 +124,6 @@ if [[ -n "$BIN_DIR" && -z "$SHARD_OUT" ]]; then
 fi
 [[ -z "$BUILD_OUT" ]] || case "$BUILD_OUT" in /*) ;; *) BUILD_OUT="$ROOT/$BUILD_OUT";; esac
 [[ -z "$BIN_DIR" ]] || case "$BIN_DIR" in /*) ;; *) BIN_DIR="$ROOT/$BIN_DIR";; esac
-# Before the template build, so a directory of stale binaries costs no time.
-[[ -z "$BIN_DIR" ]] || lane_bin_dir_check "$BIN_DIR" "$ROOT" || exit 1
 export BIN_DIR
 
 # Per-package go-test timeout and its budget rule — shared with the one-package
@@ -442,6 +440,15 @@ NUNTAGGED=$(awk -F'|' '
   END { print n + 0 }
 ' "$LANE_PKGS" "$UNTAGGED")
 
+# What the lane's binaries are compiled from. The build records it, and a run
+# from binaries refuses them when its own checkout gives another answer.
+if [[ -n "$BUILD_OUT" || -n "$BIN_DIR" ]]; then
+  lane_packages=()
+  while IFS='|' read -r _ rel; do lane_packages+=("$rel"); done < "$LANE_PKGS"
+  source_stamp="$(lane_source_stamp "$ROOT/backend" integration "${lane_packages[@]+"${lane_packages[@]}"}")" || exit 1
+  [[ -z "$BIN_DIR" ]] || lane_bin_dir_check "$BIN_DIR" "$source_stamp" || exit 1
+fi
+
 # Build mode: one `go test` compiles and links every lane package, and the
 # keeper it runs instead of each binary copies that binary out. Every
 # discovered package must then have one, because a shard fails on a missing
@@ -451,10 +458,9 @@ if [[ -n "$BUILD_OUT" ]]; then
     echo "FAIL: no integration packages discovered — nothing to compile"
     exit 1
   fi
-  lane_build_dir_prepare "$BUILD_OUT" "$ROOT" || exit 1
+  lane_build_dir_prepare "$BUILD_OUT" "$source_stamp" || exit 1
   build_started=$SECONDS
-  build_packages=()
-  while IFS='|' read -r _ rel; do build_packages+=("$rel"); done < "$LANE_PKGS"
+  build_packages=("${lane_packages[@]}")
   # -count=1: a cached result would skip the keeper, and with it the binary.
   if ! ( cd "$ROOT/backend" \
       && LANE_MODULE_DIR="$ROOT/backend" LANE_BUILD_OUT="$BUILD_OUT" \
@@ -609,15 +615,16 @@ run_binary() {
   shift 2
   local run_flags=()
   [[ "${1:-}" != "-run" ]] || run_flags=(-test.run="$2")
-  t0="$(lane_now)"
+  t0="${EPOCHREALTIME:-$(date +%s)}"
   ( cd "$rel" && "$BIN_DIR/$rel/integration.test" -test.paniconexit0 -test.v=true -test.count=1 \
       -test.timeout="$IT_TIMEOUT" "${run_flags[@]+"${run_flags[@]}"}" -test.gocoverdir="$coverdir" ) || st=$?
-  t1="$(lane_now)"
-  LC_ALL=C awk -v st="$st" -v pkg="$rel" -v t0="$t0" -v t1="$t1" \
-    'BEGIN { printf "%s\t%s\t%.3fs\n", (st == 0 ? "ok  " : "FAIL"), pkg, t1 - t0 }'
+  t1="${EPOCHREALTIME:-$(date +%s)}"
+  local verdict="ok  "
+  (( st == 0 )) || verdict=FAIL
+  printf '%s\t%s\t%ss\n' "$verdict" "$rel" "$(lane_elapsed "$t0" "$t1")"
   return "$st"
 }
-export -f run_one run_binary lane_now owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin bucket_for
+export -f run_one run_binary lane_elapsed lane_micros owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin bucket_for
 # The workers run in re-exec'd shells, so a variable run_one reads must be
 # exported and not merely set. REDIS_DBS is the only one: unexported it expands
 # to empty, and `% ` is a division by zero rather than a wrong db.
