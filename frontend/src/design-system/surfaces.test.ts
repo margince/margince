@@ -43,20 +43,15 @@ import {
   OPAQUE,
   PSEUDO_ELEMENT,
   probe,
+  ref,
   sheets,
   TYPE,
   VAR,
   type Written,
   within,
   written,
-} from "./surfaces-testing";
+} from "../../scripts/lib/surface-sheets";
 import { blocks, resolve } from "./tokens-testing";
-
-// Probes name properties no sheet defines; spelling the call through this keeps
-// the undefined-property gate from reading a fixture as shipped CSS. Kept in
-// the test file: the ladder's own scan reads every non-test module, and this
-// spells `var(`.
-const ref = (property: string) => `var(${property})`;
 
 // A rule outside surfaces.css that names a rung or paints a member overrules the ladder. The ledger holds what predates it; the ceiling keeps it shrinking.
 const LEDGER_CEILING = { spellings: 76, states: 6 };

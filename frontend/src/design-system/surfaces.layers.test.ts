@@ -22,17 +22,12 @@ import {
   OPAQUE,
   PSEUDO_ELEMENT,
   probe,
+  ref,
   STATE,
   within,
   written,
-} from "./surfaces-testing";
+} from "../../scripts/lib/surface-sheets";
 import { themes } from "./tokens-testing";
-
-// Probes name properties no sheet defines; spelling the call through this keeps
-// the undefined-property gate from reading a fixture as shipped CSS. Kept in
-// the test file: the ladder's own scan reads every non-test module, and this
-// spells `var(`.
-const ref = (property: string) => `var(${property})`;
 
 // A layer stacked under a pane shows through it unless the pane's host paints
 // the ground first. Read from the same sheets as surfaces.test.ts.

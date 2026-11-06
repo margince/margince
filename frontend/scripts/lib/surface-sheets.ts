@@ -14,17 +14,25 @@ import {
   rulesOf,
   simpleSelectorsOf,
   splitTopLevel,
-} from "../../scripts/lib/css-rules";
-import { ladderLists } from "../../scripts/lib/surface-ladder";
+} from "./css-rules";
+import { ladderLists } from "./surface-ladder";
 
 // What the surface gates read: the app's sheets, the ladder and the parsing
 // both surfaces.test.ts and surfaces.layers.test.ts apply to them, kept once.
+// Here rather than in src/, so the app's typecheck never compiles it, and the
+// ladder's scan of src/ never reads `ref` as a spelling.
 
-export const here = dirname(fileURLToPath(import.meta.url));
-export const frontendRoot = join(here, "..", "..");
+export const frontendRoot = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+);
+export const here = join(frontendRoot, "src", "design-system");
 export const ladderPath = join(here, "surfaces.css");
 export const ladderText = readFileSync(ladderPath, "utf8");
 
+// Probes name properties no sheet defines; spelling the call through this keeps the undefined-property gate from reading a fixture as shipped CSS.
+export const ref = (property: string) => `var(${property})`;
 export const VAR = /var\((--[\w-]+)\)/g;
 export const ALIAS = /^var\((--[\w-]+)\)$/;
 export const OPAQUE = /^#[0-9a-f]{6}$/i;
