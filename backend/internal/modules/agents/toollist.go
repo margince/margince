@@ -122,11 +122,11 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 }
 
 // askUserFirst tells the client to get the user's yes before a call that runs
-// with no human approval and cannot be undone. A call a human approves already
-// gets that yes, so it is never named here.
+// with no human approval. It is a request to the model, which the server does not
+// check. A call a human approves already gets that yes, so it is never named here.
 func askUserFirst(spec mcp.ToolSpec) string {
-	const ask = "; %s cannot be undone, so tell the user what the call will change and " +
-		"get their yes before calling, unless they asked for this call themselves"
+	const ask = "; the user's yes is needed for %s, so tell them what the call will change and " +
+		"get it before calling, unless they asked for this call themselves"
 	if len(spec.Actions) == 0 {
 		if !spec.AskUserFirst || spec.Tier == mcp.TierConfirmationRequired {
 			return ""

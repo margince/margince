@@ -176,7 +176,7 @@ func checkReferences(ctx context.Context, tx pgx.Tx, origin *string, owner *ids.
 		}
 	}
 	if owner != nil {
-		return auth.EnsureRoutedLeadOwner(ctx, tx, *owner)
+		return auth.EnsureNewRecordOwner(ctx, tx, *owner)
 	}
 	return nil
 }

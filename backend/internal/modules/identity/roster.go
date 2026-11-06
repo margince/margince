@@ -84,10 +84,11 @@ type userRow struct {
 	// ServiceExtension names the extension unit a service member serves; nil
 	// for every other seat.
 	ServiceExtension *string
-	// Assignable is whether the caller may make this member a record's owner;
-	// nil when the read did not ask.
+	// Assignable is whether the caller may name this member as an automation's
+	// owner. That owner must lie inside the caller's write scope. Nil when unasked.
 	Assignable *bool
-	// CanOwnRecords is the seat half of Assignable, without the caller's scope.
+	// CanOwnRecords is whether the seat may own records at all: the check a
+	// record's owner change runs, the same for every caller.
 	CanOwnRecords *bool
 	// ConnectedMailboxes counts live capture connections; nil when not read.
 	ConnectedMailboxes *int

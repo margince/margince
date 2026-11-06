@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useSeatedOwnerOptions } from "../../components/assigneepicker";
+import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import {
   EntityRef,
   RosterFailedLine,
@@ -27,7 +27,7 @@ export function OwnerField({
   onChange: (ownerId: string) => void;
 }>) {
   const t = useT();
-  const { options, roster } = useSeatedOwnerOptions();
+  const { options, roster } = useRecordOwnerOptions();
   const partial = useRosterPartial("user", true);
   const departed = useDepartedName(ownerId || null);
   const unlisted =

@@ -25,8 +25,8 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 		"liftSuppression": {scopeWrite, true}, "recordQualifyingEvent": {scopeWrite, true},
 		"retractQualifyingEvent": {scopeWrite, true},
 		"issueDoubleOptIn":       {scopeSend, true}, "sendPrivacyNotice": {scopeSend, true}, "requestDetailsConfirmation": {scopeSend, true},
-		// A contact asking to stop is recorded at once: a delay would keep mailing them.
-		"suppressContact": {scopeWrite, false},
+		// A contact asking to stop has legal weight. The marker asks the model; the server still records it at once.
+		"suppressContact": {scopeWrite, true},
 	}
 	verbs := map[string]agents.RouteVerb{}
 	for _, v := range RouteVerbs() {

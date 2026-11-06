@@ -169,11 +169,6 @@
   }
 }
 
-/* The ⓘ beside a heading: a bare glyph in the secondary ink. */
-.webhook-help {
-  color: var(--textSecondary);
-}
-
 /* Target and state at two to one, as the mockup sets them. */
 .webhook-target-row > .field:first-child {
   flex: 2 1 280px;
@@ -224,11 +219,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.webhook-help svg {
-  width: var(--controlIcon);
-  height: var(--controlIcon);
 }
 
 /* The ⓘ sits right after its label, as on every other section here. */

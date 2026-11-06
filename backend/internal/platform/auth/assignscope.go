@@ -34,28 +34,31 @@ func (e *AssigneeNotAllowedError) FieldFault() (field, code, message string) {
 	return "owner_id", "owner_not_assignable", e.Error()
 }
 
-// AssigneeEligibleSQL is the destination arm, and it is deliberately NOT the
-// write arm.
+// AssigneeEligibleSQL is the destination arm: an active, unarchived human seat
+// that can write. The caller's write scope is not asked, or an own-scope seat
+// could hand work to nobody but itself.
 //
-// A seat may be handed work when it is a live human seat that can do the work —
-// active, unarchived, not an agent, and holding a seat that can write — AND it
-// falls inside the caller's own write scope. The scope half reuses
-// ownerPredicate so the rule is spelled once: after the assignment lands, the
-// row sits inside the write scope the caller already had, which is what makes
-// "assign" incapable of pushing a record somewhere its assigner cannot follow.
-//
+// The source half (EnsureAssignable, or the update's write arm) keeps a caller
+// to the records they may change.
 // Held by: TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked (backend/gates/assigneeeligibility_test.go)
-//
-// The grant arm of writeAuthorityPredicateAs is deliberately absent. A share
-// names ONE record; it says who may change that row, never who may receive
-// other rows. Reading it here would let a single write share on one lead widen
-// the assigner's whole destination pool.
-func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int) string {
+func AssigneeEligibleSQL(alias string) string {
 	return fmt.Sprintf(
 		`%[1]s
-		   AND NOT %[2]s.is_agent AND %[2]s.seat_type <> 'read'
-		   AND %[3]s`,
-		workforce.LiveMemberSQL(alias), alias, ownerPredicate(p, arg, unownedIsNobodys)(alias))
+		   AND NOT %[2]s.is_agent AND %[2]s.seat_type <> 'read'`,
+		workforce.LiveMemberSQL(alias), alias)
+}
+
+// runAsOwnerSQL is AssigneeEligibleSQL for an owner a record RUNS AS, such as
+// an automation or a webhook. Naming that owner is acting for them, so they
+// must also sit inside the caller's write scope. A share is not read: it names
+// one row, never whom the caller may act for.
+func runAsOwnerSQL(p principal.Principal, alias string, arg func(any) int) string {
+	return AssigneeEligibleSQL(alias) + " AND " + ownerPredicate(p, arg, unownedIsNobodys)(alias)
+}
+
+// recordOwnerSQL is AssigneeEligibleSQL in the shape ensureAssigneeWith asks.
+func recordOwnerSQL(_ principal.Principal, alias string, _ func(any) int) string {
+	return AssigneeEligibleSQL(alias)
 }
 
 // newRecordOwnerSQL is AssigneeEligibleSQL for a NEW record's named owner,
@@ -69,59 +72,56 @@ func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int)
 // Derived from AssigneeEligibleSQL rather than spelled again, so every other
 // clause stays the one rule; TestANewRecordMayNameAnInvitedOwner holds the
 // swap.
-func newRecordOwnerSQL(p principal.Principal, alias string, arg func(any) int) string {
-	return strings.Replace(AssigneeEligibleSQL(p, alias, arg),
+func newRecordOwnerSQL(_ principal.Principal, alias string, _ func(any) int) string {
+	return strings.Replace(AssigneeEligibleSQL(alias),
 		workforce.LiveMemberSQL(alias), workforce.ActivatableMemberSQL(alias), 1)
 }
 
-// EnsureAssignee answers whether the caller may hand work to dest.
-//
-// The scope question is asked of a HYPOTHETICAL row: the app_user row is
-// selected with its own id aliased as owner_id, so the write-scope owner
-// predicate — which knows only how to read an owner_id — answers "would a row
-// owned by dest be mine to change?". That is the same predicate the write path
-// runs, rather than a second reading of the same rule that could drift from it.
-//
-// An unbounded seat still passes through the eligibility half: admin may assign
-// to anyone, and "anyone" has never included a suspended seat or an agent.
+// EnsureAssignee answers whether the caller may hand a record to dest: a live
+// human seat that can write. An unbounded seat asks the same, because "anyone"
+// has never included a suspended seat or an agent.
 func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
-	return ensureAssigneeWith(ctx, tx, dest, AssigneeEligibleSQL)
+	return ensureAssigneeWith(ctx, tx, dest, recordOwnerSQL)
+}
+
+// EnsureRunAsOwner is EnsureAssignee for an owner the record runs as
+// (runAsOwnerSQL): dest must also fall inside the caller's own write scope.
+//
+// The scope is asked of a HYPOTHETICAL row: app_user's id is aliased as
+// owner_id, so the owner predicate answers "would dest's row be mine?".
+func EnsureRunAsOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
+	return ensureAssigneeWith(ctx, tx, dest, runAsOwnerSQL)
 }
 
 // EligibleAssignees answers EnsureAssignee for many seats in one query. It
-// returns the candidates the caller may make an owner. It asks the same
-// hypothetical row, so a picker built on it offers what the write accepts.
+// returns the candidates the caller may make an owner, so a picker built on it
+// offers what the write accepts.
 func EligibleAssignees(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
+	return eligibleAmong(ctx, tx, candidates, func(func(any) int) string { return AssigneeEligibleSQL("u") })
+}
+
+// EligibleRunAsOwners answers EnsureRunAsOwner for many seats in one query, so
+// an automation's owner picker offers only the owners its write accepts.
+func EligibleRunAsOwners(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return eligibleAssigneesAs(ctx, tx, p, candidates)
+	return eligibleAmong(ctx, tx, candidates, func(arg func(any) int) string { return runAsOwnerSQL(p, "u", arg) })
 }
 
-// EligibleHandOverRecipients answers EnsureHandOverRecipient for many seats in
-// one query: the seat half of EligibleAssignees, without the caller's scope.
-func EligibleHandOverRecipients(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return eligibleAssigneesAs(ctx, tx, consentedAssigner(p), candidates)
-}
-
-func eligibleAssigneesAs(ctx context.Context, tx pgx.Tx, p principal.Principal, candidates []ids.UUID) (map[ids.UUID]bool, error) {
+func eligibleAmong(ctx context.Context, tx pgx.Tx, candidates []ids.UUID, predicate func(arg func(any) int) string) (map[ids.UUID]bool, error) {
 	eligible := make(map[ids.UUID]bool, len(candidates))
 	if len(candidates) == 0 {
 		return eligible, nil
 	}
-	var args []any
+	args := []any{candidates}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	candidatesPos := arg(candidates)
 	query := fmt.Sprintf(
 		`SELECT u.owner_id FROM (
 		   SELECT id AS owner_id, status, archived_at, is_agent, seat_type
-		   FROM app_user WHERE id = ANY($%d)) u WHERE %s`,
-		candidatesPos, AssigneeEligibleSQL(p, "u", arg))
+		   FROM app_user WHERE id = ANY($1)) u WHERE %s`,
+		predicate(arg))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("ask which seats may own records: %w", err)
@@ -142,15 +142,6 @@ func EnsureNewRecordOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 	return ensureAssigneeWith(ctx, tx, dest, newRecordOwnerSQL)
 }
 
-// EnsureRoutedLeadOwner is EnsureNewRecordOwner for the owner a website form
-// hands every new lead to. The installation writes those leads, never the one
-// who set up the form, so their row scope is not asked; the seat half is.
-func EnsureRoutedLeadOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
-	return ensureAssigneeWith(ctx, tx, dest, func(p principal.Principal, alias string, arg func(any) int) string {
-		return newRecordOwnerSQL(consentedAssigner(p), alias, arg)
-	})
-}
-
 func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	eligible func(principal.Principal, string, func(any) int) string,
 ) error {
@@ -162,12 +153,10 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	destPos := arg(dest)
 
-	// An owner a case admission names already holds a merged contact, and a
-	// consented receiver agreed to take the record. So the caller's scope is not
-	// asked of them, and the seat half still is.
-	if admittedCaseGrantee(ctx, dest) || handOverConsented(ctx, dest) {
-		p = consentedAssigner(p)
-		eligible = AssigneeEligibleSQL
+	// An owner a case admission names already holds a merged contact. The
+	// run-as scope is not asked of them, and an invited seat is not admitted.
+	if admittedCaseGrantee(ctx, dest) {
+		eligible = recordOwnerSQL
 	}
 	status := "status"
 	if consolidatingInto(ctx, dest) {
@@ -196,6 +185,13 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 		noteRefusal(ctx, assigneeRefusal)
 	}
 	return refuseIneligibleAssignee(false)
+}
+
+// consentedAssigner is the caller with an unbounded row scope, so a predicate's
+// scope half reads TRUE and only its seat half is asked.
+func consentedAssigner(p principal.Principal) principal.Principal {
+	p.Permissions.RowScope = principal.RowScopeAll
+	return p
 }
 
 // assigneeAdmitted asks whether the seat bound at destPos passes the
@@ -302,11 +298,23 @@ func ensureAssignableSource(ctx context.Context, tx pgx.Tx, table string, id ids
 // uneditable by anyone until somebody first handed it elsewhere — the record a
 // departed colleague leaves behind, frozen exactly when it needs picking up.
 func EnsureOwnerHandOn(ctx context.Context, tx pgx.Tx, current *ids.UUID, next *ids.UserID) error {
+	return ensureHandOnWith(ctx, tx, current, next, EnsureAssignee)
+}
+
+// EnsureRunAsOwnerHandOn is EnsureOwnerHandOn for an owner the record runs as,
+// asking EnsureRunAsOwner of a changed owner.
+func EnsureRunAsOwnerHandOn(ctx context.Context, tx pgx.Tx, current *ids.UUID, next *ids.UserID) error {
+	return ensureHandOnWith(ctx, tx, current, next, EnsureRunAsOwner)
+}
+
+func ensureHandOnWith(ctx context.Context, tx pgx.Tx, current *ids.UUID, next *ids.UserID,
+	ensure func(context.Context, pgx.Tx, ids.UUID) error,
+) error {
 	if next == nil {
 		return nil
 	}
 	if current != nil && *current == next.UUID {
 		return nil
 	}
-	return EnsureAssignee(ctx, tx, next.UUID)
+	return ensure(ctx, tx, next.UUID)
 }

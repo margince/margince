@@ -155,7 +155,7 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"decide_legacy_loss_reason": func(p *recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"reason_key": p.take("loss_reason_key")}}
 	},
-	"discard_mail_draft":    byID("mail_draft"),
+	"discard_mail_draft":    byID("agent_mail_draft"),
 	"get_scheduled_send":    byID("scheduled_send"),
 	"cancel_scheduled_send": byID("scheduled_send"),
 	"reschedule_scheduled_send": func(p *recordPool) map[string]any {
@@ -223,6 +223,7 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"update_deal_room_participant": inRoom("room_participant", "participantId"),
 	"resend_deal_room_invitation":  inRoom("room_participant", "participantId"),
 	"resolve_deal_room_thread":     inRoom("room_thread", "threadId"),
+	"reply_deal_room_thread":       inRoom("room_thread", "threadId"),
 	"resume_deal_room":             byID("paused_room"),
 	"draft_intro_note": func(p *recordPool) map[string]any {
 		contact := p.take("routed_contact")

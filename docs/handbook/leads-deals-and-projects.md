@@ -44,7 +44,7 @@ Captured activity sets Contacted and Engaged automatically. An imported reply al
 
 You may move an open lead to any open step, forward or back, on its **Lead status** ladder. Margince itself only ever moves it forward.
 
-On the leads board, the **Qualified** and **Disqualified** columns follow the board's filters, both their counts and their cards. When a filter cannot be counted, such as a search or tags, the count is withheld and the column says why. If the owner filter names someone whose figures you may not see, it says "No count for this owner’s leads. Only an administrator can let you measure them." If the counts or the leads fail to load, the board offers **Retry**.
+On the leads board, the **Qualified** and **Disqualified** columns follow the board's filters, both their counts and their cards. When a filter cannot be counted, such as a search or tags, the count is withheld and the column says why. An open column lists a page of matching leads, and **Load more** at its foot adds the next page. If the owner filter names someone whose figures you may not see, it says "No count for this owner’s leads. Only an administrator can let you measure them." If the counts or the leads fail to load, the board offers **Retry**.
 
 ### How do I qualify a lead or convert it into a deal?
 To qualify a lead in Margince, open the lead and choose **Qualify**. The dialog offers deal choices.
@@ -228,7 +228,7 @@ Also called: move a deal to another account, attach a deal to a project.
 To reassign a deal to a colleague in Margince, open the deal and press the **Owner** row of its **Details** panel. Pick the colleague in the dialog and press **Save**.
 
 To reassign many, switch **Deals** to **Table** and tick them. Use **Pick an owner** → **Assign owner** in the bulk bar, then **Change owner**.
-The new owner must be "an active colleague you may assign work to". That is a user on a full seat, not an agent, within your own reach.
+The new owner must be "an active colleague you may assign work to". That is any active colleague on a full seat, not an agent, even one whose records you cannot change. You may reassign only a deal you may change, or one with no owner.
 Also called: hand over a deal, change deal owner, transfer an opportunity.
 
 ### Can I edit a closed or archived deal?

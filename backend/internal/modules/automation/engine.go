@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -51,6 +52,9 @@ type WorkflowEngine struct {
 	resolver authz.Resolver
 	// pauses stops a list rule and tells its owner why (listrulefire.go).
 	pauses *RulePauser
+	// clock fixes the instant a setter's expiry is judged at; nil reads the
+	// database's own clock, the one authentication judges a passport by.
+	clock func() time.Time
 }
 
 // NewWorkflowEngine builds the engine over the pool and the authz resolver
@@ -66,6 +70,12 @@ func NewWorkflowEngine(db *database.DB, resolver authz.Resolver) *WorkflowEngine
 // firing instead.
 func (e *WorkflowEngine) WithRulePauses(notifier PauseNotifier, lists Lists) *WorkflowEngine {
 	e.pauses = NewRulePauser(e.db, notifier, lists)
+	return e
+}
+
+// SetClock fixes the instant a setter's expiry is judged at.
+func (e *WorkflowEngine) SetClock(clock func() time.Time) *WorkflowEngine {
+	e.clock = clock
 	return e
 }
 
@@ -193,7 +203,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 func (e *WorkflowEngine) dispatch(ctx context.Context, h workflow.Handler, ev workflow.Event, version int64) error {
 	if rule, ok := h.(listRule); ok {
 		// Before the fan-out, so a check that moved no records still stops the rule.
-		if stop, err := e.stopIfSetterRevoked(ctx, ev); stop || err != nil {
+		if stop, err := e.stopIfSetterLapsed(ctx, ev); stop || err != nil {
 			return err
 		}
 		return e.fireListRule(ctx, rule, ev, version)

@@ -30178,6 +30178,9 @@ type AgentClientRegisteredBy string
 
 // AgentClientListResponse defines model for AgentClientListResponse.
 type AgentClientListResponse struct {
+	// ClientCheck Whether admins' AI tools are offered the `check_client` tool. Change it with
+	// `mcp_client_check` on `PATCH /installation/settings`.
+	ClientCheck  bool                    `json:"client_check"`
 	Data         []AgentClient           `json:"data"`
 	Page         PageInfo                `json:"page"`
 	Registration AgentClientRegistration `json:"registration"`
@@ -34318,20 +34321,23 @@ type Automation struct {
 	OwnerId *openapi_types.UUID    `json:"owner_id,omitempty"`
 	Params  map[string]interface{} `json:"params"`
 
-	// PausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the passport of the agent that set the rule up was revoked. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
+	// PausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
 	PausedReason *AutomationPausedReason `json:"paused_reason,omitempty"`
 
 	// RunsLast30Days Runs other than skipped ones in the 30 days before the server read the list. Every GET /automations item carries it, 0 for a rule that has not run; a single read, a create and an update leave it out.
-	RunsLast30Days *int             `json:"runs_last_30_days,omitempty"`
-	Status         AutomationStatus `json:"status"`
-	UpdatedAt      *time.Time       `json:"updated_at,omitempty"`
-	Version        *int             `json:"version,omitempty"`
+	RunsLast30Days *int `json:"runs_last_30_days,omitempty"`
+
+	// SetterPassportId The passport of the agent that turned this rule on, which the rule stops with. Null for a rule a user runs. It names the credential and grants nothing: `captured_by` shows the same id on what an agent writes.
+	SetterPassportId *openapi_types.UUID `json:"setter_passport_id,omitempty"`
+	Status           AutomationStatus    `json:"status"`
+	UpdatedAt        *time.Time          `json:"updated_at,omitempty"`
+	Version          *int                `json:"version,omitempty"`
 }
 
 // AutomationLastRunOutcome How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
 type AutomationLastRunOutcome string
 
-// AutomationPausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the passport of the agent that set the rule up was revoked. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
+// AutomationPausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
 type AutomationPausedReason string
 
 // AutomationStatus defines model for Automation.Status.
@@ -34400,7 +34406,8 @@ type AutomationRetryResult struct {
 	// means nobody has established that running this handler twice is safe.
 	// `trigger_event_unavailable` means the event cannot be rebuilt, which is
 	// permanent for a scheduled firing rather than a condition that clears.
-	// `passport_revoked` means the rule stopped with the passport that set it up.
+	// `passport_revoked` means the rule stopped with the agent that set it up, whose passport
+	// or connection was revoked or expired.
 	Refusal *AutomationRetryResultRefusal `json:"refusal,omitempty"`
 
 	// Retried True when the firing was re-dispatched. It does NOT promise the firing then
@@ -34414,7 +34421,8 @@ type AutomationRetryResult struct {
 // means nobody has established that running this handler twice is safe.
 // `trigger_event_unavailable` means the event cannot be rebuilt, which is
 // permanent for a scheduled firing rather than a condition that clears.
-// `passport_revoked` means the rule stopped with the passport that set it up.
+// `passport_revoked` means the rule stopped with the agent that set it up, whose passport
+// or connection was revoked or expired.
 type AutomationRetryResultRefusal string
 
 // AutomationRun One firing of an automation, reconstructed from audit_log/automation_run (data-model §12.5). Runs of
@@ -41362,11 +41370,11 @@ type ContactStop struct {
 	Reason     *string   `json:"reason,omitempty"`
 	RecordedAt time.Time `json:"recorded_at"`
 
-	// RecordedByColleague A colleague recorded the stop. False when the contact recorded it on a link in a mail or
-	// Margince recorded it, for example for a bounce.
+	// RecordedByColleague A colleague recorded the stop, by hand or through their agent. False when the contact recorded
+	// it on a link in a mail or Margince recorded it, for example for a bounce.
 	RecordedByColleague bool `json:"recorded_by_colleague"`
 
-	// RecordedByName The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+	// RecordedByName The colleague's current name, the user an agent acted for included. Null when no colleague recorded it, or their seat is gone.
 	RecordedByName *string `json:"recorded_by_name,omitempty"`
 }
 
@@ -53126,7 +53134,7 @@ type OpenDealRoomThreadRequest struct {
 	// RequiredChange Only with a document. Marks the thread as one the seller still owes an answer on.
 	RequiredChange *bool `json:"required_change,omitempty"`
 
-	// Source Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product.
+	// Source Provenance. A user's client names it on the seller edge. An agent that omits it records `agent`, and a buyer's comment always records the credential.
 	Source *string `json:"source,omitempty"`
 }
 
@@ -53611,7 +53619,9 @@ type PostDealRoomCommentRequest struct {
 	// saying the same thing twice on purpose is allowed, and a key derived from
 	// the text would refuse the second one.
 	RequestId *openapi_types.UUID `json:"request_id,omitempty"`
-	Source    *string             `json:"source,omitempty"`
+
+	// Source Provenance. A user's client names it on the seller edge. An agent that omits it records `agent`, and a buyer's comment always records the credential.
+	Source *string `json:"source,omitempty"`
 }
 
 // PreferenceCenter The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose
@@ -62009,6 +62019,11 @@ type UpdateInstallationSettingsRequest struct {
 	// IndividualPerformance Show individual performance. Omit to leave it unchanged. Each change is audited.
 	IndividualPerformance *bool `json:"individual_performance,omitempty"`
 
+	// McpClientCheck Offer the `check_client` tool to admins' AI tools, so an admin can test which tools
+	// answer a form. Off by default; off, no one sees the tool. Needs `agent_client`
+	// update. Read as `client_check` on `GET /installation/agent-clients`.
+	McpClientCheck *bool `json:"mcp_client_check,omitempty"`
+
 	// MetadataDocumentClients Accept a client ID that is the URL of the tool's published metadata document (CIMD).
 	// Off stops new sign-ins through such a client; connections already made keep renewing.
 	// Needs `agent_client` update. The deployment file can hold it off.
@@ -62651,10 +62666,10 @@ type User struct {
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
-	// Assignable Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
+	// Assignable Whether the CALLER may name this member as an owner an automation runs as: an active human seat that can write, inside the caller's own write scope. An automation's owner picker is built on it. A record's owner picker reads `can_own_records` instead. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
 	Assignable *bool `json:"assignable,omitempty"`
 
-	// CanOwnRecords Whether this member's seat may own records at all: an active human seat that can write, asked without the caller's own write scope. A website form's owner of new leads is checked this way, because the installation writes those leads, so its picker offers these members. Present on `listUsers`; absent means not computed.
+	// CanOwnRecords Whether this member's seat may own records: an active human seat that can write. The answer is the same for every caller. A record's owner change asks this of the new owner. It also needs the caller to be allowed to change the record, unless the record has no owner and the caller is a human. Every record owner picker and a website form's owner of new leads read it. A form's new leads may also go to an invited colleague, so its picker offers fewer members than its write accepts. Present on `listUsers`; absent means not computed.
 	CanOwnRecords *bool `json:"can_own_records,omitempty"`
 
 	// ConnectedMailboxes How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture.
@@ -62706,9 +62721,12 @@ type User struct {
 	// Timezone The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
 	Timezone *string `json:"timezone,omitempty"`
 
-	// TimezoneChosen Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
-	TimezoneChosen *bool      `json:"timezone_chosen,omitempty"`
-	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
+	// TimezoneChosen Whether the user chose `timezone` themselves, rather than the app storing the browser's guess or an agent setting it. Present on the caller's own seat; absent on the roster.
+	TimezoneChosen *bool `json:"timezone_chosen,omitempty"`
+
+	// TimezoneSetBy The agent that set `timezone` for this user, as its `captured_by` stamp. Present on the caller's own seat while the zone is the agent's; absent once the user chooses, and on the roster.
+	TimezoneSetBy *string    `json:"timezone_set_by,omitempty"`
+	UpdatedAt     *time.Time `json:"updated_at,omitempty"`
 }
 
 // UserAllowedActions defines model for User.AllowedActions.

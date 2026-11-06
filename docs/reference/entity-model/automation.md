@@ -18,8 +18,8 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | `origin` | `text`, default `'catalog'::text` | yes | One of `catalog`, `agent_authored`. |
 | `owner_id` | `uuid` |  | The member the rule runs as. |
 | `params` | `jsonb`, default `'{}'::jsonb` | yes |  |
-| `paused_reason` | `text` |  | Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the passport of the agent that set the rule up was revoked. |
-| `setter_passport_id` | `uuid` |  | Points at `passport.id`. |
+| `paused_reason` | `text` |  | Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. |
+| `setter_passport_id` | `uuid` |  | The passport of the agent that turned this rule on, which the rule stops with. |
 | `tier` | `text`, default `'confirmation_required'::text` | yes | One of `auto_execute`, `confirmation_required`. |
 | `trigger` | `jsonb` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |

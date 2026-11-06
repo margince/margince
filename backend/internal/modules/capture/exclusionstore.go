@@ -182,7 +182,7 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 			  INSERT INTO capture_exclusion (scope, user_id, kind, value, created_by)
 			  VALUES ($1, $2, $3, $4, $5)
 			  ON CONFLICT (scope, user_id, kind, value)
-			    DO UPDATE SET value = EXCLUDED.value
+			    DO UPDATE SET value = EXCLUDED.value, created_by = `+fmt.Sprintf(agentDecisionTakeoverSQL, "capture_exclusion")+`
 			  RETURNING id, scope, user_id, kind, value, created_at, created_by)
 			SELECT `+exclusionColumns,
 			scope, userID, kind, value, actor.ID), &out); err != nil {
@@ -210,8 +210,9 @@ func (s *ExclusionStore) Remove(ctx context.Context, id ids.UUID) error {
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var e Exclusion
-		err := tx.QueryRow(ctx, `SELECT id, scope, user_id, kind, value FROM capture_exclusion WHERE id = $1`, id).
-			Scan(&e.ID, &e.Scope, &e.UserID, &e.Kind, &e.Value)
+		var createdBy string
+		err := tx.QueryRow(ctx, `SELECT id, scope, user_id, kind, value, created_by FROM capture_exclusion WHERE id = $1 FOR UPDATE`, id).
+			Scan(&e.ID, &e.Scope, &e.UserID, &e.Kind, &e.Value, &createdBy)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -224,6 +225,9 @@ func (s *ExclusionStore) Remove(ctx context.Context, id ids.UUID) error {
 			}
 		} else if e.UserID == nil || *e.UserID != actor.UserID {
 			return apperrors.ErrNotFound
+		}
+		if err := refuseAgentOverAUsersDecision(actor, &createdBy, "this exclusion"); err != nil {
+			return err
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM capture_exclusion WHERE id = $1`, id); err != nil {
 			return fmt.Errorf("capture: removing an exclusion: %w", err)

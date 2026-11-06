@@ -145,7 +145,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		// the floor carry in the same transaction.
 		Country:      req.Country,
 		CallWhatsApp: req.CallWhatsapp, CallTelegram: req.CallTelegram, CallZalo: req.CallZalo, IndividualPerformance: req.IndividualPerformance, ForecastSelfCorrecting: req.ForecastSelfCorrecting,
-		ForecastLikelyThreshold: req.ForecastLikelyThreshold,
+		ForecastLikelyThreshold: req.ForecastLikelyThreshold, McpClientCheck: req.McpClientCheck,
 	}
 	patch.DateFormat = enumText(req.DateFormat)
 	patch.TimeFormat = enumText(req.TimeFormat)
