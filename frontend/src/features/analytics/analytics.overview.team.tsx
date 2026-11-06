@@ -21,10 +21,12 @@ import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { AssessmentPanel } from "./analytics.assessment";
 import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import type { HandoffScope } from "./analytics.outcomes.handoffpages";
 import { TEAM_PERIODS } from "./analytics.overview.context";
 import { useOverviewNavigation } from "./analytics.overview.navigation";
 import { QualificationNote } from "./analytics.overview.prospecting";
+import { teamPeriod, teamQuestion } from "./analytics.overview.questions";
 import {
   MetricReading,
   OverviewSaveActions,
@@ -35,28 +37,21 @@ import {
   useTeamSummary,
 } from "./analytics.overview.team.standing";
 import { periodCaption } from "./analytics.period";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
 import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   type ReportingMetricID,
-  type ReportingSelection,
   reportingPeriodLabel,
 } from "./reporting.model";
 import { useReportingEvaluation } from "./reporting.queries";
-import { presetRequest, workflowMetrics } from "./reporting.views";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 type Framework = components["schemas"]["ReportingFramework"];
 type Review = components["schemas"]["SdrTeamReview"];
 
 type TeamPeriod = (typeof TEAM_PERIODS)[number];
-
-function teamPeriod(value: string | null | undefined): TeamPeriod {
-  return TEAM_PERIODS.find((period) => period === value) ?? "this_week";
-}
 
 type TeamScope = Readonly<{
   kind: "team" | "workspace" | "managed_teams";
@@ -114,7 +109,6 @@ export function TeamProspecting({
   const { locale } = useLocale();
   const [params] = useUrlParams();
   const period = teamPeriod(params.get("period"));
-  const { metrics: offered, blocks } = presetRequest("team", catalog);
   // Both reads take this one scope, so the figures and the feedback below
   // them always describe the same members.
   const team = teamScope(scope);
@@ -126,15 +120,8 @@ export function TeamProspecting({
         ? "sdr"
         : "sales"
       : undefined);
-  const metrics = workflowMetrics(offered, template);
-  const selection: ReportingSelection = {
-    scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
-    period,
-    target_basis: "month",
-    close_window: "all_open",
-    metrics,
-    blocks: [],
-  };
+  const { selection, blocks } = teamQuestion(catalog, scope, period, template);
+  const { metrics } = selection;
   useOverviewNavigation("team", selection);
   const query = useReportingEvaluation(
     selection,

@@ -22,7 +22,7 @@ function client() {
 }
 
 it("shares the authenticated reads with the screen's query options", async () => {
-  location.hash = "#/analytics/overview";
+  location.hash = "#/analytics/performance";
   const me = meFixture({
     allow: {
       report_definition: ["read"],

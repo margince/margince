@@ -6,8 +6,8 @@ import { QueryGate } from "../../design-system/querystates";
 import { formatDateAbbrev } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { AttentionState } from "./analytics.attention";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ChartPanel } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import type {
   ReportingEvaluation,

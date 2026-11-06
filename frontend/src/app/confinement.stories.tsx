@@ -29,3 +29,11 @@ export const MfaRequiredDark: Story = {
   globals: { theme: "dark" },
   play: ready,
 };
+
+export const PasswordRequired: Story = {
+  args: { kind: "must-change-password" },
+};
+export const PasswordRequiredDark: Story = {
+  args: { kind: "must-change-password" },
+  globals: { theme: "dark" },
+};

@@ -130,6 +130,12 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   complete catalog through `CompleteLocale` and `frontend/src/i18n/lazy.tsx`.
   A language change also loads the complete catalog.
 
+  `frontend/src/app/analytics-prefetch.ts` starts the session read while the app loads.
+  Once the session grants are known, it starts `Analytics` reads in the shared query cache.
+  The opening page and the rendered views use the same functions in
+  `frontend/src/features/analytics/analytics.overview.questions.ts`.
+  Sign-in forms, closed drawers and other `Analytics` sections load when opened.
+
   The order of choice is: the user's own choice, then the languages the browser
   asks for, then the default. English with no setting is `en-GB`, never
   `en-US`. The locale only changes how things show: it never changes what is

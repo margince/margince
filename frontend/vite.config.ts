@@ -93,11 +93,6 @@ const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
 const entries = initialEntries(frontendRoot);
 const bootstrap = entryChunks("bootstrap", entries.bootstrap, 20);
 const startup = entryChunks("startup", entries.startup);
-const analyticsData = entryChunks(
-  "analytics-data",
-  [join(frontendRoot, "src/app/analytics-prefetch.ts")],
-  15,
-);
 const analytics = entryChunks("analytics", entries.analytics);
 
 export default defineConfig({
@@ -109,7 +104,6 @@ export default defineConfig({
           groups: [
             bootstrap.group,
             startup.group,
-            analyticsData.group,
             analytics.group,
             {
               name: "shared",
@@ -133,7 +127,6 @@ export default defineConfig({
     preloadEntries(entries.startup),
     bootstrap.plugin,
     startup.plugin,
-    analyticsData.plugin,
     analytics.plugin,
     react(),
     tailwindcss(),

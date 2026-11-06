@@ -27,3 +27,7 @@ export const ReportingTargets = lazy(async () => ({
 export const ReportBoard = lazy(async () => ({
   default: (await import("./analytics.reportboard")).ReportBoard,
 }));
+
+export const ReportingOverview = lazy(async () => ({
+  default: (await import("./reporting.overview")).ReportingOverview,
+}));

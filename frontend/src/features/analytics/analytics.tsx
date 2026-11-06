@@ -43,6 +43,7 @@ import {
   ReportBoard,
   ReportingDefinitions,
   ReportingLibrary,
+  ReportingOverview,
   ReportingTargets,
   SharedForecastView,
 } from "./analytics.sections";
@@ -52,7 +53,6 @@ import {
   useAnalyticsSections,
 } from "./analytics.tabs";
 import { stagesOfEveryPipeline } from "./pipelinestages";
-import { ReportingOverview } from "./reporting.overview";
 import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
 

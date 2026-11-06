@@ -769,22 +769,28 @@ function dispatchKey(
  * Derived rather than listed: a screen routed there has no rail above it and
  * therefore no page head to line up with.
  */
-function raillessComponents(): ReadonlySet<string> {
+function raillessComponents(source = sourceFileAt(APP)): ReadonlySet<string> {
   const out = new Set<string>();
   const visit = (node: ts.Node) => {
     if (
       ts.isJsxElement(node) &&
       node.openingElement.tagName.getText() === "RaillessFrame"
     ) {
-      for (const root of node.children.flatMap(rootsOfChild)) {
-        if (root.kind === "element") {
-          out.add(root.node.tagName.getText());
-        }
-      }
+      const collect = (child: ts.Node) => {
+        const tag = ts.isJsxElement(child)
+          ? child.openingElement.tagName
+          : ts.isJsxSelfClosingElement(child)
+            ? child.tagName
+            : undefined;
+        if (tag && ts.isIdentifier(tag) && /^[A-Z]/.test(tag.text))
+          out.add(tag.text);
+        ts.forEachChild(child, collect);
+      };
+      node.children.forEach(collect);
     }
     ts.forEachChild(node, visit);
   };
-  visit(sourceFileAt(APP));
+  visit(source);
   return out;
 }
 
@@ -872,6 +878,25 @@ describe("page gutter", () => {
     expect(
       [...NOT_OURS_TO_INSET.keys()].filter((name) => !known.has(name)),
     ).toEqual([]);
+  });
+
+  it("finds railless screens below a provider without exempting HTML tags", () => {
+    const source = ts.createSourceFile(
+      "App.tsx",
+      `
+      const view = <RaillessFrame><CompleteLocale><ResetRoute />
+        <div><AuthScreen /></div>
+      </CompleteLocale></RaillessFrame>;
+    `,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
+    expect([...raillessComponents(source)].sort()).toEqual([
+      "AuthScreen",
+      "CompleteLocale",
+      "ResetRoute",
+    ]);
   });
 
   it("insets every screen that renders inside the railed shell", () => {

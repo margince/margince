@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { analyticsContextOptions } from "../features/analytics/analytics.context";
+import { prefetchOverview } from "../features/analytics/analytics.overview.prefetch";
 import {
   reportingCatalogOptions,
   reportingFrameworkOptions,
@@ -12,6 +13,7 @@ import { pipelinesOptions } from "../lib/pipelines.queries";
 import { parseHash } from "../lib/router";
 import { sessionOptions } from "../lib/session";
 import { installationSettingsOptions } from "../lib/uploadlimit";
+import { currentParams } from "../lib/urlstate";
 
 export async function prefetchAnalytics(client: QueryClient): Promise<void> {
   await client.prefetchQuery(sessionOptions);
@@ -20,15 +22,21 @@ export async function prefetchAnalytics(client: QueryClient): Promise<void> {
   const requests = [
     client.prefetchQuery(analyticsContextOptions),
     client.prefetchQuery(installationSettingsOptions),
-    client.prefetchQuery(companyContextCapabilitiesOptions),
   ];
-  if (holdsAdminRole(me.roles))
-    requests.push(client.prefetchQuery(companyOptions));
   if (grants(me, "report_definition", "read"))
     requests.push(client.prefetchQuery(reportingCatalogOptions));
-  if (grants(me, "reporting_framework", "read"))
-    requests.push(client.prefetchQuery(reportingFrameworkOptions));
   if (grants(me, "deal", "read"))
     requests.push(client.prefetchQuery(pipelinesOptions));
-  await Promise.all(requests);
+  if (grants(me, "reporting_framework", "read"))
+    requests.push(client.prefetchQuery(reportingFrameworkOptions));
+  requests.push(client.prefetchQuery(companyContextCapabilitiesOptions));
+  if (holdsAdminRole(me.roles))
+    requests.push(client.prefetchQuery(companyOptions));
+  const prepare = () => {
+    const route = parseHash(location.hash);
+    return route.screen === "analytics"
+      ? prefetchOverview(client, me, route.id, currentParams())
+      : Promise.resolve();
+  };
+  await Promise.all(requests.map((request) => request.then(prepare)));
 }

@@ -40,11 +40,11 @@ import {
   type Step,
 } from "./reporting.initiativegoal";
 import { MemberFields, MembersTable } from "./reporting.initiativemembers";
+import { initiativeDials } from "./reporting.initiatives";
 import {
   INITIATIVES_KEY,
-  initiativeDials,
   type SalesInitiative,
-} from "./reporting.initiatives";
+} from "./reporting.initiatives.queries";
 import { useMetricNames } from "./reporting.queries";
 import { goalWithProposal, ruleWithProposal } from "./reporting.setupapply";
 

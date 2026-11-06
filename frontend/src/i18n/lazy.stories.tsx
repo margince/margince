@@ -10,7 +10,7 @@ function Reading() {
 }
 const DeferredReading = lazy(async () => ({ default: Reading }));
 const meta: Meta = {
-  title: "App/Deferred language copy",
+  title: "Shell/Deferred language copy",
   render: () => (
     <Suspense fallback={null}>
       <DeferredReading />
