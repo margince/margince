@@ -94,7 +94,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	opts = append(opts, withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
 		agents.WithBaseLanguage(installationLanguage(pool)),
-		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))),
+		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
 		agents.WithChangeWords(agentChangeWords(db)),
 		agents.WithContactCaseMerger(contactCaseMergerSeam(db)))
 	// Approval decisions need the same registered effects as the HTTP path.

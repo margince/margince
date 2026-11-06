@@ -90,7 +90,7 @@ var listRecordTypes = []string{
 // is a wiring defect, not a configuration.
 func RegisterListTool(r *Registry, p datasource.SystemOfRecordProvider, vocabulary FilterVocabulary) {
 	filters := bindableFilters(vocabulary)
-	r.Register(listRecords{p: p, filters: filters, name: r.seats})
+	r.Register(listRecords{p: p, filters: filters, name: r.seats, calendar: r.listCalendar})
 	r.Register(describeListFilters{filters: filters})
 }
 
@@ -115,8 +115,9 @@ func bindableFilters(vocabulary FilterVocabulary) map[string][]listFilter {
 type listRecords struct {
 	p datasource.SystemOfRecordProvider
 	// filters is the published vocabulary per record type, already intersected.
-	filters map[string][]listFilter
-	name    SeatNamer
+	filters  map[string][]listFilter
+	name     SeatNamer
+	calendar ActivityListCalendar
 }
 
 func (t listRecords) Spec() mcp.ToolSpec {
@@ -247,7 +248,15 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(listResult(ctx, t.name, res))
+	out := listResult(ctx, t.name, res)
+	calendar, owed, err := t.activityListCalendar(ctx, args.RecordType, args.Filters)
+	if err != nil {
+		return nil, err
+	}
+	if owed {
+		out.Calendar = &calendar
+	}
+	return json.Marshal(out)
 }
 
 // pageLimit reads the page size, telling an ABSENT argument from an explicit

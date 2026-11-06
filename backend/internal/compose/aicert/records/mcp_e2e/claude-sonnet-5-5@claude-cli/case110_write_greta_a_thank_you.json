@@ -1,5 +1,5 @@
 {
-  "scenario": "case96_put_our_logo_in",
+  "scenario": "case110_write_greta_a_thank_you",
   "criteria": [
     1
   ],
@@ -12,12 +12,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 8,
-    "output_tokens": 1140,
-    "cache_creation_input_tokens": 23567,
-    "cache_read_input_tokens": 295562,
+    "input_tokens": 22,
+    "output_tokens": 2201,
+    "cache_creation_input_tokens": 7185,
+    "cache_read_input_tokens": 713930,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1352
+    "cost_usd": 0.1222
   }
 }

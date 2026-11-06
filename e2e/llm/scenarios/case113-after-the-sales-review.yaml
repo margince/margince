@@ -1,33 +1,42 @@
-# CASE 83 — A decision from a sales review is a change_reports action on its deal, not a plain task.
-name: case83_write_the_decision_down
-criteria: [1]
+# CASE 113 — Two outcomes of a sales review are two change_reports actions: a
+# decision on its deal and the rep's forecast call, in minor units. Neither is a
+# plain task, a note or an edit to the deal.
+name: case113_after_the_sales_review
+criteria: [1, 2]
 writes: true
 
 prompt: |
   From today's sales review: we decided that on Rheinufer Netzmodernisierung we bring in their CFO before the end
-  of the month. I own it. Record it as the review's decision, to be reviewed in four weeks.
+  of the month. I own it. Record it as the review's decision, to be reviewed in four weeks. And record my forecast
+  call for this quarter: 450,000 EUR.
 
 must_call:
   - change_reports
 
 must_call_with:
   - change_reports.action=record_decision
+  - change_reports.action=record_forecast_call
 
 must_call_matching:
   - record_sales_decision~"deal_id"
   - record_sales_decision~CFO
   - record_sales_decision~"owner_id"
   - record_sales_decision~"review_on"
+  - record_forecast_call~"amount_minor": 45000000\b
+  - record_forecast_call~"currency": "EUR"
 
 must_not_call_with:
   - change_state~.
   - archive_record~.
   - change_activities~.
+  - update_record~.
+  - log_activity~.
 
 may_call:
   - find_records
   - search_records
   - read_record
+  - read_forecast
   - read_workspace
   - whoami
 

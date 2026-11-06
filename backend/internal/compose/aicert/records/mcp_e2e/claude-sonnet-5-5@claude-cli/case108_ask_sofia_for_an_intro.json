@@ -1,5 +1,5 @@
 {
-  "scenario": "case87_may_we_write_to_her",
+  "scenario": "case108_ask_sofia_for_an_intro",
   "criteria": [
     1
   ],
@@ -12,12 +12,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 12,
-    "output_tokens": 1369,
-    "cache_creation_input_tokens": 26273,
-    "cache_read_input_tokens": 437742,
+    "input_tokens": 20,
+    "output_tokens": 2712,
+    "cache_creation_input_tokens": 69416,
+    "cache_read_input_tokens": 568808,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1626
+    "cost_usd": 0.3617
   }
 }

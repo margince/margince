@@ -173,6 +173,20 @@ func TestReadWorkspaceListsWhatARoutersActionsTake(t *testing.T) {
 	}
 }
 
+// An action the router runs in process has no route to describe. The refusal
+// points at the router's own inputSchema. Saying the router lacks the action
+// sends a caller to invent the action's arguments.
+func TestAnActionWithNoRouteIsNotDeniedToExist(t *testing.T) {
+	_, err := describeRouterActions{verbs: []RouteVerb{shareRecordVerb}}.Handle(context.Background(),
+		json.RawMessage(`{"router":"change_access","action":"relink_many"}`))
+	if err == nil {
+		t.Fatal("an action with no route was described")
+	}
+	if !strings.Contains(err.Error(), "no route action relink_many") || !strings.Contains(err.Error(), "own inputSchema") {
+		t.Errorf("refusal = %q, want it to say the action has no route and where its arguments are", err)
+	}
+}
+
 // A write that overflows answers {status, truncated}, so its schema admits that
 // and holds nothing back as required. A read is refused instead, and keeps its own.
 func TestAWritesAnswerSchemaAdmitsTheCutAnswer(t *testing.T) {

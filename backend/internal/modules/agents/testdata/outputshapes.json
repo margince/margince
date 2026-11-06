@@ -8202,6 +8202,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "calendar": {
+            "type": "string"
+          },
           "next_cursor": {
             "type": "string"
           },

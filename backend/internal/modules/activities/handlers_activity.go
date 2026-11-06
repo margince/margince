@@ -58,7 +58,22 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ActivityListResponse{Data: activities, Page: pageInfo(page)})
+	out := crmcontracts.ActivityListResponse{Data: activities, Page: pageInfo(page)}
+	if h.listCalendar != nil {
+		kind := ""
+		if in.Kind != nil {
+			kind = *in.Kind
+		}
+		calendar, owed, err := h.listCalendar(r.Context(), kind, in.OccurredAfter != nil || in.OccurredBefore != nil)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		if owed {
+			out.Calendar = &calendar
+		}
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontracts.LogActivityParams) {

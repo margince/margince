@@ -38,11 +38,11 @@ A CLI starts with nothing of yours: `e2e/llm/clean.py` starts it, and the judge,
 
 Records made before this check did not measure a model that knows nothing about Margince. A Claude CLI run read the `CLAUDE.md` and `AGENTS.md` of this repository, and your own settings. Measure those records again before you compare them with a new one. A codex record is in question too if your codex home held plugins, hooks, `memories`, `skills` or an `AGENTS.md`. `ls backend/internal/compose/aicert/records/mcp_e2e*/*@{claude,codex}-cli/` lists them.
 
-**Two passports.** Every scenario runs on a passport that holds `read` and
+**Three passports.** Every scenario runs on a passport that holds `read` and
 `write`, which is what most jobs need. A scenario that sends mail, writes drafts or sets up meetings
 says `passport: wide`. Then the lane gives a second passport that adds the
-`draft` and `send` scopes. Without it, these tools are never in the list the
-model sees.
+`draft` and `send` scopes; `passport: research` adds `enrich`, for AI work. Without
+them, these tools are never in the list the model sees.
 
 The stack of the lane has no connected mailbox and no Telegram bot. So
 a send is refused after the model calls it, and before any data leaves. The
@@ -80,7 +80,7 @@ verdict with `"search": "lexical"`.
 
 ## 3. Run one scenario first
 
-One scenario, with three runs, takes a few minutes, and costs from under a dollar to a few dollars. Credentials go in the environment of the shell you run from.
+One scenario, with up to three runs, takes a few minutes, and costs from under a dollar to a few dollars. Credentials go in the environment of the shell you run from.
 
 ```bash
 # Claude through its CLI
@@ -110,14 +110,14 @@ the result:
 ==> search semantic
 ```
 
-Leave out `SCENARIO=` for the full sweep: every scenario, with three runs each. Add
+Leave out `SCENARIO=` for the full sweep, which section 4 counts. Add
 `E2E_LLM_KEEP=1` to leave the stack up after it ends.
 
 ## 4. Know what a full sweep costs
 
-A full sweep is every scenario, with three runs each: 22 use cases are 66 runs. These
-numbers were measured on the test data, over 21 of them, through the
-routes above. They leave out the calls of the judge (Haiku, through the claude CLI by default).
+A full sweep runs all 70 use cases, each up to three times. A case stops at two runs when both agree, so a sweep makes 140 to 210 runs for each model.
+`E2E_LLM_ALL_RUNS=1` makes all three runs, and is only for when you add one case ([add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md)). The numbers below were
+measured on the test data over 21 cases, through the routes above. They leave out the calls of the judge (Haiku, through the claude CLI by default).
 
 | Model · route | Tokens for a sweep of 21 cases | Cost for a sweep of 21 cases | Time on the clock |
 |---|---|---|---|
@@ -199,24 +199,20 @@ must_end_with:
 After each run, `e2e/llm/endstate.py` finds the record by its type and its whole name, as the app shows it
 (every page of `list_records`). It does this before the lane puts back the snapshot.
 
-It reads the field with `read_record`, through the passport of the lane,
-and compares. A wrong value, a missing record, or two records with one
-name fail the run, such as
+It reads the field with `read_record`, through the passport of the lane, and compares. A wrong value, a
+missing record, or two records with one name fail the run, such as
 `ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect`.
-A read that cannot be made (an error, a field the read does not carry, or a
-reader that fails) is a harness stop. The outcome goes at the end of the
-transcript as an `end_state` event. A `company`, `contact`, `deal`, `lead` or
-`project` can be read by name; another type is one line in `endstate.py`. A
-field that `read_record` leaves out while it is empty, such as a contact's
-`title`, reads as `(empty)` and fails the run.
+A read that cannot be made (an error, a field the read does not carry, or a reader that fails) is a
+harness stop. The outcome goes at the end of the transcript as an `end_state` event. A `company`,
+`contact`, `deal`, `deal_room`, `lead` or `project` can be read by name; another type is one line in
+`endstate.py`. A field that `read_record` leaves out while it is empty, such as a contact's `title`,
+reads as `(empty)` and fails the run.
 
-The reader calls only the tools the server lists, and a router with its view.
-A call by the name a router sends work on to is logged as a call to a tool
-that is not listed. Each
-call is made once per read, because the server limits how often a passport
-calls. If the run called `commit_import`, the reader first waits up to 90
-seconds for that import to stop running. An import that is still running after
-that is a harness stop.
+The reader calls only the tools the server lists, and a router with its view. A call by the name a
+router sends work on to is logged as a call to a tool that is not listed. Each call is made once per
+read, because the server limits how often a passport calls. If the run called `commit_import`, the
+reader first waits up to 90 seconds for that import to stop running. An import that is still running
+after that is a harness stop.
 
 Five more names read something other than a stored field. `records=N` counts
 the records of that type with that whole name. `owner=` and `stage=` compare
@@ -226,6 +222,10 @@ a harness stop. `tag "Name" records=N` counts the contacts, companies, deals
 and leads that carry the word. A lead made a contact, or disqualified, leaves
 `list_records`, so an entry tells the two apart with `records` on the lead and
 on the contact.
+
+`own_draft=` holds when the user's own draft on the record has that subject; an
+agent's draft there fails it. `automation "Name"` reads a rule, with `owner=` as
+a name or `(none)`. `me "email"` reads the lane's own seat through `whoami`.
 
 `e2e/llm/endstate_dry.py --mcp-url URL --token-env NAME` reads every scenario
 with `must_end_with` against a seeded stack, with no model. Nothing has changed

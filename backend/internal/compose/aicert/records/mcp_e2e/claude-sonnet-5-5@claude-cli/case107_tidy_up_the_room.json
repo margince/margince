@@ -1,5 +1,5 @@
 {
-  "scenario": "case101_which_model_reads_our_mail",
+  "scenario": "case107_tidy_up_the_room",
   "criteria": [
     1
   ],
@@ -12,12 +12,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 8,
-    "output_tokens": 865,
-    "cache_creation_input_tokens": 21994,
-    "cache_read_input_tokens": 295994,
+    "input_tokens": 22,
+    "output_tokens": 3788,
+    "cache_creation_input_tokens": 10270,
+    "cache_read_input_tokens": 714625,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1262
+    "cost_usd": 0.1505
   }
 }

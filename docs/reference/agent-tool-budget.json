@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39368,
+    "tokens": 39553,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 819
+    "mean_tool_tokens": 823
   },
   "agents": [
     {
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_workspace",
-      "tokens": 2630
+      "tokens": 2648
     },
     {
       "name": "read_reports",
@@ -97,15 +97,15 @@
     },
     {
       "name": "change_activities",
-      "tokens": 1898
+      "tokens": 1935
     },
     {
       "name": "find_records",
-      "tokens": 1874
+      "tokens": 1908
     },
     {
       "name": "change_state",
-      "tokens": 1872
+      "tokens": 1888
     },
     {
       "name": "change_settings",
@@ -144,16 +144,16 @@
       "tokens": 899
     },
     {
+      "name": "create_record",
+      "tokens": 861
+    },
+    {
       "name": "change_compliance",
       "tokens": 811
     },
     {
       "name": "bulk_update_records",
       "tokens": 798
-    },
-    {
-      "name": "create_record",
-      "tokens": 795
     },
     {
       "name": "read_lists",
@@ -233,7 +233,7 @@
     },
     {
       "name": "read_tags",
-      "tokens": 351
+      "tokens": 358
     },
     {
       "name": "check_availability",
@@ -253,7 +253,7 @@
     },
     {
       "name": "read_project",
-      "tokens": 307
+      "tokens": 314
     },
     {
       "name": "archive_record",

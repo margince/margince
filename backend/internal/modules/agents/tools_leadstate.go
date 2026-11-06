@@ -22,7 +22,7 @@ func (changeState) Spec() mcp.ToolSpec {
 			"company_id":{"description":"set_up_partner: the company"},
 			"partner_kinds":{"description":"set_up_partner, required: one or more of hosting, consulting, strategic or referral"},
 			"partner_role":{"description":"set_up_partner, deprecated: send partner_kinds"},
-			"reason":{"description":"demote, required: why the promotion is reversed. move_project: required when to_phase is closed. Recorded in the audit trail"}}}`),
+			"reason":{"description":"demote, required: why the promotion is reversed, recorded in the audit trail. move_project: required when to_phase is closed; read_project overview lists each phase move with its reason"}}}`),
 	}
 }
 

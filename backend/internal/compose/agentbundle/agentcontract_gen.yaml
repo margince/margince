@@ -38725,6 +38725,18 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Activity'}}
         page: {$ref: '#/components/schemas/PageInfo'}
+        calendar:
+          allOf: [{$ref: '#/components/schemas/ReaderCalendar'}]
+          description: |-
+            Whether the reader's own calendar feeds the meetings this list holds. Present when
+            the list can be read as the reader's diary: narrowed to `kind=meeting`, or to an
+            `occurred_after`/`occurred_before` window with no `kind`. Absent on any other list,
+            and when the reader may not read their own connections.
+    ReaderCalendar:
+      type: string
+      enum: [connected, not_connected, unreadable]
+      description: |-
+        Whether the reader's own calendar connections feed the meetings this product holds.
     UpdateAttachmentMetadataRequest:
       type: object
       description: |-
@@ -52041,8 +52053,7 @@ components:
         plan_coverage:
           $ref: '#/components/schemas/WorklistPlanCoverage'
         calendar:
-          type: string
-          enum: [connected, not_connected, unreadable]
+          $ref: '#/components/schemas/ReaderCalendar'
           description: |-
             Whether the reader's own calendar feeds the meetings this read counts. Present only
             for scope `mine`; a wider scope has no single calendar to answer for.
