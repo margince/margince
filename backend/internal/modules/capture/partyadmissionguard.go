@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -205,18 +206,19 @@ func partyAdmissionHasRoomTx(ctx context.Context, tx pgx.Tx, activity ids.Activi
 	return count+needed <= maxDerivedMeetingLinks-(postCommitLinkReservation-1), nil
 }
 
-// holdPartyAuthorityTx takes the user's authority locks before the ensure locks
-// any record. A member's removal takes them first too, so the admission's later
-// authority read cannot close a lock cycle with it.
-func (s *Sink) holdPartyAuthorityTx(ctx context.Context, tx pgx.Tx, user ids.UUID) error {
-	if s.partyAuthority == nil {
-		return nil
-	}
-	_, _, err := s.partyAuthority.EffectiveAuthorityTx(ctx, tx, user)
-	if errors.Is(err, apperrors.ErrNotFound) {
+// holdPartyAuthorityTx takes the user's authority locks, then the activity, before
+// the ensure writes. A member's removal takes the authority locks first too. The
+// ensure's link insert shares the activity through a trigger. Locking it only
+// after that share would wait on a colleague's import whose recompute waits on it.
+func (s *Sink) holdPartyAuthorityTx(ctx context.Context, tx pgx.Tx, user ids.UUID, activity ids.ActivityID) error {
+	if s.partyAuthority != nil {
+		_, _, err := s.partyAuthority.EffectiveAuthorityTx(ctx, tx, user)
 		// The admission refuses a member who is not live; the lock is held either way.
-		return nil
+		if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+			return err
+		}
 	}
+	_, err := storekit.LockRow(ctx, tx, "activity", activity.UUID, storekit.LiveOnly)
 	return err
 }
 
