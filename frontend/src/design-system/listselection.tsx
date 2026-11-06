@@ -12,8 +12,8 @@ const NOTHING: ReadonlySet<string> = new Set();
 
 /**
  * A list's row selection, by key. Only rows the list holds now count as
- * selected, so a row that left the result set cannot linger as a selection
- * nobody can see to clear. A tick past `limit` adds nothing.
+ * selected. A row that left the result set cannot linger unseen. A tick past
+ * `limit` adds nothing.
  */
 export function useRowSelection<Row>({
   rows,
@@ -46,20 +46,19 @@ export function useRowSelection<Row>({
         }
         return next;
       }),
-    /** Keep exactly these keys selected, e.g. the rows a bulk run refused. */
+    /** Keep only these keys selected, e.g. the rows a bulk run refused. */
     replace: (keys: Iterable<string>) => setPicked(new Set(keys)),
     clear: () => setPicked(NOTHING),
   };
 }
 
 /**
- * What the table offers over a selection: the header box for the rendered
- * page, and "Select all" for every row that matches, up to the limit.
+ * What the table offers over a selection: the header box for the page, and
+ * "Select all" for every matching row, up to the limit.
  *
- * "Select all" asks for the list's next pages one at a time until it holds
- * every row or enough to fill the limit, then ticks them. Each answer grows
- * `rows`, and that growth is what asks for the next page, so no read is ever
- * asked for twice.
+ * "Select all" asks for the next pages one at a time, then ticks the rows. It
+ * stops once it holds every row or enough to fill the limit. Each answer grows
+ * `rows`, and only that growth asks for the next page. No read is asked twice.
  */
 export function useSelectAll<Row>({
   rows,

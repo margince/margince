@@ -15,8 +15,8 @@ const selectPage = en["bulk.selectPage"];
 const selectAll = en["bulk.selectAll"];
 const clearSelection = en["bulk.clearSelection"];
 
-// A list whose server holds `total` rows and answers `perRead` at a time, the
-// way a cursor-paged screen hands its rows and its next-page call to the table.
+// A list whose server holds `total` rows and answers `perRead` at a time.
+// It hands the table its rows and next-page call as a cursor-paged screen does.
 function PagedList({
   total,
   perRead,

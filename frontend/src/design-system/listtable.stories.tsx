@@ -372,11 +372,10 @@ export const PinnedWhileScrolling: Story = {
   ),
 };
 
-// Row selection for a bulk action: the checkbox sits in the identity cell —
-// the one that stays put while the rest scrolls — and the bar above the grid
-// carries the count, the verbs, Select all and Clear selection. The header box
-// ticks the page. Two rows come pre-selected so the bar is on screen; the
-// screen owns what the verbs do.
+// Row selection for a bulk action. The checkbox sits in the identity cell,
+// which stays put while the rest scrolls. The bar above the grid carries the
+// count, the verbs, Select all and Clear selection. The header box ticks the
+// page. Two rows come pre-selected so the bar is on screen.
 function SelectableSurface() {
   const { locale } = useLocale();
   const rows = companies(8);
