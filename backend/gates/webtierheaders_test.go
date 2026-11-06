@@ -96,8 +96,8 @@ func TestTheConsentScreenLeavesAnOAuthPopupItsOpener(t *testing.T) {
 	httpserver.SecureHeaders(identity.Handlers{}.OAuthRouter()).ServeHTTP(rec,
 		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/oauth/authorize", nil))
 	api := rec.Header().Get("Cross-Origin-Opener-Policy")
-	if api == httpserver.OpenerPolicyIsolated {
-		t.Errorf("the api's /oauth/authorize sends %q, which cuts a client's popup off from its opener", api)
+	if api != "unsafe-none" {
+		t.Errorf("the api's /oauth/authorize sends %q, want unsafe-none: anything stricter cuts a client's popup off from its opener", api)
 	}
 	if string(coop[1]) != api {
 		t.Errorf("the consent screen sends Cross-Origin-Opener-Policy %q, /oauth/authorize %q — one popup, one policy", coop[1], api)

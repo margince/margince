@@ -18,10 +18,10 @@ func TestOnlyTheAuthorizeRouteKeepsAPopupsOpener(t *testing.T) {
 	for _, tc := range []struct {
 		method, path, want string
 	}{
-		{http.MethodGet, authorizePath + "?response_type=code&client_id=c1", httpserver.OpenerPolicyPopup},
-		{http.MethodPost, authorizePath, httpserver.OpenerPolicyPopup},
-		{http.MethodGet, "/oauth/unmounted", httpserver.OpenerPolicyIsolated},
-		{http.MethodGet, "/oauth/token", httpserver.OpenerPolicyIsolated},
+		{http.MethodGet, authorizePath + "?response_type=code&client_id=c1", "unsafe-none"},
+		{http.MethodPost, authorizePath, "unsafe-none"},
+		{http.MethodGet, "/oauth/unmounted", "same-origin"},
+		{http.MethodGet, "/oauth/token", "same-origin"},
 	} {
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), tc.method, tc.path, nil))
