@@ -19,12 +19,12 @@ import {
   ruleText,
 } from "../../format/jurisdiction";
 import { lockFor } from "../../format/settinglocks";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { DSR_KIND_LABEL } from "../../lib/privacy.logic";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   AUDIENCE_LABEL,
   DOCUMENT_KIND_LABEL,
@@ -291,6 +291,7 @@ function periodMonths(iso: string): number {
 function EffectsPanel({
   jurisdiction,
 }: Readonly<{ jurisdiction: Jurisdiction }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const selected = jurisdiction.selected ?? null;
@@ -346,12 +347,12 @@ function EffectsPanel({
                       before: formatDate(
                         floor.carried.before,
                         locale,
-                        viewerZone(),
+                        readerZone,
                       ),
                       until: formatDate(
                         floor.carried.binds_until,
                         locale,
-                        viewerZone(),
+                        readerZone,
                       ),
                     }),
                   },

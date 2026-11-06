@@ -174,7 +174,7 @@ func TestAThreadThatEndsAContractRaisesASignalCitingIt(t *testing.T) {
 		"inbound", extractClock.Add(-48*time.Hour))
 
 	judge := principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:owed_verdict", Permissions: principal.Permissions{RowScope: principal.RowScopeAll}})
-	if applied, err := e.Activities.SetCaptureLabel(judge, notice, "noise"); err != nil || !applied {
+	if applied, err := e.LabelCapture(judge, notice, "noise"); err != nil || !applied {
 		t.Fatalf("capture label: %t %v", applied, err)
 	}
 	if applied, err := e.Activities.SetOwedVerdict(judge, notice, activities.OwedVerdictInformsUs, "test-rules", extractClock); err != nil || !applied {

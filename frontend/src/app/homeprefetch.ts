@@ -15,15 +15,11 @@ import { worklistDayOptions } from "../lib/worklistday";
 import { DEFAULT_VIEW } from "../lib/worklistviews";
 import { notePrefetched } from "./queryclient";
 
-// Home's morning reads, started as soon as the shell may draw (App.tsx). The
-// screen commits only after React's Suspense reveal, and its queries start then.
+// Home's morning reads, started with the session probe (App.tsx). The screen
+// commits only after React's Suspense reveal, and its queries start then.
 // Each read uses its hook's own options, so the screen joins a request in
 // flight. An answer already back is noted, so the screen's mount does not fetch
 // it again (liveOnMount in queryclient.ts).
-//
-// The returned cleanup belongs to the route. A prefetch has no observer, so a
-// reader who leaves first would leave the day's Worklist assembling. Holding one
-// lets React Query abort that read once nothing observes its key.
 export function prefetchHome(
   client: QueryClient,
   params: UrlParams,
@@ -44,8 +40,10 @@ export function prefetchHome(
     });
   };
   const day = worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW);
-  // Held only while the read is in flight. Once it answers there is nothing to
-  // abort, and a held observer would count as a screen showing the day.
+  // The returned cleanup belongs to the route. A prefetch has no observer, so a
+  // reader who leaves first would leave the day assembling. One is held while the
+  // read is in flight, so React Query can abort it; after, it would count as a
+  // screen showing the day.
   const release = new InfiniteQueryObserver(client, {
     ...day,
     refetchInterval: false,

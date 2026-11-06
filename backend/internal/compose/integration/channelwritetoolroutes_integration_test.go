@@ -41,18 +41,18 @@ func TestSendMessageLeavesTheSameOnEitherDoor(t *testing.T) {
 		}, compose.CaptureConfig{}),
 		compose.WithPublicBaseURL(channelSendBaseURL),
 	}, "read", "write", "send")
-	c := &channelSendEnv{AppEnv: d.e}
-	c.contactID = createdID(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Telegram Buyer"})
-	c.user = sessionUserID(t, d.e)
-	c.bindIdentity(t)
-	c.seedInboundMessage(t)
-	c.grantConsent(t, "transactional")
-	c.connectBot(t)
+	c := &channelSendEnv{ChannelConversation: &apptest.ChannelConversation{AppEnv: d.e}}
+	c.ContactID = createdID(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Telegram Buyer"})
+	c.User = apptest.SessionUserID(t, d.e)
+	c.BindIdentity(t)
+	c.SeedInboundMessage(t)
+	c.GrantConsent(t, "transactional")
+	c.ConnectBot(t)
 
-	rest := d.restStatus(t, "POST", "/v1/activities/"+c.activityID+"/send-message",
+	rest := d.restStatus(t, "POST", "/v1/activities/"+c.ActivityID+"/send-message",
 		AnyMap{"body": "Yes, shipping Monday.", "consent_purpose": "transactional"}, http.StatusAccepted)
 	tool := d.tool(t, "send_message", map[string]any{
-		"activity_id": c.activityID, "body": "Yes, shipping Monday.", "consent_purpose": "transactional",
+		"activity_id": c.ActivityID, "body": "Yes, shipping Monday.", "consent_purpose": "transactional",
 	})
 	// The route answers the reply it filed and the tool its id and a status.
 	// So the two are compared on the stored reply and its delivery.

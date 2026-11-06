@@ -187,7 +187,14 @@ func (id Identity) hasRole(key string) bool {
 // methods that take an explicit Identity are their own admission gate,
 // so they must not depend on a transport middleware having bound the
 // actor for the audit stamp — a direct service caller is just as valid.
+//
+// An agent acting for id keeps its own principal. The audit names the agent
+// and the passport, its grants stay the ones its passport lends, and the agent
+// limits still see an agent.
 func actorCtx(ctx context.Context, id Identity) context.Context {
+	if p, ok := principal.Actor(ctx); ok && p.ActsAsItsUser() && p.OnBehalfOf == id.UserID.UUID {
+		return ctx
+	}
 	return principal.WithActor(ctx, principal.Principal{
 		Type:        principal.PrincipalHuman,
 		ID:          "human:" + id.UserID.String(),

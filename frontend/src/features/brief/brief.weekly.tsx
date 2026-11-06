@@ -16,7 +16,7 @@ import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { openAnalyticsSection } from "../../lib/analytics.address";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { routeHash } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { weeklyNumericStatus } from "./brief.numeric";
@@ -49,7 +49,7 @@ export function WeeklySection({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const [params] = useUrlParams();
   const asked = params.get("week") ?? undefined;
   const review = useWeeklyReview(asked);
@@ -327,7 +327,7 @@ function ClosedDeals({
 }: Readonly<{ review: WeeklyReview; deals: readonly Deal[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const pipeline = review.pipeline;
   const total = pipeline ? pipeline.won_minor + pipeline.lost_minor : 0;
   return (
@@ -387,7 +387,7 @@ function ClosedDeals({
 function MovedDeals({ deals }: Readonly<{ deals: readonly Deal[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   return (
     <Panel>
       {deals.map((deal) => (

@@ -679,6 +679,26 @@ kinds:
       Unique on the workspace and the deal while one is waiting or running, so
       a burst of edits to one deal is one job.
 
+  assurance_review_delivery:
+    role: worker
+    go_type: AssuranceReviewDeliveryArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    args:
+      Workspace: id
+      Exception: id
+      Episode:
+        scalar: true
+        reason: The review's episode counter, so a job for an episode that has since ended does nothing.
+    reason: >-
+      Delivers one review episode as its task. Inserted in the transaction that
+      records the finding, so the delivery exists exactly when the review does.
+      Each attempt reads the newest finished run that observed the review, and
+      a retry never starts a new check. One review's task and filing take
+      seconds. Unique on the review and its episode while one is waiting or
+      running.
+
   close_date_sweep:
     role: worker
     fleet: true
@@ -1739,6 +1759,23 @@ kinds:
       longest-unchecked first, each against at most fifty thousand records in
       keyset pages, so ten minutes bounds the slowest pass with room to spare
       and a pass cut short resumes where the checkpoints say.
+
+
+  project_health_scan:
+    role: worker
+    fleet: true
+    go_type: ProjectHealthScanArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 24h
+    reason: >-
+      Daily, because its inputs move by the day: the quiet rule counts thirty
+      days without a filed activity, and a task is overdue once its due date
+      has passed. An hourly pass would find the same answer twenty-three times
+      out of twenty-four. One pass is two indexed reads per in-flight project
+      and calls no model, so ten minutes covers every workspace of an
+      installation with room to spare.
 
 
   deal_scout:

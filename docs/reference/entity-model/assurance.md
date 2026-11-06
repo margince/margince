@@ -64,7 +64,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_exception
 
-21 columns · primary key `(id)` · referenced by 3 foreign keys
+24 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -72,6 +72,9 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `affected_minor` | `bigint` |  |  |
 | `claim` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `currency` | `currency_code` |  |  |
+| `delivered_assignee_id` | `uuid` |  |  |
+| `delivery_attempts` | `integer`, default `0` | yes |  |
+| `delivery_state` | `text` |  | One of `pending`, `failed`, `delivered`. |
 | `episode` | `integer`, default `1` | yes |  |
 | `evidence_refs` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `first_seen_at` | `timestamp with time zone`, default `now()` | yes |  |
@@ -100,6 +103,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 - `assurance_exception_affected_minor_js_safe`: `CHECK (((affected_minor >= '-9007199254740991'::bigint) AND (affected_minor <= '9007199254740991'::bigint)))`
 - `assurance_exception_amount_currency_pair`: `CHECK (((affected_minor IS NULL) = (currency IS NULL)))`
+- `assurance_exception_delivery_state_check`: `CHECK ((delivery_state = ANY (ARRAY['pending', 'failed', 'delivered'])))`
 - `assurance_exception_seen_ordered`: `CHECK ((last_seen_at >= first_seen_at))`
 - `assurance_exception_severity_check`: `CHECK ((severity = ANY (ARRAY['low', 'medium', 'high'])))`
 - `assurance_exception_status_check`: `CHECK ((status = ANY (ARRAY['open', 'resolved', 'expired', 'condition_cleared', 'subject_departed'])))`

@@ -37,10 +37,6 @@ import { Avatar, Badge, Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
-import {
-  companyTypeLabel,
-  useCompanyTypeDirectory,
-} from "../../lib/companytypes";
 import { useCan } from "../../lib/capability";
 import {
   KIND_LABELS,
@@ -50,15 +46,20 @@ import {
   usePartnerStages,
 } from "../../lib/partnerstages.queries";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import { useViewerZone } from "../../lib/viewerzone";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import type { Company } from "./companies";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
 import { displayHost } from "./companyheader";
 import { partnerMarkText } from "./companymarks";
+import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 
 async function fetchCompaniesPage(
   query: ListQuery,
@@ -93,7 +94,7 @@ export function CompaniesScreen() {
   const queryClient = useQueryClient();
   const pageName = usePageName("companies");
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const cf = useObjectCustomFields("company", "create");
   const state = useListQuery<Company>({
     key: "companies",
@@ -308,10 +309,11 @@ export function CompaniesScreen() {
               ) : null,
           },
           ownerColumn<Company>(t),
-          lastActivityColumn<Company>(t, locale, recordZone),
-          createdColumn<Company>(t, locale, recordZone),
+          lastActivityColumn<Company>(t, locale, readerZone),
+          createdColumn<Company>(t, locale, readerZone),
         ]}
-        saveView={<SaveViewAction resource="companies" query={state.query} />}
+        saveView={<SaveViewAction resource="companies" state={state} />}
+        notice={<SavedViewsFailure resource="companies" />}
         rowKey={(company) => company.id}
         rowRoute={(company) => ({ screen: "companies", id: company.id })}
         selection={selection}

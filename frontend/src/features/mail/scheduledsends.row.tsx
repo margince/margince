@@ -280,6 +280,7 @@ export function SendRow({
             preview={permission.preview}
             asking={permission.asking}
             unanswered={permission.unanswered}
+            namesRecipients
           />
         )}
       </div>

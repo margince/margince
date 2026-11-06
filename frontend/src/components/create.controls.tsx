@@ -176,15 +176,18 @@ export function MultiselectField({
   field,
   value,
   setValue,
+  labelHidden,
 }: Readonly<{
   field: CreateField;
   value: string;
   setValue: (next: string) => void;
+  labelHidden?: boolean;
 }>) {
   const t = useT();
   return (
     <Field
       label={fieldLabel(field, t)}
+      labelHidden={labelHidden}
       required={field.required}
       hint={field.hint}
     >

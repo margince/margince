@@ -696,3 +696,38 @@ func TestMeetingBriefNamesTheMeetingToTheRail(t *testing.T) {
 		}
 	}
 }
+
+// A meeting brief spends AI budget on every read. An agent without the enrich
+// scope reads its plain form, and one holding the scope starts the model.
+func TestAMeetingBriefStartsAModelCallOnlyForAnAgentWithEnrich(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
+	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
+	LinkActivity(t, owner, meeting, "contact", ours)
+	seatInRoom(t, owner, e.WS, meeting, ours)
+	agent := func(scopes ...principal.Scope) context.Context {
+		ctx := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+		p, ok := principal.Actor(ctx)
+		if !ok {
+			t.Fatal("no actor")
+		}
+		p.Scopes = principal.NewScopeSet(scopes...)
+		return principal.WithActor(ctx, p)
+	}
+
+	lane := &meetingSubjectLane{}
+	if _, err := meetingBriefService(e).WithLane(lane).Get(agent(principal.ScopeRead), meeting); err != nil {
+		t.Fatalf("the agent's read without enrich: %v", err)
+	}
+	if len(lane.subjects) != 0 {
+		t.Errorf("an agent without enrich started %d model calls", len(lane.subjects))
+	}
+	if _, err := meetingBriefService(e).WithLane(lane).Get(agent(principal.ScopeRead, principal.ScopeEnrich), meeting); err != nil {
+		t.Fatalf("the agent's read with enrich: %v", err)
+	}
+	if len(lane.subjects) == 0 {
+		t.Error("an agent with enrich started no model call")
+	}
+}

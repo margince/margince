@@ -107,7 +107,7 @@ func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
 	rig := newOIDCTestRig(t)
 	v := newGoogleOIDCVerifier(rig.jwksURL(), identityResolvedPerRequest).
 		withHTTPClient(rig.srv.Client()).
-		withClock(func() time.Time { return rig.base })
+		setClock(func() time.Time { return rig.base })
 	adapter := googleOIDCVerifierAdapter{v: v, matchIdentity: func(oidcClaims) error { return nil }}
 
 	// A Google token typically carries NO groups claim: the adapter must

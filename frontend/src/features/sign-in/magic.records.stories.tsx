@@ -102,3 +102,12 @@ export const Opened: Story = {
     await dialog.findByText("Kandu GmbH");
   },
 };
+
+export const LongRecordName: Story = {
+  args: {
+    summary:
+      "overnight_at_risk_sweep:2026-11-02:ac028e011ede4821a2467a462a9cc370_end-2 and 2 more",
+  },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

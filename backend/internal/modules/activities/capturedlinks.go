@@ -36,20 +36,22 @@ type CapturedLink struct {
 // RecordCapturedLinks writes an attachment row for each document link of a
 // newly captured activity, inside the capture transaction.
 //
-// The row hangs off the activity alone, so the mail's audience decides who sees
-// it. It has bytes_withheld and no storage key, so every byte reader refuses it.
-// The unique index on message and address hash stops a second row on a replay
-// and keeps an archived link archived.
+// The row hangs off the activity alone, so the activity's audience decides who
+// sees it. It has bytes_withheld and no storage key, so every byte reader
+// refuses it. The unique index on message and address hash stops a second row
+// on a replay and keeps an archived link archived. It answers how many rows are
+// new.
 func (s *Store) RecordCapturedLinks(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from CapturedFileSource, links []CapturedLink,
-) error {
+) (int, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return err
+		return 0, err
 	}
 	if len(links) == 0 {
-		return nil
+		return 0, nil
 	}
+	added := 0
 	from.Category = categoryLink
 	for _, link := range links {
 		address := link.URL
@@ -63,11 +65,15 @@ func (s *Store) RecordCapturedLinks(
 			withheld: true,
 			url:      &address,
 		}
-		if err := insertCapturedAttachment(ctx, tx, activityID, from, row); err != nil {
-			return err
+		isNew, err := insertCapturedAttachment(ctx, tx, activityID, from, row)
+		if err != nil {
+			return added, err
+		}
+		if isNew {
+			added++
 		}
 	}
-	return nil
+	return added, nil
 }
 
 // linkFilename is the name a link row shows: the sender's anchor text cleaned of

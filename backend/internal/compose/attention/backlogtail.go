@@ -247,7 +247,9 @@ func (s *Service) moreTasks(ctx context.Context, page tailPage, walk tailWindow,
 	rows := appendLane(nil, sourceTask, &items, walk.AsOf, classifyTask)
 	batch := tailBatch{more: more, rows: make([]tailRow, len(read))}
 	for i, task := range read {
-		batch.rows[i] = tailRow{row: rows[i], at: task.Row.DueAt, after: task.After}
+		batch.rows[i] = tailRow{
+			row: rows[i], at: task.Row.DueAt, after: task.After, elsewhere: s.reviews.foldsTask(rows[i]),
+		}
 	}
 	return batch, nil
 }

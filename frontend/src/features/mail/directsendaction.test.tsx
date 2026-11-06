@@ -13,6 +13,7 @@ import type { SendReview } from "./sendreview";
 const review = (actions: SendReview["actions"]): SendReview => ({
   reviewId: "review-1",
   actions,
+  refusals: [],
   overrulable: [],
 });
 

@@ -136,6 +136,9 @@ const (
 // buy nothing and would tell an operator their own action failed for the wrong
 // reason.
 func refuseUnlessCallerOutranksTarget(ctx context.Context, tx pgx.Tx, actor Identity, targetID ids.UserID, reach targetReach) error {
+	if err := refuseAgentMemberReach(ctx, tx, targetID); err != nil {
+		return err
+	}
 	if actor.hasRole(roleAdmin) {
 		return nil
 	}
@@ -245,6 +248,9 @@ func masksContained(caller, target []principal.FieldMask) bool {
 // cannot be archived between this read and the assignment. An archived role
 // answers errUnknownRole — it is not a role anybody can be given.
 func roleForAssignment(ctx context.Context, tx pgx.Tx, actor Identity, roleKey string, teams []ids.TeamID) (ids.UUID, error) {
+	if err := refuseAgentAdminRole(ctx, roleKey); err != nil {
+		return ids.UUID{}, err
+	}
 	var roleID ids.UUID
 	var raw []byte
 	err := tx.QueryRow(ctx,
@@ -384,6 +390,9 @@ func AdmitMemberHandover(ctx context.Context, tx pgx.Tx, member ids.UserID) erro
 	}
 	target, err := lockTargetGrants(ctx, tx, member)
 	if err != nil {
+		return err
+	}
+	if err := refuseAgentMemberReach(ctx, tx, member); err != nil {
 		return err
 	}
 	return callerOutranks(Identity{Roles: p.Permissions.RoleKeys, Permissions: p.Permissions}, target, reachDenial)

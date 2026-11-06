@@ -20,9 +20,9 @@ import type { MessageKey } from "../../i18n/en";
 import { attachmentAnchor } from "../../lib/attachmentlink";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import "./dealfiles.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ROOM_DOCUMENTS_PREFIX } from "./dealroomdocuments.key";
 
 // The deal's Files area: what a rep uploaded on the deal, and what arrived
@@ -168,7 +168,7 @@ function FilesTable({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   return (
     <DataTable
       label={t("files.title")}
@@ -215,10 +215,10 @@ function FilesTable({
                   doc.attachment.origin.occurred_at,
                   doc.attachment.origin.occurred_precision,
                   locale,
-                  recordZone,
+                  readerZone,
                   formatDateAbbrev,
                 )
-              : formatDateAbbrev(doc.attachment.created_at, locale, recordZone),
+              : formatDateAbbrev(doc.attachment.created_at, locale, readerZone),
         },
         ...(mayWrite
           ? [

@@ -79,7 +79,7 @@ func TestAdminReadsAnotherMembersStalledConnection(t *testing.T) {
 	if !overview {
 		t.Fatalf("connection absent from overview: source=%+v findings=%+v", source, findings)
 	}
-	b.registry.WithClock(func() time.Time { return at })
+	b.registry.SetClock(func() time.Time { return at })
 	if _, err := b.registry.DismissSilence(b.human, "gmail", at.Add(-48*time.Hour)); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("stalled dismissal = %v, want conflict", err)
 	}

@@ -39,21 +39,18 @@
      on the control too, because a button keeps its label on one line. */
   white-space: pre-line;
 }
-.fieldgrid-value .inline-editable,
+.fieldgrid-value .editable-value,
 .fieldgrid-value .inlinetext {
   white-space: pre-line;
-  text-align: left;
+  text-align: start;
 }
 /* A value is user data, and a legal name or a domain can arrive as one run with
    no space in it to break at. `min-width: 0` above lets the COLUMN shrink; this
-   is what makes the text inside it give way too — without it the run sets the
-   value's width, and the row grows straight through the panel's padding and out
-   over the card's edge. It reaches the editable controls as well as the plain
-   text because that is what a value usually is here: the string sits inside
-   InlineText's or InlineChoice's button, which hugs its own content. */
+   is what makes the text inside it give way too, including inside the edit
+   pill, which hugs its own content. */
 .fieldgrid-value,
 .fieldgrid-value .inlinetext,
-.fieldgrid-value .inline-editable {
+.fieldgrid-value .editable-value {
   overflow-wrap: anywhere;
 }
 
@@ -67,17 +64,6 @@
   align-self: center;
 }
 
-/* A VALUE reads as a value, not as a link. InlineText and InlineChoice make
-   their trigger a button so the whole value is pressable, and a button both
-   centres its own text and — as `.link-button` — paints it in the accent at
-   link weight. In a grid that turns every editable fact green and centred
-   while the read-only ones beside it sit black and left, so the two kinds of
-   row read as two kinds of fact rather than one column of values.
-   The pressable box stays; only its type goes back to the row's own. */
-.fieldgrid-value .inlinetext,
-.fieldgrid-value .inline-editable {
-  text-align: left;
-}
 /* An address or a number is a `ContactLink`, a button in the accent, and it
    KEEPS the accent: it is an action, not a fact the row edits. What it gives
    up is the button's centring and the link affordance's own type: at
@@ -87,21 +73,15 @@
    lets a long address break inside the rung, and a button centres every line
    it breaks into, so the tail of a wrapped address floated to the middle of
    the column under a first line that started at the edge. Left, like every
-   other value. The trailing pad is what keeps its edit verb off it when the
-   two share a line; on the value's own box rather than as a margin on the
-   verb, so a verb that wraps to the next line starts at the column's edge. */
+   other value. */
 .fieldgrid-value .link-button {
   text-align: left;
   font-weight: var(--fontWeightRegular);
   padding-inline: 0;
 }
-/* A handle and its edit verb stack, always: the verb on its own line under
-   the value, whether or not the two would have fit side by side. Inline, a
-   short number kept its verb beside it while a long address pushed its own
-   under, and two rows of one card read as two layouts. A value and the link
-   that opens it stack the same way, or the two run into one string. */
-.fieldgrid-value:has(> .link-button + .inline-editable),
-.fieldgrid-value:has(> .inline-editable + .link-button),
+/* A value and the link that opens it stack, or the two run into one string;
+   a handle stacks over the row's next part the same way. */
+.fieldgrid-value:has(> .editable-value + .link-button),
 .fieldgrid-value:has(> .inlinetext + .link-button),
 .fieldgrid-value:has(> .fieldgrid-handle) {
   display: flex;
@@ -186,9 +166,4 @@
 .fieldgrid-icon svg {
   inline-size: 0.875rem;
   block-size: 0.875rem;
-}
-
-.fieldgrid-label--stacked,
-.fieldgrid-value--stacked {
-  grid-column: 1 / -1;
 }

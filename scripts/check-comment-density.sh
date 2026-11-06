@@ -30,6 +30,8 @@ TOLERANCE_PER_MILLE=1
 # xargs may split the list across several awk runs, each printing its own totals,
 # so the sums are added up here — taking only the first would count part of the
 # tree and report a smaller ratio as a pass.
+# That also makes the batches independent, so they run one per core.
+jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
 files=$(find backend -name '*.go' ! -name '*_gen.go' ! -name '*.gen.go' | wc -l | tr -d ' ')
 if (( files < 1000 )); then
 	echo "FAIL: comment-density — found only ${files} Go files under backend/; expected thousands" >&2
@@ -38,7 +40,7 @@ fi
 
 totals="$(
 	find backend -name '*.go' ! -name '*_gen.go' ! -name '*.gen.go' -print0 \
-	| xargs -0 awk -f "$lib/lib-commentscan.awk" -f "$lib/lib-commentcount.awk" -v MODE=tree \
+	| xargs -0 -P "$jobs" -n 200 awk -f "$lib/lib-commentscan.awk" -f "$lib/lib-commentcount.awk" -v MODE=tree \
 	| awk '{ k += $1; c += $2 } END { printf "%d %d\n", k + 0, c + 0 }'
 )"
 code="${totals%% *}"

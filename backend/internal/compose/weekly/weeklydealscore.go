@@ -60,27 +60,25 @@ const dealScoreSQL = `
 		         )) / 86400 AS days
 		    FROM moves m
 		   WHERE m.from_stage_id IS NOT NULL),
-		-- Category moves, one row per deal: a rep who corrected a typo three
-		-- times did not downgrade three times. The direction is the deal's
-		-- FIRST and LAST category inside the window, compared once.
+		-- Moves of a probability set on the deal, one row per deal: a rep who
+		-- corrected a typo three times did not downgrade three times. The
+		-- direction is the deal's FIRST and LAST override inside the window,
+		-- compared once.
 		--
-		-- No erasure boundary here, unlike the rewind above, and the difference is
-		-- what the two read. The rewind folds an image back onto a record a reader
-		-- sees; this compares one enum against itself and keeps neither value. A
-		-- forecast category is a four-valued CHECK — omitted, pipeline, best_case,
-		-- commit — carrying nothing a scrub certifies gone, so stopping at a
+		-- No erasure boundary here, unlike the rewind above: this compares one
+		-- percent against itself and keeps neither value, so stopping at a
 		-- tombstone would withhold a direction while disclosing nothing.
 		cat AS (
 		  SELECT a.entity_id,
-		         (array_agg(a.before->>'forecast_category'
+		         (array_agg(a.before->>'win_probability_override'
 		           ORDER BY a.occurred_at, a.id))[1] AS first_cat,
-		         (array_agg(a.after->>'forecast_category'
+		         (array_agg(a.after->>'win_probability_override'
 		           ORDER BY a.occurred_at DESC, a.id DESC))[1] AS last_cat
 		    FROM audit_log a
 		    JOIN mine ON mine.id = a.entity_id
 		   WHERE a.entity_type = 'deal'
 		     AND a.occurred_at >= $%[1]d AND a.occurred_at < $%[2]d
-		     AND a.before->>'forecast_category' IS DISTINCT FROM a.after->>'forecast_category'
+		     AND a.before->>'win_probability_override' IS DISTINCT FROM a.after->>'win_probability_override'
 		   GROUP BY a.entity_id)
 		SELECT
 		  EXISTS (SELECT 1 FROM open_deals) OR EXISTS (SELECT 1 FROM moves)

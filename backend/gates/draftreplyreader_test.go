@@ -68,6 +68,10 @@ const draftReplyOwner = "internal/compose/draftreply/draftreply.go"
 // in the CONTRACT, not in the caller's convenience, and adding one without a
 // difference is the finding this gate exists to make.
 var statedReasons = gatekit.Waive(map[string]string{
+	"internal/compose/readerrendering/render.go": "a rendering is not a draft: its reply also says whether the text " +
+		"was already in the reader's language, an empty subject is the honest answer for an activity with none " +
+		"where draftreply.Parse refuses one, and the reply is judged against the source text it renders " +
+		"(readerrendering.Check) rather than against a drafting prompt.",
 	"internal/compose/replydraftmodel.go": "the customer reply draft is a different contract over the same envelope: " +
 		"it refuses a subject carrying a line break and enforces the RFC length bounds its schema declares, " +
 		"leaves the subject un-normalized because the caller sends it as typed, and splits parse from validate " +

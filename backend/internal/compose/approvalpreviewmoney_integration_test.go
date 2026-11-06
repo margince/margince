@@ -36,9 +36,9 @@ func TestClosingAndReopeningPreviewTheWritersFrozenValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := func() time.Time { return time.Date(2026, 9, 15, 8, 0, 0, 0, time.UTC) }
-	e.Deals.WithClock(now)
+	e.Deals.SetClock(now)
 	reader := newApprovalPreviewReader(e.DB())
-	reader.deals.WithClock(now)
+	reader.deals.SetClock(now)
 	svc := approvals.NewService(e.DB()).WithPreview(reader.read)
 	for _, destination := range []ids.StageID{won, open} {
 		raw, hash, err := diffhash.Canonical([]byte(fmt.Sprintf(`{"deal_id":%q,"to_stage_id":%q,"won_without_contract_reason":"verbal"}`, deal, destination)))
@@ -100,7 +100,7 @@ func TestRepricingAndReopeningKeepTheActualFrozenAuditBeforeImage(t *testing.T) 
 	if _, err := e.Deals.UpdateDeal(ctx, deal, deals.UpdateDealInput{AmountMinor: new(int64(250000)), Currency: &currency}); err != nil {
 		t.Fatal(err)
 	}
-	e.Deals.WithClock(func() time.Time { return time.Date(2026, 9, 15, 8, 0, 0, 0, time.UTC) })
+	e.Deals.SetClock(func() time.Time { return time.Date(2026, 9, 15, 8, 0, 0, 0, time.UTC) })
 	if _, err := e.Deals.AdvanceDeal(ctx, deal, deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: new("verbal")}); err != nil {
 		t.Fatal(err)
 	}

@@ -7,6 +7,8 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func (e *Eraser) purgePartyProjections(ctx context.Context, tx pgx.Tx, emails []string) error {
@@ -24,4 +26,14 @@ func (e *Eraser) purgePartyProjections(ctx context.Context, tx pgx.Tx, emails []
 		return ErrRetentionSeamMissing
 	}
 	return nil
+}
+
+// purgeTextCopies empties what other modules copied from the redacted
+// activities' text. An eraser built without the purger erases no mail
+// content in production, so it has no copy to reach.
+func (e *Eraser) purgeTextCopies(ctx context.Context, tx pgx.Tx, activities []ids.UUID) error {
+	if e.purgeRawCaptures == nil || len(activities) == 0 {
+		return nil
+	}
+	return e.purgeRawCaptures.PurgeTextCopiesTx(ctx, tx, activities)
 }

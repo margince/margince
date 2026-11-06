@@ -25,7 +25,6 @@ import {
 import { type Group, isComplete, newGroup } from "../../lib/segmentpredicate";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor } from "./filtereditor";
-import { useFilterExport } from "./filterexport";
 import { FilterFoot } from "./filterfoot";
 import { FocusedHead } from "./filterhead";
 import { FilterOutcome } from "./filtermatches";
@@ -49,7 +48,6 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
   const current = wordsOf(tab);
   const words = usePlainWords({ resource, dispatch });
   const vocabulary = useFilterVocabulary(resource);
-  const exportRun = useFilterExport();
   const complete = isComplete(draft.tree);
   // A half-built condition is nothing to lose; a complete one is a filter the
   // reader could have kept. Every way off the page that already asked, or
@@ -100,11 +98,9 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
         footer={
           complete ? (
             <FilterFoot
-              resource={resource}
               tree={draft.tree}
               mode={{ kind: "new" }}
               onSave={() => setSaving(draft.tree)}
-              exportRun={exportRun}
             />
           ) : undefined
         }

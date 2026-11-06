@@ -74,6 +74,22 @@ func Destination(base, fragment string) string {
 	return strings.TrimSuffix(base, "/") + fragment
 }
 
+// The Home dials that open one row of the day, spelled as the frontend's
+// TASK_PARAM and FOCUS_PARAM (gates/mailbrieflink_test.go holds the pair).
+const (
+	HomeTaskParam  = "task"
+	HomeFocusParam = "focus"
+)
+
+// WorkItemFragment opens one row of the day on Home, as a click on it does.
+// A task opens in its own read, any other row beside its context.
+func WorkItemFragment(source, id string) string {
+	if source == "task" {
+		return BriefMorningFragment + "?" + HomeTaskParam + "=" + url.QueryEscape(id)
+	}
+	return BriefMorningFragment + "?" + HomeFocusParam + "=" + url.QueryEscape(source+"-"+id)
+}
+
 // TeamFragment retains the selected team and reporting week when opening the app.
 func TeamFragment(team, week string) string {
 	params := url.Values{"scope": {"team"}, "team": {team}}

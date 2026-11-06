@@ -3,15 +3,10 @@
 
 package activities
 
-// An account-started send names its own addressees, which a reply never
-// does — a reply inherits the conversation it answers. So this is the one
-// outbound path where a caller can type an address that belongs to nobody
-// on file, and ADR-0087 §2 refuses that rather than accepting it.
-//
-// The refusal is a FIELD fault naming the address, not a generic validation
-// error, because the composer's job at that moment is to offer the fix:
-// attach this address to a contact, or pick a different recipient. A caller
-// who cannot see which address was the problem cannot act on either.
+// An account-started send names its own addressees, and a reply inherits
+// them. A new address gets a contact first, through RecipientFiler. An address
+// that still names nobody the sender can see is refused. The refusal is a
+// FIELD fault naming it, so the composer can point at it.
 
 import (
 	"context"
@@ -21,8 +16,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// RecipientDirectory answers whether an address belongs to a contact the
-// caller may read. The contacts capability implements it and compose injects
+// RecipientDirectory answers whether an address belongs to a contact or lead
+// the caller may read. The contacts capability implements it and compose injects
 // it, because a module never imports a sibling.
 //
 // It answers about VISIBILITY, not existence: an address on a contact the
@@ -32,7 +27,7 @@ import (
 // prevent everywhere else.
 type RecipientDirectory interface {
 	// VisibleAddresses returns the subset of addresses that belong to a
-	// contact this caller can read, normalized lowercase.
+	// contact or lead this caller can read, normalized lowercase.
 	VisibleAddresses(ctx context.Context, tx pgx.Tx, addresses []string) (map[string]bool, error)
 }
 
@@ -43,6 +38,37 @@ func (s *Store) WithRecipientDirectory(dir RecipientDirectory) *Store {
 	clone := *s
 	clone.recipients = dir
 	return &clone
+}
+
+// RecipientFiler makes a minimal contact for each typed address no live
+// contact or lead holds. The caller owns it. It returns the addresses it filed.
+// Contacts implements it and compose injects it.
+//
+// It writes on the caller's transaction, so a preview can file, ask the
+// consent engine and roll both back.
+type RecipientFiler interface {
+	FileTypedRecipientsTx(ctx context.Context, tx pgx.Tx, addresses []string) ([]string, error)
+}
+
+// WithRecipientFiler returns a store whose account-started sends and previews
+// file a new address as a contact before the consent engine is asked.
+func (s *Store) WithRecipientFiler(filer RecipientFiler) *Store {
+	clone := *s
+	clone.recipientFiler = filer
+	return &clone
+}
+
+// fileTypedRecipients commits a contact for each new address before the send
+// is staged. The consent engine and the dispatcher then read a recipient the
+// record names. PrepareSend calls it after the sender's own checks pass.
+func (s *Store) fileTypedRecipients(ctx context.Context, origin SendOrigin, recipients []string) error {
+	if origin.isReply() || s.recipientFiler == nil {
+		return nil
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		_, err := s.recipientFiler.FileTypedRecipientsTx(ctx, tx, recipients)
+		return err
+	})
 }
 
 // UnresolvedRecipientError refuses an account-started send that names an
@@ -59,8 +85,8 @@ type UnresolvedRecipientError struct {
 }
 
 func (e *UnresolvedRecipientError) Error() string {
-	msg := "no contact you can see has the address " + e.Address +
-		" — add it to a contact's record, or pick a different recipient"
+	msg := "no contact or lead you can see has the address " + e.Address +
+		", and it cannot be added as a new contact — pick a different recipient"
 	switch {
 	case e.More == 1:
 		msg += " (and 1 other address like it)"

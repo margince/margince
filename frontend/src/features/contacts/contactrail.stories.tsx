@@ -255,9 +255,8 @@ const signalsPartlyDerivable: View = {
 // apart and the section stops reading as a glance.
 function rail(view: View, entries = guard.entries) {
   installFetchStub({
-    // The rail draws capability-gated verbs (the inline edits, add employment),
-    // so the session has to be routed: an unrouted probe denies every grant and
-    // the gallery would show the read-only rail under every story name.
+    // The rail draws capability-gated verbs, so the session has to be routed.
+    // An unrouted probe denies every grant and every story shows the read-only rail.
     "GET /me": meRoute({ contact: ["read", "update"] }),
     "GET /installation/settings": callMessengersRoute(),
   });

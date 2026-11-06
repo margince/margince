@@ -105,6 +105,9 @@ func (s *Scanner) scanOneDeal(
 	if out.Departed, err = s.store.CloseDeparted(ctx, tx, &deal, pass.deals); err != nil {
 		return err
 	}
+	if err := s.queueReviewDeliveries(ctx, tx, runID); err != nil {
+		return err
+	}
 	out.Readiness = Readiness(coverage, pass.findings(), s.cfg)
 	out.Status = StatusComplete
 	if out.Readiness == ReadinessChecksIncomplete {
