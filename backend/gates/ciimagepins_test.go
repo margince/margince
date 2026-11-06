@@ -27,7 +27,7 @@ const ciImageDockerfile = ".github/ci-image/Dockerfile"
 
 var (
 	imageDigest      = regexp.MustCompile(`@sha256:[0-9a-f]{64}$`)
-	snapshotArg      = regexp.MustCompile(`(?m)^ARG DEBIAN_SNAPSHOT=\d{8}T\d{6}Z$`)
+	snapshotArg      = regexp.MustCompile(`(?m)^ARG UBUNTU_SNAPSHOT=\d{8}T\d{6}Z$`)
 	aptPin           = regexp.MustCompile(`^[a-z0-9][a-z0-9+.-]+=[0-9][^\s\\]*$`)
 	playwrightArg    = regexp.MustCompile(`(?m)^ARG PLAYWRIGHT_VERSION=(\S+)$`)
 	lockedPlaywright = regexp.MustCompile(`(?m)^  playwright-core@(\d+\.\d+\.\d+):`)
@@ -36,16 +36,17 @@ var (
 	verificationOff = regexp.MustCompile(`GOSUMDB=off|GONOSUMDB|GONOSUMCHECK|GOINSECURE|GOPRIVATE|GOFLAGS=\S*-insecure|COREPACK_INTEGRITY_KEYS`)
 )
 
-// The snapshot both archives must name on both hosts, at the one timestamp
-// ARG Renovate moves.
+// The rewrite a stage needs before apt: the image's live sources removed, and
+// the snapshot named at the one timestamp ARG Renovate moves.
 var snapshotSources = []string{
-	"http://snapshot-cloudflare.debian.org/archive/debian/${DEBIAN_SNAPSHOT}",
-	"http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}",
-	"http://snapshot-cloudflare.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}",
-	"http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}",
-	`Acquire::Check-Valid-Until "false";`,
-	"/etc/apt/sources.list.d/debian.sources",
+	"rm /etc/apt/sources.list.d/ubuntu.sources",
+	"URIs: https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}",
+	"/etc/apt/sources.list.d/snapshot.sources",
 }
+
+// liveArchives are the hosts that serve today's packages rather than a pinned
+// timestamp's.
+var liveArchives = []string{"archive.ubuntu.com", "security.ubuntu.com", "ports.ubuntu.com", "deb.debian.org", "security.debian.org"}
 
 // ciImageCensus counts what a reading found, so a parser that stopped
 // recognising this file reports as short rather than as clean.
@@ -61,7 +62,7 @@ func TestTheCIImageBuildsOnlyFromPins(t *testing.T) {
 	for _, finding := range findings {
 		t.Errorf("%s: %s", ciImageDockerfile, finding)
 	}
-	// The floor is the image as built today: Go, Node and Debian, the snapshot
+	// The floor is the image as built today: Go, Node and Ubuntu, the snapshot
 	// stage, the browser download, and the packages Chromium alone needs.
 	if census.images < 3 || census.snapshotStages < 1 || census.downloads < 1 || len(census.packages) < 30 {
 		t.Errorf("%s read short: %d images, %d snapshot stages, %d downloads, %d pinned packages — "+
@@ -81,7 +82,8 @@ func TestTheCIImagePinGateRefusesEachUnpinnedShape(t *testing.T) {
 		{"a base image with a tag and no digest", `(FROM node:\S+)@sha256:[0-9a-f]{64}`, "$1"},
 		{"a COPY source with a tag and no digest", `COPY --from=go `, "COPY --from=golang:trixie "},
 		{"a download with no checksum", `sha256sum -c -`, "true"},
-		{"an apt source outside the snapshot", `http://snapshot-cloudflare\.debian\.org/archive/debian/\$\{DEBIAN_SNAPSHOT\}`, "http://deb.debian.org/debian"},
+		{"an apt source outside the snapshot", `https://snapshot\.ubuntu\.com/ubuntu/\$\{UBUNTU_SNAPSHOT\}`, "http://archive.ubuntu.com/ubuntu"},
+		{"the live sources left in place", `rm /etc/apt/sources\.list\.d/ubuntu\.sources \\\n && `, ""},
 		{"an update that lets a missing index pass", `apt-get update --error-on=any`, "apt-get update"},
 		{"Go's checksum database turned off", `ENV GOPATH=/go GOTOOLCHAIN=local`, "ENV GOPATH=/go GOTOOLCHAIN=local GOSUMDB=off"},
 	}
@@ -104,12 +106,27 @@ func TestTheCIImagePinGateRefusesEachUnpinnedShape(t *testing.T) {
 func TestTheCIImagePinGateReadsAnInstallAfterItsFlags(t *testing.T) {
 	t.Parallel()
 	const stage = "FROM scratch AS base\n" +
-		"RUN echo 'URIs: http://snapshot-cloudflare.debian.org/archive/debian/${DEBIAN_SNAPSHOT}' " +
-		"'URIs: http://snapshot-cloudflare.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}' " +
-		"'Acquire::Check-Valid-Until \"false\";' > /etc/apt/sources.list.d/debian.sources\n"
+		"RUN rm /etc/apt/sources.list.d/ubuntu.sources && " +
+		"echo 'URIs: https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}' > /etc/apt/sources.list.d/snapshot.sources\n"
 	findings, _ := ciImageFindings(stage + "RUN apt-get -y install --no-install-recommends make\n")
 	if !slices.ContainsFunc(findings, func(finding string) bool { return strings.Contains(finding, "installs make") }) {
 		t.Errorf("`apt-get -y install make` passed with no version; findings: %v", findings)
+	}
+}
+
+// Two downloads behind one checksum check leave the second file unchecked. A
+// flag before `update` must not hide an update that lets a lost index pass.
+func TestTheCIImagePinGateHoldsEachDownloadAndEachUpdate(t *testing.T) {
+	t.Parallel()
+	cases := map[string]string{
+		"downloads 2 files and checks 1": "RUN curl -o /a https://x/a && echo 'sum  /a' | sha256sum -c - && curl -o /b https://x/b\n",
+		"without --error-on=any":         "RUN apt-get -q update\n",
+	}
+	for want, run := range cases {
+		findings, _ := ciImageFindings("FROM scratch AS base\n" + run)
+		if !slices.ContainsFunc(findings, func(finding string) bool { return strings.Contains(finding, want) }) {
+			t.Errorf("%q passed; want a finding naming %q, got %v", strings.TrimSpace(run), want, findings)
+		}
 	}
 }
 
@@ -152,7 +169,7 @@ func ciImageFindings(body string) ([]string, ciImageCensus) {
 	var findings []string
 	var census ciImageCensus
 	if !snapshotArg.MatchString(body) {
-		findings = append(findings, "no `ARG DEBIAN_SNAPSHOT=<YYYYMMDDTHHMMSSZ>`, so the snapshot has no pin Renovate can move")
+		findings = append(findings, "no `ARG UBUNTU_SNAPSHOT=<YYYYMMDDTHHMMSSZ>`, so the snapshot has no pin Renovate can move")
 	}
 	stages := map[string]bool{}
 	snapshotted := map[string]bool{}
@@ -181,8 +198,10 @@ func ciImageFindings(body string) ([]string, ciImageCensus) {
 		if verificationOff.MatchString(instruction) {
 			findings = append(findings, "turns a download's verification off: "+instruction)
 		}
-		if strings.Contains(instruction, "deb.debian.org") || strings.Contains(instruction, "security.debian.org") {
-			findings = append(findings, "names a live Debian mirror rather than the snapshot: "+instruction)
+		for _, host := range liveArchives {
+			if strings.Contains(instruction, host) {
+				findings = append(findings, "names "+host+", a live archive rather than the snapshot: "+instruction)
+			}
 		}
 	}
 	return findings, census
@@ -266,6 +285,7 @@ func isSnapshotRewrite(instruction string) bool {
 // and its downloads to a checksum it checks.
 func runFindings(instruction string, snapshotted bool, census *ciImageCensus) []string {
 	var findings []string
+	fetches := 0
 	for _, command := range shellCommands(instruction) {
 		words := strings.Fields(command)
 		for i, word := range words {
@@ -278,11 +298,12 @@ func runFindings(instruction string, snapshotted bool, census *ciImageCensus) []
 			}
 			if word == "curl" || word == "wget" {
 				census.downloads++
-				if !strings.Contains(instruction, "sha256sum -c") {
-					findings = append(findings, "downloads with no checksum: "+command)
-				}
+				fetches++
 			}
 		}
+	}
+	if checks := strings.Count(instruction, "sha256sum -c"); fetches > checks {
+		findings = append(findings, fmt.Sprintf("downloads %d files and checks %d checksums: %s", fetches, checks, instruction))
 	}
 	return findings
 }
@@ -311,7 +332,11 @@ func installedPackages(args []string, census *ciImageCensus) []string {
 // silentUpdate refuses an `apt-get update` that may end with an index missing:
 // apt only warns, and every pin after it then reads as not found.
 func silentUpdate(args []string) []string {
-	if len(args) == 0 || args[0] != "update" || slices.Contains(args, "--error-on=any") {
+	flags := 0
+	for flags < len(args) && strings.HasPrefix(args[flags], "-") {
+		flags++
+	}
+	if flags == len(args) || args[flags] != "update" || slices.Contains(args, "--error-on=any") {
 		return nil
 	}
 	return []string{"runs apt-get update without --error-on=any, so a missing index passes as a warning"}
@@ -351,7 +376,7 @@ func TestRenovateReachesEveryCIImagePin(t *testing.T) {
 		for _, matchString := range manager.MatchStrings {
 			for _, hit := range goPinNamed(t, matchString).FindAllStringSubmatch(body, -1) {
 				found[manager.DatasourceTemplate]++
-				if manager.DatasourceTemplate == "custom.debian-package" {
+				if manager.DatasourceTemplate == "custom.ubuntu-package" {
 					found[hit[1]+"="+hit[2]]++
 				}
 			}
@@ -363,13 +388,13 @@ func TestRenovateReachesEveryCIImagePin(t *testing.T) {
 				"a pin it does not find once is a pin nothing moves", ciImageDockerfile, pin, found[pin])
 		}
 	}
-	if found["custom.debian-package"] != len(census.packages) {
+	if found["custom.ubuntu-package"] != len(census.packages) {
 		t.Errorf("renovate.json's package pattern finds %d pins in %s and the build installs %d; "+
-			"a hit that is no package would be offered Debian versions it cannot take",
-			found["custom.debian-package"], ciImageDockerfile, len(census.packages))
+			"a hit that is no package would be offered Ubuntu versions it cannot take",
+			found["custom.ubuntu-package"], ciImageDockerfile, len(census.packages))
 	}
-	if found["custom.debian-snapshot"] != 1 {
+	if found["custom.ubuntu-snapshot"] != 1 {
 		t.Errorf("renovate.json's snapshot pattern finds %d timestamps in %s, want exactly the one ARG",
-			found["custom.debian-snapshot"], ciImageDockerfile)
+			found["custom.ubuntu-snapshot"], ciImageDockerfile)
 	}
 }

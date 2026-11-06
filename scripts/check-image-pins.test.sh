@@ -157,6 +157,16 @@ if ! reported_as "CI IMAGE INPUT DECLARED OUTSIDE workflow_call OR WITH A DEFAUL
   fail "a ci-image input a manual run can fill passed; no scan sees what is typed into a dispatch"
 fi
 
+plant_workflow "jobs:
+  ci-image:
+    outputs:
+      pinned-image: redis:7
+  b:
+    container: \${{ needs.ci-image.outputs.pinned-image }}"
+if ! reported_as "CI IMAGE OUTPUT NOT FROM THE ci-image ACTION"; then
+  fail "a ci-image job that writes its own tag passed; only the action refuses a name with no digest"
+fi
+
 plant_workflow "on:
   workflow_call:
     inputs:
@@ -166,6 +176,11 @@ plant_workflow "on:
 jobs:
   ci-image:
     runs-on: x
+    outputs:
+      pinned-image: \${{ steps.image.outputs.pinned-image }}
+    steps:
+      - id: image
+        uses: ./.github/actions/ci-image
   b:
     container: redis:7@$DIGEST
     container: \${{ needs.ci-image.outputs.pinned-image }}

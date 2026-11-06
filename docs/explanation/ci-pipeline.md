@@ -610,7 +610,7 @@ Wiring details:
 
 ## Security posture
 
-- `permissions: contents: read` at the workflow root (the least rights; no job pushes).
+- `permissions: contents: read` at the workflow root (the least rights). Only `ci-image` may push, and only the [CI image](ci-image.md).
 - `persist-credentials: false` on the checkout of each job that runs code a PR wrote (the `integration`
   shards, the unit coverage pass and fan-in, `live-boot`, `frontend`, `uat`). So a PR with bad code running
   `make test-integration` / `make frontend-e2e` cannot read the stored `GITHUB_TOKEN`.

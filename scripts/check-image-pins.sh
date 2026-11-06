@@ -110,6 +110,21 @@ while IFS= read -r line; do
 done < <(grep -rnE --include='*.yml' --include='*.yaml' \
   '^[[:space:]]*ci-image:' "${scan_dirs[@]}" 2>/dev/null || true)
 
+# The job output itself must be the action's, which refuses any name that does
+# not end in a digest. A `ci-image` job that wrote its own `pinned-image` would
+# hand any tag to every `container:` admitted above.
+while IFS= read -r line; do
+  file="${line%%:*}"
+  value=$(echo "${line#*pinned-image:}" | sed 's/[[:space:]]*#.*//' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  [[ -z "$value" ]] && continue                     # the action's own output declaration
+  if ! [[ "${value// /}" =~ ^\$\{\{steps\.[A-Za-z0-9_-]+\.outputs\.pinned-image\}\}$ ]] ||
+    ! grep -qE '^[[:space:]]*(-[[:space:]]+)?uses:[[:space:]]*\./\.github/actions/ci-image[[:space:]]*$' "$file"; then
+    echo "CI IMAGE OUTPUT NOT FROM THE ci-image ACTION: $line" >&2
+    fail=1
+  fi
+done < <(grep -rnE --include='*.yml' --include='*.yaml' \
+  '^[[:space:]]*pinned-image:' "${scan_dirs[@]}" 2>/dev/null || true)
+
 # And only as pinned as its declaration: a `ci-image` input may be declared for
 # `workflow_call` alone, where the scan above sees every caller, and with no
 # default but the empty one. A `workflow_dispatch` input or a default would

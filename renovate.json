@@ -25,20 +25,20 @@
     "schedule": ["after 2am and before 6am"]
   },
   "customDatasources": {
-    "debian-snapshot": {
-      "description": "Every timestamp snapshot.debian.org holds for the main archive, newest last. The CI image reads both the archive and its security half at one such timestamp, and snapshot resolves a timestamp to the newest import at or before it, so the main archive's list serves both.",
-      "defaultRegistryUrlTemplate": "https://snapshot.debian.org/mr/timestamp/?archive=debian",
+    "ubuntu-snapshot": {
+      "description": "The newest moment the Ubuntu 24.04 archive changed, as a snapshot.ubuntu.com timestamp. snapshot.ubuntu.com publishes no list of its snapshots and resolves any time to the archive as it stood then, so the newest publication Launchpad records for noble, in any pocket, is a time every package version below was already in. It carries no release date on purpose: the age floor applies to the package versions, each older than this time.",
+      "defaultRegistryUrlTemplate": "https://api.launchpad.net/1.0/ubuntu/+archive/primary?ws.op=getPublishedSources&distro_series=https://api.launchpad.net/1.0/ubuntu/noble&status=Published&order_by_date=true&ws.size=1",
       "format": "json",
       "transformTemplates": [
-        "{ \"releases\": [result.debian.{ \"version\": $ }] }"
+        "{ \"releases\": [entries.{ \"version\": $fromMillis($toMillis(date_published), \"[Y0001][M01][D01]T[H01][m01][s01]Z\") }] }"
       ]
     },
-    "debian-package": {
-      "description": "Every version of one binary package the archive has ever held, across all suites. The suite is not in the answer, so the allowedVersions rule below is what keeps a pin inside Debian 13.",
-      "defaultRegistryUrlTemplate": "https://snapshot.debian.org/mr/binary/{{packageName}}/",
+    "ubuntu-package": {
+      "description": "The versions of one binary package published for Ubuntu 24.04 on amd64, with their publication dates. The query is held to noble, so no other release's version is offered, and -proposed and -backports are left out because the image does not read them.",
+      "defaultRegistryUrlTemplate": "https://api.launchpad.net/1.0/ubuntu/+archive/primary?ws.op=getPublishedBinaries&binary_name={{packageName}}&exact_match=true&distro_arch_series=https://api.launchpad.net/1.0/ubuntu/noble/amd64&status=Published",
       "format": "json",
       "transformTemplates": [
-        "{ \"releases\": [result.{ \"version\": binary_version }] }"
+        "{ \"releases\": [entries[pocket != \"Proposed\" and pocket != \"Backports\"].{ \"version\": binary_package_version, \"releaseTimestamp\": date_published }] }"
       ]
     }
   },
@@ -61,23 +61,34 @@
       "datasourceTemplate": "golang-version"
     },
     {
-      "description": "The CI image's snapshot timestamp. Every package pin below resolves inside it, so the Debian group moves it in the same branch as they move.",
+      "description": "The CI image's snapshot timestamp. Every package pin below resolves inside it, so the Ubuntu group moves it in the same branch as they move.",
       "customType": "regex",
       "managerFilePatterns": ["/^\\.github\\/ci-image\\/Dockerfile$/"],
-      "matchStrings": ["ARG DEBIAN_SNAPSHOT=(?<currentValue>\\d{8}T\\d{6}Z)"],
-      "depNameTemplate": "debian-snapshot",
-      "datasourceTemplate": "custom.debian-snapshot",
+      "matchStrings": ["ARG UBUNTU_SNAPSHOT=(?<currentValue>\\d{8}T\\d{6}Z)"],
+      "depNameTemplate": "ubuntu-snapshot",
+      "datasourceTemplate": "custom.ubuntu-snapshot",
       "versioningTemplate": "regex:^(?<major>\\d{8})T(?<minor>\\d{6})Z$"
     },
     {
-      "description": "Each apt package the CI image installs, pinned `name=version` on a line of its own. The pattern is held to that one file, so the product Dockerfile is never read for Debian pins. backend/gates/ciimagepins_test.go runs this pattern over the Dockerfile and fails on a pin it does not reach.",
+      "description": "Each apt package the CI image installs, pinned `name=version` on a line of its own. The pattern is held to that one file, so the product Dockerfile is never read for Ubuntu pins. backend/gates/ciimagepins_test.go runs this pattern over the Dockerfile and fails on a pin it does not reach.",
       "customType": "regex",
       "managerFilePatterns": ["/^\\.github\\/ci-image\\/Dockerfile$/"],
       "matchStrings": [
         "\\n\\s+(?<depName>[a-z0-9][a-z0-9+.-]+)=(?<currentValue>[0-9][^\\s\\\\]*)"
       ],
-      "datasourceTemplate": "custom.debian-package",
+      "datasourceTemplate": "custom.ubuntu-package",
       "versioningTemplate": "deb"
+    },
+    {
+      "description": "The BuildKit image the CI image is built in, for its registry layer cache. It is pinned by tag and digest in a shell line of the action, which no built-in manager reads.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github\\/actions\\/ci-image\\/action\\.yml$/"
+      ],
+      "matchStrings": [
+        "image=(?<depName>moby/buildkit):(?<currentValue>v[\\d.]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [
@@ -133,14 +144,9 @@
       "minimumReleaseAgeBehaviour": "timestamp-optional"
     },
     {
-      "description": "Only a Debian 13 version, from a datasource that lists every suite. A stable or security update carries `+deb13uN` or `~deb13uN`, and a version without it is either the one trixie released with or another release's, so the pin moves only when Debian ships a trixie update for it. Checked against the archive: make 4.4.1-2 and python3 3.13.5-1 carry no suffix and are offered nothing newer, while libnss3 moves from 2:3.110-1+deb13u4 to +deb13u5 and never to sid's 2:3.132-1.",
-      "matchDatasources": ["custom.debian-package"],
-      "allowedVersions": "/deb13/"
-    },
-    {
-      "description": "The snapshot timestamp and every package pin move in ONE branch, because a version newer than the snapshot is one apt cannot find, and the build fails on it. separateMajorMinor is off because the timestamp's versioning reads a new day as a major, which would otherwise split the date from the packages; automerge and rebaseWhen are restated for the same reason, since the rule for majors above would hold a date bump for a human. Weekly, because snapshot imports four times a day and the nightly window would open a Debian branch, and an image rebuild, on every run. The age floor is off: neither datasource carries a release date, the floor would hold both pins forever, and a floor on one but not the other points a version past its snapshot. Debian's stable release managers and security team are the review a trixie update has already had.",
-      "matchDatasources": ["custom.debian-snapshot", "custom.debian-package"],
-      "groupName": "Debian",
+      "description": "The snapshot timestamp and every package pin move in ONE branch, because a version newer than the snapshot is one apt cannot find, and the build fails on it. separateMajorMinor is off because the timestamp's versioning reads a new day as a major, which would otherwise split the time from the packages; automerge and rebaseWhen are restated for the same reason, since the rule for majors above would hold a time bump for a human. Weekly, because the archive changes many times a day and the nightly window would open an Ubuntu branch, and an image rebuild, on every run. The package versions carry Launchpad's publication date, so the repository's age floor holds each one; the timestamp carries none, so timestamp-optional lets it through, and it is never older than the versions it is paired with.",
+      "matchDatasources": ["custom.ubuntu-snapshot", "custom.ubuntu-package"],
+      "groupName": "Ubuntu",
       "schedule": ["after 2am and before 6am on monday"],
       "separateMajorMinor": false,
       "automerge": true,
@@ -148,12 +154,12 @@
       "minimumReleaseAgeBehaviour": "timestamp-optional"
     },
     {
-      "description": "The CI image's Debian base joins the same group, so a new base digest is tested with the snapshot and the pins it is upgraded to. It stays on 13: a new major moves every package pin at once, which is a human's change.",
+      "description": "The CI image's Ubuntu base joins the same group, so a new base digest is tested with the snapshot and the pins it is upgraded to. It stays on 24.04: a new release moves every package pin at once, which is a human's change.",
       "matchFileNames": [".github/ci-image/Dockerfile"],
       "matchDatasources": ["docker"],
-      "matchPackageNames": ["debian"],
-      "allowedVersions": "<14",
-      "groupName": "Debian",
+      "matchPackageNames": ["ubuntu"],
+      "allowedVersions": "/^24\\.04$/",
+      "groupName": "Ubuntu",
       "schedule": ["after 2am and before 6am on monday"],
       "separateMajorMinor": false,
       "automerge": true,

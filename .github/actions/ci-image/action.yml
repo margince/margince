@@ -58,20 +58,29 @@ runs:
         ACTOR: ${{ github.actor }}
       run: echo "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
 
-    # No layer cache: every build starts from the pins alone. A build runs when
-    # an input moved, and on every run that may push while the package can be
-    # pulled only with a login.
+    # A build runs when an input moved, and on every run that may push while
+    # the package can be pulled only with a login. The layer cache under the
+    # `buildcache` tag lets a build that changed one input skip the others: the
+    # apt layer comes first, so a tools or pnpm change keeps it. A cached layer
+    # was built from the same Dockerfile lines and the same pins. The registry
+    # cache needs BuildKit in a container, which runs a pinned BuildKit image.
     - name: Build and push the image
       if: steps.lookup.outputs.digest == '' && inputs.push == 'true'
       shell: bash
       env:
         REF: ${{ steps.tag.outputs.ref }}
+        REPO: ${{ steps.tag.outputs.repo }}
         SOURCE: ${{ github.server_url }}/${{ github.repository }}
       run: |
         set -euo pipefail
+        docker buildx create --use --name ci-image --driver docker-container \
+          --driver-opt image=moby/buildkit:v0.34.2@sha256:c5f8862f52499773af85bc07695b2379ef08e8002352b0df2c4864c91d78dabe
         docker buildx build --platform linux/amd64 \
           --label "org.opencontainers.image.source=$SOURCE" \
+          --cache-from "type=registry,ref=$REPO:buildcache" \
+          --cache-to "type=registry,ref=$REPO:buildcache,mode=max" \
           --tag "$REF" --push "$RUNNER_TEMP/ci-image"
+        docker buildx rm ci-image
         docker logout ghcr.io
 
     - name: Look the pushed image up

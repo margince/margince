@@ -4,7 +4,7 @@
 
 Both parts of `deterministic-gates` and of `backend-lint`, the jobs of the frontend lane and `uat` run
 in one container image, `ghcr.io/margince/ci`. It holds Go, the gate binaries, Node with pnpm, the Chromium build
-Playwright starts, and the Debian packages Chromium needs. So these jobs install no toolchain, and
+Playwright starts, and the Ubuntu packages Chromium needs. So these jobs install no toolchain, and
 `uat` does not reach a package mirror. A mirror that stopped answering during a font fetch has
 stopped a UAT shard before a test ran.
 
@@ -17,33 +17,30 @@ has a pin in this tree:
 
 | Input | Pin | What moves it |
 |---|---|---|
-| Debian, Go and Node base images | tag and `@sha256` digest | Renovate, through its `dockerfile` manager. The `golang` image moves in the `go toolchain` group, with every other Go pin |
-| Debian packages | one time on `snapshot.debian.org`, `ARG DEBIAN_SNAPSHOT`, and each package as `name=version` | the `Debian` group in Renovate, once a week: the time and every package in one pull request |
+| Ubuntu, Go and Node base images | tag and `@sha256` digest | Renovate, through its `dockerfile` manager. The `golang` image moves in the `go toolchain` group, with every other Go pin |
+| Ubuntu packages | one time on `snapshot.ubuntu.com`, `ARG UBUNTU_SNAPSHOT`, and each package as `name=version` | the `Ubuntu` group in Renovate, once a week: the time and every package in one pull request |
 | Gate binaries | the recipe `make -n tools` prints, so the versions stay in `backend/Makefile` | a change to that recipe |
 | pnpm | `packageManager` in the root `package.json`, with its hash | the same change that moves pnpm for every other reader |
 | Chromium | `PLAYWRIGHT_VERSION`, the browser build and its sha256, as `ARG` lines | a maintainer, when Playwright moves (below) |
 
-The image reads Debian at one point in the history of the archive. So the same time and pins give
-the same packages on every build, and `apt-get upgrade` patches the base image the same way each
-time.
+The image is Ubuntu 24.04, read at one point in the history of the archive. So the same time and
+pins give the same packages on every build, and `apt-get upgrade` patches the base image the same way
+each time. The image replaces its own sources, which name the live archive, with the snapshot.
 
-`apt` reads each archive from a mirror list of two hosts: `snapshot-cloudflare.debian.org`, the
-same archive behind a CDN, then `snapshot.debian.org`. It checks each file against the signed index
-of the archive, whichever host sent it. Both hosts answer 503 and 504 under load, so a fetch tries ten
-times with a growing wait. `apt-get update --error-on=any` fails on an index that never came. Without
-it, `apt` only warns, and every pin then fails as a package it cannot find.
+`snapshot.ubuntu.com` answers only over HTTPS, and the base image has no CA bundle until
+`ca-certificates` is in. So `apt` starts on the bundle from the pinned Go image. It checks each index
+against the Ubuntu archive key either way. A fetch tries three times with a 30 second limit, so a
+dead mirror fails the build in minutes. `apt-get update --error-on=any` fails on an index that never
+came. Without it, `apt` only warns, and every pin then fails as a package it cannot find.
 
-Renovate reads two sources from `snapshot.debian.org`: the list of times, and the versions of each
-package. The second lists every version the archive holds, so the rule
-`allowedVersions: "/deb13/"` keeps a pin on Debian 13. A version with no `deb13` in it is the one
-Debian 13 shipped, and it moves only when Debian ships an update for it. The time and the versions
-move in one branch, because `apt` cannot find a version newer than the time. So the wait of seven
-days is off for both, since neither source gives a release date. A wait on one side only would split
-them.
+Renovate reads two sources from Launchpad, which records what Ubuntu publishes. One is the newest
+time the 24.04 archive changed, which is the snapshot time. The other is the versions of each
+package published for 24.04, with their dates. The time and the versions move in one branch, because
+`apt` cannot find a version newer than the time. The versions keep the wait of seven days. The time
+has no date, so it never waits, and it is never older than the versions beside it.
 
-A stable update can wait in `trixie-proposed-updates` until the next Debian release, and Renovate
-lists it. The image lists that suite with `Pin-Priority: 100`, so a pin can name such a version, and
-nothing else is taken from it.
+The gate binaries are built with no C toolchain, so they do not need the newer C library of the Go
+image. The Go and Node builds the image copies in are the upstream ones, which run on 24.04.
 
 [`backend/gates/ciimagepins_test.go`](../../backend/gates/ciimagepins_test.go) holds the file to
 these rules:
@@ -91,7 +88,9 @@ name. So `ci` is correct with or without the image, and only slower without it.
 
 `scripts/check-image-pins.sh` admits that one job output as a `container:`, read as it is or behind a
 condition that falls back to the empty string. A lane may take it as a `ci-image` input. That input is
-declared for `workflow_call` with no default but the empty one, and every caller passes the job output.
+declared for `workflow_call` with no default but the empty one. A caller passes the job output, or
+nothing, as `main-health.yml` does, and then the lane runs on the runner. Each `pinned-image` output
+must come from the `ci-image` action.
 The action refuses to hand on a name that does not end in a digest.
 
 The script also scans `.github/actions/`. Its `./path` allowance lets a local action through, because

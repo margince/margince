@@ -29,7 +29,6 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | CSV | Comma-separated values, a plain text format for tables. |
 | Cursor | An AI code editor, which can connect to Margince. |
 | de | The language code for German, as a setting value. |
-| Debian | The Linux distribution the CI image is built on, pinned to version 13. |
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
 | dmy | The date order day, month, year, as a setting value. |
@@ -55,6 +54,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | JPEG | A common photo file format, saved as .jpg or .jpeg. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
+| Launchpad | The Ubuntu project service that records each package Ubuntu publishes. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | locale | The date or time format of the reader's language, as a setting value. |
@@ -92,6 +92,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Telegram | A chat app Margince can send messages through. |
 | terminal | The window where you type commands, such as `claude` or `codex`. |
 | Typeform | An online form tool that can send each answer to a webhook address. |
+| Ubuntu | The Linux distribution the CI image is built on, pinned to 24.04. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
 | vi | The language code for Vietnamese, as a setting value. |
