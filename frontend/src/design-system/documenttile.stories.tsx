@@ -69,3 +69,24 @@ export const Superseded: Story = {
     mark: <Badge tone="warning">Superseded</Badge>,
   },
 };
+
+export const Row: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ width: "36rem" }}>
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    filename: "Retrofit-proposal-v2.pdf",
+    title: "Retrofit proposal",
+    anchor: {
+      href: "/v1/attachments/a-1/download",
+      download: "Retrofit-proposal-v2.pdf",
+    },
+    layout: "row",
+    mark: <Badge>Current</Badge>,
+    meta: "Offer · 12 Oct",
+  },
+};

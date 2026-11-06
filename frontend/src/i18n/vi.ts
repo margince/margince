@@ -7047,6 +7047,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
   "docs.category.link": "Liên kết đã gửi",
+  "docs.view.label": "Hiển thị tài liệu dạng",
+  "docs.view.grid": "Lưới",
+  "docs.view.list": "Danh sách",
   "files.title": "Tệp",
   "files.empty":
     "Chưa có tệp nào trên deal này. Tải lên một tệp, hoặc liên kết một email có tệp đính kèm.",

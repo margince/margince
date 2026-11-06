@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 import type { components } from "../api/schema";
-import { Badge } from "../design-system/atoms";
+import { Badge, SegmentedControl } from "../design-system/atoms";
 import { DocumentTile } from "../design-system/documenttile";
 import { activityDay } from "../format/activitywhen";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { attachmentAnchor } from "../lib/attachmentlink";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { useViewerZone } from "../lib/viewerzone";
 import { FileOrigin } from "./fileorigin";
 import "./attachmenttile.css";
@@ -28,6 +29,12 @@ export const CATEGORY_LABELS: Record<DocumentCategory, MessageKey> = {
   other: "docs.category.other",
   link: "docs.category.link",
 };
+
+type DocumentsView = "grid" | "list";
+const VIEWS: readonly DocumentsView[] = ["grid", "list"];
+
+// The gallery's choice, read by every tile in it.
+const DocumentsViewContext = createContext<DocumentsView>("grid");
 
 const STATE_LABELS: Record<DocState, MessageKey> = {
   draft: "docs.state.draft",
@@ -67,6 +74,7 @@ export function AttachmentTile({
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const view = useContext(DocumentsViewContext);
   const superseded = file.doc_state === "superseded";
   const title = file.title || file.filename;
   return (
@@ -75,6 +83,7 @@ export function AttachmentTile({
       title={title}
       anchor={attachmentAnchor(file)}
       lapsed={superseded || receded}
+      layout={view === "list" ? "row" : "tile"}
       mark={
         file.doc_state ? (
           <Badge tone={superseded ? "warning" : undefined}>
@@ -113,9 +122,41 @@ export function AttachmentTile({
   );
 }
 
-/** The gallery the tiles sit in, as many to a row as fit. */
+/**
+ * The gallery the tiles sit in: as many to a row as fit, or one file to a
+ * row. The reader's choice holds for every Documents tab on this device.
+ */
 export function AttachmentGrid({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  return <ul className="attachment-grid">{children}</ul>;
+  const t = useT();
+  const [view, setView] = useState<DocumentsView>(() =>
+    readStored(STORAGE_KEYS.documentsView) === "list" ? "list" : "grid",
+  );
+  const choose = (next: DocumentsView) => {
+    setView(next);
+    writeStored(STORAGE_KEYS.documentsView, next);
+  };
+  return (
+    <DocumentsViewContext.Provider value={view}>
+      <div className="attachment-gallery-bar">
+        <SegmentedControl
+          label={t("docs.view.label")}
+          options={VIEWS}
+          value={view}
+          onChange={choose}
+          labels={{ grid: t("docs.view.grid"), list: t("docs.view.list") }}
+        />
+      </div>
+      <ul
+        className={
+          view === "list"
+            ? "attachment-grid attachment-list"
+            : "attachment-grid"
+        }
+      >
+        {children}
+      </ul>
+    </DocumentsViewContext.Provider>
+  );
 }

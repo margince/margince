@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { removeStored, STORAGE_KEYS } from "../../lib/storage";
 import { ContactFilesTab } from "./contactfiles";
 
 type Attachment = components["schemas"]["Attachment"];
@@ -36,6 +37,7 @@ function attachment(
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  removeStored(STORAGE_KEYS.documentsView);
 });
 
 // The session and the installation read that the upload in this tab's header
@@ -168,6 +170,36 @@ describe("the contact's files tab", () => {
     const signed = screen.getByRole("link", { name: "signed.pdf" });
     expect(signed.getAttribute("href")).toBe("/v1/attachments/f-2");
     expect(signed.getAttribute("download")).toBe("signed.pdf");
+  });
+
+  it("draws the files as a list once the reader asks, and keeps that choice", async () => {
+    stub({
+      data: [
+        attachment({ id: "f-1", entity_id: "p-1", filename: "quote.pdf" }),
+      ],
+      page: { has_more: false },
+    });
+    const first = show(
+      <ContactFilesTab contactId="p-1" contactName="Dana Buyer" />,
+    );
+    const file = await screen.findByRole("article", { name: "quote.pdf" });
+    expect(file.classList.contains("board-doc-row")).toBe(false);
+
+    await userEvent.click(screen.getByRole("button", { name: "List" }));
+    expect(
+      screen
+        .getByRole("article", { name: "quote.pdf" })
+        .classList.contains("board-doc-row"),
+    ).toBe(true);
+    expect(screen.getByRole("link", { name: "quote.pdf" })).toBeTruthy();
+
+    first.unmount();
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
+    const again = await screen.findByRole("article", { name: "quote.pdf" });
+    expect(again.classList.contains("board-doc-row")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "List" }).getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 
   it("opens a document link in a new tab instead of downloading it", async () => {

@@ -27,6 +27,7 @@ export function DocumentTile({
   mark,
   meta,
   lapsed = false,
+  layout = "tile",
   body,
   children,
 }: Readonly<{
@@ -41,6 +42,8 @@ export function DocumentTile({
   meta?: ReactNode;
   /** A document no longer shared: its paper recedes. */
   lapsed?: boolean;
+  /** A tile in a gallery, or a row in a list with the stage as its lead. */
+  layout?: "tile" | "row";
   /** Under the facts, inside the tile's body. */
   body?: ReactNode;
   /** Under the body, each section behind its own hairline. */
@@ -49,7 +52,13 @@ export function DocumentTile({
   const kind = fileKind(filename);
   return (
     <article
-      className={lapsed ? "board-doc board-doc-lapsed" : "board-doc"}
+      className={[
+        "board-doc",
+        layout === "row" ? "board-doc-row" : null,
+        lapsed ? "board-doc-lapsed" : null,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-label={title}
     >
       <div className="board-doc-stage">

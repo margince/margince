@@ -144,3 +144,44 @@
 .board-doc-status {
   margin-top: var(--space-1);
 }
+
+/* A row in a list: the stage narrows to a lead holding the kind and the mark,
+   and the page shape gives way, so a long library reads at a glance. */
+.board-doc-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.board-doc-row .board-doc-stage {
+  flex: 0 0 5.5rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-1);
+  height: auto;
+  min-height: 4rem;
+  padding: var(--space-2);
+  border-bottom: 0;
+  border-inline-end: 1px solid var(--groundEdge);
+}
+
+.board-doc-row .board-doc-page {
+  display: none;
+}
+
+.board-doc-row .board-doc-kind,
+.board-doc-row .board-doc-mark {
+  position: static;
+}
+
+.board-doc-row .board-doc-body {
+  flex: 1 1 0;
+  min-width: 0;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--padCard);
+}
+
+/* What the caller adds under the body takes the row's whole width. */
+.board-doc-row > :not(.board-doc-stage, .board-doc-body) {
+  flex-basis: 100%;
+}
