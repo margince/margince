@@ -32,7 +32,11 @@ import {
 import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
-import { PutDownByThumb } from "./worklist.dispositions";
+import {
+  OneRowWrite,
+  PutDownByThumb,
+  useRowPutDown,
+} from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
@@ -58,6 +62,21 @@ import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
 // Preserve server order while naming each group member once.
 function namedMembers(item: WorklistItem): string[] {
   return [...new Set(item.batch?.sample ?? [])];
+}
+
+export { OneRowWrite };
+
+/**
+ * Done for a card that draws its own tick. Inside `OneRowWrite` it shares the
+ * row's write, so the tick and the row's verbs cannot write twice.
+ */
+export function useRowDone(item: WorklistItem) {
+  const write = useRowPutDown(item);
+  return {
+    offered: write.offered.includes("handled"),
+    pending: write.writing?.disposition === "handled",
+    done: () => write.put("handled"),
+  };
 }
 
 /**
