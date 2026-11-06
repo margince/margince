@@ -7,12 +7,14 @@ package compose
 
 import (
 	"errors"
-	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -27,7 +29,8 @@ func TestRiskViewsNarrowToTheNamedOwnerBeforeTheirScanCaps(t *testing.T) {
 		t.Fatal(err)
 	}
 	for range slippingScanLimit + 1 {
-		f.e.SeedDeal(t, "Other owner's newer deal", pipeline, stage, &f.e.Rep2)
+		deal := f.e.SeedDeal(t, "Other owner's newer deal", pipeline, stage, &f.e.Rep2)
+		f.e.WsExec(t, `UPDATE deal SET created_at = $2, last_activity_at = $2 WHERE id = $1`, deal, clocktest.Now(t).AddDate(0, 0, -80))
 	}
 	owner := f.e.Rep1
 	listed, err := slippingLister(f.e.Pool)(f.e.Admin(), runner.SweepQuietDays, &owner)

@@ -229,7 +229,8 @@ func refusedSendReview(s sweepSeed, purpose string) string {
 	}, nil, nil); status != http.StatusConflict {
 		s.t.Fatalf("a %s send with no grant → %d, want the refusal that opens a review", purpose, status)
 	}
-	review := s.ownerScalar(`SELECT id::text FROM communication_review WHERE resolved_at IS NULL ORDER BY id DESC LIMIT 1`)
+	review := s.ownerScalar(`SELECT id::text FROM communication_review
+ WHERE resolved_at IS NULL AND initiated_by = $1 ORDER BY id DESC LIMIT 1`, apptest.SessionUserID(s.t, s.e))
 	s.pool.note(review, "contact", contact)
 	return review
 }

@@ -252,19 +252,8 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 	}
 }
 
-// decidingApprovalsService builds the approvals engine the TOOL surface decides
-// through: the registration list plus the send-dependent releases.
-//
-// Both halves or neither. The list alone leaves held_draft — the one kind whose
-// release is a send — with no executor on this engine, so approving one here
-// would commit the decision, answer the caller success, and leave the message
-// held forever. The HTTP inbox gets the same two halves at a different moment
-// (applySendPath), because its surface is built before the send path is
-// assembled and this one is built after.
-// The process logger rides along for the reason the HTTP door takes one: a
-// bundle member whose effect fails AFTER its decision has committed is reported
-// to the caller by outcome alone, so the cause has nowhere to go but the log —
-// and this is the door where the wire carries the least.
+// decidingApprovalsService adds send-dependent releases to tool decisions.
+// Its logger retains failures that happen after a decision commits.
 func decidingApprovalsService(pool *pgxpool.Pool, send SendPath, log *slog.Logger) *approvals.Service {
 	svc := NewApprovalsServiceWithEffects(pool)
 	registerLateApprovalEffects(svc, pool, send)

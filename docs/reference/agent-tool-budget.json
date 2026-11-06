@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39523,
+    "tokens": 39562,
     "median_tool_tokens": 620,
     "mean_tool_tokens": 823
   },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6444,
-      "listing_tokens": 3370,
-      "step_schema_tokens": 2482,
-      "percent_of_ceiling": 19,
-      "headroom_tokens": 16766,
+      "tokens": 6576,
+      "listing_tokens": 3436,
+      "step_schema_tokens": 2548,
+      "percent_of_ceiling": 20,
+      "headroom_tokens": 16634,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -228,6 +228,10 @@
       "tokens": 395
     },
     {
+      "name": "read_attention",
+      "tokens": 365
+    },
+    {
       "name": "read_relationships",
       "tokens": 359
     },
@@ -242,10 +246,6 @@
     {
       "name": "list_documents",
       "tokens": 331
-    },
-    {
-      "name": "read_attention",
-      "tokens": 326
     },
     {
       "name": "read_record",

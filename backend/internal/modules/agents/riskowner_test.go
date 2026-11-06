@@ -6,9 +6,9 @@ package agents
 import (
 	"context"
 	"encoding/json"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
