@@ -12,7 +12,7 @@ out="${1:?usage: ci-image-context.sh <empty directory>}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 
 mkdir -p "$out"
-if [ -n "$(ls -A "$out")" ]; then
+if [[ -n "$(ls -A "$out")" ]]; then
 	echo "ci-image-context: $out is not empty, and a stray file would change the tag" >&2
 	exit 1
 fi
@@ -21,7 +21,7 @@ cp "$root/.github/ci-image/Dockerfile" "$out/Dockerfile"
 "$root/scripts/gate-tools-recipe.sh" >"$out/tools.sh"
 
 pin="$(grep -oE '"packageManager":[[:space:]]*"pnpm@[^"]+"' "$root/package.json" || true)"
-if [ -z "$pin" ]; then
+if [[ -z "$pin" ]]; then
 	echo "ci-image-context: package.json names no pnpm packageManager, so the image cannot pin pnpm" >&2
 	exit 1
 fi

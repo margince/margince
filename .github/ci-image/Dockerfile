@@ -49,7 +49,7 @@ ARG UBUNTU_SNAPSHOT=20261105T143010Z
 COPY --from=go /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 RUN rm /etc/apt/sources.list.d/ubuntu.sources \
  && printf '%s\t%s\t%s\n' \
-      'http://azure.archive.ubuntu.com/ubuntu/' 'priority:1' 'type:deb' \
+      'https://azure.archive.ubuntu.com/ubuntu/' 'priority:1' 'type:deb' \
       > /etc/apt/ubuntu-mirrors.list \
  && printf '%s\t%s\n' \
       "https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}/" 'priority:2' \
@@ -138,7 +138,7 @@ ARG CHROMIUM_VERSION=153.0.8010.12
 ARG CHROMIUM_SHA256=a9da028861a0cf789ff25c2fed45f5f1aaf969ed9247835b6a7821a4f7af9d1d
 RUN dir="/ms-playwright/chromium_headless_shell-${CHROMIUM_REVISION}" \
  && mkdir -p "$dir" \
- && curl -fsSL --retry 5 -o /tmp/shell.zip \
+ && curl -fsSL --proto =https --proto-redir =https --retry 5 -o /tmp/shell.zip \
       "https://cdn.playwright.dev/builds/cft/${CHROMIUM_VERSION}/linux64/chrome-headless-shell-linux64.zip" \
  && echo "${CHROMIUM_SHA256}  /tmp/shell.zip" | sha256sum -c - \
  && unzip -q /tmp/shell.zip -d "$dir" \

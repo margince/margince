@@ -38,7 +38,7 @@ case "$code" in
 	*) echo "ci-image-digest: the registry's token endpoint answered $code" >&2; exit 1 ;;
 esac
 token="$(jq -r '.token // empty' "$body")"
-[ -n "$token" ] || { echo "ci-image-digest: the token answer carried no token" >&2; exit 1; }
+[[ -n "$token" ]] || { echo "ci-image-digest: the token answer carried no token" >&2; exit 1; }
 
 code="$(status "https://ghcr.io/v2/$name/manifests/$tag" -I \
 	-H "Authorization: Bearer $token" \
