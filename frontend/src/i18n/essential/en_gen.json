@@ -1389,6 +1389,8 @@
   "app.errorTitle": "This view stopped working",
   "app.errorBody": "Retry. If it fails again, reload the page.",
   "app.errorRetry": "Retry",
+  "card.errorTitle": "This card stopped working",
+  "card.errorRetry": "Retry",
   "connectivity.offline.title": "Device offline",
   "connectivity.offline.body": "Changes cannot be saved until the connection returns.",
   "connectivity.unreachable.title": "Margince unreachable",

@@ -1389,6 +1389,8 @@
   "app.errorTitle": "Diese Ansicht funktioniert nicht mehr",
   "app.errorBody": "Bitte versuche es erneut. Wenn es wieder fehlschlägt, lade die Seite neu.",
   "app.errorRetry": "Erneut versuchen",
+  "card.errorTitle": "Diese Karte funktioniert nicht mehr",
+  "card.errorRetry": "Erneut versuchen",
   "connectivity.offline.title": "Gerät offline",
   "connectivity.offline.body": "Änderungen lassen sich erst speichern, wenn die Verbindung wiederhergestellt ist.",
   "connectivity.unreachable.title": "Margince nicht erreichbar",

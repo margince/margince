@@ -4,6 +4,7 @@
 import { type ReactNode, Suspense, useState } from "react";
 import { AppLink } from "../../design-system/applink";
 import { Button, StatCard } from "../../design-system/atoms";
+import { CardBoundary } from "../../design-system/cardboundary";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
 import { analyticsSectionHref } from "../../lib/analytics.address";
@@ -19,9 +20,13 @@ import {
 } from "./reporting.model";
 import { useMetricNames } from "./reporting.queries";
 
-const SaveReportingDialog = lazy(async () => ({
-  default: (await import("./reporting.save")).SaveReportingDialog,
-}));
+const SaveReportingDialog = lazy(
+  async () => ({
+    default: (await import("./reporting.save")).SaveReportingDialog,
+  }),
+  "complete",
+  CardBoundary,
+);
 
 type Metric = ReportingEvaluation["metrics"][number];
 

@@ -1,6 +1,7 @@
 import { UserRound } from "lucide-react";
 import { Suspense, useCallback, useId, useRef, useState } from "react";
 import { Avatar, Button } from "../design-system/atoms";
+import { CardBoundary } from "../design-system/cardboundary";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { useMe } from "../lib/session";
@@ -9,14 +10,22 @@ import { usePopoverDismiss } from "./popover";
 import "./account.css";
 import "./topbar-popover.css";
 
-const AccountPanel = lazy(async () => ({
-  default: (await import("./accountpanel")).AccountPanel,
-}));
+const AccountPanel = lazy(
+  async () => ({
+    default: (await import("./accountpanel")).AccountPanel,
+  }),
+  "complete",
+  CardBoundary,
+);
 
 // Lazy: the list reads the Brief's deck vocabulary, and most sessions never open it.
-const ShortcutsDialog = lazy(async () => ({
-  default: (await import("./shortcutsdialog")).ShortcutsDialog,
-}));
+const ShortcutsDialog = lazy(
+  async () => ({
+    default: (await import("./shortcutsdialog")).ShortcutsDialog,
+  }),
+  "complete",
+  CardBoundary,
+);
 
 /**
  * The account menu owns settings, appearance, the booking link, help and

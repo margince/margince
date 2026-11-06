@@ -1,5 +1,6 @@
 import { type ReactNode, Suspense } from "react";
 import { Button, EmptyState, PendingBody } from "../../design-system/atoms";
+import { CardBoundary } from "../../design-system/cardboundary";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
@@ -13,9 +14,13 @@ import type {
 import { useMetricNames } from "./reporting.queries";
 import "./reporting.css";
 
-const ChartBody = lazy(async () => ({
-  default: (await import("./reporting.chartbody")).ChartBody,
-}));
+const ChartBody = lazy(
+  async () => ({
+    default: (await import("./reporting.chartbody")).ChartBody,
+  }),
+  "complete",
+  CardBoundary,
+);
 type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 
 export function ChartPanel({

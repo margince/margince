@@ -1,12 +1,13 @@
-import { type ReactNode, lazy as reactLazy } from "react";
+import { type ComponentType, type ReactNode, lazy as reactLazy } from "react";
 import type { CatalogLevel } from "./catalogs";
 import { LocaleBoundary } from "./index";
 
 export function lazy<Props extends object>(
   load: () => Promise<{ default: (props: Props) => ReactNode }>,
   level: CatalogLevel = "complete",
+  Boundary?: ComponentType<{ children: ReactNode }>,
 ) {
-  return reactLazy(async () => {
+  const Deferred = reactLazy(async () => {
     const { default: View } = await load();
     return {
       default: (props: Props) => (
@@ -16,4 +17,12 @@ export function lazy<Props extends object>(
       ),
     };
   });
+  if (!Boundary) return Deferred;
+  return function DeferredView(props: Props) {
+    return (
+      <Boundary>
+        <Deferred {...props} />
+      </Boundary>
+    );
+  };
 }

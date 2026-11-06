@@ -5,6 +5,7 @@ import { App } from "./App";
 import { AttentionProvider } from "./app/attention";
 import { AppErrorBoundary } from "./app/errorboundary";
 import { queryClient } from "./app/queryclient.instance";
+import { startupSessionReady } from "./app/startup-session";
 import { BulkUndoProvider } from "./components/bulkundo";
 import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
@@ -43,12 +44,15 @@ if (!root) {
 }
 async function mountApp(root: HTMLElement) {
   try {
-    await localeReady(
-      preferredLocale(),
-      parseHash(location.hash).screen === "analytics"
-        ? "essential"
-        : "complete",
-    );
+    await Promise.all([
+      localeReady(
+        preferredLocale(),
+        parseHash(location.hash).screen === "analytics"
+          ? "essential"
+          : "complete",
+      ),
+      startupSessionReady(),
+    ]);
   } catch (error: unknown) {
     console.error(
       "Startup language could not be loaded; the error boundary offers Retry",

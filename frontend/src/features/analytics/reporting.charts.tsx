@@ -1,5 +1,6 @@
 import { type ReactNode, Suspense } from "react";
 import { PendingBody } from "../../design-system/atoms";
+import { CardBoundary } from "../../design-system/cardboundary";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
@@ -27,9 +28,13 @@ import { TargetComparison } from "./reporting.targetcomparison";
 import { WrittenSummary } from "./reporting.written";
 import "./reporting.css";
 
-const QuestionCard = lazy(async () => ({
-  default: (await import("./reporting.questioncard")).QuestionCard,
-}));
+const QuestionCard = lazy(
+  async () => ({
+    default: (await import("./reporting.questioncard")).QuestionCard,
+  }),
+  "complete",
+  CardBoundary,
+);
 
 type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 

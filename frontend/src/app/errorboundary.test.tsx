@@ -48,6 +48,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("the app-level error boundary", () => {
@@ -130,6 +131,26 @@ describe("the app-level error boundary", () => {
     renderBoundary(<Stale />);
 
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets an explicit Retry reload after the automatic chunk-reload guard fired", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-22T12:00:00Z"));
+    sessionStorage.clear();
+    const reload = vi.fn();
+    vi.spyOn(window, "location", "get").mockReturnValue({
+      ...window.location,
+      reload,
+    });
+    function Stale(): never {
+      throw new TypeError(
+        "Failed to fetch dynamically imported module: /assets/settings.js",
+      );
+    }
+    renderBoundary(<Stale />);
+    expect(reload).toHaveBeenCalledTimes(1);
+    await userEvent.setup().click(screen.getByRole("button", { name: RETRY }));
+    expect(reload).toHaveBeenCalledTimes(2);
   });
 
   it("does not reload for a defect in the screen", () => {

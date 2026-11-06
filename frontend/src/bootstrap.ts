@@ -1,3 +1,4 @@
+import { registerStartupSession } from "./app/startup-session";
 import { loadEssentialLocale, loadLocale } from "./i18n/catalogs";
 import { preferredLocale } from "./i18n/locale";
 import { restoreReturnRoute } from "./lib/returnroute";
@@ -25,25 +26,24 @@ if (parseHash(location.hash).screen === "analytics") {
       throw error;
     },
   );
-  void Promise.all([
+  const fail = (error: unknown) =>
+    console.error("Analytics startup could not be prepared", error);
+  const preparation = Promise.all([
     import("./app/analytics-prefetch"),
     import("./app/queryclient.instance"),
-  ])
-    .then(([{ prefetchAnalytics }, { queryClient }]) =>
-      prefetchAnalytics(queryClient, async (signal) => {
-        const abort = () => controller.abort(signal?.reason);
-        if (signal?.aborted) abort();
-        signal?.addEventListener("abort", abort, { once: true });
-        try {
-          return (await prepared)();
-        } finally {
-          signal?.removeEventListener("abort", abort);
-        }
-      }),
-    )
-    .catch((error: unknown) =>
-      console.error("Analytics startup could not be prepared", error),
-    );
+  ]).then(([{ prefetchAnalytics }, { queryClient }]) => {
+    void prefetchAnalytics(queryClient, async (signal) => {
+      const abort = () => controller.abort(signal?.reason);
+      if (signal?.aborted) abort();
+      signal?.addEventListener("abort", abort, { once: true });
+      try {
+        return (await prepared)();
+      } finally {
+        signal?.removeEventListener("abort", abort);
+      }
+    }).catch(fail);
+  });
+  registerStartupSession(preparation.catch(fail));
 }
 const load =
   parseHash(location.hash).screen === "analytics"

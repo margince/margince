@@ -1389,6 +1389,8 @@
   "app.errorTitle": "Màn hình này bị lỗi",
   "app.errorBody": "Thử lại. Nếu vẫn lỗi, tải lại trang.",
   "app.errorRetry": "Thử lại",
+  "card.errorTitle": "Khung này đã ngừng hoạt động",
+  "card.errorRetry": "Thử lại",
   "connectivity.offline.title": "Thiết bị ngoại tuyến",
   "connectivity.offline.body": "Chưa thể lưu thay đổi cho đến khi có kết nối trở lại.",
   "connectivity.unreachable.title": "Không thể kết nối Margince",

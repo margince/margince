@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -132,7 +132,9 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   A language change also loads the complete catalog.
 
   `frontend/src/bootstrap.ts` starts the session read through `frontend/src/lib/session.read.ts`
-  while the app loads. `frontend/src/app/analytics-prefetch.ts` keeps the response time when
+  while the app loads. The main entry waits for `frontend/src/app/startup-session.ts` to
+  register the prepared query before mounting. `frontend/src/app/analytics-prefetch.ts` keeps
+  the response time when
   filling the shared query cache. Expired responses are read again.
   Once the session grants are known, it starts `Analytics` reads in that cache.
   The opening page and the rendered views use the same functions in

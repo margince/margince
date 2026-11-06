@@ -1,9 +1,11 @@
+import { CardBoundary } from "../../design-system/cardboundary";
 import { lazy } from "../../i18n/lazy";
 export const MemberTable = lazy(
   async () => ({
     default: (await import("./analytics.overview.team.members")).MemberTable,
   }),
   "essential",
+  CardBoundary,
 );
 export const UpcomingMeetings = lazy(
   async () => ({
@@ -11,6 +13,7 @@ export const UpcomingMeetings = lazy(
       .UpcomingMeetings,
   }),
   "essential",
+  CardBoundary,
 );
 export const HandoffCohort = lazy(
   async () => ({
@@ -18,6 +21,7 @@ export const HandoffCohort = lazy(
       .HandoffCohort,
   }),
   "essential",
+  CardBoundary,
 );
 
 export const AssessmentPanel = lazy(
@@ -25,6 +29,7 @@ export const AssessmentPanel = lazy(
     default: (await import("./analytics.assessment")).AssessmentPanel,
   }),
   "essential",
+  CardBoundary,
 );
 
 export const DecisionsPanel = lazy(
@@ -32,6 +37,7 @@ export const DecisionsPanel = lazy(
     default: (await import("./analytics.decisions")).DecisionsPanel,
   }),
   "essential",
+  CardBoundary,
 );
 
 export const ReviewDecisionsAction = lazy(
@@ -39,6 +45,7 @@ export const ReviewDecisionsAction = lazy(
     default: (await import("./analytics.decisions")).ReviewDecisionsAction,
   }),
   "essential",
+  CardBoundary,
 );
 
 export const OutcomeWeeks = lazy(
@@ -47,6 +54,7 @@ export const OutcomeWeeks = lazy(
       .OutcomeWeeks,
   }),
   "essential",
+  CardBoundary,
 );
 
 export const OutcomeHistory = lazy(
@@ -55,4 +63,5 @@ export const OutcomeHistory = lazy(
       .OutcomeHistory,
   }),
   "essential",
+  CardBoundary,
 );

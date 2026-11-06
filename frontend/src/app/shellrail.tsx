@@ -9,6 +9,7 @@ import {
 } from "react";
 import { AppLink } from "../design-system/applink";
 import { Avatar, BusyMark } from "../design-system/atoms";
+import { SilentCardBoundary } from "../design-system/cardboundary";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
 import { useTruncationTooltip } from "../design-system/tooltip";
@@ -32,6 +33,7 @@ const AgentRailBody = lazy(
     default: (await import("./agentrail")).AgentRail,
   }),
   "essential",
+  SilentCardBoundary,
 );
 
 function AgentRail(props: ComponentProps<typeof AgentRailBody>) {

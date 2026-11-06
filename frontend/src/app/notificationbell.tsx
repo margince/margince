@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { useNoticeRead } from "../components/taskactions.rowwrites";
 import { Badge, Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CardBoundary } from "../design-system/cardboundary";
 import { Panel, PanelBody } from "../design-system/panel";
 import { usePortalPanelFocus } from "../design-system/portalfocus";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
@@ -24,9 +25,13 @@ import { usePopoverDismiss } from "./popover";
 import "./notificationbell.css";
 import "./topbar-popover.css";
 
-const NoticeRow = lazy(async () => ({
-  default: (await import("./notificationrow")).NoticeRow,
-}));
+const NoticeRow = lazy(
+  async () => ({
+    default: (await import("./notificationrow")).NoticeRow,
+  }),
+  "complete",
+  CardBoundary,
+);
 
 // The notification centre, as the chrome carries it: a count somebody sees
 // without opening anything, and the history behind it.

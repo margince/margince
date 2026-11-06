@@ -1,3 +1,4 @@
+import { CardBoundary } from "../../design-system/cardboundary";
 // The settings catalog, its addresses, and who may open each entry.
 //
 // Split from the screen so `src/app/**` can ask those three questions without
@@ -31,9 +32,13 @@ import {
 import { settingsRouteTarget } from "../../lib/settingsrouting";
 import { PAGE_ICONS } from "./settingsnavicons";
 
-const SettingsSearchBox = lazy(async () => ({
-  default: (await import("./settingssearchbox")).SettingsSearchBox,
-}));
+const SettingsSearchBox = lazy(
+  async () => ({
+    default: (await import("./settingssearchbox")).SettingsSearchBox,
+  }),
+  "complete",
+  CardBoundary,
+);
 
 // The entry register: one section nav entry per settings SUBJECT. Only surfaces
 // this app actually renders get one — the mockup's Booking / Flow /

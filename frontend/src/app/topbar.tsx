@@ -3,6 +3,7 @@ import { type RefObject, Suspense, useEffect, useRef } from "react";
 import { AppLink } from "../design-system/applink";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
+import { SilentCardBoundary } from "../design-system/cardboundary";
 import { IconAction } from "../design-system/iconaction";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
@@ -35,6 +36,7 @@ import "./topbar.css";
 const SetupReminder = lazy(
   async () => ({ default: (await import("./setup-reminder")).SetupReminder }),
   "essential",
+  SilentCardBoundary,
 );
 
 // The top bar: the one strip that is true of the whole session rather than of
