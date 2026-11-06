@@ -62,8 +62,8 @@ func uploadCeilings(limits UploadLimits) map[string]int64 {
 		"/v1/company/logo/icon": companyLogoUploadBytes, // uploadCompanyLogoIcon
 		// A legal entity's mark, through the same decode as the company's.
 		"/v1/legal-entities/{id}/logo": companyLogoUploadBytes, // uploadLegalEntityLogo
-		// A seat's own picture, read through the same parse as a mark. It is
-		// shrunk to 512px before it is stored, so the mark's bound fits it too.
+		// A seat's own picture goes through the same decode as a mark, under the same
+		// cap on what that decode may be handed.
 		"/v1/me/avatar": companyLogoUploadBytes, // uploadMyAvatar
 		// A website form post. Its contract takes multipart because a browser's
 		// FormData sends it. File parts are skipped, so the bound is the form's.

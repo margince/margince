@@ -43,6 +43,7 @@ const avatarRevision = "avatar-v1"
 const (
 	avatarOriginField    = "avatar_origin"
 	avatarRemovedAtField = "avatar_removed_at"
+	avatarRevisionField  = "avatar_revision"
 )
 
 // AvatarURL is where a client fetches a seat's picture, nil when it has none.
@@ -100,6 +101,9 @@ func (s *Service) writeMyAvatar(ctx context.Context, user ids.UserID, after avat
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, err := lockOwnAvatar(ctx, tx, &seat)
 		if err != nil {
+			return err
+		}
+		if err := readSeatZone(ctx, tx, &seat); err != nil {
 			return err
 		}
 		if before.pinned() && after.pinned() {
@@ -180,7 +184,8 @@ func (s *Service) FillAvatarFromProvider(ctx context.Context, user ids.UserID, o
 }
 
 // The dropped key turns provisional, so the sweep collects it if the caller's delete fails.
-// Every writer is the member's own act, so the event names them as who changed it.
+// A fill is credited to the member whose sign-in or connect started it, as a role grant is.
+// user.updated names a seat as `by`, and the system principal has none.
 func recordAvatarChange(ctx context.Context, tx pgx.Tx, user ids.UserID, before, after avatarState) error {
 	if after.key != nil {
 		if err := storedobjects.Clear(ctx, tx, *after.key); err != nil {
@@ -201,10 +206,37 @@ func recordAvatarChange(ctx context.Context, tx pgx.Tx, user ids.UserID, before,
 	})
 }
 
-// avatarImage is one side of the audit pair. The key stays out: it names a
-// bucket path, and who chose the picture is what the trail is for.
+// avatarImage is one side of the audit pair. The key stays out because it names a bucket
+// path; its revision tells a replace or a refresh apart from no change.
 func avatarImage(a avatarState) map[string]any {
-	return map[string]any{avatarOriginField: a.origin, avatarRemovedAtField: a.removedAt}
+	var revision *string
+	if a.key != nil {
+		token := AvatarETag(*a.key)
+		revision = &token
+	}
+	return map[string]any{avatarOriginField: a.origin, avatarRemovedAtField: a.removedAt, avatarRevisionField: revision}
+}
+
+// ProviderMayFill answers whether a fill would be written, and the key the seat names now.
+// A fill skips the fetch for a seat it cannot write; avatarFillableSQL decides again on write.
+func (s *Service) ProviderMayFill(ctx context.Context, user ids.UserID) (bool, *string, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return false, nil, err
+	}
+	var fillable bool
+	var current *string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT `+avatarFillableSQL+`, avatar_object_key
+			   FROM app_user WHERE id = $1 AND `+LiveMemberSQL(""), user).Scan(&fillable, &current)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil, nil
+	}
+	if err != nil {
+		return false, nil, fmt.Errorf("identity: reading whether a seat's picture may be filled: %w", err)
+	}
+	return fillable, current, nil
 }
 
 // SeatAvatarKey is where a colleague's picture lives. No picture, an archived seat and an

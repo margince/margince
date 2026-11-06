@@ -14,10 +14,13 @@ import (
 	"image/png"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -148,5 +151,52 @@ func TestEveryPictureRouteAnswers501WithNoObjectStore(t *testing.T) {
 		if rec.Code != http.StatusNotImplemented {
 			t.Errorf("%s with no object store = %d, want 501", name, rec.Code)
 		}
+	}
+}
+
+// failingPictureHost answers every fetch with one error, after asking ctx's redirect guard
+// about a hop off Google's hosts the way webread's redirect hook does.
+type failingPictureHost struct {
+	err        error
+	guardSaid  error
+	guardAsked bool
+}
+
+func (h *failingPictureHost) FetchAsset(ctx context.Context, _ string) ([]byte, string, error) {
+	h.guardAsked = true
+	h.guardSaid = webread.RedirectAllowed(ctx, &url.URL{Scheme: "http", Host: "attacker.test", Path: "/pic"})
+	return nil, "", h.err
+}
+
+const privatePicture = "https://lh3.googleusercontent.com/a/ACg8oc-carol-private=s96-c"
+
+// The picture URL is personal data, and the fill's error is what a failed sign-in fill logs.
+func TestAFailedPictureFetchNamesNoPartOfItsURL(t *testing.T) {
+	t.Parallel()
+	for name, cause := range map[string]error{
+		"a status":   &webread.StatusError{Status: http.StatusForbidden, URL: privatePicture},
+		"robots":     errors.Join(webread.ErrRobotsDisallowed, errors.New("/a/ACg8oc-carol-private=s96-c")),
+		"transport":  &url.Error{Op: "Get", URL: privatePicture, Err: errors.New("connection reset")},
+		"a redirect": &url.Error{Op: "Get", URL: privatePicture, Err: errPictureRedirect},
+	} {
+		host := &failingPictureHost{err: cause}
+		_, err := (&avatarPictures{fetch: host}).fetchPicture(context.Background(), privatePicture)
+		if err == nil {
+			t.Fatalf("%s: a failed fetch reported success", name)
+		}
+		if strings.Contains(err.Error(), "ACg8oc") || strings.Contains(err.Error(), "googleusercontent") {
+			t.Errorf("%s: the logged error %q carries the picture URL", name, err)
+		}
+	}
+}
+
+func TestThePictureFetchRefusesARedirectOffGooglesHosts(t *testing.T) {
+	t.Parallel()
+	host := &failingPictureHost{err: errors.New("unused")}
+	if _, err := (&avatarPictures{fetch: host}).fetchPicture(context.Background(), privatePicture); err == nil {
+		t.Fatal("the fetch reported success")
+	}
+	if !host.guardAsked || !errors.Is(host.guardSaid, errPictureRedirect) {
+		t.Errorf("a hop to an http host off Google's was allowed: %v", host.guardSaid)
 	}
 }

@@ -15,7 +15,8 @@ import {
 } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
-import { ProfilePictureRow } from "./profilepicture";
+import { PICTURE_MAX_BYTES, PICTURE_TYPES } from "./picturelimits";
+import { ProfilePictureRow, pictureProblem } from "./profilepicture";
 
 type User = components["schemas"]["User"];
 
@@ -116,11 +117,11 @@ it("refuses a file that is not PNG, JPEG or WebP before it is sent", async () =>
   expect(sent).toEqual([]);
 });
 
-it("refuses a file over 5 MB before it is sent", async () => {
+it("refuses a file over the server's ceiling before it is sent", async () => {
   serve(() => json(ME));
   const user = userEvent.setup();
   show();
-  const big = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "me.png", {
+  const big = new File([new Uint8Array(PICTURE_MAX_BYTES + 1)], "me.png", {
     type: "image/png",
   });
   await user.upload(picker(), big);
@@ -128,6 +129,15 @@ it("refuses a file over 5 MB before it is sent", async () => {
     await screen.findByText("Picture not uploaded. Use a file up to 5 MB."),
   ).toBeInTheDocument();
   expect(sent).toEqual([]);
+});
+
+it("offers a file at the ceiling and every type the server reads", () => {
+  for (const type of PICTURE_TYPES) {
+    const atCeiling = new File([new Uint8Array(PICTURE_MAX_BYTES)], "me", {
+      type,
+    });
+    expect(pictureProblem(atCeiling)).toBeNull();
+  }
 });
 
 it("uploads the picked file and reads every chip of the seat again", async () => {

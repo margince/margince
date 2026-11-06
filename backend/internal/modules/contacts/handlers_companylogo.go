@@ -211,9 +211,9 @@ func writeLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, etag 
 // CPU this read already spent; the object at key still holds the correct, if
 // untrimmed, picture, and the next read tries again.
 //
-// Re-reads the slot's CURRENT key both before and after the write: this read
-// may race a replace or an archive whose own cleanup (deleteUnreferencedLogo,
-// sitelogoreclaim.go) deletes the object at key, and a write-back landing on
+// Re-reads the slot's CURRENT key both before and after the write. This read
+// may race a replace or an archive whose own cleanup (deleteUnreferencedObject,
+// sitelogoreclaim.go) deletes the object at key. A write-back landing on
 // either side of that delete would resurrect bytes nothing references — the
 // exact orphan knowledgeorphan_integration_test.go exists to catch, one
 // module over. The before check skips the write outright; the after check

@@ -14,12 +14,9 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf, problemStatus, unwrap } from "../../lib/problem";
+import { PICTURE_MAX_BYTES, PICTURE_TYPES } from "./picturelimits";
 
 type User = components["schemas"]["User"];
-
-export const PICTURE_TYPES = ["image/png", "image/jpeg", "image/webp"];
-
-export const PICTURE_MAX_BYTES = 5 * 1024 * 1024;
 
 // The server is the authority on both; this only spares a reader the upload.
 export function pictureProblem(file: File): MessageKey | null {

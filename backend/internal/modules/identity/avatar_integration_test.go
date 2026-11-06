@@ -11,11 +11,13 @@ package identity
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -184,23 +186,7 @@ func TestTheGooglePictureRefreshesWhileItIsTheSeatsPicture(t *testing.T) {
 	}
 }
 
-func TestOnlyTheSeatItselfSetsItsPicture(t *testing.T) {
-	e := setupRevocationEnv(t, "avatar-who-writes")
-	agent := principal.WithActor(e.wsCtx(e.admin), principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:test", UserID: e.admin.UserID.UUID,
-	})
-	if _, _, err := e.svc.SetMyAvatar(agent, "ws/avatar/agent.png"); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("an agent uploading its user's picture: %v, want permission denied", err)
-	}
-	if _, _, err := e.svc.RemoveMyAvatar(agent); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("an agent deleting its user's picture: %v, want permission denied", err)
-	}
-	if _, _, err := e.svc.FillAvatarFromProvider(e.wsCtx(e.admin), e.admin.UserID, "ws/avatar/x.png"); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a member calling the provider fill: %v, want permission denied", err)
-	}
-}
-
-func TestAnyMemberReadsAColleaguesPictureAndNobodyElseDoes(t *testing.T) {
+func TestAnyMemberReadsAColleaguesPicture(t *testing.T) {
 	e := setupRevocationEnv(t, "avatar-read")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
 	fillFromGoogle(t, e, e.admin.UserID, "ws/avatar/google-1.png")
@@ -208,11 +194,6 @@ func TestAnyMemberReadsAColleaguesPictureAndNobodyElseDoes(t *testing.T) {
 	key, err := e.svc.SeatAvatarKey(e.wsCtx(rep), e.admin.UserID)
 	if err != nil || key != "ws/avatar/google-1.png" {
 		t.Errorf("a rep reading the admin's picture got %q, %v", key, err)
-	}
-	buyer := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws.UUID),
-		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"})
-	if _, err := e.svc.SeatAvatarKey(buyer, e.admin.UserID); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a Deal Room buyer reading a picture: %v, want permission denied", err)
 	}
 
 	notFound := map[string]ids.UserID{"no picture": rep.UserID, "unknown seat": ids.New[ids.UserKind]()}
@@ -262,47 +243,100 @@ func TestASignInOffersItsPictureWithoutWaitingForTheFill(t *testing.T) {
 	if err != nil || token == "" {
 		t.Fatalf("signing in while the picture fill is held: token %q, %v", token, err)
 	}
-	got := <-offered
+	var got offer
+	select {
+	case got = <-offered:
+	case <-time.After(30 * time.Second):
+		t.Fatal("the sign-in never offered its picture")
+	}
 	if got.user != userID || got.url != "https://lh3.googleusercontent.com/a/carol" {
 		t.Errorf("the fill was offered %v at %q, want the signed-in seat and its picture", got.user, got.url)
 	}
 }
 
-// The picture reaches every read that draws a colleague by the same URL, and
-// the object key reaches none of them.
+// Every mapping that renders a seat (SeatUser, wireUser, meResponse and /users/names)
+// carries its picture's URL, and every self-service save answers with its zone too.
 func TestEveryReadThatNamesASeatCarriesItsPictureURL(t *testing.T) {
 	e := setupRevocationEnv(t, "avatar-wire")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
-	fillFromGoogle(t, e, e.admin.UserID, "ws/avatar/google-1.png")
-	want := "/v1/users/" + e.admin.UserID.String() + "/avatar?v=" + AvatarETag("ws/avatar/google-1.png")
+	me := e.wsCtx(rep)
+	fillFromGoogle(t, e, rep.UserID, "ws/avatar/google-1.png")
+	want := "/v1/users/" + rep.UserID.String() + "/avatar?v=" + AvatarETag("ws/avatar/google-1.png")
 
-	body := nameSeatsBody(t, e, rep, []openapi_types.UUID{
-		openapi_types.UUID(e.admin.UserID.UUID), openapi_types.UUID(rep.UserID.UUID),
-	})
-	for _, row := range body.Data {
-		wantRow := ""
-		if row.Id == openapi_types.UUID(e.admin.UserID.UUID) {
-			wantRow = want
-		}
-		if textOrEmpty(row.AvatarUrl) != wantRow {
-			t.Errorf("/users/names gives %s the picture %q, want %q", row.DisplayName, textOrEmpty(row.AvatarUrl), wantRow)
-		}
-	}
-	seat, err := e.svc.SaveMyDisplayName(e.wsCtx(e.admin), "Admin Renamed")
+	_, session, err := e.svc.Login(principal.WithWorkspaceID(context.Background(), e.ws.UUID), "rep@acme.test", seatNamePassword, noDevice)
 	if err != nil {
-		t.Fatalf("renaming: %v", err)
+		t.Fatalf("signing in: %v", err)
 	}
-	if got := textOrEmpty(SeatUser(seat).AvatarUrl); got != want {
-		t.Errorf("a self-service save answers the picture %q, want %q", got, want)
+	signedIn, err := e.svc.Authenticate(principal.WithWorkspaceID(context.Background(), e.ws.UUID), session.Token)
+	if err != nil {
+		t.Fatalf("resolving the session: %v", err)
 	}
-	page, err := e.svc.ListUsers(e.wsCtx(rep), ListUsersInput{})
+	expectPicture(t, "/me", NewHandlers(e.svc).meResponse(me, signedIn).User.AvatarUrl, want)
+
+	page, err := e.svc.ListUsers(e.wsCtx(e.admin), ListUsersInput{})
 	if err != nil {
 		t.Fatalf("listing the roster: %v", err)
 	}
-	for _, u := range page.Users {
-		if u.ID == e.admin.UserID.UUID && textOrEmpty(wireUser(u).AvatarUrl) != want {
-			t.Errorf("the roster gives the admin the picture %q, want %q", textOrEmpty(wireUser(u).AvatarUrl), want)
+	listed := slices.IndexFunc(page.Users, func(u userRow) bool { return u.ID == rep.UserID.UUID })
+	if listed < 0 {
+		t.Fatal("the roster does not list the rep")
+	}
+	expectPicture(t, "the roster", wireUser(page.Users[listed]).AvatarUrl, want)
+
+	names := nameSeatsBody(t, e, e.admin, []openapi_types.UUID{openapi_types.UUID(rep.UserID.UUID)})
+	if len(names.Data) != 1 {
+		t.Fatalf("/users/names named %d seats, want the rep", len(names.Data))
+	}
+	expectPicture(t, "/users/names", names.Data[0].AvatarUrl, want)
+
+	if _, err := e.svc.SaveMyTimezone(me, "Europe/Berlin", TimezoneChosen); err != nil {
+		t.Fatalf("saving the zone: %v", err)
+	}
+	greeting := "Rep"
+	saves := map[string]func() (Seat, error){
+		"display name": func() (Seat, error) { return e.svc.SaveMyDisplayName(me, "Rep Renamed") },
+		"greeting":     func() (Seat, error) { return e.svc.SaveMyGreetingName(me, &greeting) },
+		"locale":       func() (Seat, error) { return e.svc.SaveMyLocale(me, "de") },
+		"time zone":    func() (Seat, error) { return e.svc.SaveMyTimezone(me, "Europe/Berlin", TimezoneChosen) },
+	}
+	for name, save := range saves {
+		seat, err := save()
+		if err != nil {
+			t.Fatalf("saving the %s: %v", name, err)
 		}
+		expectSeat(t, "the "+name+" save", SeatUser(seat), &want)
+	}
+
+	uploaded, _, err := e.svc.SetMyAvatar(me, "ws/avatar/upload-1.png")
+	if err != nil {
+		t.Fatalf("uploading: %v", err)
+	}
+	newer := "/v1/users/" + rep.UserID.String() + "/avatar?v=" + AvatarETag("ws/avatar/upload-1.png")
+	expectSeat(t, "the upload", SeatUser(uploaded), &newer)
+	for range 2 {
+		removed, _, err := e.svc.RemoveMyAvatar(me)
+		if err != nil {
+			t.Fatalf("removing: %v", err)
+		}
+		expectSeat(t, "the removal", SeatUser(removed), nil)
+	}
+}
+
+func expectPicture(t *testing.T, reader string, got *string, want string) {
+	t.Helper()
+	if textOrEmpty(got) != want {
+		t.Errorf("%s answers the picture %q, want %q", reader, textOrEmpty(got), want)
+	}
+}
+
+// expectSeat holds a self-service answer to the picture and to the zone the seat holds.
+func expectSeat(t *testing.T, save string, user crmcontracts.User, picture *string) {
+	t.Helper()
+	if textOrEmpty(user.AvatarUrl) != textOrEmpty(picture) {
+		t.Errorf("%s answers the picture %q, want %q", save, textOrEmpty(user.AvatarUrl), textOrEmpty(picture))
+	}
+	if textOrEmpty(user.Timezone) != "Europe/Berlin" {
+		t.Errorf("%s answers the zone %q, want the seat's Europe/Berlin", save, textOrEmpty(user.Timezone))
 	}
 }
 

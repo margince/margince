@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
@@ -53,6 +54,21 @@ type offeredPicture struct {
 	url  string
 }
 
+// pictureOfferBudget bounds the wait for a detached offer, so a missing one fails the test
+// rather than hanging the package until its timeout.
+const pictureOfferBudget = 30 * time.Second
+
+func awaitOffer(t *testing.T, offered <-chan offeredPicture) offeredPicture {
+	t.Helper()
+	select {
+	case got := <-offered:
+		return got
+	case <-time.After(pictureOfferBudget):
+		t.Fatal("no picture was offered")
+		return offeredPicture{}
+	}
+}
+
 // mailboxOwnedBy is a Gmail API whose profile names owner as the connected account.
 type mailboxOwnedBy struct {
 	stubGmailAPI
@@ -88,7 +104,7 @@ func TestAPersonalGoogleConnectOffersItsAccountPicture(t *testing.T) {
 
 	h.offerConnectPicture(humanCtx(), seat, consent, auth)
 
-	got := <-offered
+	got := awaitOffer(t, offered)
 	if got.user.UUID != seat || got.url != accountPicture {
 		t.Errorf("offered %v at %q, want the granting seat and its account's picture", got.user, got.url)
 	}

@@ -54,7 +54,7 @@ func TestAPersonalGoogleConnectLandsAndThenOffersItsPicture(t *testing.T) {
 	requireLocation(t, c.callback(t, jar, "gmail", state, granted()), "https://app.test/#/settings/connections/ok/gmail")
 	release()
 
-	got := <-offered
+	got := awaitOffer(t, offered)
 	if got.user.UUID != c.env.Rep1 || got.url != accountPicture {
 		t.Errorf("offered %v at %q, want the connecting seat and its account's picture", got.user, got.url)
 	}

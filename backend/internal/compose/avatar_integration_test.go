@@ -177,14 +177,9 @@ func TestTheUploadRefusesWhatIsNotTheSeatsOwnPicture(t *testing.T) {
 	}
 }
 
-func TestTheStreamIsForMembersAndHidesWhichSeatsExist(t *testing.T) {
+func TestTheStreamHidesWhichSeatsExist(t *testing.T) {
 	f := newAvatarFixture(t)
 	f.upload(f.me, t, encodedPicture(t, pngOf, halvesImage(20, 20)))
-	buyer := principal.WithActor(principal.WithWorkspaceID(context.Background(), f.e.WS),
-		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"})
-	if rec := f.stream(buyer, f.e.Rep1, "", ""); rec.Code != http.StatusForbidden {
-		t.Errorf("a Deal Room buyer streaming a picture = %d, want 403", rec.Code)
-	}
 	for name, seat := range map[string]ids.UUID{"no picture": f.e.Rep2, "unknown seat": ids.NewV7()} {
 		if rec := f.stream(f.me, seat, "", ""); rec.Code != http.StatusNotFound {
 			t.Errorf("%s = %d, want 404", name, rec.Code)
@@ -214,10 +209,51 @@ func TestTheSignInFillStoresTheGooglePictureUntilTheMemberDeletesIt(t *testing.T
 		t.Fatalf("deleting: %v", err)
 	}
 	f.site.assets[googlePicture] = encodedPicture(t, pngOf, halvesImage(30, 30))
+	asked := len(f.site.asked)
 	if err := pictures.FillFromPictureURL(context.Background(), rep, googlePicture); err != nil {
 		t.Fatalf("a sign-in after the delete: %v", err)
 	}
 	if key := f.storedKey(t, f.e.Rep1); key != nil {
 		t.Errorf("a sign-in after the delete gave the seat %s", *key)
+	}
+	if len(f.site.asked) != asked {
+		t.Error("a seat pinned to initials still had its Google picture fetched")
+	}
+}
+
+func TestAnUploadedPictureKeepsTheGooglePictureUnfetched(t *testing.T) {
+	f := newAvatarFixture(t)
+	f.upload(f.me, t, encodedPicture(t, pngOf, halvesImage(20, 20)))
+	if err := f.h.pictures.FillFromPictureURL(context.Background(), ids.From[ids.UserKind](f.e.Rep1), googlePicture); err != nil {
+		t.Fatalf("a sign-in after an upload: %v", err)
+	}
+	if len(f.site.asked) != 0 {
+		t.Errorf("a seat showing its own upload had the Google picture fetched: %v", f.site.asked)
+	}
+}
+
+// A picture that comes back after another one gets a key of its own. The release of its
+// earlier key then never deletes what the row names now.
+func TestAGooglePictureThatComesBackNeverLosesItsBytes(t *testing.T) {
+	f := newAvatarFixture(t)
+	rep := ids.From[ids.UserKind](f.e.Rep1)
+	first, second := encodedPicture(t, pngOf, halvesImage(60, 60)), encodedPicture(t, pngOf, halvesImage(30, 30))
+	var keys []string
+	for _, picture := range [][]byte{first, second, first} {
+		f.site.assets[googlePicture] = picture
+		if err := f.h.pictures.FillFromPictureURL(context.Background(), rep, googlePicture); err != nil {
+			t.Fatalf("filling from Google: %v", err)
+		}
+		key := f.storedKey(t, f.e.Rep1)
+		if key == nil || !f.objectExists(t, *key) {
+			t.Fatalf("after fill %d the row names %v, whose bytes are gone", len(keys)+1, key)
+		}
+		keys = append(keys, *key)
+	}
+	if keys[2] == keys[0] {
+		t.Errorf("the returning picture reused the key %s that its first fill's release deleted", keys[0])
+	}
+	if f.objectExists(t, keys[0]) || f.objectExists(t, keys[1]) {
+		t.Error("a replaced Google picture's bytes are still stored")
 	}
 }

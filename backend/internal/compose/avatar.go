@@ -34,9 +34,27 @@ const avatarEdge = 512
 
 const avatarKind = "avatar"
 
-// Not SVG: markup is a document a photo route has no reason to rasterize. Not GIF: one
-// frame of an animation is not the picture somebody chose.
-var avatarFormats = map[string]bool{"png": true, "jpeg": true, "webp": true}
+// AvatarMediaTypes maps each type an upload may be to its decoder format. Not SVG: markup is
+// a document. Not GIF: one frame of an animation is not the picture somebody chose.
+// Mirrored by frontend/src/features/settings/picturelimits.ts (frontendpicturelimits_test.go).
+var AvatarMediaTypes = map[string]string{"image/png": "png", "image/jpeg": "jpeg", "image/webp": "webp"}
+
+// avatarMultipartFraming is what a browser's form adds around the file: boundary lines and
+// part headers. Any filename a browser sends keeps it far under this.
+const avatarMultipartFraming = 16 << 10
+
+// AvatarFileMaxBytes is the largest picture file whose upload fits the route's body ceiling.
+// The client offers no larger file; the same gate holds its copy.
+const AvatarFileMaxBytes = companyLogoUploadBytes - avatarMultipartFraming
+
+// avatarFormats is AvatarMediaTypes keyed by what the decoder names.
+var avatarFormats = func() map[string]bool {
+	formats := map[string]bool{}
+	for _, format := range AvatarMediaTypes {
+		formats[format] = true
+	}
+	return formats
+}()
 
 // errAvatarFormat is a picture outside avatarFormats, or one that does not decode.
 var errAvatarFormat = &httperr.DetailedError{
@@ -48,7 +66,8 @@ type avatarPictures struct {
 	db     *database.DB
 	users  *identity.Service
 	ledger *storedobjects.Ledger
-	// blob is nil in a role that stores no objects: every route then answers 501.
+	// blob is nil in a role that stores no objects: upload and stream then answer 501. A
+	// delete still pins initials, since it frees bytes rather than storing any.
 	blob  blobstore.Store
 	fetch assetFetcher
 	log   *slog.Logger
@@ -110,7 +129,7 @@ func (p *avatarPictures) putPicture(ctx context.Context, key string, png []byte)
 // release deletes bytes a write left unreferenced. Detached and logged: the
 // write the caller asked for has happened, and the sweep retries a failure.
 func (p *avatarPictures) release(ctx context.Context, user ids.UserID, key *string) {
-	deleteUnreferencedLogo(ctx, p.blob, p.log, "seat "+user.String()+" picture", key)
+	deleteUnreferencedObject(ctx, p.blob, p.log, "seat "+user.String()+" picture", key)
 }
 
 // UploadMyAvatar implements POST /me/avatar.

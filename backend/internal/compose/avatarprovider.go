@@ -13,12 +13,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/webread"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -51,23 +51,25 @@ func (p *avatarPictures) FillFromPictureURL(ctx context.Context, user ids.UserID
 	if err != nil {
 		return err
 	}
-	source, _, err := p.fetch.FetchAsset(ctx, pictureURL)
+	fillable, current, err := p.users.ProviderMayFill(ctx, user)
+	if err != nil || !fillable {
+		return err
+	}
+	source, err := p.fetchPicture(ctx, pictureURL)
 	if err != nil {
-		return fmt.Errorf("compose: fetching a seat's Google picture: %w", err)
+		return err
 	}
 	png, err := normalizeAvatar(source)
 	if err != nil {
 		return fmt.Errorf("compose: normalizing a seat's Google picture: %w", err)
 	}
 	digest := sha256.Sum256(png)
-	key := avatarKey(ws, user, fmt.Sprintf("google-%x", digest[:8]))
-	current, err := p.users.SeatAvatarKey(ctx, user)
-	if err == nil && current == key {
+	revision := fmt.Sprintf("google-%x-", digest[:8])
+	if current != nil && strings.HasPrefix(path.Base(*current), revision) {
 		return nil
 	}
-	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
-		return err
-	}
+	// Unique per attempt: a key a later fill reused could be the one a release just deleted.
+	key := avatarKey(ws, user, revision+ids.NewV7().String())
 	if err := p.putPicture(ctx, key, png); err != nil {
 		return err
 	}
@@ -91,6 +93,37 @@ func (p *avatarPictures) fillContext(ctx context.Context) (context.Context, ids.
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	return principal.SystemActing(ctx, "system:provider-picture"), ws, nil
+}
+
+// The picture URL is personal data, and webread's errors carry it, so none of them is wrapped.
+var (
+	errPictureRobots      = errors.New("compose: the Google picture host's robots.txt refuses this fetch")
+	errPictureRedirect    = errors.New("compose: the Google picture host redirected off its own hosts")
+	errPictureUnreachable = errors.New("compose: the Google picture host could not be reached")
+)
+
+// fetchPicture holds every redirect hop to the host family the first URL was checked against.
+func (p *avatarPictures) fetchPicture(ctx context.Context, pictureURL string) ([]byte, error) {
+	ctx = webread.WithRedirectGuard(ctx, func(hop *url.URL) error {
+		if googlePictureURL(hop.String()) != nil {
+			return errPictureRedirect
+		}
+		return nil
+	})
+	source, _, err := p.fetch.FetchAsset(ctx, pictureURL)
+	var status *webread.StatusError
+	switch {
+	case err == nil:
+		return source, nil
+	case errors.As(err, &status):
+		return nil, fmt.Errorf("compose: the Google picture host answered %d", status.Status)
+	case errors.Is(err, webread.ErrRobotsDisallowed):
+		return nil, errPictureRobots
+	case errors.Is(err, errPictureRedirect):
+		return nil, errPictureRedirect
+	default:
+		return nil, errPictureUnreachable
+	}
 }
 
 // googlePictureURL refuses anything but an https URL on a Google picture host.

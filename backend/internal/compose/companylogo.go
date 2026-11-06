@@ -256,5 +256,5 @@ func boundedFilename(name string) string {
 // the write the caller asked for has happened, and an object nobody names costs
 // storage and nothing else.
 func (h companyHandlers) collectLogoObject(ctx context.Context, key *string) {
-	deleteUnreferencedLogo(ctx, h.blob, slog.Default(), "the installation's company", key)
+	deleteUnreferencedObject(ctx, h.blob, slog.Default(), "the installation's company", key)
 }
