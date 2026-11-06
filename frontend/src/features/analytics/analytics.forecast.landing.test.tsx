@@ -27,7 +27,7 @@ function draw(node: ReactNode) {
 
 const landing = (over: Partial<Landing> = {}): Landing => ({
   amount_minor: 900_00,
-  measure: "commit_evidence",
+  measure: "likely",
   won_minor: 400_00,
   remaining_minor: 500_00,
   ...over,
@@ -51,7 +51,7 @@ describe("the projected landing", () => {
 
     // One label over every measure, with the basis leading the detail.
     expect(screen.getByText("Landing")).toBeTruthy();
-    expect(screen.getByText("Won + confirmed commit")).toBeTruthy();
+    expect(screen.getByText("Won + Likely deals")).toBeTruthy();
     expect(
       screen.getByText(`${money(400_00)} won + ${money(500_00)} to come`),
     ).toBeTruthy();
@@ -163,10 +163,10 @@ describe("whether the open deals support the reference", () => {
     );
 
     // Compact, because a slot is not as wide as an amount.
-    expect(screen.getByText("2,400 EUR")).toBeTruthy();
+    expect(screen.getByText("€2,400")).toBeTruthy();
     const detail = screen.getByText(/open ·/);
-    expect(detail.textContent).toBe("1,200 EUR open · to reach 1,000 EUR");
-    expect(detail.textContent).not.toContain("2,400 EUR");
+    expect(detail.textContent).toBe("€1,200 open · to reach €1,000");
+    expect(detail.textContent).not.toContain("€2,400");
   });
 
   it("renders coverage as a whole percent", () => {

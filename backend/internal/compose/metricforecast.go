@@ -33,7 +33,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		if e.compared != nil {
 			e.compared.operands = &reporting.ForecastOperands{Quarter: crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End}, ColleagueWithheld: true}
 		}
-		return []reporting.Fact{}, loneColleagueCoverage(frame), nil
+		return []reporting.Fact{}, belowFloorCoverage(frame), nil
 	}
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
@@ -139,7 +139,7 @@ func forecastMetricFacts(frame crmcontracts.ReportingContext, readings forecasti
 		if contribution.InEvidence {
 			contexts = append(contexts, "forecast_supported")
 		}
-		if contribution.InBestCase && !contribution.InEvidence {
+		if contribution.InOpen && !contribution.InEvidence {
 			contexts = append(contexts, "forecast_upside")
 		}
 		if contribution.InOpen {

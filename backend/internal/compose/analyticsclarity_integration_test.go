@@ -161,6 +161,20 @@ func TestForecastEvidenceDatesKeepPrivateTotalsAndRemediesConsistent(t *testing.
 	asOf := f.at
 	f.at = asOf.AddDate(0, 0, -28)
 	colleagues := append(f.env.addMembers(t, f.env.Team1, "first@example.test", "second@example.test"), f.env.Rep3)
+	// Rep3 joins Team1 too, and every stage and the won total hold work of each
+	// colleague. So no figure, and no team's total taken from one, is one
+	// colleague's work.
+	if _, err := f.env.owner.Exec(t.Context(), `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, f.env.Team1, f.env.Rep3); err != nil {
+		t.Fatal(err)
+	}
+	for _, colleague := range colleagues[:2] {
+		for _, stage := range []int{55, 60} {
+			f.createDeal(t, "Priced colleague deal", 100_000, f.env.stages[stage], colleague)
+		}
+		f.env.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, status, closed_at, fx_rate_to_base, source, captured_by)
+			VALUES ($1, 'Colleague win', $2, $3, $4, 1000, 'EUR', 'won', $5, 1.0, 'manual', 'human:x')`,
+			f.env.pipeline, f.env.stages[60], colleague, asOf.AddDate(0, 0, -3))
+	}
 	for i, colleague := range colleagues {
 		closeAt := asOf.AddDate(0, 0, -7*i)
 		owner := ids.From[ids.UserKind](colleague)

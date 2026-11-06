@@ -32,8 +32,10 @@ type ViabilityInput struct {
 	ExpectedClose      *time.Time
 	CloseProvisional   bool
 	HasNextStep        bool
-	// MailCovered is true when every mailbox was read on time. Without it no
-	// silence is observed, because "nothing arrived" would mean "nothing was read".
+	// MailCovered is true when the mail this deal's silence is read from was
+	// read on time: the mailboxes of the owner and of every user whose mailbox
+	// captured mail on the deal, or every mailbox when there is no such user. Without it no silence is observed, because "nothing arrived"
+	// would mean "nothing was read".
 	MailCovered bool
 	// OpenReview is true while a viability review on this deal is open. Only
 	// somebody's validated answer closes it; a reply alone does not.

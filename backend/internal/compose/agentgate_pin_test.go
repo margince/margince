@@ -95,10 +95,6 @@ func TestStageRefusalNamesTheTargetAndSuppliesNoClientPin(t *testing.T) {
 var unpinnableConfirmFirstTypes = gatekit.Waive(map[agentRecordType]string{
 	"deal_room": "the only agent route that stages against a room is createDealRoom, a CREATE: it names no " +
 		"existing row, so there is no version to pin, and the diff_hash binds the call that makes it.",
-	"deal_room_thread": "openDealRoomThread is a CREATE of a thread: no existing row, so nothing to pin; " +
-		"the diff_hash binds the call.",
-	"deal_room_comment": "replyDealRoomThread CREATES a reply: no existing row, so nothing to pin; the " +
-		"diff_hash binds the call.",
 })
 
 // Workspace tier floors can stage auto-execute operations too, so their

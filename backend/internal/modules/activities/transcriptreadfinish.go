@@ -77,16 +77,20 @@ func finishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, out
 	if outcome.Detail != "" {
 		detail = &outcome.Detail
 	}
+	facts, err := encodeTranscriptFacts(outcome.Facts)
+	if err != nil {
+		return err
+	}
 	// RETURNING because the rail is announced from the SETTLED row rather than
 	// from the outcome the caller handed in: the two could disagree about the
 	// line count, and the row is what every other reader sees.
 	settled, err := scanTranscriptRead(tx.QueryRow(ctx, `
 			UPDATE transcript_read
 			   SET status = $2, status_detail = $3, proposal_ids = $4, finished_at = now(),
-			       line_count = COALESCE($5, line_count)
+			       line_count = COALESCE($5, line_count), outcome = $6
 			 WHERE id = $1 AND status = 'running'
 			RETURNING `+transcriptReadColumns,
-		readID, outcome.Status, detail, proposals, readLineCount(outcome.LineCount)))
+		readID, outcome.Status, detail, proposals, readLineCount(outcome.LineCount), facts))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("%w: transcript read %s is not running", apperrors.ErrConflict, readID)
 	}

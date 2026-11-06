@@ -11,9 +11,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RelationshipsTab } from "../../components/relationshiprows";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
-import { RelationshipsTab } from "../records/relationshiprows";
 
 // A deal's stakeholders were readable on three surfaces — the rail's seats, the
 // committee map, the coverage findings — and writable on none: the edge was

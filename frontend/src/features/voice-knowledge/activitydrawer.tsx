@@ -16,7 +16,7 @@ import { CommitmentReview } from "../../design-system/commitmentreview";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
-import { Markdown } from "../../design-system/markdown";
+import { NoteMarkdown } from "../../design-system/markdown";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
@@ -427,7 +427,7 @@ function withheldOrBody(
   });
   return markdown ? (
     <div className="t-body">
-      <Markdown source={body} autolink />
+      <NoteMarkdown source={body} />
     </div>
   ) : (
     <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>

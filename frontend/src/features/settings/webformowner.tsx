@@ -13,9 +13,10 @@ import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useDepartedName } from "../../lib/membernames";
 
-// Who each new lead from the form goes to. A saved owner the list does not
-// hold, or does not hold yet, stays chosen until changed. Only one the server
-// names as departed is shown as such, since their leads arrive unassigned.
+// Who each new lead from the form goes to. Any colleague may be named, since
+// the installation writes the lead, not the one who set up the form. A saved
+// owner the list does not hold stays chosen; one the server names as departed
+// is shown as such, since their leads arrive unassigned.
 export function OwnerField({
   ownerId,
   error,

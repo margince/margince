@@ -38,7 +38,7 @@ func offeredToReader(p principal.Principal, a row) bool {
 
 // offeredRecordsLive answers, by position, whether each offer put to p may
 // still be decided: the record is live, and p may still receive it. That is a
-// live human seat that can write (auth.EligibleHandOverRecipients) and a role
+// live human seat that can write (auth.EligibleAssignees) and a role
 // that may read and change the record's type. One statement asks p's seat, and
 // one more each record type.
 func offeredRecordsLive(ctx context.Context, tx pgx.Tx, p principal.Principal, refs []targetRef) ([]bool, error) {
@@ -46,7 +46,7 @@ func offeredRecordsLive(ctx context.Context, tx pgx.Tx, p principal.Principal, r
 	if len(refs) == 0 {
 		return out, nil
 	}
-	seated, err := auth.EligibleHandOverRecipients(ctx, tx, []ids.UUID{p.UserID})
+	seated, err := auth.EligibleAssignees(ctx, tx, []ids.UUID{p.UserID})
 	if err != nil {
 		return nil, fmt.Errorf("crmapprovals: asking whether the receiver may still take records: %w", err)
 	}

@@ -41,7 +41,7 @@ const (
 // movement with its own bucket: a number that moved because the rules changed
 // must not be reported as the business moving. Bump it when a reading's
 // membership or arithmetic changes.
-const DefinitionVersion = "forecast_v4"
+const DefinitionVersion = "forecast_v5"
 
 // Column and payload keys shared by the insert and the audit payload. Named
 // rather than repeated, because a key written in two places can come to be
@@ -183,8 +183,8 @@ func (s *Store) writeContributions(
 		[]string{
 			"snapshot_id", "deal_id", "owner_id", colAmountMinor, colCurrency,
 			"base_minor", "fx_rate", "fx_date", "effective_close_date",
-			"close_provisional", "category", "stage_probability", "stage_id", "weighted_minor",
-			"in_won", "in_evidence", "in_best_case", "in_open", "in_lost", "exclusion_reason",
+			"close_provisional", "probability_source", "stage_probability", "stage_id", "weighted_minor",
+			"in_won", "in_evidence", "in_open", "in_lost", "exclusion_reason",
 			"qualification", "audit_id", "approval_id", "captured_by",
 			"typed_probability", "evidence_n", "risk_signals", "risk_signal_facts", "risk_effect",
 			"qualified_policy_version", "viability_assessed_at", "viability_disposition", "qualification_complete",
@@ -223,9 +223,9 @@ func (s *Store) writeContributions(
 			return []any{
 				snapshotID, dealID, nullableID(row.Owner), row.AmountMinor,
 				currency, row.BaseMinor, nil, nil,
-				row.EffectiveClose, row.CloseProvisional, nullIfEmpty(row.Category),
+				row.EffectiveClose, row.CloseProvisional, nullIfEmpty(string(row.Source)),
 				nullableInt(row.StageProbability), nullableID(row.StageID), weighted,
-				row.InWon, row.InEvidence, row.InBestCase, row.InOpen, row.InLost,
+				row.InWon, row.InEvidence, row.InOpen, row.InLost,
 				nullIfEmpty(row.ExclusionReason), nullIfEmpty(string(row.Qualification)),
 				row.AuditID, row.ApprovalID, capturedBy,
 				row.TypedProbability, row.EvidenceN, SignalCodes(row.Signals), facts, row.Effect,
@@ -439,8 +439,8 @@ func sameID(a, b *ids.UUID) bool {
 // CollectContribution scans them. A frozen share reads through the same pair,
 // so the two cannot come to read a row two ways.
 const ContributionSelect = `SELECT c.deal_id, c.owner_id, c.amount_minor, c.currency, c.base_minor,
-		c.effective_close_date, c.close_provisional, c.category, c.stage_probability,
-		c.weighted_minor, c.in_won, c.in_evidence, c.in_best_case, c.in_open, c.in_lost,
+		c.effective_close_date, c.close_provisional, c.probability_source, c.stage_probability,
+		c.weighted_minor, c.in_won, c.in_evidence, c.in_open, c.in_lost,
 		c.exclusion_reason, c.qualification, c.audit_id, c.approval_id,
 		c.stage_id, c.typed_probability, c.evidence_n, c.risk_signal_facts, c.risk_effect,
 		c.qualified_policy_version, c.viability_assessed_at, c.viability_disposition, c.qualification_complete
@@ -451,15 +451,15 @@ func CollectContribution(row pgx.CollectableRow) (Contribution, error) {
 	var c Contribution
 	var dealID ids.UUID
 	var owner *ids.UUID
-	var currency, category, exclusion, qualification *string
+	var currency, source, exclusion, qualification *string
 	var probability *int
 	var weighted *int64
 	var stage *ids.UUID
 	var facts []byte
 	var basis frozenBasis
 	err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
-		&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
-		&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
+		&c.EffectiveClose, &c.CloseProvisional, &source, &probability,
+		&weighted, &c.InWon, &c.InEvidence, &c.InOpen, &c.InLost,
 		&exclusion, &qualification, &c.AuditID, &c.ApprovalID,
 		&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect,
 		&basis.policy, &basis.assessed, &basis.disposition, &basis.complete)
@@ -477,8 +477,8 @@ func CollectContribution(row pgx.CollectableRow) (Contribution, error) {
 	if currency != nil {
 		c.Currency = *currency
 	}
-	if category != nil {
-		c.Category = *category
+	if source != nil {
+		c.Source = ProbabilitySource(*source)
 	}
 	if exclusion != nil {
 		c.ExclusionReason = *exclusion

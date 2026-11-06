@@ -5,10 +5,8 @@ import { type RefObject, useEffect } from "react";
 import { coveredByDialog } from "./dialogfocus";
 
 /**
- * How an open portalled panel is put away. Escape does it, unless a dialog
- * raised over it owns that key. So does a press anywhere outside both the
- * panel and what opened it. The panel lives at the body. So "outside" has to mean outside
- * both boxes, or a click on a link inside it reads as a click away.
+ * Escape, or a press outside the panel and its anchor, closes the panel,
+ * unless a dialog raised over it owns the key or the press.
  *
  * Shared by `Popover` and `usePeek`, which close the same way.
  */
@@ -39,6 +37,11 @@ export function usePanelDismiss({
     };
     const onPointer = (event: MouseEvent) => {
       if (!(event.target instanceof Node)) {
+        return;
+      }
+      // A dialog raised over the panel, such as a date field's calendar,
+      // owns the press as it owns Escape.
+      if (coveredByDialog(anchor.current)) {
         return;
       }
       if (

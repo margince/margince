@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -188,8 +189,8 @@ func requireMeasurableOwner(ctx context.Context, tx pgx.Tx, owner ids.UUID) erro
 	}
 	_, err := resolveAnalyticsScope(ctx, tx, p, RequestedScope{Kind: ScopeKindOwner, ID: &owner})
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return fmt.Errorf("that owner's records are outside what you may measure: %w",
-			apperrors.ErrPermissionDenied)
+		return auth.RefuseRow(ctx, measuredPopulation, fmt.Errorf("that owner's records are outside what you may measure: %w",
+			apperrors.ErrPermissionDenied))
 	}
 	return err
 }

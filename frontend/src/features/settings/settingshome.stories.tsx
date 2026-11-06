@@ -192,7 +192,7 @@ export const Phone: Story = {
   render: home(LEAD),
 };
 
-// Every setup step done: the card folds to one success note, steps a press away.
+// Every setup step done: no setup card, the directory leads the page.
 export const SetupComplete: Story = { render: home(LEAD, "answered", true) };
 
 export const SetupCompleteDark: Story = {

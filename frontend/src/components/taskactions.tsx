@@ -19,7 +19,7 @@ import { DateInput } from "../design-system/dateinput";
 import { focusableWithin } from "../design-system/dialogfocus";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
-import { Markdown } from "../design-system/markdown";
+import { NoteMarkdown } from "../design-system/markdown";
 import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { formatActivityWhen } from "../format/activitywhen";
@@ -31,9 +31,9 @@ import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
 import { problemCodeOf, unwrap } from "../lib/problem";
-import { EntityRef } from "./entityref";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
+import { TaskAssignee } from "./taskassignee";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "../lib/activityread";
@@ -388,7 +388,7 @@ export function TaskDetailDialog({
               {/* Markdown, as the timeline draws the same body. */}
               {task.body && (
                 <div className="t-body task-detail-body">
-                  <Markdown source={task.body} autolink />
+                  <NoteMarkdown source={task.body} />
                 </div>
               )}
               <div className="t-caption task-detail-meta">
@@ -430,9 +430,7 @@ export function TaskDetailDialog({
                 {task.is_done && (
                   <Badge tone="success">{t("tasks.isDone")}</Badge>
                 )}
-                {task.assignee_id && (
-                  <EntityRef kind="user" id={task.assignee_id} />
-                )}
+                <TaskAssignee id={task.assignee_id} />
                 {/* A task an agent wrote says so, so a reader knows it was
                   read out of a conversation rather than typed by a colleague. */}
                 {provenanceOf(task.captured_by).kind === "agent" && (

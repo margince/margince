@@ -49,7 +49,7 @@ var clearableFields = map[string][]string{
 		"origin", "origin_detail", "partner_company_id",
 	},
 	"deal": {
-		"expected_close_date", "forecast_category", "wait_until", "owner_id",
+		"expected_close_date", "win_probability", "wait_until", "owner_id",
 		"company_id", "project_id", "partner_company_id", "partner_attribution",
 		"description", "commercial_motion", "priority", "acquisition_source",
 		"expected_arr_minor",

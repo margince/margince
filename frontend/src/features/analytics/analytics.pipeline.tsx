@@ -1,4 +1,3 @@
-import { forecastCategoryFilter } from "../../components/dealdials";
 import { StatCard } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Popover } from "../../design-system/popover";
@@ -9,8 +8,13 @@ import {
   formatAnalyticsNumber,
 } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { WIN_PROBABILITY_DIAL } from "../../lib/dealranges";
 import { dealsFilteredBy } from "../../lib/dealsaddress";
+import {
+  bandDialValue,
+  bandOfKey,
+  WIN_PROBABILITY_BANDS,
+} from "../../lib/winprobabilitybands";
 import {
   BarFigure,
   CountLink,
@@ -21,7 +25,6 @@ import {
   type Stage,
 } from "./analytics.cells";
 import { CellExplain, rowDerivationUrl } from "./analytics.explain";
-import { FORECAST_CATEGORIES } from "./analytics.questions.values";
 
 // One row of the deals-by-stage table: a stage and a currency. A stage holding
 // deals in two currencies has two totals and no third one that means anything.
@@ -43,11 +46,6 @@ type StageAgg = {
   derivationUrl: string | null;
 };
 
-// The group key a row with no forecast category arrives under. The wire allows
-// the field to be null: nobody has said which way the deal is going. The five
-// named categories match none of it.
-const UNCATEGORISED = "";
-
 // The footnote for a money figure a currency the rate sheet cannot price left
 // short. Null when every counted deal was priced. The TABLE's spelling; a stat
 // card states the same gap through `analytics.forecastPriced`, as a fragment.
@@ -66,7 +64,7 @@ export function pricedFootnote(
   });
 }
 
-// One forecast category as one slot of the strip. The raw total is the reading
+// One probability band as one slot of the strip. The raw total is the reading
 // and the probability-weighted total is the basis it was drawn from, which is
 // what StatCard's label/value/detail carry. Exported for the Storybook
 // task so it renders without a live fetch (mirrors how FxLine in deals.tsx
@@ -84,16 +82,16 @@ export function ForecastTile({
   dealsUrl,
 }: Readonly<{
   label: string;
-  // Both halves are nullable and neither absence has a substitute. A category
+  // Both halves are nullable and neither absence has a substitute. A band
   // the report returned no row for has no total in any currency. It is not a
   // zero, because nothing was measured for it to be zero of. A figure with no
   // currency cannot be rendered as money at all.
   amountMinor: number | null;
   weightedMinor?: number | null;
-  // How many deals the category holds, which is not how many the money above
+  // How many deals the band holds, which is not how many the money above
   // covers. A deal in a currency the rate sheet cannot price is counted here
   // but adds nothing to the total. The sum skips it rather than guess a rate.
-  // A tile printing only money would say a category is worth less than it is,
+  // A tile printing only money would say a band is worth less than it is,
   // with nothing on screen to suggest otherwise.
   // Optional: a caller with no count to hand shows none rather than a zero.
   dealCount?: number | null;
@@ -103,12 +101,10 @@ export function ForecastTile({
   pricedDeals?: number | null;
   currency: string | null;
   locale: Locale;
-  // The category row's own handle; a tile with none draws no trigger.
+  // The band row's own handle; a tile with none draws no trigger.
   explainUrl?: string | null;
-  // Where the category's deals are, for the categories the deals endpoint can
-  // narrow by. A tile with none draws no door. That is the answer for `slipped`
-  // and for the uncategorised slot. Both name a set no query parameter selects,
-  // and a door onto a wider set would promise more than it delivers.
+  // Where the band's deals are. A tile with none draws no door: a band this
+  // build has no range for names a set the deals list cannot select.
   dealsUrl?: string;
 }>) {
   const t = useT();
@@ -123,7 +119,7 @@ export function ForecastTile({
       count: formatAnalyticsNumber(n, locale),
     });
   if (amountMinor == null || !currency) {
-    // A word, never a glyph. With no money, the deals the category holds are
+    // A word, never a glyph. With no money, the deals the band holds are
     // the reading; with no count either, nothing was measured at all.
     return (
       <StatCard
@@ -151,7 +147,7 @@ export function ForecastTile({
   }
   if (dealCount != null) {
     // The gap is stated only where there is one: "8 of 8 priced" sends a reader
-    // looking for a shortfall the category does not have.
+    // looking for a shortfall the band does not have.
     parts.push(
       pricedDeals != null && pricedDeals < dealCount
         ? t("analytics.forecastPriced", {
@@ -173,32 +169,22 @@ export function ForecastTile({
   );
 }
 
-// Where a category's deals are, or nothing when the endpoint cannot narrow to
-// it.
-//
-// `forecastCategoryFilter` is the decider rather than a list here. A value the
-// wire adds reaches this door the moment the deals dial accepts it. It answers
-// nothing for `slipped`, which the report derives rather than stores. It
-// answers nothing for the uncategorised slot, whose deals carry no category.
-function forecastDealsUrl(key: string): string | undefined {
-  const narrowable = forecastCategoryFilter(key);
-  return narrowable
-    ? dealsFilteredBy("forecast_category", narrowable)
-    : undefined;
+// The band of every row: the bands this build knows, in tile order, then any
+// value the server added since, under its own name. A slot set built from the
+// known bands alone would drop that value's money off the screen.
+function bandSlots(rows: readonly ReportRow[]): string[] {
+  const known = WIN_PROBABILITY_BANDS.map((band) => band.key);
+  const added = rows
+    .map((row) => String(row.win_probability_band ?? ""))
+    .filter((key) => !known.includes(key));
+  return [...known, ...new Set(added)];
 }
 
-// The wire allows a deal to carry no forecast category, and the five named ones
-// match none of it. A slot set built from the enum alone drops those deals off
-// the screen: the money is not moved to another slot, it leaves. On the demo
-// dataset that is 22 of 27 open deals. The slot appears only where such deals
-// exist, so an installation that categorises everything is not asked about a
-// state it never reaches.
-function uncategorisedSlot(
-  band: readonly ReportRow[],
-): { key: string; labelKey: MessageKey }[] {
-  return band.some((row) => row.forecast_category == null)
-    ? [{ key: UNCATEGORISED, labelKey: "deal.fcUncategorised" }]
-    : [];
+function bandDealsUrl(key: string): string | undefined {
+  const band = bandOfKey(key);
+  return band
+    ? dealsFilteredBy(WIN_PROBABILITY_DIAL, bandDialValue(band))
+    : undefined;
 }
 
 export function ForecastStrip({
@@ -223,36 +209,33 @@ export function ForecastStrip({
         <p>{t("analytics.forecastBanner")}</p>
       </Popover>
       {/* One strip, because there is one denomination. A strip per currency
-          had a manager comparing commit against best case inside each currency
-          and never across the business. Slots rather than a bar list, because
-          each category carries two figures and a ranked bar carries one. */}
+          had a manager comparing bands inside each currency and never across
+          the business. Slots rather than a bar list, because each band
+          carries two figures and a ranked bar carries one. */}
       <StatStrip>
-        {[...FORECAST_CATEGORIES, ...uncategorisedSlot(rows)].map(
-          (category) => {
-            const row = rows.find(
-              (candidate) =>
-                String(candidate.forecast_category ?? UNCATEGORISED) ===
-                category.key,
-            );
-            return (
-              <ForecastTile
-                key={category.key}
-                dealsUrl={forecastDealsUrl(category.key)}
-                label={t(category.labelKey)}
-                amountMinor={row ? rowMoney(row, "raw_minor") : null}
-                weightedMinor={row ? rowMoney(row, "weighted_minor") : null}
-                dealCount={row ? rowCount(row, "deal_count") : null}
-                // Not rowCount: an absent aggregate here means the server
-                // did not answer. rowCount's 0 default would print that as
-                // "0 priced" instead of leaving the detail out.
-                pricedDeals={row ? rowMoney(row, "priced_deals") : null}
-                explainUrl={row ? rowDerivationUrl(row) : null}
-                currency={baseCurrency}
-                locale={locale}
-              />
-            );
-          },
-        )}
+        {bandSlots(rows).map((key) => {
+          const row = rows.find(
+            (candidate) => String(candidate.win_probability_band ?? "") === key,
+          );
+          const band = bandOfKey(key);
+          return (
+            <ForecastTile
+              key={key}
+              dealsUrl={bandDealsUrl(key)}
+              label={band ? t(band.label) : key}
+              amountMinor={row ? rowMoney(row, "raw_minor") : null}
+              weightedMinor={row ? rowMoney(row, "weighted_minor") : null}
+              dealCount={row ? rowCount(row, "deal_count") : null}
+              // Not rowCount: an absent aggregate here means the server
+              // did not answer. rowCount's 0 default would print that as
+              // "0 priced" instead of leaving the detail out.
+              pricedDeals={row ? rowMoney(row, "priced_deals") : null}
+              explainUrl={row ? rowDerivationUrl(row) : null}
+              currency={baseCurrency}
+              locale={locale}
+            />
+          );
+        })}
       </StatStrip>
     </>
   );
@@ -452,7 +435,7 @@ function PipelineTotals({
       ? undefined
       : (pricedFootnote(pricedDeals, count, locale, t) ?? undefined);
   return (
-    <StatStrip>
+    <StatStrip density="plate">
       <StatCard
         narrow="row"
         label={t("analytics.openDeals")}

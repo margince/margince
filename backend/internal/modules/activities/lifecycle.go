@@ -4,10 +4,8 @@
 package activities
 
 // The activity lifecycle beyond capture: update (completing a task is
-// the everyday case), archive (visibility change — the 🟡 floor on the
-// agent surface), and relink (moving a captured email onto the right
-// deal WITHOUT touching its provenance — an association event, not a
-// re-capture).
+// the everyday case) and archive (visibility change, the 🟡 floor on the
+// agent surface).
 
 import (
 	"context"
@@ -97,16 +95,15 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 // bounded delta, or stop taking the write lock — and the only symptom would be
 // a lead ladder that never re-read a meeting somebody had cancelled.
 //
-// The RBAC check is NOT here. It sits at UpdateActivity, where a caller is
-// asking to patch a record; the replay is not asking for that authority, it is
-// finishing the capture it already had — and the row-scope arm below still
-// applies to both.
+// The RBAC check is NOT here. It sits at each caller: UpdateActivity, and the
+// log replay that moves a meeting's status (replayMovedTheMeeting). The
+// row-scope and row-write arms below apply to every caller.
 func updateActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput,
 ) (crmcontracts.Activity, error) {
 	current, held, err := admitActivityPatch(ctx, tx, id, &in)
 	if err == nil {
-		err = storekit.CheckCustomValues(in.customColumns, in.CustomFields)
+		err = checkCustomValues(string(current.Kind), in.customColumns, in.CustomFields)
 	}
 	if err == nil {
 		err = withCustomValuesOf(ctx, tx, in.customColumns, &current)
@@ -194,63 +191,6 @@ func updateActivityInTx(
 		return crmcontracts.Activity{}, err
 	}
 	return out, nil
-}
-
-// changesNothing is true when every field the patch names already holds the
-// sent value, and no clear names a field that holds one. That is a form saved
-// untouched: writing it would bump the version and audit an empty change set.
-func (in UpdateActivityInput) changesNothing(current crmcontracts.Activity) bool {
-	return !in.movesAField(current) && !in.clearsAValue(current) && !in.changesCustom(current)
-}
-
-// movesAField compares each sent field with the row, the way a patch does.
-func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
-	p := storekit.NewPatch()
-	if in.Subject != nil {
-		p.Set("subject", current.Subject, *in.Subject)
-	}
-	if in.Body != nil {
-		p.Set("body", current.Body, *in.Body)
-	}
-	if in.OccurredAt != nil && !SameStoredStart(*in.OccurredAt, current.OccurredAt) {
-		p.Set("occurred_at", current.OccurredAt, *in.OccurredAt)
-	}
-	if in.OccurredPrecision != nil {
-		p.Set(fieldOccurredPrecision, string(current.OccurredPrecision), *in.OccurredPrecision)
-	}
-	if in.DurationSeconds != nil {
-		p.Set("duration_seconds", current.DurationSeconds, *in.DurationSeconds)
-	}
-	if in.DueAt != nil {
-		p.Set("due_at", current.DueAt, *in.DueAt)
-	}
-	if in.DueHasTime != nil {
-		p.Set(fieldDueHasTime, current.DueHasTime, *in.DueHasTime)
-	}
-	if in.RemindAt != nil {
-		p.Set("remind_at", current.RemindAt, *in.RemindAt)
-	}
-	if in.AssigneeID != nil {
-		p.Set("assignee_id", current.AssigneeId, *in.AssigneeID)
-	}
-	if in.IsDone != nil {
-		p.Set("is_done", current.IsDone, *in.IsDone)
-	}
-	if in.MeetingStatus != nil {
-		p.Set("meeting_status", current.MeetingStatus, *in.MeetingStatus)
-	}
-	if in.CallOutcome != nil {
-		p.Set(fieldCallOutcome, callOutcomeOf(current), *in.CallOutcome)
-	}
-	return !p.Empty()
-}
-
-// clearsAValue is true when a null names a field that currently holds one.
-func (in UpdateActivityInput) clearsAValue(current crmcontracts.Activity) bool {
-	return (in.clears("due_at") && current.DueAt != nil) ||
-		(in.clears("remind_at") && current.RemindAt != nil) ||
-		(in.clears("assignee_id") && current.AssigneeId != nil) ||
-		(in.clearsDeclared(fieldCallOutcome, current) && current.CallOutcome != nil)
 }
 
 func (in UpdateActivityInput) clears(field string) bool { return slices.Contains(in.Clear, field) }

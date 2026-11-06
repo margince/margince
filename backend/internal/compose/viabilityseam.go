@@ -24,7 +24,9 @@ import (
 // A verdict that lands or changes after the message counts too, and so does a
 // guest accepting or withdrawing, because each changes the answer. Work the product filed itself is left out, so the review's own task does not
 // make its receipt stale. Archiving an activity drops it from the count, which
-// changes the fingerprint too.
+// changes the fingerprint too. So does a mail connection that delivers the
+// deal's mail for the first time, because the deal's coverage is judged on
+// those connections.
 func viabilityFingerprintSQL(deal string) string {
 	return `md5(concat_ws('|', ` + deal + `.owner_id, ` + deal + `.status, ` + deal + `.archived_at, ` +
 		deal + `.expected_close_date, ` + deal + `.close_date_provisional, ` + deal + `.wait_until,
@@ -35,7 +37,8 @@ func viabilityFingerprintSQL(deal string) string {
 		          WHERE fp.activity_id = ANY (array_agg(fa.id)) AND fp.response = 'accepted'))
 		   FROM activity_link fl JOIN activity fa ON fa.id = fl.activity_id
 		  WHERE fl.deal_id = ` + deal + `.id AND fa.archived_at IS NULL AND ` + visibleToAllSQL("fa") + ` AND ` +
-		relstrength.OriginIsEngagementSQL("fa") + `)))`
+		relstrength.OriginIsEngagementSQL("fa") + `),
+		array_to_string(` + dealMailboxesSQL(deal) + `, ',')))`
 }
 
 // viabilityQualificationSQL is one deal's treatment in the qualified forecast.

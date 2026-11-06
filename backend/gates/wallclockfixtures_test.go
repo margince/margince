@@ -21,9 +21,10 @@ package gates
 //     mergegateclockbounds_test.go's subject and is prohibited outright there.
 //   - A clock reached through an interface or a struct field, which needs type
 //     information this gate does not load.
-//   - A read moved out of a _test.go file into a build-tagged helper beside
-//     it. Reading every .go file instead would report the product's legitimate
-//     use of the clock, far more correct sites than wrong ones.
+//   - A product file's read. Reading every .go file would report the
+//     product's legitimate use of the clock, far more correct sites than
+//     wrong ones. A file only the integration tag builds is test code, such as
+//     a fixture helper package, and is counted like a _test.go file.
 //   - An absolute date (time.Date(2026, ...)), which the lane sees and no count
 //     of time.Now reaches.
 //   - SQL that says now(). That is the database's clock, and only the machine
@@ -32,6 +33,7 @@ package gates
 import (
 	"fmt"
 	"go/ast"
+	"go/build/constraint"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -93,6 +95,34 @@ func TestTheWallClockLedgerAnswersEveryPlantedShape(t *testing.T) {
 	}
 }
 
+// A helper only the integration tag builds is test code, and a file any
+// untagged build links is product code, which the census leaves out.
+func TestOnlyAFileTheIntegrationTagAloneBuildsCountsAsTestCode(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	for header, want := range map[string]bool{
+		"//go:build integration\n\npackage apptest\n":               true,
+		"// SPDX\n\n//go:build integration && !race\n\npackage x\n": true,
+		"//go:build !integration\n\npackage x\n":                    false,
+		"//go:build linux\n\npackage x\n":                           false,
+		"//go:build integration || !windows\n\npackage x\n":         false,
+		"package x\n\n//go:build integration\n":                     false,
+		"// +build integration\n\npackage x\n":                      true,
+		"// +build integration\n// +build linux\n\npackage x\n":     false,
+		"// +build integration !windows\n\npackage x\n":             false,
+	} {
+		path := filepath.Join(dir, "helper.go")
+		if err := os.WriteFile(path, []byte(header), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		got, err := builtOnlyForIntegration(path)
+		if err != nil || got != want {
+			t.Errorf("%q: counted as test code = %v (%v), want %v", header, got, err, want)
+		}
+	}
+}
+
 // ledgerDrift returns every disagreement between the frozen ledger and the
 // counted tree. The ledger states each current count, so a count that fell is a
 // finding too. An entry left above its file is headroom the file can grow back
@@ -137,7 +167,8 @@ func fileExists(path string) bool {
 }
 
 // countWallClockReads returns every backend test file holding at least one
-// time.Now() call, with how many.
+// time.Now() call, with how many. A test file is a _test.go file, or one only
+// the integration tag builds.
 //
 // Read with the language's parser rather than by scanning text. A scanner that
 // runs off the end of a string goes blind and reports OK over the rest of the
@@ -149,8 +180,18 @@ func countWallClockReads(t *testing.T) map[string]int {
 	counted := map[string]int{}
 	// TestMain has left the working directory at the module root.
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, "_test.go") {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
+		}
+		if !strings.HasSuffix(path, "_test.go") {
+			testOnly, err := builtOnlyForIntegration(path)
+			if err != nil {
+				t.Errorf("reading %s's build constraint: %v", filepath.ToSlash(path), err)
+				return nil
+			}
+			if !testOnly {
+				return nil
+			}
 		}
 		rel := filepath.ToSlash(path)
 		for _, owner := range clockOwners {
@@ -176,6 +217,50 @@ func countWallClockReads(t *testing.T) map[string]int {
 			"nothing, which is not the same as finding nothing. Retarget it.")
 	}
 	return counted
+}
+
+// builtOnlyForIntegration reports whether the file's build constraint admits it
+// under the integration tag and under no tag at all, so no shipped binary
+// links it.
+func builtOnlyForIntegration(path string) (bool, error) {
+	src, err := os.ReadFile(path)
+	if err != nil {
+		return false, err
+	}
+	expr, err := buildConstraint(string(src))
+	if expr == nil || err != nil {
+		return false, err
+	}
+	integration := expr.Eval(func(tag string) bool { return tag == "integration" })
+	return integration && !expr.Eval(func(string) bool { return false }), nil
+}
+
+// buildConstraint is a file's build constraint: its //go:build line, or else
+// every legacy // +build line, which Go requires all of. Nil means none.
+func buildConstraint(src string) (constraint.Expr, error) {
+	var legacy constraint.Expr
+	for line := range strings.SplitSeq(src, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "package ") {
+			break
+		}
+		if !constraint.IsGoBuild(line) && !constraint.IsPlusBuild(line) {
+			continue
+		}
+		expr, err := constraint.Parse(line)
+		if err != nil {
+			return nil, err
+		}
+		if constraint.IsGoBuild(line) {
+			return expr, nil
+		}
+		if legacy == nil {
+			legacy = expr
+		} else {
+			legacy = &constraint.AndExpr{X: legacy, Y: expr}
+		}
+	}
+	return legacy, nil
 }
 
 // wallClockReads counts one parsed file's reads of the wall clock.

@@ -20,5 +20,8 @@ func RefusalCodes() []string {
 		ReasonNoMarketingConsent,
 		ReasonConsentWithdrawn,
 		ReasonFrequencyCapReached,
+		ReasonOptedOutAfterRequest,
+		ReasonMarketingConsentRequired,
+		ReasonDealNotRequested,
 	}
 }
