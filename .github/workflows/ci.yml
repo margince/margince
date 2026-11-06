@@ -475,9 +475,30 @@ jobs:
         # gate green.
         # TEST_LEGS only: backend-lint runs the static legs on its own runner,
         # so lint and the unit tests stop sharing four cores.
+        #
+        # Outside a PR into develop, the unit leg's pass is also the test-input
+        # census: testlog-exec.sh logs what each package read, and the next step
+        # judges it. It runs uncached (-count=1), since a replayed result reads
+        # nothing; develop keeps the test cache.
         run: |
           set -o pipefail
-          make check-backend CHECK_LEGS="${{ matrix.legs }}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
+          census=()
+          if [ "${{ matrix.part }}" = unit ] && [ "${{ needs.changes.outputs.full_lane }}" = true ]; then
+            export TESTLOG_DIR="$RUNNER_TEMP/testlogs"
+            mkdir -p "$TESTLOG_DIR"
+            census=(TEST_EXEC="$PWD/scripts/testlog-exec.sh")
+          fi
+          make check-backend CHECK_LEGS="${{ matrix.legs }}" "${census[@]}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
+      # A test read outside its module that skips the tree digest merges green
+      # and breaks cache-warm's save hours later. Here it fails the PR that
+      # adds it. Skipped into develop: it guards main's cache-warm, and the
+      # develop into main pull request runs it. Judged only after a passing
+      # pass: a failed test stops make before the rest log their reads, and a
+      # verdict over part of the tree is not one.
+      - name: Census the test cache's inputs (make test-input-census-judge)
+        if: ${{ success() && matrix.part == 'unit' && needs.changes.outputs.full_lane == 'true' }}
+        working-directory: .
+        run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs"
       # crm-hello declares capabilities no shipped unit does, so this is the one
       # walk of them; TestEveryPublishedCapabilityHasALiveDeclaringUnit reads the
       # require below. It runs after the merge gate, which must see only the committed
@@ -593,16 +614,6 @@ jobs:
       - name: Backend static gate (make check-static)
         working-directory: .
         run: make check-static STATIC_LEGS="${{ matrix.legs }}"
-      # A test read outside its module that skips the tree digest merges green
-      # and breaks cache-warm's save hours later. Here it fails the PR that
-      # adds it. On the strict leg, the shorter golangci pass, so the census's
-      # uncached pass evens the two legs out instead of lengthening the longer.
-      # Skipped into develop: it guards main's cache-warm, and the develop into
-      # main pull request runs it.
-      - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() && matrix.pass == 'strict' && needs.changes.outputs.full_lane == 'true' }}
-        working-directory: .
-        run: make test-input-census
 
   # The code-craftsmanship gate (ADR-0045) reads source only, so it starts
   # beside deterministic-gates rather than after it. `ci` fails if either does.

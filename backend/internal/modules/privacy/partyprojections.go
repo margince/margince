@@ -19,7 +19,7 @@ func (e *Eraser) purgePartyProjections(ctx context.Context, tx pgx.Tx, emails []
 		return e.purgeRawCaptures.PurgePartySourcesForEmailsTx(ctx, tx, emails)
 	}
 	var held bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM capture_party_source WHERE recipients && ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address) OR policy_addresses && ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address))`, pgx.NamedArgs{"emails": emails}).Scan(&held); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM capture_party_source WHERE recipients && ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address) OR policy_addresses && ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address)) OR EXISTS(SELECT 1 FROM capture_thread_verdict v, unnest(v.seen_addresses) seen WHERE lower(seen) = ANY(ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address)))`, pgx.NamedArgs{"emails": emails}).Scan(&held); err != nil {
 		return err
 	}
 	if held {

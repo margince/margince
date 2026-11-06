@@ -3511,7 +3511,7 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2602,
+      "tokens": 2630,
       "agents": [],
       "required_by_cases": [
         "case100_are_the_jobs_failing",

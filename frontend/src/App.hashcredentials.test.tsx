@@ -8,6 +8,9 @@ import { LocaleProvider } from "./i18n";
 import type { Screen } from "./lib/router";
 import { forgetHashCredential } from "./lib/router";
 import { memoryStorage } from "./testing/appharness";
+// The screens these cases open, loaded while the file is collected. A screen's
+// first import costs seconds; inside a case it races the case's own waiters.
+import "./features/deals/buyerroom";
 
 // The two emailed links that carry a credential in the hash — the Deal Room's
 // buyer invitation and the password reset — through the REAL App, which is
