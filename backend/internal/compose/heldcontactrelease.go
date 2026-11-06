@@ -108,7 +108,7 @@ func publishReleasedSenderTx(ctx context.Context, tx pgx.Tx, store *contacts.Sto
 			return err
 		}
 	}
-	_, err := store.PromoteContactCohortTx(ctx, tx, held.ID)
+	_, err := store.PromoteHeldContactCohortTx(ctx, tx, held.ID)
 	return err
 }
 

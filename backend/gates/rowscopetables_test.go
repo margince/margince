@@ -640,5 +640,9 @@ const (
 	// 154: privacy.readLeadNotice names the kinds of data a notice link's own
 	// website lead holds, for the privacy page. It reads presence flags only,
 	// for the lead the link resolved, and returns no reference.
-	modulesTierUnscopedCeiling = 154
+	//
+	// 155: contacts.holdCohortActivities locks the activities a cohort repair
+	// may write before it locks the contact. The ids bound that repair's writes
+	// inside its transaction, and none is returned to a caller.
+	modulesTierUnscopedCeiling = 155
 )
