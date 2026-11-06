@@ -26,9 +26,8 @@ import (
 // reads its API base from location.origin — so naming a host here would add
 // configuration that could only ever disagree with reality.
 //
-// The route rides the fragment, but the screen has a path of its own. A client
-// may run the flow in a popup, so nginx serves this one document without
-// Cross-Origin-Opener-Policy same-origin. Only a path can mark it for nginx.
+// The screen has a path of its own so nginx can keep a popup's opener on this
+// one document (httpserver.OpenerPolicyPopup).
 const ConsentScreenPath = "/consent#/oauth-consent"
 
 // The screen's own vocabulary for a refusal it has to render. These are the

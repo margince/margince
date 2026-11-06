@@ -95,25 +95,14 @@ const PermissionsPolicy = "accelerometer=(), autoplay=(), camera=(), clipboard-r
 	"publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), " +
 	"xr-spatial-tracking=()"
 
-// oauthPathPrefix is where the authorization server's endpoints live, the ones
-// an MCP client opens in a popup among them.
-const oauthPathPrefix = "/oauth/"
-
-// The Cross-Origin-Opener-Policy values. An MCP client may open /oauth/authorize
-// in a popup and read the code back through window.opener. same-origin on any
-// page of that flow cuts the popup off for good; the rest of the app keeps it.
-// The consent screen is the flow's other page, and nginx.conf matches this.
+// The Cross-Origin-Opener-Policy values. An MCP client may open the OAuth
+// consent flow in a popup and read the code back through window.opener.
+// same-origin on any page of that flow cuts the popup off for good, so those
+// pages send OpenerPolicyPopup over the OpenerPolicyIsolated set here.
 const (
 	OpenerPolicyIsolated = "same-origin"
 	OpenerPolicyPopup    = "unsafe-none"
 )
-
-func openerPolicy(path string) string {
-	if strings.HasPrefix(path, oauthPathPrefix) {
-		return OpenerPolicyPopup
-	}
-	return OpenerPolicyIsolated
-}
 
 // SecureHeaders sets the browser-facing response headers on everything —
 // UI and API alike. SameSite=Strict on the session cookie covers CSRF;
@@ -135,7 +124,9 @@ func SecureHeaders(next http.Handler) http.Handler {
 		// ignores it on the plain-HTTP hop, so it is safe to set always.
 		h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 		h.Set("Permissions-Policy", PermissionsPolicy)
-		h.Set("Cross-Origin-Opener-Policy", openerPolicy(r.URL.Path))
+		// Isolated on every route, and on a route that does not exist: the
+		// popup pages override it in their own handlers.
+		h.Set("Cross-Origin-Opener-Policy", OpenerPolicyIsolated)
 		// Nothing here is meant to be embedded by another origin.
 		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		next.ServeHTTP(w, r)

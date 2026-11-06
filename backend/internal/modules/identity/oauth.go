@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -47,11 +48,21 @@ const authCodeTTL = 5 * time.Minute
 func (h Handlers) OAuthRouter() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /oauth/register", h.oauthRegister)
-	mux.HandleFunc("GET "+authorizePath, h.oauthConsentRedirect)
-	mux.HandleFunc("POST "+authorizePath, h.oauthAuthorize)
+	mux.HandleFunc("GET "+authorizePath, keepOpener(h.oauthConsentRedirect))
+	mux.HandleFunc("POST "+authorizePath, keepOpener(h.oauthAuthorize))
 	mux.HandleFunc("POST /oauth/token", h.oauthToken)
 	mux.HandleFunc("POST /oauth/revoke", h.oauthRevoke)
 	return mux
+}
+
+// keepOpener lets a client that runs the consent flow in a popup read the code
+// back through window.opener. Set on the route, not by path, so an unmounted
+// connector's 404 here matches every other 404.
+func keepOpener(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cross-Origin-Opener-Policy", httpserver.OpenerPolicyPopup)
+		next(w, r)
+	}
 }
 
 func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {

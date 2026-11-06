@@ -93,7 +93,7 @@ func TestTheConsentScreenLeavesAnOAuthPopupItsOpener(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	httpserver.SecureHeaders(http.NotFoundHandler()).ServeHTTP(rec,
+	httpserver.SecureHeaders(identity.Handlers{}.OAuthRouter()).ServeHTTP(rec,
 		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/oauth/authorize", nil))
 	api := rec.Header().Get("Cross-Origin-Opener-Policy")
 	if api == httpserver.OpenerPolicyIsolated {
