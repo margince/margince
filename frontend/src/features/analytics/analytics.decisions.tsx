@@ -38,7 +38,12 @@ const DECISIONS_KEY = "sales-decisions";
 /** The part of a review's selection that narrows its decisions to its deals. */
 export type DecisionReview = Pick<
   ReportingSelection,
-  "scope" | "pipeline_id" | "product_id" | "initiative_id" | "country" | "industry"
+  | "scope"
+  | "pipeline_id"
+  | "product_id"
+  | "initiative_id"
+  | "country"
+  | "industry"
 >;
 
 /** The list's query for a review, or the whole list without one. */
