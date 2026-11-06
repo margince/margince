@@ -3,9 +3,9 @@
 
 package compose
 
-// The system read of whether a person has set a contact aside. A nightly job
+// The system read of whether a user has set a contact aside. A nightly job
 // that files its own reminders has nobody signed in, so it cannot ask the
-// person's own routes. The answer is the person's own choice and nothing else
+// user's own routes. The answer is the user's own choice and nothing else
 // about the contact. The rule for when a choice still holds is the Worklist
 // lane's own, asked through contacts.NudgeStatesOf.
 

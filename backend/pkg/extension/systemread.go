@@ -172,7 +172,7 @@ type Activities interface {
 	Mail(ctx context.Context, dealID string, q MailQuery) (Page[MailSummary], error)
 }
 
-// SetAsideKind is how one person stands towards one contact they were nudged to
+// SetAsideKind is how one user stands towards one contact they were nudged to
 // follow up.
 type SetAsideKind string
 
@@ -185,7 +185,7 @@ const (
 	SetAsidePermanent SetAsideKind = "permanent"
 )
 
-// SetAsideState is one person's choice about one contact, and nothing else
+// SetAsideState is one user's choice about one contact, and nothing else
 // about the contact.
 type SetAsideState struct {
 	Kind SetAsideKind
@@ -193,12 +193,12 @@ type SetAsideState struct {
 	Until *time.Time
 }
 
-// SetAside reads whether a person has set a lapsed contact aside, for a job tick
-// or a bus delivery. It reads only: a person changes the choice through the
+// SetAside reads whether a user has set a lapsed contact aside, for a job tick
+// or a bus delivery. It reads only: a user changes the choice through the
 // product's own routes.
 type SetAside interface {
-	// Contact answers one person's choice about one contact right now. It is
-	// the person's own choice and never a colleague's. A contact or a person
+	// Contact answers one user's choice about one contact right now. It is
+	// the user's own choice and never a colleague's. A contact or a user
 	// that does not exist answers none, so an id cannot be used to probe. An id
 	// that is not a canonical UUID answers ErrInvalid.
 	Contact(ctx context.Context, user UserID, contact string) (SetAsideState, error)

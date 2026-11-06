@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -27,12 +28,12 @@ func (s *systemReadEnv) setAside(t *testing.T, user ids.UUID, contact ids.UUID) 
 	return got
 }
 
-func TestASetAsideChoiceIsReadAsThePersonsOwnAndRunsOut(t *testing.T) {
+func TestASetAsideChoiceIsReadAsTheUsersOwnAndRunsOut(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadSetAside)
 	contact := ids.NewV7()
 	s.WsExec(t, `INSERT INTO contact (id, full_name, source, captured_by, visibility) VALUES ($1, 'Lapsed', 'manual', 'system', 'workspace')`, contact)
-	until := time.Now().UTC().Add(30 * 24 * time.Hour).Truncate(time.Microsecond)
+	until := clocktest.Now(t).UTC().Add(30 * 24 * time.Hour).Truncate(time.Microsecond)
 	dismiss := func(reader ids.UUID, until any) {
 		s.WsExec(t, `INSERT INTO relationship_nudge_dismissal (contact_id, reader_id, dismissed_until, set_by, set_at)
 			VALUES ($1, $2, $3, 'test', now() - interval '2 hours')
@@ -54,7 +55,7 @@ func TestASetAsideChoiceIsReadAsThePersonsOwnAndRunsOut(t *testing.T) {
 	if got := s.setAside(t, s.Rep1, contact); got.Kind != extension.SetAsideNone {
 		t.Errorf("a resumed contact read as %+v, want none", got)
 	}
-	dismiss(s.Rep1, time.Now().UTC().Add(-time.Hour))
+	dismiss(s.Rep1, clocktest.Now(t).UTC().Add(-time.Hour))
 	if got := s.setAside(t, s.Rep1, contact); got.Kind != extension.SetAsideNone {
 		t.Errorf("an expired dismissal read as %+v, want none", got)
 	}
