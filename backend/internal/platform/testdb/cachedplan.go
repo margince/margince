@@ -15,7 +15,7 @@ import (
 // ExplainCachedStatement measures the statement on the backend that prepared it.
 func ExplainCachedStatement(ctx context.Context, tx pgx.Tx, query string, values []any) ([]byte, error) {
 	if len(values) == 1 {
-		if named, ok := values[0].(pgx.NamedArgs); ok {
+		if named, ok := values[0].(pgx.QueryRewriter); ok {
 			var err error
 			query, values, err = named.RewriteQuery(ctx, tx.Conn(), query, nil)
 			if err != nil {

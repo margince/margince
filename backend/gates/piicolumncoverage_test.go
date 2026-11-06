@@ -194,6 +194,8 @@ var erasureColumnBaseline = map[string][]string{
 		"source_system",
 	},
 	"activity_participant": {
+		// Precision is a closed clock vocabulary mirrored from its parent, never source prose.
+		"domain_evidence_precision",
 		"response",
 		"role",
 	},

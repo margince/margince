@@ -198,15 +198,15 @@ func (e *dedupeEnv) seedHistoryReadBackground(ctx context.Context, t *testing.T,
 			_, err := tx.Exec(ctx, `WITH background AS (
    INSERT INTO activity(kind,direction,source,captured_by,counterparty_email,counterparty_outbound_attested,occurred_at)
    SELECT 'email',CASE WHEN n%2=0 THEN 'outbound' ELSE 'inbound' END,'gmail','connector:gmail',
-     'other-'||n||'@unrelated.test',n%2=0,@at::timestamptz FROM generate_series(@after::int+1,@through::int) n
+     'other-'||n||'@mail.unrelated.test',n%2=0,@at::timestamptz FROM generate_series(@after::int+1,@through::int) n
    RETURNING id,direction,counterparty_email),
    imported AS(INSERT INTO capture_import(activity_id,user_id,provider_received_at) SELECT id,@user,@at FROM background)
-   INSERT INTO activity_participant(activity_id,role,user_id,address)
+   INSERT INTO activity_participant(activity_id,role,user_id,address,address_domain_folded)
    SELECT id,'from',CASE WHEN direction='outbound' THEN @user::uuid END,
-     CASE WHEN direction='inbound' THEN counterparty_email ELSE 'owner@unrelated.test' END FROM background
+     CASE WHEN direction='inbound' THEN counterparty_email ELSE 'owner@mail.unrelated.test' END,'mail.unrelated.test' FROM background
    UNION ALL SELECT id,'to',CASE WHEN direction='inbound' THEN @user::uuid END,
-     CASE WHEN direction='outbound' THEN counterparty_email ELSE 'owner@unrelated.test' END FROM background
-   UNION ALL SELECT id,'cc',NULL::uuid,'copy-'||id||'@unrelated.test' FROM background`, pgx.NamedArgs{"at": connected.Add(-24 * time.Hour), "user": e.rep, "after": after, "through": after + 1000})
+     CASE WHEN direction='outbound' THEN counterparty_email ELSE 'owner@mail.unrelated.test' END,'mail.unrelated.test' FROM background
+   UNION ALL SELECT id,'cc',NULL::uuid,'copy-'||id||'@mail.unrelated.test','mail.unrelated.test' FROM background`, pgx.NamedArgs{"at": connected.Add(-24 * time.Hour), "user": e.rep, "after": after, "through": after + 1000})
 			return err
 		}); err != nil {
 			t.Fatal(err)

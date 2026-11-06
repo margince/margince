@@ -349,7 +349,7 @@ func orderedAliases(line string) []string {
 
 // matchedAlias is the alias an occurredAtColumn match at names, "" for none.
 func matchedAlias(text string, at []int) string {
-	for _, group := range []int{2, 4, 6} {
+	for group := 2; group+1 < len(at); group += 2 {
 		if at[group] >= 0 {
 			return strings.ToLower(text[at[group]:at[group+1]])
 		}
@@ -770,9 +770,10 @@ func TestTheCensusSeesARawTimeAHelperHandsBack(t *testing.T) {
 		source string
 		want   int
 	}{
-		"ordered after it":      {raw + "func f(b string) string { return ` AND ` + cited(\"x\") + ` > ` + b }\n", 1},
-		"ordered before it":     {raw + "func f(b string) string { return ` AND ` + b + ` <= ` + x.cited(\"x\") }\n", 1},
-		"selected, not ordered": {raw + "func f() string { return `SELECT ` + cited(\"x\") + ` AS at` }\n", 0},
+		"unaliased aggregate ordered after it": {"package p\nfunc cited() string { return `(SELECT max(occurred_at) FROM activity)` }\nfunc f(b string) string { return cited() + ` > ` + b }\n", 1},
+		"ordered after it":                     {raw + "func f(b string) string { return ` AND ` + cited(\"x\") + ` > ` + b }\n", 1},
+		"ordered before it":                    {raw + "func f(b string) string { return ` AND ` + b + ` <= ` + x.cited(\"x\") }\n", 1},
+		"selected, not ordered":                {raw + "func f() string { return `SELECT ` + cited(\"x\") + ` AS at` }\n", 0},
 		"another table's time": {"package p\nfunc cited() string { return `(SELECT max(au.occurred_at) FROM audit_log au)` }\n" +
 			"func f(b string) string { return cited() + ` > ` + b }\n", 0},
 		"placed by the owner": {placed + "func f(b string) string { return cited(\"x\") + ` > ` + b }\n", 0},

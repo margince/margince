@@ -15,7 +15,7 @@ import {
   taskFromCall,
   typedTask,
 } from "./mockapi/calls";
-import { anna, mockApi } from "./seed";
+import { anna, mockApi, servePrincipal } from "./seed";
 import { listClipping, openedAt, pageOverflow, textsOf } from "./waits";
 
 test.beforeAll(async () => {
@@ -1399,15 +1399,14 @@ test("AC-create-3: a company created with a domain offers the contacts on it, no
   page,
 }) => {
   // A reader who may link contacts to a company, which the shared admin is not.
-  await page.route(/\/v1\/me$/, (route) =>
-    route.fulfill({
-      json: meFixture({
-        allow: {
-          company: ["read", "create", "update"],
-          contact: ["read", "update"],
-          relationship: ["read", "create"],
-        },
-      }),
+  await servePrincipal(
+    page,
+    meFixture({
+      allow: {
+        company: ["read", "create", "update"],
+        contact: ["read", "update"],
+        relationship: ["read", "create"],
+      },
     }),
   );
   await page.goto("/#/companies");
@@ -3244,9 +3243,7 @@ const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
 // The analytics forecast for a reader who may share it, with the drawer open
 // from its trigger by the KEYBOARD, so every caller starts from the same place.
 async function openSharedLinks(page: Page) {
-  await page.route(/\/v1\/me$/, (route) =>
-    route.fulfill({ json: meFixture({ allow: { forecast: ["create"] } }) }),
-  );
+  await servePrincipal(page, meFixture({ allow: { forecast: ["create"] } }));
   await page.route(/\/v1\/forecast\/shares$/, (route) =>
     route.fulfill({ json: { data: SHARED_LINK_ROWS } }),
   );
@@ -3322,10 +3319,9 @@ test.describe("the contact's access panel, open", () => {
     test(`no AA violations with it open (${colorScheme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme });
       // A reader who may change it, so the switch is drawn and judged.
-      await page.route(/\/v1\/me$/, (route) =>
-        route.fulfill({
-          json: meFixture({ allow: { contact: ["read", "update"] } }),
-        }),
+      await servePrincipal(
+        page,
+        meFixture({ allow: { contact: ["read", "update"] } }),
       );
       await page.route("**/contacts/p-anna/360", (route) =>
         route.fulfill({

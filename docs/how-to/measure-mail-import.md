@@ -60,3 +60,14 @@ work. Check the returned IDs too: a change in the plan alone does not show a low
 
 Keep revision IDs, configuration and logs outside the source tree. Run each test again under the
 same load. The tests check results; their time may change between runs.
+
+## Domain evidence
+
+```sh
+make test-it DIR=backend/internal/modules/contacts RUN=TestDomainEvidence
+make test-it DIR=backend/internal/compose RUN=TestParticipantEvidenceCorrection
+```
+
+The reader checks both cached plan modes against matching history and mail for other domains.
+Date cases compare the indexed answer with the exact history query for held or archived mail
+and for dates after now. The correction test uses the real writer, task and worker.

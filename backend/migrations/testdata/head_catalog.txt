@@ -57,6 +57,7 @@ public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) RE
 public.activity.activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.activity.activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))
 public.activity.activity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.activity.advance_activity_domain_evidence_version CREATE TRIGGER advance_activity_domain_evidence_version BEFORE UPDATE OF occurred_at, occurred_precision, archived_at, restricted_at ON public.activity FOR EACH ROW EXECUTE FUNCTION advance_activity_domain_evidence_version()
 public.activity.agenda_fingerprint text gen=- def=-
 public.activity.archived_at timestamp with time zone gen=- def=-
 public.activity.assignee_id uuid gen=- def=-
@@ -79,6 +80,7 @@ public.activity.counterparty_email text gen=- def=-
 public.activity.counterparty_outbound_attested boolean NOT NULL gen=- def=false
 public.activity.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity.direction text gen=- def=-
+public.activity.domain_evidence_version bigint NOT NULL gen=- def=0
 public.activity.done_at timestamp with time zone gen=- def=-
 public.activity.due_at timestamp with time zone gen=- def=-
 public.activity.due_has_time boolean NOT NULL gen=- def=false
@@ -395,6 +397,11 @@ public.activity_participant.channel_user_id text gen=- def=-
 public.activity_participant.contact_id uuid gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_participant.display_name text gen=- def=-
+public.activity_participant.domain_evidence_at timestamp with time zone gen=- def=-
+public.activity_participant.domain_evidence_parent_version bigint gen=- def=-
+public.activity_participant.domain_evidence_precision text gen=- def=-
+public.activity_participant.domain_evidence_visible boolean gen=- def=-
+public.activity_participant.fk_participant_domain_evidence_version FOREIGN KEY (activity_id, domain_evidence_parent_version) REFERENCES activity(id, domain_evidence_version) ON UPDATE CASCADE ON DELETE CASCADE
 public.activity_participant.home_read_fence_participant CREATE TRIGGER home_read_fence_participant AFTER UPDATE ON public.activity_participant FOR EACH ROW WHEN (((old.user_id IS NOT NULL) AND ((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR ((old.address IS NOT NULL) AND (new.address IS NULL)) OR ((old.contact_id IS NOT NULL) AND (new.contact_id IS NULL)) OR ((old.channel_user_id IS NOT NULL) AND (new.channel_user_id IS NULL))))) EXECUTE FUNCTION advance_home_read_fence()
 public.activity_participant.home_read_fence_participant_removed CREATE TRIGGER home_read_fence_participant_removed AFTER DELETE ON public.activity_participant FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION advance_home_read_fence()
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
@@ -403,6 +410,7 @@ public.activity_participant.response text gen=- def=-
 public.activity_participant.role text NOT NULL gen=- def=-
 public.activity_participant.roster_seat uuid gen=- def=-
 public.activity_participant.settlement_evidence_share CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_participant()
+public.activity_participant.stamp_participant_domain_evidence CREATE TRIGGER stamp_participant_domain_evidence BEFORE INSERT OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION stamp_participant_domain_evidence()
 public.activity_participant.user_id uuid gen=- def=-
 public.activity_participant_pkey CREATE UNIQUE INDEX activity_participant_pkey ON public.activity_participant USING btree (id)
 public.activity_participant_replay acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -792,6 +800,15 @@ public.activity_waiting_horizon.horizon_days integer NOT NULL gen=- def=-
 public.activity_waiting_horizon.measured_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_waiting_horizon.singleton boolean NOT NULL gen=- def=true
 public.activity_waiting_horizon_pkey CREATE UNIQUE INDEX activity_waiting_horizon_pkey ON public.activity_waiting_horizon USING btree (singleton)
+public.advance_activity_domain_evidence_version() secdef=false cfg=- acl=- 
+BEGIN
+ IF ROW(NEW.occurred_at, NEW.occurred_precision, NEW.archived_at, NEW.restricted_at)
+ IS DISTINCT FROM ROW(OLD.occurred_at, OLD.occurred_precision, OLD.archived_at, OLD.restricted_at) THEN
+  NEW.domain_evidence_version := OLD.domain_evidence_version + 1;
+ END IF;
+ RETURN NEW;
+END;
+
 public.advance_home_read_fence() secdef=false cfg=- acl=- 
 BEGIN
   PERFORM advance_home_read_fence_now('access');
@@ -5539,6 +5556,9 @@ public.idx_offer_legal_entity CREATE INDEX idx_offer_legal_entity ON public.offe
 public.idx_offer_status CREATE INDEX idx_offer_status ON public.offer USING btree (status) WHERE (archived_at IS NULL)
 public.idx_offer_template_fk CREATE INDEX idx_offer_template_fk ON public.offer USING btree (template_id) WHERE (template_id IS NOT NULL)
 public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv)
+public.idx_participant_domain_evidence_incomplete CREATE INDEX idx_participant_domain_evidence_incomplete ON public.activity_participant USING btree (id) WHERE ((domain_evidence_parent_version IS NULL) OR (domain_evidence_at IS NULL) OR (domain_evidence_precision IS NULL) OR (domain_evidence_visible IS NULL))
+public.idx_participant_domain_evidence_latest CREATE INDEX idx_participant_domain_evidence_latest ON public.activity_participant USING gist (reverse(address_domain_folded) COLLATE "C", domain_evidence_precision, domain_evidence_at) WHERE (domain_evidence_visible AND (NOT past_party_cap) AND (address_domain_folded IS NOT NULL))
+public.idx_participant_domain_evidence_parent CREATE INDEX idx_participant_domain_evidence_parent ON public.activity_participant USING btree (activity_id, domain_evidence_parent_version)
 public.idx_partner_kinds CREATE INDEX idx_partner_kinds ON public.partner USING gin (partner_kinds)
 public.idx_partner_stage CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage)
 public.idx_partner_tier CREATE INDEX idx_partner_tier ON public.partner USING btree (margin_tier) WHERE (archived_at IS NULL)
@@ -8561,6 +8581,22 @@ public.stage_progression_policy.version bigint NOT NULL gen=- def=1
 public.stage_progression_policy.window_days integer NOT NULL gen=- def=30
 public.stage_progression_policy_pkey CREATE UNIQUE INDEX stage_progression_policy_pkey ON public.stage_progression_policy USING btree (id)
 public.stage_progression_policy_transition_key CREATE UNIQUE INDEX stage_progression_policy_transition_key ON public.stage_progression_policy USING btree (pipeline_id, from_stage_id, to_stage_id)
+public.stamp_participant_domain_evidence() secdef=false cfg=- acl=- 
+BEGIN
+ IF TG_OP='INSERT' OR NEW.activity_id IS DISTINCT FROM OLD.activity_id
+ OR ROW(NEW.domain_evidence_parent_version, NEW.domain_evidence_at, NEW.domain_evidence_precision, NEW.domain_evidence_visible)
+ IS DISTINCT FROM ROW(OLD.domain_evidence_parent_version, OLD.domain_evidence_at, OLD.domain_evidence_precision, OLD.domain_evidence_visible)
+ OR NEW.domain_evidence_parent_version IS NULL OR NEW.domain_evidence_at IS NULL
+ OR NEW.domain_evidence_precision IS NULL OR NEW.domain_evidence_visible IS NULL THEN
+  SELECT a.domain_evidence_version, a.occurred_at, a.occurred_precision,
+         a.archived_at IS NULL AND a.restricted_at IS NULL
+   INTO NEW.domain_evidence_parent_version, NEW.domain_evidence_at,
+        NEW.domain_evidence_precision, NEW.domain_evidence_visible
+   FROM activity a WHERE a.id=NEW.activity_id FOR KEY SHARE;
+ END IF;
+ RETURN NEW;
+END;
+
 public.stored_object_intent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.stored_object_intent.kind text NOT NULL gen=- def=-
 public.stored_object_intent.recorded_at timestamp with time zone NOT NULL gen=- def=now()
@@ -9069,6 +9105,7 @@ BEGIN
 	END IF;
 	RETURN NEW;
 END 
+public.uq_activity_domain_evidence_version CREATE UNIQUE INDEX uq_activity_domain_evidence_version ON public.activity USING btree (id, domain_evidence_version)
 public.uq_activity_link CREATE UNIQUE INDEX uq_activity_link ON public.activity_link USING btree (activity_id, entity_type, COALESCE(contact_id, company_id, deal_id, lead_id, project_id))
 public.uq_activity_link_project CREATE UNIQUE INDEX uq_activity_link_project ON public.activity_link USING btree (activity_id) WHERE (entity_type = 'project'::text)
 public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT

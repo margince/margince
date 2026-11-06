@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -188,64 +189,34 @@ func recordPendingDispositionTx(
 	return tag.RowsAffected() > 0, nil
 }
 
-// newestEvidenceFor dates the most recent mail that argues this domain is worth
-// a company — the value the stale-evidence gate reads back when the crawl
-// finally answers.
-//
-// It is the sibling of acquisitionTimeFor and deliberately not a reuse: that one
-// asks when a CONTACT was first heard from (min, keyed on one address), this one
-// asks how fresh a DOMAIN's evidence is (max, across every address under it).
-// Sharing a query would make one of the two answer the wrong question.
-//
-// NIL ON EVERY FAILURE, and never an error, for the same reason acquisitionTimeFor
-// is: a capture that failed because a timestamp would not read would drop the
-// whole record, and a nil lands a row treated as fresh — the behaviour that
-// existed before this column.
+const domainEvidenceActivityParam = "activity"
+
+// Domain evidence takes the newest date across a domain; acquisition takes the oldest per address.
+// Read failures keep the nil-evidence policy so capture can finish.
 func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID ids.ActivityID) *time.Time {
 	domain = strings.ToLower(strings.TrimSpace(domain))
 	if domain == "" {
 		return nil
 	}
-	// The triggering activity is a floor rather than the answer, exactly as in
-	// acquisitionTimeFor: the message being captured right now may have no
-	// participant rows visible to this statement yet, and a domain whose only
-	// mail is this one must still be dated from it.
-	// The domain is the REGISTRABLE one (freemail.Hostname returns eTLD+1), so
-	// the match is by suffix rather than equality: mail from `alice@mail.acme.test`
-	// is evidence about `acme.test`, and comparing the address's full host to the
-	// registrable domain would drop every subdomain sender. Dropping them is the
-	// dangerous direction — the max would then come from an older exact-domain
-	// message and withhold a company the recent mail had earned.
-	//
-	// The dot is part of the suffix so `notacme.test` cannot match `acme.test`.
-	// A FORGED date is not evidence. The header's date is the sender's to type,
-	// so one message claiming to be from 2040 would otherwise become the newest
-	// evidence on the domain and wave every later question through — and the
-	// exclusion belongs here, at the write, because once a forged value is
-	// stored as last_evidence_at no reader can tell it from a real one. The
-	// horizon carries mailClockSkewAllowance because forgery is what it is for
-	// and a fast clock is not forgery: a sender a few seconds ahead of this
-	// server would otherwise be read as the future and dropped, which ages the
-	// domain and withholds the company that mail had just earned — the same
-	// direction the subdomain match above exists to avoid.
-	// A row under a statutory hold is out of every ordinary read path, and here
-	// the exclusion is also the SAFE direction: dropping a held message can only
-	// make the domain's evidence look older, which withholds a company rather
-	// than minting one. That is the opposite of acquiredwhen.go's reader, whose
-	// ratification turns on excluding a held row moving a compliance deadline
-	// LATER — this gate has no deadline to miss.
 	var occurred *time.Time
-	err := tx.QueryRow(ctx, `
-		SELECT max(a.occurred_at)
-		  FROM activity a LEFT JOIN activity_participant ap ON ap.activity_id = a.id AND NOT ap.past_party_cap
-		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
-		   AND `+occurredday.BegunSQL("a", "now() + $3::interval")+`
-		   AND (`+owndomain.CoversSQL("ap.address_domain_folded", "$1")+` OR a.id = $2)`,
-		owndomain.Fold(domain), activityID, mailClockSkewAllowance).Scan(&occurred)
+	args := storekit.ParticipantEvidenceArgs(1)
+	folded := owndomain.Fold(domain)
+	args["domain"], args[domainEvidenceActivityParam], args["skew"] = folded, activityID, mailClockSkewAllowance
+	err := tx.QueryRow(ctx, domainEvidenceSQL(), args).Scan(&occurred)
 	if err != nil {
 		return nil
 	}
 	return occurred
+}
+
+// The trigger is a floor before participants exist. Future and held rows cannot authorize a domain.
+func domainEvidenceLegacySQL() string {
+	return `
+		SELECT max(a.occurred_at)
+		  FROM activity a LEFT JOIN activity_participant ap ON ap.activity_id = a.id AND NOT ap.past_party_cap
+		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
+		   AND ` + occurredday.BegunSQL("a", "now() + @skew::interval") + `
+		   AND (` + owndomain.CoversSQL("ap.address_domain_folded", "@domain") + ` OR a.id = @activity)`
 }
 
 // mailClockSkewAllowance is how far ahead of this server a mail header may be

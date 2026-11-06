@@ -40,10 +40,9 @@ func (n planNode) walk(visit func(planNode)) {
 	}
 }
 
-// readsByPrimaryKey holds for an index scan on activity_pkey with a condition,
-// and for a bitmap heap scan whose index child is that same scan.
+// readsByPrimaryKey accepts an id lookup through any index, including a wider key.
 func readsByPrimaryKey(n planNode) bool {
-	if n.IndexName == "activity_pkey" && n.IndexCond != "" {
+	if n.IndexName != "" && testdb.IndexConditionReadsID(n.IndexCond) {
 		return true
 	}
 	if n.NodeType != "Bitmap Heap Scan" {
@@ -52,7 +51,7 @@ func readsByPrimaryKey(n planNode) bool {
 	byKey := false
 	for _, child := range n.Plans {
 		child.walk(func(c planNode) {
-			if c.NodeType == "Bitmap Index Scan" && c.IndexName == "activity_pkey" && c.IndexCond != "" {
+			if c.NodeType == "Bitmap Index Scan" && testdb.IndexConditionReadsID(c.IndexCond) {
 				byKey = true
 			}
 		})
